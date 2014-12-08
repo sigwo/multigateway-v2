@@ -4194,7 +4194,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 			retbuf = (char *)realloc(retbuf,len+1);
 		}
 		strcpy(retbuf,retstr);
-		fprintf(stderr,"\n<<<<<<<<<<<<< BTCD received message. msg: %s from %s retstr.(%s)\n",msg,from->addr.ToString().c_str(),retbuf);
+		//fprintf(stderr,"\n<<<<<<<<<<<<< BTCD received message. msg: %s from %s retstr.(%s)\n",msg,from->addr.ToString().c_str(),retbuf);
 		free(retstr);
 	}
 	return(retbuf);
