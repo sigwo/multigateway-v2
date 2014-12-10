@@ -106,8 +106,9 @@ int32_t validate_coinaddr(char pubkey[512],struct coin_info *cp,char *coinaddr)
 
 cJSON *create_vins_json_params(char **localcoinaddrs,struct coin_info *cp,struct rawtransaction *rp)
 {
-    int32_t i;
-    char *txid;
+    int32_t map_msigaddr(char *redeemScript,struct coin_info *cp,char *normaladdr,char *msigaddr);
+    int32_t i,ret;
+    char normaladdr[1024],redeemScript[4096],*txid;
     cJSON *json,*array;
     struct coin_txidind *vp;
     array = cJSON_CreateArray();
@@ -127,7 +128,9 @@ cJSON *create_vins_json_params(char **localcoinaddrs,struct coin_info *cp,struct
         cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txid));
         cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(vp->entry.v));
         cJSON_AddItemToObject(json,"scriptPubKey",cJSON_CreateString(vp->script));
-        //cJSON_AddItemToObject(json,"redeemScript",cJSON_CreateString(vp->redeemScript));
+        if ( (ret= map_msigaddr(redeemScript,cp,normaladdr,rp->inputs[i]->coinaddr)) >= 0 )
+            cJSON_AddItemToObject(json,"redeemScript",cJSON_CreateString(redeemScript));
+        else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript,normaladdr,rp->inputs[i]->coinaddr);
         if ( localcoinaddrs != 0 )
             localcoinaddrs[i] = vp->coinaddr;
         cJSON_AddItemToArray(array,json);
@@ -203,7 +206,7 @@ int32_t add_opcode(char *hex,int32_t offset,int32_t opcode)
     return(offset+2);
 }
 
-void calc_script(char *script,char *pubkey)
+void calc_script(char *script,char *pubkey,int msigmode)
 {
     int32_t offset,len;
     offset = 0;
@@ -217,13 +220,39 @@ void calc_script(char *script,char *pubkey)
     script[offset] = 0;
 }
 
-int32_t convert_to_bitcoinhex(char *scriptasm)
+int32_t origconvert_to_bitcoinhex(char *scriptasm)
 {
     //"asm" : "OP_HASH160 db7f9942da71fd7a28f4a4b2e8c51347240b9e2d OP_EQUAL",
+    char *hex;
+    int32_t middlelen,offset,len,OP_HASH160_len,OP_EQUAL_len;
+    len = (int32_t)strlen(scriptasm);
+    OP_HASH160_len = strlen("OP_HASH160");
+    OP_EQUAL_len = strlen("OP_EQUAL");
+    if ( strncmp(scriptasm,"OP_HASH160",OP_HASH160_len) == 0 && strncmp(scriptasm+len-OP_EQUAL_len,"OP_EQUAL",OP_EQUAL_len) == 0 )
+    {
+        hex = calloc(1,len+1);
+        offset = 0;
+        offset = add_opcode(hex,offset,OP_HASH160_OPCODE);
+        middlelen = len - OP_HASH160_len - OP_EQUAL_len - 2;
+        offset = add_opcode(hex,offset,middlelen/2);
+        memcpy(hex+offset,scriptasm+OP_HASH160_len+1,middlelen);
+        hex[offset+middlelen] = hexbyte((OP_EQUAL_OPCODE >> 4) & 0xf);
+        hex[offset+middlelen+1] = hexbyte(OP_EQUAL_OPCODE & 0xf);
+        hex[offset+middlelen+2] = 0;
+        printf("(%s) -> (%s)\n",scriptasm,hex);
+        strcpy(scriptasm,hex);
+        free(hex);
+        return((int32_t)(2+middlelen+2));
+    }
+    // printf("cant assembly anything but OP_HASH160 + <key> + OP_EQUAL (%s)\n",scriptasm);
+    return(-1);
+}
+
+int32_t convert_to_bitcoinhex(char *scriptasm)
+{
     char *hex,pubkey[512];
     int32_t middlelen,len,OP_HASH160_len,OP_EQUAL_len;
     len = (int32_t)strlen(scriptasm);
-    // worlds most silly assembler!
     OP_HASH160_len = strlen("OP_DUP OP_HASH160");
     OP_EQUAL_len = strlen("OP_EQUALVERIFY OP_CHECKSIG");
     if ( strncmp(scriptasm,"OP_DUP OP_HASH160",OP_HASH160_len) == 0 && strncmp(scriptasm+len-OP_EQUAL_len,"OP_EQUALVERIFY OP_CHECKSIG",OP_EQUAL_len) == 0 )
@@ -233,14 +262,12 @@ int32_t convert_to_bitcoinhex(char *scriptasm)
         pubkey[middlelen] = 0;
         
         hex = calloc(1,len+1);
-        calc_script(hex,pubkey);
-        //printf("(%s) -> script.(%s) (%s)\n",scriptasm,pubkey,hex);
+        calc_script(hex,pubkey,0);
         strcpy(scriptasm,hex);
         free(hex);
         return((int32_t)(2+middlelen+2));
     }
-    // printf("cant assembly anything but OP_HASH160 + <key> + OP_EQUAL (%s)\n",scriptasm);
-    return(-1);
+    return(origconvert_to_bitcoinhex(scriptasm));
 }
 
 int32_t extract_txvals(char *coinaddr,char *script,int32_t nohexout,cJSON *txobj)
@@ -255,7 +282,12 @@ int32_t extract_txvals(char *coinaddr,char *script,int32_t nohexout,cJSON *txobj
             copy_cJSON(coinaddr,addrobj);
         if ( nohexout != 0 )
             hexobj = cJSON_GetObjectItem(scriptobj,"asm");
-        else hexobj = cJSON_GetObjectItem(scriptobj,"hex");
+        else
+        {
+            hexobj = cJSON_GetObjectItem(scriptobj,"hex");
+            if ( hexobj == 0 )
+                hexobj = cJSON_GetObjectItem(scriptobj,"asm"), nohexout = 1;
+        }
         if ( script != 0 )
         {
             copy_cJSON(script,hexobj);

@@ -496,6 +496,154 @@ uint64_t p2p_publishpacket(struct pserver_info *pserver,char *cmd)
     return(0);
 }
 
+char *sendfrag(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCTSECRET,char *dest,char *name,uint32_t fragi,uint32_t numfrags,uint32_t totalcrc,uint32_t checkcrc,char *datastr)
+{
+    char cmdstr[4096],_tokbuf[4096];
+    struct pserver_info *pserver;
+    struct coin_info *cp = get_coin_info("BTCD");
+    int32_t len,datalen = 0;
+    unsigned char *data = 0;
+    uint32_t datacrc;
+    uint64_t txid;
+    if ( cp == 0 || datastr == 0 || datastr[0] == 0 )
+    {
+        printf("sendfrag err cp.%p datastr.%p\n",cp,datastr);
+        return(clonestr("{\"error\":\"no BTCD coin info\"}"));
+    }
+    datalen = (int32_t)strlen(datastr)/2;
+    data = malloc(datalen);
+    decode_hex(data,datalen,datastr);
+    datacrc = _crc32(0,data,datalen);
+    sprintf(cmdstr,"{\"NXT\":\"%s\",\"pubkey\":\"%s\",\"ipaddr\":\"%s\",\"name\":\"%s\",\"time\":%ld,\"fragi\":%u,\"numfrags\":%u,\"totalcrc\":%u,\"datacrc\":%u",verifiedNXTaddr,Global_mp->pubkeystr,cp->myipaddr,name,(long)time(NULL),fragi,numfrags,totalcrc,datacrc);
+    if ( previpaddr == 0 || previpaddr[0] == 0 )
+    {
+        pserver = get_pserver(0,dest,0,0);
+        sprintf(cmdstr+strlen(cmdstr),",\"requestType\":\"sendfrag\",\"data\":%d}",datalen);
+    }
+    else
+    {
+        pserver = get_pserver(0,previpaddr,0,0);
+        if ( checkcrc != datacrc )
+            strcat(cmdstr,",\"error\":\"crcerror\"");
+        else
+        {
+            // update data
+        }
+        free(data);
+        data = 0;
+        strcat(cmdstr,",\"requestType\":\"gotfrag\"}");
+    }
+    len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
+    txid = directsend_packet(1,pserver,_tokbuf,len,data,datalen);
+    printf("send back (%s)\n",cmdstr);
+    if ( data != 0 )
+        free(data);
+    return(clonestr(_tokbuf));
+}
+
+struct transfer_args
+{
+    char previpaddr[64],sender[64],dest[64],name[512];
+    uint8_t *data;
+    int32_t datalen,blocksize,numblocks;
+    uint32_t *timestamps,*crcs,*ackcrcs,totalcrc;
+};
+
+void free_transfer_args(struct transfer_args *args)
+{
+    if ( args->data != 0 )
+        free(args->data);
+    if ( args->crcs != 0 )
+        free(args->crcs);
+    if ( args->ackcrcs != 0 )
+        free(args->ackcrcs);
+    if ( args->timestamps != 0 )
+        free(args->timestamps);
+}
+
+int32_t Do_transfers(void *_args,int32_t argsize)
+{
+    struct transfer_args *args = _args;
+    char datastr[4096],*retstr;
+    struct coin_info *cp = get_coin_info("BTCD");
+    int32_t i,remains,retval = -1,finished = 0;
+    uint32_t now = (uint32_t)time(NULL);
+    if ( cp != 0 )
+    {
+        retval = 0;
+        remains = args->datalen;
+        for (i=0; i<args->numblocks; i++)
+        {
+            if ( args->ackcrcs[i] != args->crcs[i] )
+            {
+                if ( (now - args->timestamps[i]) > 3 )
+                {
+                    init_hexbytes_noT(datastr,args->data + i*args->blocksize,(remains < args->blocksize) ? remains : args->blocksize);
+                    retstr = sendfrag(0,cp->srvNXTADDR,cp->srvNXTADDR,cp->srvNXTACCTSECRET,args->dest,args->name,i,args->numblocks,args->totalcrc,args->crcs[i],datastr);
+                    if ( retstr != 0 )
+                        free(retstr);
+                    args->timestamps[i] = now;
+                }
+            } else finished++;
+            remains -= args->blocksize;
+        }
+        if ( finished == args->numblocks )
+        {
+            printf("finished %d of %d\n",finished,args->numblocks);
+            retval = -1;
+        }
+    }
+    free_transfer_args(args);
+    return(retval);
+}
+
+char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,char *src,char *name,uint32_t fragi,uint32_t numfrags,uint32_t totalcrc,uint32_t datacrc)
+{
+    char cmdstr[4096];
+    
+    sprintf(cmdstr,"{\"requestType\":\"gotfrag\",\"sender\":\"%s\",\"src\":\"%s\",\"fragi\":%u,\"numfrags\":%u,\"totalcrc\":%u,\"datacrc\":%u}",sender,src,fragi,numfrags,totalcrc,datacrc);
+    // mark as sent
+    return(clonestr("{\"result\":\"gotfrag\"}"));
+}
+
+char *start_transfer(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCTSECRET,char *dest,char *name,uint8_t *data,int32_t datalen)
+{
+    static char *buf;
+    static int64_t allocsize=0;
+    struct transfer_args args;
+    int64_t len;
+    int32_t i,remains,blocksize = 1024;
+    if ( data == 0 || datalen == 0 )
+    {
+        data = (uint8_t *)load_file(name,&buf,&len,&allocsize);
+        datalen = (int32_t)len;
+    }
+    if ( data != 0 && datalen != 0 )
+    {
+        memset(&args,0,sizeof(args));
+        safecopy(args.previpaddr,previpaddr,sizeof(args.previpaddr));
+        safecopy(args.sender,sender,sizeof(args.sender));
+        safecopy(args.dest,dest,sizeof(args.dest));
+        safecopy(args.name,name,sizeof(args.name));
+        args.data = data, args.datalen = datalen;
+        args.blocksize = 1024;
+        args.numblocks = (datalen / args.blocksize);
+        if ( (datalen % args.blocksize) != 0 )
+            args.numblocks++;
+        args.totalcrc = _crc32(0,data,datalen);
+        args.crcs = calloc(args.numblocks,sizeof(*args.crcs));
+        remains = datalen;
+        for (i=0; i<args.numblocks; i++)
+        {
+            args.crcs[i] = _crc32(0,data + i*blocksize,(remains < blocksize) ? remains : blocksize);
+            remains -= blocksize;
+        }
+        args.timestamps = calloc(args.numblocks,sizeof(*args.timestamps));
+        start_task(Do_transfers,"transfer",1000000,(void *)&args,sizeof(args));
+        return(clonestr("{\"result\":\"start_transfer pending\"}"));
+    } else return(clonestr("{\"error\":\"start_transfer: cant start_transfer\"}"));
+}
+
 int32_t update_nodestats(char *NXTaddr,uint32_t now,struct nodestats *stats,int32_t encryptedflag,int32_t p2pflag,unsigned char pubkey[crypto_box_PUBLICKEYBYTES],char *ipaddr,int32_t port)
 {
     static unsigned char zeropubkey[crypto_box_PUBLICKEYBYTES];
