@@ -27,8 +27,11 @@ void aftertask(uv_work_t *req,int status)
     {
         fprintf(stderr,"req.%p task.%s complete status.%d\n",req,task->name,status);
         free(task);
+        req->data = 0;
     } else fprintf(stderr,"task.%p complete\n",req);
-    uv_close((uv_handle_t *)&Tasks_async,NULL);
+    free(req);
+    //uv_close((uv_handle_t *)&Tasks_async,NULL);
+    //uv_close((uv_handle_t *)req,NULL);
 }
 
 void Task_handler(uv_work_t *req)
@@ -39,6 +42,7 @@ void Task_handler(uv_work_t *req)
         //fprintf(stderr,"Task.(%s) sleep.%d\n",task->name,task->sleepmicros);
         if ( task->func != 0 )
         {
+            //printf("Task_handler.(%p)\n",*(void **)task->args);
             if ( (*task->func)(task->args,task->argsize) < 0 )
                 break;
             if ( task->sleepmicros != 0 )
@@ -54,6 +58,7 @@ uv_work_t *start_task(tfunc func,char *name,int32_t sleepmicros,void *args,int32
     struct task_info *task;
     task = calloc(1,sizeof(*task) + argsize);
     memcpy(task->args,args,argsize);
+    //printf("start_tasks copy %p %p\n",*(void **)args,*(void **)task->args);
     task->func = func;
     task->argsize = argsize;
     safecopy(task->name,name,sizeof(task->name));
@@ -280,8 +285,9 @@ void init_NXThashtables(struct NXThandler_info *mp)
     struct withdraw_info *wp = 0;
     struct pserver_info *pp = 0;
     struct telepathy_entry *tel = 0;
+    struct transfer_args *args = 0;
     //struct kademlia_storage *sp = 0;
-    static struct hashtable *NXTasset_txids,*NXTaddrs,*NXTassets,*NXTguids,*Pserver,*Telepathy_hash,*Redeems,*Coin_txidinds,*Coin_txidmap;
+    static struct hashtable *Pendings,*NXTasset_txids,*NXTaddrs,*NXTassets,*NXTguids,*Pserver,*Telepathy_hash,*Redeems,*Coin_txidinds,*Coin_txidmap;
     //if ( NXTguids == 0 )
     //    NXTguids = hashtable_create("NXTguids",HASHTABLES_STARTSIZE,sizeof(struct NXT_guid),((long)&gp->guid[0] - (long)gp),sizeof(gp->guid),((long)&gp->H.modified - (long)gp));
     if ( NXTasset_txids == 0 )
@@ -300,8 +306,11 @@ void init_NXThashtables(struct NXThandler_info *mp)
         Coin_txidinds = hashtable_create("Coin_txidinds",HASHTABLES_STARTSIZE,sizeof(struct coin_txidind),((long)&ctp->indstr[0] - (long)ctp),sizeof(ctp->indstr),((long)&ctp->modified - (long)ctp));
     if ( Coin_txidmap == 0 )
         Coin_txidmap = hashtable_create("Coin_txidmap",HASHTABLES_STARTSIZE,sizeof(struct coin_txidmap),((long)&map->txidmapstr[0] - (long)map),sizeof(map->txidmapstr),((long)&map->modified - (long)map));
+    if ( Pendings == 0 )
+        Pendings = hashtable_create("Pendings",HASHTABLES_STARTSIZE,sizeof(struct transfer_args),((long)&args->hashstr[0] - (long)args),sizeof(args->hashstr),((long)&args->modified - (long)args));
     if ( mp != 0 )
     {
+        mp->pending_xfers = &Pendings;
         mp->Telepathy_tablep = &Telepathy_hash;
         mp->Pservers_tablep = &Pserver;
         mp->redeemtxids = &Redeems;
@@ -695,8 +704,8 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         exit(-1);
     }
     Historical_done = 1;
-    if ( IS_LIBTEST > 1 && Global_mp->gatewayid >= 0 )
-        register_variant_handler(MULTIGATEWAY_VARIANT,process_directnet_syncwithdraw,MULTIGATEWAY_SYNCWITHDRAW,sizeof(struct batch_info),sizeof(struct batch_info),MGW_whitelist);
+    //if ( IS_LIBTEST > 1 && Global_mp->gatewayid >= 0 )
+    //    register_variant_handler(MULTIGATEWAY_VARIANT,process_directnet_syncwithdraw,MULTIGATEWAY_SYNCWITHDRAW,sizeof(struct batch_info),sizeof(struct batch_info),MGW_whitelist);
     Finished_init = 1;
     printf("finished addcontact\n");
     return(0);
