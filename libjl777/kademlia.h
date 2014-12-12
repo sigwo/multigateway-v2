@@ -706,7 +706,7 @@ char *kademlia_storedata(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSEC
             dist = bitweight(destbits ^ keybits);
             if ( ismynxtbits(destbits) == 0 && dist < mydist )
             {
-                printf("store i.%d of %d, (%llu) dist.%d vs mydist.%d srv.%llx key.%llx dest.%llx\n",i,n,(long long)destbits,dist,mydist,(long long)cp->srvpubnxtbits,(long long)keybits,(long long)destbits);
+                printf("store i.%d of %d, (%llu) dist.%d vs mydist.%d srv.%llx key.%llx (%s) %llu dest.%llx\n",i,n,(long long)destbits,dist,mydist,(long long)cp->srvpubnxtbits,(long long)keybits,key,(long long)calc_nxt64bits(key),(long long)destbits);
                 txid = send_kademlia_cmd(destbits,0,"store",NXTACCTSECRET,key,datastr);
                 z++;
             }
