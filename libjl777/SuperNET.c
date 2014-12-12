@@ -339,6 +339,8 @@ int main(int argc,const char *argv[])
     int32_t retval;
     char ipaddr[64],*oldport,*newport,portstr[64];
     extern int32_t ENABLE_GUIPOLL;
+    int32_t bitweight(uint64_t x);
+    printf("%llu ^ %llu = %llx wt.%d\n",(unsigned long long)5420018378925390393,(unsigned long long)17265504311777286118,(unsigned long long)5420018378925390393^17265504311777286118,bitweight(5420018378925390393^17265504311777286118)); getchar();
     sprintf(portstr,"%d",SUPERNET_PORT);
     oldport = newport = portstr;
 #ifndef __linux__
