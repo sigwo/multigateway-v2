@@ -9,7 +9,7 @@
 #ifndef mgw_h
 #define mgw_h
 
-#define DEPOSIT_XFER_DURATION 5
+#define DEPOSIT_XFER_DURATION 1
 #define MIN_DEPOSIT_FACTOR 5
 
 #define GET_COINDEPOSIT_ADDRESS 'g'
@@ -563,7 +563,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                         sprintf(buf,"{\"requestType\":\"getmsigpubkey\",\"NXT\":\"%s\",\"myaddr\":\"%s\",\"mypubkey\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\"}",NXTaddr,myacctcoinaddr,mypubkey,coinstr,refNXTaddr);
                     else sprintf(buf,"{\"requestType\":\"getmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\"}",NXTaddr,coinstr,refNXTaddr);
                     printf("SENDREQ.(%s)\n",buf);
-                    retstr = send_tokenized_cmd(hopNXTaddr,0,NXTaddr,NXTACCTSECRET,buf,destNXTaddr);
+                    retstr = send_tokenized_cmd(!prevent_queueing("getmsigpubkey"),hopNXTaddr,0,NXTaddr,NXTACCTSECRET,buf,destNXTaddr);
                 } else valid++;
                 printf("check with get_NXT_coininfo i.%d valid.%d\n",i,valid);
             }
@@ -594,46 +594,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     return(retstr);
 }
 
-// network aware funcs
-void publish_withdraw_info(struct coin_info *cp,struct batch_info *wp)
-{
-    struct coin_info *refcp = get_coin_info("BTCD");
-    char batchname[128],*retstr;
-    struct batch_info W;
-    int32_t gatewayid;
-    wp->W.coinid = conv_coinstr(cp->name);
-    sprintf(batchname,"%s.MGW%d",cp->name,Global_mp->gatewayid);
-    if ( wp->W.coinid < 0 || refcp == 0 )
-    {
-        printf("unknown coin.(%s) refcp.%p\n",cp->name,refcp);
-        return;
-    }
-    wp->W.srcgateway = Global_mp->gatewayid;
-    for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
-    {
-        wp->W.destgateway = gatewayid;
-        W = *wp;
-        fprintf(stderr,"publish_withdraw_info.%d -> %d coinid.%d %.8f crc %08x\n",Global_mp->gatewayid,gatewayid,wp->W.coinid,dstr(wp->W.amount),W.rawtx.batchcrc);
-        if ( gatewayid == Global_mp->gatewayid )
-            cp->withdrawinfos[gatewayid] = *wp;
-        else
-        {
-            retstr = start_transfer(0,refcp->srvNXTADDR,refcp->srvNXTADDR,refcp->srvNXTACCTSECRET,Server_names[gatewayid],batchname,(uint8_t *)&cp->BATCH,(int32_t)sizeof(cp->BATCH),300);
-            if ( retstr != 0 )
-                free(retstr);
-        }
-        
-        /*if ( server_request(&Global_mp->gensocks[gatewayid],Server_names[gatewayid],&W.W.H,MULTIGATEWAY_VARIANT,MULTIGATEWAY_SYNCWITHDRAW) == sizeof(W) )
-        {
-            portable_mutex_lock(&cp->consensus_mutex);
-            cp->withdrawinfos[gatewayid] = W;
-            portable_mutex_unlock(&cp->consensus_mutex);
-        }*/
-        fprintf(stderr,"got publish_withdraw_info.%d -> %d coinid.%d %.8f crc %08x\n",Global_mp->gatewayid,gatewayid,wp->W.coinid,dstr(wp->W.amount),cp->withdrawinfos[gatewayid].rawtx.batchcrc);
-    }
-}
-
-int32_t process_directnet_syncwithdraw(struct batch_info *wp,char *clientip)
+int32_t process_directnet_syncwithdraw(struct batch_info *wp)
 {
     int32_t gatewayid;
     struct coin_info *cp;
@@ -648,8 +609,61 @@ int32_t process_directnet_syncwithdraw(struct batch_info *wp,char *clientip)
     }
     return(sizeof(*wp));
 }
-//end of network funcs
 
+void MGW_handler(struct transfer_args *args)
+{
+    printf("MGW_handler(%s %d bytes) vs %ld\n",args->name,args->totallen,sizeof(struct batch_info));
+    if ( args->totallen == sizeof(struct batch_info) )
+        process_directnet_syncwithdraw((struct batch_info *)args->data);
+    //getchar();
+}
+
+void set_batchname(char *batchname,char *coinstr,int32_t gatewayid)
+{
+    sprintf(batchname,"%s.MGW%d",coinstr,gatewayid);
+}
+
+void publish_withdraw_info(struct coin_info *cp,struct batch_info *wp)
+{
+    struct coin_info *refcp = get_coin_info("BTCD");
+    char batchname[512],fname[512],*retstr;
+    struct batch_info W;
+    int32_t gatewayid;
+    FILE *fp;
+    wp->W.coinid = conv_coinstr(cp->name);
+    set_batchname(batchname,cp->name,Global_mp->gatewayid);
+    set_handler_fname(fname,batchname,"mgw");
+    if ( (fp= fopen(fname,"wb")) != 0 )
+    {
+        fwrite(wp,1,sizeof(*wp),fp);
+        fclose(fp);
+        printf("created (%s)\n",fname);
+    }
+    if ( wp->W.coinid < 0 || refcp == 0 )
+    {
+        printf("unknown coin.(%s) refcp.%p\n",cp->name,refcp);
+        return;
+    }
+    wp->W.srcgateway = Global_mp->gatewayid;
+    for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
+    {
+        wp->W.destgateway = gatewayid;
+        W = *wp;
+        fprintf(stderr,"publish_withdraw_info.%d -> %d coinid.%d %.8f crc %08x\n",Global_mp->gatewayid,gatewayid,wp->W.coinid,dstr(wp->W.amount),W.rawtx.batchcrc);
+        if ( gatewayid == Global_mp->gatewayid )
+        {
+            process_directnet_syncwithdraw(wp);
+            cp->withdrawinfos[gatewayid] = *wp;
+        }
+        else
+        {
+            retstr = start_transfer(0,refcp->srvNXTADDR,refcp->srvNXTADDR,refcp->srvNXTACCTSECRET,Server_names[gatewayid],batchname,(uint8_t *)&cp->BATCH,(int32_t)sizeof(cp->BATCH),30,"mgw");
+            if ( retstr != 0 )
+                free(retstr);
+        }
+        fprintf(stderr,"got publish_withdraw_info.%d -> %d coinid.%d %.8f crc %08x\n",Global_mp->gatewayid,gatewayid,wp->W.coinid,dstr(wp->W.amount),cp->withdrawinfos[gatewayid].rawtx.batchcrc);
+    }
+}
 
 uint64_t add_pendingxfer(int32_t removeflag,uint64_t txid)
 {
@@ -1034,6 +1048,7 @@ uint64_t process_msigdeposits(cJSON **transferjsonp,int32_t forceflag,struct coi
             {
                 //printf("UNPAID cointxid.(%s) <-> (%u %d %d)\n",txidstr,entry->blocknum,entry->txind,entry->v);
                 sprintf(comment,"{\"coinaddr\":\"%s\",\"cointxid\":\"%s\",\"coinblocknum\":%u,\"cointxind\":%u,\"coinv\":%u,\"amount\":\"%.8f\"}",coinaddr,txidstr,entry->blocknum,entry->txind,entry->v,dstr(value));
+                pair = cJSON_Parse(comment);
                 printf(">>>>>>>>>>>>>> Need to transfer %.8f %ld assetoshis | %s to %llu for (%s) %s\n",dstr(value),(long)(value/ap->mult),cp->name,(long long)nxt64bits,txidstr,comment);
                 total += value;
                 if ( forceflag > 0 )
@@ -1045,12 +1060,11 @@ uint64_t process_msigdeposits(cJSON **transferjsonp,int32_t forceflag,struct coi
                     {
                         if ( *transferjsonp == 0 )
                             *transferjsonp = cJSON_CreateArray();
-                        pair = cJSON_Parse(comment);
                         sprintf(numstr,"\"%llu\"",(long long)depositid);
                         cJSON_AddItemToObject(pair,"depositid",cJSON_CreateString(numstr));
-                        cJSON_AddItemToArray(*transferjsonp,pair);
                     }
                 }
+                cJSON_AddItemToArray(*transferjsonp,pair);
             }
         }
     }
@@ -1246,10 +1260,10 @@ return(match);
     return(0);
 }
 
-int32_t init_specialNXTaddrs(char *specialNXTaddrs[],char *ipaddrs[],char *specialNXT,char *NXT0,char *NXT1,char *NXT2,char *ip0,char *ip1,char *ip2,char *exclude0,char *exclude1)
+int32_t init_specialNXTaddrs(char *specialNXTaddrs[],char *ipaddrs[],char *specialNXT,char *NXT0,char *NXT1,char *NXT2,char *ip0,char *ip1,char *ip2,char *exclude0,char *exclude1,char *exclude2)
 {
     int32_t i,numgateways = 3;
-    specialNXTaddrs[0] = NXT0, specialNXTaddrs[1] = NXT1, specialNXTaddrs[2] = NXT2;
+    specialNXTaddrs[0] = clonestr(NXT0), specialNXTaddrs[1] = clonestr(NXT1), specialNXTaddrs[2] = clonestr(NXT2);
     ipaddrs[0] = ip0, ipaddrs[1] = ip1, ipaddrs[2] = ip2;
     for (i=0; i<numgateways; i++)
     {
@@ -1258,12 +1272,14 @@ int32_t init_specialNXTaddrs(char *specialNXTaddrs[],char *ipaddrs[],char *speci
         if ( ipaddrs[i] == 0 )
             strcpy(ipaddrs[i],Server_names[i]);
     }
-    specialNXTaddrs[numgateways++] = GENESISACCT;
-    specialNXTaddrs[numgateways++] = specialNXT;
+    specialNXTaddrs[numgateways++] = clonestr(GENESISACCT);
+    specialNXTaddrs[numgateways++] = clonestr(specialNXT);
     if ( exclude0 != 0 && exclude0[0] != 0 )
-        specialNXTaddrs[numgateways++] = exclude0;
+        specialNXTaddrs[numgateways++] = clonestr(exclude0);
     if ( exclude1 != 0 && exclude1[0] != 0 )
-        specialNXTaddrs[numgateways++] = exclude1;
+        specialNXTaddrs[numgateways++] = clonestr(exclude1);
+    if ( exclude2 != 0 && exclude2[0] != 0 )
+        specialNXTaddrs[numgateways++] = clonestr(exclude2);
     specialNXTaddrs[numgateways+1] = 0;
     return(numgateways);
 }
@@ -1307,16 +1323,17 @@ char *wait_for_pendingtxid(struct coin_info *cp,char *specialNXTaddrs[],char *re
     return(clonestr(retbuf));
 }
 
-char *process_deposits(uint64_t *unspentp,struct multisig_addr **msigs,int32_t nummsigs,struct coin_info *cp,char *ipaddrs[],char *specialNXTaddrs[],int32_t numgateways,char *refNXTaddr,struct NXT_asset *ap,int32_t transferassets,uint64_t circulation)
+void process_deposits(cJSON **jsonp,uint64_t *unspentp,struct multisig_addr **msigs,int32_t nummsigs,struct coin_info *cp,char *ipaddrs[],char *specialNXTaddrs[],int32_t numgateways,char *refNXTaddr,struct NXT_asset *ap,int32_t transferassets,uint64_t circulation)
 {
     uint64_t pendingtxid,unspent = 0,total = 0;
     int32_t i,m,max,readyflag,tmp,nonz,numunspent;
     struct multisig_addr *msig;
     struct address_entry *entries;
     struct unspent_info *up;
-    cJSON *transferjson = 0;
-    char *transferstr=0,*retstr = 0;
+    char numstr[128];
+    cJSON *array;
     *unspentp = 0;
+    array = cJSON_CreateArray();
     if ( msigs != 0 )
     {
         readyflag = ready_to_xferassets(&pendingtxid);
@@ -1346,7 +1363,7 @@ char *process_deposits(uint64_t *unspentp,struct multisig_addr **msigs,int32_t n
                     if ( readyflag > 0 && pendingtxid == 0 )
                     {
                         tmp = numunspent;
-                        total += process_msigaddr(&numunspent,&unspent,&transferjson,transferassets,ap,msig->NXTaddr,cp,msig->multisigaddr);
+                        total += process_msigaddr(&numunspent,&unspent,&array,transferassets,ap,msig->NXTaddr,cp,msig->multisigaddr);
                         if ( numunspent > tmp )
                             nonz++;
                     }
@@ -1356,19 +1373,12 @@ char *process_deposits(uint64_t *unspentp,struct multisig_addr **msigs,int32_t n
         if ( up->num > 1 )
             sort_vps(up->vps,up->num);
         printf("max %.8f min %.8f median %.8f |unspent %.8f numunspent.%d in nonz.%d accts\n",dstr(up->maxavail),dstr(up->minavail),dstr((up->maxavail+up->minavail)/2),dstr(up->unspent),numunspent,nonz);
-        if ( transferjson != 0 )
-        {
-            transferstr = cJSON_Print(transferjson);
-            free_json(transferjson);
-            stripwhite_ns(transferstr,strlen(transferstr));
-            retstr = malloc(strlen(transferstr) + 4096);
-        } else retstr = malloc(4096);
-        sprintf(retstr,"{\"circulation\":\"%.8f\",\"unspent\":\"%.8f\",\"pendingdeposits\":\"%.8f\",\"transfers\":%s}",dstr(circulation),dstr(unspent),dstr(total),transferstr!=0?transferstr:"[]");
-        if ( transferstr != 0 )
-            free(transferstr);
     }
+    sprintf(numstr,"%.8f",dstr(circulation)), cJSON_AddItemToObject(*jsonp,"circulation",cJSON_CreateString(numstr));
+    sprintf(numstr,"%.8f",dstr(unspent)), cJSON_AddItemToObject(*jsonp,"unspent",cJSON_CreateString(numstr));
+    sprintf(numstr,"%.8f",dstr(total)), cJSON_AddItemToObject(*jsonp,"pendingdeposits",cJSON_CreateString(numstr));
+    cJSON_AddItemToObject(*jsonp,"deposits",array);
     *unspentp = unspent;
-    return(retstr);
 }
 
 uint64_t calc_circulation(int32_t height,struct NXT_asset *ap,char *specialNXTaddrs[])
@@ -1503,13 +1513,14 @@ int32_t add_destaddress(struct rawtransaction *rp,char *destaddr,uint64_t amount
     return(i);
 }
 
-int32_t process_destaddr(char *destaddrs[MAX_MULTISIG_OUTPUTS],uint64_t destamounts[MAX_MULTISIG_OUTPUTS],uint64_t redeems[MAX_MULTISIG_OUTPUTS],uint64_t *pending_withdrawp,struct coin_info *cp,uint64_t nxt64bits,struct NXT_asset *ap,char *destaddr,struct NXT_assettxid *tp,int32_t numredeems)
+int32_t process_destaddr(cJSON **arrayp,char *destaddrs[MAX_MULTISIG_OUTPUTS],uint64_t destamounts[MAX_MULTISIG_OUTPUTS],uint64_t redeems[MAX_MULTISIG_OUTPUTS],uint64_t *pending_withdrawp,struct coin_info *cp,uint64_t nxt64bits,struct NXT_asset *ap,char *destaddr,struct NXT_assettxid *tp,int32_t numredeems)
 {
     struct address_entry *entries,*entry;
     struct coin_txidind *cointp;
     struct unspent_info *up;
     int32_t j,n,createdflag;
-    //char *rawtx;
+    char numstr[128];
+    cJSON *item;
     if ( (entries= get_address_entries(&n,cp->name,destaddr)) != 0 )
     {
         for (j=0; j<n; j++)
@@ -1552,6 +1563,11 @@ int32_t process_destaddr(char *destaddrs[MAX_MULTISIG_OUTPUTS],uint64_t destamou
             {
                 up = &cp->unspent;
                 printf("numredeems.%d (%p %p) PENDING REDEEM %s %s %llu %llu %.8f %.8f | %llu\n",numredeems,up->maxvp,up->minvp,cp->name,destaddr,(long long)nxt64bits,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
+                item = cJSON_CreateObject();
+                sprintf(numstr,"%llu",(long long)tp->redeemtxid), cJSON_AddItemToObject(item,"redeemtxid",cJSON_CreateString(numstr));
+                cJSON_AddItemToObject(item,"destaddr",cJSON_CreateString(destaddr));
+                sprintf(numstr,"%.8f",dstr(tp->quantity * ap->mult)), cJSON_AddItemToObject(item,"amount",cJSON_CreateString(numstr));
+                cJSON_AddItemToArray(*arrayp,item);
                 numredeems = add_redeem(destaddrs,destamounts,redeems,pending_withdrawp,cp,ap,destaddr,tp,numredeems);
                 printf("%p numredeems.%d (%s) %.8f %llu\n",&destaddrs[numredeems-1],numredeems,destaddrs[numredeems-1],dstr(destamounts[numredeems-1]),(long long)redeems[numredeems-1]);
             }
@@ -1595,10 +1611,10 @@ char *create_batch_jsontxt(struct coin_info *cp,int *firstitemp)
     return(jsontxt);
 }
 
-char *broadcast_moneysentAM(struct coin_info *cp,int32_t height)
+uint64_t broadcast_moneysentAM(struct coin_info *cp,int32_t height)
 {
     cJSON *argjson;
-    uint64_t AMtxidbits;
+    uint64_t AMtxidbits = 0;
     int32_t i,firstitem = 0;
     char AM[4096],*jsontxt,*AMtxid = 0;
     struct json_AM *ap = (struct json_AM *)AM;
@@ -1618,56 +1634,132 @@ char *broadcast_moneysentAM(struct coin_info *cp,int32_t height)
             if ( AMtxid == 0 )
             {
                 printf("Error submitting moneysent for (%s)\n",jsontxt);
-                while ( 1 )
-                    printf("broadcast_moneysentAM: %s failed. FATAL need to manually mark transaction PAID %s JSON.(%s)\n",coinid_str(cp->coinid),cp->BATCH.W.cointxid,jsontxt), sleep(60);
+                for (i=0; i<cp->BATCH.rawtx.numredeems; i++)
+                    printf("%llu ",(long long)cp->BATCH.rawtx.redeems[i]);
+                printf("broadcast_moneysentAM: %s failed. FATAL need to manually mark transaction PAID %s JSON.(%s)\n",cp->name,cp->BATCH.W.cointxid,jsontxt), sleep(60);
             }
             else
             {
                 AMtxidbits = calc_nxt64bits(AMtxid);
-                add_pendingxfer(0,AMtxidbits);
+                free(AMtxid);
+                if ( AMtxidbits != 0 )
+                    add_pendingxfer(0,AMtxidbits);
                 argjson = cJSON_Parse(jsontxt);
                 if ( argjson != 0 )
                     update_redeembits(argjson,AMtxidbits); //update_money_sent(argjson,AMtxid,height);
-                else printf("parse error (%s)\n",jsontxt);
+                else
+                {
+                    for (i=0; i<cp->BATCH.rawtx.numredeems; i++)
+                        printf("%llu ",(long long)cp->BATCH.rawtx.redeems[i]);
+                    printf("broadcast_moneysentAM: %s failed. AMtxid.%llu FATAL need to manually mark transaction PAID %s JSON.(%s)\n",cp->name,(long long)AMtxid,cp->BATCH.W.cointxid,jsontxt);
+                    exit(-1);
+                }
             }
             free(jsontxt);
         }
         else
         {
-            printf("moneysent error creating JSON?\n");
-            while ( 1 )
-                printf("broadcast_moneysentAM: %s failed. FATAL need to manually mark transaction PAID %s JSON.(%s)\n",coinid_str(cp->coinid),cp->BATCH.W.cointxid,jsontxt), sleep(60);
+            for (i=0; i<cp->BATCH.rawtx.numredeems; i++)
+                printf("%llu ",(long long)cp->BATCH.rawtx.redeems[i]);
+            printf("broadcast_moneysentAM: %s failed. FATAL need to manually mark transaction PAID %s\n",coinid_str(cp->coinid),cp->BATCH.W.cointxid);
+            exit(-1);
         }
     }
-    return(AMtxid);
+    return(AMtxidbits);
 }
 
-int32_t sign_and_sendmoney(struct coin_info *cp,int32_t height)
+char *sign_and_sendmoney(uint64_t *AMtxidp,struct coin_info *cp,int32_t height)
 {
-    char *retstr;
+    char *retstr = 0;
+    *AMtxidp = 0;
     fprintf(stderr,"achieved consensus and sign! %s\n",cp->BATCH.rawtx.batchsigned);
     if ( (retstr= submit_withdraw(cp,&cp->BATCH,&cp->withdrawinfos[(Global_mp->gatewayid + 1) % NUM_GATEWAYS])) != 0 )
     {
         safecopy(cp->BATCH.W.cointxid,retstr,sizeof(cp->BATCH.W.cointxid));
-        broadcast_moneysentAM(cp,height);
-        free(retstr);
+        *AMtxidp = broadcast_moneysentAM(cp,height);
         //backupwallet(cp,cp->coinid);
-        return(1);
+        return(retstr);
     }
     else printf("sign_and_sendmoney: error sending rawtransaction %s\n",cp->BATCH.rawtx.batchsigned);
-    return(MGW_PENDING_WITHDRAW);
+    return(0);
 }
 
-char *process_withdraws(struct multisig_addr **msigs,int32_t nummsigs,uint64_t unspent,struct coin_info *cp,struct NXT_asset *ap,char *specialNXT,int32_t sendmoney,uint64_t circulation)
+uint64_t process_consensus(cJSON **jsonp,struct coin_info *cp,int32_t sendmoney)
+{
+    struct batch_info *otherwp;
+    int32_t i,readyflag,gatewayid,matches = 0;
+    char numstr[64],*cointxid;
+    struct rawtransaction *rp;
+    cJSON *array,*item;
+    uint64_t pendingtxid,AMtxid = 0;
+    readyflag = ready_to_xferassets(&pendingtxid);
+    printf("%s: readyflag.%d\n",cp->name,readyflag);
+    for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
+    {
+        otherwp = &cp->withdrawinfos[gatewayid];
+        if ( cp->BATCH.rawtx.batchcrc != otherwp->rawtx.batchcrc )
+        {
+            fprintf(stderr,"%08x miscompares with gatewayid.%d which has crc %08x\n",cp->BATCH.rawtx.batchcrc,gatewayid,otherwp->rawtx.batchcrc);
+        } else matches++;
+    }
+    rp = &cp->withdrawinfos[Global_mp->gatewayid].rawtx;
+    array = cJSON_CreateArray();
+    printf("numredeems.%d\n",rp->numredeems);
+    if ( rp->numredeems > 0 )
+    {
+        for (i=0; i<rp->numredeems; i++)
+        {
+            item = cJSON_CreateObject();
+            sprintf(numstr,"%llu",(long long)rp->redeems[i]), cJSON_AddItemToObject(item,"redeemtxid",cJSON_CreateString(numstr));
+            cJSON_AddItemToObject(item,"destaddr",cJSON_CreateString(rp->destaddrs[i]));
+            sprintf(numstr,"%.8f",dstr(rp->destamounts[i])), cJSON_AddItemToObject(item,"amount",cJSON_CreateString(numstr));
+            cJSON_AddItemToArray(array,item);
+        }
+    }
+    cJSON_AddItemToObject(*jsonp,"withdraws",array);
+    if ( sendmoney != 0 && matches == NUM_GATEWAYS )
+    {
+        fprintf(stderr,"all gateways match\n");
+        if ( readyflag != 0 )//Global_mp->gatewayid == 0 )
+        {
+            if ( rp->batchsigned != 0 && (cointxid= sign_and_sendmoney(&AMtxid,cp,(uint32_t)cp->RTblockheight)) != 0 )
+            {
+                cJSON_AddItemToObject(*jsonp,"batchsigned",cJSON_CreateString(rp->batchsigned));
+                cJSON_AddItemToObject(*jsonp,"cointxid",cJSON_CreateString(cointxid));
+                sprintf(numstr,"%llu",(long long)AMtxid), cJSON_AddItemToObject(*jsonp,"AMtxid",cJSON_CreateString(numstr));
+                fprintf(stderr,"done and publish coin.(%s) AM.%llu\n",cointxid,(long long)AMtxid);
+                publish_withdraw_info(cp,&cp->BATCH);
+                free(cointxid);
+            }
+            else
+            {
+                fprintf(stderr,"error signing?\n");
+                cp->BATCH.rawtx.batchcrc = 0;
+                cp->withdrawinfos[Global_mp->gatewayid].rawtx.batchcrc = 0;
+                cp->withdrawinfos[Global_mp->gatewayid].W.cointxid[0] = 0;
+            }
+        }
+    }
+    printf("last array\n");
+    array = cJSON_CreateArray();
+    for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
+        cJSON_AddItemToArray(array,cJSON_CreateNumber(cp->withdrawinfos[gatewayid].rawtx.batchcrc));
+    cJSON_AddItemToObject(*jsonp,"crcs",array);
+    cJSON_AddItemToObject(*jsonp,"numredeems",cJSON_CreateNumber(rp->numredeems));
+    sprintf(numstr,"%.8f",dstr(rp->amount)), cJSON_AddItemToObject(*jsonp,"pending_withdraw",cJSON_CreateString(numstr));
+    return(AMtxid);
+}
+
+void process_withdraws(cJSON **jsonp,struct multisig_addr **msigs,int32_t nummsigs,uint64_t unspent,struct coin_info *cp,struct NXT_asset *ap,char *specialNXT,int32_t sendmoney,uint64_t circulation)
 {
     struct NXT_assettxid *tp;
     struct rawtransaction *rp;
-    struct batch_info *otherwp;
-    int32_t i,j,numredeems,gatewayid;
+    cJSON *array;
+    int32_t i,j,numredeems;
     uint64_t destamounts[MAX_MULTISIG_OUTPUTS],redeems[MAX_MULTISIG_OUTPUTS],nxt64bits,sum,pending_withdraw = 0;
-    char withdrawaddr[64],sender[64],redeemtxid[64],*destaddrs[MAX_MULTISIG_OUTPUTS],*destaddr="",*batchsigned,*str,*retstr = 0;
+    char withdrawaddr[64],sender[64],redeemtxid[64],*destaddrs[MAX_MULTISIG_OUTPUTS],*destaddr="",*batchsigned,*str;
     if ( ap->num <= 0 )
-        return(0);
+        return;
     rp = &cp->BATCH.rawtx;
     clear_BATCH(rp);
     rp->numoutputs = init_batchoutputs(cp,rp,cp->txfee);
@@ -1676,6 +1768,7 @@ char *process_withdraws(struct multisig_addr **msigs,int32_t nummsigs,uint64_t u
     memset(destaddrs,0,sizeof(destaddrs));
     memset(destamounts,0,sizeof(destamounts));
     nxt64bits = calc_nxt64bits(specialNXT);
+    array = cJSON_CreateArray();
     for (i=0; i<ap->num; i++)
     {
         tp = ap->txids[i];
@@ -1688,7 +1781,7 @@ char *process_withdraws(struct multisig_addr **msigs,int32_t nummsigs,uint64_t u
             if ( (destaddr= calc_withdraw_addr(withdrawaddr,sender,cp,tp,ap)) != 0 && destaddr[0] != 0 && tp->AMtxidbits == 0 )
             {
                 stripwhite(destaddr,strlen(destaddr));
-                numredeems = process_destaddr(destaddrs,destamounts,redeems,&pending_withdraw,cp,nxt64bits,ap,destaddr,tp,numredeems);
+                numredeems = process_destaddr(&array,destaddrs,destamounts,redeems,&pending_withdraw,cp,nxt64bits,ap,destaddr,tp,numredeems);
                 if ( numredeems >= MAX_MULTISIG_OUTPUTS-1 )
                     break;
             }
@@ -1696,6 +1789,8 @@ char *process_withdraws(struct multisig_addr **msigs,int32_t nummsigs,uint64_t u
                 printf("%s %s %llu %s %llu %.8f %.8f | %llu\n",cp->name,destaddr,(long long)nxt64bits,str,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
         }
     }
+    cJSON_AddItemToObject(*jsonp,"redeems",array);
+    array = cJSON_CreateArray();
     if ( (int64_t)pending_withdraw >= ((5 * cp->NXTfee_equiv) - (numredeems * (cp->txfee + cp->NXTfee_equiv))) )
     {
         for (sum=j=0; j<numredeems&&rp->numoutputs<(int)(sizeof(rp->destaddrs)/sizeof(*rp->destaddrs))-1; j++)
@@ -1722,34 +1817,7 @@ char *process_withdraws(struct multisig_addr **msigs,int32_t nummsigs,uint64_t u
         {
             printf("BATCHSIGNED.(%s)\n",batchsigned);
             publish_withdraw_info(cp,&cp->BATCH);
-            for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
-            {
-                otherwp = &cp->withdrawinfos[gatewayid];
-                if ( cp->BATCH.rawtx.batchcrc != otherwp->rawtx.batchcrc )
-                {
-                    fprintf(stderr,"%08x miscompares with gatewayid.%d which has crc %08x\n",cp->BATCH.rawtx.batchcrc,gatewayid,otherwp->rawtx.batchcrc);
-                    break;
-                }
-            }
-            if ( gatewayid == NUM_GATEWAYS )
-            {
-                fprintf(stderr,"all gateways match\n");
-                if ( Global_mp->gatewayid == 0 )
-                {
-                    if ( 0 && sign_and_sendmoney(cp,(uint32_t)cp->RTblockheight) >= 0 )
-                    {
-                        fprintf(stderr,"done and publish\n");
-                        publish_withdraw_info(cp,&cp->BATCH);
-                    }
-                    else
-                    {
-                        fprintf(stderr,"error signing?\n");
-                        cp->BATCH.rawtx.batchcrc = 0;
-                        cp->withdrawinfos[0].rawtx.batchcrc = 0;
-                        cp->withdrawinfos[0].W.cointxid[0] = 0;
-                    }
-                }
-            }
+            process_consensus(jsonp,cp,sendmoney);
             free(batchsigned);
         }
     }
@@ -1759,19 +1827,21 @@ char *process_withdraws(struct multisig_addr **msigs,int32_t nummsigs,uint64_t u
             printf("%.8f is not enough to pay for MGWfees.%s %.8f for %d redeems\n",dstr(pending_withdraw),cp->name,dstr(cp->NXTfee_equiv),numredeems);
         pending_withdraw = 0;
     }
-    return(retstr);
 }
 
 // need to queue
-char *MGWdeposits(char *specialNXT,int32_t rescan,int32_t actionflag,char *coin,char *assetstr,char *NXT0,char *NXT1,char *NXT2,char *ip0,char *ip1,char *ip2,char *exclude0,char *exclude1)
+char *MGWdeposits(char *specialNXT,int32_t rescan,int32_t actionflag,char *coin,char *assetstr,char *NXT0,char *NXT1,char *NXT2,char *ip0,char *ip1,char *ip2,char *exclude0,char *exclude1,char *exclude2)
 {
     static int32_t firsttimestamp;
-    char retbuf[4096],*specialNXTaddrs[257],*ipaddrs[3],*retstr,*retstr2;
+    char retbuf[4096],batchname[512],*specialNXTaddrs[257],*ipaddrs[3],*retstr = 0;
     struct coin_info *cp;
     uint64_t pendingtxid,circulation,unspent = 0;
-    int32_t i,numgateways,createdflag,nummsigs;
+    int32_t i,numgateways,gatewayid,createdflag,nummsigs;
     struct NXT_asset *ap;
     struct multisig_addr **msigs;
+    cJSON *json = 0;
+    FILE *fp;
+    struct batch_info tmp;
     ap = get_NXTasset(&createdflag,Global_mp,assetstr);
     cp = conv_assetid(assetstr);
     if ( cp == 0 || ap == 0 )
@@ -1781,38 +1851,104 @@ char *MGWdeposits(char *specialNXT,int32_t rescan,int32_t actionflag,char *coin,
     }
     if ( firsttimestamp == 0 )
         get_NXTblock(&firsttimestamp);
-    numgateways = init_specialNXTaddrs(specialNXTaddrs,ipaddrs,specialNXT,NXT0,NXT1,NXT2,ip0,ip1,ip2,exclude0,exclude1);
-    if ( (pendingtxid= update_NXTblockchain_info(cp,specialNXTaddrs,numgateways,specialNXT)) != 0 )
-        return(wait_for_pendingtxid(cp,specialNXTaddrs,specialNXT,pendingtxid));
-    circulation = calc_circulation(0,ap,specialNXTaddrs);
-    retstr = retstr2 = 0;
-    printf("circulation %.8f\n",dstr(circulation));
-    if ( (msigs= (struct multisig_addr **)copy_all_DBentries(&nummsigs,MULTISIG_DATA)) != 0 )
+    json = cJSON_CreateObject();
+    if ( actionflag < -1 )
     {
-        printf("nummsigs.%d\n",nummsigs);
-        if ( actionflag >= 0 )
-            retstr = process_deposits(&unspent,msigs,nummsigs,cp,ipaddrs,specialNXTaddrs,numgateways,specialNXT,ap,actionflag > 0,circulation);
-        printf("actionflag.%d retstr.%p\n",actionflag,retstr);
-        if ( actionflag <= 0 )
+        for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
         {
-            if ( actionflag < 0 )
-                retstr = process_deposits(&unspent,msigs,nummsigs,cp,ipaddrs,specialNXTaddrs,numgateways,specialNXT,ap,actionflag > 0,circulation);
-            retstr2 = process_withdraws(msigs,nummsigs,unspent,cp,ap,specialNXT,actionflag < 0,circulation);
+            set_batchname(batchname,cp->name,gatewayid);
+            if ( (fp= fopen(batchname,"rb")) != 0 )
+            {
+                if ( fread(&tmp,1,sizeof(tmp),fp) == sizeof(tmp) )
+                    cp->withdrawinfos[gatewayid] = tmp;
+                fclose(fp);
+            }
         }
-        for (i=0; i<nummsigs; i++)
-            free(msigs[i]);
-        free(msigs);
+        process_consensus(&json,cp,actionflag == -3);
+    }
+    else
+    {
+        numgateways = init_specialNXTaddrs(specialNXTaddrs,ipaddrs,specialNXT,NXT0,NXT1,NXT2,ip0,ip1,ip2,exclude0,exclude1,exclude2);
+        if ( (pendingtxid= update_NXTblockchain_info(cp,specialNXTaddrs,numgateways,specialNXT)) != 0 )
+            return(wait_for_pendingtxid(cp,specialNXTaddrs,specialNXT,pendingtxid));
+        circulation = calc_circulation(0,ap,specialNXTaddrs);
+        retstr = 0;
+        printf("circulation %.8f\n",dstr(circulation));
+        if ( (msigs= (struct multisig_addr **)copy_all_DBentries(&nummsigs,MULTISIG_DATA)) != 0 )
+        {
+            printf("nummsigs.%d\n",nummsigs);
+            if ( actionflag >= 0 )
+            {
+                process_deposits(&json,&unspent,msigs,nummsigs,cp,ipaddrs,specialNXTaddrs,numgateways,specialNXT,ap,actionflag > 0,circulation);
+                retstr = cJSON_Print(json);
+                printf("actionflag.%d retstr.(%s)\n",actionflag,retstr);
+                free(retstr), retstr = 0;
+            }
+            if ( actionflag <= 0 )
+            {
+                if ( actionflag < 0 )
+                    process_deposits(&json,&unspent,msigs,nummsigs,cp,ipaddrs,specialNXTaddrs,numgateways,specialNXT,ap,actionflag > 0,circulation);
+                process_withdraws(&json,msigs,nummsigs,unspent,cp,ap,specialNXT,actionflag < 0,circulation);
+            }
+            printf("json.%p\n",json);
+            for (i=0; i<nummsigs; i++)
+                free(msigs[i]);
+            free(msigs);
+        }
+    }
+    if ( json != 0 )
+    {
+        retstr = cJSON_Print(json);
+        stripwhite_ns(retstr,strlen(retstr));
+        strcat(retstr,"\n");
+        free_json(json);
     }
     if ( retstr == 0 )
         retstr = clonestr("{}");
-    else if ( retstr2 == 0 )
-        retstr2 = clonestr("{}");
-    sprintf(retbuf,"[%s, %s]\n",retstr,retstr2);
-    free(retstr);
-    free(retstr2);
-    retstr = clonestr(retbuf);
     printf("MGWDEPOSITS.(%s)\n",retstr);
     return(retstr);
+}
+
+int32_t establish_connection(char *ipaddr,char *NXTACCTSECRET,uint32_t timeout)
+{
+    uint32_t i,start;
+    struct pserver_info *pserver;
+    pserver = get_pserver(0,ipaddr,0,0);
+    start = (uint32_t)time(NULL);
+    timeout += start;
+    while ( time(NULL) < timeout )
+    {
+        for (i=0; i<7; i++)
+        {
+            send_kademlia_cmd(0,pserver,"ping",NXTACCTSECRET,0,0);
+            sleep(1);
+            if ( pserver->lastcontact > timeout )
+                return(1);
+            fprintf(stderr,"%u ",pserver->lastcontact);
+        }
+        fprintf(stderr,"| vs timeout.%u\n",timeout);
+    }
+    return(0);
+}
+
+void establish_connections(char *myipaddr,char *NXTACCTSECRET)
+{
+    char ipaddr[64];
+    int32_t i,n,m = 0;
+    cJSON *array;
+    array = cJSON_GetObjectItem(MGWconf,"whitelist");
+    if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        while ( m < n-1 )
+        {
+            for (i=m=0; i<n; i++)
+            {
+                copy_cJSON(ipaddr,cJSON_GetArrayItem(array,i));
+                if ( strcmp(ipaddr,myipaddr) != 0 )
+                    m += establish_connection(ipaddr,NXTACCTSECRET,15);
+            }
+        }
+    }
 }
 #endif
 

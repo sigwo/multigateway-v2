@@ -89,6 +89,20 @@ void send_async_message(char *msg)
     uv_async_send(&Tasks_async);
 }*/
 
+void handler_gotfile(struct transfer_args *args)
+{
+    FILE *fp;
+    char buf[512];
+    set_handler_fname(buf,args->handler,args->name);
+    if ( (fp= fopen(buf,"wb")) != 0 )
+    {
+        fwrite(args->data,1,args->totallen,fp);
+        fclose(fp);
+    }
+    if ( strcmp(args->handler,"mgw") == 0 )
+        MGW_handler(args);
+}
+
 char *get_public_srvacctsecret()
 {
     struct coin_info *cp = get_coin_info("BTCD");
@@ -145,7 +159,7 @@ void every_minute(int32_t counter)
                 if ( gen_pingstr(_cmd,1) > 0 )
                 {
                     len = construct_tokenized_req((char *)finalbuf,_cmd,cp->srvNXTACCTSECRET);
-                    send_packet(nodes[i],0,finalbuf,len);
+                    send_packet(!prevent_queueing("ping"),nodes[i],0,finalbuf,len);
                     pserver = get_pserver(0,ipaddr,0,0);
                     send_kademlia_cmd(0,pserver,"ping",cp->srvNXTACCTSECRET,0,0);
                     p2p_publishpacket(pserver,0);
@@ -338,8 +352,8 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
     mp->pollseconds = POLL_SECONDS;
     if ( portable_thread_create((void *)process_hashtablequeues,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
-    mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,(void *)on_udprecv);
     myipaddr = init_MGWconf(JSON_or_fname,myipaddr);
+    mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,(void *)on_udprecv);
     if ( 0 )
     {
         uint32_t before,after;
@@ -511,6 +525,8 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
     struct nodestats *stats;
     uint64_t txid = 0;
     int32_t port;
+    if ( SUPERNET_PORT != _SUPERNET_PORT )
+        return(0);
     if ( Debuglevel > 1 )
         printf("call_SuperNET_broadcast.%p %p len.%d\n",pserver,msg,len);
     txid = calc_txid((uint8_t *)msg,(int32_t)strlen(msg));
@@ -578,9 +594,11 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
     int32_t len,createdflag,valid;
     unsigned char packet[2*MAX_JSON_FIELD];
     char ipaddr[64],txidstr[64],retjsonstr[2*MAX_JSON_FIELD],verifiedNXTaddr[64],*cmdstr,*retstr;
-    if ( Debuglevel > 2 )
-        printf("gotpacket.(%s) duration.%d from (%s)\n",msg,duration,ip_port);
+    if ( SUPERNET_PORT != _SUPERNET_PORT )
+        return(clonestr("{\"error\":private SuperNET}"));
     strcpy(retjsonstr,"{\"result\":null}");
+        if ( Debuglevel > 2 )
+        printf("gotpacket.(%s) duration.%d from (%s)\n",msg,duration,ip_port);
     if ( Finished_loading == 0 )
     {
         if ( is_hexstr(msg) == 0 )
@@ -704,6 +722,8 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         exit(-1);
     }
     Historical_done = 1;
+    if ( IS_LIBTEST > 1 )
+        establish_connections(cp->myipaddr,cp->srvNXTACCTSECRET);
     //if ( IS_LIBTEST > 1 && Global_mp->gatewayid >= 0 )
     //    register_variant_handler(MULTIGATEWAY_VARIANT,process_directnet_syncwithdraw,MULTIGATEWAY_SYNCWITHDRAW,sizeof(struct batch_info),sizeof(struct batch_info),MGW_whitelist);
     Finished_init = 1;

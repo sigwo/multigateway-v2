@@ -59,6 +59,38 @@ struct udp_queuecmd
     uint32_t previpbits,valid;
 };
 
+int32_t prevent_queueing(char *cmd)
+{
+    if ( strcmp("ping",cmd) == 0 || strcmp("pong",cmd) == 0 || strcmp("getdb",cmd) == 0 )
+        return(1);
+    return(0);
+}
+
+void set_handler_fname(char *fname,char *handler,char *name)
+{
+    sprintf(fname,"archive/%s_%s",name,handler);
+}
+
+int32_t load_handler_fname(void *dest,int32_t len,char *handler,char *name)
+{
+    FILE *fp;
+    int32_t retval = -1;
+    char fname[1024];
+    set_handler_fname(fname,handler,name);
+    if ( (fp= fopen(fname,"rb")) != 0 )
+    {
+        fseek(fp,0,SEEK_END);
+        if ( ftell(fp) == len )
+        {
+            rewind(fp);
+            if ( fread(dest,1,len,fp) == len )
+                retval = len;
+        }
+        fclose(fp);
+    }
+    return(retval);
+}
+
 void update_nodestats_data(struct nodestats *stats)
 {
     char NXTaddr[64],ipaddr[64];
@@ -153,6 +185,8 @@ int32_t portable_udpwrite(int32_t queueflag,const struct sockaddr *addr,uv_udp_t
 {
     int32_t r=0;
     struct write_req_t *wr;
+    if ( IS_LIBTEST == 2 )
+        queueflag = 0;
     wr = alloc_wr(buf,len,allocflag);
     ASSERT(wr != NULL);
     wr->addr = *addr;
@@ -182,7 +216,8 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
         if ( notlocalip(ipaddr) == 0 )
             strcpy(ipaddr,cp->myipaddr);
         pserver = get_pserver(&createdflag,ipaddr,supernet_port,0);
-        if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
+        pserver->lastcontact = (uint32_t)time(NULL);
+        if ( pserver->nxt64bits != 0 && (stats= get_nodestats(pserver->nxt64bits)) != 0 )
         {
             stats->numrecv++;
             stats->recvmilli = milliseconds();
@@ -301,10 +336,10 @@ int32_t is_encrypted_packet(unsigned char *tx,int32_t len)
     return(packet_crc == crc);
 }
 
-void send_packet(struct nodestats *peerstats,struct sockaddr *destaddr,unsigned char *finalbuf,int32_t len)
+void send_packet(int32_t queueflag,struct nodestats *peerstats,struct sockaddr *destaddr,unsigned char *finalbuf,int32_t len)
 {
     char ipaddr[64];
-    int32_t port,queueflag,p2pflag = 0;
+    int32_t port,p2pflag = 0;
     struct nodestats *stats;
     struct pserver_info *pserver = 0;
     if ( destaddr != 0 )
@@ -319,7 +354,6 @@ void send_packet(struct nodestats *peerstats,struct sockaddr *destaddr,unsigned 
                 port = SUPERNET_PORT;
                 uv_ip4_addr(ipaddr,port,(struct sockaddr_in *)destaddr);
             }
-            queueflag = 1;
             if ( Debuglevel > 1 )
                 printf("portable_udpwrite Q.%d %d to (%s:%d)\n",queueflag,len,ipaddr,port);
             portable_udpwrite(queueflag,destaddr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
@@ -359,7 +393,7 @@ void send_packet(struct nodestats *peerstats,struct sockaddr *destaddr,unsigned 
     }
 }
 
-void route_packet(int32_t encrypted,struct sockaddr *destaddr,char *hopNXTaddr,unsigned char *outbuf,int32_t len)
+void route_packet(int32_t queueflag,int32_t encrypted,struct sockaddr *destaddr,char *hopNXTaddr,unsigned char *outbuf,int32_t len)
 {
     unsigned char finalbuf[4096];
     char destip[64];
@@ -388,7 +422,7 @@ void route_packet(int32_t encrypted,struct sockaddr *destaddr,char *hopNXTaddr,u
         port = extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)destaddr);
         if ( Debuglevel > 0 )
             printf("DIRECT send encrypted.%d to (%s/%d) finalbuf.%d\n",encrypted,destip,port,len);
-        send_packet(stats,destaddr,outbuf,len);
+        send_packet(queueflag,stats,destaddr,outbuf,len);
     }
     else if ( stats != 0 )
     {
@@ -398,13 +432,13 @@ void route_packet(int32_t encrypted,struct sockaddr *destaddr,char *hopNXTaddr,u
             if ( Debuglevel > 0 )
                 printf("DIRECT udpsend {%s} to %s/%d finalbuf.%d\n",hopNXTaddr,destip,stats->supernet_port,len);
             uv_ip4_addr(destip,stats->supernet_port!=0?stats->supernet_port:SUPERNET_PORT,&addr);
-            send_packet(stats,(struct sockaddr *)&addr,finalbuf,len);
+            send_packet(queueflag,stats,(struct sockaddr *)&addr,finalbuf,len);
         }
         else { printf("cant route packet.%d without IP address to %llu\n",len,(long long)stats->nxt64bits); return; }
     } else { printf("cant route packet.%d without nodestats\n",len); return; }
 }
 
-uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *origargstr,int32_t len,unsigned char *data,int32_t datalen)
+uint64_t directsend_packet(int32_t queueflag,int32_t encrypted,struct pserver_info *pserver,char *origargstr,int32_t len,unsigned char *data,int32_t datalen)
 {
     static unsigned char zeropubkey[crypto_box_PUBLICKEYBYTES];
     uint64_t txid = 0;
@@ -429,13 +463,13 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
     txid = calc_txid((uint8_t *)origargstr,len);
     if ( encrypted != 0 && stats != 0 && memcmp(zeropubkey,stats->pubkey,sizeof(zeropubkey)) != 0 )
     {
-        char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int32_t msglen,char *destNXTaddr,unsigned char *data,int32_t datalen);
+        char *sendmessage(int32_t queueflag,char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int32_t msglen,char *destNXTaddr,unsigned char *data,int32_t datalen);
         char hopNXTaddr[64],destNXTaddr[64],*retstr;
         expand_nxt64bits(destNXTaddr,stats->nxt64bits);
         L = (encrypted>1 ? MAX(encrypted,Global_mp->Lfactor) : 0);
         if ( Debuglevel > 2 )
             fprintf(stderr,"direct send via sendmessage (%s) %p %d\n",origargstr,data,datalen);
-        retstr = sendmessage(hopNXTaddr,L,cp->srvNXTADDR,origargstr,len,destNXTaddr,data,datalen);
+        retstr = sendmessage(queueflag,hopNXTaddr,L,cp->srvNXTADDR,origargstr,len,destNXTaddr,data,datalen);
         if ( retstr != 0 )
         {
             if ( Debuglevel > 2 )
@@ -460,7 +494,7 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
         {
             if ( Debuglevel > 0 )
                 fprintf(stderr,"route_packet encrypted.%d\n",encrypted);
-            route_packet(encrypted,&destaddr,0,outbuf,len);
+            route_packet(queueflag,encrypted,&destaddr,0,outbuf,len);
             //printf("got route_packet txid.%llu\n",(long long)txid);
         }
         else printf("directsend_packet: illegal len.%d\n",len);
@@ -496,7 +530,7 @@ uint64_t p2p_publishpacket(struct pserver_info *pserver,char *cmd)
     return(0);
 }
 
-struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *dest,char *name,uint32_t totallen,uint32_t blocksize,uint32_t totalcrc)
+struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *dest,char *name,uint32_t totallen,uint32_t blocksize,uint32_t totalcrc,char *handler)
 {
     uint64_t txid;
     char hashstr[4096];
@@ -513,6 +547,7 @@ struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *d
         safecopy(args->sender,sender,sizeof(args->sender));
         safecopy(args->dest,dest,sizeof(args->dest));
         safecopy(args->name,name,sizeof(args->name));
+        safecopy(args->handler,handler,sizeof(args->handler));
         args->totallen = totallen;
         args->blocksize = blocksize;
         args->totalcrc = totalcrc;
@@ -579,9 +614,9 @@ void purge_transfer_args(struct transfer_args *args)
         free(args->timestamps), args->timestamps = 0;
 }
 
-char *sendfrag(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCTSECRET,char *dest,char *name,uint32_t fragi,uint32_t numfrags,uint32_t totallen,uint32_t blocksize,uint32_t totalcrc,uint32_t checkcrc,char *datastr)
+char *sendfrag(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCTSECRET,char *dest,char *name,uint32_t fragi,uint32_t numfrags,uint32_t totallen,uint32_t blocksize,uint32_t totalcrc,uint32_t checkcrc,char *datastr,char *handler)
 {
-    char cmdstr[4096],_tokbuf[4096];
+    char cmdstr[4096],_tokbuf[4096],*cmd;
     struct pserver_info *pserver;
     struct transfer_args *args;
     struct coin_info *cp = get_coin_info("BTCD");
@@ -598,46 +633,39 @@ char *sendfrag(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCT
     data = malloc(datalen);
     datalen = decode_hex(data,datalen,datastr);
     datacrc = _crc32(0,data,datalen);
-    sprintf(cmdstr,"{\"NXT\":\"%s\",\"pubkey\":\"%s\",\"ipaddr\":\"%s\",\"name\":\"%s\",\"time\":%ld,\"fragi\":%u,\"numfrags\":%u,\"totallen\":%u,\"blocksize\":%u,\"totalcrc\":%u,\"datacrc\":%u",verifiedNXTaddr,Global_mp->pubkeystr,cp->myipaddr,name,(long)time(NULL),fragi,numfrags,totallen,blocksize,totalcrc,datacrc);
+    sprintf(cmdstr,"{\"NXT\":\"%s\",\"pubkey\":\"%s\",\"ipaddr\":\"%s\",\"name\":\"%s\",\"time\":%ld,\"fragi\":%u,\"numfrags\":%u,\"totallen\":%u,\"blocksize\":%u,\"totalcrc\":%u,\"datacrc\":%u,\"handler\":\"%s\"",verifiedNXTaddr,Global_mp->pubkeystr,cp->myipaddr,name,(long)time(NULL),fragi,numfrags,totallen,blocksize,totalcrc,datacrc,handler);
     if ( previpaddr == 0 || previpaddr[0] == 0 )
     {
+        cmd = "sendfrag";
         pserver = get_pserver(0,dest,0,0);
-        sprintf(cmdstr+strlen(cmdstr),",\"requestType\":\"sendfrag\",\"data\":%d}",datalen);
+        sprintf(cmdstr+strlen(cmdstr),",\"requestType\":\"%s\",\"data\":%d}",cmd,datalen);
     }
     else
     {
+        cmd = "gotfrag";
         pserver = get_pserver(0,previpaddr,0,0);
         if ( checkcrc != datacrc )
             strcat(cmdstr,",\"error\":\"crcerror\"");
         else
         {
-            args = create_transfer_args(previpaddr,sender,dest,name,totallen,blocksize,totalcrc);
+            args = create_transfer_args(previpaddr,sender,dest,name,totallen,blocksize,totalcrc,handler);
             memcpy(args->data + fragi*args->blocksize,data,datalen);
             if ( (count= update_transfer_args(args,fragi,numfrags,totalcrc,datacrc,data,datalen)) == args->numblocks )
             {
                 checkcrc = _crc32(0,args->data,args->totallen);
                 printf("completed.%d (%s) totallen.%d to (%s) checkcrc.%u vs totalcrc.%u\n",count,args->name,args->totallen,dest,checkcrc,totalcrc);
                 if ( checkcrc == args->totalcrc )
-                {
-                    FILE *fp;
-                    char buf[512];
-                    sprintf(buf,"archive/%s",args->name);
-                    if ( (fp= fopen(buf,"wb")) != 0 )
-                    {
-                        fwrite(args->data,1,args->totallen,fp);
-                        fclose(fp);
-                    }
-                }
+                    handler_gotfile(args);
                 args->completed = 1;
                 purge_transfer_args(args);
             }
         }
         free(data);
         data = 0;
-        sprintf(cmdstr+strlen(cmdstr),",\"requestType\":\"gotfrag\",\"count\":\"%d\",\"checkcrc\":%u}",count,checkcrc);
+        sprintf(cmdstr+strlen(cmdstr),",\"requestType\":\"%s\",\"count\":\"%d\",\"checkcrc\":%u}",cmd,count,checkcrc);
     }
     len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
-    txid = directsend_packet(1,pserver,_tokbuf,len,data,datalen);
+    txid = directsend_packet(!prevent_queueing(cmd),1,pserver,_tokbuf,len,data,datalen);
     if ( Debuglevel > 2 )
         printf("send back (%s) len.%d datalen.%d\n",cmdstr,len,datalen);
     if ( data != 0 )
@@ -650,24 +678,24 @@ int32_t Do_transfers(void *_args,int32_t argsize)
     struct transfer_args *args = *(struct transfer_args **)_args;
     char datastr[4096],*retstr;
     struct coin_info *cp = get_coin_info("BTCD");
-    int32_t i,remains,num,retval = -1,finished = 0;
+    int32_t i,remains,num,finished,retval = -1;
     uint32_t now = (uint32_t)time(NULL);
     //printf("Do_transfers.args.%p\n",args);
     if ( cp != 0 )
     {
         retval = 0;
-        num = 0;
+        num = finished = 0;
         remains = args->totallen;
         for (i=0; i<args->numblocks; i++)
         {
-            if ( Debuglevel > 1 )
-                printf("crc.(%u vs %u) ",args->ackcrcs[i],args->crcs[i]);
+            //if ( Debuglevel > 1 )
+           //     printf("crc[%d].(%u vs %u).%d ",i,args->ackcrcs[i],args->crcs[i],args->ackcrcs[i] != args->crcs[i]);
             if ( args->ackcrcs[i] != args->crcs[i] )
             {
-                if ( (now - args->timestamps[i]) > 1 )
+                if ( num < 1 && (now - args->timestamps[i]) > 1 )
                 {
                     init_hexbytes_noT(datastr,args->data + i*args->blocksize,(remains < args->blocksize) ? remains : args->blocksize);
-                    retstr = sendfrag(0,cp->srvNXTADDR,cp->srvNXTADDR,cp->srvNXTACCTSECRET,args->dest,args->name,i,args->numblocks,args->totallen,args->blocksize,args->totalcrc,args->crcs[i],datastr);
+                    retstr = sendfrag(0,cp->srvNXTADDR,cp->srvNXTADDR,cp->srvNXTACCTSECRET,args->dest,args->name,i,args->numblocks,args->totallen,args->blocksize,args->totalcrc,args->crcs[i],datastr,args->handler);
                     num++;
                     if ( retstr != 0 )
                         free(retstr);
@@ -675,18 +703,15 @@ int32_t Do_transfers(void *_args,int32_t argsize)
                 }
             } else finished++;
             remains -= args->blocksize;
-            //if ( num > 16 )
-                break;
         }
         if ( finished == args->numblocks )
             retval = -1;
         if ( Debuglevel > 1 )
-            printf("finished %d of %d len.%d | %s %u to %s\n",finished,args->numblocks,args->totallen,args->name,args->totalcrc,args->dest);
+            printf("numsent.%d finished %d of %d len.%d | %s %u to %s\n",num,finished,args->numblocks,args->totallen,args->name,args->totalcrc,args->dest);
     }
     if ( args->timeout != 0 && now > args->timeout )
     {
         printf("TIMEOUT %u for %s %u len.%d to %s\n",args->timeout,args->name,args->totalcrc,args->totallen,args->dest);
-        args->completed = 1;
         retval = -1;
     }
     if ( retval < 0 )
@@ -697,7 +722,7 @@ int32_t Do_transfers(void *_args,int32_t argsize)
     return(retval);
 }
 
-char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,char *src,char *name,uint32_t fragi,uint32_t numfrags,uint32_t totallen,uint32_t blocksize,uint32_t totalcrc,uint32_t datacrc,int32_t count)
+char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,char *src,char *name,uint32_t fragi,uint32_t numfrags,uint32_t totallen,uint32_t blocksize,uint32_t totalcrc,uint32_t datacrc,int32_t count,char *handler)
 {
     struct transfer_args *args;
     char cmdstr[4096];
@@ -705,13 +730,13 @@ char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,ch
         blocksize = 512;
     if ( totallen == 0 )
         totallen = numfrags * blocksize;
-    sprintf(cmdstr,"{\"requestType\":\"gotfrag\",\"sender\":\"%s\",\"src\":\"%s\",\"fragi\":%u,\"numfrags\":%u,\"totallen\":%u,\"blocksize\":%u,\"totalcrc\":%u,\"datacrc\":%u,\"count\":%d}",sender,src,fragi,numfrags,totallen,blocksize,totalcrc,datacrc,count);
-    args = create_transfer_args(previpaddr,NXTaddr,src,name,totallen,blocksize,totalcrc);
+    sprintf(cmdstr,"{\"requestType\":\"gotfrag\",\"sender\":\"%s\",\"ipaddr\":\"%s\",\"fragi\":%u,\"numfrags\":%u,\"totallen\":%u,\"blocksize\":%u,\"totalcrc\":%u,\"datacrc\":%u,\"count\":%d,\"handler\":\"%s\"}",sender,src,fragi,numfrags,totallen,blocksize,totalcrc,datacrc,count,handler);
+    args = create_transfer_args(previpaddr,NXTaddr,src,name,totallen,blocksize,totalcrc,handler);
     update_transfer_args(args,fragi,numfrags,totalcrc,datacrc,0,0);
     return(clonestr(cmdstr));
 }
 
-char *start_transfer(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCTSECRET,char *dest,char *name,uint8_t *data,int32_t totallen,int32_t timeout)
+char *start_transfer(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCTSECRET,char *dest,char *name,uint8_t *data,int32_t totallen,int32_t timeout,char *handler)
 {
     static char *buf;
     static int64_t allocsize=0;
@@ -726,7 +751,7 @@ char *start_transfer(char *previpaddr,char *sender,char *verifiedNXTaddr,char *N
     if ( data != 0 && totallen != 0 )
     {
         totalcrc = _crc32(0,data,totallen);
-        args = create_transfer_args(previpaddr,verifiedNXTaddr,dest,name,totallen,blocksize,totalcrc);
+        args = create_transfer_args(previpaddr,verifiedNXTaddr,dest,name,totallen,blocksize,totalcrc,handler);
         if ( timeout != 0 )
             args->timeout = (uint32_t)time(NULL) + timeout;
         printf("start_transfer.args.%p (%s) timeout.%u\n",args,verifiedNXTaddr,args->timeout);
@@ -736,7 +761,7 @@ char *start_transfer(char *previpaddr,char *sender,char *verifiedNXTaddr,char *N
         for (i=0; i<args->numblocks; i++)
         {
             args->crcs[i] = _crc32(0,data + i*blocksize,(remains < blocksize) ? remains : blocksize);
-            printf("CRC[%d] <- %u offset %d len.%d\n",i,args->crcs[i],i*blocksize,(remains < blocksize) ? remains : blocksize);
+            //printf("CRC[%d] <- %u offset %d len.%d\n",i,args->crcs[i],i*blocksize,(remains < blocksize) ? remains : blocksize);
             remains -= blocksize;
         }
         start_task(Do_transfers,"transfer",100000,(void *)&args,sizeof(args));
