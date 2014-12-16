@@ -124,13 +124,14 @@ cJSON *create_vins_json_params(char **localcoinaddrs,struct coin_info *cp,struct
             free_json(array);
             return(0);
         }
+        printf("vp.%p txid.(%s).%d %s %.8f\n",vp,vp->txid,vp->entry.v,vp->coinaddr,dstr(vp->value));
         json = cJSON_CreateObject();
         cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txid));
         cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(vp->entry.v));
         cJSON_AddItemToObject(json,"scriptPubKey",cJSON_CreateString(vp->script));
-        if ( (ret= map_msigaddr(redeemScript,cp,normaladdr,rp->inputs[i]->coinaddr)) >= 0 )
+        if ( (ret= map_msigaddr(redeemScript,cp,normaladdr,vp->coinaddr)) >= 0 )
             cJSON_AddItemToObject(json,"redeemScript",cJSON_CreateString(redeemScript));
-        else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript,normaladdr,rp->inputs[i]->coinaddr);
+        else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript,normaladdr,vp->coinaddr);
         if ( localcoinaddrs != 0 )
             localcoinaddrs[i] = vp->coinaddr;
         cJSON_AddItemToArray(array,json);
@@ -739,10 +740,16 @@ int64_t calc_batchinputs(struct multisig_addr **msigs,int32_t nummsigs,struct co
         if ( vp == 0 )
             continue;
         sum += vp->value;
-        fprintf(stderr,"%p %s input.%d value %.8f\n",vp,vp->coinaddr,rp->numinputs,dstr(vp->value));
-        rp->inputs[rp->numinputs++] = (sum < (amount + cp->txfee)) ? vp : up->vps[up->num-1];
-        if ( sum >= (amount + cp->txfee) && rp->numinputs > 1 )
+        fprintf(stderr,"%p (%s).%d %s input.%d value %.8f | sum %.8f amount %.8f\n",vp,vp->txid,vp->entry.v,vp->coinaddr,rp->numinputs,dstr(vp->value),dstr(sum),dstr(amount));
+        rp->inputs[rp->numinputs++] = vp;
+        if ( sum >= (amount + cp->txfee) )
         {
+            if ( (vp= up->vps[up->num - 1]) != 0 )
+            {
+                sum += vp->value;
+                rp->inputs[rp->numinputs++] = vp;
+                fprintf(stderr,"CABOOSE %p (%s).%d %s input.%d value %.8f | sum %.8f amount %.8f\n",vp,vp->txid,vp->entry.v,vp->coinaddr,rp->numinputs,dstr(vp->value),dstr(sum),dstr(amount));
+            }
             rp->amount = amount;
             rp->change = (sum - amount - cp->txfee);
             rp->inputsum = sum;
@@ -763,7 +770,7 @@ int32_t init_batchoutputs(struct coin_info *cp,struct rawtransaction *rp,uint64_
     return(1);
 }
 
-struct rawoutput_entry { char destaddr[MAX_COINADDR_LEN]; double amount; };
+struct rawoutput_entry { char destaddr[MAX_COINADDR_LEN]; uint64_t redeemtxid; double amount; };
 void sort_rawoutputs(struct rawtransaction *rp)
 {
     struct rawoutput_entry sortbuf[MAX_MULTISIG_OUTPUTS+MAX_MULTISIG_INPUTS];
@@ -775,6 +782,7 @@ void sort_rawoutputs(struct rawtransaction *rp)
         for (i=1; i<rp->numoutputs; i++)
         {
             sortbuf[i-1].amount = rp->destamounts[i];
+            sortbuf[i-1].redeemtxid = rp->redeems[i];
             strcpy(sortbuf[i-1].destaddr,rp->destaddrs[i]);
             //fprintf(stderr,"%d of %d: %s %.8f\n",i-1,rp->numoutputs,sortbuf[i-1].destaddr,dstr(sortbuf[i-1].amount));
         }
@@ -783,6 +791,7 @@ void sort_rawoutputs(struct rawtransaction *rp)
         for (i=0; i<rp->numoutputs-1; i++)
         {
             rp->destamounts[i+1] = sortbuf[i].amount;
+            rp->redeems[i+1] = sortbuf[i].redeemtxid;
             strcpy(rp->destaddrs[i+1],sortbuf[i].destaddr);
             //fprintf(stderr,"%d of %d: %s %.8f\n",i,rp->numoutputs-1,sortbuf[i].destaddr,dstr(sortbuf[i].amount));
         }
