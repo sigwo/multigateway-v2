@@ -523,7 +523,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
     struct nodestats *stats;
     uint64_t txid = 0;
     int32_t port;
-    if ( SUPERNET_PORT != _SUPERNET_PORT )
+    if ( 1 || SUPERNET_PORT != _SUPERNET_PORT )
         return(0);
     if ( Debuglevel > 1 )
         printf("call_SuperNET_broadcast.%p %p len.%d\n",pserver,msg,len);
