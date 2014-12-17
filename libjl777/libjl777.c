@@ -209,7 +209,8 @@ void SuperNET_idler(uv_idle_t *handle)
             {
                 //queue_enqueue(&sendQ,wr);
                 process_sendQ_item(wr);
-                printf("SuperNET_idler: reached firstwr.%p\n",firstwr);
+                if ( Debuglevel > 2 )
+                    printf("SuperNET_idler: reached firstwr.%p\n",firstwr);
                 break;
             }
             if ( wr->queuetime > lastattempt )
@@ -222,7 +223,7 @@ void SuperNET_idler(uv_idle_t *handle)
                 firstwr = wr;
             queue_enqueue(&sendQ,wr);
         }
-        if ( queue_size(&sendQ) != 0 )
+        if ( Debuglevel > 2 && queue_size(&sendQ) != 0 )
             printf("sendQ size.%d\n",queue_size(&sendQ));
         flag = 1;
         while ( flag != 0 )
