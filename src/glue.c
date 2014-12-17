@@ -4,6 +4,7 @@
 #include <pthread.h>
 void *poll_for_broadcasts(void *args);
 extern int32_t SuperNET_retval,did_SuperNET_init;
+char SuperNET_url[512];
 
 void *portable_thread_create(void *funcp,void *argp)
 {
@@ -21,7 +22,7 @@ void *_launch_SuperNET(void *_myip)
     char *myip = _myip;
     FILE *fp;
     char cmd[128];
-    int32_t retval;
+    int32_t retval,port,usessl;
     void *processptr = 0;
     system("rm horrible.hack");
     sprintf(cmd,"./SuperNET %s &",myip);
@@ -32,11 +33,23 @@ void *_launch_SuperNET(void *_myip)
     if ( fread(&retval,1,sizeof(retval),fp) != sizeof(retval) )
         retval = -2;
     fclose(fp);
+    if ( retval > 0 )
+    {
+        usessl = (retval & 1);
+        port = (retval >> 1);
+        if ( port < (1 << 16) )
+        {
+            sprintf(SuperNET_url,"http%s://127.0.0.1:%d",port,usessl==0?"":"s");
+            retval = 0;
+        }
+        else retval = -3;
+    }
     switch ( retval )
     {
         case 0: printf("SuperNET file found!\n"); break;
         case -1: printf("SuperNET file NOT found. It must be in the same directory as SuperNET\n"); break;
         case -2: printf("handshake file error\n"); break;
+        case -3: printf("illegal supernet port.%d usessl.%d\n",port,usessl); break;
     }
     
     if ( retval == 0 )

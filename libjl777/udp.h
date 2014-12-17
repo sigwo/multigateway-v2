@@ -691,12 +691,12 @@ char *sendfrag(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCT
                 if ( checkcrc == args->totalcrc )
                     handler_gotfile(args);
                 args->completed = 1;
-                purge_transfer_args(args);
+                //purge_transfer_args(args);
             }
-        }
+        } args = 0;
         free(data);
         data = 0;
-        sprintf(cmdstr+strlen(cmdstr),",\"requestType\":\"%s\",\"count\":\"%d\",\"checkcrc\":%u}",cmd,count,checkcrc);
+        sprintf(cmdstr+strlen(cmdstr),",\"requestType\":\"%s\",\"count\":\"%d\",\"checkcrc\":%u,\"ptr\":\"%p\"}",cmd,count,checkcrc,args);
     }
     len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
     txid = directsend_packet(!prevent_queueing(cmd),1,pserver,_tokbuf,len,data,datalen);
@@ -714,7 +714,7 @@ int32_t Do_transfers(void *_args,int32_t argsize)
     struct coin_info *cp = get_coin_info("BTCD");
     int32_t i,remains,num,finished,retval = -1;
     uint32_t now = (uint32_t)time(NULL);
-    //printf("Do_transfers.args.%p\n",args);
+    printf("Do_transfers.args.%p\n",args);
     if ( cp != 0 )
     {
         retval = 0;
@@ -751,7 +751,7 @@ int32_t Do_transfers(void *_args,int32_t argsize)
     if ( retval < 0 )
     {
         args->completed = 1;
-        purge_transfer_args(args);
+        //purge_transfer_args(args);
     }
     return(retval);
 }
