@@ -23,7 +23,7 @@
 #define PEER_TIMEOUT 0x40
 #define PEER_FINISHED 0x80
 #define PEER_EXPIRATION (60 * 1000.)
-
+#define MAX_UDPQUEUE_MILLIS 33
 
 #define ALLOCWR_DONTFREE 0
 #define ALLOCWR_ALLOCFREE 1
@@ -48,7 +48,8 @@ struct write_req_t
     struct sockaddr addr;
     uv_udp_t *udp;
     uv_buf_t buf;
-    int32_t allocflag,queuetime;
+    int32_t allocflag,isbridge;
+    float queuetime;
 };
 
 struct udp_entry
@@ -159,58 +160,6 @@ void after_write(uv_write_t *req,int status)
     fprintf(stderr, "uv_write error: %d %s\n",status,uv_err_name(status));
 }
 
-int32_t process_sendQ_item(struct write_req_t *wr)
-{
-    char ipaddr[64];
-    struct coin_info *cp = get_coin_info("BTCD");
-    struct nodestats *stats;
-    struct pserver_info *pserver;
-    int32_t r,supernet_port,createdflag;
-    {
-        supernet_port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)&wr->addr);
-        pserver = get_pserver(&createdflag,ipaddr,0,0);
-        if ( 1 && (pserver->nxt64bits == cp->privatebits || pserver->nxt64bits == cp->srvpubnxtbits) )
-        {
-            //printf("(%s/%d) no point to send yourself dest.%llu pub.%llu srvpub.%llu\n",ipaddr,supernet_port,(long long)pserver->nxt64bits,(long long)cp->pubnxtbits,(long long)cp->srvpubnxtbits);
-            //return(0);
-            strcpy(ipaddr,"127.0.0.1");
-            uv_ip4_addr(ipaddr,supernet_port,(struct sockaddr_in *)&wr->addr);
-        }
-        if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
-        {
-            stats->numsent++;
-            stats->sentmilli = milliseconds();
-        }
-        //for (i=0; i<16; i++)
-        //    printf("%02x ",((unsigned char *)buf)[i]);
-        if ( Debuglevel > 1 )
-            printf("uv_udp_send %ld bytes to %s/%d crx.%x\n",wr->buf.len,ipaddr,supernet_port,_crc32(0,wr->buf.base,wr->buf.len));
-    }
-    r = uv_udp_send(&wr->U.ureq,wr->udp,&wr->buf,1,&wr->addr,(uv_udp_send_cb)after_write);
-    if ( r != 0 )
-        printf("uv_udp_send error.%d %s wr.%p wreq.%p %p len.%ld\n",r,uv_err_name(r),wr,&wr->U.ureq,wr->buf.base,wr->buf.len);
-    return(r);
-}
-
-int32_t portable_udpwrite(int32_t queueflag,const struct sockaddr *addr,uv_udp_t *handle,void *buf,long len,int32_t allocflag)
-{
-    int32_t r=0;
-    struct write_req_t *wr;
-    if ( IS_LIBTEST == 2 )
-        queueflag = 0;
-    wr = alloc_wr(buf,len,allocflag);
-    ASSERT(wr != NULL);
-    wr->addr = *addr;
-    wr->udp = handle;
-    if ( queueflag != 0 )
-    {
-        wr->queuetime = (uint32_t)(1000. * milliseconds());
-        queue_enqueue(&sendQ,wr);
-    }
-    else r = process_sendQ_item(wr);
-    return(r);
-}
-
 void process_udpentry(struct udp_entry *up)
 {
     struct coin_info *cp = get_coin_info("BTCD");
@@ -296,24 +245,84 @@ uv_udp_t *open_udp(struct sockaddr *addr,void (*handler)(uv_udp_t *,ssize_t,cons
             return(0);
         }
     }
-    r = uv_udp_set_broadcast(udp,1);
-    if ( r != 0 )
+    if ( handler != 0 )
     {
-        fprintf(stderr,"uv_udp_set_broadcast: %d %s\n",r,uv_err_name(r));
-        return(0);
+        r = uv_udp_recv_start(udp,portable_alloc,handler);
+        if ( r != 0 )
+        {
+            fprintf(stderr, "uv_udp_recv_start: %d %s\n",r,uv_err_name(r));
+            return(0);
+        }
     }
-    r = uv_udp_recv_start(udp,portable_alloc,handler);
-    if ( r != 0 )
+    else
     {
-        fprintf(stderr, "uv_udp_recv_start: %d %s\n",r,uv_err_name(r));
-        return(0);
+        r = uv_udp_set_broadcast(udp,1);
+        if ( r != 0 )
+        {
+            fprintf(stderr,"uv_udp_set_broadcast: %d %s\n",r,uv_err_name(r));
+            return(0);
+        }
     }
     return(udp);
 }
 
+int32_t process_sendQ_item(struct write_req_t *wr)
+{
+    char ipaddr[64];
+    struct coin_info *cp = get_coin_info("BTCD");
+    struct nodestats *stats;
+    struct pserver_info *pserver;
+    int32_t r,supernet_port,createdflag;
+    {
+        supernet_port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)&wr->addr);
+        pserver = get_pserver(&createdflag,ipaddr,0,0);
+        if ( pserver->udps[wr->isbridge] == 0 )
+            pserver->udps[wr->isbridge] = open_udp(0,0);
+        if ( 1 && (pserver->nxt64bits == cp->privatebits || pserver->nxt64bits == cp->srvpubnxtbits) )
+        {
+            //printf("(%s/%d) no point to send yourself dest.%llu pub.%llu srvpub.%llu\n",ipaddr,supernet_port,(long long)pserver->nxt64bits,(long long)cp->pubnxtbits,(long long)cp->srvpubnxtbits);
+            //return(0);
+            strcpy(ipaddr,"127.0.0.1");
+            uv_ip4_addr(ipaddr,supernet_port,(struct sockaddr_in *)&wr->addr);
+        }
+        if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
+        {
+            stats->numsent++;
+            stats->sentmilli = milliseconds();
+        }
+        //for (i=0; i<16; i++)
+        //    printf("%02x ",((unsigned char *)buf)[i]);
+        if ( Debuglevel > 1 )
+            printf("uv_udp_send %ld bytes to %s/%d crx.%x\n",wr->buf.len,ipaddr,supernet_port,_crc32(0,wr->buf.base,wr->buf.len));
+    }
+    r = uv_udp_send(&wr->U.ureq,pserver->udps[wr->isbridge],&wr->buf,1,&wr->addr,(uv_udp_send_cb)after_write);
+    if ( r != 0 )
+        printf("uv_udp_send error.%d %s wr.%p wreq.%p %p len.%ld\n",r,uv_err_name(r),wr,&wr->U.ureq,wr->buf.base,wr->buf.len);
+    return(r);
+}
+
+int32_t portable_udpwrite(int32_t queueflag,const struct sockaddr *addr,int32_t isbridge,void *buf,long len,int32_t allocflag)
+{
+    int32_t r=0;
+    struct write_req_t *wr;
+    if ( IS_LIBTEST == 2 )
+        queueflag = 0;
+    wr = alloc_wr(buf,len,allocflag);
+    ASSERT(wr != NULL);
+    wr->addr = *addr;
+    wr->isbridge = isbridge;
+    if ( queueflag != 0 )
+    {
+        wr->queuetime = (uint32_t)(milliseconds() + (rand() % MAX_UDPQUEUE_MILLIS));
+        queue_enqueue(&sendQ,wr);
+    }
+    else r = process_sendQ_item(wr);
+    return(r);
+}
+
 void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void (*handler)(uv_udp_t *,ssize_t,const uv_buf_t *,const struct sockaddr *,unsigned int))
 {
-    void *srv;
+    void *srv = 0;
     const struct sockaddr *ptr;
     struct sockaddr_in addr;
     struct sockaddr_in6 addr6;
@@ -330,7 +339,12 @@ void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void (*handler)(uv_
     else { printf("illegal ip4_or_ip6 %d\n",ip4_or_ip6); return(0); }
     srv = open_udp((port > 0) ? (struct sockaddr *)ptr : 0,handler);
     if ( srv != 0 )
-        printf("UDP.%p server started on port %d\n",srv,port);
+    {
+        char ipaddr[64];
+        uint16_t ip_port;
+        ip_port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)ptr);
+        printf("UDP.%p server started on port %d <-> (%s:%d)\n",srv,port,ipaddr,ip_port);
+    }
     else printf("couldnt open_udp on port.%d\n",port);
     Servers_started |= 1;
 
@@ -390,7 +404,7 @@ void send_packet(int32_t queueflag,struct nodestats *peerstats,struct sockaddr *
             }
             if ( Debuglevel > 1 )
                 printf("portable_udpwrite Q.%d %d to (%s:%d)\n",queueflag,len,ipaddr,port);
-            portable_udpwrite(queueflag,destaddr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+            portable_udpwrite(queueflag,destaddr,0,finalbuf,len,ALLOCWR_ALLOCFREE);
         }
         else p2pflag = 1;
         if ( peerstats != 0 && peerstats->lastcontact < (time(NULL) - 600) )

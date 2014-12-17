@@ -39,7 +39,7 @@ void *_launch_SuperNET(void *_myip)
         port = (retval >> 1);
         if ( port < (1 << 16) )
         {
-            sprintf(SuperNET_url,"http%s://127.0.0.1:%d",port,usessl==0?"":"s");
+            sprintf(SuperNET_url,"http%s://127.0.0.1:%d",usessl==0?"":"s",port);
             retval = 0;
         }
         else retval = -3;
