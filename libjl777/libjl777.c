@@ -193,17 +193,16 @@ void SuperNET_idler(uv_idle_t *handle)
     void *up;
     struct udp_queuecmd *qp;
     struct write_req_t *wr,*firstwr = 0;
-    int32_t r,flag;
+    int32_t flag;
     char *jsonstr,*retstr,**ptrs;
     if ( Finished_init == 0 )
         return;
     while ( (up= queue_dequeue(&UDP_Q)) != 0 )
         process_udpentry(up);
     millis = ((double)uv_hrtime() / 1000000);
-    if ( millis > (lastattempt + 10) )
+    if ( millis > (lastattempt + 5) )
     {
         lastattempt = millis;
-        r = ((rand() >> 8) % 2);
         while ( (wr= queue_dequeue(&sendQ)) != 0 )
         {
             if ( wr == firstwr )
@@ -725,7 +724,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         establish_connections(cp->myipaddr,cp->srvNXTADDR,cp->srvNXTACCTSECRET);
     //if ( IS_LIBTEST > 1 && Global_mp->gatewayid >= 0 )
     //    register_variant_handler(MULTIGATEWAY_VARIANT,process_directnet_syncwithdraw,MULTIGATEWAY_SYNCWITHDRAW,sizeof(struct batch_info),sizeof(struct batch_info),MGW_whitelist);
-    printf("finished addcontact\n");
-    return((SUPERNET_PORT << 1) | USESSL);
+    printf("finished addcontact SUPERNET_PORT.%d USESSL.%d\n",SUPERNET_PORT,USESSL);
+    return((SUPERNET_PORT << 1) | (USESSL&1));
 }
 

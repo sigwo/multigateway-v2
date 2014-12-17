@@ -1989,12 +1989,12 @@ int32_t establish_connection(char *ipaddr,char *NXTADDR,char *NXTACCTSECRET,uint
                 case 2:  p2p_publishpacket(pserver,0); break;
                 case 0:  send_kademlia_cmd(0,pserver,"ping",NXTACCTSECRET,0,0); break;
                 case 1:
-                    retstr = start_transfer(0,NXTADDR,NXTADDR,NXTACCTSECRET,pserver->ipaddr,0,zeroes,totallen,timeout,"null");
+                    retstr = start_transfer(0,NXTADDR,NXTADDR,NXTACCTSECRET,pserver->ipaddr,"ramtest",zeroes,totallen,timeout,"null");
                     if ( retstr != 0 )
                         free(retstr);
                     break;
             }
-            usleep(100000);
+            sleep(1);
             if ( pserver->lastcontact > start )
                 return(1);
             fprintf(stderr,"%u ",pserver->lastcontact);
@@ -2013,14 +2013,17 @@ void establish_connections(char *myipaddr,char *NXTADDR,char *NXTACCTSECRET)
     array = cJSON_GetObjectItem(MGWconf,"whitelist");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
-        for (iter=0; iter<3; iter++)
-        while ( m < n-1 || m == 0 )
+        for (iter=0; iter<2; iter++)
         {
-            for (i=m=0; i<n; i++)
+            m = 0;
+            while ( m < n )
             {
-                copy_cJSON(ipaddr,cJSON_GetArrayItem(array,i));
-                if ( strcmp(ipaddr,myipaddr) != 0 )
-                    m += establish_connection(ipaddr,NXTADDR,NXTACCTSECRET,15,iter);
+                for (i=m=0; i<n; i++)
+                {
+                    copy_cJSON(ipaddr,cJSON_GetArrayItem(array,i));
+                    if ( strcmp(ipaddr,myipaddr) != 0 )
+                        m += establish_connection(ipaddr,NXTADDR,NXTACCTSECRET,15,iter);
+                }
             }
         }
     }
