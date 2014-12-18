@@ -192,17 +192,25 @@ void SuperNET_idler(uv_idle_t *handle)
     double millis;
     void *up;
     struct udp_queuecmd *qp;
-    struct write_req_t *wr,*firstwr = 0;
+    struct write_req_t *wr;//,*firstwr = 0;
     int32_t flag;
     char *jsonstr,*retstr,**ptrs;
     if ( Finished_init == 0 )
         return;
-    while ( (up= queue_dequeue(&UDP_Q)) != 0 )
+#ifndef TIMESCRAMBLE
+    if ( (wr= queue_dequeue(&sendQ)) != 0 )
+    {
+        //printf("sendQ size.%d\n",queue_size(&sendQ));
+        process_sendQ_item(wr);
+    }
+    if ( (up= queue_dequeue(&UDP_Q)) != 0 )
         process_udpentry(up);
+#endif
     millis = ((double)uv_hrtime() / 1000000);
     if ( millis > (lastattempt + 5) )
     {
         lastattempt = millis;
+#ifdef TIMESCRAMBLE
         while ( (wr= queue_dequeue(&sendQ)) != 0 )
         {
             if ( wr == firstwr )
@@ -225,6 +233,8 @@ void SuperNET_idler(uv_idle_t *handle)
         }
         if ( Debuglevel > 2 && queue_size(&sendQ) != 0 )
             printf("sendQ size.%d\n",queue_size(&sendQ));
+#else
+#endif
         flag = 1;
         while ( flag != 0 )
         {
@@ -282,7 +292,7 @@ void SuperNET_idler(uv_idle_t *handle)
         counter++;
         lastclock = millis;
     }
-    usleep(APISLEEP * 1000);
+    //usleep(APISLEEP * 1000);
 }
 
 void run_UVloop(void *arg)
@@ -595,7 +605,7 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
     if ( SUPERNET_PORT != _SUPERNET_PORT )
         return(clonestr("{\"error\":private SuperNET}"));
     strcpy(retjsonstr,"{\"result\":null}");
-        if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         printf("gotpacket.(%s) duration.%d from (%s)\n",msg,duration,ip_port);
     if ( Finished_loading == 0 )
     {
