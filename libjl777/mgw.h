@@ -1764,9 +1764,9 @@ uint64_t process_consensus(cJSON **jsonp,struct coin_info *cp,int32_t sendmoney)
             fprintf(stderr,"i.%d (%llu %p %.8f)\n",i,(long long)rp->redeems[i],rp->destaddrs[i],dstr(rp->destamounts[i]));
             item = cJSON_CreateObject();
             sprintf(numstr,"%llu",(long long)rp->redeems[i]), cJSON_AddItemToObject(item,"redeemtxid",cJSON_CreateString(numstr));
-            if ( rp->destaddrs[i] != 0 )
-                cJSON_AddItemToObject(item,"destaddr",cJSON_CreateString(rp->destaddrs[i]));
-            sprintf(numstr,"%.8f",dstr(rp->destamounts[i])), cJSON_AddItemToObject(item,"amount",cJSON_CreateString(numstr));
+            if ( rp->destaddrs[i+1] != 0 )
+                cJSON_AddItemToObject(item,"destaddr",cJSON_CreateString(rp->destaddrs[i+1]));
+            sprintf(numstr,"%.8f",dstr(rp->destamounts[i+1])), cJSON_AddItemToObject(item,"amount",cJSON_CreateString(numstr));
             cJSON_AddItemToArray(array,item);
         }
     }
@@ -1968,65 +1968,6 @@ char *MGWdeposits(char *specialNXT,int32_t rescan,int32_t actionflag,char *coin,
         retstr = clonestr("{}");
     printf("MGWDEPOSITS.(%s)\n",retstr);
     return(retstr);
-}
-
-int32_t establish_connection(char *ipaddr,char *NXTADDR,char *NXTACCTSECRET,uint32_t timeout,int32_t selector)
-{
-    uint32_t i,start,totallen = 65536;
-    struct pserver_info *pserver;
-    uint8_t *zeroes;
-    char *retstr;
-    pserver = get_pserver(0,ipaddr,0,0);
-    start = (uint32_t)time(NULL);
-    timeout += start;
-    zeroes = calloc(1,totallen);
-    while ( time(NULL) < timeout )
-    {
-        for (i=0; i<7; i++)
-        {
-            switch ( selector )
-            {
-                case 2:  p2p_publishpacket(pserver,0); break;
-                case 0:  send_kademlia_cmd(0,pserver,"ping",NXTACCTSECRET,0,0); break;
-                case 1:
-                    retstr = start_transfer(0,NXTADDR,NXTADDR,NXTACCTSECRET,pserver->ipaddr,"ramtest",zeroes,totallen,timeout,"null");
-                    if ( retstr != 0 )
-                        free(retstr);
-                    break;
-            }
-            sleep(1);
-            if ( pserver->lastcontact > start )
-                return(1);
-            fprintf(stderr,"%u ",pserver->lastcontact);
-        }
-        fprintf(stderr,"| vs start.%u\n",start);
-    }
-    free(zeroes);
-    return(0);
-}
-
-void establish_connections(char *myipaddr,char *NXTADDR,char *NXTACCTSECRET)
-{
-    char ipaddr[64];
-    int32_t iter,i,n,m = 0;
-    cJSON *array;
-    array = cJSON_GetObjectItem(MGWconf,"whitelist");
-    if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-    {
-        for (iter=0; iter<2; iter++)
-        {
-            m = 0;
-            while ( m < n )
-            {
-                for (i=m=0; i<n; i++)
-                {
-                    copy_cJSON(ipaddr,cJSON_GetArrayItem(array,i));
-                    if ( strcmp(ipaddr,myipaddr) != 0 )
-                        m += establish_connection(ipaddr,NXTADDR,NXTACCTSECRET,15,iter);
-                }
-            }
-        }
-    }
 }
 #endif
 

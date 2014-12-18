@@ -349,11 +349,11 @@ int32_t portable_udpwrite(int32_t queueflag,const struct sockaddr *addr,int32_t 
     wr->addr = *addr;
     wr->isbridge = isbridge;
     if ( queueflag != 0 )
-    {
+    //{
         wr->queuetime = (uint32_t)(milliseconds() + (rand() % MAX_UDPQUEUE_MILLIS));
         queue_enqueue(&sendQ,wr);
-    }
-    else r = process_sendQ_item(wr);
+    //}
+   // else r = process_sendQ_item(wr);
     return(r);
 }
 
@@ -453,7 +453,8 @@ void send_packet(int32_t queueflag,struct nodestats *peerstats,struct sockaddr *
     {
         expand_ipbits(ipaddr,peerstats->ipbits);
         pserver = get_pserver(0,ipaddr,0,0);
-        printf("send packet to (%s) %llu len.%d\n",ipaddr,(long long)peerstats->nxt64bits,len);
+        if ( Debuglevel > 1 )
+            printf("send packet to (%s) %llu len.%d\n",ipaddr,(long long)peerstats->nxt64bits,len);
         call_SuperNET_broadcast(pserver,(char *)finalbuf,len,0);
     }
     else
@@ -629,6 +630,7 @@ struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *d
     args = MTadd_hashtable(&createdflag,Global_mp->pending_xfers,hashstr);
     if ( createdflag != 0 )
     {
+        printf("NEW XFERARGS\n");//, getchar();
         safecopy(args->previpaddr,previpaddr,sizeof(args->previpaddr));
         safecopy(args->sender,sender,sizeof(args->sender));
         safecopy(args->dest,dest,sizeof(args->dest));
@@ -747,7 +749,7 @@ char *sendfrag(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCT
                     args->completed = 1;
                     //purge_transfer_args(args);
                 }
-            }
+            } else count++;
         } args = 0;
         free(data);
         data = 0;
@@ -789,6 +791,7 @@ int32_t Do_transfers(void *_args,int32_t argsize)
                     if ( retstr != 0 )
                         free(retstr);
                     args->timestamps[i] = now;
+break;
                 }
             } else finished++;
             remains -= args->blocksize;
@@ -824,7 +827,7 @@ char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,ch
     printf("GOTFRAG.(%s)\n",cmdstr);
     args = create_transfer_args(previpaddr,NXTaddr,src,name,totallen,blocksize,totalcrc,handler);
     update_transfer_args(args,fragi,numfrags,totalcrc,datacrc,0,0);
-    if ( args->blocksize == blocksize && args->totallen == totallen && args->numblocks == numfrags )
+    if ( count < args->numblocks && args->blocksize == blocksize && args->totallen == totallen && args->numblocks == numfrags )
     {
         for (i=1; i<numfrags; i++)
         {
@@ -835,7 +838,8 @@ char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,ch
                     len = blocksize;
                 else len = (totallen - (blocksize * (numfrags-1)));
                 init_hexbytes_noT(datastr,args->data + fragi*blocksize,len);
-                return(sendfrag(0,NXTaddr,NXTaddr,NXTACCTSECRET,previpaddr,name,(fragi+1) % numfrags,numfrags,totallen,blocksize,totalcrc,args->crcs[fragi+1],datastr,"mgw"));
+                args->timestamps[fragi] = (uint32_t)time(NULL);
+                return(sendfrag(0,NXTaddr,NXTaddr,NXTACCTSECRET,previpaddr,name,fragi,numfrags,totallen,blocksize,totalcrc,args->crcs[fragi],datastr,"mgw"));
             }
         }
     }
