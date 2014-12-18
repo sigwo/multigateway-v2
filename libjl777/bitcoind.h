@@ -1061,6 +1061,7 @@ int32_t establish_connection(char *ipaddr,char *NXTADDR,char *NXTACCTSECRET,uint
     struct pserver_info *pserver;
     uint8_t *zeroes;
     char *retstr;
+    printf("ESTABLISH_CONNECTION.(%s)\n",ipaddr);
     pserver = get_pserver(0,ipaddr,0,0);
     start = (uint32_t)time(NULL);
     timeout += start;
@@ -1081,16 +1082,17 @@ int32_t establish_connection(char *ipaddr,char *NXTADDR,char *NXTACCTSECRET,uint
             }
             sleep(1);
             if ( pserver->lastcontact > start )
-                return(1);
+                break;
             fprintf(stderr,"%u ",pserver->lastcontact);
         }
         fprintf(stderr,"| vs start.%u\n",start);
     }
+    //printf("START_TRANSFER\n");
     retstr = start_transfer(0,NXTADDR,NXTADDR,NXTACCTSECRET,pserver->ipaddr,"ramtest",zeroes,totallen,timeout,"null");
     if ( retstr != 0 )
         free(retstr);
     free(zeroes);
-    return(0);
+    return(pserver->lastcontact > start);
 }
 
 void establish_connections(char *myipaddr,char *NXTADDR,char *NXTACCTSECRET)
@@ -1125,8 +1127,9 @@ void *Coinloop(void *ptr)
     init_Contacts();
     if ( (cp= get_coin_info("BTCD")) != 0 )
     {
+        //printf("COINLOOP\n");
         //if ( 0 && IS_LIBTEST > 1 && Global_mp->gatewayid >= 0 )
-        //    establish_connections(cp->myipaddr,cp->srvNXTADDR,cp->srvNXTACCTSECRET);
+        //   establish_connections(cp->myipaddr,cp->srvNXTADDR,cp->srvNXTACCTSECRET);
         printf("add myhandle\n");
         addcontact(Global_mp->myhandle,cp->privateNXTADDR);
         printf("add mypublic\n");
