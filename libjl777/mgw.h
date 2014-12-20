@@ -19,6 +19,12 @@
 #define DEPOSIT_CONFIRMED 'd'
 #define MONEY_SENT 'm'
 
+
+int32_t enough_confirms(double redeemed,double estNXT,int32_t numconfs,int32_t minconfirms)
+{
+    return(1);
+}
+
 int32_t in_specialNXTaddrs(char *specialNXTaddrs[],char *NXTaddr)
 {
     int32_t i;
