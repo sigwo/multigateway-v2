@@ -1445,7 +1445,7 @@ char *bridge_test(int32_t actionflag,char *NXTACCTSECRET,char *destip,char *orig
     uint16_t bridgeport = 0;
     if ( strcmp(cp->myipaddr,destip) == 0 )
     {
-        if ( (bridgeport= cp->bridgeport) == 0 && cp->bridgeipaddr[0] != 0 )
+        if ( (bridgeport= cp->bridgeport) == 0 || cp->bridgeipaddr[0] == 0 )
             destip[0] = 0;
         else strcpy(destip,cp->bridgeipaddr);
     }
@@ -1539,7 +1539,7 @@ char *setmsigpubkey_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char
     printf("coin.(%s) %p ref.(%s) acc.(%s) pub.(%s)\n",coin,cp,refNXTaddr,acctcoinaddr,pubkey);
     if ( cp != 0 && refNXTaddr[0] != 0 && acctcoinaddr[0] != 0 && pubkey[0] != 0 && sender[0] != 0 && valid > 0 )
     {
-        if ( (contact= find_contact(sender)) != 0 && contact->nxt64bits != 0 )
+        if ( (contact= find_contact(1,sender)) != 0 && contact->nxt64bits != 0 )
         {
             add_NXT_coininfo(contact->nxt64bits,coin,acctcoinaddr,pubkey);
             //replace_msig_json(1,refNXTaddr,acctcoinaddr,pubkey,coin,contact->jsonstr);

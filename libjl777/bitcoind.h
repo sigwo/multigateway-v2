@@ -1123,9 +1123,16 @@ void establish_connections(char *myipaddr,char *NXTADDR,char *NXTACCTSECRET)
 
 void *Coinloop(void *ptr)
 {
-    int32_t i,processed;
+    cJSON *process_MGW(int32_t actionflag,struct coin_info *cp,struct NXT_asset *ap,char *ipaddrs[3],int32_t numgateways,char **specialNXTaddrs,char *issuer,double startmilli);
+    uint64_t update_NXTblockchain_info(struct coin_info *cp,char *specialNXTaddrs[],int32_t numgateways,char *refNXTaddr);
+    int32_t i,j,processed,createdflag;
     struct coin_info *cp;
+    struct NXT_asset *ap;
     int64_t height;
+    cJSON *json;
+    double startmilli;
+    char *ipaddrs[3];
+    printf("Coinloop numcoins.%d\n",Numcoins);
     init_Contacts();
     printf("Coinloop numcoins.%d\n",Numcoins);
     scan_address_entries();
@@ -1140,14 +1147,23 @@ void *Coinloop(void *ptr)
         printf("add mypublic\n");
         addcontact("mypublic",cp->srvNXTADDR);
     }
+    startmilli = milliseconds();
     for (i=0; i<Numcoins; i++)
     {
         if ( (cp= Daemons[i]) != 0 && is_active_coin(cp->name) != 0 )
         {
+            for (j=0; j<3; j++)
+                ipaddrs[j] = Server_names[j];
             printf("coin.%d (%s) firstblock.%d\n",i,cp->name,(int32_t)cp->blockheight);
+            update_NXTblockchain_info(cp,MGW_whitelist,3,cp->MGWissuer);
+            ap = get_NXTasset(&createdflag,Global_mp,cp->assetid);
+            if ( (json= process_MGW(0,cp,ap,ipaddrs,3,MGW_whitelist,cp->MGWissuer,milliseconds())) != 0 )
+                free_json(json);
             //load_telepods(cp,maxnofile);
         }
     }
+    MGW_initdone = 1;
+    printf("MGW Initialization took %.3f seconds\n",(milliseconds() - startmilli) / 1000.);
     while ( 1 )
     {
         processed = 0;

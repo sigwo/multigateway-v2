@@ -405,7 +405,7 @@ struct coin_info
     char privateaddr[128],privateNXTACCTSECRET[2048],coinpubkey[1024],privateNXTADDR[64];
     char srvpubaddr[128],srvNXTACCTSECRET[2048],srvcoinpubkey[1024],srvNXTADDR[64];
     
-    char name[64],backupdir[512],privacyserver[64],myipaddr[64],transporteraddr[128],bridgeipaddr[64];
+    char name[64],backupdir[512],privacyserver[64],myipaddr[64],transporteraddr[128],bridgeipaddr[64],MGWissuer[64];
     char *userpass,*serverport,assetid[64],*marker,*tradebotfname,*pending_ptr;
     uint64_t *limboarray,srvpubnxtbits,privatebits,dust,NXTfee_equiv,txfee,markeramount,lastheighttime,blockheight,RTblockheight,nxtaccts[512];
     int32_t coinid,maxevolveiters,initdone,nohexout,use_addmultisig,min_confirms,minconfirms,estblocktime,forkheight,backupcount,enabled,savedtelepods,M,N,numlogs,clonesmear,pending_ptrmaxlen,srvport,numnxtaccts;
@@ -609,9 +609,9 @@ char *bitcoind_RPC(CURL *curl_handle,char *debugstr,char *url,char *userpass,cha
 #define issue_NXT(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"NXT",cmdstr,0,0,0)
 #define issue_NXTPOST(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"curl",NXTAPIURL,0,0,cmdstr)
 #define fetch_URL(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"fetch",cmdstr,0,0,0)
-//void gen_testforms(char *secret);
+
 extern uv_loop_t *UV_loop;
-char Server_names[NUM_GATEWAYS+1][MAX_JSON_FIELD];
+char Server_names[256][MAX_JSON_FIELD];
 char Server_NXTaddrs[256][MAX_JSON_FIELD],SERVER_PORTSTR[MAX_JSON_FIELD];
 char *MGW_blacklist[256],*MGW_whitelist[256],ORIGBLOCK[MAX_JSON_FIELD],NXTISSUERACCT[MAX_JSON_FIELD];
 cJSON *MGWconf,**MGWcoins;
@@ -624,17 +624,13 @@ int32_t NXT_FORKHEIGHT,Finished_init,Finished_loading,Historical_done,Debuglevel
 char NXTSERVER[MAX_JSON_FIELD],NXTAPIURL[MAX_JSON_FIELD];
 
 struct hashtable *orderbook_txids;
-
-//char dispstr[65536];
-//char testforms[1024*1024],PC_USERNAME[512],MY_IPADDR[512];
 uv_loop_t *UV_loop;
 static long server_xferred;
 int Servers_started;
 queue_t P2P_Q,sendQ,JSON_Q,udp_JSON,storageQ,cacheQ,BroadcastQ,NarrowQ,ResultsQ,UDP_Q;
-//struct pingpong_queue PeerQ;
 int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP,USESSL,ENABLE_GUIPOLL;
 uint32_t *SuperNET_whitelist;
-int32_t Historical_done;
+int32_t Historical_done,MGW_initdone;
 struct NXThandler_info *Global_mp;
 
 double picoc(int argc,char **argv,char *codestr);
