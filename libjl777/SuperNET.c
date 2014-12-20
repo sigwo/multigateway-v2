@@ -363,11 +363,6 @@ int main(int argc,const char *argv[])
     char hexstr[256],hexstr2[256];
     unsigned char hash[32];
     void calc_sha256(char hashstr[(256 >> 3) * 2 + 1],unsigned char hash[256 >> 3],unsigned char *src,int32_t len);
-    calc_sha256(hexstr,hash,(uint8_t *)"GLYDA3",(int32_t)strlen("GLYDA3"));
-    calc_sha256(hexstr2,hash,(uint8_t *)hexstr,(int32_t)strlen(hexstr));
-    printf("HEX.(%s) -> hex2.(%s)\n",hexstr,hexstr2);
-
-    getchar();
     //printf("%llu ^ %llu = %llx wt.%d\n",(unsigned long long)0xef9b64b1eb75d7e6LL,(unsigned long long)0x4b37c5ffc7efba39LL,(unsigned long long)0xef9b64b1eb75d7e6LL^0x4b37c5ffc7efba39LL,bitweight(0xef9b64b1eb75d7e6LL^0x4b37c5ffc7efba39LL)); getchar();
     IS_LIBTEST = 1;
     if ( argc > 1 && argv[1] != 0 && strlen(argv[1]) < 32 )
