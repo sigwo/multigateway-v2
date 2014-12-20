@@ -9,7 +9,7 @@
 //
 
 #include "jl777.h"
-//#define TIMESCRAMBLE
+#define TIMESCRAMBLE
 
 uv_async_t Tasks_async;
 uv_work_t Tasks;
