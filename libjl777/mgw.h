@@ -24,7 +24,11 @@ int32_t enough_confirms(double redeemed,double estNXT,int32_t numconfs,int32_t m
 {
     if ( numconfs < minconfirms )
         return(0);
-    return(1);
+    if ( redeemed != 0 )
+        estNXT += sqrt(redeemed);
+    if ( log(estNXT) < ((double)numconfs/minconfirms) )
+        return(1);
+    return(0);
 }
 
 int32_t in_specialNXTaddrs(char *specialNXTaddrs[],char *NXTaddr)

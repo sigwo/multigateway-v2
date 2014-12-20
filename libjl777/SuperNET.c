@@ -335,6 +335,23 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     return 1; //ok - we are mapped:)
 }
 
+/*
+ #include <stdio.h>
+ #include <stdint>
+ 
+int32_t process_newbieargs(char *jsonstr)
+{
+    printf("%s\n",jsonstr);
+    return(0);
+}
+
+int32_t main(int argc,const char *argv[])
+{
+    if ( argc > 1 )
+        return(process_newbieargs((char *)argv[1]);
+    return(-1);
+}
+*/
 
 int main(int argc,const char *argv[])
 {
