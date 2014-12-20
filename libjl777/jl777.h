@@ -7,7 +7,8 @@
 #ifndef gateway_jl777_h
 #define gateway_jl777_h
 
-#define HARDCODED_VERSION "0.256"
+#define HARDCODED_VERSION "0.299"
+#define TIMESCRAMBLE
 
 #define NXT_GENESISTIME 1385294400
 #define MAX_LFACTOR 10
@@ -294,7 +295,7 @@ struct NXThandler_info
     uint64_t coins[4];
     int32_t initassets,Lfactor,gatewayid,gensocks[256];
     int32_t height,extraconfirms,maxpopdepth,maxpopheight,lastchanged,GLEFU,numblocks,timestamps[1000 * 365 * 10];
-    int32_t isudpserver,istcpserver,numPrivacyServers;
+    int32_t isudpserver,istcpserver,numPrivacyServers,isMM;
     char ipaddr[64],dispname[128],groupname[128];
 };
 struct NXT_acct *get_NXTacct(int32_t *createdp,struct NXThandler_info *mp,char *NXTaddr);

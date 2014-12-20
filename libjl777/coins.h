@@ -54,6 +54,7 @@
 #define CHA_COINID 42
 #define OPAL_COINID 43
 #define BITS_COINID 44
+#define VPN_COINID 45
 
 #define BTC_MARKER "17outUgtsnLkguDuXm14tcQ7dMbdD8KZGK"
 #define LTC_MARKER "Le9hFCEGKDKp7qYpzfWyEFAq58kSQsjAqX"
@@ -99,6 +100,7 @@
 #define CHA_MARKER "1AYNVduuf4X4jLzJ7f9Zpj7Ykz6WYkdS99"
 #define OPAL_MARKER "oJwRshRPXxgmntiS44hYQaf9Ahf7o4HT18"
 #define BITS_MARKER "BPeZsNiahkKF54YxvSJpeNgSaWbyXo4NPF"
+#define VPN_MARKER "Vaw75Sz2YeHbiGygjgGu6LrhP7TJTP5tG8"
 
 int32_t Numcoins;
 struct coin_info **Daemons;
@@ -196,6 +198,7 @@ char *coinid_str(int32_t coinid)
         case CHA_COINID: return("CHA");
         case OPAL_COINID: return("OPAL");
         case BITS_COINID: return("BITS");
+        case VPN_COINID: return("VPN");
     }
     return(ILLEGAL_COIN);
 }
@@ -266,6 +269,7 @@ char *get_backupmarker(char *coinstr)
         case CHA_COINID: return(CHA_MARKER);
         case OPAL_COINID: return(OPAL_MARKER);
         case BITS_COINID: return(BITS_MARKER);
+        case VPN_COINID: return(VPN_MARKER);
     }
     return(0);
 }
@@ -721,6 +725,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             }
             if ( Global_mp->gatewayid < 0 )
                 Global_mp->gatewayid = get_API_int(cJSON_GetObjectItem(MGWconf,"gatewayid"),Global_mp->gatewayid);
+            Global_mp->isMM = get_API_int(cJSON_GetObjectItem(MGWconf,"MMatrix"),0);
 
             printf("issuer.%s %08x NXTAPIURL.%s, minNXTconfirms.%d port.%s orig.%s gatewayid.%d 1st.%d\n",NXTISSUERACCT,GATEWAY_SIG,NXTAPIURL,MIN_NXTCONFIRMS,SERVER_PORTSTR,ORIGBLOCK,Global_mp->gatewayid,FIRST_NXTBLOCK);
             array = cJSON_GetObjectItem(MGWconf,"whitelist");
