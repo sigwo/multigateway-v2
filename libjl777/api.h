@@ -1439,34 +1439,40 @@ char *settings_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
     return(retstr);
 }
 
-char *bridge_test(int32_t actionflag,char *NXTACCTSECRET,char *destip,char *origargstr)
+char *bridge_test(int32_t sendflag,char *NXTACCTSECRET,char *destip,char *origargstr)
 {
     struct coin_info *cp = get_coin_info("BTCD");
     uint16_t bridgeport = 0;
+    char retbuf[1024],*str = "";
+    sprintf(retbuf,"{\"error\":\"no bridge\"}");
     if ( strcmp(cp->myipaddr,destip) == 0 )
     {
-        if ( (bridgeport= cp->bridgeport) == 0 || cp->bridgeipaddr[0] == 0 )
-            destip[0] = 0;
-        else strcpy(destip,cp->bridgeipaddr);
+        if ( (bridgeport= cp->bridgeport) != 0 && cp->bridgeipaddr[0] != 0 )
+            strcpy(destip,cp->bridgeipaddr);
+        else bridgeport = 0;
+        printf("my bridgetest (%s:%d)\n",destip,bridgeport);
     }
     if ( destip[0] != 0 )
     {
+        printf("bridgetest.(%s) illegal.%d\n",destip,is_illegal_ipaddr(destip));
         if ( is_illegal_ipaddr(destip) == 0 )
         {
-            if ( actionflag != 0 )
+            if ( sendflag != 0 )
                 send_to_ipaddr(bridgeport,0,destip,origargstr,NXTACCTSECRET);
+            else str = "would have ";
             if ( bridgeport != 0 )
-                return(clonestr("{\"result\":\"bridged\"}"));
-            else return(clonestr("{\"result\":\"forwarded\"}"));
-        } else return(clonestr("{\"error\":\"illegal destip\"}"));
+                sprintf(retbuf,"{\"result\":\"%sbridged\"}",str);
+            else sprintf(retbuf,"{\"result\":\"%sforwarded\"}",str);
+        } else sprintf(retbuf,"{\"error\":\"%sillegal destip\"}",str);
     }
-    return(0);
+    return(clonestr(retbuf));
 }
 
 char *genmultisig_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char refacct[MAX_JSON_FIELD],coin[MAX_JSON_FIELD],destip[MAX_JSON_FIELD],*retstr = 0;
-    int32_t M,N,n = 0;
+    cJSON *json;
+    int32_t M,N,noerror,n = 0;
     struct multisig_addr *msig;
     struct contact_info **contacts = 0;
     copy_cJSON(coin,objs[0]);
@@ -1477,14 +1483,25 @@ char *genmultisig_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     copy_cJSON(destip,objs[5]);
     if ( coin[0] != 0 && refacct[0] != 0 && sender[0] != 0 && valid > 0 )
     {
-        if ( is_remote_access(previpaddr) != 0 && (retstr= bridge_test(0,NXTACCTSECRET,destip,origargstr)) != 0 )
+        if ( (retstr= bridge_test(0,NXTACCTSECRET,destip,origargstr)) != 0 )
         {
+            printf("sender.(%s) bridgetest returns.(%s)\n",sender,retstr);
             free(retstr);
-            if ( (msig= find_NXT_msig(coin,sender,contacts,n)) != 0 )
+            noerror = 0;
+            if ( (msig= find_NXT_msig(sender,coin,contacts,n)) != 0 )
             {
                 retstr = create_multisig_json(msig,0);
+                printf("MSIGreturns.(%s)\n",retstr);
+                if ( (json= cJSON_Parse(retstr)) != 0 )
+                {
+                    if ( cJSON_GetObjectItem(json,"error") == 0 )
+                        noerror = 1;
+                    free_json(json);
+                }
                 free(msig);
-                return(retstr);
+                if ( noerror != 0 )
+                    return(retstr);
+                else free(retstr);
             }
             return(bridge_test(1,NXTACCTSECRET,destip,origargstr));
         }
