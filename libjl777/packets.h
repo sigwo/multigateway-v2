@@ -513,7 +513,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     {
                         if ( strcmp("ping",checkstr) == 0 && internalflag == 0 && dontupdate == 0 )
                             update_routing_probs(tokenized_np->H.U.NXTaddr,1,udp == 0,&tokenized_np->stats,nxtip,nxtport,pubkey);
-                        if ( strcmp("ping",checkstr) == 0 || strcmp("getdb",checkstr) == 0 || strcmp("genmultisig",checkstr) == 0 || strcmp("MGWaddr",checkstr) == 0 )
+                        if ( strcmp("ping",checkstr) == 0 || strcmp("getdb",checkstr) == 0 || strcmp("genmultisig",checkstr) == 0 || strcmp("MGWdeposits",checkstr) == 0 || strcmp("MGWaddr",checkstr) == 0 )
                             strcpy(checkstr,"valid");
                     }
                     else
@@ -586,10 +586,13 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
             {
                 static uint8_t zerokey[256>>3];
                 struct nodestats *stats;
+                char NXTpubkey[128];
                 stats = find_nodestats(destbits);
                 expand_nxt64bits(destNXTaddr,destbits);
+                if ( stats != 0 && stats->ipbits != 0 && memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
+                    set_NXTpubkey(NXTpubkey,destNXTaddr);
                 if ( Debuglevel > 1 )
-                    fprintf(stderr,"Route to {%s} %p\n",destNXTaddr,stats);
+                    fprintf(stderr,"Route to {%s} %llx\n",destNXTaddr,*(long long *)stats->pubkey);
                 if ( stats != 0 && stats->ipbits != 0 && memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) != 0 )
                 {
                     outbuf = decoded;

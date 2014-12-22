@@ -329,7 +329,7 @@ void process_telepathic(char *key,char *datastr,uint64_t senderbits,char *sender
     expand_nxt64bits(locationstr,senderbits); // overloading sender with locationbits!
     if ( (tel= find_telepathy_entry(locationstr)) != 0 )
     {
-        contact = find_contact_nxt64bits(1,tel->contactbits);
+        contact = find_contact_nxt64bits(0,tel->contactbits);
         if ( contact != 0 )
         {
             init_hexbytes_noT(AESpasswordstr,tel->AESpassword.bytes,sizeof(tel->AESpassword));
@@ -418,7 +418,7 @@ void init_telepathy_contact(struct contact_info *contact)
 {
     struct coin_info *cp = get_coin_info("BTCD");
     int32_t i;
-    char retbuf[MAX_JSON_FIELD],*retstr;
+    //char retbuf[MAX_JSON_FIELD];//,*retstr;
     uint64_t randbits;
     for (i=0; i<=MAX_DROPPED_PACKETS*3; i++)
         create_telepathy_entry(contact,i);
@@ -429,9 +429,9 @@ void init_telepathy_contact(struct contact_info *contact)
             randbits ^= (1L << ((rand()>>8) & 63));
         contact->mydrop = randbits;
     }
-    telepathic_transmit(retbuf,contact,0,0,0);
-    if ( (retstr= check_privategenesis(contact)) != 0 )
-        free(retstr);
+    //telepathic_transmit(retbuf,contact,0,0,0);
+    //if ( (retstr= check_privategenesis(contact)) != 0 )
+    //    free(retstr);
 }
 
 char *getdb(char *previpaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int32_t dir,char *contactstr,int32_t sequenceid,char *keystr,char *destip)
@@ -505,7 +505,7 @@ char *addcontact(char *handle,char *acct)
     bits256 mysecret,mypublic;
     struct coin_info *cp = get_coin_info("BTCD");
     struct contact_info *contact;
-    char retstr[1024],pubkeystr[128],RSaddr[64],*ret;
+    char retstr[1024],pubkeystr[128],RSaddr[64];//,*ret;
     if ( cp == 0 )
     {
         printf("addcontact: no BTCD cp?\n");
@@ -560,10 +560,10 @@ char *addcontact(char *handle,char *acct)
     }
     else
     {
-        fprintf(stderr,"publish deaddrop\n");
-        telepathic_transmit(retstr,contact,0,0,0);
-        if ( (ret= check_privategenesis(contact)) != 0 )
-            free(ret);
+        //fprintf(stderr,"publish deaddrop\n");
+        //telepathic_transmit(retstr,contact,0,0,0);
+        //if ( (ret= check_privategenesis(contact)) != 0 )
+        //    free(ret);
         sprintf(retstr,"{\"result\":\"(%s) acct.(%s) (%llu) unchanged\"}",handle,acct,(long long)contact->nxt64bits);
     }
     fprintf(stderr,"ADDCONTACT.(%s)\n",retstr);

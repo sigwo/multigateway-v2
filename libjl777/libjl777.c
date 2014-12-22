@@ -9,7 +9,6 @@
 //
 
 #include "jl777.h"
-#define TIMESCRAMBLE
 
 uv_async_t Tasks_async;
 uv_work_t Tasks;
@@ -198,8 +197,8 @@ void SuperNET_idler(uv_idle_t *handle)
     char *jsonstr,*retstr,**ptrs;
     if ( Finished_init == 0 )
         return;
-    millis = ((double)uv_hrtime() / 1000000);
-    if ( millis > (lastattempt + 5) )
+    millis = milliseconds();//((double)uv_hrtime() / 1000000);
+    if ( millis > (lastattempt + APISLEEP) )
     {
         lastattempt = millis;
 #ifdef TIMESCRAMBLE
@@ -436,6 +435,7 @@ char *call_SuperNET_JSON(char *JSONstr)
     {
         expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
         cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
+        cJSON_AddItemToObject(json,"pubkey",cJSON_CreateString(Global_mp->pubkeystr));
         cmdstr = cJSON_Print(json);
         if ( cmdstr != 0 )
         {

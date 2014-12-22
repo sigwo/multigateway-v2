@@ -330,14 +330,15 @@ char *issue_signTransaction(CURL *curl_handle,char *txbytes,char *NXTACCTSECRET)
     return(issue_NXTPOST(curl_handle,cmd));
 }
 
-uint64_t issue_transferAsset(char **retstrp,CURL *curl_handle,char *secret,char *recipient,char *asset,int64_t quantity,int64_t feeNQT,int32_t deadline,char *comment)
+uint64_t issue_transferAsset(char **retstrp,CURL *curl_handle,char *secret,char *recipient,char *asset,int64_t quantity,int64_t feeNQT,int32_t deadline,char *comment,char *destpubkey)
 {
-    char cmd[4096],numstr[128],*str,*jsontxt;
+    char cmd[4096],numstr[128],*jsontxt;
     uint64_t txid = 0;
     cJSON *json,*errjson,*txidobj;
-    if ( retstrp != 0 )
-        *retstrp = 0;
+    *retstrp = 0;
     sprintf(cmd,"%s=transferAsset&secretPhrase=%s&recipient=%s&asset=%s&quantityQNT=%lld&feeNQT=%lld&deadline=%d",_NXTSERVER,secret,recipient,asset,(long long)quantity,(long long)feeNQT,deadline);
+    if ( destpubkey != 0 )
+        sprintf(cmd+strlen(cmd),"&recipientPublicKey=%s",destpubkey);
     if ( comment != 0 )
     {
         //if ( Global_mp->NXTheight >= DGSBLOCK )
@@ -354,35 +355,30 @@ uint64_t issue_transferAsset(char **retstrp,CURL *curl_handle,char *secret,char 
         json = cJSON_Parse(jsontxt);
         if ( json != 0 )
         {
-            errjson = cJSON_GetObjectItem(json,"errorCode");
+            errjson = cJSON_GetObjectItem(json,"error");
             if ( errjson != 0 )
             {
                 printf("ERROR submitting assetxfer.(%s)\n",jsontxt);
-#ifdef BTC_COINID
-                int32_t _get_gatewayid();
-                if ( _get_gatewayid() >= 0 )
-                {
-                    sleep(60);
-                    fprintf(stderr,"ERROR submitting assetxfer.(%s)\n",jsontxt);
-                    exit(-1);
-                }
-#endif
+                if ( retstrp != 0 )
+                    *retstrp = jsontxt;
             }
-            txidobj = cJSON_GetObjectItem(json,"transaction");
-            copy_cJSON(numstr,txidobj);
-            txid = calc_nxt64bits(numstr);
-            if ( txid == 0 )
+            else
             {
-                str = cJSON_Print(json);
-                printf("ERROR WITH ASSET TRANSFER.(%s) -> \n%s\n",cmd,str);
-                free(str);
+                txidobj = cJSON_GetObjectItem(json,"transaction");
+                copy_cJSON(numstr,txidobj);
+                txid = calc_nxt64bits(numstr);
+                if ( txid == 0 )
+                {
+                    printf("ERROR WITH ASSET TRANSFER.(%s) -> \n%s\n",cmd,jsontxt);
+                    if ( retstrp != 0 )
+                        *retstrp = jsontxt;
+                }
             }
             free_json(json);
         } else printf("error issuing asset.(%s) -> %s\n",cmd,jsontxt);
-        if ( retstrp == 0 )
-            free(jsontxt);
-        else *retstrp = jsontxt;
     }
+    if ( *retstrp == 0 && jsontxt != 0 )
+        free(jsontxt);
     return(txid);
 }
 
@@ -1028,7 +1024,7 @@ int32_t set_json_AM(struct json_AM *ap,int32_t sig,int32_t funcid,char *nxtaddr,
     long len = 0;
     char *teststr;
     struct compressed_json *jsn = 0;
-    compressjson = 0; // some cases dont decompress on the other side, even though decode tests fine :(
+   /* compressjson = 3;
     if ( jsonstr == 0 )
         jsonflag = 0;
     else jsonflag = 1 + (compressjson != 0);
@@ -1050,6 +1046,10 @@ int32_t set_json_AM(struct json_AM *ap,int32_t sig,int32_t funcid,char *nxtaddr,
             jsonflag = 1;
         }
     } else len = sizeof(*ap);
+    */
+    
+    len = sizeof(*ap) + strlen(jsonstr) + 1;
+    jsonflag = 1;
     memset(ap,0,len);
     ap->H.sig = sig;
     if ( nxtaddr != 0 )
@@ -1475,22 +1475,34 @@ struct acct_coin *find_NXT_coininfo(struct NXT_acct **npp,uint64_t nxt64bits,cha
     return(0);
 }
 
-struct acct_coin *get_NXT_coininfo(char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr)
+struct acct_coin *get_NXT_coininfo(uint64_t srvbits,char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr)
 {
     struct acct_coin *acp = 0;
+    int32_t i;
     acctcoinaddr[0] = pubkey[0] = 0;
     if ( (acp= find_NXT_coininfo(0,nxt64bits,coinstr)) != 0 )
     {
-        if ( acp->pubkey != 0 )
-            strcpy(pubkey,acp->pubkey);
-        if ( acp->acctcoinaddr != 0 )
-            strcpy(acctcoinaddr,acp->acctcoinaddr);
+        if ( acp->numsrvbits > 0 )
+        {
+            for (i=0; i<acp->numsrvbits; i++)
+            {
+                if ( acp->srvbits[i] == srvbits )
+                {
+                    if ( acp->pubkeys[i] != 0 )
+                        strcpy(pubkey,acp->pubkeys[i]);
+                    if ( acp->acctcoinaddrs[i] != 0 )
+                        strcpy(acctcoinaddr,acp->acctcoinaddrs[i]);
+                    return(acp);
+                }
+            }
+        }
     }
-    return(acp);
+    return(0);
 }
 
-void add_NXT_coininfo(uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey)
+void add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey)
 {
+    int32_t i;
     struct NXT_acct *np;
     struct acct_coin *acp;
     if ( (acp= find_NXT_coininfo(&np,nxt64bits,coinstr)) == 0 )
@@ -1498,13 +1510,43 @@ void add_NXT_coininfo(uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *
         np->coins[np->numcoins++] = acp = calloc(1,sizeof(*acp));
         safecopy(acp->name,coinstr,sizeof(acp->name));
     }
-    printf("ADDCOININFO.(%s %s) for %llu\n",acctcoinaddr,pubkey,(long long)nxt64bits);
-    if ( acp->pubkey != 0 )
-        free(acp->pubkey);
-    if ( acp->acctcoinaddr != 0 )
-        free(acp->acctcoinaddr);
-    acp->pubkey = clonestr(pubkey);
-    acp->acctcoinaddr = clonestr(acctcoinaddr);
+    if ( acp->numsrvbits > 0 )
+    {
+        for (i=0; i<acp->numsrvbits; i++)
+        {
+            if ( acp->srvbits[i] == srvbits )
+            {
+                if ( acp->pubkeys[i] != 0 )
+                {
+                    if ( strcmp(pubkey,acp->pubkeys[i]) != 0 )
+                        printf(">>>>>>>>>> WARNING ADDCOININFO.(%s -> %s) for %llu;%llu\n",acp->pubkeys[i],pubkey,(long long)srvbits,(long long)nxt64bits);
+                    else printf("MATCHED pubkey ");
+                    free(acp->pubkeys[i]);
+                    acp->pubkeys[i] = 0;
+                }
+                if ( acp->acctcoinaddrs[i] != 0 )
+                {
+                    if ( strcmp(acctcoinaddr,acp->acctcoinaddrs[i]) != 0 )
+                        printf(">>>>>>>>>> WARNING ADDCOININFO.(%s -> %s) for %llu;%llu\n",acp->acctcoinaddrs[i],acctcoinaddr,(long long)srvbits,(long long)nxt64bits);
+                    else printf("MATCHED acctcoinaddr ");
+                    free(acp->acctcoinaddrs[i]);
+                    acp->acctcoinaddrs[i] = 0;
+                }
+                break;
+            }
+        }
+    } else i = acp->numsrvbits;
+    if ( i == acp->numsrvbits )
+    {
+        acp->numsrvbits++;
+        acp->srvbits = realloc(acp->srvbits,sizeof(*acp->srvbits) * acp->numsrvbits);
+        acp->acctcoinaddrs = realloc(acp->acctcoinaddrs,sizeof(*acp->acctcoinaddrs) * acp->numsrvbits);
+        acp->pubkeys = realloc(acp->pubkeys,sizeof(*acp->pubkeys) * acp->numsrvbits);
+    }
+    printf("ADDCOININFO.(%s %s) for %llu:%llu\n",acctcoinaddr,pubkey,(long long)srvbits,(long long)nxt64bits);
+    acp->srvbits[i] = srvbits;
+    acp->pubkeys[i] = clonestr(pubkey);
+    acp->acctcoinaddrs[i] = clonestr(acctcoinaddr);
 }
 
 void calc_NXTcointxid(char *NXTcointxid,char *cointxid,int32_t vout)
@@ -1663,6 +1705,28 @@ struct nodestats *get_nodestats(uint64_t nxt64bits)
             stats->nxt64bits = nxt64bits;
     }
     return(stats);
+}
+
+void set_NXTpubkey(char *NXTpubkey,char *NXTacct)
+{
+    static uint8_t zerokey[256>>3];
+    struct nodestats *stats;
+    bits256 pubkey;
+    if ( NXTpubkey != 0 )
+        NXTpubkey[0] = 0;
+    if ( NXTacct == 0 || NXTacct[0] == 0 )
+        return;
+    stats = get_nodestats(calc_nxt64bits(NXTacct));
+    if ( memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
+    {
+        pubkey = issue_getpubkey(NXTacct);
+        if ( memcmp(&pubkey,zerokey,sizeof(stats->pubkey)) != 0 )
+        {
+            memcpy(stats->pubkey,&pubkey,sizeof(stats->pubkey));
+            if ( NXTpubkey != 0 )
+                init_hexbytes_noT(NXTpubkey,pubkey.bytes,sizeof(pubkey));
+        }
+    }
 }
 
 struct pserver_info *get_pserver(int32_t *createdp,char *ipaddr,uint16_t supernet_port,uint16_t p2pport)

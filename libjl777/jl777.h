@@ -16,7 +16,7 @@
 #define PUBADDRS_MSGDURATION (3600 * 24)
 #define MAX_ONION_LAYERS 7
 #define pNXT_SIG 0x99999999
-#define MAX_DROPPED_PACKETS 64
+#define MAX_DROPPED_PACKETS 4
 #define MAX_MULTISIG_OUTPUTS 16
 #define MAX_MULTISIG_INPUTS 256
 #define MULTIGATEWAY_VARIANT 3
@@ -620,7 +620,7 @@ int32_t SUPERNET_PORT = 7777;
 int32_t SERVER_PORT,MIN_NXTCONFIRMS = 10;
 uint32_t GATEWAY_SIG,FIRST_NXTBLOCK,FIRST_NXTTIMESTAMP;   // 3134975738 = 0xbadbeefa;
 int32_t DGSBLOCK = 213000;
-int32_t NXT_FORKHEIGHT,Finished_init,Finished_loading,Historical_done,Debuglevel = 0;
+int32_t DBSLEEP,NXT_FORKHEIGHT,Finished_init,Finished_loading,Historical_done,Debuglevel = 0;
 char NXTSERVER[MAX_JSON_FIELD],NXTAPIURL[MAX_JSON_FIELD];
 
 struct hashtable *orderbook_txids;
@@ -744,6 +744,7 @@ double _pairave(float valA,float valB)
 #include "orders.h"
 #include "bars.h"
 #include "tradebot.h"
+#include "lotto.h"
 //#include "NXTservices.c"
 #include "api.h"
 
