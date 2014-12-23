@@ -168,6 +168,41 @@ int32_t direct_onionize(uint64_t nxt64bits,unsigned char *destpubkey,unsigned ch
     return(len + (int)extralen);
 }
 
+int32_t send_email(char *email,char *destNXTaddr,char *pubkeystr,char *msg)
+{
+    FILE *fp;
+    int32_t len,retval = -1;
+    uint8_t *destbuf,*src,pubkey[32];
+    char cmd[1024],fname[512],*hexstr;
+    len = (int32_t)strlen(msg);
+    sprintf(fname,"/tmp/%s.%d",destNXTaddr,_crc32(0,(uint8_t *)msg,len));
+    if ( (fp= fopen(fname,"wb")) != 0 )
+    {
+        fprintf(fp,"To: %s\n",email);
+        fprintf(fp,"From: MGWstatus@gmail.com\n");
+        fprintf(fp,"Subject: MGWstatus %s\n\n",destNXTaddr);
+        if ( pubkeystr != 0 && strlen(pubkeystr) == 64 )
+        {
+            decode_hex(pubkey,sizeof(pubkey),pubkeystr);
+            src = (uint8_t *)msg;
+            destbuf = calloc(1,len*2);
+            len = direct_onionize(calc_nxt64bits(destNXTaddr),pubkey,0,destbuf,&src,len);
+            hexstr = calloc(1,len*2 + 512);
+            init_hexbytes_noT(hexstr,destbuf,len);
+            fprintf(fp,"http://127.0.0.1:7778/{\"requestType\":\"emaildecode\",\"destNXT\":\"%s\",\"data\":\"%s\"}",destNXTaddr,hexstr);
+            free(destbuf);
+            free(hexstr);
+        }
+        else fprintf(fp,"%s",msg);
+        fprintf(fp,"\n");
+        fclose(fp);
+        sprintf(cmd,"ssmtp %s < %s",email,fname);
+        retval = system(cmd);
+        printf("(%s) -> retval.%d\n",cmd,retval);
+    }
+    return(retval);
+}
+
 int32_t onionize(char *hopNXTaddr,unsigned char *maxbuf,unsigned char *encoded,char *destNXTaddr,unsigned char **payloadp,int32_t len)
 {
     uint64_t nxt64bits;
@@ -403,7 +438,6 @@ int32_t sendandfree_jsoncmd(int32_t queueflag,int32_t L,char *sender,char *NXTAC
     return(err);
 }
 
-
 struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned char *recvbuf,int32_t recvlen,uv_udp_t *udp,struct sockaddr *prevaddr,char *sender,uint16_t port)
 {
     struct coin_info *cp = get_coin_info("BTCD");
@@ -511,9 +545,9 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     noqueue = prevent_queueing(checkstr);
                     if ( encrypted == 0 )
                     {
-                        if ( strcmp("ping",checkstr) == 0 && internalflag == 0 && dontupdate == 0 )
+                        if ( /*strcmp("ping",checkstr) == 0 &&*/ internalflag == 0 && dontupdate == 0 )
                             update_routing_probs(tokenized_np->H.U.NXTaddr,1,udp == 0,&tokenized_np->stats,nxtip,nxtport,pubkey);
-                        if ( strcmp("ping",checkstr) == 0 || strcmp("getdb",checkstr) == 0 || strcmp("genmultisig",checkstr) == 0 || strcmp("MGWdeposits",checkstr) == 0 || strcmp("MGWaddr",checkstr) == 0 )
+                        if ( strcmp("ping",checkstr) == 0 || strcmp("getdb",checkstr) == 0 || strcmp("genmultisig",checkstr) == 0 || strcmp("MGW",checkstr) == 0 || strcmp("MGWaddr",checkstr) == 0 )
                             strcpy(checkstr,"valid");
                     }
                     else
