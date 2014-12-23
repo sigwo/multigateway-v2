@@ -32,7 +32,7 @@
 #include "SuperNET.h"
 #include "cJSON.h"
 
-extern int32_t IS_LIBTEST,USESSL,SUPERNET_PORT;
+extern int32_t IS_LIBTEST,USESSL,SUPERNET_PORT,ENABLE_GUIPOLL;
 extern cJSON *MGWconf;
 char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char *command,char *params);
 int32_t gen_pingstr(char *cmdstr,int32_t completeflag);
@@ -66,79 +66,6 @@ cJSON *SuperAPI(char *cmd,char *field0,char *arg0,char *field1,char *arg1)
         free(retstr);
     }
     return(json);
-}
-
-void build_topology()
-{
-    cJSON *array,*item,*ret;
-    uint32_t now;
-    int32_t i,n,len,numnodes,numcontacts,numipaddrs = 0;
-    char ipaddr[64],_cmd[MAX_JSON_FIELD],**ipaddrs;
-    uint8_t finalbuf[MAX_JSON_FIELD];
-    struct nodestats **nodes;
-    struct contact_info **contacts;
-    array = cJSON_GetObjectItem(MGWconf,"whitelist");
-    if ( array != 0 && is_cJSON_Array(array) != 0 )
-    {
-        int32_t add_SuperNET_whitelist(char *ipaddr);
-        n = cJSON_GetArraySize(array);
-        ipaddrs = calloc(n+1,sizeof(*ipaddrs));
-        for (i=numipaddrs=0; i<n; i++)
-        {
-            if ( array == 0 || n == 0 )
-                break;
-            item = cJSON_GetArrayItem(array,i);
-            copy_cJSON(ipaddr,item);
-            if ( ipaddr[0] != 0 && (ret= SuperAPI("ping","destip",ipaddr,0,0)) != 0 )
-            {
-                ipaddrs[numipaddrs] = calloc(1,strlen(ipaddr)+1);
-                strcpy(ipaddrs[numipaddrs++],ipaddr);
-                free_json(ret);
-            }
-        }
-    }
-    if ( ipaddrs != 0 )
-    {
-        for (i=0; i<numipaddrs; i++)
-        {
-            printf("%s ",ipaddrs[i]);
-        }
-    }
-    printf("numipaddrs.%d\n",numipaddrs);
-    while ( 1 )
-    {
-        nodes = (struct nodestats **)copy_all_DBentries(&numnodes,NODESTATS_DATA);
-        contacts = (struct contact_info **)copy_all_DBentries(&numcontacts,CONTACT_DATA);
-        if ( nodes != 0 )
-        {
-            now = (uint32_t)time(NULL);
-            for (i=0; i<numnodes; i++)
-            {
-                expand_ipbits(ipaddr,nodes[i]->ipbits);
-                printf("(%llu %d %s) ",(long long)nodes[i]->nxt64bits,nodes[i]->lastcontact-now,ipaddr);
-                if ( gen_pingstr(_cmd,1) > 0 )
-                {
-                    int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
-                    len = construct_tokenized_req((char *)finalbuf,_cmd,get_public_srvacctsecret());
-                    send_packet(nodes[i],0,finalbuf,len);
-                }
-                free(nodes[i]);
-            }
-            free(nodes);
-        }
-        printf("numnodes.%d\n",numnodes);
-        if ( contacts != 0 )
-        {
-            for (i=0; i<numcontacts; i++)
-            {
-                printf("((%s) %llu) ",contacts[i]->handle,(long long)contacts[i]->nxt64bits);
-                free(contacts[i]);
-            }
-            free(contacts);
-        }
-        printf("numcontacts.%d\n",numcontacts);
-        sleep(100);
-    }
 }
 
 void *GUIpoll_loop(void *arg)
@@ -335,38 +262,19 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     return 1; //ok - we are mapped:)
 }
 
-/*
- #include <stdio.h>
- #include <stdint>
- 
-int32_t process_newbieargs(char *jsonstr)
-{
-    printf("%s\n",jsonstr);
-    return(0);
-}
-
-int32_t main(int argc,const char *argv[])
-{
-    if ( argc > 1 )
-        return(process_newbieargs((char *)argv[1]);
-    return(-1);
-}
-*/
-
 int main(int argc,const char *argv[])
 {
     FILE *fp;
+    cJSON *json = 0;
     int32_t retval;
     char ipaddr[64],*oldport,*newport,portstr[64];
-    extern int32_t ENABLE_GUIPOLL;
-    int32_t bitweight(uint64_t x);
-    //char hexstr[256],hexstr2[256];
-    //unsigned char hash[32];
-    void calc_sha256(char hashstr[(256 >> 3) * 2 + 1],unsigned char hash[256 >> 3],unsigned char *src,int32_t len);
-    //printf("%llu ^ %llu = %llx wt.%d\n",(unsigned long long)0xef9b64b1eb75d7e6LL,(unsigned long long)0x4b37c5ffc7efba39LL,(unsigned long long)0xef9b64b1eb75d7e6LL^0x4b37c5ffc7efba39LL,bitweight(0xef9b64b1eb75d7e6LL^0x4b37c5ffc7efba39LL)); getchar();
     IS_LIBTEST = 1;
-    if ( argc > 1 && argv[1] != 0 && strlen(argv[1]) < 32 )
-        strcpy(ipaddr,argv[1]);
+    if ( argc > 1 && argv[1] != 0 )
+    {
+        if ( argc > 2 && (argv[2][0] == '{' || argv[2][0] == '[') )
+            json = cJSON_Parse(argv[2]);
+        else strcpy(ipaddr,argv[1]);
+    }
     else strcpy(ipaddr,"127.0.0.1");
     retval = SuperNET_start("SuperNET.conf",ipaddr);
     sprintf(portstr,"%d",SUPERNET_PORT);
@@ -385,45 +293,24 @@ int main(int argc,const char *argv[])
         fwrite(&retval,1,sizeof(retval),fp);
         fclose(fp);
     }
-    if ( retval >= 0 && ENABLE_GUIPOLL != 0 )
+    if ( json == 0 )
     {
-        if ( portable_thread_create((void *)GUIpoll_loop,ipaddr) == 0 )
-            printf("ERROR hist process_hashtablequeues\n");
-        // else build_topology();
+        if ( retval >= 0 && ENABLE_GUIPOLL != 0 )
+        {
+            GUIpoll_loop(ipaddr);
+            //if ( portable_thread_create((void *)GUIpoll_loop,ipaddr) == 0 )
+            //    printf("ERROR hist process_hashtablequeues\n");
+        }
+        //while ( 1 )
+        //    sleep(60);
     }
-    while ( 1 ) sleep(60);
-    /*
-     memset(buf,0,sizeof(buf));
-     fgets(buf,sizeof(buf),stdin);
-     stripwhite_ns(buf,(int32_t)strlen(buf));
-     if ( strcmp("p",buf) == 0 )
-     strcpy(buf2,"\"getpeers\"}'");
-     else if ( strcmp("q",buf) == 0 )
-     exit(0);
-     else if ( buf[0] == 'P' && buf[1] == ' ' )
-     sprintf(buf2,"\"ping\",\"destip\":\"%s\"}'",buf+2);
-     else strcpy(buf2,buf);
-     sprintf(cmdstr,"{\"requestType\":%s",buf2);
-     retstr = SuperNET_JSON(cmdstr);
-     printf("input.(%s) -> (%s)\n",cmdstr,retstr);
-     if ( retstr != 0 )
-     free(retstr);*/
+    else
+    {
+        
+    }
     return(0);
 }
-/*
-int main(int argc, char ** argv)
-{
-    if(argc<2) {
-        printf("TEST ERROR: missing params\n");
-        printf("TEST usage: %s ext-port int-port\n",argv[0]);
-        exit(1);
-    }
-    if(!upnpredirect(argv[1],argv[2],"UDP", "SuperNET Peer")) {
-        printf("TEST ERROR: failed redirect\n");
-        exit(1);
-    }
-    exit (0);
-}*/
+
 
 // stubs
 int32_t SuperNET_broadcast(char *msg,int32_t duration) { return(0); }

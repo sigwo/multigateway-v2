@@ -1705,7 +1705,7 @@ char *MGW_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,i
             if ( strlen(retstr) < 1024 )
             {
                 hopNXTaddr[0] = 0;
-                str = send_tokenized_cmd(!prevent_queueing("MGW"),hopNXTaddr,0,NXTaddr,NXTACCTSECRET,retstr,sender);
+                str = send_tokenized_cmd(!prevent_queueing("MGWstatus"),hopNXTaddr,0,NXTaddr,NXTACCTSECRET,retstr,sender);
             }
             else
             {
@@ -1714,7 +1714,7 @@ char *MGW_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,i
                 data = malloc(datalen);
                 datalen = decode_hex(data,datalen,retstr);
                 printf("start_transfer\n");
-                str = start_transfer(previpaddr,sender,NXTaddr,NXTACCTSECRET,previpaddr,"MGWstatus",data,datalen,timeout,"mgw"); // start_transfer frees data
+                str = start_transfer(previpaddr,sender,NXTaddr,NXTACCTSECRET,previpaddr,"MGWstatus",data,datalen,timeout,"bridge"); // start_transfer frees data
             }
             if ( str != 0 )
                 free(str);
