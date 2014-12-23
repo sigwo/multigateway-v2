@@ -418,7 +418,7 @@ void init_telepathy_contact(struct contact_info *contact)
 {
     struct coin_info *cp = get_coin_info("BTCD");
     int32_t i;
-    //char retbuf[MAX_JSON_FIELD];//,*retstr;
+    char retbuf[MAX_JSON_FIELD];//,*retstr;
     uint64_t randbits;
     for (i=0; i<=MAX_DROPPED_PACKETS*3; i++)
         create_telepathy_entry(contact,i);
