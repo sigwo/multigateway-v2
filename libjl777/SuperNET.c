@@ -32,13 +32,15 @@
 #include "SuperNET.h"
 #include "cJSON.h"
 
-extern int32_t IS_LIBTEST,USESSL,SUPERNET_PORT,ENABLE_GUIPOLL;
+extern int32_t IS_LIBTEST,USESSL,SUPERNET_PORT,ENABLE_GUIPOLL,Debuglevel;
 extern cJSON *MGWconf;
 char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char *command,char *params);
-int32_t gen_pingstr(char *cmdstr,int32_t completeflag);
-void send_packet(struct nodestats *peerstats,struct sockaddr *destaddr,unsigned char *finalbuf,int32_t len);
 void expand_ipbits(char *ipaddr,uint32_t ipbits);
-char *get_public_srvacctsecret();
+uint64_t conv_acctstr(char *acctstr);
+void calc_sha256(char hashstr[(256 >> 3) * 2 + 1],unsigned char hash[256 >> 3],unsigned char *src,int32_t len);
+int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
+int32_t expand_nxt64bits(char *NXTaddr,uint64_t nxt64bits);
+char *clonestr(char *);
 
 char *SuperNET_url()
 {
@@ -54,7 +56,7 @@ cJSON *SuperAPI(char *cmd,char *field0,char *arg0,char *field1,char *arg1)
     char params[1024],*retstr;
     if ( field0 != 0 && field0[0] != 0 )
     {
-        if ( field0 != 0 && field0[0] != 0 )
+        if ( field1 != 0 && field1[0] != 0 )
             sprintf(params,"{\"requestType\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\"}",cmd,field0,arg0,field1,arg1);
         else sprintf(params,"{\"requestType\":\"%s\",\"%s\":\"%s\"}",cmd,field0,arg0);
     }
@@ -66,6 +68,47 @@ cJSON *SuperAPI(char *cmd,char *field0,char *arg0,char *field1,char *arg1)
         free(retstr);
     }
     return(json);
+}
+
+char *process_commandline_json(cJSON *json)
+{
+    void issue_genmultisig(char *coinstr,char *userNXTaddr,char *userpubkey,char *email,int32_t buyNXT);
+    char cmd[2048],userpubkey[2048],NXTacct[2048],userNXTaddr[2048],email[2048],convertNXT[2048],retbuf[1024],coinstr[1024],*retstr = 0;
+    unsigned char hash[256>>3],mypublic[256>>3];
+    uint64_t nxt64bits,checkbits;
+    int32_t i,n;
+    uint32_t buyNXT = 0;
+    cJSON *array;
+    copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
+    copy_cJSON(email,cJSON_GetObjectItem(json,"email"));
+    copy_cJSON(NXTacct,cJSON_GetObjectItem(json,"NXT"));
+    copy_cJSON(userpubkey,cJSON_GetObjectItem(json,"pubkey"));
+    copy_cJSON(convertNXT,cJSON_GetObjectItem(json,"convertNXT"));
+    if ( convertNXT[0] != 0 )
+        buyNXT = (uint32_t)atol(convertNXT);
+    if ( strcmp(cmd,"newbie") != 0 )
+        return(clonestr("{\"error\":\"only newbie command is supported now\"}"));
+    nxt64bits = conv_acctstr(NXTacct);
+    expand_nxt64bits(userNXTaddr,nxt64bits);
+    decode_hex(mypublic,sizeof(mypublic),userpubkey);
+    calc_sha256(0,hash,mypublic,32);
+    memcpy(&checkbits,hash,sizeof(checkbits));
+    if ( checkbits != nxt64bits )
+    {
+        sprintf(retbuf,"{\"error\":\"invalid pubkey\",\"pubkey\":\"%s\",\"NXT\":\"%s\",\"checkNXT\":\"%llu\"}",userpubkey,userNXTaddr,(long long)checkbits);
+        return(clonestr(retbuf));
+    }
+    array = cJSON_GetObjectItem(MGWconf,"active");
+    if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        for (i=0; i<n; i++)
+        {
+            copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
+            if ( coinstr[0] != 0 )
+                issue_genmultisig(coinstr,userNXTaddr,userpubkey,email,buyNXT);
+        }
+    }
+    return(retstr);
 }
 
 void *GUIpoll_loop(void *arg)
@@ -267,12 +310,28 @@ int main(int argc,const char *argv[])
     FILE *fp;
     cJSON *json = 0;
     int32_t retval;
-    char ipaddr[64],*oldport,*newport,portstr[64];
+    char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
+    system("git log | head -n 1");
+
     IS_LIBTEST = 1;
     if ( argc > 1 && argv[1] != 0 )
     {
-        if ( argc > 2 && (argv[2][0] == '{' || argv[2][0] == '[') )
-            json = cJSON_Parse(argv[2]);
+        char *init_MGWconf(char *JSON_or_fname,char *myipaddr);
+        if ( (argv[1][0] == '{' || argv[1][0] == '[') )
+        {
+            if ( (json= cJSON_Parse(argv[1])) != 0 )
+            {
+                Debuglevel = IS_LIBTEST = -1;
+                init_MGWconf("SuperNET.conf",0);
+                if ( (retstr= process_commandline_json(json)) != 0 )
+                {
+                    printf("%s\n",retstr);
+                    free(retstr);
+                }
+                free_json(json);
+                return(0);
+            }
+        }
         else strcpy(ipaddr,argv[1]);
     }
     else strcpy(ipaddr,"127.0.0.1");
@@ -293,21 +352,14 @@ int main(int argc,const char *argv[])
         fwrite(&retval,1,sizeof(retval),fp);
         fclose(fp);
     }
-    if ( json == 0 )
+    if ( retval >= 0 && ENABLE_GUIPOLL != 0 )
     {
-        if ( retval >= 0 && ENABLE_GUIPOLL != 0 )
-        {
-            GUIpoll_loop(ipaddr);
-            //if ( portable_thread_create((void *)GUIpoll_loop,ipaddr) == 0 )
-            //    printf("ERROR hist process_hashtablequeues\n");
-        }
-        //while ( 1 )
-        //    sleep(60);
+        GUIpoll_loop(ipaddr);
+        //if ( portable_thread_create((void *)GUIpoll_loop,ipaddr) == 0 )
+        //    printf("ERROR hist process_hashtablequeues\n");
     }
-    else
-    {
-        
-    }
+    while ( 1 )
+        sleep(60);
     return(0);
 }
 
