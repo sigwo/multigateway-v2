@@ -1608,8 +1608,8 @@ void issue_genmultisig(char *coinstr,char *userNXTaddr,char *userpubkey,char *em
     {
         sprintf(params,"{\"requestType\":\"genmultisig\",\"email\":\"%s\",\"buyNXT\":%d,\"destip\":\"%s\",\"destport\":%d,\"refcontact\":\"%s\",\"userpubkey\":\"%s\",\"coin\":\"%s\",\"contacts\":[\"%s\", \"%s\", \"%s\"],\"M\":%d,\"N\":%d}",email,buyNXT,Server_names[gatewayid],refcp->bridgeport,userNXTaddr,userpubkey,coinstr,Server_NXTaddrs[0],Server_NXTaddrs[1],Server_NXTaddrs[2],NUM_GATEWAYS-1,NUM_GATEWAYS);
         retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url(),(char *)"",(char *)"SuperNET",params);
-
-        printf("issue.(%s) -> (%s)\n",params,retstr);
+        if ( Debuglevel > 0 )
+            printf("issue.(%s) -> (%s)\n",params,retstr);
         if ( retstr != 0 )
             free(retstr);
     }
@@ -1634,7 +1634,7 @@ char *getmsigpubkey_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char
                 add_NXT_coininfo(calc_nxt64bits(sender),conv_acctstr(refNXTaddr),cp->name,myacctcoinaddr,mypubkey);
             if ( get_acct_coinaddr(acctcoinaddr,cp,refNXTaddr) != 0 && get_bitcoind_pubkey(pubkey,cp,acctcoinaddr) != 0 )
             {
-                sprintf(cmdstr,"{\"requestType\":\"setmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"addr\":\"%s\",\"pubkey\":\"%s\"}",NXTaddr,coin,refNXTaddr,acctcoinaddr,pubkey);
+                sprintf(cmdstr,"{\"requestType\":\"setmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"addr\":\"%s\",\"userpubkey\":\"%s\"}",NXTaddr,coin,refNXTaddr,acctcoinaddr,pubkey);
                 return(send_tokenized_cmd(!prevent_queueing("setmsigpubkey"),hopNXTaddr,0,NXTaddr,NXTACCTSECRET,cmdstr,sender));
             }
         }
@@ -1672,7 +1672,8 @@ char *setmsigpubkey_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char
 
 char *MGWaddr_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    printf("MGWaddr_func(%s)\n",origargstr);
+    if ( Debuglevel > 0 )
+        printf("MGWaddr_func(%s)\n",origargstr);
     if ( is_remote_access(previpaddr) == 0 )
         return(0);
     if ( sender[0] != 0 && valid > 0 )

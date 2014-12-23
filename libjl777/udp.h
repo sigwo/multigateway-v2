@@ -366,7 +366,7 @@ int32_t process_sendQ_item(struct write_req_t *wr)
     if ( 1 && (pserver->nxt64bits == cp->privatebits || pserver->nxt64bits == cp->srvpubnxtbits) )
     {
         //printf("(%s/%d) no point to send yourself dest.%llu pub.%llu srvpub.%llu\n",ipaddr,supernet_port,(long long)pserver->nxt64bits,(long long)cp->pubnxtbits,(long long)cp->srvpubnxtbits);
-        //return(0);
+        return(0);
         strcpy(ipaddr,"127.0.0.1");
         uv_ip4_addr(ipaddr,supernet_port,(struct sockaddr_in *)&wr->addr);
     }
@@ -479,6 +479,8 @@ void send_packet(int32_t queueflag,uint32_t ipbits,struct sockaddr *destaddr,uns
         uv_ip4_addr(ipaddr,port,(struct sockaddr_in *)destaddr);
     }
     port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)destaddr);
+    if ( strcmp(ipaddr,Global_mp->ipaddr) == 0 || strcmp(ipaddr,"127.0.0.1") == 0 )
+        return;
     pserver = get_pserver(0,ipaddr,0,0);
     if ( port == 0 || port == BTCD_PORT )
     {
