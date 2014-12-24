@@ -163,13 +163,17 @@ char *process_commandline_json(cJSON *json)
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
-        for (i=0; i<n; i++)
+        for (iter=0; iter<3; iter++)
         {
-            copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
-            if ( coinstr[0] != 0 )
-                issue_genmultisig(coinstr,userNXTaddr,userpubkey,email,buyNXT);
+            for (i=0; i<n; i++)
+            {
+                copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
+                if ( coinstr[0] != 0 )
+                    issue_genmultisig(coinstr,userNXTaddr,userpubkey,email,buyNXT);
+            }
+            sleep(1);
         }
-        for (i=0; i<3; i++)
+        for (i=0; i<13; i++)
         {
             if ( (retstr= GUIpoll(txidstr,senderipaddr,&port)) != 0 )
             {
@@ -195,7 +199,7 @@ char *process_commandline_json(cJSON *json)
                 free(retstr);
                 retstr = 0;
             }
-            sleep(1);
+            else sleep(1);
         }
     }
     i = 0;
