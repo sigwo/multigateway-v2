@@ -137,10 +137,9 @@ char *process_commandline_json(cJSON *json)
     unsigned char hash[256>>3],mypublic[256>>3];
     uint16_t port;
     uint64_t nxt64bits,checkbits;
-    int32_t i,j,n;
+    int32_t i,n,iter;
     uint32_t buyNXT = 0;
-    struct multisig_addr *msig;
-    cJSON *array,*argjson,*retjson,*msigjson,*item;
+    cJSON *array,*argjson,*retjson;
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     copy_cJSON(email,cJSON_GetObjectItem(json,"email"));
     copy_cJSON(NXTacct,cJSON_GetObjectItem(json,"NXT"));
