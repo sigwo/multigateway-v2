@@ -1200,7 +1200,7 @@ void *Coinloop(void *ptr)
                 printf("Coinloop: no work, sleep\n");
             sleep(10);
         }
-        else
+        else if ( 0 )
         {
             for (i=0; i<Numcoins; i++)
             {
