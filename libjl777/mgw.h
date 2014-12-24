@@ -24,8 +24,8 @@ char *create_multisig_json(struct multisig_addr *msig,int32_t truncated);
 void set_MGW_msigfname(char *fname,char *NXTaddr)
 {
     if ( NXTaddr == 0 )
-        sprintf(fname,"MGW/msig/ALL");
-    else sprintf(fname,"MGW/msig/%s",NXTaddr);
+        sprintf(fname,"/var/www/MGW/msig/ALL");
+    else sprintf(fname,"/var/www/MGW/msig/%s",NXTaddr);
 }
 
 void update_MGW_files(char *fname,struct multisig_addr *refmsig,char *jsonstr)
@@ -638,28 +638,34 @@ int32_t msigcmp(struct multisig_addr *ref,struct multisig_addr *msig)
         return(-1);
     if ( strcmp(ref->multisigaddr,msig->multisigaddr) != 0 || msig->m != ref->m || msig->n != ref->n )
     {
-        printf("A ref.(%s) vs msig.(%s)\n",ref->multisigaddr,msig->multisigaddr);
+        if ( Debuglevel > 3 )
+            printf("A ref.(%s) vs msig.(%s)\n",ref->multisigaddr,msig->multisigaddr);
         return(1);
     }
     if ( strcmp(ref->NXTaddr,msig->NXTaddr) != 0 )
     {
-        printf("B ref.(%s) vs msig.(%s)\n",ref->NXTaddr,msig->NXTaddr);
+        if ( Debuglevel > 3 )
+            printf("B ref.(%s) vs msig.(%s)\n",ref->NXTaddr,msig->NXTaddr);
         return(2);
     }
     if ( strcmp(ref->redeemScript,msig->redeemScript) != 0 )
     {
-        printf("C ref.(%s) vs msig.(%s)\n",ref->redeemScript,msig->redeemScript);
+        if ( Debuglevel > 3 )
+            printf("C ref.(%s) vs msig.(%s)\n",ref->redeemScript,msig->redeemScript);
         return(3);
     }
     for (i=0; i<ref->n; i++)
         if ( (x= pubkeycmp(&ref->pubkeys[i],&msig->pubkeys[i])) != 0 )
         {
-            switch ( x )
+            if ( Debuglevel > 3 )
             {
-                case 1: printf("P.%d pubkey ref.(%s) vs msig.(%s)\n",x,ref->pubkeys[i].pubkey,msig->pubkeys[i].pubkey); break;
-                case 2: printf("P.%d pubkey ref.(%s) vs msig.(%s)\n",x,ref->pubkeys[i].coinaddr,msig->pubkeys[i].coinaddr); break;
-                case 3: printf("P.%d pubkey ref.(%llu) vs msig.(%llu)\n",x,(long long)ref->pubkeys[i].nxt64bits,(long long)msig->pubkeys[i].nxt64bits); break;
-                default: printf("unexpected retval.%d\n",x);
+                switch ( x )
+                {
+                    case 1: printf("P.%d pubkey ref.(%s) vs msig.(%s)\n",x,ref->pubkeys[i].pubkey,msig->pubkeys[i].pubkey); break;
+                    case 2: printf("P.%d pubkey ref.(%s) vs msig.(%s)\n",x,ref->pubkeys[i].coinaddr,msig->pubkeys[i].coinaddr); break;
+                    case 3: printf("P.%d pubkey ref.(%llu) vs msig.(%llu)\n",x,(long long)ref->pubkeys[i].nxt64bits,(long long)msig->pubkeys[i].nxt64bits); break;
+                    default: printf("unexpected retval.%d\n",x);
+                }
             }
             return(4+i);
         }

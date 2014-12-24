@@ -173,6 +173,7 @@ char *process_commandline_json(cJSON *json)
             sprintf(cmdstr,"http://%s/MGW/msig/%s",Server_NXTaddrs[i],userNXTaddr);
             if ( (retstr= issue_curl(0,cmdstr)) != 0 )
             {
+                printf("(%s) -> (%s)\n",cmdstr,retstr);
                 if ( (msigjson= cJSON_Parse(retstr)) != 0 )
                 {
                     if ( (msig= decode_msigjson(0,msigjson,Server_NXTaddrs[i])) != 0 )
