@@ -726,6 +726,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             extract_cJSON_str(NXTISSUERACCT,sizeof(NXTISSUERACCT),MGWconf,"NXTISSUERACCT");
             if ( IS_LIBTEST >= 0 )
                 IS_LIBTEST = get_API_int(cJSON_GetObjectItem(MGWconf,"LIBTEST"),1);
+            FASTMODE = get_API_int(cJSON_GetObjectItem(MGWconf,"FASTMODE"),1);
             SERVER_PORT = get_API_int(cJSON_GetObjectItem(MGWconf,"SERVER_PORT"),3000);
             SUPERNET_PORT = get_API_int(cJSON_GetObjectItem(MGWconf,"SUPERNET_PORT"),_SUPERNET_PORT);
             APIPORT = get_API_int(cJSON_GetObjectItem(MGWconf,"APIPORT"),SUPERNET_PORT);
@@ -870,6 +871,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                 if ( Debuglevel > 0 )
                     printf("special_addrs.%d\n",n);
                 MGW_blacklist[n] = MGW_whitelist[n] = NXTISSUERACCT, n++;
+                MGW_blacklist[n] = MGW_whitelist[n] = GENESISACCT, n++;
                 MGW_whitelist[n] = "";
                 MGW_blacklist[n++] = "4551058913252105307";    // from accidental transfer
                 MGW_blacklist[n++] = "";

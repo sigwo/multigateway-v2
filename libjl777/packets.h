@@ -335,21 +335,28 @@ char *sendmessage(int32_t queueflag,char *hopNXTaddr,int32_t L,char *verifiedNXT
     }
     else if ( len > 0 )
     {
-        len = onionize(hopNXTaddr,maxbuf,encodedD,destNXTaddr,&outbuf,len);
-        if ( L > 0 )
+        if ( FASTMODE != 0 )
         {
-            if ( (len= add_random_onionlayers(hopNXTaddr,L,maxbuf,encodedL,&outbuf,len)) == 0 )
-            {
-                printf("unexpected case of onionlayer error\n");
-                outbuf = encoded;
-                len = prep_outbuf(outbuf,msg,msglen,data,datalen);
-                len = onionize(hopNXTaddr,maxbuf,encodedF,destNXTaddr,&outbuf,len);
-            }
+            len = onionize(hopNXTaddr,maxbuf,0,destNXTaddr,&outbuf,len);
         }
-        strcpy(destNXTaddr,hopNXTaddr);
-        //printf("len.%d -> ",len);
-        len = onionize(hopNXTaddr,maxbuf,0,destNXTaddr,&outbuf,len);
-        //printf("%d\n",len);
+        else
+        {
+            len = onionize(hopNXTaddr,maxbuf,encodedD,destNXTaddr,&outbuf,len);
+            if ( L > 0 )
+            {
+                if ( (len= add_random_onionlayers(hopNXTaddr,L,maxbuf,encodedL,&outbuf,len)) == 0 )
+                {
+                    printf("unexpected case of onionlayer error\n");
+                    outbuf = encoded;
+                    len = prep_outbuf(outbuf,msg,msglen,data,datalen);
+                    len = onionize(hopNXTaddr,maxbuf,encodedF,destNXTaddr,&outbuf,len);
+                }
+            }
+            strcpy(destNXTaddr,hopNXTaddr);
+            //printf("len.%d -> ",len);
+            len = onionize(hopNXTaddr,maxbuf,0,destNXTaddr,&outbuf,len);
+            //printf("%d\n",len);
+        }
         route_packet(queueflag,1,0,hopNXTaddr,outbuf,len);
         if ( txid == 0 )
             sprintf(buf,"{\"error\":\"%s cant sendmessage.(%s) to %s, len.%d\"}",verifiedNXTaddr,msg,destNXTaddr,len);
@@ -583,7 +590,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                             extract_nameport(previpaddr,sizeof(previpaddr),(struct sockaddr_in *)prevaddr);
                         else previpaddr[0] = 0;
                         //fprintf(stderr,"GOT.(%s) decoded.%p (%s)\n",parmstxt,decoded,decoded);
-                        if ( noqueue == 0 && IS_LIBTEST < 2 )
+                        if ( noqueue == 0 && FASTMODE == 0 )//IS_LIBTEST < 2 )
                         {
                             qp = calloc(1,sizeof(*qp));
                             if ( previpaddr[0] != 0 )
