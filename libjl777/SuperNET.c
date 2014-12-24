@@ -170,7 +170,7 @@ char *process_commandline_json(cJSON *json)
         }
         for (i=0; i<3; i++)
         {
-            sprintf(cmdstr,"http://%s/MGW/msig/%s",Server_NXTaddrs[i],userNXTaddr);
+            sprintf(cmdstr,"http://%s/MGW/msig/%s",Server_names[i],userNXTaddr);
             if ( (retstr= issue_curl(0,cmdstr)) != 0 )
             {
                 printf("(%s) -> (%s)\n",cmdstr,retstr);
@@ -185,7 +185,7 @@ char *process_commandline_json(cJSON *json)
                         //printf("[%s]\n",retstr);
                         return(retstr);
                     }
-                }
+                } else printf("error parsing.(%s)\n",retstr);
                 free_json(msigjson);
                 free(retstr);
             } else printf("cant find (%s)\n",cmdstr);
