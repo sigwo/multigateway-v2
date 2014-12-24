@@ -137,10 +137,10 @@ char *process_commandline_json(cJSON *json)
     unsigned char hash[256>>3],mypublic[256>>3];
     uint16_t port;
     uint64_t nxt64bits,checkbits;
-    int32_t i,n;
+    int32_t i,j,n;
     uint32_t buyNXT = 0;
     struct multisig_addr *msig;
-    cJSON *array,*argjson,*retjson,*msigjson;
+    cJSON *array,*argjson,*retjson,*msigjson,*item;
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     copy_cJSON(email,cJSON_GetObjectItem(json,"email"));
     copy_cJSON(NXTacct,cJSON_GetObjectItem(json,"NXT"));
@@ -202,10 +202,24 @@ char *process_commandline_json(cJSON *json)
     sprintf(cmdstr,"http://%s/MGW/msig/%s",Server_names[i],userNXTaddr);
     if ( (retstr= issue_curl(0,cmdstr)) != 0 )
     {
-        printf("(%s) -> (%s)\n",cmdstr,retstr);
+        /*printf("(%s) -> (%s)\n",cmdstr,retstr);
         if ( (msigjson= cJSON_Parse(retstr)) != 0 )
         {
-            if ( (msig= decode_msigjson(0,msigjson,Server_NXTaddrs[i])) != 0 )
+            if ( is_cJSON_Array(msigjson) != 0 && (n= cJSON_GetArraySize(msigjson)) > 0 )
+            {
+                for (j=0; j<n; j++)
+                {
+                    item = cJSON_GetArrayItem(msigjson,j);
+                    copy_cJSON(coinstr,cJSON_GetObjectItem(item,"coin"));
+                    if ( strcmp(coinstr,xxx) == 0 )
+                    {
+                        msig = decode_msigjson(0,item,Server_NXTaddrs[i]);
+                        break;
+                    }
+                }
+            }
+            else msig = decode_msigjson(0,msigjson,Server_NXTaddrs[i]);
+            if ( msig != 0 )
             {
                 free(msig);
                 free_json(msigjson);
@@ -216,7 +230,8 @@ char *process_commandline_json(cJSON *json)
             }
         } else printf("error parsing.(%s)\n",retstr);
         free_json(msigjson);
-        free(retstr);
+        free(retstr);*/
+        return(retstr);
     } else printf("cant find (%s)\n",cmdstr);
     return(clonestr("{\"error\":\"timeout\"}"));
 }
