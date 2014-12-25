@@ -925,8 +925,9 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
         else printf("PARSE ERROR\n");
         free(jsonstr);
     }
-    if ( DATADIR[0] != 0 )
-        ensure_directory(DATADIR);
+    if ( DATADIR[0] == 0 )
+        strcpy(DATADIR,"archive");
+    ensure_directory(DATADIR);
 
     /*if ( didinit == 0 )
     {
