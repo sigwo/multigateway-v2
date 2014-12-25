@@ -177,7 +177,7 @@ char *process_commandline_json(cJSON *json)
                     if ( coinstr[0] != 0 )
                         issue_genmultisig(coinstr,userNXTaddr,userpubkey,email,buyNXT);
                 }
-                sleep(2);
+                usleep(100000);
             }
         }
     }
