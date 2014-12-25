@@ -191,6 +191,35 @@ char *process_commandline_json(cJSON *json)
             free(retstr), retstr = 0;
     }
     else return(clonestr("{\"error\":\"only newbie command is supported now\"}"));
+    if ( waitfor != 0 )
+    {
+        for (i=0; i<3000; i++)
+        {
+            if ( (retstr= GUIpoll(txidstr,senderipaddr,&port)) != 0 )
+            {
+                //fprintf(stderr,"%s\n",retstr);
+                if ( retstr[0] == '[' || retstr[0] == '{' )
+                {
+                    if ( (retjson= cJSON_Parse(retstr)) != 0 )
+                    {
+                        if ( is_cJSON_Array(retjson) != 0 && (n= cJSON_GetArraySize(retjson)) == 2 )
+                        {
+                            argjson = cJSON_GetArrayItem(retjson,0);
+                            copy_cJSON(buf2,cJSON_GetObjectItem(argjson,"requestType"));
+                            if ( strcmp(buf2,waitfor) == 0 )
+                            {
+                                if ( email[0] != 0 )
+                                    send_email(email,userNXTaddr,0,retstr);
+                                //printf("[%s]\n",retstr);
+                                return(retstr);
+                            }
+                        }
+                    }
+                }
+                free(retstr),retstr = 0;
+            } else usleep(1000);
+        }
+    }
     if ( cmdstr[0] != 0 )
     {
         for (i=0; i<3; i++)
@@ -234,35 +263,6 @@ char *process_commandline_json(cJSON *json)
                 }
                 else free(retstr);
             } else printf("cant find (%s)\n",cmdstr);
-        }
-    }
-    if ( waitfor != 0 )
-    {
-        for (i=0; i<1000; i++)
-        {
-            if ( (retstr= GUIpoll(txidstr,senderipaddr,&port)) != 0 )
-            {
-                //fprintf(stderr,"%s\n",retstr);
-                if ( retstr[0] == '[' || retstr[0] == '{' )
-                {
-                    if ( (retjson= cJSON_Parse(retstr)) != 0 )
-                    {
-                        if ( is_cJSON_Array(retjson) != 0 && (n= cJSON_GetArraySize(retjson)) == 2 )
-                        {
-                            argjson = cJSON_GetArrayItem(retjson,0);
-                            copy_cJSON(buf2,cJSON_GetObjectItem(argjson,"requestType"));
-                            if ( strcmp(buf2,waitfor) == 0 )
-                            {
-                                if ( email[0] != 0 )
-                                    send_email(email,userNXTaddr,0,retstr);
-                                //printf("[%s]\n",retstr);
-                                return(retstr);
-                            }
-                        }
-                    }
-                }
-                free(retstr),retstr = 0;
-            }
         }
     }
     return(clonestr("{\"error\":\"timeout\"}"));
