@@ -1758,10 +1758,12 @@ char *MGWstatus(char *coinstr,char *userNXTaddr,char *userpubkey,char *email,int
 
         sprintf(params,"{\"requestType\":\"MGW\",\"specialNXT\":\"%s\",\"destip\":\"%s\",\"destport\":%d,\"rescan\":%d,\"actionflag\":%d,\"refcontact\":\"%s\",\"userpubkey\":\"%s\",\"coin\":\"%s\",\"asset\":\"%s\",\"exclude0\":\"7581814105672729429\"}",cp->MGWissuer,Server_names[gatewayid],refcp->bridgeport,rescan,actionflag,userNXTaddr,userpubkey,coinstr,cp->assetid);
         retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url(),(char *)"",(char *)"SuperNET",params);
-        if ( Debuglevel > 0 )
-            printf("issue.(%s) -> (%s)\n",params,retstr);
         if ( retstr != 0 )
-            free(retstr);
+        {
+           // if ( Debuglevel > 0 )
+                printf("issue.(%s) -> (%s)\n",params,retstr);
+           free(retstr);
+        }
     }
     return(0);
 }
