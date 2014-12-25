@@ -224,7 +224,7 @@ char *process_commandline_json(cJSON *json)
                             free_json(retjson);
                     }
                 }
-                fprintf(stderr,"(%p) %s\n",retjson,retstr);
+                //fprintf(stderr,"(%p) %s\n",retjson,retstr);
                 free(retstr),retstr = 0;
             } else usleep(1000);
         }
@@ -285,10 +285,10 @@ char *process_commandline_json(cJSON *json)
             cJSON_AddItemToArray(json,retjsons[i]);
     }
     retstr = cJSON_Print(json);
-    printf("json.(%s)\n",retstr);
     free_json(json);
     if ( email[0] != 0 )
         send_email(email,userNXTaddr,0,retstr);
+    return(retstr);
  }
 
 void *GUIpoll_loop(void *arg)
