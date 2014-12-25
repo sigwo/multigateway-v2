@@ -739,6 +739,8 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             DBSLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"DBSLEEP"),100);
             APISLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"APISLEEP"),25);
             USESSL = get_API_int(cJSON_GetObjectItem(MGWconf,"USESSL"),0);
+            UPNP = get_API_int(cJSON_GetObjectItem(MGWconf,"UPNP"),0);
+            MULTIPORT = get_API_int(cJSON_GetObjectItem(MGWconf,"MULTIPORT"),1);
             if ( Debuglevel > 0 )
                 printf("USESSL.%d IS_LIBTEST.%d APIPORT.%d APISLEEP.%d millis\n",USESSL,IS_LIBTEST,APIPORT,APISLEEP);
             ismainnet = get_API_int(cJSON_GetObjectItem(MGWconf,"MAINNET"),1);
