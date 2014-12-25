@@ -218,6 +218,7 @@ char *process_commandline_json(cJSON *json)
                                     retstrs[gatewayid] = retstr, retstr = 0;
                                     if ( retstrs[0] != 0 && retstrs[1] != 0 && retstrs[2] != 0 )
                                         break;
+                                }
                             }
                         }
                     }
