@@ -214,7 +214,10 @@ char *process_commandline_json(cJSON *json)
                             {
                                 copy_cJSON(errstr,cJSON_GetObjectItem(argjson,"error"));
                                 if ( strlen(errstr) > 0 || strcmp(buf2,waitfor) == 0 )
+                                {
                                     retstrs[gatewayid] = retstr, retstr = 0;
+                                    if ( retstrs[0] != 0 && retstrs[1] != 0 && retstrs[2] != 0 )
+                                        break;
                             }
                         }
                     }
