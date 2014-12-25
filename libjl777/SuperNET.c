@@ -223,8 +223,8 @@ char *process_commandline_json(cJSON *json)
                         if ( retjson != 0 )
                             free_json(retjson);
                     }
-                    fprintf(stderr,"(%p) %s\n",retjson,retstr);
                 }
+                fprintf(stderr,"(%p) %s\n",retjson,retstr);
                 free(retstr),retstr = 0;
             } else usleep(1000);
         }
