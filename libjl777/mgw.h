@@ -2608,12 +2608,21 @@ char *MGW(char *issuerNXT,int32_t rescan,int32_t actionflag,char *coin,char *ass
     }
     if ( depositors_pubkey != 0 && depositors_pubkey[0] == 0 )
         depositors_pubkey = 0;
-    ap = get_NXTasset(&createdflag,Global_mp,assetstr);
-    cp = conv_assetid(assetstr);
-    if ( cp == 0 || ap == 0 )
+    if ( (cp= get_coin_info(coin)) == 0 )
     {
-        sprintf(retbuf,"{\"error\":\"dont have coin_info for (%s) ap.%p\"}",assetstr,ap);
-        return(clonestr(retbuf));
+        ap = get_NXTasset(&createdflag,Global_mp,assetstr);
+        cp = conv_assetid(assetstr);
+        if ( cp == 0 || ap == 0 )
+        {
+            sprintf(retbuf,"{\"error\":\"dont have coin_info for asset (%s) ap.%p\"}",assetstr,ap);
+            return(clonestr(retbuf));
+        }
+    }
+    else
+    {
+        if ( assetstr != 0 && strcmp(cp->assetid,assetstr) != 0 )
+            return(clonestr("{\"error\":\"mismatched assetid\"}"));
+        ap = get_NXTasset(&createdflag,Global_mp,cp->assetid);
     }
     if ( firsttimestamp == 0 )
         get_NXTblock(&firsttimestamp);
