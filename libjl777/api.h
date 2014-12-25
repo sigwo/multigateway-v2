@@ -1750,6 +1750,7 @@ char *MGWstatus(char *coinstr,char *userNXTaddr,char *userpubkey,char *email,int
     struct coin_info *cp,*refcp = get_coin_info("BTCD");
     char params[4096],*retstr;
     int32_t gatewayid;
+    printf("MGWstatus(%s %s %s (%s) %d %d)\n",coinstr,userNXTaddr,userpubkey,email,rescan,actionflag);
     if ( (cp= get_coin_info(coinstr)) == 0 )
         return(clonestr("{\"error\":\"unsupported coin\"}"));
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)

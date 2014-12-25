@@ -160,6 +160,7 @@ char *process_commandline_json(cJSON *json)
         return(clonestr(retbuf));
     }
     cmdstr[0] = 0;
+    printf("got cmd.(%s)\n",cmd);
     if ( strcmp(cmd,"newbie") == 0 )
     {
         waitfor = "MGWaddr";
@@ -186,6 +187,7 @@ char *process_commandline_json(cJSON *json)
         int32_t actionflag = 0,rescan = 1;
         waitfor = "MGWstatus";
         sprintf(cmdstr,"http://%s/MGW/status/%s",Server_names[i],userNXTaddr);
+        printf("cmdstr.(%s) waitfor.(%s)\n",cmdstr,waitfor);
         retstr = MGWstatus(coin,userNXTaddr,userpubkey,0,rescan,actionflag);
         if ( retstr != 0 )
             free(retstr), retstr = 0;
