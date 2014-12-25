@@ -200,7 +200,6 @@ char *process_commandline_json(cJSON *json)
         {
             if ( (retstr= GUIpoll(txidstr,senderipaddr,&port)) != 0 )
             {
-                //fprintf(stderr,"%s\n",retstr);
                 if ( retstr[0] == '[' || retstr[0] == '{' )
                 {
                     if ( (retjson= cJSON_Parse(retstr)) != 0 )
@@ -224,6 +223,7 @@ char *process_commandline_json(cJSON *json)
                         if ( retjson != 0 )
                             free_json(retjson);
                     }
+                    fprintf(stderr,"(%p) %s\n",retjson,retstr);
                 }
                 free(retstr),retstr = 0;
             } else usleep(1000);
@@ -285,6 +285,7 @@ char *process_commandline_json(cJSON *json)
             cJSON_AddItemToArray(json,retjsons[i]);
     }
     retstr = cJSON_Print(json);
+    printf("json.(%s)\n",retstr);
     free_json(json);
     if ( email[0] != 0 )
         send_email(email,userNXTaddr,0,retstr);
