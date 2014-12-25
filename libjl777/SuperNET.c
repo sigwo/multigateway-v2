@@ -445,6 +445,7 @@ int main(int argc,const char *argv[])
     if ( argc > 1 && argv[1] != 0 )
     {
         char *init_MGWconf(char *JSON_or_fname,char *myipaddr);
+        printf("ARGV1.(%s)\n",argv[1]);
         if ( (argv[1][0] == '{' || argv[1][0] == '[') )
         {
             if ( (json= cJSON_Parse(argv[1])) != 0 )
