@@ -134,7 +134,7 @@ char *process_commandline_json(cJSON *json)
     struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender);
     int32_t send_email(char *email,char *destNXTaddr,char *pubkeystr,char *msg);
     void issue_genmultisig(char *coinstr,char *userNXTaddr,char *userpubkey,char *email,int32_t buyNXT);
-    char txidstr[1024],senderipaddr[1024],cmd[2048],coin[2048],userpubkey[2048],NXTacct[2048],userNXTaddr[2048],email[2048],convertNXT[2048],retbuf[1024],buf2[1024],coinstr[1024],cmdstr[512],*retstr = 0,*waitfor = 0,*retstrs[3],errstr[2048];
+    char txidstr[1024],senderipaddr[1024],cmd[2048],coin[2048],userpubkey[2048],NXTacct[2048],userNXTaddr[2048],email[2048],convertNXT[2048],retbuf[1024],buf2[1024],coinstr[1024],cmdstr[512],*buf,*retstr = 0,*waitfor = 0,*retstrs[3],errstr[2048];
     unsigned char hash[256>>3],mypublic[256>>3];
     uint16_t port;
     uint64_t nxt64bits,checkbits;
@@ -283,12 +283,18 @@ char *process_commandline_json(cJSON *json)
             retstrs[i] = clonestr("[{\"error\":\"timeout\"}]");
         len += strlen(retstrs[i]) + 128;
     }
-    retstr = calloc(1,len);
-    sprintf(retstr,"{\"gateway0\":%s,\"gateway1\":%s,\"gateway2\":%s}",retstrs[0],retstrs[1],retstrs[2]);
-    if ( email[0] != 0 )
-        send_email(email,userNXTaddr,0,retstr);
+    buf = calloc(1,len);
+    sprintf(buf,"{\"gateway0\":%s,\"gateway1\":%s,\"gateway2\":%s}",retstrs[0],retstrs[1],retstrs[2]);
+    if ( (json= cJSON_Parse(buf)) != 0 )
+    {
+        retstr = cJSON_Print(json);
+        free_json(json);
+        if ( email[0] != 0 )
+            send_email(email,userNXTaddr,0,retstr);
+        return(retstr);
+    }
     //printf("[%s]\n",retstr);
-    return(retstr);
+    else return(buf);
 }
 
 void *GUIpoll_loop(void *arg)
