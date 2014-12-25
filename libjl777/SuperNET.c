@@ -284,7 +284,7 @@ char *process_commandline_json(cJSON *json)
         len += strlen(retstrs[i]) + 128;
     }
     buf = calloc(1,len);
-    sprintf(buf,"{\"gateway0\":%s,\"gateway1\":%s,\"gateway2\":%s}",retstrs[0],retstrs[1],retstrs[2]);
+    sprintf(buf,"[%s, %s, %s]",retstrs[0],retstrs[1],retstrs[2]);
     if ( (json= cJSON_Parse(buf)) != 0 )
     {
         retstr = cJSON_Print(json);
