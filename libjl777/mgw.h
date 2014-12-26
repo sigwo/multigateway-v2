@@ -1341,10 +1341,10 @@ uint64_t process_NXTtransaction(char *specialNXTaddrs[],char *sender,char *recei
                                     {
                                         if ( cp->NXTfee_equiv != 0 && cp->txfee != 0 )
                                             tp->estNXT = (((double)cp->NXTfee_equiv / cp->txfee) * assetoshis / SATOSHIDEN);
-                                        if ( Debuglevel > 1 )
-                                            printf("%s txid.(%s) got comment.(%s) gotpossibleredeem.(%s) %.8f/%.8f NXTequiv %.8f\n",ap->name,txid,tp->comment!=0?tp->comment:"",cointxid,dstr(tp->quantity * ap->mult),dstr(assetoshis),tp->estNXT);
                                         if ( tp->comment != 0 && tp->comment[0] != 0 )
                                             tp->redeemtxid = calc_nxt64bits(txid);
+                                        if ( Debuglevel > 1 )
+                                            printf("%s txid.(%s) got comment.(%s) gotpossibleredeem.(%s) %.8f/%.8f NXTequiv %.8f -> redeemtxid.%llu\n",ap->name,txid,tp->comment!=0?tp->comment:"",cointxid,dstr(tp->quantity * ap->mult),dstr(assetoshis),tp->estNXT,(long long)tp->redeemtxid);
                                     }
                                 }
                                 break;
@@ -1971,7 +1971,7 @@ cJSON *gen_autoconvert_json(struct NXT_assettxid *tp)
     return(json);
 }
 
-int32_t calc_withdrawaddr(char *withdrawaddr,struct coin_info *cp,struct NXT_assettxid *tp,cJSON *argjson)
+char *calc_withdrawaddr(char *withdrawaddr,struct coin_info *cp,struct NXT_assettxid *tp,cJSON *argjson)
 {
     cJSON *json;
     int32_t convert = 0;
@@ -1980,7 +1980,7 @@ int32_t calc_withdrawaddr(char *withdrawaddr,struct coin_info *cp,struct NXT_ass
     if ( tp->convname[0] != 0 )
     {
         withdrawaddr[0] = 0;
-        return(-1);
+        return(0);
     }
     copy_cJSON(withdrawaddr,cJSON_GetObjectItem(argjson,"withdrawaddr"));
     copy_cJSON(autoconvert,cJSON_GetObjectItem(argjson,"autoconvert"));
@@ -2020,8 +2020,8 @@ int32_t calc_withdrawaddr(char *withdrawaddr,struct coin_info *cp,struct NXT_ass
         else withdrawaddr[0] = autoconvert[0] = 0;
     }
     if ( withdrawaddr[0] == 0 || autoconvert[0] != 0 )
-        return(-1);
-    return(0);
+        return(0);
+    return(withdrawaddr);
 }
 
 char *parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct coin_info *cp,struct NXT_assettxid *tp,struct NXT_asset *ap)
