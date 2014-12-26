@@ -4115,7 +4115,7 @@ return_result:
 int32_t issue_gotnewpeer(char *ip_port)
 {
     char *retstr,params[MAX_JSON_FIELD];
-    if ( SuperNET_retval < 0 )
+    if ( 1 || SuperNET_retval < 0 )
         return(-1);
     memset(params,0,sizeof(params));
     sprintf(params,"{\"requestType\":\"gotnewpeer\",\"ip_port\":\"%s\"}",ip_port);
@@ -4168,7 +4168,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	int32_t len;
     char *retstr,params[MAX_JSON_FIELD*2],*str;
     //printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
-    if ( SuperNET_retval < 0 )
+    if ( 1 || SuperNET_retval < 0 )
         return(0);
 	if ( msg == 0 || msg[0] == 0 )
 	{
@@ -4203,7 +4203,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
-    if ( SuperNET_retval < 0 )
+    if ( 1 || SuperNET_retval < 0 )
         return(-1);
     broadcastPubAddr(msg,duration);
 	return(0);
@@ -4215,7 +4215,7 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     CPubAddr *pubaddr = new CPubAddr;
     std::string supernetmsg = "";
     CNode *peer;
-    if ( SuperNET_retval < 0 )
+    if ( 1 || SuperNET_retval < 0 )
         return(-1);
     peer = FindNode((CService)destip);
     if ( peer == NULL )
