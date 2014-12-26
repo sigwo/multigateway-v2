@@ -2019,14 +2019,16 @@ char *calc_withdrawaddr(char *withdrawaddr,struct coin_info *cp,struct NXT_asset
         }
         else withdrawaddr[0] = autoconvert[0] = 0;
     }
+    //printf("withdrawaddr.(%s) autoconvert.(%s)\n",withdrawaddr,autoconvert);
     if ( withdrawaddr[0] == 0 || autoconvert[0] != 0 )
         return(0);
+    //printf("return.(%s)\n",withdrawaddr);
     return(withdrawaddr);
 }
 
 char *parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct coin_info *cp,struct NXT_assettxid *tp,struct NXT_asset *ap)
 {
-    char pubkey[1024],withdrawaddr[1024],*retstr = 0;
+    char pubkey[1024],withdrawaddr[1024],*retstr = destaddr;
     int64_t amount,minwithdraw;
     cJSON *argjson = 0;
     destaddr[0] = withdrawaddr[0] = 0;
@@ -2035,29 +2037,38 @@ char *parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct coin_info 
         printf("no redeem txid %s %s\n",cp->name,cJSON_Print(argjson));
         retstr = 0;
     }
-    amount = tp->quantity * ap->mult;
-    if ( tp->comment != 0 && (tp->comment[0] == '{' || tp->comment[0] == '[') && (argjson= cJSON_Parse(tp->comment)) != 0 )
+    else
     {
-        if ( calc_withdrawaddr(withdrawaddr,cp,tp,argjson) < 0 )
-            return(0);
+        amount = tp->quantity * ap->mult;
+        if ( tp->comment != 0 && (tp->comment[0] == '{' || tp->comment[0] == '[') && (argjson= cJSON_Parse(tp->comment)) != 0 )
+        {
+            if ( calc_withdrawaddr(withdrawaddr,cp,tp,argjson) == 0 )
+            {
+                printf("no withdraw.(%s) or autoconvert.(%s)\n",withdrawaddr,tp->comment);
+                retstr = 0;
+            }
+        }
+        if ( retstr != 0 )
+        {
+            minwithdraw = cp->txfee * MIN_DEPOSIT_FACTOR;
+            if ( amount <= minwithdraw )
+            {
+                printf("minimum withdrawal must be more than %.8f %s\n",dstr(minwithdraw),cp->name);
+                retstr = 0;
+            }
+            else if ( withdrawaddr[0] == 0 )
+            {
+                printf("no withdraw address for %.8f | ",dstr(amount));
+                retstr = 0;
+            }
+            else if ( cp != 0 && validate_coinaddr(pubkey,cp,withdrawaddr) < 0 )
+            {
+                printf("invalid address.(%s) for NXT.%s %.8f validate.%d\n",withdrawaddr,NXTaddr,dstr(amount),validate_coinaddr(pubkey,cp,withdrawaddr));
+                retstr = 0;
+            }
+        }
     }
-    minwithdraw = cp->txfee * MIN_DEPOSIT_FACTOR;
-    if ( amount <= minwithdraw )
-    {
-        printf("minimum withdrawal must be more than %.8f %s\n",dstr(minwithdraw),cp->name);
-        retstr = 0;
-    }
-    else if ( withdrawaddr[0] == 0 )
-    {
-        printf("no withdraw address for %.8f | ",dstr(amount));
-        retstr = 0;
-    }
-    //printf("withdraw addr.(%s) lp.%p\n",withdrawaddr,lp);
-    else if ( cp != 0 && validate_coinaddr(pubkey,cp,withdrawaddr) < 0 )
-    {
-        printf("invalid address.(%s) for NXT.%s %.8f validate.%d\n",withdrawaddr,NXTaddr,dstr(amount),validate_coinaddr(pubkey,cp,withdrawaddr));
-        retstr = 0;
-    }
+    //printf("withdraw addr.(%s) for (%s)\n",withdrawaddr,NXTaddr);
     if ( retstr != 0 )
         strcpy(retstr,withdrawaddr);
     if ( argjson != 0 )
@@ -2416,7 +2427,7 @@ void process_withdraws(cJSON **jsonp,struct multisig_addr **msigs,int32_t nummsi
     for (i=sum=0; i<ap->num; i++)
     {
         tp = ap->txids[i];
-        if ( Debuglevel > 2 )
+        if ( Debuglevel > 1 )
             printf("%d of %d: redeem.%llu (%llu vs %llu) (%llu vs %llu)\n",i,ap->num,(long long)tp->redeemtxid,(long long)tp->receiverbits,(long long)nxt64bits,(long long)tp->assetbits,(long long)ap->assetbits);
         if ( tp->redeemtxid != 0 && tp->receiverbits == nxt64bits && tp->assetbits == ap->assetbits && tp->U.assetoshis >= MIN_DEPOSIT_FACTOR*(cp->txfee + cp->NXTfee_equiv) )
         {
@@ -2431,8 +2442,8 @@ void process_withdraws(cJSON **jsonp,struct multisig_addr **msigs,int32_t nummsi
                 if ( numredeems >= MAX_MULTISIG_OUTPUTS-1 )
                     break;
             }
-            if ( Debuglevel > 2 )
-                printf("%s %s %llu %s %llu %.8f %.8f | %llu\n",cp->name,destaddr,(long long)nxt64bits,str,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
+            if ( Debuglevel > 1 )
+                printf("%s (%s, %s) %llu %s %llu %.8f %.8f | %llu\n",cp->name,destaddr,withdrawaddr,(long long)nxt64bits,str,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
         }
     }
     cJSON_AddItemToObject(*jsonp,"redeems",array);
