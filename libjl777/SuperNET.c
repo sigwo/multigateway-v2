@@ -34,7 +34,7 @@
 #define NUM_GATEWAYS 3
 extern char Server_names[256][MAX_JSON_FIELD];
 extern char Server_NXTaddrs[256][MAX_JSON_FIELD];
-extern int32_t IS_LIBTEST,USESSL,SUPERNET_PORT,ENABLE_GUIPOLL,Debuglevel,UPNP;
+extern int32_t IS_LIBTEST,USESSL,SUPERNET_PORT,ENABLE_GUIPOLL,Debuglevel,UPNP,MULTIPORT;
 extern cJSON *MGWconf;
 #define issue_curl(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"curl",cmdstr,0,0,0)
 char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char *command,char *params);
@@ -509,7 +509,7 @@ int main(int argc,const char *argv[])
     //oldport = newport = portstr;
     //if ( upnpredirect(oldport,newport,"UDP","SuperNET_http") == 0 )
     //    printf("TEST ERROR: failed redirect (%s) to (%s)\n",oldport,newport);
-    printf("saving retval.%x (%d usessl.%d)\n",retval,retval>>1,retval&1);
+    printf("saving retval.%x (%d usessl.%d) UPNP.%d MULTIPORT.%d\n",retval,retval>>1,retval&1,UPNP,MULTIPORT);
     if ( (fp= fopen("horrible.hack","wb")) != 0 )
     {
         fwrite(&retval,1,sizeof(retval),fp);
