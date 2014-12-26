@@ -131,7 +131,7 @@ void update_MGW_msig(struct multisig_addr *msig,char *sender)
         retstr = create_multisig_json(msig,0);
         if ( retstr != 0 )
         {
-            if ( Debuglevel > 1 )
+            if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
                 printf("add_MGWaddr(%s) from (%s)\n",retstr,sender!=0?sender:"");
             //broadcast_bindAM(msig->NXTaddr,msig,origargstr);
             set_MGW_msigfname(fname,0);
@@ -359,7 +359,8 @@ int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sende
             data.data = msig;
             datap = &data;
         }
-        printf("add (%s) NXTpubkey.(%s) sdb.%p\n",msig->multisigaddr,msig->NXTpubkey,sdb->dbp);
+        if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+            printf("add (%s) NXTpubkey.(%s) sdb.%p\n",msig->multisigaddr,msig->NXTpubkey,sdb->dbp);
         if ( (ret= dbput(sdb,0,&key,datap,0)) != 0 )
             sdb->storage->err(sdb->storage,ret,"Database put for quote failed.");
         else if ( syncflag != 0 ) ret = dbsync(sdb,0);
@@ -375,7 +376,8 @@ struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char
     msig->H.size = size;
     msig->n = n;
     msig->created = (uint32_t)time(NULL);
-    msig->sender = calc_nxt64bits(sender);
+    if ( sender != 0 && sender[0] != 0 )
+        msig->sender = calc_nxt64bits(sender);
     safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
     safecopy(msig->NXTaddr,NXTaddr,sizeof(msig->NXTaddr));
     safecopy(msig->NXTpubkey,refpubkey,sizeof(msig->NXTpubkey));
@@ -403,7 +405,8 @@ char *create_multisig_json(struct multisig_addr *msig,int32_t truncated)
         for (i=0; i<msig->n; i++)
             len += calc_pubkey_jsontxt(truncated,pubkeyjsontxt+strlen(pubkeyjsontxt),&msig->pubkeys[i],(i<(msig->n - 1)) ? ", " : "");
         sprintf(jsontxt,"{%s\"sender\":\"%llu\",\"created\":%u,\"M\":%d,\"N\":%d,\"NXTaddr\":\"%s\",\"RS\":\"%s\",\"address\":\"%s\",\"redeemScript\":\"%s\",\"coin\":\"%s\",\"coinid\":\"%d\",\"pubkey\":[%s]}",truncated==0?"\"requestType\":\"MGWaddr\",":"",(long long)msig->sender,msig->created,msig->m,msig->n,msig->NXTaddr,rsacct,msig->multisigaddr,msig->redeemScript,msig->coinstr,conv_coinstr(msig->coinstr),pubkeyjsontxt);
-        printf("(%s) pubkeys len.%ld msigjsonlen.%ld\n",jsontxt,len,strlen(jsontxt));
+        if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+            printf("(%s) pubkeys len.%ld msigjsonlen.%ld\n",jsontxt,len,strlen(jsontxt));
         return(clonestr(jsontxt));
     }
     else return(0);
@@ -502,7 +505,8 @@ int32_t issue_createmultisig(struct coin_info *cp,struct multisig_addr *msig)
     flag = 0;
     if ( params != 0 )
     {
-        printf("multisig params.(%s)\n",params);
+        if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+            printf("multisig params.(%s)\n",params);
         if ( cp->use_addmultisig != 0 )
         {
             retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"addmultisigaddress",params);
@@ -547,7 +551,8 @@ int32_t issue_createmultisig(struct coin_info *cp,struct multisig_addr *msig)
                             flag = 1;
                         } else printf("missing redeemScript in (%s)\n",retstr);
                     } else printf("multisig missing address in (%s) params.(%s)\n",retstr,params);
-                    printf("addmultisig.(%s)\n",retstr);
+                    if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+                        printf("addmultisig.(%s)\n",retstr);
                     free_json(json);
                 }
                 free(retstr);
@@ -618,31 +623,72 @@ void broadcast_bindAM(char *refNXTaddr,struct multisig_addr *msig,char *origargs
     }
 }
 
-void add_MGWaddr(char *previpaddr,char *sender,int32_t valid,char *origargstr)
+int32_t update_MGWaddr(cJSON *argjson,char *sender)
+{
+    int32_t i,retval = 0;
+    uint64_t senderbits;
+    struct multisig_addr *msig;
+    if  ( (msig= decode_msigjson(0,argjson,sender)) != 0 )
+    {
+        senderbits = calc_nxt64bits(sender);
+        for (i=0; i<msig->n; i++)
+        {
+            if ( msig->pubkeys[i].nxt64bits == senderbits )
+            {
+                update_msig_info(msig,1,sender);
+                retval = 1;
+                break;
+            }
+        }
+        free(msig);
+    }
+    return(retval);
+}
+
+int32_t add_MGWaddr(char *previpaddr,char *sender,int32_t valid,char *origargstr)
 {
     cJSON *origargjson,*argjson;
-    struct multisig_addr *msig;
-    uint64_t senderbits;
-    int32_t i;
     if ( valid > 0 && (origargjson= cJSON_Parse(origargstr)) != 0 )
     {
         if ( is_cJSON_Array(origargjson) != 0 )
             argjson = cJSON_GetArrayItem(origargjson,0);
         else argjson = origargjson;
-        if  ( (msig= decode_msigjson(0,argjson,sender)) != 0 )
-        {
-            senderbits = calc_nxt64bits(sender);
-            for (i=0; i<msig->n; i++)
-            {
-                if ( msig->pubkeys[i].nxt64bits == senderbits )
-                {
-                    update_msig_info(msig,1,sender);
-                    break;
-                }
-            }
-            free(msig);
-        }
+        return(update_MGWaddr(argjson,sender));
     }
+    return(0);
+}
+
+int32_t init_multisig(struct coin_info *cp)
+{
+    FILE *fp;
+    long len,n;
+    int32_t i,num = 0;
+    cJSON *json;
+    char fname[512],*buf;
+    set_MGW_msigfname(fname,0);
+    if ( (fp= fopen(fname,"rb")) != 0 )
+    {
+        fseek(fp,0,SEEK_END);
+        len = ftell(fp);
+        rewind(fp);
+        buf = calloc(1,len);
+        if ( (n= fread(buf,1,len,fp)) == len )
+        {
+            if ( (json= cJSON_Parse(buf)) != 0 )
+            {
+                if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
+                {
+                    for (i=0; i<n; i++)
+                        num += update_MGWaddr(cJSON_GetArrayItem(json,i),Global_mp->myNXTADDR);
+
+                } else printf("(%s) (%s) is not array or n.%ld is too small\n",fname,buf,n);
+            } else printf("error parsing (%s) (%s)\n",fname,buf);
+        } else printf("error reading in (%s) len %ld != size %ld\n",fname,n,len);
+        fclose(fp);
+        free(buf);
+    }
+    printf("loaded %d multisig addrs locally\n",num);
+    return(num);
 }
 
 int32_t pubkeycmp(struct pubkey_info *ref,struct pubkey_info *cmp)
@@ -708,7 +754,8 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     int32_t i,iter,flag,valid = 0;
     refbits = conv_acctstr(refacct);
     expand_nxt64bits(refNXTaddr,refbits);
-    printf("GENMULTISIG.%d from (%s) refacct.(%s) %llu %s email.(%s) buyNXT.%d\n",N,previpaddr,refacct,(long long)refbits,refNXTaddr,email,buyNXT);
+    if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+        printf("GENMULTISIG.%d from (%s) refacct.(%s) %llu %s email.(%s) buyNXT.%d\n",N,previpaddr,refacct,(long long)refbits,refNXTaddr,email,buyNXT);
     if ( refNXTaddr[0] == 0 )
         return(clonestr("\"error\":\"genmultisig couldnt find refcontact\"}"));
     flag = 0;
@@ -721,7 +768,8 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
             if ( iter == 0 && ismynxtbits(contact->nxt64bits) != 0 )//|| (stats->ipbits != 0 && calc_ipbits(cp->myipaddr) == stats->ipbits)) )
             {
                 myacctcoinaddr[0] = mypubkey[0] = 0;
-                printf("Is me.%llu\n",(long long)contact->nxt64bits);
+                if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+                    printf("Is me.%llu\n",(long long)contact->nxt64bits);
                 if ( cp != 0 && get_acct_coinaddr(myacctcoinaddr,cp,refNXTaddr) != 0 && get_bitcoind_pubkey(mypubkey,cp,myacctcoinaddr) != 0 && myacctcoinaddr[0] != 0 && mypubkey[0] != 0 )
                 {
                     flag++;
@@ -748,8 +796,9 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                     printf("already have %llu:%llu (%s %s)\n",(long long)contact->nxt64bits,(long long)refbits,acctcoinaddr,pubkey);
                     valid++;
                 }
-                printf("check %llu with get_NXT_coininfo i.%d valid.%d\n",(long long)contact->nxt64bits,i,valid);
-            } else printf("iter.%d reject %llu\n",iter,(long long)contact->nxt64bits);
+                if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+                    printf("check %llu with get_NXT_coininfo i.%d valid.%d\n",(long long)contact->nxt64bits,i,valid);
+            } //else printf("iter.%d reject %llu\n",iter,(long long)contact->nxt64bits);
         }
     }
     if ( (msig= gen_multisig_addr(NXTaddr,M,N,cp,refNXTaddr,userpubkey,contacts)) != 0 )
@@ -763,7 +812,8 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
             retstr = create_multisig_json(msig,0);
             if ( retstr != 0 )
             {
-                printf("retstr.(%s) previp.(%s)\n",retstr,previpaddr);
+                if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+                    printf("retstr.(%s) previp.(%s)\n",retstr,previpaddr);
                 if ( retstr != 0 && previpaddr != 0 && previpaddr[0] != 0 )
                     send_to_ipaddr(0,1,previpaddr,retstr,NXTACCTSECRET);
                 if ( msig != 0 )
@@ -844,7 +894,8 @@ void update_coinacct_addresses(uint64_t nxt64bits,cJSON *json,char *txid)
                 free(contacts[i]);
         return;
     }
-    printf("update_coinacct_addresses.(%s)\n",NXTaddr);
+    if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+        printf("update_coinacct_addresses.(%s)\n",NXTaddr);
     for (i=0; i<Numcoins; i++)
     {
         cp = Daemons[i];
@@ -860,7 +911,8 @@ void update_coinacct_addresses(uint64_t nxt64bits,cJSON *json,char *txid)
                 retstr = genmultisig(refcp->srvNXTADDR,refcp->srvNXTACCTSECRET,0,cp->name,NXTaddr,M,N,contacts,N,NXTpubkey,0,0);
                 if ( retstr != 0 )
                 {
-                    printf("UPDATE_COINACCT_ADDRESSES (%s) -> (%s)\n",cp->name,retstr);
+                    if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+                        printf("UPDATE_COINACCT_ADDRESSES (%s) -> (%s)\n",cp->name,retstr);
                     free(retstr);
                 }
             }
@@ -1089,7 +1141,8 @@ void _update_redeembits(struct coin_info *cp,uint64_t redeembits,uint64_t AMtxid
     cp->limboarray = realloc(cp->limboarray,sizeof(*cp->limboarray) * (n+2));
     cp->limboarray[n++] = redeembits;
     cp->limboarray[n] = 0;
-    printf("n.%d set AMtxidbits.%llu -> %s.(%llu)\n",n,(long long)AMtxidbits,cp->name,(long long)redeembits);
+    if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+        printf("n.%d set AMtxidbits.%llu -> %s.(%llu)\n",n,(long long)AMtxidbits,cp->name,(long long)redeembits);
     if ( cp != 0 )
     {
         ap = get_NXTasset(&createdflag,Global_mp,cp->assetid);
@@ -1134,7 +1187,8 @@ void process_MGW_message(char *specialNXTaddrs[],struct json_AM *ap,char *sender
     expand_nxt64bits(NXTaddr,ap->H.nxt64bits);
     if ( (argjson = parse_json_AM(ap)) != 0 )
     {
-        fprintf(stderr,"func.(%c) %s -> %s txid.(%s) JSON.(%s)\n",ap->funcid,sender,receiver,txid,ap->U.jsonstr);
+        if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+            fprintf(stderr,"func.(%c) %s -> %s txid.(%s) JSON.(%s)\n",ap->funcid,sender,receiver,txid,ap->U.jsonstr);
         switch ( ap->funcid )
         {
             case GET_COINDEPOSIT_ADDRESS:
@@ -1147,10 +1201,10 @@ void process_MGW_message(char *specialNXTaddrs[],struct json_AM *ap,char *sender
                 {
                     if ( strcmp(msig->coinstr,coinstr) == 0 )
                     {
-                        fprintf(stderr,"BINDFUNC: %s func.(%c) %s -> %s txid.(%s) JSON.(%s)\n",msig->coinstr,ap->funcid,sender,receiver,txid,ap->U.jsonstr);
+                        if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+                            fprintf(stderr,"BINDFUNC: %s func.(%c) %s -> %s txid.(%s) JSON.(%s)\n",msig->coinstr,ap->funcid,sender,receiver,txid,ap->U.jsonstr);
                         if ( update_msig_info(msig,syncflag,sender) == 0 )
                             fprintf(stderr,"%s func.(%c) %s -> %s txid.(%s) JSON.(%s)\n",msig->coinstr,ap->funcid,sender,receiver,txid,ap->U.jsonstr);
-                        fprintf(stderr,"done BINDFUNC\n");
                     }
                     free(msig);
                 } //else printf("WARNING: sender.%s == NXTaddr.%s\n",sender,NXTaddr);
@@ -1289,7 +1343,8 @@ uint64_t process_NXTtransaction(char *specialNXTaddrs[],char *sender,char *recei
                                             tp->estNXT = (((double)cp->NXTfee_equiv / cp->txfee) * assetoshis / SATOSHIDEN);
                                         if ( Debuglevel > 1 )
                                             printf("%s txid.(%s) got comment.(%s) gotpossibleredeem.(%s) %.8f/%.8f NXTequiv %.8f\n",ap->name,txid,tp->comment!=0?tp->comment:"",cointxid,dstr(tp->quantity * ap->mult),dstr(assetoshis),tp->estNXT);
-                                        tp->redeemtxid = calc_nxt64bits(txid);
+                                        if ( tp->comment != 0 && tp->comment[0] != 0 )
+                                            tp->redeemtxid = calc_nxt64bits(txid);
                                     }
                                 }
                                 break;

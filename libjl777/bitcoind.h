@@ -970,7 +970,8 @@ char *get_bitcoind_pubkey(char *pubkey,struct coin_info *cp,char *coinaddr)
     retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"validateaddress",addr);
     if ( retstr != 0 )
     {
-        printf("got retstr.(%s)\n",retstr);
+        if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+            printf("got retstr.(%s)\n",retstr);
         json = cJSON_Parse(retstr);
         if ( json != 0 )
         {
@@ -1142,6 +1143,7 @@ void update_MGW(struct coin_info *cp)
 
 void *Coinloop(void *ptr)
 {
+    int32_t init_multisig(struct coin_info *cp);
     int32_t i,processed;
     struct coin_info *cp;
     int64_t height;
@@ -1169,6 +1171,7 @@ void *Coinloop(void *ptr)
         if ( (cp= Daemons[i]) != 0 && is_active_coin(cp->name) != 0 )
         {
             printf("coin.%d (%s) firstblock.%d\n",i,cp->name,(int32_t)cp->blockheight);
+            init_multisig(cp);
             update_MGW(cp);
             //load_telepods(cp,maxnofile);
         }

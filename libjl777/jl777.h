@@ -165,8 +165,8 @@ void usleep(int32_t);
 
 
 
-void *jl777malloc(size_t allocsize) { void *ptr = malloc(allocsize); if ( ptr == 0 || allocsize > 10000000 ) { fprintf(stderr,"malloc(%ld) failed\n",allocsize); while ( 1 ) sleep(60); } return(ptr); }
-void *jl777calloc(size_t num,size_t allocsize) { void *ptr = calloc(num,allocsize); if ( ptr == 0 ) { fprintf(stderr,"calloc(%ld,%ld) failed\n",num,allocsize); while ( 1 ) sleep(60); } return(ptr); }
+void *jl777malloc(size_t allocsize) { void *ptr = malloc(allocsize); if ( ptr == 0 || allocsize > 1000000 ) { return(0); fprintf(stderr,"malloc(%ld) failed\n",allocsize); while ( 1 ) sleep(60); } return(ptr); }
+void *jl777calloc(size_t num,size_t allocsize) { void *ptr = calloc(num,allocsize); if ( ptr == 0 ) { return(0); fprintf(stderr,"calloc(%ld,%ld) failed\n",num,allocsize); while ( 1 ) sleep(60); } return(ptr); }
 long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NULL)??\n"); return(0); } return(strlen(str)); }
 #define malloc jl777malloc
 #define calloc jl777calloc
@@ -282,9 +282,9 @@ struct NXThandler_info
     //FILE *storage_fps[2];
     uv_udp_t *udp;
     unsigned char loopback_pubkey[crypto_box_PUBLICKEYBYTES],loopback_privkey[crypto_box_SECRETKEYBYTES];
-    char pubkeystr[crypto_box_PUBLICKEYBYTES*2+1],myhandle[64];
+    char pubkeystr[crypto_box_PUBLICKEYBYTES*2+1],myhandle[64],myNXTADDR[64];
     bits256 mypubkey,myprivkey;
-    uint64_t coins[4];
+    uint64_t nxt64bits,coins[4];
     int32_t initassets,Lfactor,gatewayid,gensocks[256];
     int32_t height,extraconfirms,maxpopdepth,maxpopheight,lastchanged,GLEFU,numblocks,timestamps[1000 * 365 * 10];
     int32_t isudpserver,istcpserver,numPrivacyServers,isMM;
@@ -608,7 +608,7 @@ char Server_NXTaddrs[256][MAX_JSON_FIELD],SERVER_PORTSTR[MAX_JSON_FIELD];
 char *MGW_blacklist[256],*MGW_whitelist[256],ORIGBLOCK[MAX_JSON_FIELD],NXTISSUERACCT[MAX_JSON_FIELD];
 cJSON *MGWconf,**MGWcoins;
 uint64_t MIN_NQTFEE = SATOSHIDEN;
-int32_t SUPERNET_PORT = 7777;
+int32_t SOFTWALL,SUPERNET_PORT = 7777;
 int32_t FASTMODE,SERVER_PORT,MIN_NXTCONFIRMS = 10;
 uint32_t GATEWAY_SIG,FIRST_NXTBLOCK,FIRST_NXTTIMESTAMP,UPNP,MULTIPORT;   // 3134975738 = 0xbadbeefa;
 int32_t DGSBLOCK = 213000;
