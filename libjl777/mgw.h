@@ -1977,12 +1977,15 @@ char *calc_withdrawaddr(char *withdrawaddr,struct coin_info *cp,struct NXT_asset
     int32_t convert = 0;
     struct coin_info *newcp;
     char buf[MAX_JSON_FIELD],autoconvert[MAX_JSON_FIELD],issuer[MAX_JSON_FIELD],*retstr;
+    copy_cJSON(withdrawaddr,cJSON_GetObjectItem(argjson,"withdrawaddr"));
+//if ( withdrawaddr[0] != 0 )
+//    return(withdrawaddr);
+//else return(0);
     if ( tp->convname[0] != 0 )
     {
         withdrawaddr[0] = 0;
         return(0);
     }
-    copy_cJSON(withdrawaddr,cJSON_GetObjectItem(argjson,"withdrawaddr"));
     copy_cJSON(autoconvert,cJSON_GetObjectItem(argjson,"autoconvert"));
     copy_cJSON(buf,cJSON_GetObjectItem(argjson,"teleport")); // "send" or <emailaddr>
     safecopy(tp->teleport,buf,sizeof(tp->teleport));
@@ -2068,7 +2071,7 @@ char *parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct coin_info 
             }
         }
     }
-    //printf("withdraw addr.(%s) for (%s)\n",withdrawaddr,NXTaddr);
+    printf("withdraw addr.(%s) for (%s)\n",withdrawaddr,NXTaddr);
     if ( retstr != 0 )
         strcpy(retstr,withdrawaddr);
     if ( argjson != 0 )
@@ -2195,7 +2198,7 @@ int32_t process_destaddr(int32_t *alreadysentp,cJSON **arrayp,char *destaddrs[MA
             if ( j == n )*/
             if ( is_limbo_redeem(cp,tp->redeemtxid) == 0 )
             {
-                //*alreadysentp = 0;
+                *alreadysentp = 0;
                 up = &cp->unspent;
                 tp->numconfs = get_NXTconfirms(tp->redeemtxid);
                 printf("numredeems.%d (%p %p) PENDING REDEEM numconfs.%d %s %s %llu %llu %.8f %.8f | %llu\n",numredeems,up->maxvp,up->minvp,tp->numconfs,cp->name,destaddr,(long long)nxt64bits,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
@@ -2395,7 +2398,7 @@ uint64_t process_consensus(cJSON **jsonp,struct coin_info *cp,int32_t sendmoney)
             }
         }
     }
-    printf("last array\n");
+    printf("last array AMtxid.%llu\n",(long long)AMtxid);
     array = cJSON_CreateArray();
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
         cJSON_AddItemToArray(array,cJSON_CreateNumber(cp->withdrawinfos[gatewayid].rawtx.batchcrc));
@@ -2428,10 +2431,10 @@ void process_withdraws(cJSON **jsonp,struct multisig_addr **msigs,int32_t nummsi
     {
         tp = ap->txids[i];
         if ( Debuglevel > 1 )
-            printf("%d of %d: redeem.%llu (%llu vs %llu) (%llu vs %llu)\n",i,ap->num,(long long)tp->redeemtxid,(long long)tp->receiverbits,(long long)nxt64bits,(long long)tp->assetbits,(long long)ap->assetbits);
+            printf("%d of %d: (%s) redeem.%llu (%llu vs %llu) (%llu vs %llu)\n",i,ap->num,tp->comment,(long long)tp->redeemtxid,(long long)tp->receiverbits,(long long)nxt64bits,(long long)tp->assetbits,(long long)ap->assetbits);
+        str = (tp->AMtxidbits != 0) ? ": REDEEMED" : " <- redeem";
         if ( tp->redeemtxid != 0 && tp->receiverbits == nxt64bits && tp->assetbits == ap->assetbits && tp->U.assetoshis >= MIN_DEPOSIT_FACTOR*(cp->txfee + cp->NXTfee_equiv) )
         {
-            str = (tp->AMtxidbits != 0) ? ": REDEEMED" : " <- redeem";
             expand_nxt64bits(sender,tp->senderbits);
             if ( tp->AMtxidbits == 0 && (destaddr= parse_withdraw_instructions(withdrawaddr,sender,cp,tp,ap)) != 0 && destaddr[0] != 0 )
             {
@@ -2442,9 +2445,9 @@ void process_withdraws(cJSON **jsonp,struct multisig_addr **msigs,int32_t nummsi
                 if ( numredeems >= MAX_MULTISIG_OUTPUTS-1 )
                     break;
             }
-            if ( Debuglevel > 1 )
-                printf("%s (%s, %s) %llu %s %llu %.8f %.8f | %llu\n",cp->name,destaddr,withdrawaddr,(long long)nxt64bits,str,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
         }
+        if ( Debuglevel > 1 )
+            printf("%s (%s, %s) %llu %s %llu %.8f %.8f | %llu\n",cp->name,destaddr,withdrawaddr,(long long)nxt64bits,str,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
     }
     cJSON_AddItemToObject(*jsonp,"redeems",array);
     balance = unspent - pending_withdraw - circulation;
@@ -2626,7 +2629,7 @@ void MGW_useracct_str(cJSON **jsonp,int32_t actionflag,struct coin_info *cp,stru
                     }
                     if ( tp->AMtxidbits == 0 && is_limbo_redeem(cp,tp->AMtxidbits) == 0 )
                         cJSON_AddItemToObject(item,"status",cJSON_CreateString("queued"));
-                    else if ( tp->AMtxidbits > 1 || is_limbo_redeem(cp,tp->AMtxidbits) != 0 )
+                    else if ( tp->AMtxidbits >= 1 || is_limbo_redeem(cp,tp->AMtxidbits) != 0 )
                     {
                         expand_nxt64bits(redeemstr,tp->AMtxidbits), cJSON_AddItemToObject(item,"sentAM",cJSON_CreateString(redeemstr));
                         if ( (withdrew= get_sentAM_cointxid(txidstr,cp,autojson,withdrawaddr,tp->redeemtxid,tp->AMtxidbits)) <= 0 )
@@ -2722,6 +2725,8 @@ char *MGW(char *issuerNXT,int32_t rescan,int32_t actionflag,char *coin,char *ass
             sprintf(retbuf+strlen(retbuf),",\"requestType\":\"MGWresponse\",\"NXT\":\"%s\"}",cp->srvNXTADDR);
         return(clonestr(retbuf));
     }
+    if ( issuerNXT == 0 || issuerNXT[0] == 0 )
+        issuerNXT = cp->MGWissuer;
     if ( NXT0 != 0 && NXT0[0] != 0 )
     {
         specialNXTaddrs = calloc(16,sizeof(*specialNXTaddrs));
