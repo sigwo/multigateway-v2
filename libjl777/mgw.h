@@ -4,7 +4,8 @@
 //  Created by jl777 2014, refactored MGW
 //  Copyright (c) 2014 jl777. MIT License.
 //
-// tighten security
+// tighten security, debug xfer of large status, consensus triggers for deposit/withdraw, autoconvert!
+// BTC, BTCD, DOGE, VRC, OPAL, BITS, VPN
 
 #ifndef mgw_h
 #define mgw_h
@@ -31,12 +32,14 @@ void set_MGW_msigfname(char *fname,char *NXTaddr)
 void save_MGW_status(char *NXTaddr,char *jsonstr)
 {
     FILE *fp;
-    char fname[1024];
+    char fname[1024],cmd[1024];
     sprintf(fname,"/var/www/MGW/status/%s",NXTaddr);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
         fwrite(jsonstr,1,strlen(jsonstr),fp);
         fclose(fp);
+        sprintf(cmd,"chmod +r %s",fname);
+        system(cmd);
     }
 }
 
@@ -47,7 +50,7 @@ void update_MGW_files(char *fname,struct multisig_addr *refmsig,char *jsonstr)
     cJSON *json = 0,*newjson;
     int32_t i,n;
     struct multisig_addr *msig;
-    char sender[MAX_JSON_FIELD],*buf,*str;
+    char cmd[1024],sender[MAX_JSON_FIELD],*buf,*str;
     if ( (newjson= cJSON_Parse(jsonstr)) == 0 )
     {
         printf("update_MGW_files: cant parse.(%s)\n",jsonstr);
@@ -66,6 +69,8 @@ void update_MGW_files(char *fname,struct multisig_addr *refmsig,char *jsonstr)
                 free(str);
                 free_json(json);
             }
+            sprintf(cmd,"chmod +r %s",fname);
+            system(cmd);
             fclose(fp);
         } else printf("couldnt open (%s)\n",fname);
         if ( newjson != 0 )
@@ -1226,7 +1231,7 @@ void process_MGW_message(char *specialNXTaddrs[],struct json_AM *ap,char *sender
         }
         if ( argjson != 0 )
             free_json(argjson);
-    } else printf("can't JSON parse (%s)\n",ap->U.jsonstr);
+    } else if ( Debuglevel > 2 ) printf("can't JSON parse (%s)\n",ap->U.jsonstr);
 }
 
 uint64_t process_NXTtransaction(char *specialNXTaddrs[],char *sender,char *receiver,cJSON *item,char *refNXTaddr,char *assetid,int32_t syncflag,struct coin_info *refcp)
@@ -2477,7 +2482,8 @@ void process_withdraws(cJSON **jsonp,struct multisig_addr **msigs,int32_t nummsi
         if ( batchsigned != 0 )
         {
             printf("BATCHSIGNED.(%s)\n",batchsigned);
-            publish_withdraw_info(cp,&cp->BATCH);
+            if ( sendmoney != 0 )
+                publish_withdraw_info(cp,&cp->BATCH);
             process_consensus(jsonp,cp,sendmoney);
             free(batchsigned);
         }
