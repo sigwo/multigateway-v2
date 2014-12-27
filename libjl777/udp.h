@@ -131,7 +131,7 @@ int32_t prevent_queueing(char *cmd)
 
 void set_handler_fname(char *fname,char *handler,char *name)
 {
-    sprintf(fname,"%s/%s_%s",DATADIR,name,handler);
+    sprintf(fname,"%s/%s/%s",DATADIR,handler,name);
 }
 
 int32_t load_handler_fname(void *dest,int32_t len,char *handler,char *name)
@@ -923,7 +923,7 @@ char *start_transfer(char *previpaddr,char *sender,char *verifiedNXTaddr,char *N
     static int64_t allocsize=0;
     struct transfer_args *args;
     int64_t len;
-    int32_t didalloc,remains,fragi,totalcrc,blocksize = 512;
+    int32_t incr,didalloc,remains,fragi,totalcrc,blocksize = 512;
     if ( data == 0 || totallen == 0 )
     {
         data = (uint8_t *)load_file(name,&buf,&len,&allocsize);
@@ -949,7 +949,10 @@ char *start_transfer(char *previpaddr,char *sender,char *verifiedNXTaddr,char *N
             //printf("CRC[%d] <- %u offset %d len.%d\n",i,args->crcs[i],i*blocksize,(remains < blocksize) ? remains : blocksize);
             remains -= blocksize;
         }
-        for (fragi=0; fragi<args->numblocks; fragi+=(args->numblocks>>4)+1)
+        if ( args->numblocks < 8 )
+            incr = 1;
+        else incr = (args->numblocks >> 3);
+        for (fragi=0; fragi<args->numblocks; fragi+=incr)
             send_fragi(verifiedNXTaddr,NXTACCTSECRET,args,fragi);
         //start_task(Do_transfers,"transfer",10000000,(void *)&args,sizeof(args));
         return(clonestr("{\"result\":\"start_transfer pending\"}"));
