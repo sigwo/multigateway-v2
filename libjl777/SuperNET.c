@@ -149,7 +149,7 @@ char *process_commandline_json(cJSON *json)
     copy_cJSON(userpubkey,cJSON_GetObjectItem(json,"pubkey"));
     if ( userpubkey[0] == 0 )
     {
-        pubkeybits = issue_getpubkey(&haspubkey,rsacct);
+        pubkeybits = issue_getpubkey(&haspubkey,NXTacct);
         if ( haspubkey != 0 )
             init_hexbytes_noT(userpubkey,pubkeybits.bytes);
     }
