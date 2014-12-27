@@ -358,7 +358,7 @@ void bridge_handler(struct transfer_args *args)
         {
             fwrite(args->data,1,args->totallen,fp);
             fclose(fp);
-            sprintf(cmd,"chmod +r %s",name);
+            sprintf(cmd,"chmod +r %s",fname);
             system(cmd);
         }
     }
