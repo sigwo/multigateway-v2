@@ -130,6 +130,7 @@ char *GUIpoll(char *txidstr,char *senderipaddr,uint16_t *portp)
 
 char *process_commandline_json(cJSON *json)
 {
+    int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
     bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
     char *issue_MGWstatus(int32_t mask,char *coinstr,char *userNXTaddr,char *userpubkey,char *email,int32_t rescan,int32_t actionflag);
     struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender);
@@ -152,7 +153,7 @@ char *process_commandline_json(cJSON *json)
     {
         pubkeybits = issue_getpubkey(&haspubkey,NXTacct);
         if ( haspubkey != 0 )
-            init_hexbytes_noT(userpubkey,pubkeybits.bytes);
+            init_hexbytes_noT(userpubkey,pubkeybits.bytes,sizeof(pubkeybits.bytes));
     }
     copy_cJSON(convertNXT,cJSON_GetObjectItem(json,"convertNXT"));
     if ( convertNXT[0] != 0 )
