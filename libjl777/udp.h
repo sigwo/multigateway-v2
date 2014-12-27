@@ -766,7 +766,8 @@ char *sendfrag(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCT
             args = create_transfer_args(previpaddr,sender,dest,name,totallen,blocksize,totalcrc,handler);
             if ( fragi < args->numblocks )
                 args->crcs[fragi] = checkcrc;
-            fprintf(stderr,"GOT SENDFRAG.(%s) datalen.%d %p %p %u\n",cmdstr,datalen,args->data,args->gotcrcs,args->gotcrcs[fragi]);
+            if ( Debuglevel > 2 )
+                fprintf(stderr,"GOT SENDFRAG.(%s) datalen.%d %p %p %u\n",cmdstr,datalen,args->data,args->gotcrcs,args->gotcrcs[fragi]);
             if ( datacrc != args->gotcrcs[fragi] )
             {
                 //fprintf(stderr,"copy %p <- %p datalen.%d\n",args->data + fragi*blocksize,data,datalen);
