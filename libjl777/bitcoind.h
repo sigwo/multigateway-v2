@@ -633,9 +633,9 @@ uint64_t get_txoutstr(int32_t *numvoutsp,char *txidstr,char *coinaddr,char *scri
         if ( (txobj= _get_blocktxarray(&blockid,&n,cp,json)) != 0 && txind < n )
         {
             copy_cJSON(txidstr,cJSON_GetArrayItem(txobj,txind));
-            if ( Debuglevel > 3 )
-                printf("%-5s blocktxt.%ld i.%d of n.%d %s\n",cp->name,(long)blockheight,txind,n,txidstr);
             value = get_txvout(0,numvoutsp,coinaddr,script,cp,0,txidstr,vout);
+            if ( Debuglevel > 3 || strcmp("bbGihDgrR8kNrDspfSvb2wrPgeha5tcYgn",coinaddr) == 0 )
+                printf("%-5s (%s) blocktxt.%ld txind.%d of n.%d %s vout.%d\n",cp->name,coinaddr,(long)blockheight,txind,n,txidstr,vout);
         } else printf("txind.%d >= numtxinds.%d for block.%d\n",txind,n,blockheight);
         free_json(json);
     }
@@ -970,14 +970,15 @@ char *get_bitcoind_pubkey(char *pubkey,struct coin_info *cp,char *coinaddr)
     retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"validateaddress",addr);
     if ( retstr != 0 )
     {
-        if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+        if ( (MGW_initdone == 0 && Debuglevel > 3) || (MGW_initdone != 0 && Debuglevel > 2) )
             printf("got retstr.(%s)\n",retstr);
         json = cJSON_Parse(retstr);
         if ( json != 0 )
         {
             pubobj = cJSON_GetObjectItem(json,"pubkey");
             copy_cJSON(pubkey,pubobj);
-            printf("got.%s get_coinaddr_pubkey (%s)\n",cp->name,pubkey);
+            if ( Debuglevel > 2 )
+                printf("got.%s get_coinaddr_pubkey (%s)\n",cp->name,pubkey);
             free_json(json);
         } else printf("get_coinaddr_pubkey.%s: parse error.(%s)\n",cp->name,retstr);
         free(retstr);

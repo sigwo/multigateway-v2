@@ -1532,7 +1532,8 @@ char *bridge_test(int32_t sendflag,char *NXTACCTSECRET,char *destip,uint16_t bri
     }
     if ( destip[0] != 0 )
     {
-        printf("bridgetest.(%s) illegal.%d\n",destip,is_illegal_ipaddr(destip));
+        if ( Debuglevel > 2 )
+            printf("bridgetest.(%s) illegal.%d\n",destip,is_illegal_ipaddr(destip));
         if ( is_illegal_ipaddr(destip) == 0 )
         {
             if ( sendflag != 0 )
@@ -1648,7 +1649,7 @@ char *setmsigpubkey_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char
     //struct contact_info *contact;
     struct coin_info *cp;
     uint64_t nxt64bits;
-    if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+    if ( (MGW_initdone == 0 && Debuglevel > 3) || (MGW_initdone != 0 && Debuglevel > 2) )
         printf("setmsigpubkey(%s)\n",previpaddr);
     if ( is_remote_access(previpaddr) == 0 )
         return(0);
@@ -1657,7 +1658,8 @@ char *setmsigpubkey_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char
     copy_cJSON(acctcoinaddr,objs[2]);
     copy_cJSON(userpubkey,objs[3]);
     cp = get_coin_info(coin);
-    printf("coin.(%s) %p ref.(%s) acc.(%s) pub.(%s)\n",coin,cp,refNXTaddr,acctcoinaddr,userpubkey);
+    if ( (MGW_initdone == 0 && Debuglevel > 3) || (MGW_initdone != 0 && Debuglevel > 2) )
+        printf("coin.(%s) %p ref.(%s) acc.(%s) pub.(%s)\n",coin,cp,refNXTaddr,acctcoinaddr,userpubkey);
     if ( cp != 0 && refNXTaddr[0] != 0 && acctcoinaddr[0] != 0 && userpubkey[0] != 0 && sender[0] != 0 && valid > 0 )
     {
         if ( (nxt64bits= conv_acctstr(refNXTaddr)) != 0 )
@@ -1718,7 +1720,7 @@ char *MGW_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,i
     if ( sender[0] != 0 )
     {
         retstr = MGW(specialNXT,rescan,actionflag,coin,asset,NXT0,NXT1,NXT2,ip0,ip1,ip2,exclude0,exclude1,exclude2,destNXT,pubkey);
-        if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+        if ( (MGW_initdone == 0 && Debuglevel > 3) || (MGW_initdone != 0 && Debuglevel > 2) )
             printf("got retstr.(%s)\n",retstr);
         if ( previpaddr != 0 )
         {

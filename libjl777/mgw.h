@@ -466,6 +466,7 @@ struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
                     msig->pubkeys[j].ipbits = calc_ipbits(ipaddr);
                 } else { free(msig); msig = 0; }
             }
+            //printf("NXT.%s -> (%s)\n",nxtstr,msig->multisigaddr);
             if ( Debuglevel > 3 )
                 fprintf(stderr,"for msig.%s\n",msig->multisigaddr);
         } else { printf("%p %p %p\n",addrobj,redeemobj,pubkeysobj); free(msig); msig = 0; }
@@ -1450,9 +1451,12 @@ int32_t ready_to_xferassets(uint64_t *txidp)
 
 uint64_t conv_address_entry(char *coinaddr,char *txidstr,char *script,struct coin_info *cp,struct address_entry *entry)
 {
-    char coinaddr_v0[1024],script_v0[4096],_script[4096];
+    char txidstr_v0[1024],coinaddr_v0[1024],script_v0[4096],_script[4096];
     int32_t numvouts;
     uint64_t value = 0;
+    coinaddr[0] = txidstr[0] = 0;
+    if ( script != 0 )
+        script[0] = 0;
     if ( entry->vinflag == 0 )
     {
         if ( script == 0 )
@@ -1460,9 +1464,9 @@ uint64_t conv_address_entry(char *coinaddr,char *txidstr,char *script,struct coi
         value = get_txoutstr(&numvouts,txidstr,coinaddr,script,cp,entry->blocknum,entry->txind,entry->v);
         if ( strcmp("31dcbc5b7cfd7fc8f2c1cedf65f38ec166b657cc9eb15e7d1292986eada35ea9",txidstr) == 0 ) // due to uncommented tx
             return(0);
-        if ( entry->v == numvouts-1 )
+        if ( entry->v == numvouts-1 ) // the last output when there is a marker is internal change, need to get numvouts first
         {
-            get_txoutstr(0,txidstr,coinaddr_v0,script_v0,cp,entry->blocknum,entry->txind,0);
+            get_txoutstr(0,txidstr_v0,coinaddr_v0,script_v0,cp,entry->blocknum,entry->txind,0);
             if ( strcmp(coinaddr_v0,cp->marker) == 0 )
                 return(0);
         }
@@ -1882,7 +1886,9 @@ void process_deposits(cJSON **jsonp,uint64_t *unspentp,struct multisig_addr **ms
     sprintf(numstr,"%.8f",dstr(circulation)), cJSON_AddItemToObject(*jsonp,"circulation",cJSON_CreateString(numstr));
     sprintf(numstr,"%.8f",dstr(unspent)), cJSON_AddItemToObject(*jsonp,"unspent",cJSON_CreateString(numstr));
     sprintf(numstr,"%.8f",dstr(total)), cJSON_AddItemToObject(*jsonp,"pendingdeposits",cJSON_CreateString(numstr));
-    cJSON_AddItemToObject(*jsonp,"deposits",array);
+    if ( cJSON_GetArraySize(array) > 0 )
+        cJSON_AddItemToObject(*jsonp,"alldeposits",array);
+    else free_json(array);
     *unspentp = unspent;
 }
 
@@ -2379,7 +2385,9 @@ uint64_t process_consensus(cJSON **jsonp,struct coin_info *cp,int32_t sendmoney)
             cJSON_AddItemToArray(array,item);
         }
     }
-    cJSON_AddItemToObject(*jsonp,"withdraws",array);
+    if ( cJSON_GetArraySize(array) > 0 )
+        cJSON_AddItemToObject(*jsonp,"allredeems",array);
+    else free_json(array);
     if ( sendmoney != 0 && matches == NUM_GATEWAYS )
     {
         fprintf(stderr,"all gateways match\n");
@@ -2408,7 +2416,7 @@ uint64_t process_consensus(cJSON **jsonp,struct coin_info *cp,int32_t sendmoney)
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
         cJSON_AddItemToArray(array,cJSON_CreateNumber(cp->withdrawinfos[gatewayid].rawtx.batchcrc));
     cJSON_AddItemToObject(*jsonp,"crcs",array);
-    cJSON_AddItemToObject(*jsonp,"numredeems",cJSON_CreateNumber(rp->numredeems));
+    cJSON_AddItemToObject(*jsonp,"allwithdraws",cJSON_CreateNumber(rp->numredeems));
     sprintf(numstr,"%.8f",dstr(rp->amount)), cJSON_AddItemToObject(*jsonp,"pending_withdraw",cJSON_CreateString(numstr));
     return(AMtxid);
 }
@@ -2435,7 +2443,7 @@ void process_withdraws(cJSON **jsonp,struct multisig_addr **msigs,int32_t nummsi
     for (i=sum=0; i<ap->num; i++)
     {
         tp = ap->txids[i];
-        if ( Debuglevel > 1 )
+        if ( Debuglevel > 2 )
             printf("%d of %d: (%s) redeem.%llu (%llu vs %llu) (%llu vs %llu)\n",i,ap->num,tp->comment,(long long)tp->redeemtxid,(long long)tp->receiverbits,(long long)nxt64bits,(long long)tp->assetbits,(long long)ap->assetbits);
         str = (tp->AMtxidbits != 0) ? ": REDEEMED" : " <- redeem";
         if ( tp->redeemtxid != 0 && tp->receiverbits == nxt64bits && tp->assetbits == ap->assetbits && tp->U.assetoshis >= MIN_DEPOSIT_FACTOR*(cp->txfee + cp->NXTfee_equiv) )
@@ -2451,7 +2459,7 @@ void process_withdraws(cJSON **jsonp,struct multisig_addr **msigs,int32_t nummsi
                     break;
             }
         }
-        if ( Debuglevel > 1 )
+        if ( Debuglevel > 2 )
             printf("%s (%s, %s) %llu %s %llu %.8f %.8f | %llu\n",cp->name,destaddr,withdrawaddr,(long long)nxt64bits,str,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
     }
     cJSON_AddItemToObject(*jsonp,"redeems",array);
@@ -2566,20 +2574,21 @@ void MGW_useracct_str(cJSON **jsonp,int32_t actionflag,struct coin_info *cp,stru
                     }
                     if ( (entries= get_address_entries(&n,cp->name,msig->multisigaddr)) != 0 )
                     {
+                        printf("got %d entries for (%s)\n",n,msig->multisigaddr);
                         for (j=0; j<n; j++)
                         {
+                            item = cJSON_CreateObject();
+                            cJSON_AddItemToObject(item,"vout",cJSON_CreateNumber(entries[j].v));
+                            cJSON_AddItemToObject(item,"height",cJSON_CreateNumber(entries[j].blocknum));
                             if ( (value= conv_address_entry(coinaddr,txidstr,0,cp,&entries[j])) != 0 )
                             {
-                                item = cJSON_CreateObject();
-                                cJSON_AddItemToObject(item,"addr",cJSON_CreateString(coinaddr));
                                 cJSON_AddItemToObject(item,"txid",cJSON_CreateString(txidstr));
-                                cJSON_AddItemToObject(item,"vout",cJSON_CreateNumber(entries[j].v));
-                                cJSON_AddItemToObject(item,"height",cJSON_CreateNumber(entries[j].blocknum));
+                                cJSON_AddItemToObject(item,"addr",cJSON_CreateString(coinaddr));
                                 sprintf(numstr,"%.8f",dstr(value)), cJSON_AddItemToObject(item,"value",cJSON_CreateString(numstr));
                                 if ( (deposittxid= get_deposittxid(ap,txidstr,entries[j].v)) != 0 )
                                 {
                                     expand_nxt64bits(depositstr,deposittxid);
-                                    cJSON_AddItemToObject(item,"deposit",cJSON_CreateString(depositstr));
+                                    cJSON_AddItemToObject(item,"depositid",cJSON_CreateString(depositstr));
                                     cJSON_AddItemToObject(item,"status",cJSON_CreateString("complete"));
                                 }
                                 else
@@ -2591,8 +2600,8 @@ void MGW_useracct_str(cJSON **jsonp,int32_t actionflag,struct coin_info *cp,stru
                                     }
                                     else cJSON_AddItemToObject(item,"status",cJSON_CreateString("too small"));
                                 }
-                                cJSON_AddItemToArray(array,item);
                             }
+                            cJSON_AddItemToArray(array,item);
                         }
                     }
                 }
@@ -2600,7 +2609,7 @@ void MGW_useracct_str(cJSON **jsonp,int32_t actionflag,struct coin_info *cp,stru
             }
         }
         free(msigs);
-        cJSON_AddItemToObject(*jsonp,"deposits",array);
+        cJSON_AddItemToObject(*jsonp,"userdeposits",array);
     }
     if ( ap->num > 0 )
     {
@@ -2635,7 +2644,9 @@ void MGW_useracct_str(cJSON **jsonp,int32_t actionflag,struct coin_info *cp,stru
                     }
                     if ( tp->AMtxidbits == 0 && is_limbo_redeem(cp,tp->AMtxidbits) == 0 )
                         cJSON_AddItemToObject(item,"status",cJSON_CreateString("queued"));
-                    else if ( tp->AMtxidbits >= 1 || is_limbo_redeem(cp,tp->AMtxidbits) != 0 )
+                    else if ( tp->AMtxidbits == 1 ) cJSON_AddItemToObject(item,"status",cJSON_CreateString("pending"));
+                    else if ( is_limbo_redeem(cp,tp->AMtxidbits) != 0 ) cJSON_AddItemToObject(item,"status",cJSON_CreateString("completed"));
+                    else if ( tp->AMtxidbits > 1 )
                     {
                         expand_nxt64bits(redeemstr,tp->AMtxidbits), cJSON_AddItemToObject(item,"sentAM",cJSON_CreateString(redeemstr));
                         if ( (withdrew= get_sentAM_cointxid(txidstr,cp,autojson,withdrawaddr,tp->redeemtxid,tp->AMtxidbits)) <= 0 )
@@ -2647,12 +2658,12 @@ void MGW_useracct_str(cJSON **jsonp,int32_t actionflag,struct coin_info *cp,stru
                             cJSON_AddItemToObject(item,"status",cJSON_CreateString("completed"));
                         }
                     }
-                    else cJSON_AddItemToObject(item,"status",cJSON_CreateString("pending"));
+                    else cJSON_AddItemToObject(item,"status",cJSON_CreateString("unexpected"));
                 }
                 cJSON_AddItemToArray(array,item);
             }
         }
-        cJSON_AddItemToObject(*jsonp,"withdraws",array);
+        cJSON_AddItemToObject(*jsonp,"userwithdraws",array);
     }
     assetoshis = get_accountassets(0,ap,NXTaddr);
     balance = assetoshis + pending_deposits + pending_withdraws;
