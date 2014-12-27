@@ -709,7 +709,7 @@ int32_t update_transfer_args(struct transfer_args *args,uint32_t fragi,uint32_t 
             checkcrc = _crc32(0,args->data,args->totallen);
             if ( checkcrc != args->totalcrc )
                 printf("totalcrc ERROR %u != %u\n",checkcrc,args->totalcrc);
-            fprintf(stderr,"update_transer_args return count.%d (%s)\n",count,args->totallen<4096?(char *)args->data:"");
+            //fprintf(stderr,"update_transer_args return count.%d\n",count,args->totallen<4096?(char *)args->data:"");
         }
         //fprintf(stderr,"update_transer_args return count.%d\n",count);
     }
