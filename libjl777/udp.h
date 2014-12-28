@@ -723,8 +723,6 @@ int32_t update_transfer_args(struct transfer_args *args,uint32_t fragi,uint32_t 
             memcpy(args->snapshot,args->data,args->totallen);
             args->snapshotcrc = _crc32(0,args->snapshot,args->totallen);
             args->completed++;
-            if ( Debuglevel > 1 )
-                printf("completed send of %s\n",args->name);
         }
         if ( Debuglevel > 2 )
             printf(">>>>>>>>> set ack[%d] <- %u | count.%d of %d | %p\n",fragi,datacrc,count,args->numfrags,args);
@@ -763,7 +761,7 @@ int32_t update_transfer_args(struct transfer_args *args,uint32_t fragi,uint32_t 
                     }
                     if ( count == args->numfrags )
                     {
-                        if ( Debuglevel > 0 )
+                        if ( Debuglevel > 2 )
                             printf("completed.%d (%s) totallen.%d to (%s) checkcrc.%u vs totalcrc.%u\n",count,args->name,args->totallen,args->dest,checkcrc,totalcrc);
                         handler_gotfile(args,args->snapshot,args->totallen,args->snapshotcrc);
                         args->completed++;
