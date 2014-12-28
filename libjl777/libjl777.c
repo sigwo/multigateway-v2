@@ -89,11 +89,22 @@ void send_async_message(char *msg)
     uv_async_send(&Tasks_async);
 }*/
 
-void handler_gotfile(struct transfer_args *args)
+void handler_gotfile(struct transfer_args *args,uint8_t *data,int32_t len,uint32_t crc)
 {
     void bridge_handler(struct transfer_args *args);
     FILE *fp;
     char buf[512];
+    uint32_t now = (uint32_t)time(NULL);
+    if ( args->syncmem != 0 )
+    {
+        if ( args->handlercrc == crc )
+        {
+            if ( now < args->handlertime+10 )
+                return;
+        }
+        args->handlercrc = crc;
+        args->handlertime = now;
+    }
     if ( strcmp(args->handler,"mgw") == 0 )
     {
         set_handler_fname(buf,args->handler,args->name);
@@ -106,6 +117,11 @@ void handler_gotfile(struct transfer_args *args)
     }
     else if ( strcmp(args->handler,"bridge") == 0 )
         bridge_handler(args);
+    if ( args->syncmem == 0 )
+    {
+        memset(args->data,0,args->totallen);
+        memset(args->crcs,0,args->numfrags * sizeof(*args->gotcrcs));
+    }
 }
 
 char *get_public_srvacctsecret()
@@ -727,7 +743,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         printf("call init_NXTservices (%s)\n",myipaddr);
     myipaddr = init_NXTservices(JSON_or_fname,myipaddr);
     if ( Debuglevel > 0 )
-        printf("back from init_NXTservices (%s)\n",myipaddr);
+        printf("back from init_NXTservices (%s) NXTheight.%d\n",myipaddr,get_NXTheight());
     uint64_t pendingtxid; ready_to_xferassets(&pendingtxid);
     p2p_publishpacket(0,0);
     if ( (cp= get_coin_info("BTCD")) == 0 || cp->srvNXTACCTSECRET[0] == 0 || cp->srvNXTADDR[0] == 0 )

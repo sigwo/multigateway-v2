@@ -134,22 +134,61 @@ uint64_t mynxt64bits()
 char *get_marker(char *coinstr)
 {
     struct coin_info *cp;
+    if ( (cp= get_coin_info(coinstr)) != 0 && cp->marker[0] != 0 )
+        return(cp->marker);
     if ( strcmp(coinstr,"NXT") == 0 )
         return("8712042175100667547"); // NXTprivacy
     else if ( strcmp(coinstr,"BTC") == 0 )
+        return(BTC_MARKER);
+    else if ( strcmp(coinstr,"BTCD") == 0 )
+        return(BTCD_MARKER);
+    else if ( strcmp(coinstr,"VRC") == 0 )
+        return(VRC_MARKER);
+    else if ( strcmp(coinstr,"OPAL") == 0 )
+        return(OPAL_MARKER);
+    else if ( strcmp(coinstr,"VPN") == 0 )
+        return(VPN_MARKER);
+    else if ( strcmp(coinstr,"BBR") == 0 )
+        return(BBR_MARKER);
+    else if ( strcmp(coinstr,"BITS") == 0 )
+        return(BITS_MARKER);
+    else if ( strcmp(coinstr,"CHA") == 0 )
+        return(CHA_MARKER);
+    else if ( strcmp(coinstr,"LTC") == 0 )
+        return(LTC_MARKER);
+    else if ( strcmp(coinstr,"DOGE") == 0 )
+        return(DOGE_MARKER);
+    else if ( strcmp(coinstr,"DRK") == 0 )
+        return(DRK_MARKER);
+    else if ( strcmp(coinstr,"PPC") == 0 )
+        return(PPC_MARKER);
+    else if ( strcmp(coinstr,"NMC") == 0 )
+        return(NMC_MARKER);
+    /*else if ( strcmp(coinstr,"BTC") == 0 )
         return("177MRHRjAxCZc7Sr5NViqHRivDu1sNwkHZ");
     else if ( strcmp(coinstr,"BTCD") == 0 )
         return("RMMGbxZdav3cRJmWScNVX6BJivn6BNbBE8");
     else if ( strcmp(coinstr,"LTC") == 0 )
         return("LUERp4v5abpTk9jkuQh3KFxc4mFSGTMCiz");
     else if ( strcmp(coinstr,"DRK") == 0 )
-        return("XmxSWLPA92QyAXxw2FfYFFex6QgBhadv2Q");
-    else if ( (cp= get_coin_info(coinstr)) != 0 )
-        return(cp->marker);
+        return("XmxSWLPA92QyAXxw2FfYFFex6QgBhadv2Q");*/
     else return(0);
 }
 
-char *coinid_str(int32_t coinid)
+void set_legacy_coinid(char *coinstr,int32_t legacyid)
+{
+    switch ( legacyid )
+    {
+        case BTC_COINID: strcpy(coinstr,"BTC"); return;
+        case LTC_COINID: strcpy(coinstr,"LTC"); return;
+        case DOGE_COINID: strcpy(coinstr,"DOGE"); return;
+        case BC_COINID: strcpy(coinstr,"BC"); return;
+        case VIA_COINID: strcpy(coinstr,"VIA"); return;
+        case BTCD_COINID: strcpy(coinstr,"BTCD"); return;
+    }
+}
+
+/*char *coinid_str(int32_t coinid)
 {
     switch ( coinid )
     {
@@ -272,7 +311,7 @@ char *get_backupmarker(char *coinstr)
         case VPN_COINID: return(VPN_MARKER);
     }
     return(0);
-}
+}*/
 
 char *get_assetid_str(char *coinstr)
 {
@@ -486,7 +525,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
         {
             extract_cJSON_str(_marker,sizeof(_marker),json,"marker");
             if ( _marker[0] == 0 )
-                strcpy(_marker,get_backupmarker(coinstr));
+                strcpy(_marker,get_marker(coinstr));
             marker = clonestr(_marker);
         }
         if ( //marker != 0 && txfee != 0. && NXTfee_equiv != 0. &&
@@ -505,10 +544,10 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                     expand_nxt64bits(cp->MGWissuer,conv_rsacctstr(cp->MGWissuer,0));
                 if ( Debuglevel > 0 )
                     printf("MGW issuer.(%s)\n",cp->MGWissuer);
-                cp->coinid = conv_coinstr(coinstr);
+                //cp->coinid = conv_coinstr(coinstr);
                 cp->limboarray = limboarray;
-                if ( cp->coinid >= 0 && cp->coinid < 256 )
-                    Global_mp->coins[cp->coinid >> 6] |= (1L << (cp->coinid & 63));
+                //if ( cp->coinid >= 0 && cp->coinid < 256 )
+                //    Global_mp->coins[cp->coinid >> 6] |= (1L << (cp->coinid & 63));
                 if ( strcmp(cp->name,"BTCD") == 0 )
                 {
                     Global_mp->Lfactor = (int32_t)get_API_int(cJSON_GetObjectItem(json,"Lfactor"),1);
@@ -634,10 +673,10 @@ int32_t is_active_coin(char *coinstr)
                 break;
             copy_cJSON(str,cJSON_GetArrayItem(array,i));
             if ( strcmp(str,coinstr) == 0 )
-                return(1);
+                return(i);
         }
     }
-    return(0);
+    return(-1);
 }
 
 int32_t is_whitelisted(char *ipaddr)
@@ -688,39 +727,22 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
     static int didinit,exchangeflag;
     static char ipbuf[64],*buf=0;
     static int64_t len=0,allocsize=0;
-    int32_t init_SuperNET_storage();
+    int32_t init_SuperNET_storage(char *backupdir);
     int32_t init_tradebots(cJSON *languagesobj);
     uint64_t nxt64bits;
     struct coin_info *cp;
     cJSON *array,*item,*languagesobj = 0;
-    char ipaddr[64],coinstr[MAX_JSON_FIELD],dirname[1024],NXTACCTSECRET[MAX_JSON_FIELD],NXTADDR[MAX_JSON_FIELD],*jsonstr;
+    char ipaddr[64],coinstr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],NXTADDR[MAX_JSON_FIELD],*jsonstr;
     int32_t i,n,ismainnet,timezone=0;
     void close_SuperNET_dbs();
     if ( Global_mp == 0 )
         Global_mp = init_SuperNET_globals();
+   // close_SuperNET_dbs();
     NXTACCTSECRET[0] = 0;
     NXTADDR[0] = 0;
     exchangeflag = 0;//!strcmp(NXTACCTSECRET,"exchanges");
     if ( Debuglevel > 0 )
         printf("init_MGWconf exchangeflag.%d myip.(%s)\n",exchangeflag,myipaddr);
-    if ( IS_LIBTEST > 0 )
-    {
-        close_SuperNET_dbs();
-        //init_filtered_bufs(); crashed ubunty
-        //if ( IS_LIBTEST >= 2 )
-        {
-            printf("create MGW dirs\n");
-            ensure_directory("MGW");
-            ensure_directory("MGW/msig");
-            ensure_directory("MGW/status");
-            sprintf(dirname,"%s/%s",DATADIR,"mgw"), ensure_directory(dirname);
-            sprintf(dirname,"%s/%s",DATADIR,"bridge"), ensure_directory(dirname);
-        }
-        ensure_directory("backups");
-        ensure_directory("backups/telepods");
-        ensure_directory("archive");
-        ensure_directory("archive/telepods");
-    }
     //printf("load MGW.conf (%s)\n",JSON_or_fname);
     if ( JSON_or_fname[0] == '{' )
         jsonstr = clonestr(JSON_or_fname);
@@ -755,7 +777,8 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             extract_cJSON_str(NXTAPIURL,sizeof(NXTAPIURL),MGWconf,"NXTAPIURL");
             extract_cJSON_str(NXTISSUERACCT,sizeof(NXTISSUERACCT),MGWconf,"NXTISSUERACCT");
             extract_cJSON_str(DATADIR,sizeof(NXTISSUERACCT),MGWconf,"DATADIR");
-            if ( IS_LIBTEST >= 0 )
+            extract_cJSON_str(MGWROOT,sizeof(MGWROOT),MGWconf,"MGWROOT");
+             if ( IS_LIBTEST >= 0 )
                 IS_LIBTEST = get_API_int(cJSON_GetObjectItem(MGWconf,"LIBTEST"),1);
             SOFTWALL = get_API_int(cJSON_GetObjectItem(MGWconf,"SOFTWALL"),0);
             FASTMODE = get_API_int(cJSON_GetObjectItem(MGWconf,"FASTMODE"),1);
@@ -767,6 +790,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             APISLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"APISLEEP"),25);
             USESSL = get_API_int(cJSON_GetObjectItem(MGWconf,"USESSL"),0);
             UPNP = get_API_int(cJSON_GetObjectItem(MGWconf,"UPNP"),1);
+            LOG2_MAX_XFERPACKETS = get_API_int(cJSON_GetObjectItem(MGWconf,"LOG2_MAXPACKETS"),3);
             MULTIPORT = get_API_int(cJSON_GetObjectItem(MGWconf,"MULTIPORT"),0);
             if ( Debuglevel > 0 )
                 printf("(%s) USESSL.%d IS_LIBTEST.%d APIPORT.%d APISLEEP.%d millis\n",ipaddr,USESSL,IS_LIBTEST,APIPORT,APISLEEP);
@@ -869,6 +893,12 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                                 printf("BTCDaddr.(%s)\n",BTCDaddr);
                             if ( cp->privatebits != 0 )
                                 expand_nxt64bits(NXTADDR,cp->privatebits);
+                            if ( DATADIR[0] == 0 )
+                                strcpy(DATADIR,"archive");
+                            if ( MGWROOT[0] == 0 )
+                                strcpy(MGWROOT,"/var/www");
+                            if ( IS_LIBTEST > 0 )
+                                init_SuperNET_storage(cp->backupdir);
                             //addcontact(Global_mp->myhandle,cp->privateNXTADDR);
                             //addcontact("mypublic",cp->srvNXTADDR);
                         }
@@ -879,8 +909,9 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                      }
                 }
             } else printf("no coins array.%p ?\n",array);
-            if ( IS_LIBTEST > 0 )
-                init_SuperNET_storage();
+                //init_filtered_bufs(); crashed ubunty
+                //if ( IS_LIBTEST >= 2 )
+            
             //if ( NXTACCTSECRET[0] == 0 )
             //    gen_randomacct(0,33,NXTADDR,NXTACCTSECRET,"randvals");
             nxt64bits = issue_getAccountId(0,NXTACCTSECRET);
@@ -950,9 +981,6 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
         else printf("PARSE ERROR\n");
         free(jsonstr);
     }
-    if ( DATADIR[0] == 0 )
-        strcpy(DATADIR,"archive");
-    ensure_directory(DATADIR);
 
     /*if ( didinit == 0 )
     {

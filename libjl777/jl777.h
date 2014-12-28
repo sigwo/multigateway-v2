@@ -284,7 +284,7 @@ struct NXThandler_info
     unsigned char loopback_pubkey[crypto_box_PUBLICKEYBYTES],loopback_privkey[crypto_box_SECRETKEYBYTES];
     char pubkeystr[crypto_box_PUBLICKEYBYTES*2+1],myhandle[64],myNXTADDR[64];
     bits256 mypubkey,myprivkey;
-    uint64_t nxt64bits,coins[4];
+    uint64_t nxt64bits;//,coins[4];
     int32_t initassets,Lfactor,gatewayid,gensocks[256];
     int32_t height,extraconfirms,maxpopdepth,maxpopheight,lastchanged,GLEFU,numblocks,timestamps[1000 * 365 * 10];
     int32_t isudpserver,istcpserver,numPrivacyServers,isMM;
@@ -364,14 +364,15 @@ struct withdraw_info
     //struct server_request_header H;
     uint64_t modified,AMtxidbits,approved[16];
     int64_t amount,moneysent;
-    int32_t coinid,srcgateway,destgateway,twofactor,authenticated,submitted,confirmed;
-    char withdrawaddr[64],NXTaddr[MAX_NXTADDR_LEN],redeemtxid[MAX_NXTADDR_LEN],comment[1024];
-    char cointxid[MAX_COINTXID_LEN];
+    int32_t srcgateway,destgateway,twofactor,authenticated,submitted,confirmed;
+    char withdrawaddr[128],NXTaddr[MAX_NXTADDR_LEN],redeemtxid[MAX_NXTADDR_LEN],comment[1024];
+    char cointxid[MAX_COINTXID_LEN],coinstr[16];
 };
 
 struct batch_info
 {
-    uint64_t balance,circulation,unspent,pendingdeposits;
+    int64_t balance;
+    uint64_t circulation,unspent,pendingdeposits;
     uint32_t boughtNXT,pad0,pad1,pad2;
     struct withdraw_info W;
     struct rawtransaction rawtx;
@@ -394,7 +395,7 @@ struct coin_info
     char *userpass,*serverport,assetid[64],*marker,*tradebotfname,*pending_ptr;
     uint64_t *limboarray,srvpubnxtbits,privatebits,dust,NXTfee_equiv,txfee,markeramount,lastheighttime,blockheight,RTblockheight,nxtaccts[512];
     uint32_t uptodate,boughtNXT;
-    int32_t coinid,maxevolveiters,initdone,nohexout,use_addmultisig,min_confirms,minconfirms,estblocktime,forkheight,backupcount,enabled,savedtelepods,M,N,numlogs,clonesmear,pending_ptrmaxlen,srvport,numnxtaccts;
+    int32_t maxevolveiters,initdone,nohexout,use_addmultisig,min_confirms,minconfirms,estblocktime,forkheight,backupcount,enabled,savedtelepods,M,N,numlogs,clonesmear,pending_ptrmaxlen,srvport,numnxtaccts;
     uint16_t bridgeport;
 };
 
@@ -607,14 +608,14 @@ int32_t FASTMODE,SERVER_PORT,MIN_NXTCONFIRMS = 10;
 uint32_t GATEWAY_SIG,FIRST_NXTBLOCK,FIRST_NXTTIMESTAMP,UPNP,MULTIPORT;   // 3134975738 = 0xbadbeefa;
 int32_t DGSBLOCK = 213000;
 int32_t MAX_BUYNXT,DBSLEEP,NXT_FORKHEIGHT,Finished_init,Finished_loading,Historical_done,Debuglevel = 0;
-char NXTSERVER[MAX_JSON_FIELD],NXTAPIURL[MAX_JSON_FIELD],NXT_ASSETIDSTR[64];
+char NXTSERVER[MAX_JSON_FIELD],NXTAPIURL[MAX_JSON_FIELD],NXT_ASSETIDSTR[64],MGWROOT[1024];
 
 struct hashtable *orderbook_txids;
 uv_loop_t *UV_loop;
 static long server_xferred;
 int Servers_started;
 queue_t P2P_Q,sendQ,JSON_Q,udp_JSON,storageQ,cacheQ,BroadcastQ,NarrowQ,ResultsQ,UDP_Q;
-int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP,USESSL,ENABLE_GUIPOLL;
+int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP,USESSL,ENABLE_GUIPOLL,LOG2_MAX_XFERPACKETS = 3;
 uint32_t *SuperNET_whitelist;
 int32_t Historical_done,MGW_initdone;
 struct NXThandler_info *Global_mp;
@@ -630,7 +631,7 @@ typedef int32_t (*tfunc)(void *,int32_t argsize);
 uv_work_t *start_task(tfunc func,char *name,int32_t sleepmicros,void *args,int32_t argsize);
 char *addcontact(char *handle,char *acct);
 char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *argjson,char *sender,int32_t valid,char *origargstr);
-void handler_gotfile(struct transfer_args *args);
+void handler_gotfile(struct transfer_args *args,uint8_t *data,int32_t len,uint32_t crc);
 
 bits256 curve25519(bits256 mysecret,bits256 theirpublic)
 {
