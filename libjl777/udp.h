@@ -690,7 +690,7 @@ struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *d
     if ( args->snapshot == 0 )
         args->snapshot = calloc(1,totallen);*/
     portable_mutex_unlock(&mutex);
-    fprintf(stderr,"return args.%p\n",args);
+   // fprintf(stderr,"return args.%p\n",args);
     return(args);
 }
 
@@ -701,12 +701,12 @@ void calc_crcs(uint32_t *crcs,uint8_t *data,int32_t len,int32_t num,int32_t bloc
         crcs[fragi] = _crc32(0,data + offset,blocksize);
     if ( offset < len )
         crcs[fragi] = _crc32(0,data + offset,len - offset);
-    printf("crcs.%u: %u %u %u | %d\n",_crc32(0,data,len),crcs[0],crcs[1],crcs[2],len-offset);
+    //printf("crcs.%u: %u %u %u | %d\n",_crc32(0,data,len),crcs[0],crcs[1],crcs[2],len-offset);
 }
 
 int32_t update_transfer_args(struct transfer_args *args,uint32_t fragi,uint32_t numfrags,uint32_t totalcrc,uint32_t datacrc,uint8_t *data,int32_t datalen)
 {
-    int i,count = -1;
+    int i,count = 0;
     uint32_t checkcrc;
     if ( data == 0 ) // sender
     {
@@ -728,12 +728,12 @@ int32_t update_transfer_args(struct transfer_args *args,uint32_t fragi,uint32_t 
     }
     else if ( args->totalcrc == totalcrc ) // recipient
     {
-        fprintf(stderr,"update_transfer_args %d of %d <- %u\n",fragi,args->numfrags,datacrc);
         if ( fragi < args->numfrags && fragi*args->blocksize+datalen <= args->totallen )
         {
             memcpy(args->data + fragi*args->blocksize,data,datalen);
             args->gotcrcs[fragi] = datacrc;
         }
+        //fprintf(stderr,"update_transfer_args %d of %d <- %u datalen.%d | %u %u %u (%u)\n",fragi,args->numfrags,datacrc,datalen,args->gotcrcs[0],args->gotcrcs[1],args->gotcrcs[2],_crc32(0,args->data,args->totallen));
         for (i=0; i<args->numfrags; i++)
         {
             if ( args->gotcrcs[i] == args->crcs[i] )
@@ -832,7 +832,7 @@ char *sendfrag(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCT
             if ( fragi < args->numfrags )
                 args->crcs[fragi] = checkcrc;
             if ( Debuglevel > 1 )
-                fprintf(stderr,"GOT SENDFRAG.(%s) datalen.%d %p %p %u\n",cmdstr,datalen,args->data,args->gotcrcs,args->gotcrcs[fragi]);
+                fprintf(stderr,"GOT SENDFRAG.(%s) datalen.%d %p %p (%u %u %u)\n",cmdstr,datalen,args->data,args->gotcrcs,args->crcs[0],args->crcs[1],args->crcs[2]);
             if ( datacrc == checkcrc )
                 count = update_transfer_args(args,fragi,numfrags,totalcrc,datacrc,data,datalen);
             snapshotcrc = _crc32(0,args->snapshot,args->totallen);
