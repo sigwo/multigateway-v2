@@ -716,13 +716,11 @@ char *inject_pushtx(char *coinstr,cJSON *json)
         coinstr = "NXT";
     if ( (txobj= cJSON_GetObjectItem(json,"tx")) != 0 && is_cJSON_String(txobj) != 0 && txobj->valuestring != 0 && txobj->valuestring[0] != 0 )
     {
-        printf("got string.(%s)\n",txobj->valuestring);
         if ( strcmp("NXT",coinstr) == 0 )
         {
-            txid = issue_broadcastTransaction(&errcode,0,txobj->valuestring,refcp->srvNXTACCTSECRET);
-            if ( txid != 0 && errcode == 0 )
-                sprintf(retstr,"{\"result\":\"success\",\"coin\":\"%s\",\"txid\":\"%llu\"}",coinstr,(long long)txid);
-            else sprintf(retstr,"{\"error\":\"code %d\",\"coin\":\"%s\"}",errcode,coinstr);
+            txid = issue_broadcastTransaction(&errcode,&str,txobj->valuestring,refcp->srvNXTACCTSECRET);
+            if ( txid == 0 && str == 0 )
+                sprintf(retstr,"{\"error\":\"code %d\",\"coin\":\"%s\"}",errcode,coinstr);
         }
         else if ( (cp= get_coin_info(coinstr)) != 0 )
         {
@@ -731,7 +729,8 @@ char *inject_pushtx(char *coinstr,cJSON *json)
                 sprintf(txbytes,"[\"%s\"]",txobj->valuestring);
                 str = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"sendrawtransaction",txbytes);
                 free(txbytes);
-                return(str);
+                sprintf(retstr,"{\"result\":\"%s\"}",str);
+                free(str);
             } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant allocate buffer size %ld\"}",coinstr,strlen(txobj->valuestring)+16);
         } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant find tx bytes\"}",coinstr);
     } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) not support\"}",coinstr);
