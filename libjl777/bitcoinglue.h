@@ -728,7 +728,7 @@ char *inject_pushtx(char *coinstr,cJSON *json)
             if ( (txbytes= calloc(1,strlen(txobj->valuestring)+16)) != 0 )
             {
                 sprintf(txbytes,"[\"%s\"]",txobj->valuestring);
-                str = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"sendrawtransaction",txbytes);
+                bitcoind_RPC(&str,cp->name,cp->serverport,cp->userpass,"sendrawtransaction",txbytes);
                 free(txbytes);
                 sprintf(retstr,"{\"result\":\"%s\"}",str);
                 free(str);
