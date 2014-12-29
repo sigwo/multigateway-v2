@@ -145,6 +145,14 @@ char *process_commandline_json(cJSON *json)
     int32_t i,n,haspubkey,iter,gatewayid,actionflag = 0,rescan = 1;
     uint32_t buyNXT = 0;
     cJSON *array,*argjson,*retjson,*retjsons[3];
+    copy_cJSON(cmdstr,cJSON_GetObjectItem(json,"webcmd"));
+    if ( strcmp(cmdstr,"SuperNET") == 0 )
+    {
+        str = cJSON_Print(json);
+        retstr = SuperNET_JSON(str);
+        free(str);
+        return(retstr);
+    }
     copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     if ( strcmp(cmd,"pushtx") == 0 )

@@ -714,6 +714,10 @@ char *inject_pushtx(char *coinstr,cJSON *json)
     struct coin_info *cp,*refcp = get_coin_info("BTCD");
     if ( coinstr == 0 || coinstr[0] == 0 )
         coinstr = "NXT";
+    if ( strcmp(coinstr,"SuperNET") == 0 )
+    {
+        
+    }
     if ( (txobj= cJSON_GetObjectItem(json,"tx")) != 0 && is_cJSON_String(txobj) != 0 && txobj->valuestring != 0 && txobj->valuestring[0] != 0 )
     {
         if ( strcmp("NXT",coinstr) == 0 )
@@ -730,8 +734,9 @@ char *inject_pushtx(char *coinstr,cJSON *json)
                 sprintf(txbytes,"[\"%s\"]",txobj->valuestring);
                 bitcoind_RPC(&str,cp->name,cp->serverport,cp->userpass,"sendrawtransaction",txbytes);
                 free(txbytes);
-                sprintf(retstr,"{\"result\":\"%s\"}",str);
-                free(str);
+                if ( str != 0 )
+                    return(str);
+                sprintf(retstr,"{\"error\":\"nothing returned from coin.(%s)\"}",coinstr);
             } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant allocate buffer size %ld\"}",coinstr,strlen(txobj->valuestring)+16);
         } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant find tx bytes\"}",coinstr);
     } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) not support\"}",coinstr);
