@@ -128,39 +128,9 @@ char *GUIpoll(char *txidstr,char *senderipaddr,uint16_t *portp)
     return(retstr);
 }
 
-char *inject_pushtx(char *coinstr,cJSON *json)
-{
-    cJSON *txobj;
-    char *params,retstr[1024],*txbytes;
-    uint64_t txid;
-    struct coin_info *cp;
-    if ( coinstr == 0 || coinstr[0] == 0 )
-        coinstr = "NXT";
-    if ( strcmp("NXT",coinstr) == 0 )
-    {
-        txid = issue_broadcastTransaction(&errcode,0,signedtx,np->NXTACCTSECRET);
-        if ( othertxid != 0 && errcode == 0 )
-            sprintf(retstr,"{\"result\":\"success\",\"coin\":\"%s\",\"txid\":\"%llu\"}",coinstr,(long long)txid);
-        else sprintf(retstr,"{\"error\":\"code %d\",\"coin\":\"%s\"}",errcode,coinstr);
-    }
-    else if ( (cp= get_coin_info(coinstr)) != 0 )
-    {
-        if ( (txobj= cJSON_GetObjectItem(json,"tx")) != 0 && is_cJSON_String(txobj) != 0 && txobj->valuestring != 0 && txobj->valuestring[0] != 0 )
-        {
-            if ( (txbytes= calloc(1,strlen(txobj->valuestring)+16)) != 0 )
-            {
-                sprintf(txbytes,"[\"%s\"]",txobj->valuestring);
-                printf("got string.(%s)\n",txobj->valuestring);
-                retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"sendrawtransaction",txbytes);
-                free(txbytes);
-            } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant allocate buffer size %ld\"}",coinstr,strlen(txobj->valuestring)+16);
-        } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant find tx bytes\"}",coinstr);
-    } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) not support\"}",coinstr);
-    return(clonestr(retstr));
-}
-
 char *process_commandline_json(cJSON *json)
 {
+    char *inject_pushtx(char *coinstr,cJSON *json);
     int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
     bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
     char *issue_MGWstatus(int32_t mask,char *coinstr,char *userNXTaddr,char *userpubkey,char *email,int32_t rescan,int32_t actionflag);

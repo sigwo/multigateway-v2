@@ -704,4 +704,37 @@ uint64_t get_unspent_value(char *script,struct coin_info *cp,struct telepod *pod
     return(unspent);*/
     return(0);
 }
+
+char *inject_pushtx(char *coinstr,cJSON *json)
+{
+    cJSON *txobj;
+    char retstr[1024],*txbytes,*str;
+    uint64_t txid;
+    int32_t errcode;
+    struct coin_info *cp,*refcp = get_coin_info("BTCD");
+    if ( coinstr == 0 || coinstr[0] == 0 )
+        coinstr = "NXT";
+    if ( (txobj= cJSON_GetObjectItem(json,"tx")) != 0 && is_cJSON_String(txobj) != 0 && txobj->valuestring != 0 && txobj->valuestring[0] != 0 )
+    {
+        printf("got string.(%s)\n",txobj->valuestring);
+        if ( strcmp("NXT",coinstr) == 0 )
+        {
+            txid = issue_broadcastTransaction(&errcode,0,txobj->valuestring,refcp->srvNXTACCTSECRET);
+            if ( txid != 0 && errcode == 0 )
+                sprintf(retstr,"{\"result\":\"success\",\"coin\":\"%s\",\"txid\":\"%llu\"}",coinstr,(long long)txid);
+            else sprintf(retstr,"{\"error\":\"code %d\",\"coin\":\"%s\"}",errcode,coinstr);
+        }
+        else if ( (cp= get_coin_info(coinstr)) != 0 )
+        {
+            if ( (txbytes= calloc(1,strlen(txobj->valuestring)+16)) != 0 )
+            {
+                sprintf(txbytes,"[\"%s\"]",txobj->valuestring);
+                str = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"sendrawtransaction",txbytes);
+                free(txbytes);
+                return(str);
+            } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant allocate buffer size %ld\"}",coinstr,strlen(txobj->valuestring)+16);
+        } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant find tx bytes\"}",coinstr);
+    } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) not support\"}",coinstr);
+    return(clonestr(retstr));
+}
 #endif
