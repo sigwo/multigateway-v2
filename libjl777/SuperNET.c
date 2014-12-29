@@ -149,6 +149,7 @@ char *process_commandline_json(cJSON *json)
     if ( strcmp(cmdstr,"SuperNET") == 0 )
     {
         str = cJSON_Print(json);
+        printf("GOT webcmd.(%s)\n",str);
         retstr = SuperNET_JSON(str);
         free(str);
         return(retstr);
