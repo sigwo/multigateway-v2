@@ -714,10 +714,6 @@ char *inject_pushtx(char *coinstr,cJSON *json)
     struct coin_info *cp,*refcp = get_coin_info("BTCD");
     if ( coinstr == 0 || coinstr[0] == 0 )
         coinstr = "NXT";
-    if ( strcmp(coinstr,"SuperNET") == 0 )
-    {
-        
-    }
     if ( (txobj= cJSON_GetObjectItem(json,"tx")) != 0 && is_cJSON_String(txobj) != 0 && txobj->valuestring != 0 && txobj->valuestring[0] != 0 )
     {
         if ( strcmp("NXT",coinstr) == 0 )

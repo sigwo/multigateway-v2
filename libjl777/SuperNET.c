@@ -34,7 +34,7 @@
 #define NUM_GATEWAYS 3
 extern char Server_names[256][MAX_JSON_FIELD],MGWROOT[];
 extern char Server_NXTaddrs[256][MAX_JSON_FIELD];
-extern int32_t IS_LIBTEST,USESSL,SUPERNET_PORT,ENABLE_GUIPOLL,Debuglevel,UPNP,MULTIPORT;
+extern int32_t IS_LIBTEST,USESSL,SUPERNET_PORT,ENABLE_GUIPOLL,Debuglevel,UPNP,MULTIPORT,Finished_init;
 extern cJSON *MGWconf;
 #define issue_curl(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"curl",cmdstr,0,0,0)
 char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char *command,char *params);
@@ -130,7 +130,6 @@ char *GUIpoll(char *txidstr,char *senderipaddr,uint16_t *portp)
 
 char *process_commandline_json(cJSON *json)
 {
-    char *call_SuperNET_JSON(char *JSONstr);
     char *inject_pushtx(char *coinstr,cJSON *json);
     int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
     bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
@@ -151,7 +150,7 @@ char *process_commandline_json(cJSON *json)
     {
         str = cJSON_Print(json);
         //printf("GOT webcmd.(%s)\n",str);
-        retstr = call_SuperNET_JSON(str);
+        retstr = bitcoind_RPC(0,"webcmd",SuperNET_url(),(char *)"",(char *)"SuperNET",str)
         free(str);
         return(retstr);
     }
