@@ -721,6 +721,7 @@ char *inject_pushtx(char *coinstr,cJSON *json)
             txid = issue_broadcastTransaction(&errcode,&str,txobj->valuestring,refcp->srvNXTACCTSECRET);
             if ( txid == 0 && str == 0 )
                 sprintf(retstr,"{\"error\":\"code %d\",\"coin\":\"%s\"}",errcode,coinstr);
+            return(str);
         }
         else if ( (cp= get_coin_info(coinstr)) != 0 )
         {

@@ -305,7 +305,7 @@ uint64_t issue_broadcastTransaction(int32_t *errcodep,char **retstrp,char *txbyt
         *retstrp = retstr;
     if ( retstr != 0 )
     {
-        printf("broadcast got.(%s)\n",retstr);
+        //printf("broadcast got.(%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             errjson = cJSON_GetObjectItem(json,"errorCode");
