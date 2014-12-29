@@ -150,7 +150,7 @@ char *process_commandline_json(cJSON *json)
     {
         str = cJSON_Print(json);
         //printf("GOT webcmd.(%s)\n",str);
-        retstr = bitcoind_RPC(0,"webcmd",SuperNET_url(),(char *)"",(char *)"SuperNET",str)
+        retstr = bitcoind_RPC(0,"webcmd",SuperNET_url(),(char *)"",(char *)"SuperNET",str);
         free(str);
         return(retstr);
     }
