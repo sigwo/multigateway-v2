@@ -130,6 +130,7 @@ char *GUIpoll(char *txidstr,char *senderipaddr,uint16_t *portp)
 
 char *process_commandline_json(cJSON *json)
 {
+    char *call_SuperNET_JSON(char *JSONstr);
     char *inject_pushtx(char *coinstr,cJSON *json);
     int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
     bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
@@ -149,8 +150,8 @@ char *process_commandline_json(cJSON *json)
     if ( strcmp(cmdstr,"SuperNET") == 0 )
     {
         str = cJSON_Print(json);
-        printf("GOT webcmd.(%s)\n",str);
-        retstr = SuperNET_JSON(str);
+        //printf("GOT webcmd.(%s)\n",str);
+        retstr = call_SuperNET_JSON(str);
         free(str);
         return(retstr);
     }
