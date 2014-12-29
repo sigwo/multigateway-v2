@@ -97,7 +97,7 @@ void _set_address_key(DBT *key,char *coinaddr,char *coin,char *addr)
     //printf("[%s] + [%s] = (%s)\n",coin,addr,coinaddr);
 }
 
-void _add_address_entry(char *coin,char *addr,struct address_entry *bp,int32_t syncflag)
+void _add_address_entry(char *coin,char *addr,struct address_entry *bp,int32_t syncflag,uint64_t value)
 {
     struct SuperNET_db *sdb = &SuperNET_dbs[ADDRESS_DATA];
     char coinaddr[512],dirname[512],fname[512];
@@ -127,6 +127,8 @@ void _add_address_entry(char *coin,char *addr,struct address_entry *bp,int32_t s
         if ( fp != 0 )
         {
             fwrite(bp,1,sizeof(*bp),fp);
+            if ( bp->vinflag == 0 )
+                fwrite(&value,1,sizeof(value),fp);
             fclose(fp);
         }
     }
