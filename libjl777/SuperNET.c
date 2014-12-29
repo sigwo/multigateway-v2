@@ -128,9 +128,35 @@ char *GUIpoll(char *txidstr,char *senderipaddr,uint16_t *portp)
     return(retstr);
 }
 
-char *inject_pushtx(cJSON *json)
+char *inject_pushtx(char *coinstr,cJSON *json)
 {
-    return(clonestr("{\"error\":\"woof!\"}"));
+    cJSON *txobj;
+    char *params,retstr[1024],*txbytes;
+    uint64_t txid;
+    struct coin_info *cp;
+    if ( coinstr == 0 || coinstr[0] == 0 )
+        coinstr = "NXT";
+    if ( strcmp("NXT",coinstr) == 0 )
+    {
+        txid = issue_broadcastTransaction(&errcode,0,signedtx,np->NXTACCTSECRET);
+        if ( othertxid != 0 && errcode == 0 )
+            sprintf(retstr,"{\"result\":\"success\",\"coin\":\"%s\",\"txid\":\"%llu\"}",coinstr,(long long)txid);
+        else sprintf(retstr,"{\"error\":\"code %d\",\"coin\":\"%s\"}",errcode,coinstr);
+    }
+    else if ( (cp= get_coin_info(coinstr)) != 0 )
+    {
+        if ( (txobj= cJSON_GetObjectItem(json,"tx")) != 0 && is_cJSON_String(txobj) != 0 && txobj->valuestring != 0 && txobj->valuestring[0] != 0 )
+        {
+            if ( (txbytes= calloc(1,strlen(txobj->valuestring)+16)) != 0 )
+            {
+                sprintf(txbytes,"[\"%s\"]",txobj->valuestring);
+                printf("got string.(%s)\n",txobj->valuestring);
+                retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"sendrawtransaction",txbytes);
+                free(txbytes);
+            } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant allocate buffer size %ld\"}",coinstr,strlen(txobj->valuestring)+16);
+        } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) cant find tx bytes\"}",coinstr);
+    } else sprintf(retstr,"{\"error\":\"inject_pushtx coin.(%s) not support\"}",coinstr);
+    return(clonestr(retstr));
 }
 
 char *process_commandline_json(cJSON *json)
@@ -149,11 +175,11 @@ char *process_commandline_json(cJSON *json)
     int32_t i,n,haspubkey,iter,gatewayid,actionflag = 0,rescan = 1;
     uint32_t buyNXT = 0;
     cJSON *array,*argjson,*retjson,*retjsons[3];
+    copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     if ( strcmp(cmd,"pushtx") == 0 )
-        return(inject_pushtx(json));
+        return(inject_pushtx(coin,json));
     copy_cJSON(email,cJSON_GetObjectItem(json,"email"));
-    copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
     copy_cJSON(NXTacct,cJSON_GetObjectItem(json,"NXT"));
     copy_cJSON(userpubkey,cJSON_GetObjectItem(json,"pubkey"));
     if ( userpubkey[0] == 0 )
