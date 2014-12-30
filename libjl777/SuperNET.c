@@ -768,6 +768,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                 printf("%s",V->disp);
                 V->disp[0] = 0;
                 V->numentries = 0;
+                V->prevblock = bp->blocknum;
             }
             V->numentries++;
             emit_valuebits(V->hp,value);
