@@ -735,6 +735,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
         else
         {
             V->buffer = calloc(1,1000000);
+            V->disp = calloc(1,1000000);
             V->hp = hopen(V->buffer,1000000);
             V->addrs = hashtable_create("addrs",100,sizeof(*addrp),((long)&addrp->addr[0] - (long)addrp),sizeof(addrp->addr),-1);
             V->txids = hashtable_create("txids",100,sizeof(*tp),((long)&tp->txidstr[0] - (long)tp),sizeof(tp->txidstr),-1);
@@ -763,7 +764,9 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                 emit_varbits(V->hp,V->numentries);
                 hflush(V->fp,V->hp);
                 hclear(V->hp);
-                printf("-> numentries.%d %.1f %.1f\n\nNEWBLOCK.%u A%u T%u S%u\n",V->numentries,(double)(ftell(V->fp)+ftell(V->afp)+ftell(V->tfp)+ftell(V->sfp))/bp->blocknum,(double)ftell(V->fp)/bp->blocknum,bp->blocknum,V->prevaddrind,V->prevtxind,V->prevscriptind);
+                sprintf(V->disp+strlen(V->disp),"-> numentries.%d %.1f %.1f\n%s NEWBLOCK.%u A%u T%u S%u |",V->numentries,(double)(ftell(V->fp)+ftell(V->afp)+ftell(V->tfp)+ftell(V->sfp))/bp->blocknum,(double)ftell(V->fp)/bp->blocknum,coinstr,bp->blocknum,V->prevaddrind,V->prevtxind,V->prevscriptind);
+                printf("%s",V->disp);
+                V->disp[0] = 0;
                 V->numentries = 0;
             }
             V->numentries++;
@@ -798,7 +801,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                     flag++;
                 }
                 valA = addrp->ind - V->prevaddrind;
-                sprintf(addr,"a%d",valA);
+                //sprintf(addr,"a%d",valA);
                 V->prevaddrind = addrp->ind;
                 
                 tp = add_hashtable(&createdflag,&V->txids,txidstr);
@@ -813,7 +816,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                     flag++;
                 }
                 valT = tp->ind - V->prevtxind;
-                sprintf(txidstr,"t%d",valT);
+                //sprintf(txidstr,"t%d",valT);
                 V->prevtxind = tp->ind;
                 
                 sp = add_hashtable(&createdflag,&V->scripts,script);
@@ -829,27 +832,27 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                     flag++;
                 }
                 valS = sp->ind - V->prevscriptind;
-                sprintf(script,"s%d",valS);
+                //sprintf(script,"s%d",valS);
                 V->prevscriptind = sp->ind;
                 
                 //if ( flag != 0 )
                 //    printf("\n");
                 //printf("%s %6u.%-5u %s:%d %s %c%s %.8f | %.1f\n",coinstr,bp->blocknum,bp->txind,txidstr,bp->v,addr,mode,script,dstr(value),(double)(ftell(fp)+ftell(afp)+ftell(tfp)+ftell(sfp))/(bp->blocknum+1));
                 //fwrite(&mode,1,sizeof(mode),fp);
-                printf("{%d.%d %d.%d %d.%d %.8f} ",V->prevaddrind,valA,V->prevtxind,valT,V->prevscriptind,valS,dstr(value));
+                sprintf(V->disp+strlen(V->disp),"{%d.%d %d.%d %d.%d %.8f} ",V->prevaddrind,valA,V->prevtxind,valT,V->prevscriptind,valS,dstr(value));
                 choose_varbits(V->hp,V->prevaddrind,valA);
                 choose_varbits(V->hp,V->prevtxind,valS);
                 choose_varbits(V->hp,V->prevscriptind,valT);
             }
             else
             {
-                printf("[%d %d %d] ",bp->blocknum,bp->txind,bp->v);
+                sprintf(V->disp+strlen(V->disp),"[%d %d %d] ",bp->blocknum,bp->txind,bp->v);
                 //fwrite(bp,1,sizeof(*bp),fp);
             }
         }
         else
         {
-            printf("(%d %d %d) ",bp->blocknum,bp->txind,bp->v);
+            sprintf(V->disp+strlen(V->disp),"(%d %d %d) ",bp->blocknum,bp->txind,bp->v);
             //fwrite(bp,1,sizeof(*bp),fp);
         }
         if ( IS_LIBTEST != 7 )
@@ -865,13 +868,11 @@ int main(int argc,const char *argv[])
     int32_t retval;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
    // if ( Debuglevel > 0 )
-    if ( IS_LIBTEST == 7 )
+    if ( argc > 1 && strcmp(argv[1],"genfiles") == 0 )
     {
-        uint32_t process_coinblocks(char *coinstr,uint32_t blockheight,int32_t dispflag);
-        uint32_t blockheight = 0;
-        IS_LIBTEST = 7;
+        uint32_t process_coinblocks();
         retval = SuperNET_start("SuperNET.conf","127.0.0.1");
-        process_coinblocks("BTCD",blockheight,0);
+        process_coinblocks();
         getchar();
     }
     if ( 0 )

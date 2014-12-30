@@ -4102,29 +4102,49 @@ void *Coinloop(void *ptr)
     return(0);
 }
 
-uint32_t process_coinblocks(char *coinstr,uint32_t blockheight,int32_t dispflag)
+void *_process_coinblocks(void *_cp)
 {
-    uint32_t height,processed = 0;
-    struct coin_info *cp = get_coin_info(coinstr);
-    int32_t oldval = IS_LIBTEST;
+    struct coin_info *cp = _cp;
+    uint32_t height,blockheight,processed = 0;
+    blockheight = 0;
+    printf("process coinblocks for (%s)\n",cp->name);
     if ( cp != 0 )
     {
-        IS_LIBTEST = 7;
         height = get_blockheight(cp);
         while ( blockheight < (height - cp->min_confirms) )
         {
-            if ( dispflag != 0 )
-                printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)blockheight,(long)height);
+            //if ( dispflag != 0 )
+            //    printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)blockheight,(long)height);
             if ( update_address_infos(cp,blockheight) != 0 )
             {
                 processed++;
                 blockheight++;
             } else break;
         }
-        IS_LIBTEST = oldval;
     }
-    return(blockheight);
+    return(0);
 }
 
+void process_coinblocks()
+{
+    int32_t i,n;
+    cJSON *array;
+    char coinstr[1024];
+    struct coin_info *cp;
+    int32_t oldval = IS_LIBTEST;
+    IS_LIBTEST = 7;
+    array = cJSON_GetObjectItem(MGWconf,"active");
+    if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        for (i=0; i<n; i++)
+        {
+            copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
+            if ( (cp= get_coin_info(coinstr)) != 0 )
+                if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
+                    printf("ERROR hist findaddress_loop\n");
+        }
+    }
+    IS_LIBTEST = oldval;
+}
 #endif
     

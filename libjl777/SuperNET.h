@@ -80,6 +80,7 @@ struct compressionvars
     struct hashtable *addrs,*txids,*scripts;
     uint32_t addrind,txidind,scriptind,prevaddrind,prevtxind,prevscriptind,prevblock,numentries;
     uint8_t *buffer;
+    char *disp;
     HUFF *hp;
     FILE *fp,*afp,*tfp,*sfp;
 };
