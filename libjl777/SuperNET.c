@@ -534,14 +534,333 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
         freeUPNPDevlist(devlist);
         return 0; //error - port map wasnt returned by query so likely failed.
     }
-    else {
-        printf("UPNP OK: EXT (%s:%s) %s redirected to INT (%s:%s) (duration=%s)\n",
-               externalIPAddress, eport, proto, intClient, intPort, duration);
-    }
-    
+    else printf("UPNP OK: EXT (%s:%s) %s redirected to INT (%s:%s) (duration=%s)\n",externalIPAddress, eport, proto, intClient, intPort, duration);
     FreeUPNPUrls(&urls);
     freeUPNPDevlist(devlist);
     return 1; //ok - we are mapped:)
+}
+
+
+
+struct coinscripts
+{
+    char prefix[16],suffix[16];
+};
+
+struct coinaddr
+{
+    uint8_t addr[35],pubkey[66];
+    uint32_t numentries,allocsize,ind;
+    struct address_entry entries[];
+};
+
+struct scriptinfo
+{
+    uint32_t ind,mode;
+    uint8_t script[];
+};
+
+struct txout
+{
+    uint32_t scriptind:2,addrind:30;
+    uint64_t value;
+};
+
+struct txinfo
+{
+    uint8_t txidstr[128];
+    uint16_t numvouts,numvins;
+    uint32_t ind;
+    uint32_t txouts[]; // both vouts and vins in same array, vouts first
+};
+
+struct blockinfo
+{
+    uint16_t numtx;
+    uint8_t txs[];
+};
+
+void update_block(struct blockinfo *block,struct address_entry *entry)
+{
+    if ( entry->txind > block->numtx )
+        block->numtx = entry->txind;
+}
+
+/*
+void cross_validate_rawfiles(char *coin,char *addr,struct address_entry *bp)
+{
+    static uint32_t n,maxblock;
+    uint32_t ind,numinds,size;
+    struct huffcode *huff;
+    struct coin_info *cp;
+    cp = get_coin_info(coin);
+    numinds = 1000000;
+    if ( cp->items == 0 )
+    {
+        cp->items = calloc(numinds,sizeof(*cp->items));
+    }
+    if ( addr == 0  || (n % 100) == 99 )
+    {
+        if ( cp != 0 )
+        {
+            double endmilli,startmilli = milliseconds();
+            size = 1;
+            for (ind=1; ind<numinds; ind++)
+            {
+                if ( ind == (1 << 8) )
+                    size = 2;
+                else if ( ind == (1 << 16) )
+                    size = 3;
+                else if ( ind == (1 << 24) )
+                    size = 4;
+                huff_iteminit(&cp->items[ind],&ind,size,0,0);
+            }
+            printf("items initialized\n");
+            testhuffcode("hello",cp->items,numinds);
+            huff = huff_init(cp->items,numinds);
+            endmilli = milliseconds();
+            printf("%.3f millis to encode maxblock.%d BTCD.%d %d bytes -> %d bits %.3f ratio\n",endmilli-startmilli,maxblock,n,huff->totalbytes,huff->totalbits,(double)huff->totalbytes*8./huff->totalbits);
+        }
+        return;
+    }
+    n++;
+    if ( bp->blocknum > maxblock )
+        maxblock = bp->blocknum;
+    cp->items[bp->blocknum].freq++;
+    cp->items[bp->txind].freq++;
+    cp->items[bp->v].freq++;
+    //update_block(&cp->blocks[bp->blocknum],bp);
+    //struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
+    printf("%d: max.%d %7u %-5u %-5u (%-5s %s) vin.%d spent.%d isinternal.%d\n",n,maxblock,bp->blocknum,bp->txind,bp->v,coin,addr,bp->vinflag,bp->spent,bp->isinternal);
+}*/
+
+int32_t _calc_bitsize(uint32_t x)
+{
+    uint32_t mask = (1 << 31);
+    int32_t i;
+    if ( x == 0 )
+        return(0);
+    for (i=31; i>=0; i--)
+    {
+        if ( (mask & x) != 0 )
+            return(i);
+    }
+    return(-1);
+}
+
+int32_t emit_varbits(HUFF *hp,uint8_t val)
+{
+    int i,valsize = _calc_bitsize(val);
+    for (i=0; i<3; i++)
+        hputbit(hp,(valsize & (1<<i)) != 0);
+    for (i=0; i<valsize; i++)
+        hputbit(hp,(val & (1<<i)) != 0);
+    return(valsize + 3);
+}
+
+int32_t emit_valuebits(HUFF *hp,uint8_t value)
+{
+    int32_t i,num,valsize,lsb = 0;
+    uint64_t mask;
+    mask = (1L << 63);
+    for (i=63; i>=0; i--,mask>>=1)
+        if ( (value & mask) != 0 )
+            break;
+    mask = 1;
+    for (lsb=0; lsb<i; lsb++,mask<<=1)
+        if ( (value & mask) != 0 )
+            break;
+    value >>= lsb;
+    valsize = (i - lsb);
+    num = emit_varbits(hp,lsb);
+    num += emit_varbits(hp,valsize);
+    mask = 1;
+    for (i=0; i<valsize; i++,mask<<=1)
+        hputbit(hp,(value & mask) != 0);
+    printf("%d ",num+valsize);
+    return(num + valsize);
+}
+
+int32_t choose_varbits(HUFF *hp,uint32_t val,int32_t diff)
+{
+    int valsize,diffsize,i,num = 0;
+    valsize = _calc_bitsize(val);
+    diffsize = _calc_bitsize(diff < 0 ? -diff : diff);
+    if ( valsize < diffsize )
+    {
+        hputbit(hp,0);
+        hputbit(hp,1);
+        num = 2 + valsize + emit_varbits(hp,valsize);
+        for (i=0; i<valsize; i++)
+            hputbit(hp,(val & (1<<i)) != 0);
+    }
+    else
+    {
+        num = 1;
+        if ( diff < 0 )
+        {
+            hputbit(hp,0);
+            hputbit(hp,0);
+            num++;
+        }
+        else hputbit(hp,1);
+        num += emit_varbits(hp,diffsize) + diffsize;
+        for (i=0; i<diffsize; i++)
+            hputbit(hp,(diff & (1<<i)) != 0);
+    }
+    return(num);
+}
+
+void update_ramchain(char *coinstr,char *addr,struct address_entry *bp,uint64_t value,char *txidstr,char *script)
+{
+    struct hashtable *hashtable_create(char *name,int64_t hashsize,long structsize,long keyoffset,long keysize,long modifiedoffset);
+    void *add_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key);
+    static struct hashtable *addrs,*txids,*scripts;
+    static uint32_t addrind,txidind,scriptind,prevaddrind,prevtxind,prevscriptind,prevblock,numentries;
+    static uint8_t *buffer;
+    static HUFF *hp;
+    char fname[512];
+    static FILE *fp,*afp,*tfp,*sfp;
+    uint32_t len;
+    uint16_t slen;
+    char mode;
+    int32_t createdflag,flag,valA,valT,valS;
+    struct coinaddr *addrp = 0;
+    struct txinfo *tp = 0;
+    struct scriptinfo *sp = 0;
+    if ( fp == 0 )
+    {
+        if ( IS_LIBTEST != 7 )
+        {
+            sprintf(fname,"address/%s/%s",coinstr,addr);
+            if ( (fp= fopen(fname,"rb+")) == 0 )
+                fp = fopen(fname,"wb");
+            else fseek(fp,0,SEEK_END);
+        }
+        else
+        {
+            buffer = calloc(1,1000000);
+            hp = hopen(buffer,1000000);
+            addrs = hashtable_create("addrs",100,sizeof(*addrp),((long)&addrp->addr[0] - (long)addrp),sizeof(addrp->addr),-1);
+            txids = hashtable_create("txids",100,sizeof(*tp),((long)&tp->txidstr[0] - (long)tp),sizeof(tp->txidstr),-1);
+            scripts = hashtable_create("scripts",100,sizeof(*sp),sizeof(*sp),0,-1);
+            sprintf(fname,"address/%s.raw",coinstr);
+            fp = fopen(fname,"wb");
+            printf("opened %s\n",fname);
+            sprintf(fname,"address/%s.addrs",coinstr);
+            afp = fopen(fname,"wb");
+            printf("opened %s\n",fname);
+            sprintf(fname,"address/%s.txids",coinstr);
+            tfp = fopen(fname,"wb");
+            printf("opened %s\n",fname);
+            sprintf(fname,"address/%s.scripts",coinstr);
+            sfp = fopen(fname,"wb");
+            printf("opened %s\n",fname);
+            prevblock = prevaddrind = prevtxind = prevscriptind = -1;
+        }
+    }
+    if ( fp != 0 )
+    {
+        if ( bp->vinflag == 0 && script != 0 && txidstr != 0 )
+        {
+            if ( prevblock != bp->blocknum )
+            {
+                emit_varbits(hp,numentries);
+                hflush(fp,hp);
+                hclear(hp);
+                printf("-> numentries.%d %.1f %.1f\n\nNEWBLOCK.%u A%u T%u S%u\n",numentries,(double)(ftell(fp)+ftell(afp)+ftell(tfp)+ftell(sfp))/bp->blocknum,(double)ftell(fp)/bp->blocknum,bp->blocknum,prevaddrind,prevtxind,prevscriptind);
+                numentries = 0;
+            }
+            numentries++;
+            emit_valuebits(hp,value);
+            //fwrite(&value,1,sizeof(value),fp);
+            if ( txidstr != 0 && script != 0 )
+            {
+                len = (int32_t)strlen(script);
+                if ( strncmp(script,"76a914",6) == 0 && strcmp(script+len-4,"88ac") == 0 )
+                {
+                    script[len-4] = 0;
+                    script += 6;
+                    mode = 's';
+                }
+                else if ( strncmp(script,"a9",2) == 0 && strcmp(script+len-2,"ac") == 0 )
+                {
+                    script[len-2] = 0;
+                    script += 2;
+                    mode = 'm';
+                }
+                else mode = 'r';
+                flag = 0;
+                addrp = add_hashtable(&createdflag,&addrs,addr);
+                if ( createdflag != 0 )
+                {
+                    addrp->ind = ++addrind;
+                    //printf("%s ",addr);
+                    slen = (int32_t)strlen(addr) + 1;
+                    fwrite(&slen,1,sizeof(slen),afp);
+                    fwrite(addr,1,slen,afp);
+                    fflush(afp);
+                    flag++;
+                }
+                valA = addrp->ind - prevaddrind;
+                sprintf(addr,"a%d",valA);
+                prevaddrind = addrp->ind;
+                
+                tp = add_hashtable(&createdflag,&txids,txidstr);
+                if ( createdflag != 0 )
+                {
+                    tp->ind = ++txidind;
+                    //printf("%s ",txidstr);
+                    slen = (int32_t)strlen(txidstr) + 1;
+                    fwrite(&slen,1,sizeof(slen),tfp);
+                    fwrite(txidstr,1,slen,tfp);
+                    fflush(tfp);
+                    flag++;
+                }
+                valT = tp->ind - prevtxind;
+                sprintf(txidstr,"t%d",valT);
+                prevtxind = tp->ind;
+                
+                sp = add_hashtable(&createdflag,&scripts,script);
+                if ( createdflag != 0 )
+                {
+                    sp->ind = ++scriptind;
+                    sp->mode = mode;
+                    //printf("%s ",script);
+                    slen = (int32_t)strlen(script) + 1;
+                    fwrite(&slen,1,sizeof(slen),sfp);
+                    fwrite(script,1,slen,sfp);
+                    fflush(sfp);
+                    flag++;
+                }
+                valS = sp->ind - prevscriptind;
+                sprintf(script,"s%d",valS);
+                prevscriptind = sp->ind;
+                
+                //if ( flag != 0 )
+                //    printf("\n");
+                //printf("%s %6u.%-5u %s:%d %s %c%s %.8f | %.1f\n",coinstr,bp->blocknum,bp->txind,txidstr,bp->v,addr,mode,script,dstr(value),(double)(ftell(fp)+ftell(afp)+ftell(tfp)+ftell(sfp))/(bp->blocknum+1));
+                //fwrite(&mode,1,sizeof(mode),fp);
+                printf("{%d.%d %d.%d %d.%d %.8f} ",prevaddrind,valA,prevtxind,valT,prevscriptind,valS,dstr(value));
+                choose_varbits(hp,prevaddrind,valA);
+                choose_varbits(hp,prevtxind,valS);
+                choose_varbits(hp,prevscriptind,valT);
+            }
+            else
+            {
+                printf("[%d %d %d] ",bp->blocknum,bp->txind,bp->v);
+                //fwrite(bp,1,sizeof(*bp),fp);
+            }
+        }
+        else
+        {
+            printf("(%d %d %d) ",bp->blocknum,bp->txind,bp->v);
+            //fwrite(bp,1,sizeof(*bp),fp);
+        }
+        if ( IS_LIBTEST != 7 )
+            fclose(fp);
+        else fflush(fp);
+    }
 }
 
 int main(int argc,const char *argv[])
@@ -550,9 +869,32 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     int32_t retval;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
-    if ( Debuglevel > 0 )
+   // if ( Debuglevel > 0 )
+    if ( 0 )
+    {
+        uint32_t process_coinblocks(char *coinstr,uint32_t blockheight,int32_t dispflag);
+        uint32_t blockheight = 0;
+        IS_LIBTEST = 7;
+        retval = SuperNET_start("SuperNET.conf","127.0.0.1");
+        process_coinblocks("BTCD",blockheight,0);
+        getchar();
+    }
+    if ( 0 )
+    {
+        void huff_iteminit(struct huffitem *hip,void *ptr,int32_t size,int32_t isptr,int32_t ishex);
+        char *p,*str = "this is an example for huffman encoding";
+        int i,numinds = 256;
+        struct huffitem *items = calloc(numinds,sizeof(*items));
+        int testhuffcode(char *str,struct huffitem *freqs,int32_t numinds);
+        for (i=0; i<numinds; i++)
+            huff_iteminit(&items[i],&i,1,0,0);
+        p = str;
+        while ( *p != '\0' )
+            items[*p++].freq++;
+        testhuffcode(str,items,numinds);
+        //getchar();
         system("git log | head -n 1");
-
+    }
     IS_LIBTEST = 1;
     if ( argc > 1 && argv[1] != 0 )
     {

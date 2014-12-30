@@ -35,6 +35,46 @@
 #define TRANSFER_BLOCKSIZE 512
 #define MAX_TRANSFER_BLOCKS (MAX_TRANSFER_SIZE / TRANSFER_BLOCKSIZE)
 
+static uint8_t huffmasks[8] = { (1<<0), (1<<1), (1<<2), (1<<3), (1<<4), (1<<5), (1<<6), (1<<7) };
+static uint8_t huffoppomasks[8] = { ~(1<<0), ~(1<<1), ~(1<<2), ~(1<<3), ~(1<<4), ~(1<<5), ~(1<<6), (uint8_t)~(1<<7) };
+struct huffstream { uint8_t *ptr,*buf; int32_t bitoffset,maski,endpos,allocsize; };
+typedef struct huffstream HUFF;
+
+void hclose(HUFF *hp);
+HUFF *hopen(uint8_t *bits,int32_t num);
+void hrewind(HUFF *hp);
+void hclear(HUFF *hp);
+int32_t hseek(HUFF *hp,int32_t offset,int32_t mode);
+int32_t hgetbit(HUFF *hp);
+int32_t hputbit(HUFF *hp,int32_t bit);
+int32_t hwrite(uint64_t codebits,int32_t numbits,HUFF *hp);
+int32_t hflush(FILE *fp,HUFF *hp);
+
+struct hashtable
+{
+    char *name;
+    void **hashtable;
+    uint64_t hashsize,numsearches,numiterations,numitems;
+    long keyoffset,keysize,modifiedoffset,structsize;
+};
+
+union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
+typedef union _bits256 bits256;
+
+union hufftype
+{
+    bits256 bits;
+    void *ptr;
+};
+
+struct huffitem
+{
+    union hufftype U;
+    uint64_t codebits;
+    uint32_t freq;
+    uint8_t size,isptr,ishex,numbits;
+};
+
 struct transfer_args
 {
     uint64_t modified;
@@ -67,10 +107,6 @@ struct telepod
     char coinstr[8],txid[MAX_COINTXID_LEN],coinaddr[MAX_COINADDR_LEN],script[128];
     char privkey[];
 };
-
-union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
-typedef union _bits256 bits256;
-
 
 struct pserver_info
 {

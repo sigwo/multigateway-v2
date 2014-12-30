@@ -62,6 +62,11 @@ int32_t is_limbo_redeem(struct coin_info *cp,uint64_t redeemtxidbits)
     return(0);
 }
 
+void set_txidmap_str(char *mapstr,char *txidstr,char *coinstr,int32_t v) // for txid/vout -> presence check
+{
+    sprintf(mapstr,"%s=%s.%d",coinstr,txidstr,v);
+}
+
 void set_MGW_fname(char *fname,char *dirname,char *NXTaddr)
 {
     if ( NXTaddr == 0 )
@@ -816,7 +821,7 @@ int32_t set_address_entry(struct address_entry *bp,uint32_t blocknum,int32_t txi
     return(0);
 }
 
-int32_t add_address_entry(char *coin,char *addr,uint32_t blocknum,int32_t txind,int32_t vin,int32_t vout,int32_t isinternal,int32_t spent,int32_t syncflag,uint64_t value)
+int32_t add_address_entry(char *coin,char *addr,uint32_t blocknum,int32_t txind,int32_t vin,int32_t vout,int32_t isinternal,int32_t spent,int32_t syncflag,uint64_t value,char *txidstr,char *script)
 {
     struct address_entry B;
     struct coin_info *cp;
@@ -825,7 +830,7 @@ int32_t add_address_entry(char *coin,char *addr,uint32_t blocknum,int32_t txind,
     {
         if ( set_address_entry(&B,blocknum,txind,vin,vout,isinternal,spent) == 0 )
         {
-            _add_address_entry(coin,addr,&B,syncflag,value);
+            _add_address_entry(coin,addr,&B,syncflag,value,txidstr,script);
             if ( Global_mp->gatewayid == (NUM_GATEWAYS-1) && isinternal == 0 && vin < 0 && MGW_initdone != 0 && (cp= get_coin_info(coin)) != 0 )
             {
                 if ( (msig= find_msigaddr(addr)) != 0 && msig->NXTaddr[0] != 0 )
@@ -1038,8 +1043,8 @@ uint64_t update_vins(int32_t *isinternalp,char *coinaddr,char *script,struct coi
                     if ( (oldblockheight= get_blocktxind(&oldtxind,cp,0,blockhash,txidstr)) > 0 )
                     {
                         flag++;
-                        add_address_entry(cp->name,coinaddr,oldblockheight,oldtxind,-1,vout,-1,1,0,value);
-                        add_address_entry(cp->name,coinaddr,blockheight,txind,i,-1,-1,1,syncflag * (i == (numvins-1)),value);
+                        add_address_entry(cp->name,coinaddr,oldblockheight,oldtxind,-1,vout,-1,1,0,value,0,0);
+                        add_address_entry(cp->name,coinaddr,blockheight,txind,i,-1,-1,1,syncflag * (i == (numvins-1)),value,0,0);
                     } else printf("error getting oldblockheight (%s %s)\n",blockhash,txidstr);
                 } else printf("unexpected error vout.%d %s\n",vout,txidstr);
             } else printf("illegal txid.(%s)\n",txidstr);
@@ -1060,13 +1065,13 @@ void update_txid_infos(struct coin_info *cp,uint32_t blockheight,int32_t txind,c
         {
             v = 0;
             if ( (value= get_txvout(0,&numvouts,coinaddr_v0,script,cp,txjson,0,v)) > 0 )
-                add_address_entry(cp->name,coinaddr_v0,blockheight,txind,-1,v,isinternal,0,syncflag * (v == (numvouts-1)),value);
+                add_address_entry(cp->name,coinaddr_v0,blockheight,txind,-1,v,isinternal,0,syncflag * (v == (numvouts-1)),value,txidstr,script);
             for (v=1; v<numvouts; v++)
             {
                 if ( v < numvouts && (value= get_txvout(0,&tmp,coinaddr,script,cp,txjson,0,v)) > 0 )
                 {
                     isinternal = calc_isinternal(cp,coinaddr_v0,blockheight,v,numvouts);
-                    add_address_entry(cp->name,coinaddr,blockheight,txind,-1,v,isinternal,0,syncflag * (v == (numvouts-1)),value);
+                    add_address_entry(cp->name,coinaddr,blockheight,txind,-1,v,isinternal,0,syncflag * (v == (numvouts-1)),value,txidstr,script);
                 }
             }
             update_vins(&isinternal,coinaddr,script,cp,blockheight,txind,cJSON_GetObjectItem(txjson,"vin"),-1,syncflag);
@@ -2690,7 +2695,7 @@ struct coin_txidmap *get_txid(struct coin_info *cp,char *txidstr,uint32_t blockn
     char buf[1024],coinaddr[1024],script[4096],checktxidstr[1024];
     int32_t createdflag;
     struct coin_txidmap *tp;
-    sprintf(buf,"%s_%s_%d",txidstr,cp->name,v);
+    set_txidmap_str(buf,txidstr,cp->name,v);
     tp = MTadd_hashtable(&createdflag,Global_mp->coin_txidmap,buf);
     if ( createdflag != 0 )
     {
@@ -4097,5 +4102,29 @@ void *Coinloop(void *ptr)
     return(0);
 }
 
-#endif
+uint32_t process_coinblocks(char *coinstr,uint32_t blockheight,int32_t dispflag)
+{
+    uint32_t height,processed = 0;
+    struct coin_info *cp = get_coin_info(coinstr);
+    int32_t oldval = IS_LIBTEST;
+    if ( cp != 0 )
+    {
+        IS_LIBTEST = 7;
+        height = get_blockheight(cp);
+        while ( blockheight < (height - cp->min_confirms) )
+        {
+            if ( dispflag != 0 )
+                printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)blockheight,(long)height);
+            if ( update_address_infos(cp,blockheight) != 0 )
+            {
+                processed++;
+                blockheight++;
+            } else break;
+        }
+        IS_LIBTEST = oldval;
+    }
+    return(blockheight);
+}
 
+#endif
+    

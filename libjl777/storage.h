@@ -97,42 +97,33 @@ void _set_address_key(DBT *key,char *coinaddr,char *coin,char *addr)
     //printf("[%s] + [%s] = (%s)\n",coin,addr,coinaddr);
 }
 
-void _add_address_entry(char *coin,char *addr,struct address_entry *bp,int32_t syncflag,uint64_t value)
+void _add_address_entry(char *coin,char *addr,struct address_entry *bp,int32_t syncflag,uint64_t value,char *txidstr,char *script)
 {
+    void update_ramchain(char *coin,char *addr,struct address_entry *bp,uint64_t value,char *txidstr,char *script);
     struct SuperNET_db *sdb = &SuperNET_dbs[ADDRESS_DATA];
-    char coinaddr[512],dirname[512],fname[512];
+    char coinaddr[512];
     DBT key,data;
     int32_t ret;
-    FILE *fp;
-    clear_pair(&key,&data);
-    memset(coinaddr,0,sizeof(coinaddr));
-    _set_address_key(&key,coinaddr,coin,addr);
-    data.data = bp;
-    data.size = (int32_t)sizeof(*bp);
-    if ( Debuglevel > 2 )
-        printf("_add_address_entry vin.%d spent.%d %d %d %d | (%s %s).%d [%s].%ld [%s]\n",bp->vinflag,bp->spent,bp->blocknum,bp->txind,bp->v,key.data,(void *)((long)key.data+strlen(key.data)+1),key.size,coin,strlen(coin),addr);
-    if ( (ret= dbput(sdb,0,&key,&data,0)) != 0 )
-    //if ( (ret= sdb->dbp->put(sdb->dbp,0,&key,&data,0)) != 0 )
-        sdb->storage->err(sdb->storage,ret,"add_address: Database put failed.");
-    else if ( syncflag != 0 )
-        dbsync(sdb,0);
-    if ( IS_LIBTEST > 2 )
+    if ( IS_LIBTEST == 7 )
+        update_ramchain(coin,addr,bp,value,txidstr,script);
+    else
     {
-        sprintf(dirname,"address/%s",coin);
-        ensure_directory(dirname);
-        sprintf(fname,"%s/%s",dirname,addr);
-        if ( (fp= fopen(fname,"rb+")) == 0 )
-            fp = fopen(fname,"wb");
-        else fseek(fp,0,SEEK_END);
-        if ( fp != 0 )
-        {
-            fwrite(bp,1,sizeof(*bp),fp);
-            if ( bp->vinflag == 0 )
-                fwrite(&value,1,sizeof(value),fp);
-            fclose(fp);
-        }
+        clear_pair(&key,&data);
+        memset(coinaddr,0,sizeof(coinaddr));
+        _set_address_key(&key,coinaddr,coin,addr);
+        data.data = bp;
+        data.size = (int32_t)sizeof(*bp);
+        if ( Debuglevel > 2 )
+            printf("_add_address_entry vin.%d spent.%d %d %d %d | (%s %s).%d [%s].%ld [%s]\n",bp->vinflag,bp->spent,bp->blocknum,bp->txind,bp->v,key.data,(void *)((long)key.data+strlen(key.data)+1),key.size,coin,strlen(coin),addr);
+        if ( (ret= dbput(sdb,0,&key,&data,0)) != 0 )
+            //if ( (ret= sdb->dbp->put(sdb->dbp,0,&key,&data,0)) != 0 )
+            sdb->storage->err(sdb->storage,ret,"add_address: Database put failed.");
+        else if ( syncflag != 0 )
+            dbsync(sdb,0);
+        if ( IS_LIBTEST > 2 )
+            update_ramchain(coin,addr,bp,value,txidstr,script);
+        //sdb->dbp->sync(sdb->dbp,0);
     }
-    //sdb->dbp->sync(sdb->dbp,0);
 }
 
 struct address_entry *dbupdate_address_entries(int32_t *nump,char *coin,char *addr,struct address_entry *bp,int32_t syncflag)
@@ -373,6 +364,8 @@ int32_t scan_address_entries()
                 memcpy(&B,retdata,sizeof(B));
                 //add_hashtable(&createdflag,Global_mp->coin_txids,retkey+strlen(retkey)+1);
                 uniq += createdflag;
+                //if ( IS_LIBTEST == 7 )
+                //    cross_validate_rawfiles(retkey,(void *)((long)retkey+strlen(retkey)+1),&B);
                 if ( (n % 10000) == 0 )
                     printf("n.%-6d %7u %u %u | (%s %s).%ld | %d m.%d\n",n,B.blocknum,B.txind,B.v,retkey,(void *)((long)retkey+strlen(retkey)+1),retkeylen,uniq,m);
                 set_coin_blockheight(retkey,B.blocknum);
@@ -391,6 +384,8 @@ int32_t scan_address_entries()
         free(bigbuf);
     }
     //fprintf(stderr,"done copy all dB.%d\n",selector);
+    //if ( IS_LIBTEST == 7 )
+    //    cross_validate_rawfiles("BTCD",0,0);
     return(n);
 }
 
@@ -673,7 +668,23 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
 
 void ensure_SuperNET_dirs(char *backupdir)
 {
-    char dirname[1024];
+    char dirname[1024],coinstr[128];
+    int32_t i,n;
+    cJSON *array;
+    struct coin_info *cp;
+    array = cJSON_GetObjectItem(MGWconf,"active");
+    if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        for (i=0; i<n; i++)
+        {
+            copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
+            if ( (cp= get_coin_info(coinstr)) != 0 )
+            {
+                sprintf(dirname,"address/%s",coinstr);
+                ensure_directory(dirname);
+            }
+        }
+    }
     printf("ensure_SuperNET_dirs backupdir.%s MGWROOT.%s\n",backupdir,MGWROOT);
     sprintf(dirname,"%s/%s",MGWROOT,"MGW"), ensure_directory(dirname);
     sprintf(dirname,"%s/%s",MGWROOT,"MGW/msig"), ensure_directory(dirname);
