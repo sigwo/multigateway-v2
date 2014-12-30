@@ -148,9 +148,9 @@ long emit_varint(FILE *fp,uint64_t x)
     {
         switch ( x )
         {
-            case 0xfd: b = x, retval = fwrite(&b,1,sizeof(b),fp); break;
-            case 0xfe: s = x, retval = fwrite(&s,1,sizeof(s),fp); break;
-            case 0xff: i = (uint32_t)x, retval = fwrite(&i,1,sizeof(i),fp); break;
+            case 0xfd: s = x, retval = fwrite(&s,1,sizeof(s),fp); break;
+            case 0xfe: i = (uint32_t)x, retval = fwrite(&i,1,sizeof(i),fp); break;
+            case 0xff: retval = fwrite(&x,1,sizeof(x),fp); break;
             default: printf("impossible switch val %llx\n",(long long)x); break;
         }
     }
@@ -202,7 +202,7 @@ void *huff_getitem(struct huffcode *huff,int32_t *sizep,uint32_t ind)
         for (i=0; i<256; i++)
             defaultbytes[i] = i;
     *sizep = 1;
-    return(&defaultbytes[i]);
+    return(&defaultbytes[ind & 0xff]);
 }
 
 int32_t huff_output(struct huffcode *huff,uint8_t *output,int32_t num,int32_t maxlen,int32_t ind)
@@ -706,8 +706,8 @@ int32_t huffencode(struct huffcode *huff,HUFF *hp,char *s)
     int32_t i,n,count = 0;
 	while ( *s )
     {
-        codebits = huff->items[*s].codebits;
-        n = huff->items[*s].numbits;
+        codebits = huff->items[(int)*s].codebits;
+        n = huff->items[(int)*s].numbits;
         for (i=0; i<n; i++,codebits>>=1)
             hputbit(hp,codebits & 1);
         count += n;
