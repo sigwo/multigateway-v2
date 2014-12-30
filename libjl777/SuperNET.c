@@ -711,68 +711,63 @@ int32_t choose_varbits(HUFF *hp,uint32_t val,int32_t diff)
     return(num);
 }
 
-void update_ramchain(char *coinstr,char *addr,struct address_entry *bp,uint64_t value,char *txidstr,char *script)
+void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct address_entry *bp,uint64_t value,char *txidstr,char *script)
 {
     struct hashtable *hashtable_create(char *name,int64_t hashsize,long structsize,long keyoffset,long keysize,long modifiedoffset);
     void *add_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key);
-    static struct hashtable *addrs,*txids,*scripts;
-    static uint32_t addrind,txidind,scriptind,prevaddrind,prevtxind,prevscriptind,prevblock,numentries;
-    static uint8_t *buffer;
-    static HUFF *hp;
-    char fname[512];
-    static FILE *fp,*afp,*tfp,*sfp;
     uint32_t len;
     uint16_t slen;
+    char fname[512];
     char mode;
     int32_t createdflag,flag,valA,valT,valS;
     struct coinaddr *addrp = 0;
     struct txinfo *tp = 0;
     struct scriptinfo *sp = 0;
-    if ( fp == 0 )
+    if ( V->fp == 0 )
     {
         if ( IS_LIBTEST != 7 )
         {
             sprintf(fname,"address/%s/%s",coinstr,addr);
-            if ( (fp= fopen(fname,"rb+")) == 0 )
-                fp = fopen(fname,"wb");
-            else fseek(fp,0,SEEK_END);
+            if ( (V->fp= fopen(fname,"rb+")) == 0 )
+                V->fp = fopen(fname,"wb");
+            else fseek(V->fp,0,SEEK_END);
         }
         else
         {
-            buffer = calloc(1,1000000);
-            hp = hopen(buffer,1000000);
-            addrs = hashtable_create("addrs",100,sizeof(*addrp),((long)&addrp->addr[0] - (long)addrp),sizeof(addrp->addr),-1);
-            txids = hashtable_create("txids",100,sizeof(*tp),((long)&tp->txidstr[0] - (long)tp),sizeof(tp->txidstr),-1);
-            scripts = hashtable_create("scripts",100,sizeof(*sp),sizeof(*sp),0,-1);
+            V->buffer = calloc(1,1000000);
+            V->hp = hopen(V->buffer,1000000);
+            V->addrs = hashtable_create("addrs",100,sizeof(*addrp),((long)&addrp->addr[0] - (long)addrp),sizeof(addrp->addr),-1);
+            V->txids = hashtable_create("txids",100,sizeof(*tp),((long)&tp->txidstr[0] - (long)tp),sizeof(tp->txidstr),-1);
+            V->scripts = hashtable_create("scripts",100,sizeof(*sp),sizeof(*sp),0,-1);
             sprintf(fname,"address/%s.raw",coinstr);
-            fp = fopen(fname,"wb");
+            V->fp = fopen(fname,"wb");
             printf("opened %s\n",fname);
             sprintf(fname,"address/%s.addrs",coinstr);
-            afp = fopen(fname,"wb");
+            V->afp = fopen(fname,"wb");
             printf("opened %s\n",fname);
             sprintf(fname,"address/%s.txids",coinstr);
-            tfp = fopen(fname,"wb");
+            V->tfp = fopen(fname,"wb");
             printf("opened %s\n",fname);
             sprintf(fname,"address/%s.scripts",coinstr);
-            sfp = fopen(fname,"wb");
+            V->sfp = fopen(fname,"wb");
             printf("opened %s\n",fname);
-            prevblock = prevaddrind = prevtxind = prevscriptind = -1;
+            V->prevblock = V->prevaddrind = V->prevtxind = V->prevscriptind = -1;
         }
     }
-    if ( fp != 0 )
+    if ( V->fp != 0 )
     {
         if ( bp->vinflag == 0 && script != 0 && txidstr != 0 )
         {
-            if ( prevblock != bp->blocknum )
+            if ( V->prevblock != bp->blocknum )
             {
-                emit_varbits(hp,numentries);
-                hflush(fp,hp);
-                hclear(hp);
-                printf("-> numentries.%d %.1f %.1f\n\nNEWBLOCK.%u A%u T%u S%u\n",numentries,(double)(ftell(fp)+ftell(afp)+ftell(tfp)+ftell(sfp))/bp->blocknum,(double)ftell(fp)/bp->blocknum,bp->blocknum,prevaddrind,prevtxind,prevscriptind);
-                numentries = 0;
+                emit_varbits(V->hp,V->numentries);
+                hflush(V->fp,V->hp);
+                hclear(V->hp);
+                printf("-> numentries.%d %.1f %.1f\n\nNEWBLOCK.%u A%u T%u S%u\n",V->numentries,(double)(ftell(V->fp)+ftell(V->afp)+ftell(V->tfp)+ftell(V->sfp))/bp->blocknum,(double)ftell(V->fp)/bp->blocknum,bp->blocknum,V->prevaddrind,V->prevtxind,V->prevscriptind);
+                V->numentries = 0;
             }
-            numentries++;
-            emit_valuebits(hp,value);
+            V->numentries++;
+            emit_valuebits(V->hp,value);
             //fwrite(&value,1,sizeof(value),fp);
             if ( txidstr != 0 && script != 0 )
             {
@@ -791,60 +786,60 @@ void update_ramchain(char *coinstr,char *addr,struct address_entry *bp,uint64_t 
                 }
                 else mode = 'r';
                 flag = 0;
-                addrp = add_hashtable(&createdflag,&addrs,addr);
+                addrp = add_hashtable(&createdflag,&V->addrs,addr);
                 if ( createdflag != 0 )
                 {
-                    addrp->ind = ++addrind;
+                    addrp->ind = ++V->addrind;
                     //printf("%s ",addr);
                     slen = (int32_t)strlen(addr) + 1;
-                    fwrite(&slen,1,sizeof(slen),afp);
-                    fwrite(addr,1,slen,afp);
-                    fflush(afp);
+                    fwrite(&slen,1,sizeof(slen),V->afp);
+                    fwrite(addr,1,slen,V->afp);
+                    fflush(V->afp);
                     flag++;
                 }
-                valA = addrp->ind - prevaddrind;
+                valA = addrp->ind - V->prevaddrind;
                 sprintf(addr,"a%d",valA);
-                prevaddrind = addrp->ind;
+                V->prevaddrind = addrp->ind;
                 
-                tp = add_hashtable(&createdflag,&txids,txidstr);
+                tp = add_hashtable(&createdflag,&V->txids,txidstr);
                 if ( createdflag != 0 )
                 {
-                    tp->ind = ++txidind;
+                    tp->ind = ++V->txidind;
                     //printf("%s ",txidstr);
                     slen = (int32_t)strlen(txidstr) + 1;
-                    fwrite(&slen,1,sizeof(slen),tfp);
-                    fwrite(txidstr,1,slen,tfp);
-                    fflush(tfp);
+                    fwrite(&slen,1,sizeof(slen),V->tfp);
+                    fwrite(txidstr,1,slen,V->tfp);
+                    fflush(V->tfp);
                     flag++;
                 }
-                valT = tp->ind - prevtxind;
+                valT = tp->ind - V->prevtxind;
                 sprintf(txidstr,"t%d",valT);
-                prevtxind = tp->ind;
+                V->prevtxind = tp->ind;
                 
-                sp = add_hashtable(&createdflag,&scripts,script);
+                sp = add_hashtable(&createdflag,&V->scripts,script);
                 if ( createdflag != 0 )
                 {
-                    sp->ind = ++scriptind;
+                    sp->ind = ++V->scriptind;
                     sp->mode = mode;
                     //printf("%s ",script);
                     slen = (int32_t)strlen(script) + 1;
-                    fwrite(&slen,1,sizeof(slen),sfp);
-                    fwrite(script,1,slen,sfp);
-                    fflush(sfp);
+                    fwrite(&slen,1,sizeof(slen),V->sfp);
+                    fwrite(script,1,slen,V->sfp);
+                    fflush(V->sfp);
                     flag++;
                 }
-                valS = sp->ind - prevscriptind;
+                valS = sp->ind - V->prevscriptind;
                 sprintf(script,"s%d",valS);
-                prevscriptind = sp->ind;
+                V->prevscriptind = sp->ind;
                 
                 //if ( flag != 0 )
                 //    printf("\n");
                 //printf("%s %6u.%-5u %s:%d %s %c%s %.8f | %.1f\n",coinstr,bp->blocknum,bp->txind,txidstr,bp->v,addr,mode,script,dstr(value),(double)(ftell(fp)+ftell(afp)+ftell(tfp)+ftell(sfp))/(bp->blocknum+1));
                 //fwrite(&mode,1,sizeof(mode),fp);
-                printf("{%d.%d %d.%d %d.%d %.8f} ",prevaddrind,valA,prevtxind,valT,prevscriptind,valS,dstr(value));
-                choose_varbits(hp,prevaddrind,valA);
-                choose_varbits(hp,prevtxind,valS);
-                choose_varbits(hp,prevscriptind,valT);
+                printf("{%d.%d %d.%d %d.%d %.8f} ",V->prevaddrind,valA,V->prevtxind,valT,V->prevscriptind,valS,dstr(value));
+                choose_varbits(V->hp,V->prevaddrind,valA);
+                choose_varbits(V->hp,V->prevtxind,valS);
+                choose_varbits(V->hp,V->prevscriptind,valT);
             }
             else
             {
@@ -858,8 +853,8 @@ void update_ramchain(char *coinstr,char *addr,struct address_entry *bp,uint64_t 
             //fwrite(bp,1,sizeof(*bp),fp);
         }
         if ( IS_LIBTEST != 7 )
-            fclose(fp);
-        else fflush(fp);
+            fclose(V->fp);
+        else fflush(V->fp);
     }
 }
 
@@ -870,7 +865,7 @@ int main(int argc,const char *argv[])
     int32_t retval;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
    // if ( Debuglevel > 0 )
-    if ( 0 )
+    if ( IS_LIBTEST == 7 )
     {
         uint32_t process_coinblocks(char *coinstr,uint32_t blockheight,int32_t dispflag);
         uint32_t blockheight = 0;

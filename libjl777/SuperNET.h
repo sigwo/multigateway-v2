@@ -75,6 +75,15 @@ struct huffitem
     uint8_t size,isptr,ishex,numbits;
 };
 
+struct compressionvars
+{
+    struct hashtable *addrs,*txids,*scripts;
+    uint32_t addrind,txidind,scriptind,prevaddrind,prevtxind,prevscriptind,prevblock,numentries;
+    uint8_t *buffer;
+    HUFF *hp;
+    FILE *fp,*afp,*tfp,*sfp;
+};
+
 struct transfer_args
 {
     uint64_t modified;
