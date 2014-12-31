@@ -296,7 +296,7 @@ uint64_t search_hashtable(struct hashtable *hp,void *key)
     void *ptr,**hashtable = hp->hashtable;
     uint64_t i,hashval,ind;
     int32_t keysize;
-    if ( hp == 0 || key == 0 || ((char *)key)[0] == 0 )
+    if ( hp == 0 || key == 0 || ((char *)key)[0] == 0 || hp->hashsize == 0 )
         return(HASHSEARCH_ERROR);
     keysize = (int32_t)hp->keysize;
     hashval = calc_decimalhash(key);

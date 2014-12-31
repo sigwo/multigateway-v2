@@ -26,6 +26,7 @@
 #define SMALLVAL .000000000000001
 #define _SUPERNET_PORT 7777
 
+#define HUFF_NUMFREQS 10
 #define MAX_COINTXID_LEN 128
 #define MAX_COINADDR_LEN 128
 #define MAX_NXT_STRLEN 24
@@ -71,15 +72,36 @@ struct huffitem
 {
     union hufftype U;
     uint64_t codebits;
-    uint32_t freq;
-    uint8_t size,isptr,ishex,numbits;
+    uint32_t freq[HUFF_NUMFREQS];
+    uint8_t size,wt,ishex,numbits;
+};
+
+struct huffcode
+{
+    const struct huffitem **items;
+    int32_t numinds,maxbits,numnodes,depth,maxind,*tree;
+    double totalbits,totalbytes;
+    //struct huffnode pool[];//n_nodes,qend
+    //struct huffentry *codes;
+    //struct huffnode **qqq,**q;
+};
+
+struct rawblock_voutdata { uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };
+struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
+
+struct rawblockdata
+{
+    int32_t numvins,numvouts;
+    struct address_entry vins[65536];
+    struct rawblock_voutdata vouts[65536];
 };
 
 struct compressionvars
 {
-    struct hashtable *addrs,*txids,*scripts;
-    uint32_t addrind,txidind,scriptind,prevaddrind,prevtxind,prevscriptind,prevblock,numentries;
-    uint8_t *buffer;
+    struct hashtable *addrs,*txids,*scripts,*values;
+    struct rawblockdata *rawdata;
+    uint32_t addrind,txind,scriptind,valueind,prevblock,maxitems,filecount;
+    uint8_t *buffer,*rawbits;
     char *disp;
     HUFF *hp;
     FILE *fp,*afp,*tfp,*sfp;
@@ -167,7 +189,6 @@ struct multisig_addr
     struct pubkey_info pubkeys[];
 };
 
-struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
 
 struct storage_header **copy_all_DBentries(int32_t *nump,int32_t selector);
 

@@ -410,8 +410,8 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
        printf("init_NXTservices.(%s)\n",myipaddr);
     UV_loop = uv_default_loop();
     myipaddr = init_MGWconf(JSON_or_fname,myipaddr);
-    if ( IS_LIBTEST == 7 )
-        return(myipaddr);
+    //if ( IS_LIBTEST == 7 )
+    //    return(myipaddr);
     mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,on_udprecv);
     if ( (cp= get_coin_info("BTCD")) != 0 && cp->bridgeport != 0 )
         cp->bridgeudp = start_libuv_udpserver(4,cp->bridgeport,on_bridgerecv);
@@ -743,11 +743,11 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     if ( Debuglevel > 0 )
         printf("call init_NXTservices (%s)\n",myipaddr);
     myipaddr = init_NXTservices(JSON_or_fname,myipaddr);
-    if ( IS_LIBTEST < 7 )
+    //if ( IS_LIBTEST < 7 )
     {
         uint64_t pendingtxid; ready_to_xferassets(&pendingtxid);
-        if ( Debuglevel > 0 )
-            printf("back from init_NXTservices (%s) NXTheight.%d\n",myipaddr,get_NXTheight());
+        //if ( Debuglevel > 0 )
+        //    printf("back from init_NXTservices (%s) NXTheight.%d\n",myipaddr,get_NXTheight());
         p2p_publishpacket(0,0);
         if ( (cp= get_coin_info("BTCD")) == 0 || cp->srvNXTACCTSECRET[0] == 0 || cp->srvNXTADDR[0] == 0 )
         {

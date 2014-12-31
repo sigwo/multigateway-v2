@@ -899,8 +899,9 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                                 strcpy(DATADIR,"archive");
                             if ( MGWROOT[0] == 0 )
                                 strcpy(MGWROOT,"/var/www");
-                            if ( IS_LIBTEST > 0 && IS_LIBTEST < 7 )
+                            if ( IS_LIBTEST > 0 )//&& IS_LIBTEST < 7 )
                                 init_SuperNET_storage(cp->backupdir);
+                            void init_rambases(); init_rambases();
                             //addcontact(Global_mp->myhandle,cp->privateNXTADDR);
                             //addcontact("mypublic",cp->srvNXTADDR);
                         }

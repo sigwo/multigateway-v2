@@ -314,14 +314,18 @@ void broadcast_bindAM(char *refNXTaddr,struct multisig_addr *msig,char *origargs
 int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender)
 {
     DBT key,data,*datap;
-    int32_t i,ret,createdflag;
+    int32_t i,ret = 0,createdflag;
     struct multisig_addr *msigram;
     struct SuperNET_db *sdb = &SuperNET_dbs[MULTISIG_DATA];
     update_MGW_msig(msig,sender);
     if ( IS_LIBTEST <= 0 )
         return(-1);
-    if ( msig == 0 && syncflag != 0 )
-        return(dbsync(sdb,0));
+    if ( msig == 0 )
+    {
+        if ( syncflag != 0 && sdb != 0 && sdb->storage != 0 )
+            return(dbsync(sdb,0));
+        return(0);
+    }
     for (i=0; i<msig->n; i++)
         if ( msig->pubkeys[i].nxt64bits != 0 && msig->pubkeys[i].coinaddr[0] != 0 && msig->pubkeys[i].pubkey[0] != 0 )
             add_NXT_coininfo(msig->pubkeys[i].nxt64bits,calc_nxt64bits(msig->NXTaddr),msig->coinstr,msig->pubkeys[i].coinaddr,msig->pubkeys[i].pubkey);
@@ -360,10 +364,14 @@ int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sende
         }
         if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
             printf("add (%s) NXTpubkey.(%s) sdb.%p\n",msig->multisigaddr,msig->NXTpubkey,sdb->dbp);
-        if ( (ret= dbput(sdb,0,&key,datap,0)) != 0 )
-            sdb->storage->err(sdb->storage,ret,"Database put for quote failed.");
-        else if ( syncflag != 0 ) ret = dbsync(sdb,0);
-    } return(1);
+        if ( sdb != 0 && sdb->storage != 0 )
+        {
+            if (  (ret= dbput(sdb,0,&key,datap,0)) != 0 )
+                sdb->storage->err(sdb->storage,ret,"Database put for quote failed.");
+            else if ( syncflag != 0 ) ret = dbsync(sdb,0);
+        }
+        ret = 1;
+    }
     return(ret);
 }
 
@@ -2331,7 +2339,7 @@ void process_MGW_message(char *specialNXTaddrs[],struct json_AM *ap,char *sender
                     {
                         if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
                             fprintf(stderr,"BINDFUNC: %s func.(%c) %s -> %s txid.(%s) JSON.(%s)\n",msig->coinstr,ap->funcid,sender,receiver,txid,ap->U.jsonstr);
-                        if ( update_msig_info(msig,syncflag,sender) == 0 )
+                        if ( update_msig_info(msig,syncflag,sender) > 0 )
                             fprintf(stderr,"%s func.(%c) %s -> %s txid.(%s) JSON.(%s)\n",msig->coinstr,ap->funcid,sender,receiver,txid,ap->U.jsonstr);
                     }
                     free(msig);
@@ -4028,7 +4036,7 @@ void *Coinloop(void *ptr)
     int64_t height;
     char *retstr,*msigaddr;
     double startmilli;
-    while ( Finished_init == 0 )
+    while ( Finished_init == 0 || IS_LIBTEST == 7 )
         sleep(1);
     printf("Coinloop numcoins.%d\n",Numcoins);
     init_Contacts();
@@ -4106,8 +4114,8 @@ void *_process_coinblocks(void *_cp)
 {
     struct coin_info *cp = _cp;
     uint32_t height,blockheight,processed = 0;
-    blockheight = 0;
-    printf("process coinblocks for (%s)\n",cp->name);
+    blockheight = 1;
+    printf("process coinblocks for (%s) from %d\n",cp->name,blockheight);
     if ( cp != 0 )
     {
         height = get_blockheight(cp);
@@ -4125,7 +4133,7 @@ void *_process_coinblocks(void *_cp)
     return(0);
 }
 
-void process_coinblocks()
+void process_coinblocks(char *argcoinstr)
 {
     int32_t i,n;
     cJSON *array;
@@ -4139,7 +4147,7 @@ void process_coinblocks()
         for (i=0; i<n; i++)
         {
             copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
-            if ( (cp= get_coin_info(coinstr)) != 0 )
+            if ( (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0) && (cp= get_coin_info(coinstr)) != 0 )
                 if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
                     printf("ERROR hist findaddress_loop\n");
         }
