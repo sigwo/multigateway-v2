@@ -1346,7 +1346,7 @@ int main(int argc,const char *argv[])
     int32_t retval;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
    // if ( Debuglevel > 0 )
-    //if ( argc > 1 && strcmp(argv[1],"genfiles") == 0 )
+    if ( argc > 1 && strcmp(argv[1],"genfiles") == 0 )
     {
         uint32_t process_coinblocks(char *coinstr);
         retval = SuperNET_start("SuperNET.conf","127.0.0.1");
