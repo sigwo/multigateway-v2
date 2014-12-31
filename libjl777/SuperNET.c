@@ -1351,7 +1351,7 @@ int main(int argc,const char *argv[])
         uint32_t process_coinblocks(char *coinstr);
         retval = SuperNET_start("SuperNET.conf","127.0.0.1");
         printf("process coinblocks\n");
-        process_coinblocks("BTCD");//(char *)argv[2]);
+        process_coinblocks((char *)argv[2]);
         getchar();
     }
 #ifdef fortesting
