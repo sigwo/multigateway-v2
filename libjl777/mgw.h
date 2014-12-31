@@ -4135,21 +4135,42 @@ void *_process_coinblocks(void *_cp)
 
 void process_coinblocks(char *argcoinstr)
 {
-    int32_t i,n;
+    int32_t i,n,height,processed = 0;
     cJSON *array;
     char coinstr[1024];
     struct coin_info *cp;
     int32_t oldval = IS_LIBTEST;
     IS_LIBTEST = 7;
+    double startmilli;
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
-        for (i=0; i<n; i++)
+        while ( 1 )
         {
-            copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
-            if ( (cp= get_coin_info(coinstr)) != 0 )//&& (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0))
-                if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
-                    printf("ERROR hist findaddress_loop\n");
+            processed = 0;
+            for (i=0; i<n; i++)
+            {
+                copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
+                if ( (cp= get_coin_info(coinstr)) != 0 )//&& (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0))
+                {
+                    //if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
+                    //    printf("ERROR hist findaddress_loop\n");
+                    height = get_blockheight(cp);
+                    startmilli = milliseconds();
+                    while ( cp->blockheight < (height - cp->min_confirms) && milliseconds() < (startmilli+1000) )
+                    {
+                        //if ( dispflag != 0 )
+                        //    printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)blockheight,(long)height);
+                        if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
+                        {
+                            processed++;
+                            cp->blockheight++;
+                        } //else break;
+                    }
+                }
+            }
+            if ( processed == 0 )
+                sleep(10);
         }
     }
     IS_LIBTEST = oldval;
