@@ -10,6 +10,7 @@
 #define LOTTO_H
 
 #define MIN_REQUIRED 100
+#define EXCLUDED_ACCT "4383817337783094122"
 
 cJSON *gen_lottotickets_json(uint64_t *bestp,uint64_t seed,int32_t numtickets,uint64_t lotto)
 {
@@ -46,7 +47,7 @@ uint64_t calc_netassets(uint64_t refbits,uint64_t *boughtp,uint64_t *receivedp,u
     cJSON *json,*array,*item;
     expand_nxt64bits(refNXTaddr,buyer);
     *soldp = *xferp = *boughtp = *receivedp = 0;
-    if ( strcmp("4383817337783094122",refNXTaddr) == 0 )
+    if ( strcmp(EXCLUDED_ACCT,refNXTaddr) == 0 )
     {
         printf("hardcoded exclude.(%s)\n",refNXTaddr);
         return(0);
@@ -86,7 +87,7 @@ uint64_t calc_netassets(uint64_t refbits,uint64_t *boughtp,uint64_t *receivedp,u
                                 } else tickets += qnt;
                             }
                         }
-                        if ( 0 && calc_nxt64bits("12298820653909015414") == sellerbits || calc_nxt64bits("12298820653909015414") == buyerbits )
+                        if ( 0 && (calc_nxt64bits("12298820653909015414") == sellerbits || calc_nxt64bits("12298820653909015414") == buyerbits) )
                             printf("%s\nbuyer %llu <- seller %llu: 1st %u, blockid.%u | sold.%lld xfer.%lld bought.%lld received.%lld | tickets.%lld vs total.%lld | net.%lld\n",cJSON_Print(item),(long long)buyer,(long long)sellerbits,firstblock,blockid,(long long)sold,(long long)xfer,(long long)bought,(long long)received,(long long)tickets,(long long)total,(long long)(total - (sold + xfer)));
                     }
                 }
@@ -275,7 +276,7 @@ char *update_lotto_transactions(char *refNXTaddr,char *assetidstr,char *lottosee
                         blockid = (int32_t)get_API_int(cJSON_GetObjectItem(item,"height"),0);
                         sellerbits = get_API_nxt64bits(cJSON_GetObjectItem(item,(iter & 1) ? "sender" : "seller"));
                         buyerbits = get_API_nxt64bits(cJSON_GetObjectItem(item,(iter & 1) ? "recipient" : "buyer"));
-                        if ( calc_nxt64bits("4383817337783094122") == buyerbits )
+                        if ( calc_nxt64bits(EXCLUDED_ACCT) == buyerbits )
                             continue;
                         if ( ((iter&2) == 0 && sellerbits == refbits) || ((iter&2) != 0 && buyerbits == refbits) )
                             process_lotto(refbits,prizefund,assetidstr,lotto,&jsonarg,iter,(iter&2) == 0 ? buyerbits : sellerbits,qnt * (1 - (iter&2)),blockid,txid);
