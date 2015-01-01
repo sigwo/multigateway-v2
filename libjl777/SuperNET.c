@@ -547,6 +547,7 @@ struct huffcode *huff_create(const struct huffitem **items,int32_t numinds,int32
 void huff_iteminit(struct huffitem *hip,void *ptr,long size,long wt,int32_t ishexstr);
 void huff_free(struct huffcode *huff);
 void huff_clearstats(struct huffcode *huff);
+char *_mbstr(double n);
 
 uint32_t BITSTREAM_GROUPSIZE(char *coinstr)
 {
@@ -718,32 +719,17 @@ void emit_compressed_block(struct compressionvars *V,char *coinstr,uint32_t bloc
         update_huffitem(&blockitems[bp->blocknum],(bp->blocknum << 3) | 1,32);
         update_huffitem(&txinditems[bp->txind],(bp->txind << 3) | 2,15);
         update_huffitem(&voutitems[bp->v],(bp->v << 3) | 3,15);
-        
-        /*if ( blockitems[bp->blocknum].freq[frequi]++ == 0 )
-            huffind = ((bp->blocknum << 3) | 1), huff_iteminit(&blockitems[bp->blocknum],&huffind,sizeof(huffind),32,0);
-        if ( txinditems[bp->txind].freq++ == 0 )
-            huffind = ((bp->txind << 3) | 2), huff_iteminit(&txinditems[bp->txind],&huffind,sizeof(huffind),15,0);
-        if ( voutitems[bp->v].freq++ == 0 )
-            huffind = ((bp->v << 3) | 3), huff_iteminit(&voutitems[bp->v],&huffind,sizeof(huffind),15,0);*/
     }
     for (i=0; i<numvouts; i++)
     {
         vout = V->rawdata->vouts[i].vout;
         update_huffitem(&voutitems[vout],(vout << 3) | 4,15);
-        //if ( voutitems[vout].freq++ == 0 )
-        //    huffind = ((vout << 3) | 4), huff_iteminit(&voutitems[vout],&huffind,sizeof(huffind),15,0);
-        //incr_valueitem(valueitems,V->maxitems,V->rawdata->vouts[i].value,frequi);
     }
     for (i=0; i<=blocknum; i++)
     {
         if ( blockitems[i].freq[frequi] != 0 )
             items[numhuffinds++] = &blockitems[i];
     }
-    /*for (i=0; i<V->maxitems; i++)
-    {
-        if ( valueitems[i].freq[frequi] != 0 )
-            items[numhuffinds++] = &valueitems[i];
-    }*/
     for (i=0; i<(1<<16); i++)
     {
         if ( voutitems[i].freq[frequi] != 0 )
@@ -945,11 +931,12 @@ int32_t save_filestr(FILE *fp,char *str)
 
 int32_t load_cfilestr(int32_t *lenp,char *str,FILE *fp)
 {
+    int32_t retval;
     long savepos;
     uint64_t len;
     *lenp = 0;
     savepos = ftell(fp);
-    if ( load_varint(&len,fp) > 0 )
+    if ( (retval= load_varint(&len,fp)) > 0 )
     {
         if ( fread(str,1,len,fp) != len )
         {
@@ -961,9 +948,10 @@ int32_t load_cfilestr(int32_t *lenp,char *str,FILE *fp)
         {
             str[len] = 0;
             *lenp = (int32_t)len;
-            return(0);
+            //printf("got string.(%s) len.%d\n",str,(int)len);
+            return((int32_t)len);
         }
-    }
+    } else printf("load_varint got %d at %ld: len.%lld\n",retval,ftell(fp),(long long)len);
     fseek(fp,savepos,SEEK_SET);
     return(-1);
 }
@@ -1017,6 +1005,24 @@ FILE *_open_varsfile(uint32_t *blocknump,char *fname,char *coinstr)
     return(fp);
 }
 
+int32_t load_reference_strings(struct hashtable *table,FILE *fp)
+{
+    char str[65536];
+    uint32_t *ptr;
+    int32_t len,createdflag,count = 0;
+    if ( fp != 0 && table != 0 )
+    {
+        while ( load_cfilestr(&len,str,fp) > 0 )
+        {
+            ptr = add_hashtable(&createdflag,&table,str);
+            if ( createdflag != 0 )
+                *ptr = ++count;
+            else printf("FATAL: redundant entry in (%s).%d [%s]?\n",table->name,count,str), exit(-1);
+        }
+    }
+    return(count);
+}
+
 void set_commpressionvars_fname(char *fname,char *coinstr,char *typestr,int32_t subgroup)
 {
     if ( subgroup < 0 )
@@ -1038,8 +1044,8 @@ FILE *open_commpresionvars_file(uint32_t *checkpoints,struct hashtable *table,ui
     if ( 1 )
     {
         set_commpressionvars_fname(fname,coinstr,typestr,-1 + (strcmp(typestr,"bitstream") == 0));
-        fp = fopen(fname,"wb");
-        printf("created (%s) %p\n",fname,fp);
+        fp = fopen(fname,"rb");
+        printf("opened (%s) %p\n",fname,fp);
         return(fp);
     }
     if ( strcmp(typestr,"bitstream") == 0 )
@@ -1088,19 +1094,47 @@ FILE *open_commpresionvars_file(uint32_t *checkpoints,struct hashtable *table,ui
             fclose(tmpfp), tmpfp = 0;
     }
     else set_commpressionvars_fname(fname,coinstr,typestr,-1);
-    if ( fp != 0 && table != 0 )
-    {
-        while ( load_cfilestr(&len,str,fp) > 0 )
-        {
-            ptr = add_hashtable(&createdflag,&table,str);
-            if ( createdflag != 0 )
-                *ptr = ++count;
-            else printf("FATAL: redundant entry in (%s).%d [%s]?\n",fname,count,str), exit(-1);
-        }
-    }
-    *countp = count;
+    *countp = load_reference_strings(table,fp);
     printf("(%s) count.%d blocknum.%d fp.%p\n",fname,count,*blocknump,fp);
     return(fp);
+}
+
+uint32_t load_bitstream_block(struct compressionvars *V,FILE *fp)
+{
+    long incr,size = 0;
+    int32_t blocknum,numvins,numvouts,checkpoints[3];
+    incr = sizeof(blocknum), fread(&blocknum,1,incr,fp), size += incr;
+    incr = sizeof(numvins), fread(&numvins,1,incr,fp), size += incr;
+    incr = sizeof(numvouts), fread(&numvouts,1,incr,fp), size += incr;
+    incr = sizeof(V->rawdata->vins[0]) * numvins, fread(&V->rawdata->vins[0],1,incr,fp), size += incr;
+    incr = sizeof(V->rawdata->vouts[0]) * numvouts, fread(&V->rawdata->vouts[0],1,incr,fp), size += incr;
+    incr = sizeof(checkpoints), fread(checkpoints,1,incr,fp), size += incr;
+    printf("%d vins.%d vouts.%d: %d %d %d\n",blocknum,numvins,numvouts,checkpoints[0],checkpoints[1],checkpoints[2] );
+    if ( numvins <= 0 || numvouts <= 0 )
+        return(-1);
+    return(1);
+}
+
+uint32_t load_bitstream(struct compressionvars *V,FILE *fp)
+{
+    uint32_t blocknum = 0;
+    while ( load_bitstream_block(V,fp) > 0 )
+    {
+        blocknum++;
+    }
+    return(blocknum);
+}
+
+void init_ramchain(struct compressionvars *V,char *coinstr)
+{
+    long size;
+    V->addrind = load_reference_strings(V->addrs,V->afp);
+    V->txind = load_reference_strings(V->txids,V->tfp);
+    V->scriptind = load_reference_strings(V->scripts,V->sfp);
+    size = V->addrind*sizeof(struct coinaddr) + V->txind*sizeof(struct txinfo) + V->scriptind*sizeof(struct scriptinfo);
+    printf("addrs.%d txids.%d scripts.%d: %s\n",V->addrind,V->txind,V->scriptind,_mbstr(size));
+    V->prevblock = load_bitstream(V,V->fp);
+    getchar();
 }
 
 void compressionvars_add_txout(struct rawblockdata *rp,char *coinstr,uint32_t tp_ind,uint32_t vout,uint32_t addr_ind,uint64_t value,uint32_t sp_ind)
@@ -1136,7 +1170,7 @@ uint32_t flush_compressionvars(struct compressionvars *V,char *coinstr,uint32_t 
     emit_blockcheck(V->sfp,prevblocknum,1);
     if ( V->disp != 0 )
     {
-        sprintf(V->disp+strlen(V->disp),"-> max.%d %.1f %.1f\n%s F.%d NEWBLOCK.%u A%u T%u S%u |",V->maxitems,(double)(ftell(V->fp)+ftell(V->afp)+ftell(V->tfp)+ftell(V->sfp))/(prevblocknum+1),(double)ftell(V->fp)/(prevblocknum+1),coinstr,frequi,prevblocknum,V->addrind,V->txind,V->scriptind);
+        sprintf(V->disp+strlen(V->disp),"-> max.%d %.1f %.1f\n%s F.%d NEWBLOCK.%u A%u T%u S%u numV.%d |",V->maxitems,(double)(ftell(V->fp)+ftell(V->afp)+ftell(V->tfp)+ftell(V->sfp))/(prevblocknum+1),(double)ftell(V->fp)/(prevblocknum+1),coinstr,frequi,prevblocknum,V->addrind,V->txind,V->scriptind,V->numvalues);
         printf("%s",V->disp);
         V->disp[0] = 0;
     }
@@ -1179,6 +1213,7 @@ void init_compressionvars(struct compressionvars *V,char *coinstr)
         V->afp = open_commpresionvars_file(0,V->addrs,&V->addrind,&blocknums[1],coinstr,"addrs");
         V->tfp = open_commpresionvars_file(0,V->txids,&V->txind,&blocknums[2],coinstr,"txids");
         V->sfp = open_commpresionvars_file(0,V->scripts,&V->scriptind,&blocknums[3],coinstr,"scripts");
+        
         for (i=1; i<4; i++)
         {
             printf("blocknum.%u vs %u | checkpoint %u\n",blocknums[i],blocknums[0],checkpoints[i-1]);
@@ -1193,6 +1228,7 @@ void init_compressionvars(struct compressionvars *V,char *coinstr)
             fseek(V->sfp,checkpoints[2],SEEK_SET);
         }
         V->prevblock = blocknums[0];
+        init_ramchain(V,coinstr);
     }
 }
 
@@ -1292,6 +1328,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                     valp = update_compressionvars_table(0,&V->valueind,V->values,valuestr);
                     if ( valp->ind == V->valueind ) // indicates just created
                     {
+                        V->numvalues++;
                         huffind = (valp->ind << 3) | 0, huff_iteminit(&valp->item,&huffind,sizeof(huffind),64,0);
                         valp->item.U.bits.txid = value;
                     }
@@ -1346,7 +1383,9 @@ int main(int argc,const char *argv[])
     int32_t retval;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
    // if ( Debuglevel > 0 )
+//#ifndef __APPLE__
     if ( argc > 1 && strcmp(argv[1],"genfiles") == 0 )
+//#endif
     {
         uint32_t process_coinblocks(char *coinstr);
         retval = SuperNET_start("SuperNET.conf","127.0.0.1");

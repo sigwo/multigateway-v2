@@ -100,7 +100,7 @@ struct compressionvars
 {
     struct hashtable *addrs,*txids,*scripts,*values;
     struct rawblockdata *rawdata;
-    uint32_t addrind,txind,scriptind,valueind,prevblock,maxitems,filecount;
+    uint32_t addrind,txind,scriptind,valueind,prevblock,maxitems,filecount,numvalues;
     uint8_t *buffer,*rawbits;
     char *disp;
     HUFF *hp;

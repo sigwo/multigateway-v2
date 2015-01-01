@@ -4135,7 +4135,7 @@ void *_process_coinblocks(void *_cp)
 
 void process_coinblocks(char *argcoinstr)
 {
-    int32_t i,n,height,processed = 0;
+    int32_t i,n,height,firstiter,processed = 0;
     cJSON *array;
     char coinstr[1024];
     struct coin_info *cp;
@@ -4145,6 +4145,7 @@ void process_coinblocks(char *argcoinstr)
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
+        firstiter = 1;
         while ( 1 )
         {
             processed = 0;
@@ -4153,6 +4154,8 @@ void process_coinblocks(char *argcoinstr)
                 copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
                 if ( (cp= get_coin_info(coinstr)) != 0 )//&& (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0))
                 {
+                    if ( firstiter != 0 )
+                        cp->blockheight = 0;
                     //if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
                     //    printf("ERROR hist findaddress_loop\n");
                     height = get_blockheight(cp);
@@ -4171,6 +4174,7 @@ void process_coinblocks(char *argcoinstr)
             }
             if ( processed == 0 )
                 sleep(10);
+            firstiter = 0;
         }
     }
     IS_LIBTEST = oldval;
