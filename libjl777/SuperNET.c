@@ -642,7 +642,7 @@ void clear_compressionvars(struct compressionvars *V,int32_t clearstats,int32_t 
 void update_huffitem(int32_t incr,struct huffitem *hip,uint32_t rawind,uint32_t hufftype,void *fullitem,long fullsize,int32_t wt)
 {
     int32_t i;
-    printf("update_huffitem rawind.%d type.%d full.%p size.%d wt.%d\n",rawind,hufftype,fullitem,fullsize,wt);
+    printf("update_huffitem rawind.%d type.%d full.%p size.%ld wt.%d\n",rawind,hufftype,fullitem,fullsize,wt);
     if ( fullitem != 0 )
         huff_iteminit(hip,(rawind << 3) | hufftype,fullitem,fullsize,wt);
     if ( incr > 0 )
@@ -1185,13 +1185,13 @@ void init_compressionvars(int32_t readonly,struct compressionvars *V,char *coins
         V->blockitems = calloc(V->maxblocknum,sizeof(*V->blockitems));
         V->txinditems = calloc(1<<16,sizeof(*V->txinditems));
         V->voutitems = calloc(1<<16,sizeof(*V->voutitems));
-        for (i=0; i<V->maxblocknum; i++)
+        /*for (i=0; i<V->maxblocknum; i++)
             update_huffitem(0,&V->blockitems[i],i,HUFF_BLOCKNUM,&i,sizeof(i),sizeof(uint32_t));
         for (s=0; s<=((1<<16)-2); s++)
         {
             update_huffitem(0,&V->txinditems[s],s,HUFF_TXIND,&s,sizeof(s),sizeof(uint16_t));
             update_huffitem(0,&V->voutitems[s],s,HUFF_VOUT,&s,sizeof(s),sizeof(uint16_t));
-        }
+        }*/
         //V->values = hashtable_create("values",10,sizeof(*valp),((long)&valp->value - (long)valp),sizeof(valp->value),-1);
         V->values = hashtable_create("values",10,sizeof(*valp),sizeof(*valp),0,-1);
         V->addrs = hashtable_create("addrs",10,sizeof(*addrp),sizeof(*addrp),0,-1);
@@ -1433,13 +1433,15 @@ printf("txid.(%s) %s\n",txidstr,script);
             }
             else if ( txidstr != 0 ) // dereferenced (blocknum, txind, v)
             {
+                uint16_t s;
+                uint32_t tmp;
                 add_entry_to_tx(tp,bp);
                 if ( 0 && V->disp != 0 )
                     sprintf(V->disp+strlen(V->disp),"[%d %d %d] ",bp->blocknum,bp->txind,bp->v);
                 compressionvars_add_txin(V->rawdata,V->coinstr,bp);
-                update_huffitem(1,&V->blockitems[bp->blocknum],bp->blocknum,HUFF_BLOCKNUM,0,0,sizeof(uint32_t));
-                update_huffitem(1,&V->txinditems[bp->txind],bp->txind,HUFF_TXIND,0,0,sizeof(uint16_t));
-                update_huffitem(1,&V->voutitems[bp->v],bp->v,HUFF_VOUT,0,0,sizeof(uint16_t));
+                tmp = bp->blocknum, update_huffitem(1,&V->blockitems[bp->blocknum],bp->blocknum,HUFF_BLOCKNUM,&tmp,sizeof(tmp),sizeof(uint32_t));
+                s = bp->txind, update_huffitem(1,&V->txinditems[bp->txind],bp->txind,HUFF_TXIND,&s,sizeof(s),sizeof(uint16_t));
+                s = bp->v, update_huffitem(1,&V->voutitems[bp->v],bp->v,HUFF_VOUT,&s,sizeof(s),sizeof(uint16_t));
             }
             V->maxitems++;
         }
