@@ -1062,7 +1062,7 @@ FILE *open_commpresionvars_file(int32_t readonly,struct compressionvars *V,uint3
 
 void init_ramchain(int32_t readonly,struct compressionvars *V)
 {
-    long size;
+    long size = 1;
     int32_t checkpoints[4],numblocks,numoffsets,numvalues = 0;
     uint64_t value;
     uint32_t offset;
@@ -1214,9 +1214,7 @@ void init_compressionvars(int32_t readonly,struct compressionvars *V,char *coins
                 V->ofp = fopen(fname,"rb+");
             }
         }
-        //V->ofp = open_commpresionvars_file(readonly,V,0,0,0,0,coinstr,"offsets");
         V->fp = open_commpresionvars_file(readonly,V,checkpoints,0,&V->filecount,&blocknums[0],coinstr,"bitstream");
-        init_ramchain(0,V);
         if ( blocknums[0] == 0xffffffff )
             blocknums[0] = 0;
         for (i=1; i<4; i++)
