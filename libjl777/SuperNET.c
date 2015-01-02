@@ -642,6 +642,7 @@ void clear_compressionvars(struct compressionvars *V,int32_t clearstats,int32_t 
 void update_huffitem(int32_t incr,struct huffitem *hip,uint32_t rawind,uint32_t hufftype,void *fullitem,long fullsize,int32_t wt)
 {
     int32_t i;
+    printf("update_huffitem rawind.%d type.%d full.%p size.%d wt.%d\n",rawind,hufftype,fullitem,fullsize,wt);
     if ( fullitem != 0 )
         huff_iteminit(hip,(rawind << 3) | hufftype,fullitem,fullsize,wt);
     if ( incr > 0 )
@@ -1366,9 +1367,11 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
     }
     if ( V->fp != 0 )
     {
+printf("update compressionvars vinflag.%d\n",bp->vinflag);
         if ( bp->vinflag == 0 )
         {
             addrp = update_compressionvars_table(&createdflag,&V->addrind,V->addrs,addr);
+printf("addrp.%p created.%d\n",addrp,createdflag);
             if ( addrp == 0 )
                 exit(-1);
             if ( createdflag != 0 )
@@ -1385,10 +1388,10 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
             else update_huffitem(1,&addrp->item,addrp->ind,HUFF_COINADDR,0,0,sizeof(uint32_t));
             if ( txidstr != 0 && script != 0 && value != 0 )
             {
+printf("txid.(%s) %s\n",txidstr,script);
                 frequi = calc_frequi(0,V->coinstr,V->prevblock);
                 if ( bp->blocknum != V->prevblock )
                     V->prevblock = flush_compressionvars(V,V->prevblock,bp->blocknum,frequi);
-            //printf("txid.(%s) %s\n",txidstr,script);
                 //printf("update value %.8f %p\n",dstr(value),&value);
                 if ( V->vfp != 0 )
                     fwrite(&value,1,sizeof(value),V->vfp);
