@@ -686,7 +686,7 @@ uint32_t load_blockcheck(FILE *fp,int32_t depth,char *coinstr)
 
 uint32_t setget_rawbits(uint32_t *rawbits,uint32_t size,uint32_t *blocknump,uint32_t checkpoints[3],uint16_t *numvinsp,uint16_t *numvoutsp,struct address_entry *vins,struct rawblock_voutdata *vouts)
 {
-    long i,n,incr,sizes[6];
+    long i,n,incr,sizes[64];
     void *ptrs[64];
     uint32_t parsedsize = size;
     incr = n = 0;
@@ -1178,7 +1178,7 @@ void init_compressionvars(int32_t readonly,struct compressionvars *V,char *coins
     struct scriptinfo *sp = 0;
     struct valueinfo *valp = 0;
     char fname[512];
-    uint16_t s;
+    //uint16_t s;
     uint32_t blocknums[4],i,checkpoints[4];
     if ( V->addrs == 0 )
     {
