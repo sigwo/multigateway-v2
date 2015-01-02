@@ -2457,7 +2457,7 @@ int32_t update_NXT_transactions(char *specialNXTaddrs[],int32_t txtype,char *ref
     int32_t timestamp,numconfs;
     struct NXT_acct *np;
     cJSON *item,*json,*array;
-    if ( refNXTaddr == 0 )
+    if ( refNXTaddr == 0 || specialNXTaddrs == 0 || specialNXTaddrs[0] == 0 )
     {
         printf("illegal refNXT.(%s)\n",refNXTaddr);
         return(0);
@@ -2492,7 +2492,7 @@ int32_t update_NXT_transactions(char *specialNXTaddrs[],int32_t txtype,char *ref
                         timestamp = (int32_t)get_cJSON_int(item,"blockTimestamp");
                         if ( coinid >= 0 && coinid < 64 && timestamp > 0 && (timestamp - 3600) > np->timestamps[coinid] )
                         {
-                            printf("new timestamp.%d %d -> %d\n",coinid,np->timestamps[coinid],timestamp-3600);
+                            printf("new.%s timestamp.%d %d -> %d\n",cp->name,coinid,np->timestamps[coinid],timestamp-3600);
                             np->timestamps[coinid] = (timestamp - 3600); // assumes no hour long block
                         } //else if ( timestamp < 0 ) genesis tx dont have any timestamps!
                           //  printf("missing blockTimestamp.(%s)\n",jsonstr), getchar();
@@ -2936,7 +2936,6 @@ uint64_t update_NXTblockchain_info(struct coin_info *cp,char *specialNXTaddrs[],
         update_NXT_transactions(specialNXTaddrs,-1,btcdcp->privateNXTADDR,cp);
     }
     update_NXT_transactions(specialNXTaddrs,-1,refNXTaddr,cp);
-    //update_NXT_transactions(specialNXTaddrs,2,refNXTaddr,cp);
     for (i=0; i<specialNXTaddrs[i][0]!=0; i++)
         update_NXT_transactions(specialNXTaddrs,-1,specialNXTaddrs[i],cp); // first numgateways of specialNXTaddrs[] are gateways
     update_msig_info(0,1,0); // sync MULTISIG_DATA
