@@ -882,8 +882,10 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         MGWcoins = realloc(MGWcoins,sizeof(*MGWcoins) * (Numcoins+1));
                         MGWcoins[Numcoins] = item;
                         Daemons[Numcoins] = cp;
+                        uint32_t get_blockheight(struct coin_info *cp);
+                        cp->RTblockheight = get_blockheight(cp);
                         if ( Debuglevel > 0 )
-                            printf("i.%d coinid.%d %s asset.%s\n",i,Numcoins,coinstr,Daemons[Numcoins]->assetid);
+                            printf("i.%d coinid.%d %s asset.%s RTheight.%u\n",i,Numcoins,coinstr,Daemons[Numcoins]->assetid,(uint32_t)cp->RTblockheight);
                         Numcoins++;
                         cp->json = item;
                         parse_ipaddr(cp->myipaddr,myipaddr);
@@ -899,8 +901,6 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                                 strcpy(DATADIR,"archive");
                             if ( MGWROOT[0] == 0 )
                                 strcpy(MGWROOT,"/var/www");
-                            if ( IS_LIBTEST > 0 )//&& IS_LIBTEST < 7 )
-                                init_SuperNET_storage(cp->backupdir);
                             void init_rambases(); init_rambases();
                             //addcontact(Global_mp->myhandle,cp->privateNXTADDR);
                             //addcontact("mypublic",cp->srvNXTADDR);

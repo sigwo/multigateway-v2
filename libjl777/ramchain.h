@@ -167,7 +167,7 @@ void huff_free(struct huffcode *huff)
     free(huff);
 }
 
-void huff_iteminit(struct huffitem *hip,void *ptr,long size,long wt,int32_t ishexstr)
+void huff_iteminit(struct huffitem *hip,uint32_t huffind,void *ptr,long size,long wt)
 {
     if ( size > sizeof(*hip) )
     {
@@ -175,14 +175,17 @@ void huff_iteminit(struct huffitem *hip,void *ptr,long size,long wt,int32_t ishe
         exit(-1);
         return;
     }
-    memcpy(hip->U.bits.bytes,ptr,size);
-    hip->size = (uint8_t)size;
+    if ( (hip->size= (uint8_t)size) == 0 )
+        hip->U.str = ptr, hip->isptr = 1, hip->size = (uint16_t)strlen(ptr);
+    else if ( size <= sizeof(hip->U) )
+        memcpy(hip->U.bits.bytes,ptr,size);
+    else printf("huff_iteminit FATAL size overflow: %ld vs %ld\n",size,sizeof(hip->U)), exit(-1);
     if ( wt > 0xff )
         wt = 0xff;
-    hip->wt = (uint8_t)((wt != 0) ? wt : 8);
-    hip->ishex = ishexstr;
+    hip->wt = (uint8_t)((wt != 0) ? wt : 1);
     hip->codebits = 0;
     hip->numbits = 0;
+    hip->huffind = huffind;
 }
 
 const void *huff_getitem(struct huffcode *huff,int32_t *sizep,uint32_t ind)
@@ -229,6 +232,169 @@ uint64_t _reversebits(uint64_t x,int32_t n)
         n--;
     }
     return(rev);
+}
+
+int32_t _calc_bitsize(uint32_t x)
+{
+    uint32_t mask = (1 << 31);
+    int32_t i;
+    if ( x == 0 )
+        return(0);
+    for (i=31; i>=0; i--)
+    {
+        if ( (mask & x) != 0 )
+            return(i);
+    }
+    return(-1);
+}
+
+int32_t emit_varbits(HUFF *hp,uint8_t val)
+{
+    int i,valsize = _calc_bitsize(val);
+    for (i=0; i<3; i++)
+        hputbit(hp,(valsize & (1<<i)) != 0);
+    for (i=0; i<valsize; i++)
+        hputbit(hp,(val & (1<<i)) != 0);
+    return(valsize + 3);
+}
+
+int32_t emit_valuebits(HUFF *hp,uint8_t value)
+{
+    int32_t i,num,valsize,lsb = 0;
+    uint64_t mask;
+    mask = (1L << 63);
+    for (i=63; i>=0; i--,mask>>=1)
+        if ( (value & mask) != 0 )
+            break;
+    mask = 1;
+    for (lsb=0; lsb<i; lsb++,mask<<=1)
+        if ( (value & mask) != 0 )
+            break;
+    value >>= lsb;
+    valsize = (i - lsb);
+    num = emit_varbits(hp,lsb);
+    num += emit_varbits(hp,valsize);
+    mask = 1;
+    for (i=0; i<valsize; i++,mask<<=1)
+        hputbit(hp,(value & mask) != 0);
+    //printf("%d ",num+valsize);
+    return(num + valsize);
+}
+
+int32_t choose_varbits(HUFF *hp,uint32_t val,int32_t diff)
+{
+    int valsize,diffsize,i,num = 0;
+    valsize = _calc_bitsize(val);
+    diffsize = _calc_bitsize(diff < 0 ? -diff : diff);
+    if ( valsize < diffsize )
+    {
+        hputbit(hp,0);
+        hputbit(hp,1);
+        num = 2 + valsize + emit_varbits(hp,valsize);
+        for (i=0; i<valsize; i++)
+            hputbit(hp,(val & (1<<i)) != 0);
+    }
+    else
+    {
+        num = 1;
+        if ( diff < 0 )
+        {
+            hputbit(hp,0);
+            hputbit(hp,0);
+            num++;
+        }
+        else hputbit(hp,1);
+        num += emit_varbits(hp,diffsize) + diffsize;
+        for (i=0; i<diffsize; i++)
+            hputbit(hp,(diff & (1<<i)) != 0);
+    }
+    return(num);
+}
+
+long emit_varint(FILE *fp,uint64_t x)
+{
+    uint8_t b; uint16_t s; uint32_t i;
+    long retval = -1;
+    if ( x < 0xfd )
+        b = x, retval = fwrite(&b,1,sizeof(b),fp);
+    else
+    {
+        if ( x <= 0xffff )
+        {
+            fputc(0xfd,fp);
+            s = (uint16_t)x, retval = fwrite(&s,1,sizeof(s),fp);
+        }
+        else if ( x <= 0xffffffffL )
+        {
+            fputc(0xfe,fp);
+            i = (uint32_t)x, retval = fwrite(&i,1,sizeof(i),fp);
+        }
+        else
+        {
+            fputc(0xff,fp);
+            retval = fwrite(&x,1,sizeof(x),fp);
+        }
+    }
+    return(retval);
+}
+
+int32_t load_varint(uint64_t *valp,FILE *fp)
+{
+    uint16_t s; uint32_t i; int32_t c; int32_t retval = 1;
+    *valp = 0;
+    if ( (c= fgetc(fp)) == EOF )
+        return(0);
+    c &= 0xff;
+    switch ( c )
+    {
+        case 0xfd: retval = (sizeof(s) + 1) * (fread(&s,1,sizeof(s),fp) == sizeof(s)), *valp = s; break;
+        case 0xfe: retval = (sizeof(i) + 1) * (fread(&i,1,sizeof(i),fp) == sizeof(i)), *valp = i; break;
+        case 0xff: retval = (sizeof(*valp) + 1) * (fread(valp,1,sizeof(*valp),fp) == sizeof(*valp)); break;
+        default: *valp = c; break;
+    }
+    return(retval);
+}
+
+int32_t save_vfilestr(FILE *fp,char *str)
+{
+    long savepos,len = strlen(str);
+    savepos = ftell(fp);
+    //printf("save.(%s) at %ld\n",str,ftell(fp));
+    if ( emit_varint(fp,len) > 0 )
+    {
+        fwrite(str,1,len,fp);
+        fflush(fp);
+        return(0);
+    }
+    else fseek(fp,savepos,SEEK_SET);
+    return(-1);
+}
+
+int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp)
+{
+    int32_t retval;
+    long savepos;
+    uint64_t len;
+    *lenp = 0;
+    savepos = ftell(fp);
+    if ( (retval= load_varint(&len,fp)) > 0 )
+    {
+        if ( fread(str,1,len,fp) != len )
+        {
+            printf("load_filestr: error reading len.%lld at %ld, truncate to %ld\n",(long long)len,ftell(fp),savepos);
+            fseek(fp,savepos,SEEK_SET);
+            return(-1);
+        }
+        else
+        {
+            str[len] = 0;
+            *lenp = (int32_t)len;
+            //printf("fpos.%ld got string.(%s) len.%d\n",ftell(fp),str,(int)len);
+            return((int32_t)len);
+        }
+    } else printf("load_varint got %d at %ld: len.%lld\n",retval,ftell(fp),(long long)len);
+    fseek(fp,savepos,SEEK_SET);
+    return(-1);
 }
 
 void huff_clearstats(struct huffcode *huff)

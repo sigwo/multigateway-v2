@@ -53,27 +53,30 @@ int32_t hflush(FILE *fp,HUFF *hp);
 
 struct hashtable
 {
-    char *name;
+    char *name;//[128];
     void **hashtable;
     uint64_t hashsize,numsearches,numiterations,numitems;
     long keyoffset,keysize,modifiedoffset,structsize;
 };
 
 union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
+union _bits64 { uint8_t bytes[8]; uint16_t ushorts[4]; uint32_t uints[2]; uint64_t txid; };
+typedef union _bits64 bits64;
 typedef union _bits256 bits256;
 
 union hufftype
 {
-    bits256 bits;
-    void *ptr;
+    bits64 bits;
+    void *str;
 };
 
 struct huffitem
 {
     union hufftype U;
     uint64_t codebits;
-    uint32_t freq[HUFF_NUMFREQS];
-    uint8_t size,wt,ishex,numbits;
+    uint32_t huffind,freq[HUFF_NUMFREQS];
+    uint16_t size:5,numbits:11;
+    uint8_t isptr,wt;
 };
 
 struct huffcode
@@ -100,11 +103,13 @@ struct compressionvars
 {
     struct hashtable *addrs,*txids,*scripts,*values;
     struct rawblockdata *rawdata;
-    uint32_t addrind,txind,scriptind,valueind,prevblock,maxitems,filecount,numvalues;
+    struct huffitem *blockitems,*txinditems,*voutitems;
+    uint32_t addrind,txind,scriptind,valueind,prevblock,maxitems,filecount,numvalues,maxblocknum,firstblock,processed;
     uint8_t *buffer,*rawbits;
-    char *disp;
+    char *disp,coinstr[64];
+    double startmilli;
     HUFF *hp;
-    FILE *fp,*afp,*tfp,*sfp;
+    FILE *fp,*afp,*tfp,*sfp,*vfp,*ofp;
 };
 
 struct transfer_args

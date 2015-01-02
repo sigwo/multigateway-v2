@@ -83,7 +83,7 @@ void save_MGW_file(char *fname,char *jsonstr)
 {
     FILE *fp;
     char cmd[1024];
-    if ( (fp= fopen(fname,"wb")) != 0 )
+    if ( (fp= fopen(fname,"wb+")) != 0 )
     {
         fwrite(jsonstr,1,strlen(jsonstr),fp);
         fclose(fp);
@@ -115,7 +115,7 @@ cJSON *update_MGW_file(FILE **fpp,cJSON **newjsonp,char *fname,char *jsonstr)
     }
     if ( (fp= fopen(fname,"rb+")) == 0 )
     {
-        fp = fopen(fname,"wb");
+        fp = fopen(fname,"wb+");
         if ( fp != 0 )
         {
             if ( (json = cJSON_CreateArray()) != 0 )
@@ -2193,7 +2193,7 @@ void publish_withdraw_info(struct coin_info *cp,struct batch_info *wp)
     safecopy(wp->W.coinstr,cp->name,sizeof(wp->W.coinstr));
     set_batchname(batchname,cp->name,Global_mp->gatewayid);
     set_handler_fname(fname,"mgw",batchname);
-    if ( (fp= fopen(fname,"wb")) != 0 )
+    if ( (fp= fopen(fname,"wb+")) != 0 )
     {
         fwrite(wp,1,sizeof(*wp),fp);
         fclose(fp);
@@ -4163,7 +4163,7 @@ void process_coinblocks(char *argcoinstr)
                     while ( cp->blockheight < (height - cp->min_confirms) && milliseconds() < (startmilli+1000) )
                     {
                         //if ( dispflag != 0 )
-                        //    printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)blockheight,(long)height);
+                        //   printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)blockheight,(long)height);
                         if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
                         {
                             processed++;
