@@ -687,7 +687,7 @@ uint32_t load_blockcheck(FILE *fp,int32_t depth,char *coinstr)
 uint32_t setget_rawbits(uint32_t *rawbits,uint32_t size,uint32_t *blocknump,uint32_t checkpoints[3],uint16_t *numvinsp,uint16_t *numvoutsp,struct address_entry *vins,struct rawblock_voutdata *vouts)
 {
     long i,n,incr,sizes[6];
-    void *ptrs[6];
+    void *ptrs[64];
     uint32_t parsedsize = size;
     incr = n = 0;
     sizes[n] = sizeof(parsedsize), incr += sizes[n], ptrs[n++] = &parsedsize;
@@ -789,6 +789,7 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
         printf("vout overflow: numvins.%d V->rawdata->numvins.%d, numvouts.%d V->rawdata->numvouts.%d\n",numvins,V->rawdata->numvins,numvouts,V->rawdata->numvouts);
         exit(-1);
     }
+    printf("calling setget_rawbits);
     size = setget_rawbits((uint32_t *)V->rawbits,0,&blocknum,checkpoints,&numvins,&numvouts,V->rawdata->vins,V->rawdata->vouts);
     printf("did setget_rawbits fp.%p\n",V->fp);
     if ( V->fp != 0 )
@@ -1013,7 +1014,7 @@ FILE *open_commpresionvars_file(int32_t readonly,struct compressionvars *V,uint3
             checkpoints[2] = load_blockcheck(fp,4,coinstr);
             V->prevblock = *blocknump = load_blockcheck(fp,1,coinstr); // set fpos
         }
-        printf("Got checkpoints %u %u %u\n",checkpoints[0],checkpoints[1],checkpoints[2]);
+        printf("Got checkpoints %u %u %u | fp.%p\n",checkpoints[0],checkpoints[1],checkpoints[2],fp);
         return(fp);
     }
     else
