@@ -3,6 +3,12 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#if defined(__APPLE__) || defined(__MACH__)
+# ifndef MSG_NOSIGNAL
+#   define MSG_NOSIGNAL SO_NOSIGPIPE
+# endif
+#endif
+
 #include "netbase.h"
 #include "util.h"
 #include "sync.h"

@@ -3,6 +3,12 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#if defined(__APPLE__) || defined(__MACH__)
+# ifndef MSG_NOSIGNAL
+#   define MSG_NOSIGNAL SO_NOSIGPIPE
+# endif
+#endif
+
 #include "irc.h"
 #include "db.h"
 #include "net.h"
@@ -23,6 +29,7 @@ int32_t got_newpeer(const char *ip_port);
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
 #endif
+
 
 using namespace std;
 using namespace boost;
