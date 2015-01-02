@@ -9,7 +9,8 @@ typedef unsigned long u32;
 typedef unsigned long long u64;
 typedef long long i64;
 typedef i64 gf[16];
-extern void randombytes(u8 *,u64);
+//extern void randombytes(u8 *,u64);
+void randombytes(uint8_t *x,uint64_t xlen);
 
 static const u8
 _0[16],
@@ -846,7 +847,7 @@ void randombytes(uint8_t *x,uint64_t xlen)
 #include <windows.h>
 #include <wincrypt.h>
 
-void randombytes(unsigned char *x,unsigned long long xlen)
+void randombytes(uint8_t *x,uint64_t xlen)
 {
     HCRYPTPROV prov = 0;
     
