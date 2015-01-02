@@ -690,19 +690,29 @@ uint32_t setget_rawbits(uint32_t *rawbits,uint32_t size,uint32_t *blocknump,uint
     void *ptrs[64];
     uint32_t parsedsize = size;
     incr = n = 0;
+    printf("set_getrawbits A\n");
     sizes[n] = sizeof(parsedsize), incr += sizes[n], ptrs[n++] = &parsedsize;
+    printf("set_getrawbits B\n");
     sizes[n] = sizeof(*blocknump), incr += sizes[n], ptrs[n++] = blocknump;
+    printf("set_getrawbits C\n");
     sizes[n] = sizeof(checkpoints[0]) * 3, incr += sizes[n], ptrs[n++] = checkpoints;
+    printf("set_getrawbits D\n");
     sizes[n] = sizeof(*numvinsp), incr += sizes[n], ptrs[n++] = numvinsp;
+    printf("set_getrawbits E\n");
     sizes[n] = sizeof(*numvoutsp), incr += sizes[n], ptrs[n++] = numvoutsp;
+    printf("set_getrawbits F\n");
     sizes[n] = sizeof(*vins) * (*numvinsp), incr += sizes[n], ptrs[n++] = vins;
     //rawblock_voutdata *vp;//{ uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };  // tp_ind is incrementing each time vout resets
+    printf("set_getrawbits G\n");
     sizes[n] = sizeof(*vouts) * (*numvoutsp), incr += sizes[n], ptrs[n++] = vouts;
     if ( size == 0 )
     {
         for (i=0; i<n; i++)
             if ( sizes[i] != 0 )
+            {
+                printf("%p <- %p size.%d\n",&rawbits[size],ptrs[i],sizes[i]);
                 memcpy(&rawbits[size],ptrs[i],sizes[i]), size += (uint32_t)sizes[i];
+            }
         return(size);
     }
     else
@@ -710,7 +720,10 @@ uint32_t setget_rawbits(uint32_t *rawbits,uint32_t size,uint32_t *blocknump,uint
         size = 0;
         for (i=0; i<n; i++)
             if ( sizes[i] != 0 )
+            {
+                printf("%p <--- %p size.%d\n",ptrs[i],&rawbits[size],sizes[i]);
                 memcpy(ptrs[i],&rawbits[size],sizes[i]), size += (uint32_t)sizes[i];
+            }
         return(parsedsize);
     }
 }
@@ -719,8 +732,10 @@ int32_t parse_bitstream(struct compressionvars *V,uint8_t *rawbits,uint32_t size
 {
     int32_t retval = -1;
     uint16_t numvins,numvouts;
-    uint32_t blocknum,parsedsize,checkpoints[3];
+    uint32_t blocknum,parsedsize,checkpoints[16];
+    printf("call setget_rawbits\n");
     parsedsize = setget_rawbits((uint32_t *)V->rawbits,size,&blocknum,checkpoints,&numvins,&numvouts,V->rawdata->vins,V->rawdata->vouts);
+    printf("got parsedsize.%d vs %d setget_rawbits\n",parsedsize,size);
     if ( parsedsize == size )
     {
         V->rawdata->numvins = numvins, V->rawdata->numvouts = numvouts;
@@ -798,6 +813,7 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
         emit_blockcheck(V->fp,ftell(fps[2]),0), emit_blockcheck(V->fp,ftell(fps[1]),0), emit_blockcheck(V->fp,ftell(fps[0]),0), emit_blockcheck(V->fp,blocknum,0);
         fflush(V->fp);
     }
+    printf("calling parse_bitstream size.%d\n",size);
     parse_bitstream(V,V->rawbits,size);
     printf("size.%d numvins.%d numvouts.%d\n",size,numvins,numvouts);
     maxhuffinds = (int32_t)(V->addrs->numitems + V->values->numitems + V->txids->numitems + V->scripts->numitems);
