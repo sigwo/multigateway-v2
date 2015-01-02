@@ -1136,7 +1136,9 @@ uint32_t flush_compressionvars(struct compressionvars *V,uint32_t prevblocknum,u
         return(0);
     if ( V->firstblock == 0 && newblocknum > 0 )
         V->firstblock = newblocknum;
+    printf("call emit\n");
     numhuffinds = emit_compressed_block(V,prevblocknum,frequi);
+    printf("back\n");
     V->processed++;
     if ( V->disp != 0 )
     {
@@ -1376,7 +1378,6 @@ printf("addrp.%p created.%d\n",addrp,createdflag);
                 exit(-1);
             if ( createdflag != 0 )
             {
-                update_huffitem(1,&addrp->item,addrp->ind,HUFF_COINADDR,addr,0,sizeof(uint32_t));
                 if ( V->afp != 0 )
                 {
                     if ( 0 && calc_binaryaddr(addrp->binaryaddr,addr) <= sizeof(addrp->binaryaddr) )
@@ -1385,14 +1386,15 @@ printf("addrp.%p created.%d\n",addrp,createdflag);
                 }
                 update_coinaddr_entries(addrp,bp);
             }
-            else update_huffitem(1,&addrp->item,addrp->ind,HUFF_COINADDR,0,0,sizeof(uint32_t));
+            //else update_huffitem(1,&addrp->item,addrp->ind,HUFF_COINADDR,0,0,sizeof(uint32_t));
+            update_huffitem(1,&addrp->item,addrp->ind,HUFF_COINADDR,addr,0,sizeof(uint32_t));
             if ( txidstr != 0 && script != 0 && value != 0 )
             {
 printf("txid.(%s) %s\n",txidstr,script);
                 frequi = calc_frequi(0,V->coinstr,V->prevblock);
                 if ( bp->blocknum != V->prevblock )
                     V->prevblock = flush_compressionvars(V,V->prevblock,bp->blocknum,frequi);
-                //printf("update value %.8f %p\n",dstr(value),&value);
+            printf("update value %.8f %p\n",dstr(value),&value);
                 if ( V->vfp != 0 )
                     fwrite(&value,1,sizeof(value),V->vfp);
                 if ( 1 ) // problem with binary hashval mode
@@ -1403,30 +1405,30 @@ printf("txid.(%s) %s\n",txidstr,script);
                     if ( createdflag != 0 )
                     {
                         V->numvalues++;
-                        update_huffitem(1,&valp->item,valp->ind,HUFF_VALUE,(void *)&value,sizeof(value),sizeof(uint64_t));
                     }
-                    else update_huffitem(1,&valp->item,valp->ind,HUFF_VALUE,0,0,sizeof(uint64_t));
+                   // else update_huffitem(1,&valp->item,valp->ind,HUFF_VALUE,0,0,sizeof(uint64_t));
+                    update_huffitem(1,&valp->item,valp->ind,HUFF_VALUE,(void *)&value,sizeof(value),sizeof(uint64_t));
                 }
                 tp = update_compressionvars_table(&createdflag,&V->txind,V->txids,txidstr);
                 if ( createdflag != 0 )
                 {
                     datalen = (uint32_t)(strlen(txidstr) >> 1);
                     decode_hex(databuf,datalen,txidstr);
-                    update_huffitem(1,&tp->item,tp->ind,HUFF_TXID,tp->txidstr,0,sizeof(uint32_t));
                     if ( V->tfp != 0 )
                         emit_varint(V->tfp,datalen), fwrite(databuf,1,datalen,V->tfp);
                 }
-                else update_huffitem(1,&tp->item,tp->ind,HUFF_TXID,0,0,sizeof(uint32_t));
+                //else update_huffitem(1,&tp->item,tp->ind,HUFF_TXID,0,0,sizeof(uint32_t));
+                update_huffitem(1,&tp->item,tp->ind,HUFF_TXID,tp->txidstr,0,sizeof(uint32_t));
                 sp = update_compressionvars_table(&createdflag,&V->scriptind,V->scripts,script);
                 if ( createdflag != 0 ) // indicates just created
                 {
                     sp->mode = calc_scriptmode(&datalen,databuf,script,1);
                     sp->addrind = addrp->ind;
-                    update_huffitem(1,&sp->item,sp->ind,HUFF_SCRIPT,sp->scriptstr,0,sizeof(uint32_t));
                     if ( V->sfp != 0 )
                         emit_varint(V->sfp,datalen), fwrite(databuf,1,datalen,V->sfp);
                 }
-                else update_huffitem(1,&sp->item,sp->ind,HUFF_SCRIPT,0,0,sizeof(uint32_t));
+                //else update_huffitem(1,&sp->item,sp->ind,HUFF_SCRIPT,0,0,sizeof(uint32_t));
+                update_huffitem(1,&sp->item,sp->ind,HUFF_SCRIPT,sp->scriptstr,0,sizeof(uint32_t));
                 if ( 0 && V->disp != 0 )
                     sprintf(V->disp+strlen(V->disp),"{A%d T%d.%d S%d %.8f} ",V->addrind,V->txind,bp->v,V->scriptind,dstr(value));
                 compressionvars_add_txout(V->rawdata,V->coinstr,tp->ind,bp->v,addrp->ind,value,sp->ind);
