@@ -767,7 +767,7 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
         fseek(V->ofp,blocknum*sizeof(offset),SEEK_SET);
         fwrite(&offset,1,sizeof(offset),V->ofp);
         fflush(V->ofp);
-        printf("[%s offset.%u %ld] ",V->coinstr,offset,ftell(V->ofp));
+        fprintf(stderr,"[%s offset.%u %ld] ",V->coinstr,offset,ftell(V->ofp));
     }
     for (i=0; i<(int)(sizeof(fps)/sizeof(*fps)); i++)
     {
@@ -781,6 +781,7 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
             fflush(fps[i]);
         }
     }
+    printf("did blockchecks\n");
     numvins = V->rawdata->numvins, numvouts = V->rawdata->numvouts;
     if ( numvins != V->rawdata->numvins || numvouts != V->rawdata->numvouts )
     {
@@ -788,13 +789,17 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
         exit(-1);
     }
     size = setget_rawbits((uint32_t *)V->rawbits,0,&blocknum,checkpoints,&numvins,&numvouts,V->rawdata->vins,V->rawdata->vouts);
-    *(uint32_t *)V->rawbits = size, fwrite(V->rawbits,1,size,V->fp);
-    emit_blockcheck(V->fp,ftell(fps[2]),0), emit_blockcheck(V->fp,ftell(fps[1]),0), emit_blockcheck(V->fp,ftell(fps[0]),0), emit_blockcheck(V->fp,blocknum,0);
-    fflush(V->fp);
+    printf("did setget_rawbits fp.%p\n",V->fp);
+    if ( V->fp != 0 )
+    {
+        *(uint32_t *)V->rawbits = size, fwrite(V->rawbits,1,size,V->fp);
+        emit_blockcheck(V->fp,ftell(fps[2]),0), emit_blockcheck(V->fp,ftell(fps[1]),0), emit_blockcheck(V->fp,ftell(fps[0]),0), emit_blockcheck(V->fp,blocknum,0);
+        fflush(V->fp);
+    }
     parse_bitstream(V,V->rawbits,size);
-   // printf("size.%ld numvins.%d numvouts.%d\n",size,numvins,numvouts);
+    printf("size.%d numvins.%d numvouts.%d\n",size,numvins,numvouts);
     maxhuffinds = (int32_t)(V->addrs->numitems + V->values->numitems + V->txids->numitems + V->scripts->numitems);
-    if ( 0 || maxhuffinds == 0 )
+    if ( 1 || maxhuffinds == 0 )
         return(0);
     items = calloc(maxhuffinds,sizeof(*items));
     for (i=0; i<numvouts; i++)
