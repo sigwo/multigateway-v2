@@ -760,6 +760,7 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
     struct huffitem **items;
     //struct rawblock_voutdata *vp;//{ uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };
     //struct address_entry *bp;//{ uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
+    printf("emit compressed block\n");
     fps[0] = V->sfp, fps[1] = V->tfp, fps[2] = V->afp;
     if ( V->ofp != 0 )
     {
@@ -984,6 +985,7 @@ FILE *open_commpresionvars_file(int32_t readonly,struct compressionvars *V,uint3
             }
             else fp = fopen(fname,"wb+");
         }
+        printf("(%s) fp.%p\n",fname,fp);
         return(fp);
     }
     else if ( 1 )
