@@ -789,7 +789,7 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
         printf("vout overflow: numvins.%d V->rawdata->numvins.%d, numvouts.%d V->rawdata->numvouts.%d\n",numvins,V->rawdata->numvins,numvouts,V->rawdata->numvouts);
         exit(-1);
     }
-    printf("calling setget_rawbits);
+    printf("calling setget_rawbits\n");
     size = setget_rawbits((uint32_t *)V->rawbits,0,&blocknum,checkpoints,&numvins,&numvouts,V->rawdata->vins,V->rawdata->vouts);
     printf("did setget_rawbits fp.%p\n",V->fp);
     if ( V->fp != 0 )
