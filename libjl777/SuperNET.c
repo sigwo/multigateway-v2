@@ -11,7 +11,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <memory.h>
+#ifndef _WIN32
 #include <arpa/inet.h>
+#endif
 #include <sys/time.h>
 
 //Miniupnp code for supernet by chanc3r
@@ -23,11 +25,12 @@
 // for IPPROTO_TCP / IPPROTO_UDP
 #include <netinet/in.h>
 #endif
+#ifndef _WIN32
 #include "miniupnpc/miniwget.h"
 #include "miniupnpc/miniupnpc.h"
 #include "miniupnpc/upnpcommands.h"
 #include "miniupnpc/upnperrors.h"
-
+#endif
 
 #include "SuperNET.h"
 #include "cJSON.h"
@@ -393,6 +396,7 @@ void *GUIpoll_loop(void *arg)
     return(0);
 }
 
+#ifndef _WIN32
 // redirect port on external upnp enabled router to port on *this* host
 int upnpredirect(const char* eport, const char* iport, const char* proto, const char* description) {
     
@@ -1474,6 +1478,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
             fclose(V->fp);
     }
 }
+#endif
 
 int main(int argc,const char *argv[])
 {
