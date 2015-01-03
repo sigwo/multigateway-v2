@@ -543,6 +543,8 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     return 1; //ok - we are mapped:)
 }
 
+#endif
+
 #define HUFF_VALUE 0
 #define HUFF_COINADDR 1
 #define HUFF_TXID 2
@@ -1478,7 +1480,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
             fclose(V->fp);
     }
 }
-#endif
+
 
 int main(int argc,const char *argv[])
 {
@@ -1561,8 +1563,10 @@ int main(int argc,const char *argv[])
     retval = SuperNET_start("SuperNET.conf",ipaddr);
     sprintf(portstr,"%d",SUPERNET_PORT);
     oldport = newport = portstr;
+    #ifndef _WIN32
     if ( UPNP != 0 && upnpredirect(oldport,newport,"UDP","SuperNET_https") == 0 )
         printf("TEST ERROR: failed redirect (%s) to (%s)\n",oldport,newport);
+    #endif
     //sprintf(portstr,"%d",SUPERNET_PORT+1);
     //oldport = newport = portstr;
     //if ( upnpredirect(oldport,newport,"UDP","SuperNET_http") == 0 )
