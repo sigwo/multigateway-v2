@@ -642,7 +642,7 @@ void clear_compressionvars(struct compressionvars *V,int32_t clearstats,int32_t 
 void update_huffitem(int32_t incr,struct huffitem *hip,uint32_t rawind,uint32_t hufftype,void *fullitem,long fullsize,int32_t wt)
 {
     int32_t i;
-    printf("update_huffitem rawind.%d type.%d full.%p size.%ld wt.%d\n",rawind,hufftype,fullitem,fullsize,wt);
+    //printf("update_huffitem rawind.%d type.%d full.%p size.%ld wt.%d\n",rawind,hufftype,fullitem,fullsize,wt);
     if ( fullitem != 0 )
         huff_iteminit(hip,(rawind << 3) | hufftype,fullitem,fullsize,wt);
     if ( incr > 0 )
@@ -690,29 +690,25 @@ uint32_t setget_rawbits(uint32_t *rawbits,uint32_t size,uint32_t *blocknump,uint
     void *ptrs[64];
     uint32_t parsedsize = size;
     incr = n = 0;
-    printf("set_getrawbits A\n");
     sizes[n] = sizeof(parsedsize), incr += sizes[n], ptrs[n++] = &parsedsize;
-    printf("set_getrawbits B\n");
     sizes[n] = sizeof(*blocknump), incr += sizes[n], ptrs[n++] = blocknump;
-    printf("set_getrawbits C\n");
     sizes[n] = sizeof(checkpoints[0]) * 3, incr += sizes[n], ptrs[n++] = checkpoints;
-    printf("set_getrawbits D\n");
     sizes[n] = sizeof(*numvinsp), incr += sizes[n], ptrs[n++] = numvinsp;
-    printf("set_getrawbits E\n");
     sizes[n] = sizeof(*numvoutsp), incr += sizes[n], ptrs[n++] = numvoutsp;
-    printf("set_getrawbits F\n");
-    sizes[n] = sizeof(*vins) * (*numvinsp), incr += sizes[n], ptrs[n++] = vins;
-    //rawblock_voutdata *vp;//{ uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };  // tp_ind is incrementing each time vout resets
-    printf("set_getrawbits G\n");
-    sizes[n] = sizeof(*vouts) * (*numvoutsp), incr += sizes[n], ptrs[n++] = vouts;
     if ( size == 0 )
     {
         for (i=0; i<n; i++)
             if ( sizes[i] != 0 )
             {
-                printf("%p <- %p size.%d\n",&rawbits[size],ptrs[i],sizes[i]);
+               // printf("%p <- %p size.%ld\n",&rawbits[size],ptrs[i],sizes[i]);
                 memcpy(&rawbits[size],ptrs[i],sizes[i]), size += (uint32_t)sizes[i];
             }
+        sizes[n] = sizeof(*vins) * (*numvinsp), incr += sizes[n], ptrs[n++] = vins;
+        //rawblock_voutdata *vp;//{ uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };  // tp_ind is incrementing each time vout resets
+        sizes[n] = sizeof(*vouts) * (*numvoutsp), incr += sizes[n], ptrs[n++] = vouts;
+        //printf("size.%d numvins.%d numvouts.%d | incr.%ld sizeof(%ld %ld)\n",size,*numvinsp,*numvoutsp,incr,sizeof(*vins),sizeof(*vouts));
+        memcpy(&rawbits[size],ptrs[i],sizes[i]), size += (uint32_t)sizes[i], i++;
+        memcpy(&rawbits[size],ptrs[i],sizes[i]), size += (uint32_t)sizes[i], i++;
         return(size);
     }
     else
@@ -721,9 +717,17 @@ uint32_t setget_rawbits(uint32_t *rawbits,uint32_t size,uint32_t *blocknump,uint
         for (i=0; i<n; i++)
             if ( sizes[i] != 0 )
             {
-                printf("%p <--- %p size.%d\n",ptrs[i],&rawbits[size],sizes[i]);
+                //printf("%p <--- %p size.%ld\n",ptrs[i],&rawbits[size],sizes[i]);
                 memcpy(ptrs[i],&rawbits[size],sizes[i]), size += (uint32_t)sizes[i];
             }
+        
+        sizes[n] = sizeof(*vins) * (*numvinsp), incr += sizes[n], ptrs[n++] = vins;
+        //rawblock_voutdata *vp;//{ uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };  // tp_ind is incrementing each time vout resets
+        sizes[n] = sizeof(*vouts) * (*numvoutsp), incr += sizes[n], ptrs[n++] = vouts;
+        //printf("size.%d numvins.%d numvouts.%d | incr.%ld sizeof(%ld %ld)\n",size,*numvinsp,*numvoutsp,incr,sizeof(*vins),sizeof(*vouts));
+        
+        memcpy(ptrs[i],&rawbits[size],sizes[i]), size += (uint32_t)sizes[i], i++;
+        memcpy(ptrs[i],&rawbits[size],sizes[i]), size += (uint32_t)sizes[i], i++;
         return(parsedsize);
     }
 }
@@ -733,15 +737,15 @@ int32_t parse_bitstream(struct compressionvars *V,uint8_t *rawbits,uint32_t size
     int32_t retval = -1;
     uint16_t numvins,numvouts;
     uint32_t blocknum,parsedsize,checkpoints[16];
-    printf("call setget_rawbits\n");
+    //printf("call setget_rawbits\n");
     parsedsize = setget_rawbits((uint32_t *)V->rawbits,size,&blocknum,checkpoints,&numvins,&numvouts,V->rawdata->vins,V->rawdata->vouts);
-    printf("got parsedsize.%d vs %d setget_rawbits\n",parsedsize,size);
+   // printf("got parsedsize.%d vs %d setget_rawbits\n",parsedsize,size);
     if ( parsedsize == size )
     {
         V->rawdata->numvins = numvins, V->rawdata->numvouts = numvouts;
         return(size);
     } else printf("ERROR: parsedsize.%d != size.%d: ",parsedsize,size);
-    printf("%d vins.%d vouts.%d: %d %d %d\n",blocknum,numvins,numvouts,checkpoints[0],checkpoints[1],checkpoints[2] );
+    //printf("%d vins.%d vouts.%d: %d %d %d\n",blocknum,numvins,numvouts,checkpoints[0],checkpoints[1],checkpoints[2] );
     return(retval);
 }
 
@@ -750,7 +754,6 @@ uint32_t load_bitstream(struct compressionvars *V,FILE *fp,int32_t breakflag)
     uint32_t size,count = 0;
     while ( fread(&size,1,sizeof(size),fp) == sizeof(size) )
     {
-        printf("got size.%d\n",size);
         memcpy(V->rawbits,&size,sizeof(size));
         if ( fread((void *)((long)V->rawbits + sizeof(size)),1,size - sizeof(size),fp) != (size - sizeof(size)) || parse_bitstream(V,V->rawbits,size) < 0 )
             break;
@@ -775,7 +778,6 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
     struct huffitem **items;
     //struct rawblock_voutdata *vp;//{ uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };
     //struct address_entry *bp;//{ uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
-    printf("emit compressed block\n");
     fps[0] = V->sfp, fps[1] = V->tfp, fps[2] = V->afp;
     if ( V->ofp != 0 )
     {
@@ -797,25 +799,20 @@ int32_t emit_compressed_block(struct compressionvars *V,uint32_t blocknum,int32_
             fflush(fps[i]);
         }
     }
-    printf("did blockchecks\n");
     numvins = V->rawdata->numvins, numvouts = V->rawdata->numvouts;
     if ( numvins != V->rawdata->numvins || numvouts != V->rawdata->numvouts )
     {
         printf("vout overflow: numvins.%d V->rawdata->numvins.%d, numvouts.%d V->rawdata->numvouts.%d\n",numvins,V->rawdata->numvins,numvouts,V->rawdata->numvouts);
         exit(-1);
     }
-    printf("calling setget_rawbits\n");
     size = setget_rawbits((uint32_t *)V->rawbits,0,&blocknum,checkpoints,&numvins,&numvouts,V->rawdata->vins,V->rawdata->vouts);
-    printf("did setget_rawbits fp.%p\n",V->fp);
     if ( V->fp != 0 )
     {
         *(uint32_t *)V->rawbits = size, fwrite(V->rawbits,1,size,V->fp);
         emit_blockcheck(V->fp,ftell(fps[2]),0), emit_blockcheck(V->fp,ftell(fps[1]),0), emit_blockcheck(V->fp,ftell(fps[0]),0), emit_blockcheck(V->fp,blocknum,0);
         fflush(V->fp);
     }
-    printf("calling parse_bitstream size.%d\n",size);
     parse_bitstream(V,V->rawbits,size);
-    printf("size.%d numvins.%d numvouts.%d\n",size,numvins,numvouts);
     maxhuffinds = (int32_t)(V->addrs->numitems + V->values->numitems + V->txids->numitems + V->scripts->numitems);
     if ( 1 || maxhuffinds == 0 )
         return(0);
@@ -1160,9 +1157,7 @@ uint32_t flush_compressionvars(struct compressionvars *V,uint32_t prevblocknum,u
         return(0);
     if ( V->firstblock == 0 && newblocknum > 0 )
         V->firstblock = newblocknum;
-    printf("call emit\n");
     numhuffinds = emit_compressed_block(V,prevblocknum,frequi);
-    printf("back\n");
     V->processed++;
     if ( V->disp != 0 )
     {
@@ -1393,11 +1388,10 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
     }
     if ( V->fp != 0 )
     {
-printf("update compressionvars vinflag.%d\n",bp->vinflag);
+//printf("update compressionvars vinflag.%d\n",bp->vinflag);
         if ( bp->vinflag == 0 )
         {
             addrp = update_compressionvars_table(&createdflag,&V->addrind,V->addrs,addr);
-printf("addrp.%p created.%d\n",addrp,createdflag);
             if ( addrp == 0 )
                 exit(-1);
             if ( createdflag != 0 )
@@ -1414,11 +1408,11 @@ printf("addrp.%p created.%d\n",addrp,createdflag);
             update_huffitem(1,&addrp->item,addrp->ind,HUFF_COINADDR,addr,0,sizeof(uint32_t));
             if ( txidstr != 0 && script != 0 && value != 0 )
             {
-printf("txid.(%s) %s\n",txidstr,script);
+//printf("txid.(%s) %s\n",txidstr,script);
                 frequi = calc_frequi(0,V->coinstr,V->prevblock);
                 if ( bp->blocknum != V->prevblock )
                     V->prevblock = flush_compressionvars(V,V->prevblock,bp->blocknum,frequi);
-            printf("update value %.8f %p\n",dstr(value),&value);
+            //printf("update value %.8f %p\n",dstr(value),&value);
                 if ( V->vfp != 0 )
                     fwrite(&value,1,sizeof(value),V->vfp);
                 if ( 1 ) // problem with binary hashval mode
