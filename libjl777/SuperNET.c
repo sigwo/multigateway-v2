@@ -795,7 +795,11 @@ struct bitstream_file *init_bitstream_file(int32_t huffid,int32_t mode,int32_t r
         bfp->blocknum = load_blockcheck(bfp->fp);
 
     if (  refblock != 0xffffffff && bfp->blocknum != refblock )
-        printf("%s bfp->blocknum %u != refblock.%u mismatch\n",typestr,bfp->blocknum,refblock);
+    {
+        printf("%s bfp->blocknum %u != refblock.%u mismatch FATAL if less than\n",typestr,bfp->blocknum,refblock);
+        if ( bfp->blocknum < refblock )
+            exit(-1);
+    }
     //printf("%-8s mode.%d %s itemsize.%ld numitems.%d blocknum.%u refblock.%u\n",typestr,mode,coinstr,itemsize,bfp->ind,bfp->blocknum,refblock);
     return(bfp);
 }
@@ -930,6 +934,15 @@ void *update_bitstream_file(int32_t *createdflagp,struct bitstream_file *bfp,uin
     }
     else
     {
+        uint8_t c; uint16_t s;
+        rawind = 0;
+        switch ( bfp->itemsize )
+        {
+            case sizeof(uint32_t): memcpy(&rawind,data,bfp->itemsize); break;
+            case sizeof(uint16_t): memcpy(&s,data,bfp->itemsize), rawind = s; break;
+            case sizeof(uint8_t): c = *(uint8_t *)data, rawind = c; break;
+            default: rawind = 0; printf("illegal itemsize.%ld\n",bfp->itemsize);
+        }
         memcpy(&rawind,data,bfp->itemsize);
         if ( rawind < bfp->maxitems ) // "inblock", "intxind", "invout"
         {
@@ -984,16 +997,20 @@ double estimate_completion(char *coinstr,double startmilli,int32_t processed,int
 uint32_t flush_compressionvars(struct compressionvars *V,uint32_t prevblocknum,uint32_t newblocknum,int32_t frequi)
 {
     struct blockinfo B;
-    long sum,sum2;
+    long sum,sum2,fpos;
     uint32_t slice,i;
     memset(&B,0,sizeof(B));
     if ( prevblocknum != 0xffffffff )
     {
         B.firstvout = V->firstvout, B.firstvin = V->firstvin;
-        append_to_streamfile(V->bfps[0],prevblocknum,&B,1,1);
+        append_to_streamfile(V->bfps[0],prevblocknum,&B,1,0);
         V->firstvout = V->bfps[V->voutsbfp]->ind;
         V->firstvin = V->bfps[V->vinsbfp]->ind;
-        sum = sum2 = ftell(V->bfps[0]->fp);
+        B.firstvout = V->firstvout, B.firstvin = V->firstvin;
+        fpos = ftell(V->bfps[0]->fp);
+        append_to_streamfile(V->bfps[0],prevblocknum,&B,1,1);
+        fseek(V->bfps[0]->fp,fpos,SEEK_SET);
+        sum = sum2 = fpos;
         for (i=1; i<V->numbfps; i++)
         {
             if ( V->bfps[i]->fp != 0 )
