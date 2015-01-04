@@ -623,21 +623,35 @@ void set_commpressionvars_fname(int32_t readonly,char *fname,char *coinstr,char 
     else sprintf(fname,"%s/%s/%s/%s.%d",dirname,coinstr,typestr,coinstr,subgroup);
 }
 
+int32_t check_for_blockcheck(FILE *fp)
+{
+    long fpos;
+    uint64_t blockcheck;
+    fpos = ftell(fp);
+    fread(&blockcheck,1,sizeof(blockcheck),fp);
+    if ( (uint32_t)(blockcheck >> 32) == ~(uint32_t)blockcheck )
+        return(1);
+    fseek(fp,fpos,SEEK_SET);
+    return(0);
+}
+
 long emit_blockcheck(FILE *fp,uint64_t blocknum)
 {
     long fpos,retval = 0;
     uint64_t blockcheck;
     if ( fp != 0 )
     {
-        fseek(fp,0,SEEK_END);
+        /*fseek(fp,0,SEEK_END);
         fpos = ftell(fp) - sizeof(blockcheck);
         if ( fpos < 0 )
-            fpos = 0;
-        fseek(fp,fpos,SEEK_SET);
+            fpos = 0, rewind(fp);
+        else if ( check_for_blockcheck(fp) != 0 )
+            fseek(fp,fpos,SEEK_SET);*/
+        fpos = ftell(fp);
         blockcheck = (~blocknum << 32) | blocknum;
         retval = fwrite(&blockcheck,1,sizeof(blockcheck),fp);
-        fflush(fp);
         fseek(fp,fpos,SEEK_SET);
+        fflush(fp);
     }
     return(retval);
 }
@@ -730,7 +744,8 @@ int32_t load_reference_strings(struct bitstream_file *bfp,int32_t isbinary)
     uint8_t data[32768];
     struct huffitem *item;
     long remaining,eofpos,endpos = 0;
-    int32_t len,maxlen,createdflag,count = 0;
+    int32_t len,maxlen,createdflag,n,count = 0;
+    n = 0;
     if ( (fp= bfp->fp) != 0 )
     {
         fseek(fp,0,SEEK_END);
@@ -739,17 +754,22 @@ int32_t load_reference_strings(struct bitstream_file *bfp,int32_t isbinary)
         endpos = ftell(fp);
         rewind(fp);
         maxlen = (int32_t)sizeof(data)-1;
+        //int i; for (i=0; i<64; i++)
+        //    printf("%c ",fgetc(fp));
+        //rewind(fp); getchar();
         while ( ftell(fp) < endpos && load_vfilestr(&len,(isbinary != 0) ? (char *)data : str,fp,maxlen) > 0 )
         {
+            //printf("isbinary.%d: len.%d\n",isbinary,len);
             if ( isbinary != 0 )
                 init_hexbytes_noT(str,data,len);
             if ( str[0] != 0 )
             {
-                //printf("add.(%s)\n",str);
+                printf("add.(%s)\n",str);
                 item = update_compressionvars_table(&createdflag,bfp,str);
                 //item = add_hashtable(&createdflag,&table,str);
                 if ( createdflag == 0 )
                     printf("WARNING: redundant entry in (%s).%d [%s]?\n",bfp->fname,count,str);
+                //n += check_for_blockcheck(fp);
                 count++;
             }
             remaining = (endpos - ftell(fp));
@@ -758,8 +778,39 @@ int32_t load_reference_strings(struct bitstream_file *bfp,int32_t isbinary)
         }
     }
     bfp->checkblock = load_blockcheck(bfp->fp);
-    printf("loaded %d to block.%u from hashtable.(%s) fpos.%ld vs endpos.%ld\n",count,bfp->checkblock,bfp->fname,ftell(fp),eofpos);
+    printf("loaded %d to block.%u from hashtable.(%s) fpos.%ld vs endpos.%ld | numblockchecks.%d\n",count,bfp->checkblock,bfp->fname,ftell(fp),eofpos,n);
     return(count);
+}
+
+int32_t checkblock(struct blockinfo *current,struct blockinfo *prev,uint32_t blocknum,uint64_t blockcheck)
+{
+    return((abs((int)~(blockcheck>>32)-blocknum)+abs((int)blockcheck-blocknum)));
+}
+
+int32_t scan_ramchain(struct compressionvars *V)
+{
+    int i,checkval,errs = 0;
+    //uint64_t blockcheck;
+    struct blockinfo B,prevB;
+    struct bitstream_file *bfp;
+    memset(&prevB,0,sizeof(prevB));
+    bfp = V->bfps[0];
+    if ( bfp->fp == 0 )
+        return(-1);
+    rewind(bfp->fp);
+    for (i=0; i<bfp->blocknum; i++)
+    {
+        fread(&B,1,sizeof(B),bfp->fp);
+        //fread(&blockcheck,1,sizeof(blockcheck),bfp->fp);
+        checkval = 0;//checkblock(&B,i==0?0:&prevB,i,blockcheck);
+        printf("%i: %d %d | %s\n",i,B.firstvout,B.firstvin,checkval!=0?"ERROR":"OK");
+        prevB = B;
+        errs += (checkval != 0);
+    }
+    //uint32_t valuebfp,inblockbfp,txinbfp,invoutbfp,addrbfp,txidbfp,scriptbfp,voutsbfp,vinsbfp,bitstream,numbfps;
+    printf("scan_ramchain %s: errs.%d blocks.%u values.%u addrs.%u txids.%u scripts.%u vouts.%u vins.%u | VIN block.%u txind.%u v.%u\n",bfp->coinstr,errs,bfp->blocknum,V->bfps[V->valuebfp]->ind,V->bfps[V->addrbfp]->ind,V->bfps[V->txidbfp]->ind,V->bfps[V->scriptbfp]->ind,V->bfps[V->voutsbfp]->ind,V->bfps[V->vinsbfp]->ind,V->bfps[V->inblockbfp]->ind,V->bfps[V->txinbfp]->ind,V->bfps[V->invoutbfp]->ind);
+    //getchar();
+    return(errs);
 }
 
 struct bitstream_file *init_bitstream_file(int32_t huffid,int32_t mode,int32_t readonly,char *coinstr,char *typestr,long itemsize,uint32_t refblock,long huffwt)
@@ -784,8 +835,8 @@ struct bitstream_file *init_bitstream_file(int32_t huffid,int32_t mode,int32_t r
         //bfp->dataptr = hashtable_create(typestr,10,itemsize,itemsize,(mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) ? 0 : itemsize,-1);
         set_commpressionvars_fname(readonly,bfp->fname,coinstr,typestr,-1);
         bfp->fp = _open_varsfile(readonly,&bfp->blocknum,bfp->fname,coinstr);
-        if ( (mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) != 0 )
-            load_reference_strings(bfp,BITSTREAM_HEXSTR);
+        if ( bfp->fp != 0 && (mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) != 0 )
+            load_reference_strings(bfp,bfp->mode & BITSTREAM_HEXSTR);
     }
     else
     {
@@ -794,7 +845,6 @@ struct bitstream_file *init_bitstream_file(int32_t huffid,int32_t mode,int32_t r
     }
     if ( bfp->fp != 0 )
         bfp->blocknum = load_blockcheck(bfp->fp);
-
     if (  refblock != 0xffffffff && bfp->blocknum != refblock )
     {
         printf("%s bfp->blocknum %u != refblock.%u mismatch FATAL if less than\n",typestr,bfp->blocknum,refblock);
@@ -837,6 +887,7 @@ int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *co
         V->voutsbfp = n, V->bfps[n] = init_bitstream_file(n,0,readonly,coinstr,"vouts",sizeof(struct rawblock_voutdata),refblock,0), n++;
         V->vinsbfp = n, V->bfps[n] = init_bitstream_file(n,0,readonly,coinstr,"vins",sizeof(struct address_entry),refblock,0), n++;
         V->bitstream = n, V->bfps[n] = init_bitstream_file(n,BITSTREAM_COMPRESSED,readonly,coinstr,"bitstream",0,refblock,0), n++;
+        scan_ramchain(V);
     }
     if ( readonly != 0 )
         exit(1);
@@ -917,12 +968,28 @@ void *update_bitstream_file(int32_t *createdflagp,struct bitstream_file *bfp,uin
                     data = (uint8_t *)str, datalen = (int32_t)strlen(str);
                 if ( data != 0 && datalen != 0 )
                 {
-                    emit_varint(bfp->fp,datalen);
+                    //printf("%s: ",bfp->typestr);
+                    if ( (bfp->mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) != 0 )
+                    {
+                        //printf("%s: %d -> fpos.%ld ",bfp->typestr,datalen,ftell(bfp->fp));
+                        emit_varint(bfp->fp,datalen);
+                    }
+                    if ( 0 )
+                    {
+                        char tmp[8192];
+                        if ( str == 0 || str[0] == 0 )
+                            init_hexbytes_noT(tmp,data,datalen);
+                        else strcpy(tmp,str);
+                        printf("(%s) -> fpos.%ld ",tmp,ftell(bfp->fp));
+                    }
                     if ( fwrite(data,1,datalen,bfp->fp) != datalen )
                     {
                         printf("error writing %d bytes to %s\n",datalen,bfp->fname);
                         exit(-1);
                     }
+                    //printf("block.%u -> fpos.%ld ",blocknum,ftell(bfp->fp));
+                    emit_blockcheck(bfp->fp,blocknum);
+                    //printf("curpos.%ld\n",ftell(bfp->fp));
                 } else printf("warning: bfp[%d] had no data in block.%u\n",bfp->huffid,blocknum);
             }
         }
@@ -1016,7 +1083,7 @@ uint32_t flush_compressionvars(struct compressionvars *V,uint32_t prevblocknum,u
         {
             if ( V->bfps[i]->fp != 0 )
             {
-                append_to_streamfile(V->bfps[i],prevblocknum,0,0,1);
+                emit_blockcheck(V->bfps[i]->fp,prevblocknum);
                 sum += ftell(V->bfps[i]->fp);
             }
         }
