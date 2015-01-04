@@ -89,18 +89,23 @@ struct huffcode
     double totalbits,totalbytes;
 };
 
-#define BITSTREAM_UNIQUE 1
-#define BITSTREAM_STRING 2
-#define BITSTREAM_HEXSTR 4
-#define BITSTREAM_COMPRESSED 8
-#define BITSTREAM_STATSONLY 16
+#define BITSTREAM_UNIQUE (1<<0)
+#define BITSTREAM_STRING (1<<1)
+#define BITSTREAM_HEXSTR (1<<2)
+#define BITSTREAM_COMPRESSED (1<<3)
+#define BITSTREAM_STATSONLY (1<<4)
+#define BITSTREAM_VALUE (1<<5)
+#define BITSTREAM_SCRIPT (1<<6)
+#define BITSTREAM_VINS (1<<7)
+#define BITSTREAM_VOUTS (1<<8)
+
 struct bitstream_file
 {
     struct huffitem *dataptr;
     FILE *fp;
     long itemsize;
     char fname[1024],coinstr[16],typestr[16],stringflag;
-    uint32_t blocknum,ind,checkblock,refblock,mode,huffid,huffwt,maxitems;
+    uint32_t blocknum,ind,checkblock,refblock,mode,huffid,huffwt,maxitems,nomemstructs;
 };
 
 struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
