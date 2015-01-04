@@ -625,15 +625,19 @@ void set_commpressionvars_fname(int32_t readonly,char *fname,char *coinstr,char 
 
 long emit_blockcheck(FILE *fp,uint64_t blocknum)
 {
-    long retval = 0;
+    long fpos,retval = 0;
     uint64_t blockcheck;
     if ( fp != 0 )
     {
         fseek(fp,0,SEEK_END);
+        fpos = ftell(fp) - sizeof(blockcheck);
+        if ( fpos < 0 )
+            fpos = 0;
+        fseek(fp,fpos,SEEK_SET);
         blockcheck = (~blocknum << 32) | blocknum;
         retval = fwrite(&blockcheck,1,sizeof(blockcheck),fp);
-        fseek(fp,-sizeof(blockcheck),SEEK_END);
         fflush(fp);
+        fseek(fp,fpos,SEEK_SET);
     }
     return(retval);
 }
@@ -655,9 +659,13 @@ uint32_t load_blockcheck(FILE *fp)
     else
     {
         blocknum = (uint32_t)blockcheck;
-        //printf("found valid marker.%s blocknum %llx -> %u\n",coinstr,(long long)blockcheck,blocknum);
+        fpos = ftell(fp);
+        fseek(fp,fpos-sizeof(blockcheck),SEEK_SET);
+        //printf("found valid marker blocknum %llx -> %u endpos.%ld fpos.%ld\n",(long long)blockcheck,blocknum,fpos,ftell(fp));
     }
-    fseek(fp,fpos,SEEK_SET);
+    //fseek(fp,0,SEEK_END);
+    //fpos = ftell(fp);
+    //fseek(fp,fpos-sizeof(blockcheck),SEEK_SET);
     return(blocknum);
 }
 
@@ -1126,9 +1134,12 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                 datalen = (uint32_t)(strlen(txidstr) >> 1);
                 decode_hex(databuf,datalen,txidstr);
                 tp = update_bitstream_file(&createdflag,V->bfps[V->txidbfp],bp->blocknum,databuf,datalen,txidstr);
-                mode = calc_scriptmode(&datalen,databuf,script,1);
-                if ( (sp= update_bitstream_file(&createdflag,V->bfps[V->scriptbfp],bp->blocknum,databuf,datalen,script)) != 0 && createdflag != 0 )
-                    sp->addrhuffind = addrp->item.huffind, sp->mode = mode;
+                if ( strlen(script) < 1024 )
+                {
+                    mode = calc_scriptmode(&datalen,databuf,script,1);
+                    if ( (sp= update_bitstream_file(&createdflag,V->bfps[V->scriptbfp],bp->blocknum,databuf,datalen,script)) != 0 && createdflag != 0 )
+                        sp->addrhuffind = addrp->item.huffind, sp->mode = mode;
+                } else sp = 0;
                 expand_nxt64bits(valuestr,value);
                 if ( (valp= update_bitstream_file(&createdflag,V->bfps[V->valuebfp],bp->blocknum,&value,sizeof(value),valuestr)) != 0 && createdflag != 0 )
                     valp->value = value;
