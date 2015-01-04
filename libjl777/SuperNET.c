@@ -714,7 +714,8 @@ struct huffitem *update_compressionvars_table(int32_t *createdflagp,struct bitst
     {
         len = (int32_t)strlen(str);
         item = calloc(1,bfp->itemsize + len + 1);
-        memcpy((void *)((long)item + bfp->itemsize),str,len+1);
+        strcpy(item->str,str);
+        //printf("add.(%s)\n",str);
         HASH_ADD_STR(bfp->dataptr,str,item);
         huff_iteminit(item,(++bfp->ind<<3) | bfp->huffid,str,0,bfp->huffwt);
         *createdflagp = 1;
