@@ -1051,8 +1051,8 @@ uint64_t update_vins(int32_t *isinternalp,char *coinaddr,char *script,struct coi
                     if ( (oldblockheight= get_blocktxind(&oldtxind,cp,0,blockhash,txidstr)) > 0 )
                     {
                         flag++;
-                        add_address_entry(cp->name,coinaddr,oldblockheight,oldtxind,-1,vout,-1,1,0,value,0,0);
-                        add_address_entry(cp->name,coinaddr,blockheight,txind,i,-1,-1,1,syncflag * (i == (numvins-1)),value,0,0);
+                        add_address_entry(cp->name,coinaddr,blockheight,txind,i,-1,-1,1,0,value,0,0);
+                        add_address_entry(cp->name,coinaddr,oldblockheight,oldtxind,-1,vout,-1,1,syncflag * (i == (numvins-1)),value,0,0);
                     } else printf("error getting oldblockheight (%s %s)\n",blockhash,txidstr);
                 } else printf("unexpected error vout.%d %s\n",vout,txidstr);
             } else printf("illegal txid.(%s)\n",txidstr);
@@ -4134,10 +4134,12 @@ void *_process_coinblocks(void *_cp)
 
 void process_coinblocks(char *argcoinstr)
 {
+    int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *coinstr,int32_t maxblocknum);
     int32_t i,n,height,firstiter,processed = 0;
     cJSON *array;
     char coinstr[1024];
     struct coin_info *cp;
+    struct compressionvars *V;
     int32_t oldval = IS_LIBTEST;
     IS_LIBTEST = 7;
     double startmilli;
@@ -4153,8 +4155,14 @@ void process_coinblocks(char *argcoinstr)
                 copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
                 if ( (cp= get_coin_info(coinstr)) != 0 )//&& (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0))
                 {
-                    if ( firstiter != 0 )
-                        cp->blockheight = 0;
+                    V = &cp->V;
+                    if ( V->numbfps == 0 )
+                    {
+                        if ( IS_LIBTEST == 7 )
+                            V->numbfps = init_compressionvars(0,V,coinstr,(uint32_t)cp->RTblockheight);
+                    }
+                    if ( firstiter != 0 && (cp->blockheight= V->firstblock) != 0 )
+                        cp->blockheight++;
                     //if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
                     //    printf("ERROR hist findaddress_loop\n");
                     height = get_blockheight(cp);

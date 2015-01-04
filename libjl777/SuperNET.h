@@ -10,6 +10,7 @@
 #define libtest_libjl777_h
 
 #include <stdint.h>
+#include "uthash.h"
 
 #define MAX_PUBADDR_TIME (24 * 60 * 60)
 #define PUBLIC_DATA 0
@@ -51,14 +52,6 @@ int32_t hputbit(HUFF *hp,int32_t bit);
 int32_t hwrite(uint64_t codebits,int32_t numbits,HUFF *hp);
 int32_t hflush(FILE *fp,HUFF *hp);
 
-struct hashtable
-{
-    char *name;//[128];
-    void **hashtable;
-    uint64_t hashsize,numsearches,numiterations,numitems;
-    long keyoffset,keysize,modifiedoffset,structsize;
-};
-
 union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
 union _bits64 { uint8_t bytes[8]; uint16_t ushorts[4]; uint32_t uints[2]; uint64_t txid; };
 typedef union _bits64 bits64;
@@ -73,10 +66,20 @@ union hufftype
 struct huffitem
 {
     union hufftype U;
+    UT_hash_handle hh;
     uint64_t codebits;
     uint32_t huffind,freq[HUFF_NUMFREQS];
     uint16_t size:5,numbits:11;
     uint8_t isptr,wt;
+    char str[];
+};
+
+struct hashtable
+{
+    char *name;//[128];
+    void **hashtable;
+    uint64_t hashsize,numsearches,numiterations,numitems;
+    long keyoffset,keysize,modifiedoffset,structsize;
 };
 
 struct huffcode
@@ -84,32 +87,33 @@ struct huffcode
     const struct huffitem **items;
     int32_t numinds,maxbits,numnodes,depth,maxind,*tree;
     double totalbits,totalbytes;
-    //struct huffnode pool[];//n_nodes,qend
-    //struct huffentry *codes;
-    //struct huffnode **qqq,**q;
 };
 
-struct rawblock_voutdata { uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };
-struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
-
-struct rawblockdata
+#define BITSTREAM_UNIQUE 1
+#define BITSTREAM_STRING 2
+#define BITSTREAM_HEXSTR 4
+#define BITSTREAM_COMPRESSED 8
+#define BITSTREAM_STATSONLY 16
+struct bitstream_file
 {
-    int32_t numvins,numvouts;
-    struct address_entry vins[65536];
-    struct rawblock_voutdata vouts[65536];
+    struct huffitem *dataptr;
+    FILE *fp;
+    long itemsize;
+    char fname[1024],coinstr[16],typestr[16],stringflag;
+    uint32_t blocknum,ind,checkblock,refblock,mode,huffid,huffwt,maxitems;
 };
+
+struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
 
 struct compressionvars
 {
-    struct hashtable *addrs,*txids,*scripts,*values;
-    struct rawblockdata *rawdata;
-    struct huffitem *blockitems,*txinditems,*voutitems;
-    uint32_t addrind,txind,scriptind,valueind,prevblock,maxitems,filecount,numvalues,maxblocknum,firstblock,processed;
+    HUFF *hp;
+    uint32_t valuebfp,inblockbfp,txinbfp,invoutbfp,addrbfp,txidbfp,scriptbfp,voutsbfp,vinsbfp,bitstream,numbfps;
+    uint32_t maxitems,maxblocknum,firstblock,blocknum,processed,firstvout,firstvin;
     uint8_t *buffer,*rawbits;
+    struct bitstream_file *bfps[16];
     char *disp,coinstr[64];
     double startmilli;
-    HUFF *hp;
-    FILE *fp,*afp,*tfp,*sfp,*vfp,*ofp;
 };
 
 struct transfer_args

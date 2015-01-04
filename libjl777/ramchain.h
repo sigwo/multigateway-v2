@@ -370,14 +370,14 @@ int32_t save_vfilestr(FILE *fp,char *str)
     return(-1);
 }
 
-int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp)
+int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
 {
     int32_t retval;
     long savepos;
     uint64_t len;
     *lenp = 0;
     savepos = ftell(fp);
-    if ( (retval= load_varint(&len,fp)) > 0 )
+    if ( (retval= load_varint(&len,fp)) > 0 && len < maxlen )
     {
         if ( fread(str,1,len,fp) != len )
         {
@@ -392,7 +392,7 @@ int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp)
             //printf("fpos.%ld got string.(%s) len.%d\n",ftell(fp),str,(int)len);
             return((int32_t)len);
         }
-    } else printf("load_varint got %d at %ld: len.%lld\n",retval,ftell(fp),(long long)len);
+    } else printf("load_varint got %d at %ld: len.%lld maxlen.%d\n",retval,ftell(fp),(long long)len,maxlen);
     fseek(fp,savepos,SEEK_SET);
     return(-1);
 }

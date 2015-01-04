@@ -449,7 +449,10 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
     {
         struct coin_info *cp;
         while ( (cp= get_coin_info("BTCD")) == 0 )
-            sleep(1);
+        {
+            printf("no BTCD coin info\n");
+            sleep(10);
+        }
         parse_ipaddr(cp->myipaddr,myipaddr);
         bind_NXT_ipaddr(cp->srvpubnxtbits,myipaddr);
         if ( IS_LIBTEST > 0 )//&& IS_LIBTEST < 7 )
@@ -742,7 +745,6 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         fclose(fp);
     }
     Global_mp = init_SuperNET_globals();
-    
     if ( Debuglevel > 0 )
         printf("call init_NXTservices (%s)\n",myipaddr);
     myipaddr = init_NXTservices(JSON_or_fname,myipaddr);

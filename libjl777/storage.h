@@ -716,11 +716,11 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
 
 void ensure_SuperNET_dirs(char *backupdir)
 {
-    char dirname[1024],coinstr[128];
+    char dirname[1024],coinstr[128],*dirstr = "ramchains";
     int32_t i,n;
     cJSON *array;
     //struct coin_info *cp;
-    ensure_directory("address");
+    ensure_directory(dirstr);
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
@@ -730,9 +730,9 @@ void ensure_SuperNET_dirs(char *backupdir)
             //if ( (cp= get_coin_info(coinstr)) != 0 )
             {
                 printf("ensure.%s\n",coinstr);
-                sprintf(dirname,"address/%s",coinstr), ensure_directory(dirname);
+                sprintf(dirname,"%s/%s",dirstr,coinstr), ensure_directory(dirname);
                 //sprintf(dirname,"address/%s/addrs",coinstr), ensure_directory(dirname);
-                sprintf(dirname,"address/%s/bitstream",coinstr), ensure_directory(dirname);
+                sprintf(dirname,"%s/%s/bitstream",dirstr,coinstr), ensure_directory(dirname);
                 //sprintf(dirname,"address/%s/scripts",coinstr), ensure_directory(dirname);
                 //sprintf(dirname,"address/%s/txids",coinstr), ensure_directory(dirname);
             }

@@ -21,7 +21,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	ar rcu  libs/libjl777.a  $(OBJS) gzip/*.o libtom/*.o libs/randombytes.o;\
+	ar rcu  libs/libjl777.a  $(OBJS) gzip/*.o libtom/*.o #libs/randombytes.o;\
 
 test:	all
 	(cd tests; make test)
@@ -127,7 +127,7 @@ count:
 .PHONY: libjl777.c
 
 ../src/BitcoinDarkd: libjl777.a
-libs/randombytes.o:
+#libs/randombytes.o:
 libs/libuv.a:
 /usr/lib/libjl777.so: libs/libjl777.so
 doesntexist:

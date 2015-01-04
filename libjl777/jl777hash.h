@@ -3,7 +3,6 @@
 //  Created by jl777
 //  MIT License
 //
-
 #ifndef gateway_jl777hash_h
 #define gateway_jl777hash_h
 
@@ -451,6 +450,7 @@ void *add_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key)
     int32_t allocsize;
     struct hashtable *hp = *hp_ptr;
     *createdflagp = 0;
+
     if ( key == 0 || hp == 0 || (*key == 0 && hp->keysize == 0) )
     {
         printf("%p key.(%s) len.%ld is too big for %s %ld, FATAL\n",key,key,strlen(key),hp!=0?hp->name:"",hp!=0?hp->keysize:0);
