@@ -555,7 +555,7 @@ int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *
     uint8_t data[32768];
     struct huffitem *item;
     union huffinfo U;
-    long remaining,eofpos,endpos = 0;
+    long remaining,eofpos,fpos,endpos = 0;
     int32_t len,maxlen,createdflag,n,count = 0;
     n = 0;
     if ( (fp= bfp->fp) != 0 )
@@ -637,7 +637,7 @@ int32_t load_fixed_fields(struct compressionvars *V,struct bitstream_file *bfp)
     if ( (bfp->mode & BITSTREAM_VALUE) != 0 )
         itemsize = sizeof(uint64_t);
     else itemsize = bfp->itemsize;
-    fpos = ftell(fp);
+    fpos = ftell(bfp->fp);
     while ( (ftell(bfp->fp)+bfp->itemsize) <= endpos && fread(data,1,itemsize,bfp->fp) == itemsize )
     {
         memset(&U,0,sizeof(U));
