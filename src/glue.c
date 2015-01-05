@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
 void *poll_for_broadcasts(void *args);
@@ -24,8 +25,13 @@ void *_launch_SuperNET(void *_myip)
     char cmd[128];
     int32_t retval,port,usessl;
     void *processptr = 0;
+    #ifdef _WIN32
+    system("del horrible.hack");
+    sprintf(cmd, "SuperNET.exe %s",myip);
+    #else
     system("rm horrible.hack");
     sprintf(cmd,"./SuperNET %s &",myip);
+    #endif
     if ( system(cmd) != 0 )
         printf("error launching (%s)\n",cmd);
     while ( (fp= fopen("horrible.hack","rb")) == 0 )
