@@ -47,6 +47,886 @@ int32_t expand_nxt64bits(char *NXTaddr,uint64_t nxt64bits);
 char *clonestr(char *);
 int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
 
+struct huffcode *huff_create(const struct huffitem **items,int32_t numinds,int32_t frequi);
+void huff_iteminit(struct huffitem *hip,uint32_t huffind,void *ptr,long size,long wt);
+void huff_free(struct huffcode *huff);
+void huff_clearstats(struct huffcode *huff);
+char *_mbstr(double n);
+int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen);
+long emit_varint(FILE *fp,uint64_t x);
+double milliseconds();
+struct coin_info *get_coin_info(char *coinstr);
+uint32_t get_blockheight(struct coin_info *cp);
+
+
+uint32_t conv_rawind(uint32_t huffid,uint32_t rawind) { return((rawind << 4) | (huffid&0xf)); }
+
+int32_t calc_frequi(uint32_t *slicep,char *coinstr,uint32_t blocknum)
+{
+    int32_t slice,incr;
+    incr = 1000;
+    slice = (incr / HUFF_NUMFREQS);
+    if ( slicep != 0 )
+        *slicep = slice;
+    return((blocknum / slice) % HUFF_NUMFREQS);
+}
+
+void set_commpressionvars_fname(int32_t readonly,char *fname,char *coinstr,char *typestr,int32_t subgroup)
+{
+    char *dirname = (readonly != 0) ? "/Users/jimbolaptop/ramchains" : "ramchains";
+    if ( subgroup < 0 )
+        sprintf(fname,"%s/%s/%s.%s",dirname,coinstr,coinstr,typestr);
+    else sprintf(fname,"%s/%s/%s/%s.%d",dirname,coinstr,typestr,coinstr,subgroup);
+}
+
+void update_huffitem(int32_t incr,struct huffitem *hip,uint32_t huffind,void *fullitem,long fullsize,int32_t wt)
+{
+    int32_t i;
+    //printf("update_huffitem rawind.%d type.%d full.%p size.%ld wt.%d\n",rawind,hufftype,fullitem,fullsize,wt);
+    if ( fullitem != 0 && hip->wt == 0 )
+        huff_iteminit(hip,huffind,fullitem,fullsize,wt==0?sizeof(uint32_t):wt);
+    if ( incr > 0 )
+    {
+        for (i=0; i<(int32_t)(sizeof(hip->freq)/sizeof(*hip->freq)); i++)
+            hip->freq[i] += incr;
+    }
+}
+
+void update_bitstream(struct bitstream_file *bfp,uint32_t blocknum)
+{
+    bfp->blocknum = blocknum;
+}
+
+void *_get_dataptr(char **strp,uint64_t *valuep,struct bitstream_file *bfp,uint32_t itemind)
+{
+    void *dataptr;
+    struct huffitem *item;
+    *valuep = 0;
+    **strp = 0;
+    if ( bfp != 0 && itemind <= bfp->ind )
+    {
+        if ( (bfp->mode & BITSTREAM_UNIQUE) == 0 && (dataptr= (struct voutinfo *)bfp->dataptr) != 0 )
+        {
+            if ( bfp->huffwt != 0 && (bfp->mode & BITSTREAM_STATSONLY) == 0 )
+                return((void *)((long)dataptr + itemind*bfp->huffwt));
+        }
+        else
+        {
+            if ( (item= bfp->itemptrs[itemind]) != 0 )
+            {
+                if ( (bfp->mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) == 0 )
+                    *valuep = item->U.value.amount;
+                else *strp = item->str;
+            }
+            return(item);
+        }
+    }
+    return(0);
+}
+
+struct address_entry *get_vininfo(struct compressionvars *V,uint32_t vinind)
+{
+    char *str; uint64_t value;
+    return(_get_dataptr(&str,&value,V->bfps[V->vinsbfp],vinind));
+}
+
+struct address_entry *get_voutinfo(struct compressionvars *V,uint32_t voutind)
+{
+    char *str; uint64_t value;
+    return(_get_dataptr(&str,&value,V->bfps[V->voutsbfp],voutind));
+}
+
+struct huffitem *get_valueinfo(struct compressionvars *V,uint64_t value)
+{
+    char valuestr[64];
+    struct huffitem *item;
+    expand_nxt64bits(valuestr,value);
+    HASH_FIND_STR(V->bfps[V->valuebfp]->dataptr,valuestr,item);
+    return(item);
+}
+
+struct blockinfo *get_blockinfo(struct compressionvars *V,uint32_t blocknum)
+{
+    char *str; uint64_t value;
+    return(_get_dataptr(&str,&value,V->bfps[0],blocknum));
+}
+
+char *_conv_rawind(struct compressionvars *V,struct bitstream_file *bfp,uint32_t rawind)
+{
+    char *str; uint64_t value;
+    if ( _get_dataptr(&str,&value,bfp,rawind) != 0 )
+        return(str);
+    else return(0);
+}
+#define conv_addrind(V,addrind) _conv_rawind(V,(V)->bfps[(V)->addrbfp],addind)
+#define conv_txidind(V,txidind) _conv_rawind(V,(V)->bfps[(V)->txidbfp],txidind)
+#define conv_scriptind(V,scriptind) _conv_rawind(V,(V)->bfps[(V)->scriptbfp],scriptind)
+
+int32_t check_for_blockcheck(FILE *fp)
+{
+    long fpos;
+    uint64_t blockcheck;
+    fpos = ftell(fp);
+    fread(&blockcheck,1,sizeof(blockcheck),fp);
+    if ( (uint32_t)(blockcheck >> 32) == ~(uint32_t)blockcheck )
+        return(1);
+    fseek(fp,fpos,SEEK_SET);
+    return(0);
+}
+
+long emit_blockcheck(FILE *fp,uint64_t blocknum)
+{
+    long fpos,retval = 0;
+    uint64_t blockcheck;
+    if ( fp != 0 )
+    {
+        fpos = ftell(fp);
+        blockcheck = (~blocknum << 32) | blocknum;
+        retval = fwrite(&blockcheck,1,sizeof(blockcheck),fp);
+        fseek(fp,fpos,SEEK_SET);
+        fflush(fp);
+    }
+    return(retval);
+}
+
+uint32_t load_blockcheck(FILE *fp)
+{
+    long fpos;
+    uint64_t blockcheck;
+    uint32_t blocknum = 0;
+    fseek(fp,0,SEEK_END);
+    fpos = ftell(fp);
+    if ( fpos >= sizeof(blockcheck) )
+    {
+        fpos -= sizeof(blockcheck);
+        fseek(fp,fpos,SEEK_SET);
+    } else rewind(fp);
+    if ( fread(&blockcheck,1,sizeof(blockcheck),fp) != sizeof(blockcheck) || (uint32_t)(blockcheck >> 32) != ~(uint32_t)blockcheck )
+        blocknum = 0;
+    else
+    {
+        blocknum = (uint32_t)blockcheck;
+        fpos = ftell(fp);
+        fseek(fp,fpos-sizeof(blockcheck),SEEK_SET);
+        //printf("found valid marker blocknum %llx -> %u endpos.%ld fpos.%ld\n",(long long)blockcheck,blocknum,fpos,ftell(fp));
+    }
+    return(blocknum);
+}
+
+FILE *_open_varsfile(int32_t readonly,uint32_t *blocknump,char *fname,char *coinstr)
+{
+    FILE *fp = 0;
+    if ( readonly != 0 )
+    {
+        if ( (fp = fopen(fname,"rb")) != 0 )
+        {
+            fseek(fp,0,SEEK_END);
+            *blocknump = load_blockcheck(fp);
+            printf("opened %s blocknum.%d\n",fname,*blocknump);
+            rewind(fp);
+        }
+    }
+    else
+    {
+        if ( (fp = fopen(fname,"rb+")) == 0 )
+        {
+            if ( (fp = fopen(fname,"wb")) == 0 )
+            {
+                printf("couldnt create (%s)\n",fname);
+                while ( 1 ) sleep (60);
+            }
+            printf("created %s -> fp.%p\n",fname,fp);
+            *blocknump = 0;
+        }
+        else
+        {
+            fseek(fp,0,SEEK_END);
+            *blocknump = load_blockcheck(fp);
+            printf("opened %s blocknum.%d\n",fname,*blocknump);
+            rewind(fp);
+        }
+    }
+    return(fp);
+}
+
+struct huffitem *update_compressionvars_table(int32_t *createdflagp,struct bitstream_file *bfp,char *str,union huffinfo *U)
+{
+    struct huffitem *item;
+    int32_t len,numitems;
+    HASH_FIND_STR(bfp->dataptr,str,item);
+    if ( item == 0 )
+    {
+        len = (int32_t)strlen(str);
+        item = calloc(1,sizeof(*item) + len + 1);
+        strcpy(item->str,str);
+        HASH_ADD_STR(bfp->dataptr,str,item);
+        numitems = (++bfp->ind + 1);
+        if ( bfp->nomemstructs == 0 )
+        {
+            bfp->itemptrs = realloc(bfp->itemptrs,sizeof(item) * numitems);
+            bfp->itemptrs[bfp->ind] = item;
+        }
+        huff_iteminit(item,conv_rawind(bfp->huffid,bfp->ind),str,0,bfp->huffwt);
+        item->U = *U;
+        //printf("%s: add.(%s) rawind.%d huffind.%d rawind2.%d U.script.addrind %d vs %d\n",bfp->typestr,str,bfp->ind,item->huffind,item->huffind>>4,item->U.script.addrind,U->script.addrind);
+        *createdflagp = 1;
+    }
+    else
+    {
+        if ( bfp->nomemstructs == 0 )
+        {
+            update_huffitem(1,item,item->huffind,0,0,item->wt);
+            printf("%s: incr.(%s) huffind.%d freq.%d\n",bfp->typestr,str,item->huffind,item->freq[0]);
+        }
+        *createdflagp = 0;
+    }
+    return(item);
+}
+
+struct huffitem *append_to_streamfile(struct bitstream_file *bfp,uint32_t blocknum,void *newdata,uint32_t num,int32_t flushflag)
+{
+    unsigned char databuf[8192];
+    long n,fpos,startpos = ((long)bfp->ind * bfp->itemsize);
+    void *startptr;
+    FILE *fp;
+    if ( (newdata == 0 || num == 0) && flushflag != 0 && (fp= bfp->fp) != 0 )
+    {
+        if ( blocknum != 0xffffffff )
+        {
+            emit_blockcheck(fp,blocknum); // will be overwritten next block, but allows resuming in case interrupted
+            //printf("emit blockcheck.%d for %s from %u fpos %ld %d\n",blocknum,bfp->fname,bfp->blocknum,ftell(fp),load_blockcheck(fp));
+            bfp->blocknum = blocknum;
+        }
+        return(0);
+    }
+    bfp->ind += num;
+    if ( bfp->nomemstructs == 0 )
+    {
+        bfp->dataptr = realloc(bfp->dataptr,bfp->itemsize * bfp->ind);
+        startptr = (void *)((long)bfp->dataptr + startpos);
+    } else startptr = databuf;
+    if ( sizeof(databuf) < num*bfp->itemsize )
+    {
+        printf("%s: databuf too small %ld vs %ld\n",bfp->typestr,sizeof(databuf),num*bfp->itemsize);
+        exit(-1);
+    }
+    memcpy(startptr,newdata,num * bfp->itemsize);
+    if ( blocknum == 0xffffffff )
+        return(0);
+    //force_fpos(bfp->fname,&bfp->fp,startpos);
+    fseek(bfp->fp,startpos,SEEK_SET);
+    if ( (fp= bfp->fp) != 0 && (fpos= ftell(fp)) == startpos )
+    {
+        if ( (n= fwrite(startptr,bfp->itemsize,num,fp)) != num )
+            fprintf(stderr,"FWRITE ERROR %ld (%s) block.%u startpos.%ld num.%d itemsize.%ld\n",n,bfp->fname,blocknum,startpos,num,bfp->itemsize);
+        else
+        {
+            if ( flushflag != 0 )
+            {
+                emit_blockcheck(bfp->fp,blocknum); // will be overwritten next block, but allows resuming in case interrupted
+                //printf("emit blockcheck.%d for %s from %u fpos %ld %d\n",blocknum,bfp->fname,bfp->blocknum,ftell(fp),load_blockcheck(fp));
+                bfp->blocknum = blocknum;
+            }
+            return(0);
+        }
+    } else fprintf(stderr,"append_to_filedata.(%s) block.%u error: fp.%p fpos.%ld vs startpos.%ld\n",bfp->fname,blocknum,fp,fpos,startpos);
+    while ( 1 )
+        sleep(1);
+    exit(-1); // to get here probably out of disk space, abort is best
+}
+
+void *update_bitstream_file(struct compressionvars *V,int32_t *createdflagp,struct bitstream_file *bfp,uint32_t blocknum,void *data,int32_t datalen,char *str,union huffinfo *Up)
+{
+    union huffinfo U;
+    struct huffitem *item = 0;
+    uint32_t huffind,rawind;
+    int32_t createdflag = 0;
+    if ( blocknum != 0xffffffff )
+        bfp->blocknum = blocknum;
+    if ( (bfp->mode & BITSTREAM_UNIQUE) != 0 ) // "addr", "txid", "script", "value"
+    {
+        item = update_compressionvars_table(&createdflag,bfp,str,Up);
+        if ( item != 0 )
+        {
+            if ( createdflag != 0 && blocknum != 0xffffffff && bfp->fp != 0 && (bfp->mode & BITSTREAM_STATSONLY) == 0 )
+            {
+                if ( data == 0 && str != 0 )
+                    data = (uint8_t *)str, datalen = (int32_t)strlen(str) + 1;
+                if ( data != 0 && datalen != 0 )
+                {
+                    //printf("%s: ",bfp->typestr);
+                    if ( (bfp->mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) != 0 )
+                    {
+                        //printf("%s: %d -> fpos.%ld ",bfp->typestr,datalen,ftell(bfp->fp));
+                        emit_varint(bfp->fp,datalen);
+                    }
+                    if ( 0 )
+                    {
+                        char tmp[8192];
+                        if ( str == 0 || str[0] == 0 )
+                            init_hexbytes_noT(tmp,data,datalen);
+                        else strcpy(tmp,str);
+                        printf("(%s) -> fpos.%ld ",tmp,ftell(bfp->fp));
+                    }
+                    if ( fwrite(data,1,datalen,bfp->fp) != datalen )
+                    {
+                        printf("error writing %d bytes to %s\n",datalen,bfp->fname);
+                        exit(-1);
+                    }
+                    //printf("block.%u -> fpos.%ld ",blocknum,ftell(bfp->fp));
+                    emit_blockcheck(bfp->fp,blocknum);
+                    //printf("curpos.%ld\n",ftell(bfp->fp));
+                } else printf("warning: bfp[%d] had no data in block.%u\n",bfp->huffid,blocknum);
+            }
+            //else printf("%s: (%s) duplicate.%d \n",bfp->typestr,item->str,item->freq[0]);
+        }
+    }
+    else if ( bfp->fp != 0 ) // "blocks", "vins", "vouts", "bitstream"
+    {
+        if ( blocknum != 0xffffffff && (bfp->mode & BITSTREAM_COMPRESSED) != 0 ) // "bitstream"
+            update_bitstream(bfp,blocknum);
+        else
+        {
+            append_to_streamfile(bfp,blocknum,data,1,1);
+            if ( bfp->nomemstructs == 0 )
+            {
+                if ( strcmp(bfp->typestr,"blocks") == 0 )
+                {
+                    int32_t numvins,numvouts;
+                    struct blockinfo B;
+                    if ( datalen == sizeof(B) )
+                    {
+                        memcpy(&B,data,sizeof(B));
+                        if ( (numvins= (B.firstvin - V->prevB.firstvin)) >= 0 && (numvouts= (B.firstvout - V->prevB.firstvout)) >= 0 )
+                        {
+                            if ( numvins < (1<<16) && numvouts < (1<<16) )
+                            {
+                                memset(&U,0,sizeof(U));
+                                U.s = numvins, update_bitstream_file(V,&createdflag,V->numvinsbfp,blocknum,&U.s,sizeof(U.s),0,&U);
+                                U.s = numvouts, update_bitstream_file(V,&createdflag,V->numvoutsbfp,blocknum,&U.s,sizeof(U.s),0,&U);
+                            }
+                            else
+                            {
+                                printf("block.%d: numvouts.%d or numvins.%d overflow\n",blocknum,numvouts,numvins);
+                                exit(-1);
+                            }
+                        }
+                        printf("block.%d %u %u | %d %d\n",blocknum,B.firstvin,B.firstvout,numvins,numvouts);
+                        V->prevB = B;
+                    }
+                    else
+                    {
+                        printf("illegal size.%d for blockinfo.%ld\n",datalen,sizeof(B));
+                        exit(-1);
+                    }
+                }
+                else if ( strcmp(bfp->typestr,"vouts") == 0 )
+                {
+                    struct voutinfo v;
+                    if ( datalen == sizeof(v) )
+                    {
+                        memcpy(&v,data,datalen);
+                        printf("tx.%-5d:v%-3d A.%-5d S.%-5d %.8f\n",v.tp_ind,v.vout,v.addr_ind,v.sp_ind,dstr(v.value));
+                    }
+                    else
+                    {
+                        printf("illegal size.%d for voutinfo.%ld\n",datalen,sizeof(v));
+                        exit(-1);
+                    }
+                }
+            }
+        }
+    }
+    if ( (bfp->mode & BITSTREAM_STATSONLY) != 0 )
+    {
+        ++bfp->ind;
+        if ( bfp->nomemstructs == 0 )
+        {
+            uint8_t c; uint16_t s;
+            rawind = 0;
+            switch ( bfp->itemsize )
+            {
+                case sizeof(uint32_t): memcpy(&rawind,data,bfp->itemsize); break;
+                case sizeof(uint16_t): memcpy(&s,data,bfp->itemsize), rawind = s; break;
+                case sizeof(uint8_t): c = *(uint8_t *)data, rawind = c; break;
+                default: rawind = 0; printf("illegal itemsize.%ld\n",bfp->itemsize);
+            }
+            if ( rawind < bfp->maxitems ) // "inblock", "intxind", "invout"
+            {
+                huffind = conv_rawind(bfp->huffid,rawind);
+                item = &bfp->dataptr[rawind];
+                if ( item->wt == 0 )
+                    huff_iteminit(item,huffind,(void *)&huffind,sizeof(huffind),bfp->huffwt);
+                update_huffitem(1,item,item->huffind,0,0,item->wt);
+            } else printf("rawind %d too big for %s %u\n",rawind,bfp->fname,bfp->maxitems);
+        }
+    }
+    *createdflagp = createdflag;
+    return(item);
+}
+
+long get_endofdata(long *eofposp,FILE *fp)
+{
+    long endpos;
+    fseek(fp,0,SEEK_END);
+    *eofposp = ftell(fp);
+    fseek(fp,-sizeof(uint64_t),SEEK_END);
+    endpos = ftell(fp);
+    rewind(fp);
+    return(endpos);
+}
+
+int32_t expand_scriptdata(uint32_t *addrhuffindp,char *scriptstr,uint8_t *scriptdata,int32_t datalen)
+{
+    char *prefix,*suffix;
+    int32_t mode,n;
+    uint32_t addrhuffind = 0;
+    for (n=0; n<4; n++)
+        addrhuffind |= scriptdata[n], addrhuffind <<= 8;
+    switch ( (mode= scriptdata[n++]) )
+    {
+        case 's': prefix = "76a914", suffix = "88ac"; break;
+        case 'm': prefix = "a9", suffix = "ac"; break;
+        case 'r': prefix = "", suffix = "ac"; break;
+        case ' ': prefix = "", suffix = ""; break;
+        default: printf("unexpected scriptmode.(%d)\n",mode); prefix = "", suffix = ""; break;
+    }
+    strcpy(scriptstr,prefix);
+    init_hexbytes_noT(scriptstr+strlen(scriptstr),scriptdata+n,datalen-n);
+    if ( suffix[0] != 0 )
+        strcat(scriptstr,suffix);
+    printf("mode.%d %u (%s)\n",mode,addrhuffind,scriptstr);
+    *addrhuffindp = addrhuffind;
+    return(mode);
+}
+
+int32_t calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,int32_t trimflag,uint32_t addrhuffind)
+{
+    int32_t n,len,mode = 0;
+    len = (int32_t)strlen(script);
+    *datalenp = 0;
+    if ( strncmp(script,"76a914",6) == 0 && strcmp(script+len-4,"88ac") == 0 )
+    {
+        if ( trimflag != 0 )
+        {
+            script[len-4] = 0;
+            script += 6;
+        }
+        mode = 's';
+    }
+    else if ( strcmp(script+len-2,"ac") == 0 )
+    {
+        if ( strncmp(script,"a9",2) == 0 )
+        {
+            if ( trimflag != 0 )
+            {
+                script[len-2] = 0;
+                script += 2;
+            }
+            mode = 'm';
+        }
+        else
+        {
+            if ( trimflag != 0 )
+                script[len-2] = 0;
+            mode = 'r';
+        }
+    } else mode = ' ';
+    if ( trimflag != 0 )
+    {
+        //if ( addrhuffind != 0 )
+        //    printf("set addrhuffind.%d\n",addrhuffind);
+        for (n=0; n<4; n++)
+            scriptdata[n] = (addrhuffind & 0xff), addrhuffind >>= 8;
+        scriptdata[n++] = mode;
+        len = (int32_t)(strlen(script) >> 1);
+        decode_hex(scriptdata+n,len,script);
+        (*datalenp) = (len + n);
+        //printf("set pubkey.(%s).%ld <- (%s)\n",pubkeystr,strlen(pubkeystr),script);
+    }
+    return(mode);
+}
+
+int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *bfp,int32_t isbinary)
+{
+    FILE *fp;
+    char str[65536];
+    uint8_t data[32768];
+    struct huffitem *item;
+    union huffinfo U;
+    long remaining,eofpos,endpos = 0;
+    int32_t len,maxlen,createdflag,n,count = 0;
+    n = 0;
+    if ( (fp= bfp->fp) != 0 )
+    {
+        endpos = get_endofdata(&eofpos,fp);
+        maxlen = (int32_t)sizeof(data)-1;
+        while ( ftell(fp) < endpos && load_vfilestr(&len,(isbinary != 0) ? (char *)data : str,fp,maxlen) > 0 )
+        {
+            memset(&U,0,sizeof(U));
+            //printf("isbinary.%d: len.%d\n",isbinary,len);
+            if ( isbinary != 0 )
+            {
+                if ( (bfp->mode & BITSTREAM_SCRIPT) != 0 )
+                    U.script.mode = expand_scriptdata(&U.script.addrind,str,data,len);
+                else if ( (bfp->mode & BITSTREAM_32bits) != 0 )
+                {
+                    memcpy(&U.i,data,sizeof(uint32_t));
+                    init_hexbytes_noT(str,data+sizeof(uint32_t),len-sizeof(uint32_t));
+                }
+                else if ( (bfp->mode & BITSTREAM_64bits) != 0 )
+                    memcpy(&U.value.amount,data,sizeof(uint64_t));
+                else init_hexbytes_noT(str,data,len);
+            }
+            if ( str[0] != 0 )
+            {
+                //printf("add.(%s)\n",str);
+                if ( isbinary != 0 )
+                    item = update_bitstream_file(V,&createdflag,bfp,0xffffffff,data,len,str,&U);
+                else item = update_bitstream_file(V,&createdflag,bfp,0xffffffff,0,0,str,&U);
+                /*if ( (bfp->mode & BITSTREAM_SCRIPT) != 0 )
+                {
+                    sp = (struct scriptinfo *)item;
+                    sp->mode = mode;
+                    sp->addrhuffind = addrhuffind;
+                    if ( addrhuffind != 0 )
+                        printf("set addrhuffind.%d < (%s)\n",addrhuffind,str);
+                }*/
+                if ( createdflag == 0 )
+                    printf("WARNING: redundant entry in (%s).%d [%s]?\n",bfp->fname,count,str);
+                count++;
+            }
+            remaining = (endpos - ftell(fp));
+            if ( remaining < sizeof(data) )
+                maxlen = (int32_t)(endpos - ftell(fp));
+        }
+    }
+    bfp->checkblock = load_blockcheck(bfp->fp);
+    printf("loaded %d to block.%u from hashtable.(%s) fpos.%ld vs endpos.%ld | numblockchecks.%d\n",count,bfp->checkblock,bfp->fname,ftell(fp),eofpos,n);
+    return(count);
+}
+
+void update_vinsbfp(struct compressionvars *V,struct bitstream_file *bfp,struct address_entry *bp,uint32_t blocknum)
+{
+    int32_t createdflag;
+    union huffinfo U;
+    memset(&U,0,sizeof(U));
+    //printf("spent block.%u txind.%d vout.%d\n",bp->blocknum,bp->txind,bp->v);
+    if ( blocknum != 0xffffffff )
+        update_bitstream_file(V,&createdflag,bfp,blocknum,bp,sizeof(*bp),0,&U);
+    U.s = bp->txind, update_bitstream_file(V,&createdflag,V->txinbfp,blocknum,&U.s,sizeof(U.s),0,&U);
+    U.s = bp->v, update_bitstream_file(V,&createdflag,V->invoutbfp,blocknum,&U.s,sizeof(U.s),0,&U);
+    U.i = bp->blocknum, update_bitstream_file(V,&createdflag,V->inblockbfp,blocknum,&U.i,sizeof(U.i),0,&U);
+}
+
+int32_t load_fixed_fields(struct compressionvars *V,struct bitstream_file *bfp)
+{
+    void *ptr;
+    char hexstr[16385];
+    uint8_t data[8192];
+    union huffinfo U;
+    int32_t createdflag,count = 0;
+    long eofpos,endpos,itemsize;
+    endpos = get_endofdata(&eofpos,bfp->fp);
+    if ( bfp->itemsize >= sizeof(data) )
+    {
+        printf("bfp.%s itemsize.%ld too big\n",bfp->typestr,bfp->itemsize);
+        exit(-1);
+    }
+    if ( (bfp->mode & BITSTREAM_VALUE) != 0 )
+        itemsize = sizeof(uint64_t);
+    else itemsize = bfp->itemsize;
+    while ( (ftell(bfp->fp)+bfp->itemsize) <= endpos && fread(data,1,itemsize,bfp->fp) == itemsize )
+    {
+        memset(&U,0,sizeof(U));
+        init_hexbytes_noT(hexstr,data,itemsize);
+        ptr = update_bitstream_file(V,&createdflag,bfp,0xffffffff,data,(int32_t)itemsize,hexstr,&U);
+        //if ( (bfp->mode & BITSTREAM_VALUE) != 0 )
+        //    memcpy(&((struct valueinfo *)ptr)->value,data,itemsize);
+        //else
+        if ( (bfp->mode & BITSTREAM_VINS) != 0 )
+            update_vinsbfp(V,bfp,(void *)data,0xffffffff);
+    }
+    return(count);
+}
+
+int32_t checkblock(struct blockinfo *current,struct blockinfo *prev,uint32_t blocknum)
+{
+    int32_t numvins,numvouts;
+    //return((abs((int)~(blockcheck>>32)-blocknum)+abs((int)blockcheck-blocknum)));
+    if ( prev != 0 )
+    {
+        if ( (numvins= (current->firstvin - prev->firstvin)) < 0 || (numvouts= (current->firstvout - prev->firstvout)) < 0 )
+            return(1);
+        printf("block.%d: vins.(%d %d) vouts.(%d %d)\n",blocknum-1,prev->firstvin,numvins,prev->firstvout,numvouts);
+    }
+    return(0);
+}
+
+int32_t scan_ramchain(struct compressionvars *V)
+{
+    int i,checkval,errs = 0;
+    //uint64_t blockcheck;
+    struct blockinfo B,prevB;
+    struct bitstream_file *bfp;
+    memset(&prevB,0,sizeof(prevB));
+    bfp = V->bfps[0];
+    if ( bfp->fp == 0 )
+        return(-1);
+    rewind(bfp->fp);
+    for (i=0; i<bfp->blocknum; i++)
+    {
+        fread(&B,1,sizeof(B),bfp->fp);
+        checkval = checkblock(&B,i==0?0:&prevB,i);
+        if ( checkval != 0 )
+            printf("%i: %d %d | %s\n",i,B.firstvout,B.firstvin,checkval!=0?"ERROR":"OK");
+        prevB = B;
+        errs += (checkval != 0);
+    }
+    //uint32_t valuebfp,inblockbfp,txinbfp,invoutbfp,addrbfp,txidbfp,scriptbfp,voutsbfp,vinsbfp,bitstream,numbfps;
+    printf("scan_ramchain %s: errs.%d blocks.%u values.%u addrs.%u txids.%u scripts.%u vouts.%u vins.%u | VIN block.%u txind.%u v.%u\n",bfp->coinstr,errs,bfp->blocknum,V->bfps[V->valuebfp]->ind,V->bfps[V->addrbfp]->ind,V->bfps[V->txidbfp]->ind,V->bfps[V->scriptbfp]->ind,V->bfps[V->voutsbfp]->ind,V->bfps[V->vinsbfp]->ind,V->inblockbfp->ind,V->txinbfp->ind,V->invoutbfp->ind);
+    getchar();
+    return(errs);
+}
+
+struct bitstream_file *init_bitstream_file(struct compressionvars *V,int32_t huffid,int32_t mode,int32_t readonly,char *coinstr,char *typestr,long itemsize,uint32_t refblock,long huffwt)
+{
+    struct bitstream_file *bfp = calloc(1,sizeof(*bfp));
+    int32_t numitems;
+    bfp->huffid = huffid;
+    bfp->nomemstructs = !readonly;
+    bfp->mode = mode;
+    bfp->huffwt = (uint32_t)huffwt;
+    bfp->itemsize = itemsize;
+    bfp->refblock = refblock;
+    strcpy(bfp->coinstr,coinstr);
+    strcpy(bfp->typestr,typestr);
+    if ( (mode & BITSTREAM_STATSONLY) != 0 ) // needs to be unique filtered, so use hashtable
+    {
+        bfp->maxitems = refblock;
+        if ( bfp->nomemstructs == 0 )
+        {
+            if ( itemsize == sizeof(uint32_t) )
+                numitems = bfp->maxitems;
+            else if ( itemsize == sizeof(int16_t) )
+                numitems = (1<<16);
+            else { printf("unsupported itemsize of statsonly: %ld\n",itemsize); exit(-1); }
+            bfp->dataptr = calloc(numitems,sizeof(struct huffitem));
+        }
+        return(bfp);
+    }
+    set_commpressionvars_fname(readonly,bfp->fname,coinstr,typestr,-1);
+    bfp->fp = _open_varsfile(readonly,&bfp->blocknum,bfp->fname,coinstr);
+    if ( bfp->fp != 0 != 0 ) // needs to be unique filtered, so use hashtable
+    {
+        if ( (bfp->mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) != 0 )
+            load_reference_strings(V,bfp,bfp->mode & BITSTREAM_HEXSTR);
+        else if ( bfp->itemsize != 0 )
+            load_fixed_fields(V,bfp);
+        //else load_bitstream(V,bfp);
+        bfp->blocknum = load_blockcheck(bfp->fp);
+    }
+    if (  refblock != 0xffffffff && bfp->blocknum != refblock )
+    {
+        printf("%s bfp->blocknum %u != refblock.%u mismatch FATAL if less than\n",typestr,bfp->blocknum,refblock);
+        if ( bfp->blocknum < refblock )
+            exit(-1);
+    }
+    //printf("%-8s mode.%d %s itemsize.%ld numitems.%d blocknum.%u refblock.%u\n",typestr,mode,coinstr,itemsize,bfp->ind,bfp->blocknum,refblock);
+    return(bfp);
+}
+
+int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *coinstr,int32_t maxblocknum)
+{
+    struct coin_info *cp = get_coin_info(coinstr);
+    struct huffitem *addrp=0,*tp=0,*sp=0,*valp=0;
+    struct blockinfo *blockp = 0;
+    uint32_t n=0,refblock;
+    if ( V->rawbits == 0 )
+    {
+        strcpy(V->coinstr,coinstr);
+        V->startmilli = milliseconds();
+        if ( (V->maxblocknum= get_blockheight(cp)) == 0 )
+            V->maxblocknum = maxblocknum;
+        printf("init compression vars.%s: maxblocknum %d %d readonly.%d\n",coinstr,maxblocknum,get_blockheight(cp),readonly);
+        V->disp = calloc(1,100000);
+        V->buffer = calloc(1,100000);
+        V->hp = hopen(V->buffer,100000);
+        V->rawbits = calloc(1,100000);
+        V->numvinsbfp = init_bitstream_file(V,-5,BITSTREAM_STATSONLY,readonly,coinstr,"numvins",sizeof(uint16_t),1<<16,sizeof(uint16_t));
+        V->numvoutsbfp = init_bitstream_file(V,-4,BITSTREAM_STATSONLY,readonly,coinstr,"numvouts",sizeof(uint16_t),1<<16,sizeof(uint16_t));
+        V->inblockbfp = init_bitstream_file(V,-3,BITSTREAM_STATSONLY,readonly,coinstr,"inblock",sizeof(uint32_t),V->maxblocknum,sizeof(uint32_t));
+        V->txinbfp = init_bitstream_file(V,-2,BITSTREAM_STATSONLY,readonly,coinstr,"intxind",sizeof(uint16_t),1<<16,sizeof(uint16_t));
+        V->invoutbfp = init_bitstream_file(V,-1,BITSTREAM_STATSONLY,readonly,coinstr,"invout",sizeof(uint16_t),1<<16,sizeof(uint16_t));
+        n = 0;
+        V->bfps[n] = init_bitstream_file(V,n,0,readonly,coinstr,"blocks",sizeof(*blockp),0xffffffff,0), n++;
+        V->firstblock = refblock = V->bfps[0]->blocknum;
+        V->valuebfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_UNIQUE|BITSTREAM_VALUE,readonly,coinstr,"values",sizeof(*valp),refblock,sizeof(uint64_t)), n++;
+        V->addrbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_UNIQUE|BITSTREAM_STRING,readonly,coinstr,"addrs",sizeof(*addrp),refblock,0), n++;
+        V->txidbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_UNIQUE|BITSTREAM_HEXSTR,readonly,coinstr,"txids",sizeof(*tp),refblock,0), n++;
+        V->scriptbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_UNIQUE|BITSTREAM_HEXSTR|BITSTREAM_SCRIPT,readonly,coinstr,"scripts",sizeof(*sp),refblock,0), n++;
+        V->voutsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VOUTS,readonly,coinstr,"vouts",sizeof(struct voutinfo),refblock,sizeof(struct voutinfo)), n++;
+        V->vinsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VINS,readonly,coinstr,"vins",sizeof(struct address_entry),refblock,sizeof(struct address_entry)), n++;
+        V->bitstream = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_COMPRESSED,readonly,coinstr,"bitstream",0,refblock,0), n++;
+        scan_ramchain(V);
+    }
+    if ( readonly != 0 )
+        exit(1);
+    return(n);
+}
+
+void clear_compressionvars(struct compressionvars *V,int32_t clearstats,int32_t frequi)
+{
+    V->maxitems = 0;
+    /* int32_t i;
+     struct scriptinfo *sp = 0;
+     struct txinfo *tp = 0;
+     struct coinaddrinfo *addrp = 0;
+     struct valueinfo *valp = 0;
+     if ( clearstats != 0 )
+     {
+     clear_hashtable_field(V->values,(long)((long)&valp->item.freq[frequi] - (long)valp),sizeof(valp->item.freq[frequi]));
+     clear_hashtable_field(V->addrs,(long)((long)&addrp->item.freq[frequi] - (long)addrp),sizeof(addrp->item.freq[frequi]));
+     clear_hashtable_field(V->txids,(long)((long)&tp->item.freq[frequi] - (long)tp),sizeof(tp->item.freq[frequi]));
+     clear_hashtable_field(V->scripts,(long)((long)&sp->item.freq[frequi] - (long)sp),sizeof(sp->item.freq[frequi]));
+     for (i=0; i<V->maxblocknum; i++)
+     V->blockitems[i].freq[frequi] = 0;
+     for (i=0; i<(1<<16); i++)
+     V->txinditems[i].freq[frequi] = 0;
+     for (i=0; i<(1<<16); i++)
+     V->voutitems[i].freq[frequi] = 0;
+     }*/
+}
+
+double estimate_completion(char *coinstr,double startmilli,int32_t processed,int32_t numleft)
+{
+    double elapsed,rate;
+    if ( processed <= 0 )
+        return(0.);
+    elapsed = (milliseconds() - startmilli);
+    rate = (elapsed / processed);
+    if ( rate <= 0. )
+        return(0.);
+    //printf("numleft %d rate %f\n",numleft,rate);
+    return(numleft * rate / 1000.);
+}
+
+uint32_t flush_compressionvars(struct compressionvars *V,uint32_t prevblocknum,uint32_t newblocknum,int32_t frequi)
+{
+    struct blockinfo B;
+    long sum,sum2,fpos;
+    uint32_t slice,i;
+    memset(&B,0,sizeof(B));
+    if ( prevblocknum != 0xffffffff )
+    {
+        B.firstvout = V->firstvout, B.firstvin = V->firstvin;
+        append_to_streamfile(V->bfps[0],prevblocknum,&B,1,0);
+        V->firstvout = V->bfps[V->voutsbfp]->ind;
+        V->firstvin = V->bfps[V->vinsbfp]->ind;
+        B.firstvout = V->firstvout, B.firstvin = V->firstvin;
+        fpos = ftell(V->bfps[0]->fp);
+        append_to_streamfile(V->bfps[0],prevblocknum,&B,1,1);
+        fseek(V->bfps[0]->fp,fpos,SEEK_SET);
+        sum = sum2 = fpos;
+        for (i=1; i<V->numbfps; i++)
+        {
+            if ( V->bfps[i]->fp != 0 )
+            {
+                emit_blockcheck(V->bfps[i]->fp,prevblocknum);
+                sum += ftell(V->bfps[i]->fp);
+            }
+        }
+        sum2 += ftell(V->bfps[V->voutsbfp]->fp) + ftell(V->bfps[V->vinsbfp]->fp);
+        // numhuffinds = emit_compressed_block(V,prevblocknum,frequi);
+        if ( V->disp != 0 )
+        {
+            sprintf(V->disp+strlen(V->disp),"-> max.%-4d %.1f %.1f est %.1f minutes\n%s F.%d NEWBLOCK.%u | ",V->maxitems,(double)sum/(prevblocknum+1),(double)sum2/(prevblocknum+1),estimate_completion(V->coinstr,V->startmilli,V->processed,(int32_t)V->maxblocknum-prevblocknum)/60,V->coinstr,frequi,prevblocknum);
+            printf("%s",V->disp);
+            V->disp[0] = 0;
+        }
+        calc_frequi(&slice,V->coinstr,newblocknum);
+        clear_compressionvars(V,(newblocknum % slice) == 0,frequi);
+    }
+    V->blocknum = newblocknum;
+    V->processed++;
+    return(newblocknum);
+}
+
+void set_voutinfo(struct voutinfo *v,uint32_t tp_ind,uint32_t vout,uint32_t addr_ind,uint64_t value,uint32_t sp_ind)
+{
+    memset(v,0,sizeof(*v));
+    v->tp_ind = tp_ind;
+    v->vout = vout;
+    v->addr_ind = addr_ind;
+    v->value = value;
+    v->sp_ind = sp_ind;
+}
+
+void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct address_entry *bp,uint64_t value,char *txidstr,char *script,int32_t numvins,uint64_t inputsum,int32_t numvouts,uint64_t remainder)
+{
+    char valuestr[128];
+    int32_t frequi,datalen,createdflag;
+    uint8_t databuf[4096];
+    struct voutinfo vout;
+    union huffinfo U;
+    struct huffitem *addrp,*tp,*sp,*valp;
+    //printf("update ramchain.(%s) addr.(%s) block.%d vin.%d %p %p\n",coinstr,addr,bp->blocknum,bp->vinflag,txidstr,script);
+    if ( V->numbfps != 0 )
+    {
+        //printf("update compressionvars vinflag.%d\n",bp->vinflag);
+        if ( bp->vinflag == 0 )
+        {
+            if (txidstr != 0 && script != 0 ) // txidstr != 0 && script != 0 && value != 0 &&
+            {
+                //printf("txid.(%s) %s\n",txidstr,script);
+                frequi = calc_frequi(0,V->coinstr,V->blocknum);
+                if ( bp->blocknum != V->blocknum )
+                    V->blocknum = flush_compressionvars(V,V->blocknum,bp->blocknum,frequi);
+                memset(&U,0,sizeof(U));
+                addrp = update_bitstream_file(V,&createdflag,V->bfps[V->addrbfp],bp->blocknum,0,0,addr,&U);
+                datalen = (uint32_t)(strlen(txidstr) >> 1);
+                decode_hex(databuf,datalen,txidstr);
+                tp = update_bitstream_file(V,&createdflag,V->bfps[V->txidbfp],bp->blocknum,databuf,datalen,txidstr,&U);
+                if ( strlen(script) < 1024 )
+                {
+                    U.script.addrind = addrp->huffind>>4;
+                    U.script.mode = calc_scriptmode(&datalen,databuf,script,1,U.script.addrind);
+                    //printf("mode.%d addrhuff.%d vs %d\n",U.script.mode,U.script.addrind,addrp->huffind);
+                    sp = update_bitstream_file(V,&createdflag,V->bfps[V->scriptbfp],bp->blocknum,databuf,datalen,script,&U);
+                    //printf("mode.%d addrhuff.%d vs %d after update_bitstream_file\n",U.script.mode,U.script.addrind,sp->U.script.addrind);
+                } else sp = 0;
+                expand_nxt64bits(valuestr,value);
+                memset(&U,0,sizeof(U));
+                U.value.amount = value;
+                valp = update_bitstream_file(V,&createdflag,V->bfps[V->valuebfp],bp->blocknum,&value,sizeof(value),valuestr,&U);
+                //if ( 0 && V->disp != 0 )
+                //    sprintf(V->disp+strlen(V->disp),"{A%d T%d.%d S%d %.8f} ",V->addrind,V->txind,bp->v,V->scriptind,dstr(value));
+                if ( tp != 0 && addrp != 0 && sp != 0 )
+                {
+                    set_voutinfo(&vout,tp->huffind>>4,bp->v,addrp->huffind>>4,value,sp->huffind>>4);
+                    printf("output tp.%d v.%d A.%d s.%d (%d) %.8f | numvins.%d inputs %.8f numvouts.%d %.8f [%.8f]\n",vout.tp_ind,vout.vout,vout.addr_ind,vout.sp_ind,sp->U.script.addrind,dstr(vout.value),numvins,dstr(inputsum),numvouts,dstr(remainder),dstr(remainder)-dstr(value));
+                    memset(&U,0,sizeof(U));
+                    update_bitstream_file(V,&createdflag,V->bfps[V->voutsbfp],bp->blocknum,&vout,sizeof(vout),0,&U);
+                }
+            }
+            else
+            {
+                if ( 0 && V->disp != 0 )
+                    sprintf(V->disp+strlen(V->disp),"[%d %d %d] ",bp->blocknum,bp->txind,bp->v);
+                update_vinsbfp(V,V->bfps[V->vinsbfp],bp,V->blocknum);
+            }
+            V->maxitems++;
+        }
+        else
+        {
+            // vin txid:vin is dereferenced above
+            //sprintf(V->disp+strlen(V->disp),"(%d %d %d) ",bp->blocknum,bp->txind,bp->v);
+        }
+        //if ( IS_LIBTEST != 7 )
+        //    fclose(V->fp);
+    }
+}
+
 char *SuperNET_url()
 {
     static char urls[2][64];
@@ -57,7 +937,7 @@ char *SuperNET_url()
 
 cJSON *SuperAPI(char *cmd,char *field0,char *arg0,char *field1,char *arg1)
 {
-    cJSON *json;
+    cJSON *json = 0;
     char params[1024],*retstr;
     if ( field0 != 0 && field0[0] != 0 )
     {
@@ -187,7 +1067,7 @@ char *process_commandline_json(cJSON *json)
     if ( strcmp(cmd,"newbie") == 0 )
     {
         waitfor = "MGWaddr";
-        sprintf(cmdstr,"http://%s/MGW/msig/%s",Server_names[i],userNXTaddr);
+        strcpy(cmdstr,cmd);
         array = cJSON_GetObjectItem(MGWconf,"active");
         if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
         {
@@ -211,7 +1091,7 @@ char *process_commandline_json(cJSON *json)
     else if ( strcmp(cmd,"status") == 0 )
     {
         waitfor = "MGWresponse";
-        sprintf(cmdstr,"http://%s/MGW/status/%s",Server_names[i],userNXTaddr);
+        strcpy(cmdstr,cmd);
         //printf("cmdstr.(%s) waitfor.(%s)\n",cmdstr,waitfor);
         retstr = issue_MGWstatus((1<<NUM_GATEWAYS)-1,coin,userNXTaddr,userpubkey,0,rescan,actionflag);
         if ( retstr != 0 )
@@ -340,7 +1220,7 @@ char *load_filestr(char *userNXTaddr,int32_t gatewayid)
 {
     long fpos;
     FILE *fp;
-    char fname[1024],*buf,*retstr = 0;
+    char fname[1024],*buf=0,*retstr = 0;
     sprintf(fname,"%s/gateway%d/%s",MGWROOT,gatewayid,userNXTaddr);
     if ( (fp= fopen(fname,"rb")) != 0 )
     {
@@ -363,7 +1243,7 @@ char *load_filestr(char *userNXTaddr,int32_t gatewayid)
 void bridge_handler(struct transfer_args *args)
 {
     FILE *fp;
-    int32_t gatewayid;
+    int32_t gatewayid = -1;
     char fname[1024],cmd[1024],*name = args->name;
     if ( strncmp(name,"MGW",3) == 0 && name[3] >= '0' && name[3] <= '2' )
     {
@@ -538,790 +1418,6 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     FreeUPNPUrls(&urls);
     freeUPNPDevlist(devlist);
     return 1; //ok - we are mapped:)
-}
-
-/*#define HUFF_VALUE 0
-#define HUFF_COINADDR 1
-#define HUFF_TXID 2
-#define HUFF_SCRIPT 3
-#define HUFF_BLOCKNUM 4
-#define HUFF_TXIND 5
-#define HUFF_VOUT 6
-#define HUFF_RESERVED 7*/
-
-//int32_t clear_hashtable_field(struct hashtable *hp,long offset,long fieldsize);
-//int32_t gather_hashtable_field(void **items,int32_t numitems,int32_t maxitems,struct hashtable *hp,long offset,long fieldsize);
-//struct hashtable *hashtable_create(char *name,int64_t hashsize,long structsize,long keyoffset,long keysize,long modifiedoffset);
-//void *add_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key);
-//void **hashtable_gather_modified(int64_t *changedp,struct hashtable *hp,int32_t forceflag);
-struct huffcode *huff_create(const struct huffitem **items,int32_t numinds,int32_t frequi);
-void huff_iteminit(struct huffitem *hip,uint32_t huffind,void *ptr,long size,long wt);
-void huff_free(struct huffcode *huff);
-void huff_clearstats(struct huffcode *huff);
-char *_mbstr(double n);
-int32_t save_vfilestr(FILE *fp,char *str);
-int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen);
-long emit_varint(FILE *fp,uint64_t x);
-double milliseconds();
-struct coin_info *get_coin_info(char *coinstr);
-uint32_t get_blockheight(struct coin_info *cp);
-
-uint32_t BITSTREAM_GROUPSIZE(char *coinstr)
-{
-    if ( strcmp(coinstr,"BTC") == 0 )
-        return(1000);
-    else return(10000);
-}
-
-int32_t calc_frequi(uint32_t *slicep,char *coinstr,uint32_t blocknum)
-{
-    int32_t slice,incr;
-    incr = 1000;//BITSTREAM_GROUPSIZE(coinstr);
-    slice = (incr / HUFF_NUMFREQS);
-    if ( slicep != 0 )
-        *slicep = slice;
-    return((blocknum / slice) % HUFF_NUMFREQS);
-}
-
-struct coinaddrinfo
-{
-    uint32_t numentries,allocsize;
-    uint8_t binaryaddr[24];
-    struct address_entry *entries;
-    struct huffitem item;
-};
-
-struct valueinfo
-{
-    uint64_t value;
-    struct huffitem item;
-};
-
-struct scriptinfo
-{
-    uint32_t addrhuffind;
-    char mode;
-    struct huffitem item;
-};
-
-struct txinfo
-{
-    uint32_t allocsize,numentries;
-    uint16_t numvouts,numvins;
-    struct address_entry *entries;
-    struct huffitem item;
-};
-
-struct blockinfo { uint32_t firstvout,firstvin; }; // minimal info needed each block's VOUTS_count and VINS_count
-struct rawblock_voutdata { uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };
-
-void set_commpressionvars_fname(int32_t readonly,char *fname,char *coinstr,char *typestr,int32_t subgroup)
-{
-    char *dirname = (1*readonly != 0) ? "/Users/jimbolaptop/ramchains" : "ramchains";
-    if ( subgroup < 0 )
-        sprintf(fname,"%s/%s/%s.%s",dirname,coinstr,coinstr,typestr);
-    else sprintf(fname,"%s/%s/%s/%s.%d",dirname,coinstr,typestr,coinstr,subgroup);
-}
-
-int32_t check_for_blockcheck(FILE *fp)
-{
-    long fpos;
-    uint64_t blockcheck;
-    fpos = ftell(fp);
-    fread(&blockcheck,1,sizeof(blockcheck),fp);
-    if ( (uint32_t)(blockcheck >> 32) == ~(uint32_t)blockcheck )
-        return(1);
-    fseek(fp,fpos,SEEK_SET);
-    return(0);
-}
-
-long emit_blockcheck(FILE *fp,uint64_t blocknum)
-{
-    long fpos,retval = 0;
-    uint64_t blockcheck;
-    if ( fp != 0 )
-    {
-        /*fseek(fp,0,SEEK_END);
-        fpos = ftell(fp) - sizeof(blockcheck);
-        if ( fpos < 0 )
-            fpos = 0, rewind(fp);
-        else if ( check_for_blockcheck(fp) != 0 )
-            fseek(fp,fpos,SEEK_SET);*/
-        fpos = ftell(fp);
-        blockcheck = (~blocknum << 32) | blocknum;
-        retval = fwrite(&blockcheck,1,sizeof(blockcheck),fp);
-        fseek(fp,fpos,SEEK_SET);
-        fflush(fp);
-    }
-    return(retval);
-}
-
-uint32_t load_blockcheck(FILE *fp)
-{
-    long fpos;
-    uint64_t blockcheck;
-    uint32_t blocknum = 0;
-    fseek(fp,0,SEEK_END);
-    fpos = ftell(fp);
-    if ( fpos >= sizeof(blockcheck) )
-    {
-        fpos -= sizeof(blockcheck);
-        fseek(fp,fpos,SEEK_SET);
-    } else rewind(fp);
-    if ( fread(&blockcheck,1,sizeof(blockcheck),fp) != sizeof(blockcheck) || (uint32_t)(blockcheck >> 32) != ~(uint32_t)blockcheck )
-        blocknum = 0;
-    else
-    {
-        blocknum = (uint32_t)blockcheck;
-        fpos = ftell(fp);
-        fseek(fp,fpos-sizeof(blockcheck),SEEK_SET);
-        //printf("found valid marker blocknum %llx -> %u endpos.%ld fpos.%ld\n",(long long)blockcheck,blocknum,fpos,ftell(fp));
-    }
-    //fseek(fp,0,SEEK_END);
-    //fpos = ftell(fp);
-    //fseek(fp,fpos-sizeof(blockcheck),SEEK_SET);
-    return(blocknum);
-}
-
-FILE *_open_varsfile(int32_t readonly,uint32_t *blocknump,char *fname,char *coinstr)
-{
-    FILE *fp = 0;
-    if ( readonly != 0 )
-    {
-        if ( (fp = fopen(fname,"rb")) != 0 )
-        {
-            fseek(fp,0,SEEK_END);
-            *blocknump = load_blockcheck(fp);
-            printf("opened %s blocknum.%d\n",fname,*blocknump);
-            rewind(fp);
-        }
-    }
-    else
-    {
-        if ( (fp = fopen(fname,"rb+")) == 0 )
-        {
-            if ( (fp = fopen(fname,"wb")) == 0 )
-            {
-                printf("couldnt create (%s)\n",fname);
-                while ( 1 ) sleep (60);
-            }
-            printf("created %s -> fp.%p\n",fname,fp);
-            *blocknump = 0;
-        }
-        else
-        {
-            fseek(fp,0,SEEK_END);
-            *blocknump = load_blockcheck(fp);
-            printf("opened %s blocknum.%d\n",fname,*blocknump);
-            rewind(fp);
-        }
-    }
-    return(fp);
-}
-
-struct huffitem *update_compressionvars_table(int32_t *createdflagp,struct bitstream_file *bfp,char *str)
-{
-    struct huffitem *item;
-    int32_t len;
-    HASH_FIND_STR(bfp->dataptr,str,item);
-    if ( item == 0 )
-    {
-        len = (int32_t)strlen(str);
-        item = calloc(1,bfp->itemsize + len + 1);
-        strcpy(item->str,str);
-        //printf("%s: add.(%s)\n",bfp->typestr,str);
-        HASH_ADD_STR(bfp->dataptr,str,item);
-        huff_iteminit(item,(++bfp->ind<<3) | bfp->huffid,str,0,bfp->huffwt);
-        *createdflagp = 1;
-    } else *createdflagp = 0;
-    return(item);
-}
-
-int32_t append_to_streamfile(struct bitstream_file *bfp,uint32_t blocknum,void *newdata,uint32_t num,int32_t flushflag)
-{
-    unsigned char databuf[8192];
-    long n,fpos,startpos = ((long)bfp->ind * bfp->itemsize);
-    void *startptr;
-    FILE *fp;
-    if ( (newdata == 0 || num == 0) && flushflag != 0 && (fp= bfp->fp) != 0 )
-    {
-        if ( blocknum != 0xffffffff )
-        {
-            emit_blockcheck(fp,blocknum); // will be overwritten next block, but allows resuming in case interrupted
-            //printf("emit blockcheck.%d for %s from %u fpos %ld %d\n",blocknum,bfp->fname,bfp->blocknum,ftell(fp),load_blockcheck(fp));
-            bfp->blocknum = blocknum;
-        }
-        return(0);
-    }
-    bfp->ind += num;
-    if ( bfp->nomemstructs == 0 )
-    {
-        bfp->dataptr = realloc(bfp->dataptr,bfp->itemsize * bfp->ind);
-        startptr = (void *)((long)bfp->dataptr + startpos);
-    } else startptr = databuf;
-    memcpy(startptr,newdata,num * bfp->itemsize);
-    if ( blocknum == 0xffffffff )
-        return(0);
-    //force_fpos(bfp->fname,&bfp->fp,startpos);
-    fseek(bfp->fp,startpos,SEEK_SET);
-    if ( (fp= bfp->fp) != 0 && (fpos= ftell(fp)) == startpos )
-    {
-        if ( (n= fwrite(startptr,bfp->itemsize,num,fp)) != num )
-            fprintf(stderr,"FWRITE ERROR %ld (%s) block.%u startpos.%ld num.%d itemsize.%ld\n",n,bfp->fname,blocknum,startpos,num,bfp->itemsize);
-        else
-        {
-            if ( flushflag != 0 )
-            {
-                emit_blockcheck(bfp->fp,blocknum); // will be overwritten next block, but allows resuming in case interrupted
-                //printf("emit blockcheck.%d for %s from %u fpos %ld %d\n",blocknum,bfp->fname,bfp->blocknum,ftell(fp),load_blockcheck(fp));
-                bfp->blocknum = blocknum;
-            }
-            return(0);
-        }
-    } else fprintf(stderr,"append_to_filedata.(%s) block.%u error: fp.%p fpos.%ld vs startpos.%ld\n",bfp->fname,blocknum,fp,fpos,startpos);
-    while ( 1 )
-        sleep(1);
-    exit(-1); // to get here probably out of disk space, abort is best
-}
-
-void update_huffitem(int32_t incr,struct huffitem *hip,uint32_t huffind,void *fullitem,long fullsize,int32_t wt)
-{
-    int32_t i;
-    //printf("update_huffitem rawind.%d type.%d full.%p size.%ld wt.%d\n",rawind,hufftype,fullitem,fullsize,wt);
-    if ( fullitem != 0 && hip->wt == 0 )
-        huff_iteminit(hip,huffind,fullitem,fullsize,wt);
-    if ( incr > 0 )
-    {
-        for (i=0; i<(int32_t)(sizeof(hip->freq)/sizeof(*hip->freq)); i++)
-            hip->freq[i] += incr;
-    }
-}
-
-void update_bitstream(struct bitstream_file *bfp,uint32_t blocknum)
-{
-    bfp->blocknum = blocknum;
-}
-
-void *update_bitstream_file(int32_t *createdflagp,struct bitstream_file *bfp,uint32_t blocknum,void *data,int32_t datalen,char *str)
-{
-    struct huffitem *item = 0;
-    uint32_t huffind,rawind;
-    int32_t createdflag = 0;
-    if ( blocknum != 0xffffffff )
-        bfp->blocknum = blocknum;
-    if ( (bfp->mode & BITSTREAM_UNIQUE) != 0 ) // "addr", "txid", "script", "value"
-    {
-        item = update_compressionvars_table(&createdflag,bfp,str);
-        if ( item != 0 && createdflag != 0 )
-        {
-            if ( blocknum != 0xffffffff && bfp->fp != 0 && (bfp->mode & BITSTREAM_STATSONLY) == 0 )
-            {
-                if ( data == 0 && str != 0 )
-                    data = (uint8_t *)str, datalen = (int32_t)strlen(str);
-                if ( data != 0 && datalen != 0 )
-                {
-                    //printf("%s: ",bfp->typestr);
-                    if ( (bfp->mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) != 0 )
-                    {
-                        //printf("%s: %d -> fpos.%ld ",bfp->typestr,datalen,ftell(bfp->fp));
-                        emit_varint(bfp->fp,datalen);
-                    }
-                    if ( 0 )
-                    {
-                        char tmp[8192];
-                        if ( str == 0 || str[0] == 0 )
-                            init_hexbytes_noT(tmp,data,datalen);
-                        else strcpy(tmp,str);
-                        printf("(%s) -> fpos.%ld ",tmp,ftell(bfp->fp));
-                    }
-                    if ( fwrite(data,1,datalen,bfp->fp) != datalen )
-                    {
-                        printf("error writing %d bytes to %s\n",datalen,bfp->fname);
-                        exit(-1);
-                    }
-                    //printf("block.%u -> fpos.%ld ",blocknum,ftell(bfp->fp));
-                    emit_blockcheck(bfp->fp,blocknum);
-                    //printf("curpos.%ld\n",ftell(bfp->fp));
-                } else printf("warning: bfp[%d] had no data in block.%u\n",bfp->huffid,blocknum);
-            }
-        }
-    }
-    else if ( bfp->fp != 0 ) // "blocks", "vins", "vouts", "bitstream"
-    {
-        if ( blocknum != 0xffffffff && (bfp->mode & BITSTREAM_COMPRESSED) != 0 ) // "bitstream"
-            update_bitstream(bfp,blocknum);
-        else append_to_streamfile(bfp,blocknum,data,1,1);
-    }
-    else
-    {
-        uint8_t c; uint16_t s;
-        rawind = 0;
-        ++bfp->ind;
-        switch ( bfp->itemsize )
-        {
-            case sizeof(uint32_t): memcpy(&rawind,data,bfp->itemsize); break;
-            case sizeof(uint16_t): memcpy(&s,data,bfp->itemsize), rawind = s; break;
-            case sizeof(uint8_t): c = *(uint8_t *)data, rawind = c; break;
-            default: rawind = 0; printf("illegal itemsize.%ld\n",bfp->itemsize);
-        }
-        memcpy(&rawind,data,bfp->itemsize);
-        if ( bfp->nomemstructs == 0 )
-        {
-            if ( rawind < bfp->maxitems ) // "inblock", "intxind", "invout"
-            {
-                huffind = (rawind << 3) | bfp->huffid;
-                item = &bfp->dataptr[rawind];
-                if ( item->wt == 0 )
-                    huff_iteminit(item,huffind,(void *)&huffind,sizeof(huffind),bfp->huffwt);
-            } else printf("rawind %d too big for %s %u\n",rawind,bfp->fname,bfp->maxitems);
-        }
-    }
-    if ( item != 0 && bfp->nomemstructs == 0 )
-        update_huffitem(1,item,item->huffind,0,0,bfp->huffwt);
-    *createdflagp = createdflag;
-    return(item);
-}
-
-long get_endofdata(long *eofposp,FILE *fp)
-{
-    long endpos;
-    fseek(fp,0,SEEK_END);
-    *eofposp = ftell(fp);
-    fseek(fp,-sizeof(uint64_t),SEEK_END);
-    endpos = ftell(fp);
-    rewind(fp);
-    return(endpos);
-}
-
-int32_t expand_scriptdata(uint32_t *addrhuffindp,char *scriptstr,uint8_t *scriptdata,int32_t datalen)
-{
-    char *prefix,*suffix;
-    int32_t mode,n;
-    uint32_t addrhuffind = 0;
-    for (n=0; n<4; n++)
-        addrhuffind |= scriptdata[n], addrhuffind <<= 8;
-    switch ( (mode= scriptdata[n++]) )
-    {
-        case 's': prefix = "76a914", suffix = "88ac"; break;
-        case 'm': prefix = "a9", suffix = "ac"; break;
-        case 'r': prefix = "", suffix = "ac"; break;
-        case ' ': prefix = "", suffix = ""; break;
-        default: printf("unexpected scriptmode.(%d)\n",mode); prefix = "", suffix = ""; break;
-    }
-    strcpy(scriptstr,prefix);
-    init_hexbytes_noT(scriptstr+strlen(scriptstr),scriptdata+n,datalen-n);
-    if ( suffix[0] != 0 )
-        strcat(scriptstr,suffix);
-    return(mode);
-}
-
-int32_t calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,int32_t trimflag,uint32_t addrhuffind)
-{
-    int32_t n,len,mode = 0;
-    len = (int32_t)strlen(script);
-    *datalenp = 0;
-    if ( strncmp(script,"76a914",6) == 0 && strcmp(script+len-4,"88ac") == 0 )
-    {
-        if ( trimflag != 0 )
-        {
-            script[len-4] = 0;
-            script += 6;
-        }
-        mode = 's';
-    }
-    else if ( strcmp(script+len-2,"ac") == 0 )
-    {
-        if ( strncmp(script,"a9",2) == 0 )
-        {
-            if ( trimflag != 0 )
-            {
-                script[len-2] = 0;
-                script += 2;
-            }
-            mode = 'm';
-        }
-        else
-        {
-            if ( trimflag != 0 )
-                script[len-2] = 0;
-            mode = 'r';
-        }
-    } else mode = ' ';
-    if ( trimflag != 0 )
-    {
-        for (n=0; n<4; n++)
-            scriptdata[n] = (addrhuffind & 0xff), addrhuffind >>= 8;
-        scriptdata[n++] = mode;
-        len = (int32_t)(strlen(script) >> 1);
-        decode_hex(scriptdata+n,len,script);
-        (*datalenp) = (len + n);
-        //printf("set pubkey.(%s).%ld <- (%s)\n",pubkeystr,strlen(pubkeystr),script);
-    }
-    return(mode);
-}
-
-int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *bfp,int32_t isbinary)
-{
-    FILE *fp;
-    char str[65536],mode = 0;
-    uint8_t data[32768];
-    uint32_t addrhuffind = 0;
-    struct huffitem *item;
-    struct scriptinfo *sp;
-    long remaining,eofpos,endpos = 0;
-    int32_t len,maxlen,createdflag,n,count = 0;
-    n = 0;
-    if ( (fp= bfp->fp) != 0 )
-    {
-        endpos = get_endofdata(&eofpos,fp);
-        maxlen = (int32_t)sizeof(data)-1;
-        while ( ftell(fp) < endpos && load_vfilestr(&len,(isbinary != 0) ? (char *)data : str,fp,maxlen) > 0 )
-        {
-            //printf("isbinary.%d: len.%d\n",isbinary,len);
-            if ( isbinary != 0 )
-            {
-                if ( (bfp->mode & BITSTREAM_SCRIPT) != 0 )
-                    mode = expand_scriptdata(&addrhuffind,str,data,len);
-                else init_hexbytes_noT(str,data,len);
-            }
-            if ( str[0] != 0 )
-            {
-                //printf("add.(%s)\n",str);
-                if ( isbinary != 0 )
-                    item = update_bitstream_file(&createdflag,bfp,0xffffffff,data,len,str);
-                else item = update_bitstream_file(&createdflag,bfp,0xffffffff,0,0,str);
-                if ( (bfp->mode & BITSTREAM_SCRIPT) != 0 )
-                {
-                    sp = (struct scriptinfo *)item;
-                    sp->mode = mode;
-                    sp->addrhuffind = addrhuffind;
-                }
-                if ( createdflag == 0 )
-                    printf("WARNING: redundant entry in (%s).%d [%s]?\n",bfp->fname,count,str);
-                count++;
-            }
-            remaining = (endpos - ftell(fp));
-            if ( remaining < sizeof(data) )
-                maxlen = (int32_t)(endpos - ftell(fp));
-        }
-    }
-    bfp->checkblock = load_blockcheck(bfp->fp);
-    printf("loaded %d to block.%u from hashtable.(%s) fpos.%ld vs endpos.%ld | numblockchecks.%d\n",count,bfp->checkblock,bfp->fname,ftell(fp),eofpos,n);
-    return(count);
-}
-
-void update_vinsbfp(struct compressionvars *V,struct bitstream_file *bfp,struct address_entry *bp,uint32_t blocknum)
-{
-    uint16_t s; uint32_t tmp;
-    int32_t createdflag;
-//    printf("spent block.%u txind.%d vout.%d\n",bp->blocknum,bp->txind,bp->v);
-    if ( blocknum != 0xffffffff )
-        update_bitstream_file(&createdflag,bfp,blocknum,bp,sizeof(*bp),0);
-    tmp = bp->blocknum, update_bitstream_file(&createdflag,V->bfps[V->inblockbfp],blocknum,&tmp,sizeof(tmp),0);
-    s = bp->txind, update_bitstream_file(&createdflag,V->bfps[V->txinbfp],blocknum,&s,sizeof(s),0);
-    s = bp->v, update_bitstream_file(&createdflag,V->bfps[V->invoutbfp],blocknum,&s,sizeof(s),0);
-}
-
-int32_t load_fixed_fields(struct compressionvars *V,struct bitstream_file *bfp)
-{
-    void *ptr;
-    char hexstr[16385];
-    uint8_t data[8192];
-    int32_t createdflag,count = 0;
-    long eofpos,endpos,itemsize;
-    endpos = get_endofdata(&eofpos,bfp->fp);
-    if ( bfp->itemsize >= sizeof(data) )
-    {
-        printf("bfp.%s itemsize.%ld too big\n",bfp->typestr,bfp->itemsize);
-        exit(-1);
-    }
-    if ( (bfp->mode & BITSTREAM_VALUE) != 0 )
-        itemsize = sizeof(uint64_t);
-    else itemsize = bfp->itemsize;
-    while ( (ftell(bfp->fp)+bfp->itemsize) <= endpos && fread(data,1,itemsize,bfp->fp) == itemsize )
-    {
-        init_hexbytes_noT(hexstr,data,itemsize);
-        ptr = update_bitstream_file(&createdflag,bfp,0xffffffff,data,(int32_t)itemsize,hexstr);
-        if ( (bfp->mode & BITSTREAM_VALUE) != 0 )
-            memcpy(&((struct valueinfo *)ptr)->value,data,itemsize);
-        else if ( (bfp->mode & BITSTREAM_VINS) != 0 )
-            update_vinsbfp(V,bfp,(void *)data,0xffffffff);
-    }
-    return(count);
-}
-
-int32_t checkblock(struct blockinfo *current,struct blockinfo *prev,uint32_t blocknum)
-{
-    int32_t numvins,numvouts;
-    //return((abs((int)~(blockcheck>>32)-blocknum)+abs((int)blockcheck-blocknum)));
-    if ( prev != 0 )
-    {
-        if ( (numvins= (current->firstvin - prev->firstvin)) < 0 || (numvouts= (current->firstvout - prev->firstvout)) < 0 )
-            return(1);
-       // printf("block.%d: vins.(%d %d) vouts.(%d %d)\n",blocknum-1,prev->firstvin,numvins,prev->firstvout,numvouts);
-    }
-    return(0);
-}
-
-int32_t scan_ramchain(struct compressionvars *V)
-{
-    int i,checkval,errs = 0;
-    //uint64_t blockcheck;
-    struct blockinfo B,prevB;
-    struct bitstream_file *bfp;
-    memset(&prevB,0,sizeof(prevB));
-    bfp = V->bfps[0];
-    if ( bfp->fp == 0 )
-        return(-1);
-    rewind(bfp->fp);
-    for (i=0; i<bfp->blocknum; i++)
-    {
-        fread(&B,1,sizeof(B),bfp->fp);
-        checkval = checkblock(&B,i==0?0:&prevB,i);
-        if ( checkval != 0 )
-            printf("%i: %d %d | %s\n",i,B.firstvout,B.firstvin,checkval!=0?"ERROR":"OK");
-        prevB = B;
-        errs += (checkval != 0);
-    }
-    //uint32_t valuebfp,inblockbfp,txinbfp,invoutbfp,addrbfp,txidbfp,scriptbfp,voutsbfp,vinsbfp,bitstream,numbfps;
-    printf("scan_ramchain %s: errs.%d blocks.%u values.%u addrs.%u txids.%u scripts.%u vouts.%u vins.%u | VIN block.%u txind.%u v.%u\n",bfp->coinstr,errs,bfp->blocknum,V->bfps[V->valuebfp]->ind,V->bfps[V->addrbfp]->ind,V->bfps[V->txidbfp]->ind,V->bfps[V->scriptbfp]->ind,V->bfps[V->voutsbfp]->ind,V->bfps[V->vinsbfp]->ind,V->bfps[V->inblockbfp]->ind,V->bfps[V->txinbfp]->ind,V->bfps[V->invoutbfp]->ind);
-    getchar();
-    return(errs);
-}
-
-struct bitstream_file *init_bitstream_file(struct compressionvars *V,int32_t huffid,int32_t mode,int32_t readonly,char *coinstr,char *typestr,long itemsize,uint32_t refblock,long huffwt)
-{
-    struct bitstream_file *bfp = calloc(1,sizeof(*bfp));
-    int32_t numitems;
-    bfp->huffid = huffid;
-    bfp->nomemstructs = !readonly;
-    bfp->mode = mode;
-    if ( (bfp->huffwt = (uint32_t)huffwt) == 0 )
-        bfp->huffwt = (uint32_t)itemsize;
-    bfp->itemsize = itemsize;
-    bfp->refblock = refblock;
-    strcpy(bfp->coinstr,coinstr);
-    strcpy(bfp->typestr,typestr);
-    if ( (mode & BITSTREAM_STATSONLY) != 0 ) // needs to be unique filtered, so use hashtable
-    {
-        bfp->maxitems = refblock;
-        if ( bfp->nomemstructs == 0 )
-        {
-            if ( itemsize == sizeof(uint32_t)/8 )
-                numitems = bfp->maxitems;
-            else if ( itemsize == sizeof(int16_t)/8 )
-                numitems = (1<<16);
-            else { printf("unsupported itemsize of statsonly: %ld\n",itemsize); exit(-1); }
-            bfp->dataptr = calloc(numitems,sizeof(struct huffitem));
-        }
-        return(bfp);
-    }
-    set_commpressionvars_fname(readonly,bfp->fname,coinstr,typestr,-1);
-    bfp->fp = _open_varsfile(readonly,&bfp->blocknum,bfp->fname,coinstr);
-    if ( bfp->fp != 0 != 0 ) // needs to be unique filtered, so use hashtable
-    {
-        if ( (bfp->mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) != 0 )
-            load_reference_strings(V,bfp,bfp->mode & BITSTREAM_HEXSTR);
-        else if ( bfp->itemsize != 0 )
-            load_fixed_fields(V,bfp);
-        //else load_bitstream(V,bfp);
-        bfp->blocknum = load_blockcheck(bfp->fp);
-    }
-    if (  refblock != 0xffffffff && bfp->blocknum != refblock )
-    {
-        printf("%s bfp->blocknum %u != refblock.%u mismatch FATAL if less than\n",typestr,bfp->blocknum,refblock);
-        if ( bfp->blocknum < refblock )
-            exit(-1);
-    }
-    //printf("%-8s mode.%d %s itemsize.%ld numitems.%d blocknum.%u refblock.%u\n",typestr,mode,coinstr,itemsize,bfp->ind,bfp->blocknum,refblock);
-    return(bfp);
-}
-
-int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *coinstr,int32_t maxblocknum)
-{
-    struct coin_info *cp = get_coin_info(coinstr);
-    struct coinaddrinfo *addrp = 0;
-    struct txinfo *tp = 0;
-    struct scriptinfo *sp = 0;
-    struct valueinfo *valp = 0;
-    struct blockinfo *blockp = 0;
-    uint32_t n=0,refblock;
-    if ( V->rawbits == 0 )
-    {
-        strcpy(V->coinstr,coinstr);
-        V->startmilli = milliseconds();
-        if ( (V->maxblocknum= get_blockheight(cp)) == 0 )
-            V->maxblocknum = maxblocknum;
-        printf("init compression vars.%s: maxblocknum %d %d\n",coinstr,maxblocknum,get_blockheight(cp));
-        V->disp = calloc(1,100000);
-        V->buffer = calloc(1,100000);
-        V->hp = hopen(V->buffer,100000);
-        V->rawbits = calloc(1,100000);
-        V->bfps[n] = init_bitstream_file(V,n,0,readonly,coinstr,"blocks",sizeof(*blockp),0xffffffff,0), n++;
-        V->firstblock = refblock = V->bfps[0]->blocknum;
-        V->valuebfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_UNIQUE|BITSTREAM_VALUE,readonly,coinstr,"values",sizeof(*valp),refblock,sizeof(uint64_t)), n++;
-        V->inblockbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_STATSONLY,readonly,coinstr,"inblock",sizeof(uint32_t),V->maxblocknum,0), n++;
-        V->txinbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_STATSONLY,readonly,coinstr,"intxind",sizeof(uint16_t),1<<16,0), n++;
-        V->invoutbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_STATSONLY,readonly,coinstr,"invout",sizeof(uint16_t),1<<16,0), n++;
-        V->addrbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_UNIQUE|BITSTREAM_STRING,readonly,coinstr,"addrs",sizeof(*addrp),refblock,sizeof(uint32_t)), n++;
-        V->txidbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_UNIQUE|BITSTREAM_HEXSTR,readonly,coinstr,"txids",sizeof(*tp),refblock,sizeof(uint32_t)), n++;
-        V->scriptbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_UNIQUE|BITSTREAM_HEXSTR|BITSTREAM_SCRIPT,readonly,coinstr,"scripts",sizeof(*sp),refblock,sizeof(uint32_t)), n++;
-        V->voutsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VOUTS,readonly,coinstr,"vouts",sizeof(struct rawblock_voutdata),refblock,0), n++;
-        V->vinsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VINS,readonly,coinstr,"vins",sizeof(struct address_entry),refblock,0), n++;
-        V->bitstream = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_COMPRESSED,readonly,coinstr,"bitstream",0,refblock,0), n++;
-        scan_ramchain(V);
-    }
-    if ( readonly != 0 )
-        exit(1);
-    return(n);
-}
-
-void clear_compressionvars(struct compressionvars *V,int32_t clearstats,int32_t frequi)
-{
-    V->maxitems = 0;
-  /* int32_t i;
-    struct scriptinfo *sp = 0;
-    struct txinfo *tp = 0;
-    struct coinaddrinfo *addrp = 0;
-    struct valueinfo *valp = 0;
-     if ( clearstats != 0 )
-    {
-        clear_hashtable_field(V->values,(long)((long)&valp->item.freq[frequi] - (long)valp),sizeof(valp->item.freq[frequi]));
-        clear_hashtable_field(V->addrs,(long)((long)&addrp->item.freq[frequi] - (long)addrp),sizeof(addrp->item.freq[frequi]));
-        clear_hashtable_field(V->txids,(long)((long)&tp->item.freq[frequi] - (long)tp),sizeof(tp->item.freq[frequi]));
-        clear_hashtable_field(V->scripts,(long)((long)&sp->item.freq[frequi] - (long)sp),sizeof(sp->item.freq[frequi]));
-        for (i=0; i<V->maxblocknum; i++)
-            V->blockitems[i].freq[frequi] = 0;
-        for (i=0; i<(1<<16); i++)
-            V->txinditems[i].freq[frequi] = 0;
-        for (i=0; i<(1<<16); i++)
-            V->voutitems[i].freq[frequi] = 0;
-    }*/
-}
-
-double estimate_completion(char *coinstr,double startmilli,int32_t processed,int32_t numleft)
-{
-    double elapsed,rate;
-    if ( processed <= 0 )
-        return(0.);
-    elapsed = (milliseconds() - startmilli);
-    rate = (elapsed / processed);
-    if ( rate <= 0. )
-        return(0.);
-    //printf("numleft %d rate %f\n",numleft,rate);
-    return(numleft * rate / 1000.);
-}
-
-uint32_t flush_compressionvars(struct compressionvars *V,uint32_t prevblocknum,uint32_t newblocknum,int32_t frequi)
-{
-    struct blockinfo B;
-    long sum,sum2,fpos;
-    uint32_t slice,i;
-    memset(&B,0,sizeof(B));
-    if ( prevblocknum != 0xffffffff )
-    {
-        B.firstvout = V->firstvout, B.firstvin = V->firstvin;
-        append_to_streamfile(V->bfps[0],prevblocknum,&B,1,0);
-        V->firstvout = V->bfps[V->voutsbfp]->ind;
-        V->firstvin = V->bfps[V->vinsbfp]->ind;
-        B.firstvout = V->firstvout, B.firstvin = V->firstvin;
-        fpos = ftell(V->bfps[0]->fp);
-        append_to_streamfile(V->bfps[0],prevblocknum,&B,1,1);
-        fseek(V->bfps[0]->fp,fpos,SEEK_SET);
-        sum = sum2 = fpos;
-        for (i=1; i<V->numbfps; i++)
-        {
-            if ( V->bfps[i]->fp != 0 )
-            {
-                emit_blockcheck(V->bfps[i]->fp,prevblocknum);
-                sum += ftell(V->bfps[i]->fp);
-            }
-        }
-        sum2 += ftell(V->bfps[V->voutsbfp]->fp) + ftell(V->bfps[V->vinsbfp]->fp);
-        // numhuffinds = emit_compressed_block(V,prevblocknum,frequi);
-        if ( V->disp != 0 )
-        {
-            sprintf(V->disp+strlen(V->disp),"-> max.%-4d %.1f %.1f est %.1f minutes\n%s F.%d NEWBLOCK.%u | ",V->maxitems,(double)sum/(prevblocknum+1),(double)sum2/(prevblocknum+1),estimate_completion(V->coinstr,V->startmilli,V->processed,(int32_t)V->maxblocknum-prevblocknum)/60,V->coinstr,frequi,prevblocknum);
-            printf("%s",V->disp);
-            V->disp[0] = 0;
-        }
-        calc_frequi(&slice,V->coinstr,newblocknum);
-        clear_compressionvars(V,(newblocknum % slice) == 0,frequi);
-    }
-    V->blocknum = newblocknum;
-    V->processed++;
-    return(newblocknum);
-}
-
-void set_rawblock_voutdata(struct rawblock_voutdata *v,uint32_t tp_ind,uint32_t vout,uint32_t addr_ind,uint64_t value,uint32_t sp_ind)
-{
-    memset(v,0,sizeof(*v));
-    v->tp_ind = tp_ind;
-    v->vout = vout;
-    v->addr_ind = addr_ind;
-    v->value = value;
-    v->sp_ind = sp_ind;
-}
-
-void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct address_entry *bp,uint64_t value,char *txidstr,char *script)
-{
-    char valuestr[128],mode;
-    int32_t frequi,datalen,createdflag;
-    uint8_t databuf[4096];
-    struct rawblock_voutdata vout;
-    struct coinaddrinfo *addrp = 0;
-    struct txinfo *tp = 0;
-    struct scriptinfo *sp = 0;
-    struct valueinfo *valp = 0;
-//printf("update ramchain.(%s) addr.(%s) block.%d vin.%d %p %p\n",coinstr,addr,bp->blocknum,bp->vinflag,txidstr,script);
-    if ( V->numbfps != 0 )
-    {
-//printf("update compressionvars vinflag.%d\n",bp->vinflag);
-        if ( bp->vinflag == 0 )
-        {
-            if (txidstr != 0 && script != 0 ) // txidstr != 0 && script != 0 && value != 0 &&
-            {
-//printf("txid.(%s) %s\n",txidstr,script);
-                frequi = calc_frequi(0,V->coinstr,V->blocknum);
-                if ( bp->blocknum != V->blocknum )
-                    V->blocknum = flush_compressionvars(V,V->blocknum,bp->blocknum,frequi);
-                addrp = update_bitstream_file(&createdflag,V->bfps[V->addrbfp],bp->blocknum,0,0,addr);
-                datalen = (uint32_t)(strlen(txidstr) >> 1);
-                decode_hex(databuf,datalen,txidstr);
-                tp = update_bitstream_file(&createdflag,V->bfps[V->txidbfp],bp->blocknum,databuf,datalen,txidstr);
-                if ( strlen(script) < 1024 )
-                {
-                    mode = calc_scriptmode(&datalen,databuf,script,1,addrp->item.huffind);
-                    if ( (sp= update_bitstream_file(&createdflag,V->bfps[V->scriptbfp],bp->blocknum,databuf,datalen,script)) != 0 && createdflag != 0 )
-                        sp->addrhuffind = addrp->item.huffind, sp->mode = mode;
-                } else sp = 0;
-                expand_nxt64bits(valuestr,value);
-                if ( (valp= update_bitstream_file(&createdflag,V->bfps[V->valuebfp],bp->blocknum,&value,sizeof(value),valuestr)) != 0 && createdflag != 0 )
-                    valp->value = value;
-       //if ( 0 && V->disp != 0 )
-                //    sprintf(V->disp+strlen(V->disp),"{A%d T%d.%d S%d %.8f} ",V->addrind,V->txind,bp->v,V->scriptind,dstr(value));
-                if ( tp != 0 && addrp != 0 && sp != 0 )
-                {
-                    set_rawblock_voutdata(&vout,tp->item.huffind,bp->v,addrp->item.huffind,value,sp->item.huffind);
-                    update_bitstream_file(&createdflag,V->bfps[V->voutsbfp],bp->blocknum,&vout,sizeof(vout),0);
-                }
-            }
-            else
-            {
-                if ( 0 && V->disp != 0 )
-                    sprintf(V->disp+strlen(V->disp),"[%d %d %d] ",bp->blocknum,bp->txind,bp->v);
-                update_vinsbfp(V,V->bfps[V->vinsbfp],bp,V->blocknum);
-            }
-            V->maxitems++;
-        }
-        else
-        {
-            // vin txid:vin is dereferenced above
-            //sprintf(V->disp+strlen(V->disp),"(%d %d %d) ",bp->blocknum,bp->txind,bp->v);
-        }
-        //if ( IS_LIBTEST != 7 )
-        //    fclose(V->fp);
-    }
 }
 
 int main(int argc,const char *argv[])

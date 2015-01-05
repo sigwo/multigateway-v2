@@ -8,6 +8,7 @@
 
 #ifndef libtest_libjl777_h
 #define libtest_libjl777_h
+#define HUFF_GENMODE
 
 #include <stdint.h>
 #include "uthash.h"
@@ -27,7 +28,6 @@
 #define SMALLVAL .000000000000001
 #define _SUPERNET_PORT 7777
 
-#define HUFF_NUMFREQS 10
 #define MAX_COINTXID_LEN 128
 #define MAX_COINADDR_LEN 128
 #define MAX_NXT_STRLEN 24
@@ -63,16 +63,14 @@ union hufftype
     void *str;
 };
 
-struct huffitem
-{
-    union hufftype U;
-    UT_hash_handle hh;
-    uint64_t codebits;
-    uint32_t huffind,freq[HUFF_NUMFREQS];
-    uint16_t size:5,numbits:11;
-    uint8_t isptr,wt;
-    char str[];
-};
+#ifdef HUFF_GENMODE
+#define HUFF_NUMFREQS 1
+#define HUFF_READONLY 0
+#else
+#define HUFF_READONLY 1
+#define HUFF_NUMFREQS 10
+#endif
+
 
 struct hashtable
 {
@@ -80,13 +78,6 @@ struct hashtable
     void **hashtable;
     uint64_t hashsize,numsearches,numiterations,numitems;
     long keyoffset,keysize,modifiedoffset,structsize;
-};
-
-struct huffcode
-{
-    const struct huffitem **items;
-    int32_t numinds,maxbits,numnodes,depth,maxind,*tree;
-    double totalbits,totalbytes;
 };
 
 #define BITSTREAM_UNIQUE (1<<0)
@@ -98,25 +89,60 @@ struct huffcode
 #define BITSTREAM_SCRIPT (1<<6)
 #define BITSTREAM_VINS (1<<7)
 #define BITSTREAM_VOUTS (1<<8)
+#define BITSTREAM_32bits (1<<9)
+#define BITSTREAM_64bits (1<<10)
+
+struct huffcode
+{
+    const struct huffitem **items;
+    int32_t numinds,maxbits,numnodes,depth,maxind,*tree;
+    double totalbits,totalbytes;
+};
+
+struct voutinfo { uint32_t tp_ind,vout,addr_ind,sp_ind; uint64_t value; };
+struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
+struct blockinfo { uint32_t firstvout,firstvin; };
+
+struct valueinfo { uint64_t amount; };
+struct scriptinfo { uint32_t addrind; char mode; };
+struct txinfo { uint16_t numvouts,numvins; };
+union huffinfo
+{
+    uint8_t c; uint16_t s; uint32_t i; void *ptr;
+    struct valueinfo value;
+    struct scriptinfo script;
+    struct txinfo tx;
+};
+
+struct huffitem
+{
+    union huffinfo U;
+    UT_hash_handle hh;
+    uint64_t codebits;
+    uint32_t huffind,freq[HUFF_NUMFREQS];
+    uint16_t size:5,numbits:11;
+    uint8_t isptr,wt;
+    char str[];
+};
 
 struct bitstream_file
 {
-    struct huffitem *dataptr;
+    struct huffitem *dataptr,**itemptrs;
     FILE *fp;
     long itemsize;
     char fname[1024],coinstr[16],typestr[16],stringflag;
     uint32_t blocknum,ind,checkblock,refblock,mode,huffid,huffwt,maxitems,nomemstructs;
 };
 
-struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
 
 struct compressionvars
 {
     HUFF *hp;
-    uint32_t valuebfp,inblockbfp,txinbfp,invoutbfp,addrbfp,txidbfp,scriptbfp,voutsbfp,vinsbfp,bitstream,numbfps;
+    struct blockinfo prevB;
+    uint32_t valuebfp,addrbfp,txidbfp,scriptbfp,voutsbfp,vinsbfp,bitstream,numbfps;
     uint32_t maxitems,maxblocknum,firstblock,blocknum,processed,firstvout,firstvin;
     uint8_t *buffer,*rawbits;
-    struct bitstream_file *bfps[16];
+    struct bitstream_file *bfps[16],*numvoutsbfp,*numvinsbfp,*inblockbfp,*txinbfp,*invoutbfp;
     char *disp,coinstr[64];
     double startmilli;
 };

@@ -176,9 +176,9 @@ void huff_iteminit(struct huffitem *hip,uint32_t huffind,void *ptr,long size,lon
         return;
     }
     if ( (hip->size= (uint8_t)size) == 0 )
-        hip->U.str = ptr, hip->isptr = 1, hip->size = (uint16_t)strlen(ptr);
+        hip->U.ptr = ptr, hip->isptr = 1, hip->size = (uint16_t)strlen(ptr);
     else if ( size <= sizeof(hip->U) )
-        memcpy(hip->U.bits.bytes,ptr,size);
+        memcpy(&hip->U,ptr,size);
     else printf("huff_iteminit FATAL size overflow: %ld vs %ld\n",size,sizeof(hip->U)), exit(-1);
     if ( wt > 0xff )
         wt = 0xff;
@@ -196,7 +196,7 @@ const void *huff_getitem(struct huffcode *huff,int32_t *sizep,uint32_t ind)
     if ( huff != 0 && (hip= huff->items[ind]) != 0 )
     {
         *sizep = hip->size;
-        return(hip->U.bits.bytes);
+        return(&hip->U);
     }
     if ( defaultbytes[0xff] != 0xff )
         for (i=0; i<256; i++)

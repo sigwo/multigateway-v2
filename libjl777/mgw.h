@@ -829,7 +829,7 @@ int32_t set_address_entry(struct address_entry *bp,uint32_t blocknum,int32_t txi
     return(0);
 }
 
-int32_t add_address_entry(char *coin,char *addr,uint32_t blocknum,int32_t txind,int32_t vin,int32_t vout,int32_t isinternal,int32_t spent,int32_t syncflag,uint64_t value,char *txidstr,char *script)
+int32_t add_address_entry(int32_t numvins,uint64_t inputsum,int32_t numvouts,uint64_t remainder,char *coin,char *addr,uint32_t blocknum,int32_t txind,int32_t vin,int32_t vout,int32_t isinternal,int32_t spent,int32_t syncflag,uint64_t value,char *txidstr,char *script)
 {
     struct address_entry B;
     struct coin_info *cp;
@@ -838,7 +838,7 @@ int32_t add_address_entry(char *coin,char *addr,uint32_t blocknum,int32_t txind,
     {
         if ( set_address_entry(&B,blocknum,txind,vin,vout,isinternal,spent) == 0 )
         {
-            _add_address_entry(coin,addr,&B,syncflag,value,txidstr,script);
+            _add_address_entry(numvins,inputsum,numvouts,remainder,coin,addr,&B,syncflag,value,txidstr,script);
             if ( Global_mp->gatewayid == (NUM_GATEWAYS-1) && isinternal == 0 && vin < 0 && MGW_initdone != 0 && (cp= get_coin_info(coin)) != 0 )
             {
                 if ( (msig= find_msigaddr(addr)) != 0 && msig->NXTaddr[0] != 0 )
@@ -1014,16 +1014,18 @@ int32_t calc_isinternal(struct coin_info *cp,char *coinaddr_v0,uint32_t height,i
     return(0);
 }
 
-uint64_t update_vins(int32_t *isinternalp,char *coinaddr,char *script,struct coin_info *cp,uint32_t blockheight,int32_t txind,cJSON *vins,int32_t vind,int32_t syncflag)
+uint64_t update_vins(int32_t *numvinsp,int32_t *isinternalp,char *coinaddr,char *script,struct coin_info *cp,uint32_t blockheight,int32_t txind,cJSON *vins,int32_t vind,int32_t syncflag)
 {
     uint32_t get_blocktxind(int32_t *txindp,struct coin_info *cp,uint32_t blockheight,char *blockhashstr,char *txidstr);
     cJSON *obj,*txidobj,*coinbaseobj;
-    uint64_t value;
+    uint64_t value,sum = 0;
     int32_t i,vout,numvins,numvouts,oldtxind,flag = 0;
     char txidstr[1024],coinbase[1024],blockhash[1024];
     uint32_t oldblockheight;
+    *numvinsp = 0;
     if ( vins != 0 && is_cJSON_Array(vins) != 0 && (numvins= cJSON_GetArraySize(vins)) > 0 )
     {
+        *numvinsp = numvins;
         for (i=0; i<numvins; i++)
         {
             if ( vind >= 0 && vind != i )
@@ -1033,13 +1035,14 @@ uint64_t update_vins(int32_t *isinternalp,char *coinaddr,char *script,struct coi
             {
                 coinbaseobj = cJSON_GetObjectItem(obj,"coinbase");
                 copy_cJSON(coinbase,coinbaseobj);
-                if ( strlen(coinbase) > 1 )
+                if ( 1 && strlen(coinbase) > 1 )
                 {
                     if ( txind > 0 )
                         printf("txind.%d is coinbase.%s\n",txind,coinbase);
-                    return(flag);
+                    return(0);
                 }
-            }
+                //printf("process input.(%s) coinbase.(%s) sum.(%.8f)\n",coinaddr,coinbase,dstr(sum));
+            } else coinbase[0] = 0;
             txidobj = cJSON_GetObjectItem(obj,"txid");
             if ( txidobj != 0 && cJSON_GetObjectItem(obj,"vout") != 0 )
             {
@@ -1047,42 +1050,43 @@ uint64_t update_vins(int32_t *isinternalp,char *coinaddr,char *script,struct coi
                 copy_cJSON(txidstr,txidobj);
                 if ( txidstr[0] != 0 && (value= get_txvout(blockhash,&numvouts,coinaddr,script,cp,0,txidstr,vout)) != 0 && blockhash[0] != 0 )
                 {
-                    //printf("process input.(%s)\n",coinaddr);
+                    sum += value;
                     if ( (oldblockheight= get_blocktxind(&oldtxind,cp,0,blockhash,txidstr)) > 0 )
                     {
                         flag++;
-                        add_address_entry(cp->name,coinaddr,blockheight,txind,i,-1,-1,1,0,value,0,0);
-                        add_address_entry(cp->name,coinaddr,oldblockheight,oldtxind,-1,vout,-1,1,syncflag * (i == (numvins-1)),value,0,0);
+                        add_address_entry(0,0,0,0,cp->name,coinaddr,blockheight,txind,i,-1,-1,1,0,value,0,0);
+                        add_address_entry(0,0,0,0,cp->name,coinaddr,oldblockheight,oldtxind,-1,vout,-1,1,syncflag * (i == (numvins-1)),value,0,0);
                     } else printf("error getting oldblockheight (%s %s)\n",blockhash,txidstr);
                 } else printf("unexpected error vout.%d %s\n",vout,txidstr);
             } else printf("illegal txid.(%s)\n",txidstr);
         }
     }
-    return(flag);
+    return(sum);
 }
 
 void update_txid_infos(struct coin_info *cp,uint32_t blockheight,int32_t txind,char *txidstr,int32_t syncflag)
 {
     char coinaddr[1024],script[4096],coinaddr_v0[1024],*retstr = 0;
-    int32_t v,tmp,numvouts,isinternal = 0;
-    uint64_t value;
+    int32_t v,tmp,numvouts,numvins,isinternal = 0;
+    uint64_t value,remainder,inputsum = 0;
     cJSON *txjson;
     if ( (retstr= get_transaction(cp,txidstr)) != 0 )
     {
         if ( (txjson= cJSON_Parse(retstr)) != 0 )
         {
+            inputsum = update_vins(&numvins,&isinternal,coinaddr,script,cp,blockheight,txind,cJSON_GetObjectItem(txjson,"vin"),-1,syncflag);
             v = 0;
+            remainder = inputsum;
             if ( (value= get_txvout(0,&numvouts,coinaddr_v0,script,cp,txjson,0,v)) > 0 )
-                add_address_entry(cp->name,coinaddr_v0,blockheight,txind,-1,v,isinternal,0,syncflag * (v == (numvouts-1)),value,txidstr,script);
+                add_address_entry(numvins,inputsum,numvouts,remainder,cp->name,coinaddr_v0,blockheight,txind,-1,v,isinternal,0,syncflag * (v == (numvouts-1)),value,txidstr,script), remainder -= value;
             for (v=1; v<numvouts; v++)
             {
                 if ( v < numvouts && (value= get_txvout(0,&tmp,coinaddr,script,cp,txjson,0,v)) > 0 )
                 {
                     isinternal = calc_isinternal(cp,coinaddr_v0,blockheight,v,numvouts);
-                    add_address_entry(cp->name,coinaddr,blockheight,txind,-1,v,isinternal,0,syncflag * (v == (numvouts-1)),value,txidstr,script);
+                    add_address_entry(numvins,inputsum,numvouts,remainder,cp->name,coinaddr,blockheight,txind,-1,v,isinternal,0,syncflag * (v == (numvouts-1)),value,txidstr,script), remainder -= value;
                 }
             }
-            update_vins(&isinternal,coinaddr,script,cp,blockheight,txind,cJSON_GetObjectItem(txjson,"vin"),-1,syncflag);
             free_json(txjson);
         } else printf("update_txid_infos parse error.(%s)\n",retstr);
         free(retstr);
@@ -1105,7 +1109,7 @@ uint32_t get_blocktxind(int32_t *txindp,struct coin_info *cp,uint32_t blockheigh
             for (txind=0; txind<n; txind++)
             {
                 copy_cJSON(txidstr,cJSON_GetArrayItem(txobj,txind));
-                if ( Debuglevel > 3 )
+                if ( blockheight == 0 || Debuglevel > 3 )
                     printf("%-5s blocktxt.%ld i.%d of n.%d %s\n",cp->name,(long)blockheight,txind,n,txidstr);
                 if ( reftxidstr != 0 )
                 {
@@ -4159,7 +4163,7 @@ void process_coinblocks(char *argcoinstr)
                     if ( V->numbfps == 0 )
                     {
                         if ( IS_LIBTEST == 7 )
-                            V->numbfps = init_compressionvars(0,V,coinstr,(uint32_t)cp->RTblockheight);
+                            V->numbfps = init_compressionvars(HUFF_READONLY,V,coinstr,(uint32_t)cp->RTblockheight);
                     }
                     if ( firstiter != 0 && (cp->blockheight= V->firstblock) != 0 )
                         cp->blockheight++;
@@ -4170,7 +4174,7 @@ void process_coinblocks(char *argcoinstr)
                     while ( cp->blockheight < (height - cp->min_confirms) && milliseconds() < (startmilli+1000) )
                     {
                         //if ( dispflag != 0 )
-                        //   printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)blockheight,(long)height);
+                           printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)cp->blockheight,(long)height);
                         if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
                         {
                             processed++;
