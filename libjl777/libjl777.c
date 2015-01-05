@@ -463,7 +463,6 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         if ( IS_LIBTEST > 0 )//&& IS_LIBTEST < 7 )
             init_SuperNET_storage(cp->backupdir);
     }
-    fprintf(stderr, "returning from init_NXTservices");
     return(myipaddr);
 }
 
