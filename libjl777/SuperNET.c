@@ -648,7 +648,7 @@ int32_t load_fixed_fields(struct compressionvars *V,struct bitstream_file *bfp)
         //else
         if ( (bfp->mode & BITSTREAM_VINS) != 0 )
             update_vinsbfp(V,bfp,(void *)data,0xffffffff);
-        fpos = ftell(fp);
+        fpos = ftell(bfp->fp);
     }
     return(count);
 }
