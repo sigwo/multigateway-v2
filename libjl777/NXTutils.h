@@ -1672,7 +1672,6 @@ struct sockaddr_in conv_ipbits(uint32_t ipbits,int32_t port)
 
 char *conv_ipv6(char *ipv6addr)
 {
-fprintf(stderr, "in conv_ipv6\n");
     static unsigned char IPV4CHECK[10]; // 80 ZERO BITS for testing
     char ipv4str[4096];
     struct sockaddr_in6 ipv6sa;
@@ -1690,14 +1689,6 @@ fprintf(stderr, "in conv_ipv6\n");
         {
             bytes += 12;
             ipv4bin = (in_addr_t *)bytes;
-
-	  /*  #ifdef _WIN32
-	    if ( getnameinfo(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str),0,0,NI_NUMERICHOST) == 0 )
-	    {
-	        fprintf(stderr, "after getnameinfo\n");
-		isok = 0;
-	    }
-            #else*/
 	    #ifndef _WIN32
             if ( inet_ntop(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str)) == 0 )
 		isok = 0;
@@ -1706,39 +1697,32 @@ fprintf(stderr, "in conv_ipv6\n");
     }
     if ( isok != 0 )
         strcpy(ipv6addr,ipv4str);
-fprintf(stderr, "returning from conv_ipv6\n");
     return(ipv6addr); // it is ipv4 now
 }
 
 int32_t parse_ipaddr(char *ipaddr,char *ip_port)
 {
     int32_t j,port = 0;
-fprintf(stderr, "\nin parse_ipaddr\n ipaddr: %s\nip_port: %s\n", ipaddr, ip_port);
     if ( ip_port != 0 && ip_port[0] != 0 )
     {
-        fprintf(stderr, "before strcpy\n");
 	#ifndef _WIN32
         strcpy(ipaddr,conv_ipv6(ip_port));
 	#else
 	strcpy(ipaddr, ip_port);
 	#endif
-        fprintf(stderr, "after strcpy\n");
-
         for (j=0; ipaddr[j]!=0&&j<60; j++)
             if ( ipaddr[j] == ':' )
-            {fprintf(stderr, "port atoi\n");
+            {
                 port = atoi(ipaddr+j+1);
                 break;
             }
         ipaddr[j] = 0;
     } else strcpy(ipaddr,"127.0.0.1");
-fprintf(stderr, "returning %d\n", port);
     return(port);
 }
 
 uint32_t calc_ipbits(char *ip_port)
 {
-    fprintf(stderr, "in calc_ipbits\n");
     char ipaddr[64];
     parse_ipaddr(ipaddr,ip_port);
     return(inet_addr(ipaddr));
