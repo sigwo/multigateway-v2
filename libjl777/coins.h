@@ -725,6 +725,7 @@ int32_t is_trusted_issuer(char *issuer)
 
 char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
 {
+    fprintf(stderr, "in init_MGWconf\n");
     void *init_SuperNET_globals();
     static int didinit,exchangeflag;
     static char ipbuf[64],*buf=0;
@@ -744,7 +745,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
     NXTADDR[0] = 0;
     exchangeflag = 0;//!strcmp(NXTACCTSECRET,"exchanges");
     if ( Debuglevel > 0 )
-        printf("init_MGWconf exchangeflag.%d myip.(%s)\n",exchangeflag,myipaddr);
+        fprintf(stderr, "init_MGWconf exchangeflag.%d myip.(%s)\n",exchangeflag,myipaddr);
     //printf("load MGW.conf (%s)\n",JSON_or_fname);
     if ( JSON_or_fname[0] == '{' )
         jsonstr = clonestr(JSON_or_fname);
@@ -752,7 +753,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
     if ( jsonstr != 0 )
     {
         if ( Debuglevel > 0 )
-            printf("loaded.(%s)\n",jsonstr);
+            fprintf(stderr, "loaded.(%s)\n",jsonstr);
         if ( MGWconf != 0 )
             free_json(MGWconf);
         MGWconf = cJSON_Parse(jsonstr);
@@ -795,7 +796,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             LOG2_MAX_XFERPACKETS = get_API_int(cJSON_GetObjectItem(MGWconf,"LOG2_MAXPACKETS"),3);
             MULTIPORT = get_API_int(cJSON_GetObjectItem(MGWconf,"MULTIPORT"),0);
             if ( Debuglevel > 0 )
-                printf("(%s) USESSL.%d IS_LIBTEST.%d APIPORT.%d APISLEEP.%d millis\n",ipaddr,USESSL,IS_LIBTEST,APIPORT,APISLEEP);
+                fprintf(stderr, "(%s) USESSL.%d IS_LIBTEST.%d APIPORT.%d APISLEEP.%d millis\n",ipaddr,USESSL,IS_LIBTEST,APIPORT,APISLEEP);
             ismainnet = get_API_int(cJSON_GetObjectItem(MGWconf,"MAINNET"),1);
             ENABLE_GUIPOLL = get_API_int(cJSON_GetObjectItem(MGWconf,"GUIPOLL"),1);
             if ( Debuglevel >= 0 )
@@ -859,6 +860,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         break;
                     item = cJSON_GetArrayItem(array,i);
                     copy_cJSON(ipaddr,item);
+		    fprintf(stderr, "adding %s to whitelist\n", ipaddr);
                     add_SuperNET_whitelist(ipaddr);
                 }
             }
@@ -877,7 +879,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                     if ( coinstr[0] != 0 && (cp= init_coin_info(item,coinstr)) != 0 )
                     {
                         if ( Debuglevel > 0 )
-                            printf("coinstr.(%s) myip.(%s)\n",coinstr,myipaddr);
+                            fprintf(stderr, "coinstr.(%s) myip.(%s)\n",coinstr,myipaddr);
                         Daemons = realloc(Daemons,sizeof(*Daemons) * (Numcoins+1));
                         MGWcoins = realloc(MGWcoins,sizeof(*MGWcoins) * (Numcoins+1));
                         MGWcoins[Numcoins] = item;
@@ -885,16 +887,18 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         uint32_t get_blockheight(struct coin_info *cp);
                         cp->RTblockheight = get_blockheight(cp);
                         if ( Debuglevel > 0 )
-                            printf("i.%d coinid.%d %s asset.%s RTheight.%u\n",i,Numcoins,coinstr,Daemons[Numcoins]->assetid,(uint32_t)cp->RTblockheight);
+                            fprintf(stderr, "i.%d coinid.%d %s asset.%s RTheight.%u\n",i,Numcoins,coinstr,Daemons[Numcoins]->assetid,(uint32_t)cp->RTblockheight);
                         Numcoins++;
                         cp->json = item;
+			fprintf(stderr, "before parse_ipaddr in coins.h\n");
                         parse_ipaddr(cp->myipaddr,myipaddr);
+		        fprintf(stderr, "after parse_ipaddr in coins.h\n");
                         if ( strcmp(coinstr,"BTCD") == 0 )
                         {
                             BTCDaddr = cp->privateaddr;
                             strcpy(NXTACCTSECRET,cp->privateNXTACCTSECRET);
                             if ( Debuglevel > 0 )
-                                printf("BTCDaddr.(%s)\n",BTCDaddr);
+                                fprintf(stderr, "BTCDaddr.(%s)\n",BTCDaddr);
                             if ( cp->privatebits != 0 )
                                 expand_nxt64bits(NXTADDR,cp->privatebits);
                             if ( DATADIR[0] == 0 )
@@ -911,7 +915,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                             pubNXT = cp->privateNXTADDR;
                      }
                 }
-            } else printf("no coins array.%p ?\n",array);
+            } else fprintf(stderr, "no coins array.%p ?\n",array);
                 //init_filtered_bufs(); crashed ubunty
                 //if ( IS_LIBTEST >= 2 )
             
@@ -919,6 +923,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             //    gen_randomacct(0,33,NXTADDR,NXTACCTSECRET,"randvals");
             nxt64bits = issue_getAccountId(0,NXTACCTSECRET);
             expand_nxt64bits(NXTADDR,nxt64bits);
+	    fprintf(stderr, "getting special_NXTaddrs\n");
             array = cJSON_GetObjectItem(MGWconf,"special_NXTaddrs");
             if ( array != 0 && is_cJSON_Array(array) != 0 ) // first three must be the gateway's addresses
             {
@@ -940,19 +945,20 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                     MGW_blacklist[i] = MGW_whitelist[i] = clonestr(NXTADDR);
                 }
                 if ( Debuglevel > 0 )
-                    printf("special_addrs.%d\n",n);
+                    fprintf(stderr, "special_addrs.%d\n",n);
                 MGW_blacklist[n] = MGW_whitelist[n] = NXTISSUERACCT, n++;
                 MGW_blacklist[n] = MGW_whitelist[n] = GENESISACCT, n++;
                 MGW_whitelist[n] = "";
                 MGW_blacklist[n++] = "4551058913252105307";    // from accidental transfer
                 MGW_blacklist[n++] = "";
             }
+	    fprintf(stderr, "getting contacts");
             array = (IS_LIBTEST > 0) ? cJSON_GetObjectItem(MGWconf,"contacts") : 0;
             if ( array != 0 && is_cJSON_Array(array) != 0 ) // first three must be the gateway's addresses
             {
                 char handle[MAX_JSON_FIELD],acct[MAX_JSON_FIELD];//,*retstr;
                 n = cJSON_GetArraySize(array);
-                printf("scanning %d contacts\n",n);
+                fprintf(stderr, "scanning %d contacts\n",n);
                 for (i=0; i<n; i++)
                 {
                     if ( array == 0 || n == 0 )
@@ -971,7 +977,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         }
                     }
                 }
-                printf("contacts.%d\n",n);
+                fprintf(stderr, "contacts.%d\n",n);
             }
             /*if ( didinit == 0 )
             {
@@ -981,7 +987,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                     start_polling_exchanges(exchangeflag);
             }*/
         }
-        else printf("PARSE ERROR\n");
+        else fprintf(stderr, "PARSE ERROR\n");
         free(jsonstr);
     }
 
@@ -1007,6 +1013,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             else printf("ORIGBLOCK.(%s)\n",ORIGBLOCK);
         }
     }*/
+    fprintf(stderr, "returning from init_MGWconf\n");
     didinit = 1;
     return(myipaddr);
 }
