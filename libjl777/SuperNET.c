@@ -685,7 +685,7 @@ int32_t scan_ramchain(struct compressionvars *V)
     }
     //uint32_t valuebfp,inblockbfp,txinbfp,invoutbfp,addrbfp,txidbfp,scriptbfp,voutsbfp,vinsbfp,bitstream,numbfps;
     printf("scan_ramchain %s: errs.%d blocks.%u values.%u addrs.%u txids.%u scripts.%u vouts.%u vins.%u | VIN block.%u txind.%u v.%u\n",bfp->coinstr,errs,bfp->blocknum,V->bfps[V->valuebfp]->ind,V->bfps[V->addrbfp]->ind,V->bfps[V->txidbfp]->ind,V->bfps[V->scriptbfp]->ind,V->bfps[V->voutsbfp]->ind,V->bfps[V->vinsbfp]->ind,V->inblockbfp->ind,V->txinbfp->ind,V->invoutbfp->ind);
-    getchar();
+    //getchar();
     return(errs);
 }
 
@@ -904,7 +904,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                 if ( tp != 0 && addrp != 0 && sp != 0 )
                 {
                     set_voutinfo(&vout,tp->huffind>>4,bp->v,addrp->huffind>>4,value,sp->huffind>>4);
-                    printf("output tp.%d v.%d A.%d s.%d (%d) %.8f | numvins.%d inputs %.8f numvouts.%d %.8f [%.8f]\n",vout.tp_ind,vout.vout,vout.addr_ind,vout.sp_ind,sp->U.script.addrind,dstr(vout.value),numvins,dstr(inputsum),numvouts,dstr(remainder),dstr(remainder)-dstr(value));
+                    //printf("output tp.%d v.%d A.%d s.%d (%d) %.8f | numvins.%d inputs %.8f numvouts.%d %.8f [%.8f]\n",vout.tp_ind,vout.vout,vout.addr_ind,vout.sp_ind,sp->U.script.addrind,dstr(vout.value),numvins,dstr(inputsum),numvouts,dstr(remainder),dstr(remainder)-dstr(value));
                     memset(&U,0,sizeof(U));
                     update_bitstream_file(V,&createdflag,V->bfps[V->voutsbfp],bp->blocknum,&vout,sizeof(vout),0,&U);
                 }

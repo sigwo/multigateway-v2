@@ -4173,7 +4173,7 @@ void process_coinblocks(char *argcoinstr)
                     startmilli = milliseconds();
                     while ( cp->blockheight < (height - cp->min_confirms) && milliseconds() < (startmilli+1000) )
                     {
-                        //if ( dispflag != 0 )
+                        if ( Debuglevel > 2 )
                            printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)cp->blockheight,(long)height);
                         if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
                         {
