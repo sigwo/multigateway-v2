@@ -4165,7 +4165,7 @@ void process_coinblocks(char *argcoinstr)
                         if ( IS_LIBTEST == 7 )
                             V->numbfps = init_compressionvars(HUFF_READONLY,V,coinstr,(uint32_t)cp->RTblockheight);
                     }
-                    if ( firstiter != 0 && (cp->blockheight= V->firstblock) != 0 )
+                    if ( 0 && firstiter != 0 && (cp->blockheight= V->firstblock) != 0 )
                         cp->blockheight++;
                     //if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
                     //    printf("ERROR hist findaddress_loop\n");
