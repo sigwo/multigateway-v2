@@ -52,7 +52,7 @@ void huff_iteminit(struct huffitem *hip,uint32_t huffind,void *ptr,long size,lon
 void huff_free(struct huffcode *huff);
 void huff_clearstats(struct huffcode *huff);
 char *_mbstr(double n);
-int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen);
+long load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen);
 long emit_varint(FILE *fp,uint64_t x);
 double milliseconds();
 struct coin_info *get_coin_info(char *coinstr);
@@ -249,7 +249,7 @@ FILE *_open_varsfile(int32_t readonly,uint32_t *blocknump,char *fname,char *coin
     return(fp);
 }
 
-struct huffitem *update_compressionvars_table(int32_t *createdflagp,struct bitstream_file *bfp,char *str,union huffinfo *U)
+struct huffitem *update_compressionvars_table(int32_t *createdflagp,struct bitstream_file *bfp,char *str,union huffinfo *U,long fpos)
 {
     struct huffitem *item;
     int32_t len,numitems;
@@ -268,6 +268,7 @@ struct huffitem *update_compressionvars_table(int32_t *createdflagp,struct bitst
         }
         huff_iteminit(item,conv_rawind(bfp->huffid,bfp->ind),str,0,bfp->huffwt);
         item->U = *U;
+        item->fpos = (int32_t)fpos;
         //printf("%s: add.(%s) rawind.%d huffind.%d rawind2.%d U.script.addrind %d vs %d\n",bfp->typestr,str,bfp->ind,item->huffind,item->huffind>>4,item->U.script.addrind,U->script.addrind);
         *createdflagp = 1;
     }
@@ -335,7 +336,7 @@ struct huffitem *append_to_streamfile(struct bitstream_file *bfp,uint32_t blockn
     exit(-1); // to get here probably out of disk space, abort is best
 }
 
-void *update_bitstream_file(struct compressionvars *V,int32_t *createdflagp,struct bitstream_file *bfp,uint32_t blocknum,void *data,int32_t datalen,char *str,union huffinfo *Up)
+void *update_bitstream_file(struct compressionvars *V,int32_t *createdflagp,struct bitstream_file *bfp,uint32_t blocknum,void *data,int32_t datalen,char *str,union huffinfo *Up,long fpos)
 {
     union huffinfo U;
     struct huffitem *item = 0;
@@ -345,7 +346,7 @@ void *update_bitstream_file(struct compressionvars *V,int32_t *createdflagp,stru
         bfp->blocknum = blocknum;
     if ( (bfp->mode & BITSTREAM_UNIQUE) != 0 ) // "addr", "txid", "script", "value"
     {
-        item = update_compressionvars_table(&createdflag,bfp,str,Up);
+        item = update_compressionvars_table(&createdflag,bfp,str,Up,fpos);
         if ( item != 0 )
         {
             if ( createdflag != 0 && blocknum != 0xffffffff && bfp->fp != 0 && (bfp->mode & BITSTREAM_STATSONLY) == 0 )
@@ -402,8 +403,8 @@ void *update_bitstream_file(struct compressionvars *V,int32_t *createdflagp,stru
                             if ( numvins < (1<<16) && numvouts < (1<<16) )
                             {
                                 memset(&U,0,sizeof(U));
-                                U.s = numvins, update_bitstream_file(V,&createdflag,V->numvinsbfp,blocknum,&U.s,sizeof(U.s),0,&U);
-                                U.s = numvouts, update_bitstream_file(V,&createdflag,V->numvoutsbfp,blocknum,&U.s,sizeof(U.s),0,&U);
+                                U.s = numvins, update_bitstream_file(V,&createdflag,V->numvinsbfp,blocknum,&U.s,sizeof(U.s),0,&U,-1);
+                                U.s = numvouts, update_bitstream_file(V,&createdflag,V->numvoutsbfp,blocknum,&U.s,sizeof(U.s),0,&U,-1);
                             }
                             else
                             {
@@ -561,7 +562,7 @@ int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *
     {
         endpos = get_endofdata(&eofpos,fp);
         maxlen = (int32_t)sizeof(data)-1;
-        while ( ftell(fp) < endpos && load_vfilestr(&len,(isbinary != 0) ? (char *)data : str,fp,maxlen) > 0 )
+        while ( ftell(fp) < endpos && (fpos= load_vfilestr(&len,(isbinary != 0) ? (char *)data : str,fp,maxlen)) > 0 )
         {
             memset(&U,0,sizeof(U));
             //printf("isbinary.%d: len.%d\n",isbinary,len);
@@ -582,8 +583,8 @@ int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *
             {
                 //printf("add.(%s)\n",str);
                 if ( isbinary != 0 )
-                    item = update_bitstream_file(V,&createdflag,bfp,0xffffffff,data,len,str,&U);
-                else item = update_bitstream_file(V,&createdflag,bfp,0xffffffff,0,0,str,&U);
+                    item = update_bitstream_file(V,&createdflag,bfp,0xffffffff,data,len,str,&U,fpos);
+                else item = update_bitstream_file(V,&createdflag,bfp,0xffffffff,0,0,str,&U,fpos);
                 /*if ( (bfp->mode & BITSTREAM_SCRIPT) != 0 )
                 {
                     sp = (struct scriptinfo *)item;
@@ -613,10 +614,10 @@ void update_vinsbfp(struct compressionvars *V,struct bitstream_file *bfp,struct 
     memset(&U,0,sizeof(U));
     //printf("spent block.%u txind.%d vout.%d\n",bp->blocknum,bp->txind,bp->v);
     if ( blocknum != 0xffffffff )
-        update_bitstream_file(V,&createdflag,bfp,blocknum,bp,sizeof(*bp),0,&U);
-    U.s = bp->txind, update_bitstream_file(V,&createdflag,V->txinbfp,blocknum,&U.s,sizeof(U.s),0,&U);
-    U.s = bp->v, update_bitstream_file(V,&createdflag,V->invoutbfp,blocknum,&U.s,sizeof(U.s),0,&U);
-    U.i = bp->blocknum, update_bitstream_file(V,&createdflag,V->inblockbfp,blocknum,&U.i,sizeof(U.i),0,&U);
+        update_bitstream_file(V,&createdflag,bfp,blocknum,bp,sizeof(*bp),0,&U,-1);
+    U.s = bp->txind, update_bitstream_file(V,&createdflag,V->txinbfp,blocknum,&U.s,sizeof(U.s),0,&U,-1);
+    U.s = bp->v, update_bitstream_file(V,&createdflag,V->invoutbfp,blocknum,&U.s,sizeof(U.s),0,&U,-1);
+    U.i = bp->blocknum, update_bitstream_file(V,&createdflag,V->inblockbfp,blocknum,&U.i,sizeof(U.i),0,&U,-1);
 }
 
 int32_t load_fixed_fields(struct compressionvars *V,struct bitstream_file *bfp)
@@ -626,7 +627,7 @@ int32_t load_fixed_fields(struct compressionvars *V,struct bitstream_file *bfp)
     uint8_t data[8192];
     union huffinfo U;
     int32_t createdflag,count = 0;
-    long eofpos,endpos,itemsize;
+    long eofpos,endpos,itemsize,fpos;
     endpos = get_endofdata(&eofpos,bfp->fp);
     if ( bfp->itemsize >= sizeof(data) )
     {
@@ -636,16 +637,18 @@ int32_t load_fixed_fields(struct compressionvars *V,struct bitstream_file *bfp)
     if ( (bfp->mode & BITSTREAM_VALUE) != 0 )
         itemsize = sizeof(uint64_t);
     else itemsize = bfp->itemsize;
+    fpos = ftell(fp);
     while ( (ftell(bfp->fp)+bfp->itemsize) <= endpos && fread(data,1,itemsize,bfp->fp) == itemsize )
     {
         memset(&U,0,sizeof(U));
         init_hexbytes_noT(hexstr,data,itemsize);
-        ptr = update_bitstream_file(V,&createdflag,bfp,0xffffffff,data,(int32_t)itemsize,hexstr,&U);
+        ptr = update_bitstream_file(V,&createdflag,bfp,0xffffffff,data,(int32_t)itemsize,hexstr,&U,fpos);
         //if ( (bfp->mode & BITSTREAM_VALUE) != 0 )
         //    memcpy(&((struct valueinfo *)ptr)->value,data,itemsize);
         //else
         if ( (bfp->mode & BITSTREAM_VINS) != 0 )
             update_vinsbfp(V,bfp,(void *)data,0xffffffff);
+        fpos = ftell(fp);
     }
     return(count);
 }
@@ -883,22 +886,26 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                 if ( bp->blocknum != V->blocknum )
                     V->blocknum = flush_compressionvars(V,V->blocknum,bp->blocknum,frequi);
                 memset(&U,0,sizeof(U));
-                addrp = update_bitstream_file(V,&createdflag,V->bfps[V->addrbfp],bp->blocknum,0,0,addr,&U);
+                addrp = update_bitstream_file(V,&createdflag,V->bfps[V->addrbfp],bp->blocknum,0,0,addr,&U,-1);
                 datalen = (uint32_t)(strlen(txidstr) >> 1);
                 decode_hex(databuf,datalen,txidstr);
-                tp = update_bitstream_file(V,&createdflag,V->bfps[V->txidbfp],bp->blocknum,databuf,datalen,txidstr,&U);
+                memset(&U,0,sizeof(U));
+                U.tx.txind = bp->txind;
+                U.tx.numvins = numvins;
+                U.tx.numvouts = numvouts;
+                tp = update_bitstream_file(V,&createdflag,V->bfps[V->txidbfp],bp->blocknum,databuf,datalen,txidstr,&U,-1);
                 if ( strlen(script) < 1024 )
                 {
                     U.script.addrind = addrp->huffind>>4;
                     U.script.mode = calc_scriptmode(&datalen,databuf,script,1,U.script.addrind);
                     //printf("mode.%d addrhuff.%d vs %d\n",U.script.mode,U.script.addrind,addrp->huffind);
-                    sp = update_bitstream_file(V,&createdflag,V->bfps[V->scriptbfp],bp->blocknum,databuf,datalen,script,&U);
+                    sp = update_bitstream_file(V,&createdflag,V->bfps[V->scriptbfp],bp->blocknum,databuf,datalen,script,&U,-1);
                     //printf("mode.%d addrhuff.%d vs %d after update_bitstream_file\n",U.script.mode,U.script.addrind,sp->U.script.addrind);
                 } else sp = 0;
                 expand_nxt64bits(valuestr,value);
                 memset(&U,0,sizeof(U));
                 U.value.amount = value;
-                valp = update_bitstream_file(V,&createdflag,V->bfps[V->valuebfp],bp->blocknum,&value,sizeof(value),valuestr,&U);
+                valp = update_bitstream_file(V,&createdflag,V->bfps[V->valuebfp],bp->blocknum,&value,sizeof(value),valuestr,&U,-1);
                 //if ( 0 && V->disp != 0 )
                 //    sprintf(V->disp+strlen(V->disp),"{A%d T%d.%d S%d %.8f} ",V->addrind,V->txind,bp->v,V->scriptind,dstr(value));
                 if ( tp != 0 && addrp != 0 && sp != 0 )
@@ -906,7 +913,7 @@ void update_ramchain(struct compressionvars *V,char *coinstr,char *addr,struct a
                     set_voutinfo(&vout,tp->huffind>>4,bp->v,addrp->huffind>>4,value,sp->huffind>>4);
                     //printf("output tp.%d v.%d A.%d s.%d (%d) %.8f | numvins.%d inputs %.8f numvouts.%d %.8f [%.8f]\n",vout.tp_ind,vout.vout,vout.addr_ind,vout.sp_ind,sp->U.script.addrind,dstr(vout.value),numvins,dstr(inputsum),numvouts,dstr(remainder),dstr(remainder)-dstr(value));
                     memset(&U,0,sizeof(U));
-                    update_bitstream_file(V,&createdflag,V->bfps[V->voutsbfp],bp->blocknum,&vout,sizeof(vout),0,&U);
+                    update_bitstream_file(V,&createdflag,V->bfps[V->voutsbfp],bp->blocknum,&vout,sizeof(vout),0,&U,-1);
                 }
             }
             else

@@ -105,7 +105,7 @@ struct blockinfo { uint32_t firstvout,firstvin; };
 
 struct valueinfo { uint64_t amount; };
 struct scriptinfo { uint32_t addrind; char mode; };
-struct txinfo { uint16_t numvouts,numvins; };
+struct txinfo { uint16_t txind,numvouts,numvins; };
 union huffinfo
 {
     uint8_t c; uint16_t s; uint32_t i; void *ptr;
@@ -119,7 +119,7 @@ struct huffitem
     union huffinfo U;
     UT_hash_handle hh;
     uint64_t codebits;
-    uint32_t huffind,freq[HUFF_NUMFREQS];
+    uint32_t huffind,fpos,freq[HUFF_NUMFREQS];
     uint16_t size:5,numbits:11;
     uint8_t isptr,wt;
     char str[];

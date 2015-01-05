@@ -370,15 +370,16 @@ int32_t save_vfilestr(FILE *fp,char *str)
     return(-1);
 }
 
-int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
+long load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
 {
     int32_t retval;
-    long savepos;
+    long savepos,fpos = 0;
     uint64_t len;
     *lenp = 0;
     savepos = ftell(fp);
     if ( (retval= load_varint(&len,fp)) > 0 && len < maxlen )
     {
+        fpos = ftell(fp);
         if ( fread(str,1,len,fp) != len )
         {
             printf("load_filestr: error reading len.%lld at %ld, truncate to %ld\n",(long long)len,ftell(fp),savepos);
@@ -390,7 +391,7 @@ int32_t load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
             str[len] = 0;
             *lenp = (int32_t)len;
             //printf("fpos.%ld got string.(%s) len.%d\n",ftell(fp),str,(int)len);
-            return((int32_t)len);
+            return(fpos);
         }
     } else printf("load_varint got %d at %ld: len.%lld maxlen.%d\n",retval,ftell(fp),(long long)len,maxlen);
     fseek(fp,savepos,SEEK_SET);
