@@ -4144,6 +4144,7 @@ void *_process_coinblocks(void *_cp)
 
 void process_coinblocks(char *argcoinstr)
 {
+    double estimate_completion(char *coinstr,double startmilli,int32_t processed,int32_t numleft);
     int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *coinstr,int32_t maxblocknum);
     int32_t i,n,height,firstiter,processed = 0;
     cJSON *array;
@@ -4152,7 +4153,7 @@ void process_coinblocks(char *argcoinstr)
     struct compressionvars *V;
     int32_t oldval = IS_LIBTEST;
     IS_LIBTEST = 7;
-    double startmilli;
+    double startmilli,estimated;
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
@@ -4187,8 +4188,10 @@ void process_coinblocks(char *argcoinstr)
                         //if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
                         {
                             save_rawblock(V->rawfp,&V->raw);
-                            printf("%-5s [%.1f per block: est %s] ",cp->name,(double)ftell(V->rawfp)/cp->blockheight,_mbstr(height * ((double)ftell(V->rawfp)/cp->blockheight)));
+                            V->processed++;
                             processed++;
+                            estimated = estimate_completion(V->coinstr,V->startmilli,V->processed,(int32_t)height-V->blocknum)/60;
+                            printf("%-5s %.1f min left [%.1f per block: est %s] ",cp->name,estimated,(double)ftell(V->rawfp)/cp->blockheight,_mbstr(height * ((double)ftell(V->rawfp)/cp->blockheight)));
                             cp->blockheight++;
                         } //else break;
                     }

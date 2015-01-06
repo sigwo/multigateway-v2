@@ -743,19 +743,22 @@ long load_varfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
     if ( (retval= load_varint(&len,fp)) > 0 && len < maxlen )
     {
         fpos = ftell(fp);
-        if ( fread(str,1,len,fp) != len )
+        if ( len > 0 )
         {
-            printf("load_filestr: error reading len.%lld at %ld, truncate to %ld\n",(long long)len,ftell(fp),savepos);
-            fseek(fp,savepos,SEEK_SET);
-            return(-1);
-        }
-        else
-        {
-            str[len] = 0;
-            *lenp = (int32_t)len;
-            //printf("fpos.%ld got string.(%s) len.%d\n",ftell(fp),str,(int)len);
-            return(fpos);
-        }
+            if ( fread(str,1,len,fp) != len )
+            {
+                printf("load_filestr: error reading len.%lld at %ld, truncate to %ld\n",(long long)len,ftell(fp),savepos);
+                fseek(fp,savepos,SEEK_SET);
+                return(-1);
+            }
+            else
+            {
+                str[len] = 0;
+                *lenp = (int32_t)len;
+                //printf("fpos.%ld got string.(%s) len.%d\n",ftell(fp),str,(int)len);
+                return(fpos);
+            }
+        } else return(fpos);
     } else printf("load_varint got %d at %ld: len.%lld maxlen.%d\n",retval,ftell(fp),(long long)len,maxlen);
     fseek(fp,savepos,SEEK_SET);
     return(-1);
@@ -834,20 +837,30 @@ int32_t calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,
 
 int32_t load_rawvout(FILE *fp,struct rawvout *vout)
 {
-    long fpos;
-    uint64_t varint;
-    int32_t datalen,len;
+    long fpos,n;
+    uint64_t varint,vlen;
+    int32_t datalen,len,retval;
     uint8_t data[4096];
-    if ( load_varint(&varint,fp) <= 0 )
+    printf("load_rawvout starting %ld\n",ftell(fp));
+    if ( (n= load_varint(&varint,fp)) <= 0 )
         return(-1);
     else
     {
+        printf("loaded varint %lld with %ld bytes | fpos.%ld\n",(long long)varint,n,ftell(fp));
         vout->value = varint;
         if ( (fpos= load_varfilestr(&datalen,(char *)data,fp,sizeof(vout->script)/2-1)) > 0 )
         {
-            expand_scriptdata(vout->script,data,len);
-            if ( (fpos= load_varfilestr(&len,vout->coinaddr,fp,sizeof(vout->coinaddr)-1)) > 0 )
+            expand_scriptdata(vout->script,data,datalen);
+            printf("fpos after loading script.%ld\n",ftell(fp));
+            retval = load_varint(&vlen,fp);
+            printf("script.(%s) datalen.%d | retval.%d vlen.%llu | fpos.%ld\n",vout->script,datalen,retval,(long long)vlen,ftell(fp));
+            vout->coinaddr[0] = 0;
+            if ( vlen > 0 && retval == 0 && vlen < sizeof(vout->coinaddr)-1 && (n= fread(vout->coinaddr,1,vlen,fp)) == vlen )
+           // if ( (fpos= load_varfilestr(&len,vout->coinaddr,fp,sizeof(vout->coinaddr)-1)) > 0 )
+            {
+                printf("coinaddr.(%s) len.%d fpos.%ld\n",vout->coinaddr,len,ftell(fp));
                 return(0);
+            } else printf("read coinaddr.%d (%s) returns %ld fpos.%ld\n",(int)vlen,vout->coinaddr,n,ftell(fp));
         } else return(-1);
     }
     return(-1);
@@ -873,7 +886,7 @@ int32_t save_rawvout(FILE *fp,struct rawvout *vout)
         }
         else if ( emit_varint(fp,0) <= 0 )
             return(-1);
-        else if ( emit_varint(fp,len) <= 0 )
+        if ( emit_varint(fp,len) <= 0 )
             return(-1);
         else if ( fwrite(vout->coinaddr,1,len,fp) != len )
             return(-1);
@@ -954,7 +967,7 @@ long get_endofdata(long *eofposp,FILE *fp)
     return(endpos);
 }
 
-int32_t check_for_blockcheck(FILE *fp)
+/*int32_t check_for_blockcheck(FILE *fp)
 {
     long fpos;
     uint64_t blockcheck;
@@ -964,7 +977,7 @@ int32_t check_for_blockcheck(FILE *fp)
         return(1);
     fseek(fp,fpos,SEEK_SET);
     return(0);
-}
+}*/
 
 long emit_blockcheck(FILE *fp,uint64_t blocknum)
 {
@@ -1024,17 +1037,41 @@ int32_t save_rawblock(FILE *fp,struct rawblock *raw)
     return(-1);
 }
 
-int32_t load_rawblock(FILE *fp,struct rawblock *raw,uint32_t expectedblock,long endpos)
+int32_t load_rawblock(int32_t dispflag,FILE *fp,struct rawblock *raw,uint32_t expectedblock,long endpos)
 {
-    if ( fread(raw,sizeof(int32_t),6,fp) != 6 || expectedblock != raw->blocknum )
+    int32_t i;
+    if ( fread(raw,sizeof(int32_t),6,fp) != 6 )
         printf("fread error of header for block.%d expected.%d\n",raw->blocknum,expectedblock);
-    else if ( raw->numtx < MAX_BLOCKTX && fread(raw->txspace,sizeof(*raw->txspace),raw->numtx,fp) != raw->numtx )
-        printf("fread error of txspace[%d] for block.%d\n",raw->numtx,raw->blocknum);
-    else if ( raw->numrawvins < MAX_BLOCKTX && vinspace_io(0,fp,raw->vinspace,raw->numrawvins) != 0 )
-        printf("read error of vinspace[%d] for block.%d\n",raw->numrawvins,raw->blocknum);
-    else if ( raw->numrawvouts < MAX_BLOCKTX && voutspace_io(0,fp,raw->voutspace,raw->numrawvouts) != 0 )
-        printf("read error of voutspace[%d] for block.%d\n",raw->numrawvouts,raw->blocknum);
-    else return(0);
+    else
+    {
+        if ( dispflag != 0 )
+            printf("block.%d: numtx.%d numrawvins.%d numrawvouts.%d minted %.8f\n",raw->blocknum,raw->numtx,raw->numrawvins,raw->numrawvouts,dstr(raw->minted));
+        if ( expectedblock == raw->blocknum )
+        {
+            if ( raw->numtx < MAX_BLOCKTX && fread(raw->txspace,sizeof(*raw->txspace),raw->numtx,fp) != raw->numtx )
+                printf("fread error of txspace[%d] for block.%d\n",raw->numtx,raw->blocknum);
+            else
+            {
+                if ( dispflag != 0 )
+                {
+                    for (i=0; i<raw->numtx; i++)
+                    printf("txind.%d: vins.(%d %d) vouts.(%d %d)\n",i,raw->txspace[i].firstvin,raw->txspace[i].numvins,raw->txspace[i].firstvout,raw->txspace[i].numvouts);
+                }
+                if ( raw->numrawvins < MAX_BLOCKTX && vinspace_io(0,fp,raw->vinspace,raw->numrawvins) != 0 )
+                    printf("read error of vinspace[%d] for block.%d\n",raw->numrawvins,raw->blocknum);
+                else if ( raw->numrawvouts < MAX_BLOCKTX && voutspace_io(0,fp,raw->voutspace,raw->numrawvouts) != 0 )
+                    printf("read error of voutspace[%d] for block.%d\n",raw->numrawvouts,raw->blocknum);
+                else
+                {
+                    //if ( fread(&checkblock,1,sizeof(checkblock),fp) != sizeof(checkblock) )
+                    //    printf("fread error of checkblock for block.%d expected.%d: %llx\n",raw->blocknum,expectedblock,(long long)checkblock);
+                    //if ( dispflag != 0 )
+                    //    printf("checkblock.%llx %x vs %x\n",(long long)checkblock,(uint32_t)~(checkblock>>32),(uint32_t)checkblock);
+                    return(0);
+                }
+            }
+        } else printf("fread error block.%d expected.%d\n",raw->blocknum,expectedblock);
+    }
     return(-1);
 }
 
@@ -1048,7 +1085,6 @@ FILE *_open_varsfile(int32_t readonly,uint32_t *blocknump,char *fname,char *coin
             fseek(fp,0,SEEK_END);
             *blocknump = load_blockcheck(fp);
             printf("opened %s blocknum.%d\n",fname,*blocknump);
-            rewind(fp);
         }
     }
     else
@@ -1068,7 +1104,6 @@ FILE *_open_varsfile(int32_t readonly,uint32_t *blocknump,char *fname,char *coin
             fseek(fp,0,SEEK_END);
             *blocknump = load_blockcheck(fp);
             printf("opened %s blocknum.%d\n",fname,*blocknump);
-            rewind(fp);
         }
     }
     return(fp);
@@ -1435,11 +1470,25 @@ void update_vinsbfp(struct compressionvars *V,struct bitstream_file *bfp,struct 
     prevblocknum = bp->blocknum;
 }
 
-void init_bitstream(struct compressionvars *V,FILE *rawfp)
+void init_bitstream(struct compressionvars *V,FILE *fp)
 {
-    
+    double avesize;
+    uint32_t blocknum;
+    long endpos,eofpos;
+    endpos = get_endofdata(&eofpos,fp);
+    rewind(fp);
+    for (blocknum=0; blocknum<=V->blocknum; blocknum++)
+    {
+        if ( load_rawblock(1,fp,&V->raw,blocknum,endpos) != 0 )
+        {
+            printf("error loading block.%d\n",blocknum);
+            break;
+        }
+        avesize = ((double)ftell(fp) / (blocknum+1));
+        printf("%-5s [%.1f per block: est %s]\n",V->coinstr,avesize,_mbstr(V->blocknum * avesize));
+    }
+    getchar();
 }
-
 
 int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *bfp,int32_t isbinary)
 {
@@ -1561,8 +1610,9 @@ struct bitstream_file *init_bitstream_file(struct compressionvars *V,int32_t huf
     }
     set_compressionvars_fname(readonly,bfp->fname,coinstr,typestr,-1);
     bfp->fp = _open_varsfile(readonly,&bfp->blocknum,bfp->fname,coinstr);
-    if ( bfp->fp != 0 != 0 ) // needs to be unique filtered, so use hashtable
+    if ( bfp->fp != 0 ) // needs to be unique filtered, so use hashtable
     {
+        rewind(bfp->fp);
         if ( (bfp->mode & (BITSTREAM_STRING|BITSTREAM_HEXSTR)) != 0 )
             load_reference_strings(V,bfp,bfp->mode & BITSTREAM_HEXSTR);
         else if ( bfp->itemsize != 0 )
@@ -1595,6 +1645,9 @@ int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *co
             V->maxblocknum = maxblocknum;
         printf("init compression vars.%s: maxblocknum %d %d readonly.%d\n",coinstr,maxblocknum,get_blockheight(cp),readonly);
         set_compressionvars_fname(readonly,fname,coinstr,"rawblocks",-1);
+#ifdef HUFF_GENMODE
+        char cmdstr[512]; sprintf(cmdstr,"rm %s",fname); system(cmdstr);
+#endif
         V->rawfp = _open_varsfile(readonly,&V->blocknum,fname,coinstr);
         V->disp = calloc(1,100000);
         V->buffer = calloc(1,100000);
@@ -1622,7 +1675,6 @@ int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *co
         V->voutsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VOUTS,readonly,coinstr,"vouts",sizeof(struct voutinfo),refblock,sizeof(struct voutinfo)), n++;
         V->vinsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VINS,readonly,coinstr,"vins",sizeof(struct address_entry),refblock,sizeof(struct address_entry)), n++;
         V->bitstream = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_COMPRESSED,readonly,coinstr,"bitstream",0,refblock,0), n++;
-        rewind(V->rawfp);
         init_bitstream(V,V->rawfp);
     }
     if ( readonly != 0 )
