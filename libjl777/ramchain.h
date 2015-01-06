@@ -839,7 +839,7 @@ int32_t load_rawvout(FILE *fp,struct rawvout *vout)
 {
     long fpos,n;
     uint64_t varint,vlen;
-    int32_t datalen,len,retval;
+    int32_t datalen,retval;
     uint8_t data[4096];
     if ( (n= load_varint(&varint,fp)) <= 0 )
         return(-1);
@@ -851,17 +851,17 @@ int32_t load_rawvout(FILE *fp,struct rawvout *vout)
         {
             expand_scriptdata(vout->script,data,datalen);
             retval = load_varint(&vlen,fp);
-            printf("script.(%s) datalen.%d | retval.%d vlen.%llu | fpos.%ld\n",vout->script,datalen,retval,(long long)vlen,ftell(fp));
+            //printf("script.(%s) datalen.%d | retval.%d vlen.%llu | fpos.%ld\n",vout->script,datalen,retval,(long long)vlen,ftell(fp));
             vout->coinaddr[0] = 0;
-            if ( vlen > 0 && retval > 0 && vlen < sizeof(vout->coinaddr)-1 && (n= fread(vout->coinaddr,1,vlen+1,fp)) == vlen )
+            if ( vlen > 0 && retval > 0 && vlen < sizeof(vout->coinaddr)-1 && (n= fread(vout->coinaddr,1,vlen+1,fp)) == (vlen+1) )
            // if ( (fpos= load_varfilestr(&len,vout->coinaddr,fp,sizeof(vout->coinaddr)-1)) > 0 )
             {
-                printf("coinaddr.(%s) len.%d fpos.%ld\n",vout->coinaddr,len,ftell(fp));
+                //printf("coinaddr.(%s) len.%d fpos.%ld\n",vout->coinaddr,(int)vlen,ftell(fp));
                 return(0);
             } else printf("read coinaddr.%d (%s) returns %ld fpos.%ld\n",(int)vlen,vout->coinaddr,n,ftell(fp));
-        } else return(-1);
+        } else return(-2);
     }
-    return(-1);
+    return(-3);
 }
 
 int32_t save_rawvout(FILE *fp,struct rawvout *vout)
@@ -1478,24 +1478,57 @@ void update_vinsbfp(struct compressionvars *V,struct bitstream_file *bfp,struct 
 
 void init_bitstream(struct compressionvars *V,FILE *fp)
 {
-    double avesize;
-    uint32_t blocknum;
+    double avesize,startmilli = milliseconds();
+    uint32_t blocknum,txind,vin,vout,checkvins,checkvouts;
+    struct rawtx *tx;
+    struct rawvin *vi;
+    struct rawvout *vo;
+    struct rawblock *raw;
     long endpos,eofpos;
     if ( fp != 0 )
     {
         endpos = get_endofdata(&eofpos,fp);
         rewind(fp);
+        raw = &V->raw;
         for (blocknum=1; blocknum<=V->blocknum||ftell(fp)<endpos-1024; blocknum++)
         {
-            if ( load_rawblock(1,fp,&V->raw,blocknum,endpos) != 0 )
+            if ( load_rawblock(0,fp,raw,blocknum,endpos) != 0 )
             {
                 printf("error loading block.%d\n",blocknum);
                 break;
             }
+            checkvins = checkvouts = 0;
+            if ( raw->numtx > 0 )
+            {
+                for (txind=0; txind<raw->numtx; txind++)
+                {
+                    tx = &raw->txspace[txind];
+                    printf("(%d %d).t%d ",tx->numvins,tx->numvouts,txind);
+                    if ( tx->numvins > 0 )
+                    {
+                        for (vin=0; vin<tx->numvins; vin++)
+                        {
+                            vi = &raw->vinspace[tx->firstvin + vin];
+                        }
+                        checkvins += tx->numvins;
+                    }
+                    if ( tx->numvouts > 0 )
+                    {
+                        for (vout=0; vout<tx->numvouts; vout++)
+                        {
+                            vo = &raw->voutspace[tx->firstvout + vout];
+                        }
+                        checkvouts += tx->numvouts;
+                    }
+                }
+            }
             avesize = ((double)ftell(fp) / (blocknum+1));
-            printf("%-5s [%.1f per block: est %s]\n",V->coinstr,avesize,_mbstr(V->blocknum * avesize));
+            if ( checkvins != raw->numrawvins || checkvouts != raw->numrawvouts )
+                printf("ERROR: checkvins %d != %d raw->numrawvins || checkvouts %d != %d raw->numrawvouts\n",checkvins,raw->numrawvins,checkvouts,raw->numrawvouts);
+            printf("%-5s.%u [%.1f per block: est %s] numtx.%d raw.(vins.%d vouts.%d) minted %.8f\n",V->coinstr,blocknum,avesize,_mbstr(V->blocknum * avesize),raw->numtx,raw->numrawvins,raw->numrawvouts,dstr(raw->minted));
         }
     }
+    printf("%.1f seconds to init_bitstream.%s\n",(milliseconds() - startmilli)/1000.,V->coinstr);
 #ifndef HUFF_GENMODE
     getchar();
 #endif

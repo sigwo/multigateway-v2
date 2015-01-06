@@ -55,7 +55,7 @@ int32_t safecopy(char *dest,char *src,long len);
 
 void set_compressionvars_fname(int32_t readonly,char *fname,char *coinstr,char *typestr,int32_t subgroup)
 {
-    char *dirname = (readonly != 0) ? "/Users/jimbolaptop/ramchains" : "ramchains";
+    char *dirname = (1*readonly != 0) ? "/Users/jimbolaptop/ramchains" : "ramchains";
     if ( subgroup < 0 )
         sprintf(fname,"%s/%s/%s.%s",dirname,coinstr,coinstr,typestr);
     else sprintf(fname,"%s/%s/%s/%s.%d",dirname,coinstr,typestr,coinstr,subgroup);
@@ -402,7 +402,7 @@ int32_t _get_txvins(struct rawblock *raw,struct rawtx *tx,struct coin_info *cp,c
     tx->firstvin = raw->numrawvins;
     if ( vinsobj != 0 && is_cJSON_Array(vinsobj) != 0 && (numvins= cJSON_GetArraySize(vinsobj)) > 0 && tx->firstvin+numvins < MAX_BLOCKTX )
     {
-        for (i=0; i<numvins; i++)
+        for (i=0; i<numvins; i++,raw->numrawvins++)
         {
             item = cJSON_GetArrayItem(vinsobj,i);
             if ( numvins == 1  )
@@ -412,7 +412,7 @@ int32_t _get_txvins(struct rawblock *raw,struct rawtx *tx,struct coin_info *cp,c
                     return(0);
             }
             copy_cJSON(txidstr,cJSON_GetObjectItem(item,"txid"));
-            v = &raw->vinspace[raw->numrawvins++];
+            v = &raw->vinspace[raw->numrawvins];
             memset(v,0,sizeof(*v));
             v->vout = (int)get_cJSON_int(item,"vout");
             if ( strlen(txidstr) < sizeof(v->txidstr)-1 )
@@ -420,6 +420,7 @@ int32_t _get_txvins(struct rawblock *raw,struct rawtx *tx,struct coin_info *cp,c
             //printf("numraw.%d vin.%d (%s).v%d\n",raw->numrawvins,i,v->txidstr,v->vout);
         }
     } else printf("error with vins\n");
+    tx->numvins = numvins;
     return(numvins);
 }
 
@@ -434,12 +435,12 @@ int32_t _get_txvouts(struct rawblock *raw,struct rawtx *tx,struct coin_info *cp,
     tx->firstvout = raw->numrawvouts;
     if ( voutsobj != 0 && is_cJSON_Array(voutsobj) != 0 && (numvouts= cJSON_GetArraySize(voutsobj)) > 0 && tx->firstvout+numvouts < MAX_BLOCKTX )
     {
-        for (i=0; i<numvouts; i++)
+        for (i=0; i<numvouts; i++,raw->numrawvouts++)
         {
             item = cJSON_GetArrayItem(voutsobj,i);
             if ( (value = conv_cJSON_float(item,"value")) > 0 )
             {
-                v = &raw->voutspace[raw->numrawvouts++];
+                v = &raw->voutspace[raw->numrawvouts];
                 memset(v,0,sizeof(*v));
                 v->value = value;
                 extract_txvals(coinaddr,script,1,item); // default to nohexout
@@ -451,6 +452,7 @@ int32_t _get_txvouts(struct rawblock *raw,struct rawtx *tx,struct coin_info *cp,
             }
         }
     } else printf("error with vouts\n");
+    tx->numvouts = numvouts;
     return(numvouts);
 }
 
@@ -464,8 +466,8 @@ void _get_txidinfo(struct rawblock *raw,struct rawtx *tx,struct coin_info *cp,in
     {
         if ( (txjson= cJSON_Parse(retstr)) != 0 )
         {
-            tx->numvins = _get_txvins(raw,tx,cp,cJSON_GetObjectItem(txjson,"vin"));
-            tx->numvouts = _get_txvouts(raw,tx,cp,cJSON_GetObjectItem(txjson,"vout"));
+            _get_txvins(raw,tx,cp,cJSON_GetObjectItem(txjson,"vin"));
+            _get_txvouts(raw,tx,cp,cJSON_GetObjectItem(txjson,"vout"));
             free_json(txjson);
         } else printf("update_txid_infos parse error.(%s)\n",retstr);
         free(retstr);
@@ -498,7 +500,7 @@ uint32_t _get_blockinfo(struct rawblock *raw,struct coin_info *cp,uint32_t block
         } else printf("error _get_blocktxarray for block.%d got %d, n.%d vs %d\n",blockheight,blockid,n,MAX_BLOCKTX);
         free_json(json);
     } else printf("get_blockjson error parsing.(%s)\n",txidstr);
-    printf("block.%d numtx.%d rawnumvins.%d rawnumvouts.%d\n",raw->blocknum,raw->numtx,raw->numrawvins,raw->numrawvouts);
+    //printf("block.%d numtx.%d rawnumvins.%d rawnumvouts.%d\n",raw->blocknum,raw->numtx,raw->numrawvins,raw->numrawvouts);
     return(raw->numtx);
 }
 

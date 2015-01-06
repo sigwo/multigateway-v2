@@ -4191,7 +4191,7 @@ void process_coinblocks(char *argcoinstr)
                             V->processed++;
                             processed++;
                             estimated = estimate_completion(V->coinstr,V->startmilli,V->processed,(int32_t)height-V->blocknum)/60;
-                            printf("%-5s %.1f min left [%.1f per block: est %s] ",cp->name,estimated,(double)ftell(V->rawfp)/cp->blockheight,_mbstr(height * ((double)ftell(V->rawfp)/cp->blockheight)));
+                            printf("%-5s %.1f min left [%.1f per block: est %s] numtx.%d vins.%d vouts.%d minted %.8f\n",cp->name,estimated,(double)ftell(V->rawfp)/cp->blockheight,_mbstr(height * ((double)ftell(V->rawfp)/cp->blockheight)),V->raw.numtx,V->raw.numrawvins,V->raw.numrawvouts,dstr(V->raw.minted));
                             cp->blockheight++;
                         } //else break;
                     }
