@@ -906,7 +906,7 @@ int32_t load_rawvin(FILE *fp,struct rawvin *vin)
     else
     {
         vin->vout = (uint32_t)varint;
-        if ( (fpos= load_varfilestr(&datalen,(char *)data,fp,sizeof(vin->txidstr)/2-1)) > 0 )
+        if ( (fpos= load_varfilestr(&datalen,(char *)data,fp,sizeof(vin->txidstr)-1)) > 0 )
         {
             init_hexbytes_noT(vin->txidstr,data,datalen);
             return(0);
@@ -926,7 +926,7 @@ int32_t save_rawvin(FILE *fp,struct rawvin *vin)
         len = strlen(vin->txidstr) >> 1;
         if ( len <= 0 )
             return(-1);
-        decode_hex(data,(int32_t)len>>1,vin->txidstr);
+        decode_hex(data,(int32_t)len,vin->txidstr);
         if ( emit_varint(fp,len) <= 0 )
             return(-1);
         else if ( fwrite(data,1,len,fp) != len )
@@ -1503,12 +1503,12 @@ void init_bitstream(struct compressionvars *V,FILE *fp)
                 for (txind=0; txind<raw->numtx; txind++)
                 {
                     tx = &raw->txspace[txind];
-                    printf("(%d %d).t%d ",tx->numvins,tx->numvouts,txind);
                     if ( tx->numvins > 0 )
                     {
                         for (vin=0; vin<tx->numvins; vin++)
                         {
                             vi = &raw->vinspace[tx->firstvin + vin];
+                            printf("(%s).v%d ",vi->txidstr,vi->vout);
                         }
                         checkvins += tx->numvins;
                     }
@@ -1517,9 +1517,11 @@ void init_bitstream(struct compressionvars *V,FILE *fp)
                         for (vout=0; vout<tx->numvouts; vout++)
                         {
                             vo = &raw->voutspace[tx->firstvout + vout];
+                            printf("(%s, %s, %.8f) ",vo->coinaddr,vo->script,dstr(vo->value));
                         }
                         checkvouts += tx->numvouts;
                     }
+                    printf("(vins.%d vouts.%d).txind.%d\n",tx->numvins,tx->numvouts,txind);
                 }
             }
             avesize = ((double)ftell(fp) / (blocknum+1));
