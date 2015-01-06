@@ -152,7 +152,6 @@ FILE *jl777fopen(char *fname,char *mode)
 }
 #define fopen jl777fopen
 
-
 #ifdef __MINGW32__
 #elif __MINGW64__
 #else
