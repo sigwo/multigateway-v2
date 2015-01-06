@@ -2516,4 +2516,5 @@ long force_fpos(char *fname,FILE **fpp,long setfpos)
 }
 
 
+
 #endif

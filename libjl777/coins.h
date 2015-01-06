@@ -791,9 +791,13 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             SERVER_PORT = get_API_int(cJSON_GetObjectItem(MGWconf,"SERVER_PORT"),3000);
             SUPERNET_PORT = get_API_int(cJSON_GetObjectItem(MGWconf,"SUPERNET_PORT"),_SUPERNET_PORT);
             APIPORT = get_API_int(cJSON_GetObjectItem(MGWconf,"APIPORT"),SUPERNET_PORT);
-            DBSLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"DBSLEEP"),1000);
+            DBSLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"DBSLEEP"),100);
             MAX_BUYNXT = get_API_int(cJSON_GetObjectItem(MGWconf,"MAX_BUYNXT"),10);
-            APISLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"APISLEEP"),100);
+            APISLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"APISLEEP"),10);
+#ifndef HUFF_GENMODE
+            DBSLEEP *= 10;
+            APISLEEP *= 10;
+#endif
             USESSL = get_API_int(cJSON_GetObjectItem(MGWconf,"USESSL"),0);
             UPNP = get_API_int(cJSON_GetObjectItem(MGWconf,"UPNP"),1);
             LOG2_MAX_XFERPACKETS = get_API_int(cJSON_GetObjectItem(MGWconf,"LOG2_MAXPACKETS"),3);

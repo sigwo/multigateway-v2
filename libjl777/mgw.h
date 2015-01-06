@@ -1064,7 +1064,7 @@ uint64_t update_vins(int32_t *numvinsp,int32_t *isinternalp,char *coinaddr,char 
     return(sum);
 }
 
-void update_txid_infos(struct coin_info *cp,uint32_t blockheight,int32_t txind,char *txidstr,int32_t syncflag)
+void update_txid_infos(struct coin_info *cp,uint32_t blockheight,int32_t txind,char *txidstr,int32_t syncflag,uint64_t minted)
 {
     char coinaddr[1024],script[4096],coinaddr_v0[1024],*retstr = 0;
     int32_t v,tmp,numvouts,numvins,isinternal = 0;
@@ -1075,6 +1075,8 @@ void update_txid_infos(struct coin_info *cp,uint32_t blockheight,int32_t txind,c
         if ( (txjson= cJSON_Parse(retstr)) != 0 )
         {
             inputsum = update_vins(&numvins,&isinternal,coinaddr,script,cp,blockheight,txind,cJSON_GetObjectItem(txjson,"vin"),-1,syncflag);
+            if ( inputsum == 0 && txind == 0 )
+                inputsum = minted;
             v = 0;
             remainder = inputsum;
             if ( (value= get_txvout(0,&numvouts,coinaddr_v0,script,cp,txjson,0,v)) > 0 )
@@ -1095,13 +1097,17 @@ void update_txid_infos(struct coin_info *cp,uint32_t blockheight,int32_t txind,c
 
 uint32_t get_blocktxind(int32_t *txindp,struct coin_info *cp,uint32_t blockheight,char *blockhashstr,char *reftxidstr)
 {
-    char txidstr[1024];
+    char txidstr[1024],mintedstr[512];
     cJSON *json,*txobj;
     int32_t txind,n;
+    uint64_t minted = 0;
     uint32_t blockid = 0;
     *txindp = -1;
     if ( (json= get_blockjson(0,cp,blockhashstr,blockheight)) != 0 )
     {
+        copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"mint"));
+        if ( mintedstr[0] != 0 )
+            minted = (uint64_t)(atof(mintedstr) * SATOSHIDEN);
         if ( (txobj= _get_blocktxarray(&blockid,&n,cp,json)) != 0 )
         {
             if ( blockheight == 0 )
@@ -1118,7 +1124,7 @@ uint32_t get_blocktxind(int32_t *txindp,struct coin_info *cp,uint32_t blockheigh
                         *txindp = txind;
                         break;
                     }
-                }  else update_txid_infos(cp,blockheight,txind,txidstr,txind == n-1);
+                }  else update_txid_infos(cp,blockheight,txind,txidstr,txind == n-1,minted);
             }
         }
         free_json(json);
@@ -4165,7 +4171,7 @@ void process_coinblocks(char *argcoinstr)
                         if ( IS_LIBTEST == 7 )
                             V->numbfps = init_compressionvars(HUFF_READONLY,V,coinstr,(uint32_t)cp->RTblockheight);
                     }
-                    if ( 0 && firstiter != 0 && (cp->blockheight= V->firstblock) != 0 )
+                    if ( 1 && firstiter != 0 && (cp->blockheight= V->firstblock) != 0 )
                         cp->blockheight++;
                     //if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
                     //    printf("ERROR hist findaddress_loop\n");
@@ -4173,10 +4179,15 @@ void process_coinblocks(char *argcoinstr)
                     startmilli = milliseconds();
                     while ( cp->blockheight < (height - cp->min_confirms) && milliseconds() < (startmilli+1000) )
                     {
+                        int32_t save_rawblock(FILE *fp,struct rawblock *raw);
+                        uint32_t _get_blockinfo(struct rawblock *raw,struct coin_info *cp,uint32_t blockheight);
                         if ( Debuglevel > 2 )
                            printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)cp->blockheight,(long)height);
-                        if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
+                        if ( _get_blockinfo(&V->raw,cp,(uint32_t)cp->blockheight) > 0 )
+                        //if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
                         {
+                            save_rawblock(V->rawfp,&V->raw);
+                            printf("[%.1f per block: est %s] ",(double)ftell(V->rawfp)/cp->blockheight,_mbstr(height * ((double)ftell(V->rawfp)/cp->blockheight)));
                             processed++;
                             cp->blockheight++;
                         } //else break;
@@ -4184,7 +4195,10 @@ void process_coinblocks(char *argcoinstr)
                 }
             }
             if ( processed == 0 )
-                sleep(10);
+            {
+                printf("coinblocks caught up\n");
+                sleep(60);
+            }
             firstiter = 0;
         }
     }
