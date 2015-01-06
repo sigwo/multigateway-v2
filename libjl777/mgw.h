@@ -4187,7 +4187,7 @@ void process_coinblocks(char *argcoinstr)
                         //if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
                         {
                             save_rawblock(V->rawfp,&V->raw);
-                            printf("[%.1f per block: est %s] ",(double)ftell(V->rawfp)/cp->blockheight,_mbstr(height * ((double)ftell(V->rawfp)/cp->blockheight)));
+                            printf("%-5s [%.1f per block: est %s] ",cp->name,(double)ftell(V->rawfp)/cp->blockheight,_mbstr(height * ((double)ftell(V->rawfp)/cp->blockheight)));
                             processed++;
                             cp->blockheight++;
                         } //else break;

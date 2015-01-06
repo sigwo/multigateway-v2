@@ -50,11 +50,11 @@ union hufftype
 #define MAX_BLOCKTX 4096
 struct rawvin { char txidstr[128]; int32_t vout; };
 struct rawvout { char coinaddr[64],script[128]; uint64_t value; };
-struct rawtx { int16_t firstvin,numvins,firstvout,numvouts; };
+struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; };
 
 struct rawblock
 {
-    int32_t numtx,numrawvins,numrawvouts;
+    uint32_t numtx,numrawvins,numrawvouts;
     uint32_t blocknum;
     uint64_t minted;
     struct rawtx txspace[MAX_BLOCKTX];
@@ -718,7 +718,7 @@ int32_t load_varint(uint64_t *valp,FILE *fp)
     return(retval);
 }
 
-int32_t save_vfilestr(FILE *fp,char *str)
+int32_t save_varfilestr(FILE *fp,char *str)
 {
     long savepos,len = strlen(str);
     savepos = ftell(fp);
@@ -733,7 +733,7 @@ int32_t save_vfilestr(FILE *fp,char *str)
     return(-1);
 }
 
-long load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
+long load_varfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
 {
     int32_t retval;
     long savepos,fpos = 0;
@@ -759,24 +759,6 @@ long load_vfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
     } else printf("load_varint got %d at %ld: len.%lld maxlen.%d\n",retval,ftell(fp),(long long)len,maxlen);
     fseek(fp,savepos,SEEK_SET);
     return(-1);
-}
-
-int32_t save_rawvin(FILE *fp,struct rawvin *vin)
-{
-    long len;
-    uint8_t data[512];
-    if ( emit_varint(fp,vin->vout) <= 0 )
-        return(-1);
-    else
-    {
-        len = strlen(vin->txidstr) >> 1;
-        decode_hex(data,(int32_t)len>>1,vin->txidstr);
-        if ( emit_varint(fp,len) <= 0 )
-            return(-1);
-        else if ( fwrite(data,1,len,fp) != len )
-            return(-1);
-    }
-    return(0);
 }
 
 int32_t expand_scriptdata(char *scriptstr,uint8_t *scriptdata,int32_t datalen)
@@ -850,6 +832,27 @@ int32_t calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,
     return(mode);
 }
 
+int32_t load_rawvout(FILE *fp,struct rawvout *vout)
+{
+    long fpos;
+    uint64_t varint;
+    int32_t datalen,len;
+    uint8_t data[4096];
+    if ( load_varint(&varint,fp) <= 0 )
+        return(-1);
+    else
+    {
+        vout->value = varint;
+        if ( (fpos= load_varfilestr(&datalen,(char *)data,fp,sizeof(vout->script)/2-1)) > 0 )
+        {
+            expand_scriptdata(vout->script,data,len);
+            if ( (fpos= load_varfilestr(&len,vout->coinaddr,fp,sizeof(vout->coinaddr)-1)) > 0 )
+                return(0);
+        } else return(-1);
+    }
+    return(-1);
+}
+
 int32_t save_rawvout(FILE *fp,struct rawvout *vout)
 {
     long len;
@@ -878,25 +881,63 @@ int32_t save_rawvout(FILE *fp,struct rawvout *vout)
     return(0);
 }
 
-int32_t save_vinspace(FILE *fp,struct rawvin *vins,int32_t numrawvins)
+int32_t load_rawvin(FILE *fp,struct rawvin *vin)
+{
+    long fpos;
+    uint64_t varint;
+    int32_t datalen;
+    uint8_t data[4096];
+    if ( load_varint(&varint,fp) <= 0 )
+        return(-1);
+    else
+    {
+        vin->vout = (uint32_t)varint;
+        if ( (fpos= load_varfilestr(&datalen,(char *)data,fp,sizeof(vin->txidstr)/2-1)) > 0 )
+        {
+            init_hexbytes_noT(vin->txidstr,data,datalen);
+            return(0);
+        }
+    }
+    return(-1);
+}
+
+int32_t save_rawvin(FILE *fp,struct rawvin *vin)
+{
+    long len;
+    uint8_t data[512];
+    if ( emit_varint(fp,vin->vout) <= 0 )
+        return(-1);
+    else
+    {
+        len = strlen(vin->txidstr) >> 1;
+        decode_hex(data,(int32_t)len>>1,vin->txidstr);
+        if ( emit_varint(fp,len) <= 0 )
+            return(-1);
+        else if ( fwrite(data,1,len,fp) != len )
+            return(-1);
+    }
+    return(0);
+}
+
+int32_t vinspace_io(int32_t saveflag,FILE *fp,struct rawvin *vins,int32_t numrawvins)
 {
     int32_t i;
     if ( numrawvins > 0 )
     {
         for (i=0; i<numrawvins; i++)
-            if ( save_rawvin(fp,&vins[i]) != 0 )
+            if ( ((saveflag != 0) ? save_rawvin(fp,&vins[i]) : load_rawvin(fp,&vins[i])) != 0 )
                 return(-1);
     }
     return(0);
 }
 
-int32_t save_voutspace(FILE *fp,struct rawvout *vouts,int32_t numrawvouts)
+int32_t voutspace_io(int32_t saveflag,FILE *fp,struct rawvout *vouts,int32_t numrawvouts)
 {
     int32_t i;
     if ( numrawvouts > 0 )
     {
         for (i=0; i<numrawvouts; i++)
-            if ( save_rawvout(fp,&vouts[i]) != 0 )
+            if ( ((saveflag != 0) ? save_rawvout(fp,&vouts[i]) : load_rawvout(fp,&vouts[i])) != 0 )
                 return(-1);
     }
     return(0);
@@ -966,16 +1007,33 @@ uint32_t load_blockcheck(FILE *fp)
 
 int32_t save_rawblock(FILE *fp,struct rawblock *raw)
 {
-    if ( fwrite(raw,sizeof(int32_t),6,fp) != 6 )
-        printf("fwrite error of header for block.%d\n",raw->blocknum);
-    else if ( fwrite(raw->txspace,sizeof(*raw->txspace),raw->numtx,fp) != raw->numtx )
-        printf("fwrite error of txspace[%d] for block.%d\n",raw->numtx,raw->blocknum);
-    else if ( save_vinspace(fp,raw->vinspace,raw->numrawvins) != 0 )
-        printf("fwrite error of vinspace[%d] for block.%d\n",raw->numrawvins,raw->blocknum);
-    else if ( save_voutspace(fp,raw->voutspace,raw->numrawvouts) != 0 )
-        printf("fwrite error of voutspace[%d] for block.%d\n",raw->numrawvouts,raw->blocknum);
-    else if ( emit_blockcheck(fp,raw->blocknum) <= 0 )
-        printf("emit_blockcheck error for block.%d\n",raw->blocknum);
+    if ( raw->numtx < MAX_BLOCKTX && raw->numrawvins < MAX_BLOCKTX  && raw->numrawvouts < MAX_BLOCKTX )
+    {
+        if ( fwrite(raw,sizeof(int32_t),6,fp) != 6 )
+            printf("fwrite error of header for block.%d\n",raw->blocknum);
+        else if ( fwrite(raw->txspace,sizeof(*raw->txspace),raw->numtx,fp) != raw->numtx )
+            printf("fwrite error of txspace[%d] for block.%d\n",raw->numtx,raw->blocknum);
+        else if ( vinspace_io(1,fp,raw->vinspace,raw->numrawvins) != 0 )
+            printf("fwrite error of vinspace[%d] for block.%d\n",raw->numrawvins,raw->blocknum);
+        else if ( voutspace_io(1,fp,raw->voutspace,raw->numrawvouts) != 0 )
+            printf("fwrite error of voutspace[%d] for block.%d\n",raw->numrawvouts,raw->blocknum);
+        else if ( emit_blockcheck(fp,raw->blocknum) <= 0 )
+            printf("emit_blockcheck error for block.%d\n",raw->blocknum);
+        else return(0);
+    }
+    return(-1);
+}
+
+int32_t load_rawblock(FILE *fp,struct rawblock *raw,uint32_t expectedblock,long endpos)
+{
+    if ( fread(raw,sizeof(int32_t),6,fp) != 6 || expectedblock != raw->blocknum )
+        printf("fread error of header for block.%d expected.%d\n",raw->blocknum,expectedblock);
+    else if ( raw->numtx < MAX_BLOCKTX && fread(raw->txspace,sizeof(*raw->txspace),raw->numtx,fp) != raw->numtx )
+        printf("fread error of txspace[%d] for block.%d\n",raw->numtx,raw->blocknum);
+    else if ( raw->numrawvins < MAX_BLOCKTX && vinspace_io(0,fp,raw->vinspace,raw->numrawvins) != 0 )
+        printf("read error of vinspace[%d] for block.%d\n",raw->numrawvins,raw->blocknum);
+    else if ( raw->numrawvouts < MAX_BLOCKTX && voutspace_io(0,fp,raw->voutspace,raw->numrawvouts) != 0 )
+        printf("read error of voutspace[%d] for block.%d\n",raw->numrawvouts,raw->blocknum);
     else return(0);
     return(-1);
 }
@@ -1362,6 +1420,27 @@ void *update_bitstream_file(struct compressionvars *V,int32_t *createdflagp,stru
     return(item);
 }
 
+void update_vinsbfp(struct compressionvars *V,struct bitstream_file *bfp,struct address_entry *bp,uint32_t blocknum)
+{
+    static uint32_t prevblocknum;
+    int32_t createdflag;
+    union huffinfo U;
+    memset(&U,0,sizeof(U));
+    //printf("spent block.%u txind.%d vout.%d\n",bp->blocknum,bp->txind,bp->v);
+    if ( blocknum != 0xffffffff )
+        update_bitstream_file(V,&createdflag,bfp,blocknum,bp,sizeof(*bp),0,&U,-1);
+    U.s = bp->txind, update_bitstream_file(V,&createdflag,V->txinbfp,blocknum,&U.s,sizeof(U.s),0,&U,-1);
+    U.s = bp->v, update_bitstream_file(V,&createdflag,V->voutbfp,blocknum,&U.s,sizeof(U.s),0,&U,-1);
+    U.i = abs(bp->blocknum - prevblocknum), update_bitstream_file(V,&createdflag,V->inblockbfp,blocknum,&U.i,sizeof(U.i),0,&U,-1);
+    prevblocknum = bp->blocknum;
+}
+
+void init_bitstream(struct compressionvars *V,FILE *rawfp)
+{
+    
+}
+
+
 int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *bfp,int32_t isbinary)
 {
     FILE *fp;
@@ -1376,7 +1455,7 @@ int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *
     {
         endpos = get_endofdata(&eofpos,fp);
         maxlen = (int32_t)sizeof(data)-1;
-        while ( ftell(fp) < endpos && (fpos= load_vfilestr(&len,(isbinary != 0) ? (char *)data : str,fp,maxlen)) > 0 )
+        while ( ftell(fp) < endpos && (fpos= load_varfilestr(&len,(isbinary != 0) ? (char *)data : str,fp,maxlen)) > 0 )
         {
             memset(&U,0,sizeof(U));
             //printf("isbinary.%d: len.%d\n",isbinary,len);
@@ -1419,21 +1498,6 @@ int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *
     bfp->checkblock = load_blockcheck(bfp->fp);
     printf("loaded %d to block.%u from hashtable.(%s) fpos.%ld vs endpos.%ld | numblockchecks.%d\n",count,bfp->checkblock,bfp->fname,ftell(fp),eofpos,n);
     return(count);
-}
-
-void update_vinsbfp(struct compressionvars *V,struct bitstream_file *bfp,struct address_entry *bp,uint32_t blocknum)
-{
-    static uint32_t prevblocknum;
-    int32_t createdflag;
-    union huffinfo U;
-    memset(&U,0,sizeof(U));
-    //printf("spent block.%u txind.%d vout.%d\n",bp->blocknum,bp->txind,bp->v);
-    if ( blocknum != 0xffffffff )
-        update_bitstream_file(V,&createdflag,bfp,blocknum,bp,sizeof(*bp),0,&U,-1);
-    U.s = bp->txind, update_bitstream_file(V,&createdflag,V->txinbfp,blocknum,&U.s,sizeof(U.s),0,&U,-1);
-    U.s = bp->v, update_bitstream_file(V,&createdflag,V->voutbfp,blocknum,&U.s,sizeof(U.s),0,&U,-1);
-    U.i = abs(bp->blocknum - prevblocknum), update_bitstream_file(V,&createdflag,V->inblockbfp,blocknum,&U.i,sizeof(U.i),0,&U,-1);
-    prevblocknum = bp->blocknum;
 }
 
 int32_t load_fixed_fields(struct compressionvars *V,struct bitstream_file *bfp)
@@ -1558,6 +1622,8 @@ int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *co
         V->voutsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VOUTS,readonly,coinstr,"vouts",sizeof(struct voutinfo),refblock,sizeof(struct voutinfo)), n++;
         V->vinsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VINS,readonly,coinstr,"vins",sizeof(struct address_entry),refblock,sizeof(struct address_entry)), n++;
         V->bitstream = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_COMPRESSED,readonly,coinstr,"bitstream",0,refblock,0), n++;
+        rewind(V->rawfp);
+        init_bitstream(V,V->rawfp);
     }
     if ( readonly != 0 )
         exit(1);

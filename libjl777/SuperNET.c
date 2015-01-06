@@ -399,7 +399,7 @@ int32_t _get_txvins(struct rawblock *raw,struct rawtx *tx,struct coin_info *cp,c
     int32_t i,numrawvins,numvins = 0;
     char txidstr[1024],coinbase[1024];
     tx->firstvin = raw->numrawvins;
-    if ( vinsobj != 0 && is_cJSON_Array(vinsobj) != 0 && (numvins= cJSON_GetArraySize(vinsobj)) > 0 )
+    if ( vinsobj != 0 && is_cJSON_Array(vinsobj) != 0 && (numvins= cJSON_GetArraySize(vinsobj)) > 0 && tx->firstvin+numvins < MAX_BLOCKTX )
     {
         for (i=0; i<numvins; i++)
         {
@@ -426,7 +426,7 @@ int32_t _get_txvouts(struct rawblock *raw,struct rawtx *tx,struct coin_info *cp,
     int32_t i,numrawvouts,numvouts = 0;
     char coinaddr[1024],script[1024];
     tx->firstvout = raw->numrawvouts;
-    if ( voutsobj != 0 && is_cJSON_Array(voutsobj) != 0 && (numvouts= cJSON_GetArraySize(voutsobj)) > 0 )
+    if ( voutsobj != 0 && is_cJSON_Array(voutsobj) != 0 && (numvouts= cJSON_GetArraySize(voutsobj)) > 0 && tx->firstvout+numvouts < MAX_BLOCKTX )
     {
         for (i=0; i<numvouts; i++)
         {
@@ -479,14 +479,14 @@ uint32_t _get_blockinfo(struct rawblock *raw,struct coin_info *cp,uint32_t block
         copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"mint"));
         if ( mintedstr[0] != 0 )
             raw->minted = (uint64_t)(atof(mintedstr) * SATOSHIDEN);
-        if ( (txobj= _get_blocktxarray(&blockid,&n,cp,json)) != 0 && blockid == blockheight )
+        if ( (txobj= _get_blocktxarray(&blockid,&n,cp,json)) != 0 && blockid == blockheight && n < MAX_BLOCKTX )
         {
             for (txind=0; txind<n; txind++)
             {
                 copy_cJSON(txidstr,cJSON_GetArrayItem(txobj,txind));
                 _get_txidinfo(raw,&raw->txspace[raw->numtx++],cp,txidstr);
             }
-        } else printf("error _get_blocktxarray for block.%d got %d\n",blockheight,blockid);
+        } else printf("error _get_blocktxarray for block.%d got %d, n.%d vs %d\n",blockheight,blockid,n,MAX_BLOCKTX);
         free_json(json);
     } else printf("get_blockjson error parsing.(%s)\n",txidstr);
     printf("block.%d numtx.%d rawnumvins.%d rawnumvouts.%d\n",raw->blocknum,raw->numtx,raw->numrawvins,raw->numrawvouts);
