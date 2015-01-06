@@ -47,7 +47,7 @@ union hufftype
 #define BITSTREAM_32bits (1<<9)
 #define BITSTREAM_64bits (1<<10)
 
-#define MAX_BLOCKTX 4096
+#define MAX_BLOCKTX 16384
 struct rawvin { char txidstr[128]; int32_t vout; };
 struct rawvout { char coinaddr[64],script[128]; uint64_t value; };
 struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; };
@@ -841,21 +841,19 @@ int32_t load_rawvout(FILE *fp,struct rawvout *vout)
     uint64_t varint,vlen;
     int32_t datalen,len,retval;
     uint8_t data[4096];
-    printf("load_rawvout starting %ld\n",ftell(fp));
     if ( (n= load_varint(&varint,fp)) <= 0 )
         return(-1);
     else
     {
-        printf("loaded varint %lld with %ld bytes | fpos.%ld\n",(long long)varint,n,ftell(fp));
+        //printf("loaded varint %lld with %ld bytes | fpos.%ld\n",(long long)varint,n,ftell(fp));
         vout->value = varint;
         if ( (fpos= load_varfilestr(&datalen,(char *)data,fp,sizeof(vout->script)/2-1)) > 0 )
         {
             expand_scriptdata(vout->script,data,datalen);
-            printf("fpos after loading script.%ld\n",ftell(fp));
             retval = load_varint(&vlen,fp);
             printf("script.(%s) datalen.%d | retval.%d vlen.%llu | fpos.%ld\n",vout->script,datalen,retval,(long long)vlen,ftell(fp));
             vout->coinaddr[0] = 0;
-            if ( vlen > 0 && retval == 0 && vlen < sizeof(vout->coinaddr)-1 && (n= fread(vout->coinaddr,1,vlen,fp)) == vlen )
+            if ( vlen > 0 && retval > 0 && vlen < sizeof(vout->coinaddr)-1 && (n= fread(vout->coinaddr,1,vlen+1,fp)) == vlen )
            // if ( (fpos= load_varfilestr(&len,vout->coinaddr,fp,sizeof(vout->coinaddr)-1)) > 0 )
             {
                 printf("coinaddr.(%s) len.%d fpos.%ld\n",vout->coinaddr,len,ftell(fp));
@@ -869,27 +867,30 @@ int32_t load_rawvout(FILE *fp,struct rawvout *vout)
 int32_t save_rawvout(FILE *fp,struct rawvout *vout)
 {
     long len;
-    int32_t mode,datalen;
+    int32_t mode,datalen = 0;
     uint8_t data[4096];
     if ( emit_varint(fp,vout->value) <= 0 )
         return(-1);
     else
     {
-        len = strlen(vout->coinaddr) + 1;
+        len = strlen(vout->coinaddr);
         if ( vout->script[0] != 0 )
         {
             mode = calc_scriptmode(&datalen,data,vout->script,1);
             if ( emit_varint(fp,datalen) <= 0 )
-                return(-1);
+                return(-2);
             else if ( fwrite(data,1,datalen,fp) != datalen )
-                return(-1);
+                return(-3);
         }
         else if ( emit_varint(fp,0) <= 0 )
-            return(-1);
+            return(-4);
         if ( emit_varint(fp,len) <= 0 )
-            return(-1);
-        else if ( fwrite(vout->coinaddr,1,len,fp) != len )
-            return(-1);
+            return(-5);
+        else if ( len > 0 && fwrite(vout->coinaddr,1,len+1,fp) != len+1 )
+            return(-6);
+        else if ( len <= 0 )
+            return(-7);
+        //else printf("script.(%s).%d wrote (%s).%ld %.8f\n",vout->script,datalen,vout->coinaddr,len,dstr(vout->value));
     }
     return(0);
 }
@@ -923,6 +924,8 @@ int32_t save_rawvin(FILE *fp,struct rawvin *vin)
     else
     {
         len = strlen(vin->txidstr) >> 1;
+        if ( len <= 0 )
+            return(-1);
         decode_hex(data,(int32_t)len>>1,vin->txidstr);
         if ( emit_varint(fp,len) <= 0 )
             return(-1);
@@ -946,12 +949,15 @@ int32_t vinspace_io(int32_t saveflag,FILE *fp,struct rawvin *vins,int32_t numraw
 
 int32_t voutspace_io(int32_t saveflag,FILE *fp,struct rawvout *vouts,int32_t numrawvouts)
 {
-    int32_t i;
+    int32_t i,retval;
     if ( numrawvouts > 0 )
     {
         for (i=0; i<numrawvouts; i++)
-            if ( ((saveflag != 0) ? save_rawvout(fp,&vouts[i]) : load_rawvout(fp,&vouts[i])) != 0 )
+            if ( (retval= ((saveflag != 0) ? save_rawvout(fp,&vouts[i]) : load_rawvout(fp,&vouts[i]))) != 0 )
+            {
+                printf("rawvout.saveflag.%d returns %d\n",saveflag,retval);
                 return(-1);
+            }
     }
     return(0);
 }
@@ -1475,19 +1481,24 @@ void init_bitstream(struct compressionvars *V,FILE *fp)
     double avesize;
     uint32_t blocknum;
     long endpos,eofpos;
-    endpos = get_endofdata(&eofpos,fp);
-    rewind(fp);
-    for (blocknum=0; blocknum<=V->blocknum; blocknum++)
+    if ( fp != 0 )
     {
-        if ( load_rawblock(1,fp,&V->raw,blocknum,endpos) != 0 )
+        endpos = get_endofdata(&eofpos,fp);
+        rewind(fp);
+        for (blocknum=1; blocknum<=V->blocknum||ftell(fp)<endpos-1024; blocknum++)
         {
-            printf("error loading block.%d\n",blocknum);
-            break;
+            if ( load_rawblock(1,fp,&V->raw,blocknum,endpos) != 0 )
+            {
+                printf("error loading block.%d\n",blocknum);
+                break;
+            }
+            avesize = ((double)ftell(fp) / (blocknum+1));
+            printf("%-5s [%.1f per block: est %s]\n",V->coinstr,avesize,_mbstr(V->blocknum * avesize));
         }
-        avesize = ((double)ftell(fp) / (blocknum+1));
-        printf("%-5s [%.1f per block: est %s]\n",V->coinstr,avesize,_mbstr(V->blocknum * avesize));
     }
+#ifndef HUFF_GENMODE
     getchar();
+#endif
 }
 
 int32_t load_reference_strings(struct compressionvars *V,struct bitstream_file *bfp,int32_t isbinary)
@@ -1644,11 +1655,6 @@ int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *co
         if ( (V->maxblocknum= get_blockheight(cp)) == 0 )
             V->maxblocknum = maxblocknum;
         printf("init compression vars.%s: maxblocknum %d %d readonly.%d\n",coinstr,maxblocknum,get_blockheight(cp),readonly);
-        set_compressionvars_fname(readonly,fname,coinstr,"rawblocks",-1);
-#ifdef HUFF_GENMODE
-        char cmdstr[512]; sprintf(cmdstr,"rm %s",fname); system(cmdstr);
-#endif
-        V->rawfp = _open_varsfile(readonly,&V->blocknum,fname,coinstr);
         V->disp = calloc(1,100000);
         V->buffer = calloc(1,100000);
         V->hp = hopen(V->buffer,100000);
@@ -1675,7 +1681,15 @@ int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *co
         V->voutsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VOUTS,readonly,coinstr,"vouts",sizeof(struct voutinfo),refblock,sizeof(struct voutinfo)), n++;
         V->vinsbfp = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_VINS,readonly,coinstr,"vins",sizeof(struct address_entry),refblock,sizeof(struct address_entry)), n++;
         V->bitstream = n, V->bfps[n] = init_bitstream_file(V,n,BITSTREAM_COMPRESSED,readonly,coinstr,"bitstream",0,refblock,0), n++;
+        set_compressionvars_fname(readonly,fname,coinstr,"rawblocks",-1);
+#ifdef HUFF_GENMODE
+        char cmdstr[512]; sprintf(cmdstr,"rm %s",fname); system(cmdstr);
+        V->rawfp = _open_varsfile(readonly,&V->blocknum,fname,coinstr);
+#else
+        V->rawfp = _open_varsfile(readonly,&V->blocknum,fname,coinstr);
+        printf("rawfp.%p readonly.%d V->blocks.%d (%s) %s\n",V->rawfp,readonly,V->blocknum,fname,coinstr);
         init_bitstream(V,V->rawfp);
+#endif
     }
     if ( readonly != 0 )
         exit(1);

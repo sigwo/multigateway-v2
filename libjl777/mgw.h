@@ -4172,8 +4172,8 @@ void process_coinblocks(char *argcoinstr)
                         if ( IS_LIBTEST == 7 )
                             V->numbfps = init_compressionvars(HUFF_READONLY,V,coinstr,(uint32_t)cp->RTblockheight);
                     }
-                    if ( 1 && firstiter != 0 && (cp->blockheight= V->firstblock) != 0 )
-                        cp->blockheight++;
+                    if ( 1 && firstiter != 0 )
+                        cp->blockheight = (V->firstblock + 1);
                     //if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
                     //    printf("ERROR hist findaddress_loop\n");
                     height = get_blockheight(cp);
@@ -4184,7 +4184,7 @@ void process_coinblocks(char *argcoinstr)
                         uint32_t _get_blockinfo(struct rawblock *raw,struct coin_info *cp,uint32_t blockheight);
                         if ( Debuglevel > 2 )
                            printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)cp->blockheight,(long)height);
-                        if ( _get_blockinfo(&V->raw,cp,(uint32_t)cp->blockheight) > 0 )
+                        if ( (strcmp(cp->name,"BTC") == 0 && cp->blockheight == 71036) || _get_blockinfo(&V->raw,cp,(uint32_t)cp->blockheight) > 0 )
                         //if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
                         {
                             save_rawblock(V->rawfp,&V->raw);
