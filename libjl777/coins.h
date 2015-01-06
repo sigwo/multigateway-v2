@@ -890,9 +890,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                             fprintf(stderr, "i.%d coinid.%d %s asset.%s RTheight.%u\n",i,Numcoins,coinstr,Daemons[Numcoins]->assetid,(uint32_t)cp->RTblockheight);
                         Numcoins++;
                         cp->json = item;
-			fprintf(stderr, "before parse_ipaddr in coins.h\n");
                         parse_ipaddr(cp->myipaddr,myipaddr);
-		        fprintf(stderr, "after parse_ipaddr in coins.h\n");
                         if ( strcmp(coinstr,"BTCD") == 0 )
                         {
                             BTCDaddr = cp->privateaddr;
@@ -903,8 +901,12 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                                 expand_nxt64bits(NXTADDR,cp->privatebits);
                             if ( DATADIR[0] == 0 )
                                 strcpy(DATADIR,"archive");
-                            if ( MGWROOT[0] == 0 )
-                                strcpy(MGWROOT,"/var/www");
+			    if ( MGWROOT[0] == 0 )
+			    #ifndef _WIN32
+                            strcpy(MGWROOT,"/var/www");
+			    #else
+			    strcpy(MGWROOT,"\\var\\www");
+			    #endif
                             void init_rambases(); init_rambases();
                             //addcontact(Global_mp->myhandle,cp->privateNXTADDR);
                             //addcontact("mypublic",cp->srvNXTADDR);
@@ -923,7 +925,6 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             //    gen_randomacct(0,33,NXTADDR,NXTACCTSECRET,"randvals");
             nxt64bits = issue_getAccountId(0,NXTACCTSECRET);
             expand_nxt64bits(NXTADDR,nxt64bits);
-	    fprintf(stderr, "getting special_NXTaddrs\n");
             array = cJSON_GetObjectItem(MGWconf,"special_NXTaddrs");
             if ( array != 0 && is_cJSON_Array(array) != 0 ) // first three must be the gateway's addresses
             {
@@ -952,7 +953,6 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                 MGW_blacklist[n++] = "4551058913252105307";    // from accidental transfer
                 MGW_blacklist[n++] = "";
             }
-	    fprintf(stderr, "getting contacts");
             array = (IS_LIBTEST > 0) ? cJSON_GetObjectItem(MGWconf,"contacts") : 0;
             if ( array != 0 && is_cJSON_Array(array) != 0 ) // first three must be the gateway's addresses
             {
@@ -1013,7 +1013,6 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             else printf("ORIGBLOCK.(%s)\n",ORIGBLOCK);
         }
     }*/
-    fprintf(stderr, "returning from init_MGWconf\n");
     didinit = 1;
     return(myipaddr);
 }

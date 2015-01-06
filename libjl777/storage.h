@@ -732,6 +732,7 @@ void ensure_SuperNET_dirs(char *backupdir)
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
+	#ifndef _WIN32
         for (i=0; i<n; i++)
         {
             copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
@@ -745,7 +746,23 @@ void ensure_SuperNET_dirs(char *backupdir)
                 //sprintf(dirname,"address/%s/txids",coinstr), ensure_directory(dirname);
             }
         }
+	#else
+        for (i=0; i<n; i++)
+        {
+            copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
+            //if ( (cp= get_coin_info(coinstr)) != 0 )
+            {
+                printf("ensure.%s\n",coinstr);
+                sprintf(dirname,"address\\%s",coinstr), ensure_directory(dirname);
+                //sprintf(dirname,"address/%s/addrs",coinstr), ensure_directory(dirname);
+                sprintf(dirname,"address\\%s\\bitstream",coinstr), ensure_directory(dirname);
+                //sprintf(dirname,"address/%s/scripts",coinstr), ensure_directory(dirname);
+                //sprintf(dirname,"address/%s/txids",coinstr), ensure_directory(dirname);
+            }
+        }
+	#endif
     }
+    #ifndef _WIN32
     printf("ensure_SuperNET_dirs backupdir.%s MGWROOT.%s\n",backupdir,MGWROOT);
     sprintf(dirname,"%s/%s",MGWROOT,"MGW"), ensure_directory(dirname);
     sprintf(dirname,"%s/%s",MGWROOT,"MGW/msig"), ensure_directory(dirname);
@@ -766,6 +783,28 @@ void ensure_SuperNET_dirs(char *backupdir)
     sprintf(dirname,"%s/%s",backupdir,"backups/telepods"), ensure_directory(dirname);
     sprintf(dirname,"%s/%s",backupdir,"archive"), ensure_directory(dirname);
     sprintf(dirname,"%s/%s",backupdir,"archive/telepods"), ensure_directory(dirname);
+    #else
+    printf("ensure_SuperNET_dirs backupdir.%s MGWROOT.%s\n",backupdir,MGWROOT);
+    sprintf(dirname,"%s\\%s",MGWROOT,"MGW"), ensure_directory(dirname);
+    sprintf(dirname,"%s\\%s",MGWROOT,"MGW\\msig"), ensure_directory(dirname);
+    sprintf(dirname,"%s\\%s",MGWROOT,"MGW\\status"), ensure_directory(dirname);
+    sprintf(dirname,"%s\\%s",MGWROOT,"MGW\\sent"), ensure_directory(dirname);
+    sprintf(dirname,"%s\\%s",MGWROOT,"MGW\\deposit"), ensure_directory(dirname);
+    
+    if ( DATADIR[0] != 0 && DATADIR[0] != '.' )
+        ensure_directory(DATADIR);
+    sprintf(dirname,"%s\\%s",DATADIR,"mgw"), ensure_directory(dirname);
+    sprintf(dirname,"%s\\%s",DATADIR,"bridge"), ensure_directory(dirname);
+    
+    if ( backupdir == 0 || backupdir[0] == 0 )
+        backupdir = ".";
+    if ( backupdir[0] != '.' )
+        ensure_directory(backupdir);
+    sprintf(dirname,"%s\\%s",backupdir,"backups"), ensure_directory(dirname);
+    sprintf(dirname,"%s\\%s",backupdir,"backups\\telepods"), ensure_directory(dirname);
+    sprintf(dirname,"%s\\%s",backupdir,"archive"), ensure_directory(dirname);
+    sprintf(dirname,"%s\\%s",backupdir,"archive\\telepods"), ensure_directory(dirname);
+    #endif
 }
 
 void init_rambases()
