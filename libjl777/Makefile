@@ -117,6 +117,12 @@ onetime: doesntexist; \
     cp .libs/libuv.so ../libs; \
     cd ..; \
 
+winpatch: doesntexist; \
+   sh make_windows.sh;
+
+winexe: doesntexist; \
+    sh quick_win.sh;
+
 count:
 	@echo "Core:"
 	@cat $(SRCS) *.h | grep -v '^[ 	]*/\*' | grep -v '^[ 	]*$$' | wc
