@@ -2550,7 +2550,6 @@ FILE* AppendBlockFile(unsigned int& nFileRet)
 bool LoadBlockIndex(bool fAllowNew)
 {
     CBigNum bnTrustedModulus;
-	getDataDir();
     if (fTestNet)
     {
         pchMessageStart[0] = 0xcd;
@@ -4038,13 +4037,10 @@ char *unstringify(char *str)
     return(str);
 }
 
-extern "C" void getDataDir()
+extern "C" const char* getDataDir()
 {
-	
-	fprintf(stderr, "%s", GetDataDir().string().c_str());
-	
+	return GetDataDir().string().c_str();	
 }
-
 
 int32_t Pending_RPC,SuperNET_retval,did_SuperNET_init;
 extern char SuperNET_url[512];
