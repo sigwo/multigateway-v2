@@ -35,21 +35,20 @@
 #define TRANSFER_BLOCKSIZE 512
 #define MAX_TRANSFER_BLOCKS (MAX_TRANSFER_SIZE / TRANSFER_BLOCKSIZE)
 
-/*void hclose(HUFF *hp);
-HUFF *hopen(uint8_t *bits,int32_t num);
-void hrewind(HUFF *hp);
-void hclear(HUFF *hp);
-int32_t hseek(HUFF *hp,int32_t offset,int32_t mode);
-int32_t hgetbit(HUFF *hp);
-int32_t hputbit(HUFF *hp,int32_t bit);
-int32_t hwrite(uint64_t codebits,int32_t numbits,HUFF *hp);
-int32_t hflush(FILE *fp,HUFF *hp);*/
-
 union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
 union _bits64 { uint8_t bytes[8]; uint16_t ushorts[4]; uint32_t uints[2]; uint64_t txid; };
 typedef union _bits64 bits64;
 typedef union _bits256 bits256;
+struct address_entry { uint64_t blocknum:32,txind:15,vinflag:1,v:14,spent:1,isinternal:1; };
 
+
+struct mappedptr
+{
+	char fname[512];
+	void *fileptr,*pending;
+	uint64_t allocsize,changedsize;
+	int32_t rwflag,actually_allocated;
+};
 
 struct hashtable
 {
