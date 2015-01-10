@@ -2583,18 +2583,12 @@ uint64_t process_msigdeposits(cJSON **transferjsonp,int32_t forceflag,struct coi
     {
         if ( (value= conv_address_entry(coinaddr,txidstr,script,cp,entry)) == 0 )
         {
-            if ( strcmp("9e88f76196922f9d0651039b50fdaed4022f86ac2632985794ea21d33484f8fb",txidstr) == 0 )
-                printf("%d of %d: process.(%s) isinternal.%d %llu\n",j,ap->num,msigaddr,entry->isinternal,(long long)nxt64bits);
             if ( Debuglevel > 2 )
                 printf("skip %s\n",txidstr);
             return(0);
         }
-        if ( strcmp("9e88f76196922f9d0651039b50fdaed4022f86ac2632985794ea21d33484f8fb",txidstr) == 0 )
-            printf("almost there\n");
         if ( strcmp(msigaddr,coinaddr) == 0 && txidstr[0] != 0 && value >= (cp->NXTfee_equiv * MIN_DEPOSIT_FACTOR) )
         {
-            if ( strcmp("9e88f76196922f9d0651039b50fdaed4022f86ac2632985794ea21d33484f8fb",txidstr) == 0 )
-                printf("inside\n");
             for (j=0; j<ap->num; j++)
             {
                 tp = ap->txids[j];
@@ -2608,8 +2602,6 @@ uint64_t process_msigdeposits(cJSON **transferjsonp,int32_t forceflag,struct coi
                     break;
                 }
             }
-            if ( strcmp("9e88f76196922f9d0651039b50fdaed4022f86ac2632985794ea21d33484f8fb",txidstr) == 0 )
-                printf("j is %d vs %d\n",j,ap->num);
             if ( j == ap->num )
             {
                 conv_rsacctstr(rsacct,nxt64bits);
@@ -3299,18 +3291,51 @@ int32_t add_destaddress(struct rawtransaction *rp,char *destaddr,uint64_t amount
     return(i);
 }
 
+int32_t process_redeem(int32_t *alreadysentp,cJSON **arrayp,char *destaddrs[MAX_MULTISIG_OUTPUTS],uint64_t destamounts[MAX_MULTISIG_OUTPUTS],uint64_t redeems[MAX_MULTISIG_OUTPUTS],uint64_t *pending_withdrawp,struct coin_info *cp,uint64_t nxt64bits,struct NXT_asset *ap,char *destaddr,struct NXT_assettxid *tp,int32_t numredeems,char *sender)
+{
+    struct unspent_info *up;
+    struct NXT_acct *np;
+    char numstr[128],rsacct[64];
+    int32_t createdflag;
+    cJSON *item;
+    double pending;
+    if ( is_limbo_redeem(cp,tp->redeemtxid) == 0 )
+    {
+        np = get_NXTacct(&createdflag,Global_mp,sender);
+        *alreadysentp = 0;
+        up = &cp->unspent;
+        tp->numconfs = get_NXTconfirms(tp->redeemtxid);
+        printf("numredeems.%d (%p %p) PENDING REDEEM numconfs.%d %s %s %llu %llu %.8f %.8f | %llu\n",numredeems,up->maxvp,up->minvp,tp->numconfs,cp->name,destaddr,(long long)nxt64bits,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
+        item = cJSON_CreateObject();
+        conv_rsacctstr(rsacct,np->H.nxt64bits);
+        cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(rsacct));
+        sprintf(numstr,"%llu",(long long)tp->redeemtxid), cJSON_AddItemToObject(item,"redeemtxid",cJSON_CreateString(numstr));
+        cJSON_AddItemToObject(item,"destaddr",cJSON_CreateString(destaddr));
+        sprintf(numstr,"%.8f",dstr(tp->quantity * ap->mult)), cJSON_AddItemToObject(item,"amount",cJSON_CreateString(numstr));
+        cJSON_AddItemToObject(item,"confirms",cJSON_CreateNumber(tp->numconfs));
+        cJSON_AddItemToArray(*arrayp,item);
+        if ( (pending= enough_confirms(np->redeemed,tp->estNXT,tp->numconfs,1)) > 0 )
+        {
+            numredeems = add_redeem(destaddrs,destamounts,redeems,pending_withdrawp,cp,ap,destaddr,tp,numredeems);
+            np->redeemed += tp->estNXT;
+            printf("NXT.(%s) redeemed %.8f %p numredeems.%d (%s) %.8f %llu\n",sender,np->redeemed,&destaddrs[numredeems-1],numredeems,destaddrs[numredeems-1],dstr(destamounts[numredeems-1]),(long long)redeems[numredeems-1]);
+        }
+        else
+        {
+            sprintf(numstr,"%.2f",dstr(np->redeemed)), cJSON_AddItemToObject(item,"already",cJSON_CreateString(numstr));
+            sprintf(numstr,"%.2f",dstr(tp->estNXT)), cJSON_AddItemToObject(item,"estNXT",cJSON_CreateString(numstr));
+            sprintf(numstr,"%.3f",pending), cJSON_AddItemToObject(item,"wait",cJSON_CreateString(numstr));
+        }
+    }
+    return(numredeems);
+}
+
 int32_t process_destaddr(int32_t *alreadysentp,cJSON **arrayp,char *destaddrs[MAX_MULTISIG_OUTPUTS],uint64_t destamounts[MAX_MULTISIG_OUTPUTS],uint64_t redeems[MAX_MULTISIG_OUTPUTS],uint64_t *pending_withdrawp,struct coin_info *cp,uint64_t nxt64bits,struct NXT_asset *ap,char *destaddr,struct NXT_assettxid *tp,int32_t numredeems,char *sender)
 {
     struct address_entry *entries,*entry;
     struct coin_txidind *cointp;
-    struct unspent_info *up;
-    struct NXT_acct *np;
-    int32_t j,n,createdflag;
-    char numstr[128],rsacct[64];
-    cJSON *item;
-    double pending;
+    int32_t j,n,createdflag,processflag = 0;
     *alreadysentp = 0;
-    np = get_NXTacct(&createdflag,Global_mp,sender);
     fprintf(stderr,"[");
     if ( (entries= get_address_entries(&n,cp->name,destaddr)) != 0 )
     {
@@ -3321,75 +3346,17 @@ int32_t process_destaddr(int32_t *alreadysentp,cJSON **arrayp,char *destaddrs[MA
             entry = &entries[j];
             if ( entry->vinflag == 0 )
             {
-                // would save on _get_cointp calls, but since they are so fast, no point to do this
-                /*for (i=0; i<n; i++)
-                    if ( entries[i].vinflag != 0 && entries[i].blocknum == entry->blocknum && entries[i].txind == entry->txind && entries[i].v == entry->v )
-                        break;
-                if ( i == n )*/
-                {
-                    cointp = _get_cointp(&createdflag,cp->name,entry->blocknum,entry->txind,entry->v);
-                    if ( cointp->redeemtxid == tp->redeemtxid )
-                        break;
-                }
+                cointp = _get_cointp(&createdflag,cp->name,entry->blocknum,entry->txind,entry->v);
+                if ( cointp->redeemtxid == tp->redeemtxid )
+                    break;
             }
         }
         if ( j == n )
-        {
-            // following is too unproven, messing with bitcoin tx format, could be good to flag tx as MGW tx
-            /*for (j=0; j<n; j++)
-            {
-                entry = &entries[j];
-                if ( entry->vinflag == 0 )
-                {
-                    cointp = get_cointp(cp,entry);
-                    if ( cointp->seq0 == 0 )
-                    {
-                        cointp->redeemtxid = -1;
-                        printf("check txid.(%s)\n",cointp->txid);
-                        if ( (rawtx= get_rawtransaction(cp,cointp->txid)) != 0 )
-                        {
-                            cointp->seq0 = extract_sequenceid(&cointp->numinputs,cp,rawtx,0);
-                            cointp->seq1 = extract_sequenceid(&cointp->numinputs,cp,rawtx,1);
-                            cointp->redeemtxid = ((uint64_t)cointp->seq1 << 32) | cointp->seq0;
-                            printf("%x %x -> redeem.%llu\n",cointp->seq0,cointp->seq1,(long long)cointp->redeemtxid);
-                            free(rawtx);
-                        }
-                    }
-                    if ( cointp->redeemtxid == tp->redeemtxid )
-                        break;
-                }
-            }
-            if ( j == n )*/
-            if ( is_limbo_redeem(cp,tp->redeemtxid) == 0 )
-            {
-                *alreadysentp = 0;
-                up = &cp->unspent;
-                tp->numconfs = get_NXTconfirms(tp->redeemtxid);
-                printf("numredeems.%d (%p %p) PENDING REDEEM numconfs.%d %s %s %llu %llu %.8f %.8f | %llu\n",numredeems,up->maxvp,up->minvp,tp->numconfs,cp->name,destaddr,(long long)nxt64bits,(long long)tp->redeemtxid,dstr(tp->quantity),dstr(tp->U.assetoshis),(long long)tp->AMtxidbits);
-                item = cJSON_CreateObject();
-                conv_rsacctstr(rsacct,np->H.nxt64bits);
-                cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(rsacct));
-                sprintf(numstr,"%llu",(long long)tp->redeemtxid), cJSON_AddItemToObject(item,"redeemtxid",cJSON_CreateString(numstr));
-                cJSON_AddItemToObject(item,"destaddr",cJSON_CreateString(destaddr));
-                sprintf(numstr,"%.8f",dstr(tp->quantity * ap->mult)), cJSON_AddItemToObject(item,"amount",cJSON_CreateString(numstr));
-                cJSON_AddItemToObject(item,"confirms",cJSON_CreateNumber(tp->numconfs));
-                cJSON_AddItemToArray(*arrayp,item);
-                if ( (pending= enough_confirms(np->redeemed,tp->estNXT,tp->numconfs,1)) > 0 )
-                {
-                    numredeems = add_redeem(destaddrs,destamounts,redeems,pending_withdrawp,cp,ap,destaddr,tp,numredeems);
-                    np->redeemed += tp->estNXT;
-                    printf("NXT.(%s) redeemed %.8f %p numredeems.%d (%s) %.8f %llu\n",sender,np->redeemed,&destaddrs[numredeems-1],numredeems,destaddrs[numredeems-1],dstr(destamounts[numredeems-1]),(long long)redeems[numredeems-1]);
-                }
-                else
-                {
-                    sprintf(numstr,"%.2f",dstr(np->redeemed)), cJSON_AddItemToObject(item,"already",cJSON_CreateString(numstr));
-                    sprintf(numstr,"%.2f",dstr(tp->estNXT)), cJSON_AddItemToObject(item,"estNXT",cJSON_CreateString(numstr));
-                    sprintf(numstr,"%.3f",pending), cJSON_AddItemToObject(item,"wait",cJSON_CreateString(numstr));
-                }
-            }
-        }
+            processflag = 1;
         free(entries);
     }
+    if ( processflag != 0 )
+        numredeems = process_destaddr(alreadysentp,arrayp,destaddrs,destamounts,redeems,pending_withdrawp,cp,nxt64bits,ap,destaddr,tp,numredeems,sender);
     return(numredeems);
 }
 
@@ -3775,6 +3742,7 @@ char *check_MGW_cache(struct coin_info *cp,char *userNXTaddr)
     cJSON *json;
     char fname[512],*buf;
     uint32_t coinheight,height,timestamp,cacheheight,cachetimestamp;
+return(0);
     coinheight = get_blockheight(cp);
     if ( cp->uptodate >= (coinheight - cp->minconfirms) )
     {
@@ -3828,7 +3796,7 @@ cJSON *auto_process_MGW(char **specialNXTaddrs,struct coin_info *cp,cJSON *origj
     for (i=0; i<3; i++)
         ipaddrs[i] = Server_names[i];
     portable_mutex_lock(&mutex);
-    if ( cmp_batch_depositinfo(&cp->withdrawinfos[2].C,&cp->withdrawinfos[1].C) == 0 )//&& cmp_batch_depositinfo(&cp->withdrawinfos[0].C,&cp->withdrawinfos[2].C) == 0 )
+    if ( cmp_batch_depositinfo(&cp->withdrawinfos[2].C,&cp->withdrawinfos[1].C) == 0 && cmp_batch_depositinfo(&cp->withdrawinfos[0].C,&cp->withdrawinfos[2].C) == 0 )
     {
         if ( cp->withdrawinfos[0].C.pendingwithdraws > 0 && cp->withdrawinfos[0].rawtx.batchcrc != 0 && cp->withdrawinfos[0].rawtx.batchcrc == cp->withdrawinfos[1].rawtx.batchcrc && cp->withdrawinfos[0].rawtx.batchcrc == cp->withdrawinfos[2].rawtx.batchcrc )
         {
@@ -4037,6 +4005,11 @@ char *invoke_MGW(char **specialNXTaddrs,struct coin_info *cp,struct multisig_add
     return(retstr);
 }
 
+int32_t save_rawblock(int32_t dispflag,FILE *fp,struct rawblock *raw,uint32_t blocknum);
+uint32_t _get_blockinfo(struct rawblock *raw,struct coin_info *cp,uint32_t blockheight);
+//double estimate_completion(char *coinstr,double startmilli,int32_t processed,int32_t numleft);
+int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *coinstr,uint32_t maxblocknum);
+
 void *Coinloop(void *ptr)
 {
     int32_t i,processed;
@@ -4044,7 +4017,8 @@ void *Coinloop(void *ptr)
     struct multisig_addr *msig;
     int64_t height;
     char *retstr,*msigaddr;
-    double startmilli;
+    double startmilli,estimated;
+    struct compressionvars *V;
     while ( Finished_init == 0 || IS_LIBTEST == 7 )
         sleep(1);
     printf("Coinloop numcoins.%d\n",Numcoins);
@@ -4087,10 +4061,20 @@ void *Coinloop(void *ptr)
                 cp->RTblockheight = (int32_t)height;
                 if ( cp->blockheight < (height - cp->min_confirms) )
                 {
+                    V = &cp->V;
+                    if ( IS_LIBTEST == 7 && V->rawfp == 0 )
+                        init_compressionvars(HUFF_READONLY,V,cp->name,(uint32_t)cp->RTblockheight);
                     if ( Debuglevel > 1 )
                         printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)cp->blockheight,(long)height);
-                    if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
+                    if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 && (IS_LIBTEST != 7 || _get_blockinfo(&V->raw,cp,(uint32_t)cp->blockheight) > 0) )
                     {
+                        if ( V->rawfp != 0 )
+                        {
+                            save_rawblock(1,V->rawfp,&V->raw,(uint32_t)cp->blockheight);
+                            V->processed++;
+                            estimated = estimate_completion(V->coinstr,V->startmilli,V->processed,(int32_t)height-V->blocknum)/60;
+                            printf("%-5s.%d %.1f min left [%.1f per block: est %s] numtx.%d vins.%d vouts.%d minted %.8f\n",cp->name,(int)cp->blockheight,estimated,(double)ftell(V->rawfp)/cp->blockheight,_mbstr(height * ((double)ftell(V->rawfp)/cp->blockheight)),V->raw.numtx,V->raw.numrawvins,V->raw.numrawvouts,dstr(V->raw.minted));
+                        }
                         processed++;
                         cp->blockheight++;
                         if ( cp->blockheight == (height - cp->min_confirms) )
@@ -4144,8 +4128,6 @@ void *_process_coinblocks(void *_cp)
 
 void process_coinblocks(char *argcoinstr)
 {
-    double estimate_completion(char *coinstr,double startmilli,int32_t processed,int32_t numleft);
-    int32_t init_compressionvars(int32_t readonly,struct compressionvars *V,char *coinstr,int32_t maxblocknum);
     int32_t i,n,height,firstiter,processed = 0;
     cJSON *array;
     char coinstr[1024];
@@ -4167,27 +4149,24 @@ void process_coinblocks(char *argcoinstr)
                 if ( (cp= get_coin_info(coinstr)) != 0 )//&& (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0))
                 {
                     V = &cp->V;
-                    if ( V->numbfps == 0 )
-                    {
-                        if ( IS_LIBTEST == 7 )
-                            V->numbfps = init_compressionvars(HUFF_READONLY,V,coinstr,(uint32_t)cp->RTblockheight);
-                    }
+                    if ( IS_LIBTEST == 7 && V->rawfp == 0 )
+                        init_compressionvars(HUFF_READONLY,V,coinstr,(uint32_t)cp->RTblockheight);
                     if ( 1 && firstiter != 0 )
-                        cp->blockheight = (V->firstblock + 1);
+                    {
+                        cp->blockheight = (V->blocknum + 1);
+                        printf("set blockheight %d\n",V->blocknum);
+                    }
                     //if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
                     //    printf("ERROR hist findaddress_loop\n");
                     height = get_blockheight(cp);
                     startmilli = milliseconds();
                     while ( cp->blockheight < (height - cp->min_confirms) && milliseconds() < (startmilli+1000) )
                     {
-                        int32_t save_rawblock(FILE *fp,struct rawblock *raw);
-                        uint32_t _get_blockinfo(struct rawblock *raw,struct coin_info *cp,uint32_t blockheight);
                         if ( Debuglevel > 2 )
-                           printf("%s: historical block.%ld when height.%ld\n",cp->name,(long)cp->blockheight,(long)height);
-                        if ( (strcmp(cp->name,"BTC") == 0 && cp->blockheight == 71036) || _get_blockinfo(&V->raw,cp,(uint32_t)cp->blockheight) > 0 )
-                        //if ( update_address_infos(cp,(uint32_t)cp->blockheight) != 0 )
+                           printf("%p %s: historical block.%ld when height.%ld\n",V->rawfp,cp->name,(long)cp->blockheight,(long)height);
+                        if ( _get_blockinfo(&V->raw,cp,(uint32_t)cp->blockheight) > 0 )
                         {
-                            save_rawblock(V->rawfp,&V->raw);
+                            save_rawblock(1,V->rawfp,&V->raw,(uint32_t)cp->blockheight);
                             V->processed++;
                             processed++;
                             estimated = estimate_completion(V->coinstr,V->startmilli,V->processed,(int32_t)height-V->blocknum)/60;

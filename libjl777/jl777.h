@@ -196,7 +196,6 @@ long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NUL
 
 //#include "utils/smoothers.h"
 #include "jdatetime.h"
-#include "mappedptr.h"
 #include "sorts.h"
 //#include "utils/kdtree.c"
 //#include "bitmap.h"
@@ -207,8 +206,10 @@ long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NUL
 #include "bitcoind_RPC.c"
 #include "jsoncodec.h"
 #include "SuperNET.h"
+#include "mappedptr.h"
 #include "ramchain.h"
 
+#define portable_mutex_t uv_mutex_t
 typedef struct queue
 {
 #ifdef oldqueue
@@ -222,6 +223,9 @@ typedef struct queue
 	//pthread_cond_t cond_empty;
 } queue_t;
 //#define QUEUE_INITIALIZER(buffer) { buffer, sizeof(buffer) / sizeof(buffer[0]), 0, 0, 0, PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER }
+void *queue_dequeue(queue_t *queue);
+void queue_enqueue(queue_t *queue,void *ptr);
+
 
 struct pingpong_queue
 {
