@@ -26,7 +26,7 @@
 // for IPPROTO_TCP / IPPROTO_UDP
 #include <netinet/in.h>
 #endif
-#ifdef _WIN32
+#ifndef _WIN32
 #include "miniupnpc/miniwget.h"
 #include "miniupnpc/miniupnpc.h"
 #include "miniupnpc/upnpcommands.h"

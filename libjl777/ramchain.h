@@ -1510,8 +1510,8 @@ void *huffhash_mapfile(struct huffhash *hash)
     struct huffpair_hash *hp;
     hash->ind = ind;
     huffhash_setfname(fname,hash,0);
-    if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
-        return(0);
+    /*if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
+        return(0);*/
     while ( (offset= decode_varint(&datalen,hash->M.fileptr,offset,hash->M.allocsize)) > 0 )
     {
         printf("offset.%ld datalen.%d\n",offset,(int)datalen);
