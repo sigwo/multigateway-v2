@@ -4406,7 +4406,7 @@ void ram_setdirB(char *dirB,struct ramchain_info *ram,uint32_t blocknum)
     blocknum %= (64 * 64 * 64);
     ram_setdirA(dirA,ram);
     i = blocknum / (64 * 64);
-    sprintf(dirB,"%s/%06x_%06x",dirA,i*64*64,(i+1)*64*64-1);
+    sprintf(dirB,"%s/%05x_%05x",dirA,i*64*64,(i+1)*64*64-1);
     if ( strcmp(dirB,lastdirB) != 0 )
     {
         ensure_dir(dirB);
@@ -4424,7 +4424,7 @@ void ram_setdirC(char *dirC,struct ramchain_info *ram,uint32_t blocknum)
     ram_setdirB(dirB,ram,blocknum);
     i = blocknum / (64 * 64);
     j = (blocknum - (i * 64 * 64)) / 64;
-    sprintf(dirC,"%s/%06x_%06x",dirB,i*64*64 + j*64,i*64*64 + (j+1)*64 - 1);
+    sprintf(dirC,"%s/%05x_%05x",dirB,i*64*64 + j*64,i*64*64 + (j+1)*64 - 1);
     if ( strcmp(dirC,lastdirC) != 0 )
     {
         ensure_dir(dirC);
