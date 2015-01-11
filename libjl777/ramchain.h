@@ -2791,7 +2791,7 @@ uint32_t get_RTheight(struct ramchain_info *ram)
     char *retstr;
     cJSON *json;
     uint32_t height = 0;
-    printf("RTheight.(%s) (%s) (%s)\n",ram->name,ram->serverport,ram->userpass);
+   // printf("RTheight.(%s) (%s) (%s)\n",ram->name,ram->serverport,ram->userpass);
     retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getinfo","");
     if ( retstr != 0 )
     {
@@ -4549,12 +4549,12 @@ void process_coinblocks(char *argcoinstr)
                         init_ramchain(ram);
                         ram->firstiter = 0;
                     }
-                    processed += process_ramchain(ram,1000000000.,ram_millis());
+                    processed += process_ramchain(ram,1000.,ram_millis());
                 }
             }
             if ( processed == 0 )
             {
-                printf("coinblocks caught up\n");
+                //printf("coinblocks caught up\n");
                 sleep(1);
             }
         }
