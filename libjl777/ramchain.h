@@ -4549,7 +4549,7 @@ void process_coinblocks(char *argcoinstr)
                         init_ramchain(ram);
                         ram->firstiter = 0;
                     }
-                    processed += process_ramchain(ram,1000.,ram_millis());
+                    processed += process_ramchain(ram,1000000000.,ram_millis());
                 }
             }
             if ( processed == 0 )
