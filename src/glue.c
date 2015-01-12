@@ -7,6 +7,56 @@ void *poll_for_broadcasts(void *args);
 extern int32_t SuperNET_retval,did_SuperNET_init;
 char SuperNET_url[512];
 
+int8_t portable_spawn(char *os, char *cmd, char *argv) //TODO: extend for other OSes
+{
+    int8_t status = 0;
+    if(strcmp("_WIN32",os)==0)
+    {
+        #ifdef _WIN32
+        if(_spawnl(_P_NOWAIT, cmd, cmd, argv, NULL) !=0 )
+            status = 1;
+        else
+            status = 0;
+	    #endif  
+    } 
+    else if(strcmp("__linux__",os)==0)
+    {
+        #ifndef _WIN32
+        pid_t pid = 0;
+        pid = fork();
+        if(pid==0)//child process
+        {
+            if ( execl(cmd, argv) )
+		        status = 1;
+	        else
+		        status = 0;
+        }
+        #endif
+    }
+    else
+    {
+	    #ifndef _WIN32
+        char *cmdArgs = (char*)malloc(strlen(cmd)+strlen(argv)+16);
+        strcpy(cmdArgs, cmd);
+        strcat(cmdArgs, " ");
+        strcat(cmdArgs, argv);
+	    pid_t pid = 0;
+	    pid = fork();
+	    if (pid==0)//child process
+	    {
+            if ( system(cmd) != 0 )
+	        status = 1;
+	    else
+	        status = 0;
+	    }
+        free(cmdArgs);
+		#else
+		status = 1;
+		#endif
+    }
+return status;
+} 
+
 void *portable_thread_create(void *funcp,void *argp)
 {
     pthread_t *ptr;
@@ -27,12 +77,17 @@ void *_launch_SuperNET(void *_myip)
     void *processptr = 0;
     #ifdef _WIN32
     system("del horrible.hack");
-    sprintf(cmd, "SuperNET.exe %s",myip);
+    sprintf(cmd, "SuperNET.exe");
+    sprintf(SuperNET_url, "http://127.0.0.1:7778");
+    did_SuperNET_init = 1;
+    SuperNET_retval = 0;
+    processptr = portable_thread_create(poll_for_broadcasts,0);
+    if (portable_spawn("_WIN32", cmd, myip) != 0)
+        fprintf(stderr, "Error Starting SuperNET.exe");
     #else
     system("rm horrible.hack");
-    sprintf(cmd,"./SuperNET %s &",myip);
-    #endif
-    if ( system(cmd) != 0 )
+    sprintf(cmd,"./SuperNET");
+    if ( portable_spawn("__linux__", cmd, myip) != 0 )
         printf("error launching (%s)\n",cmd);
     while ( (fp= fopen("horrible.hack","rb")) == 0 )
         sleep(1);
@@ -65,6 +120,7 @@ void *_launch_SuperNET(void *_myip)
         did_SuperNET_init = 1;
     }
     SuperNET_retval = retval;
+	#endif
     return(processptr);
 }
 
