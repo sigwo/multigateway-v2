@@ -161,6 +161,7 @@ struct ramchain_info
     struct rawblock raw,raw2;
     struct compressionvars V;
     HUFF **blocks;
+    struct mappedptr *M;
     uint64_t *blockflags;
     double Vsum,Bsum;
     struct huffhash addrhash,txidhash,scripthash;
@@ -587,6 +588,14 @@ void hclose(HUFF *hp)
     }
 }
 
+void hpurge(HUFF *hps[],int32_t num)
+{
+    int32_t i;
+    for (i=0; i<num; i++)
+        if ( hps[i] != 0 )
+            hclose(hps[i]), hps[i] = 0;
+}
+
 HUFF *hopen(uint8_t *bits,int32_t num,void *allocptr)
 {
     HUFF *hp = calloc(1,sizeof(*hp));
@@ -670,27 +679,32 @@ int32_t hflush(FILE *fp,HUFF *hp)
     if ( fwrite(hp->buf,1,len,fp) != len )
         return(-1);
     fflush(fp);
+    //printf("HFLUSH len.%d numbytes.%d | fpos.%ld\n",len,numbytes,ftell(fp));
     return(numbytes + len);
 }
 
-HUFF *hload(FILE *fp,char *fname)
+HUFF *hload(long *offsetp,FILE *fp,char *fname)
 {
     long load_varint(uint64_t *x,FILE *fp);
     uint64_t endbitpos;
     int32_t len,flag = 0;
     uint8_t *buf;
     HUFF *hp = 0;
+    if ( offsetp != 0 )
+        *offsetp = -1;
     if ( fp == 0 )
         fp = fopen(fname,"rb"), flag = 1;
     if ( load_varint(&endbitpos,fp) > 0 )
     {
         len = conv_bitlen(endbitpos);
         buf = calloc(1,len);
+        if ( offsetp != 0 )
+            *offsetp = ftell(fp);
         if ( fread(buf,1,len,fp) != len )
             free(buf);
         else hp = hopen(buf,len,buf), hp->endpos = (int32_t)endbitpos;
-        fseek(fp,0,SEEK_END);
-        //printf("HLOAD endbitpos.%d len.%d endfpos.%ld\n",(int)endbitpos,len,ftell(fp));
+        //fseek(fp,0,SEEK_END);
+        //printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
     }
     if ( flag != 0 && fp != 0 )
         fclose(fp);
@@ -3888,50 +3902,6 @@ int32_t ram_verify_block(struct ramchain_info *ram, HUFF *Vhp,HUFF *Bhp)
     return(-1);
 }
 
-int32_t ram_verify_B64(bits256 *sha,HUFF *blocks[64],char *fname,bits256 *refsha,uint32_t blocknum)
-{
-    FILE *fp; long offset; uint8_t *ptr; bits256 hsha,tmp; struct mappedptr M; uint64_t datalen; int32_t i,verified,varlen,rwflag = 0;
-    if ( (fp= fopen(fname,"rb")) != 0 )
-    {
-        memset(&M,0,sizeof(M));
-        if ( init_mappedptr(0,&M,0,rwflag,fname) != 0 )
-        {
-            if ( fread(hsha.bytes,1,sizeof(hsha),fp) == sizeof(hsha) && (refsha == 0 || memcmp(hsha.bytes,refsha,sizeof(hsha)) == 0) )
-            {
-                offset = sizeof(bits256);
-                memset(sha->bytes,0,sizeof(sha));
-                for (i=0; i<64; i++)
-                {
-                    ptr = (M.fileptr + offset);
-                    if ( (varlen= (int32_t)decode_varint(&datalen,M.fileptr,offset,(long)M.allocsize)) > 0 )
-                    {
-                        if ( blocks[i] != 0 )
-                            hclose(blocks[i]), printf("warning blocks[%d] blocknum.%d nonz\n",i,blocknum);
-                        blocks[i] = hopen(ptr+varlen,(int32_t)datalen,0);
-                        calc_sha256cat(tmp.bytes,sha->bytes,256>>3,ptr+varlen,(int32_t)datalen), *sha = tmp;
-                    }
-                    else break;
-                    offset += (datalen + varlen);
-                }
-                if ( i == 64 && ((refsha != 0 && memcmp(sha->bytes,refsha,sizeof(*sha)) == 0) || memcmp(hsha.bytes,sha->bytes,sizeof(hsha)) == 0) )
-                {
-                    printf("%s verified\n",fname);
-                    verified = 1;
-                }
-                else
-                {
-                    for (i=0; i<64; i++)
-                        if ( blocks[i] != 0 )
-                            hclose(blocks[i]), blocks[i] = 0;
-                    close_mappedptr(&M);
-                }
-            }
-        }
-        fclose(fp);
-    } else memset(sha->bytes,0,sizeof(*sha));
-    return(verified);
-}
-
 uint32_t create_ramchain_block(struct ramchain_info *ram,uint32_t blocknum,char format)
 {
     char fname[1024],formatstr[2];
@@ -3945,9 +3915,6 @@ uint32_t create_ramchain_block(struct ramchain_info *ram,uint32_t blocknum,char 
         ram_setfname(fname,ram,blocknum,formatstr);
         if ( (fp= fopen(fname,"wb")) != 0 )
         {
-            //datalen = conv_bitlen(hp->endpos);
-            //fwrite(hp->buf,1,datalen,fp);
-            //hrewind(hp);
             hflush(fp,hp);
             //printf("CREATE.(%s) size.%ld bitoffset.%d allocsize.%d\n",fname,ftell(fp),hp->bitoffset,hp->allocsize);
             fclose(fp);
@@ -3955,6 +3922,37 @@ uint32_t create_ramchain_block(struct ramchain_info *ram,uint32_t blocknum,char 
         hclose(hp);
     } else printf("create_ramchain_block block.%d format.%c error\n",blocknum,format);
     return(1 + datalen);
+}
+
+long *ram_load_bitstreams(bits256 *sha,char *fname,HUFF *bitstreams[],int32_t num)
+{
+    FILE *fp;
+    long *offsets = 0;
+    bits256 tmp,stored;
+    int32_t i,x,len = 0;
+    if ( (fp= fopen(fname,"rb")) != 0 )
+    {
+        offsets = calloc(num,sizeof(*offsets));
+        memset(sha,0,sizeof(*sha));
+        //printf("loading %s\n",fname);
+        if ( fread(&x,1,sizeof(x),fp) == sizeof(x) && x == num )
+        {
+            if ( fread(&stored,1,sizeof(stored),fp) == sizeof(stored) )
+            {
+                for (i=0; i<num; i++)
+                {
+                    if ( (bitstreams[i]= hload(&offsets[i],fp,0)) != 0 && bitstreams[i]->buf != 0 )
+                        calc_sha256cat(tmp.bytes,sha->bytes,sizeof(*sha),bitstreams[i]->buf,bitstreams[i]->allocsize), *sha = tmp;
+                    else printf("unexpected null bitstream at %d %p offset.%ld\n",i,bitstreams[i],offsets[i]);
+                }
+                if ( memcmp(sha,&stored,sizeof(stored)) != 0 )
+                    printf("sha error %s %llx vs stored.%llx\n",fname,(long long)sha->txid,(long long)stored.txid);
+            } else printf("error loading sha\n");
+        } else printf("num mismatch %d != num.%d\n",x,num);
+        len = (int32_t)ftell(fp);
+        fclose(fp);
+    }
+    return(offsets);
 }
 
 int32_t ram_save_bitstreams(char *fname,HUFF *bitstreams[],int32_t num)
@@ -3966,22 +3964,77 @@ int32_t ram_save_bitstreams(char *fname,HUFF *bitstreams[],int32_t num)
     {
         memset(&sha,0,sizeof(sha));
         for (i=0; i<num; i++)
-            calc_sha256cat(tmp.bytes,sha.bytes,sizeof(sha),bitstreams[i]->buf,bitstreams[i]->allocsize), sha = tmp;
+        {
+            //printf("i.%d %p\n",i,bitstreams[i]);
+            if ( bitstreams[i] != 0 && bitstreams[i]->buf != 0 )
+                calc_sha256cat(tmp.bytes,sha.bytes,sizeof(sha),bitstreams[i]->buf,bitstreams[i]->allocsize), sha = tmp;
+            else
+            {
+                printf("bitstreams[%d] == 0? %p\n",i,bitstreams[i]);
+                fclose(fp);
+                return(-1);
+            }
+        }
+        printf("saving %s num.%d %llx\n",fname,num,(long long)sha.txid);
         if ( fwrite(&num,1,sizeof(num),fp) == sizeof(num) )
         {
             if ( fwrite(&sha,1,sizeof(sha),fp) == sizeof(sha) )
             {
                 for (i=0; i<num; i++)
-                    hflush(fp,bitstreams[i]);
+                    if ( bitstreams[i] != 0 )
+                        hflush(fp,bitstreams[i]);
+                    else printf("unexpected null bitstream at %d\n",i);
             }
         }
         len = (int32_t)ftell(fp);
         fclose(fp);
     }
+    {
+        bits256 tmp;
+        long *offsets;
+        HUFF **hps;
+        hps = calloc(num,sizeof(*hps));
+        printf("VERIFICATION load_bitstreams\n");
+        offsets = ram_load_bitstreams(&tmp,fname,hps,num);
+        if ( offsets != 0 )
+            free(offsets);
+        hpurge(hps,num);
+    }
     return(len);
 }
 
-uint64_t verify_block(struct rawblock *tmp,struct ramchain_info *ram,uint32_t blocknum)
+int32_t ram_map_bitstreams(struct mappedptr *M,bits256 *sha,HUFF *blocks[],int32_t num,char *fname,bits256 *refsha)
+{
+    HUFF *hp;
+    long *offsets;
+    int32_t i,verified=0,rwflag = 0;
+    if ( (offsets= ram_load_bitstreams(sha,fname,blocks,num)) != 0 )
+    {
+        if ( refsha != 0 && memcmp(sha->bytes,refsha,sizeof(*sha)) != 0 )
+        {
+            printf("refsha cmp error for %s %llx vs %llx\n",fname,(long long)sha->txid,(long long)refsha->txid);
+            hpurge(blocks,num);
+            free(offsets);
+            return(0);
+        }
+        memset(M,0,sizeof(*M));
+        if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
+        {
+            for (i=0; i<num; i++)
+                if ( (hp= blocks[i]) != 0 )
+                {
+                    blocks[i] = hopen((void *)((long)M->fileptr + offsets[i]),hp->allocsize,0);
+                    verified++;
+                    hclose(hp);
+                } else printf("ram_map_bitstreams unexpected null hp at slot.%d\n",i);
+            //close_mappedptr(&M);
+        }
+        free(offsets);
+    }
+    return(verified == num);
+}
+
+uint64_t verify_block(HUFF **hpp,struct rawblock *tmp,struct ramchain_info *ram,uint32_t blocknum)
 {
     int32_t format,i,j,m,n = 0;
     HUFF *hp;
@@ -3995,7 +4048,7 @@ uint64_t verify_block(struct rawblock *tmp,struct ramchain_info *ram,uint32_t bl
     {
         strs[n][0] = format;
         ram_setfname(fname,ram,blocknum,strs[n]);
-        if ( (hp = hload(0,fname)) != 0 )
+        if ( (hp = hload(0,0,fname)) != 0 )
         {
             //fprintf(stderr,"\n%c: ",format);
             json = 0;
@@ -4007,15 +4060,16 @@ uint64_t verify_block(struct rawblock *tmp,struct ramchain_info *ram,uint32_t bl
             }
             if ( format == 'B' )
             {
-                if ( ram->blocks[blocknum] != 0 )
-                    hclose(ram->blocks[blocknum]);
-                ram->blocks[blocknum] = hp;
+                if ( *hpp != 0 )
+                    hclose(*hpp);
+                (*hpp) = hp;
             }
             else hclose(hp);
         } else create_ramchain_block(ram,blocknum,format);
     }
     if ( jsonstrs[0] != 0 && jsonstrs[1] != 0 && strcmp(jsonstrs[0],jsonstrs[1]) == 0 )
     {
+        fprintf(stderr,"%d ",blocknum);
         free(jsonstrs[0]); free(jsonstrs[1]);
         return(0);
     }
@@ -4059,56 +4113,47 @@ uint64_t verify_block(struct rawblock *tmp,struct ramchain_info *ram,uint32_t bl
     return(errs);
 }
 
-uint64_t init_ramchain_directory(bits256 *sha,struct ramchain_info *ram,uint32_t blocknum)
+uint64_t init_ramchain_directory(struct mappedptr *M,bits256 *sha,struct ramchain_info *ram,uint32_t blocknum)
 {
     static int totalerrs,totalerrs2;
     char fname[1024];
-    HUFF *Bhps[64];
-    int32_t i,verified;
+    int32_t i;
     bits256 tmp;
     uint64_t errs,errs2,flags = 0;
-    memset(Bhps,0,sizeof(Bhps));
     //ram_setdirC(0,dirC,ram,blocknum);
     ram_setfname(fname,ram,blocknum,"B64");
-    if ( ram_verify_B64(sha,&ram->blocks[blocknum],fname,0,blocknum) != 0 )
+    if ( ram_map_bitstreams(M,sha,&ram->blocks[blocknum],64,fname,0) != 0 )
         return((uint64_t)-1);
     for (i=0; i<64; i++)
     {
         //create_ramchain_block(ram,blocknum + i,'V');
         //create_ramchain_block(ram,blocknum + i,'B');
         errs2 = 0;
-        if ( (errs= verify_block(&ram->raw,ram,blocknum+i)) != 0 )
-            errs2 = verify_block(&ram->raw,ram,blocknum+i);
+        if ( (errs= verify_block(&ram->blocks[blocknum+i],&ram->raw,ram,blocknum+i)) != 0 )
+        {
+            errs2 = verify_block(&ram->blocks[blocknum+i],&ram->raw,ram,blocknum+i);
+            printf("%s BLOCK.%d i.%d %u | %llx -> %llx total.(%d %d)\n",ram->name,blocknum,i,blocknum+i,(long long)errs,(long long)errs2,totalerrs,totalerrs2);
+        }
         totalerrs += (errs != 0);
         totalerrs2 += (errs2 != 0);
-        printf("%s BLOCK.%d i.%d %u | %llx -> %llx total.(%d %d)\n",ram->name,blocknum,i,blocknum+i,(long long)errs,(long long)errs2,totalerrs,totalerrs2);
         if ( errs2 != 0 )
             continue;
-        if ( (Bhps[i]= ram->blocks[blocknum+i]) != 0 )
+        if ( ram->blocks[blocknum+i] != 0 )
         {
-            ram->blocks[blocknum+i] = 0;
-            calc_sha256cat(tmp.bytes,sha->bytes,256>>3,Bhps[i]->buf,Bhps[i]->allocsize), *sha = tmp;
+            calc_sha256cat(tmp.bytes,sha->bytes,256>>3,ram->blocks[blocknum+i]->buf,ram->blocks[blocknum+i]->allocsize), *sha = tmp;
             flags |= (1LL << i);
         }
     }
-    if ( flags == (uint64_t)-1 )
-    {
-        ram_setfname(fname,ram,blocknum,"B64");
-        tmp = *sha;
-        if ( ram_verify_B64(sha,&ram->blocks[blocknum],fname,&tmp,blocknum) != 0 )
-            return((uint64_t)-1);
-    }
-    for (i=0; i<64; i++)
-        if ( Bhps[i] != 0 )
-            hclose(Bhps[i]);
     return(flags);
 }
 
-void save_dirhash(char *fname,bits256 dirhash)
+void save_dirhash(char *fname,bits256 dirhash,uint32_t *blocknump)
 {
     FILE *fp;
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
+        if ( blocknump != 0 )
+            fwrite(blocknump,1,sizeof(*blocknump),fp);
         fwrite(dirhash.bytes,1,sizeof(dirhash),fp);
         fclose(fp);
     }
@@ -4118,43 +4163,85 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
 {
     char dirA[1024],dirB[1024],dirC[1024],fname[1024];
     int32_t i,j,n,skipped,blocknum = 0;
+    uint32_t z;
     uint64_t flags;
-    bits256 sha,dirhash,dirshash,tmp;
+    FILE *hashfp,*hash4096fp;
+    bits256 sha,hash4096,hashall,tmp;
     if ( ram->blockflags == 0 )
         ram->blockflags = calloc(1,(maxblock>>6) + 1);
+    if ( ram->blocks == 0 )
+        ram->blocks = calloc(maxblock+1,sizeof(*ram->blocks));
+    if ( ram->M == 0 )
+        ram->M = calloc(sizeof(*ram->M),(maxblock>>6) + 1);
     strcpy(ram->dirpath,dirpath);
     ram_setdirA(dirA,ram);
     ensure_dir(dirA);
-    memset(&dirhash,0,sizeof(dirhash));
-    memset(&dirshash,0,sizeof(dirshash));
+    sprintf(fname,"%s/hash64",dirA);
+    hashfp = fopen(fname,"wb");
+    sprintf(fname,"%s/hash4096",dirA);
+    hash4096fp = fopen(fname,"wb");
+    memset(&hashall,0,sizeof(hashall));
     for (i=n=skipped=0; blocknum<ram->RTblockheight; i++)
     {
         ram_setdirB(1,dirB,ram,i * 64 * 64);
-        for (flags=j=0; j<64; j++,blocknum+=64)
+        memset(&hash4096,0,sizeof(hash4096));
+        for (flags=j=0; j<64; j++,blocknum+=64,n++)
         {
             ram_setdirC(1,dirC,ram,blocknum);
-            memset(&sha,0,sizeof(sha));
-            if ( (ram->blockflags[n++] = init_ramchain_directory(&sha,ram,blocknum)) == (uint64_t)-1 )
+            sprintf(fname,"%s/%u.B64",dirB,blocknum);
+            if ( ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64,fname,0) == 0 )
             {
-                sprintf(fname,"%s/dirhash.%u",dirC,i * 64 * 64 + j*64);
-                save_dirhash(fname,sha);
+                memset(&sha,0,sizeof(sha));
+                if ( (ram->blockflags[n] = init_ramchain_directory(&ram->M[n],&sha,ram,blocknum)) == (uint64_t)-1 )
+                {
+                    if ( ram_save_bitstreams(fname,&ram->blocks[blocknum],64) > 0 )
+                        if ( ram_map_bitstreams(&ram->M[n],&tmp,&ram->blocks[blocknum],64,fname,&sha) != 0 )
+                            printf("64 verified %d (i.%d j.%d)\n",i*64*64 + j*64,i,j);
+                }
+            }
+            else ram->blockflags[n] = (uint64_t)-1;
+            if ( hashfp != 0 )
+                fwrite(&sha,1,sizeof(sha),hashfp), fflush(hashfp);
+            if ( ram->blockflags[n] == (uint64_t)-1 )
+            {
                 flags |= (1LL << j);
-                calc_sha256cat(tmp.bytes,dirhash.bytes,256>>3,sha.bytes,256>>3), dirhash = tmp;
+                calc_sha256cat(tmp.bytes,hash4096.bytes,sizeof(hash4096),sha.bytes,sizeof(sha)), hash4096 = tmp;
             }
             if ( (blocknum+64) >= ram->RTblockheight )
                 break;
         }
         if ( flags == (uint64_t)-1 )
         {
-            sprintf(fname,"%s/dirhash.%u",dirB,i * 64 * 64);
-            save_dirhash(fname,dirhash);
+            sprintf(fname,"%s/hash4096.%u",dirB,i * 64 * 64);
+            save_dirhash(fname,hash4096,0);
+            printf("4096 verified %d\n",i*64*64);
+            sprintf(fname,"%s/%u.B4096",dirB,i * 64 * 64);
+            ram_save_bitstreams(fname,&ram->blocks[i * 64 * 64],64 * 64);
+            for (j=0; j<64; j++)
+                close_mappedptr(&ram->M[i*64 + j]), memset(&ram->M[i*64 + j],0,sizeof(ram->M[i*64 + j]));
+            ram_map_bitstreams(&ram->M[i*64],&sha,&ram->blocks[i * 64 * 64],64*64,fname,0);
             if ( skipped == 0 )
             {
-                calc_sha256cat(tmp.bytes,dirshash.bytes,256>>3,dirhash.bytes,256>>3), dirshash = tmp;
-                sprintf(fname,"%s/dirshash.%u",dirA,(i+1) * 64 * 64 - 1);
-                save_dirhash(fname,dirshash);
+                calc_sha256cat(tmp.bytes,hashall.bytes,sizeof(hashall),hash4096.bytes,sizeof(hash4096)), hashall = tmp;
+                z = ((i+1) * 64 * 64) - 1;
+                sprintf(fname,"%s/hashall.%u",dirA,z);
+                save_dirhash(fname,hashall,&z);
             }
-        } else skipped++;
+        }
+        else if ( skipped++ == 0 )
+        {
+            for (j=0; j<64; j++)
+                if ( (flags & (1LL << j)) == 0 )
+                    break;
+            z = i * 64 * 64 + j*64;
+            printf("SAVING.(%s)\n",fname);
+            sprintf(fname,"%s/B%d",dirA,z);
+            ram_save_bitstreams(fname,ram->blocks,z);
+            for (j=0; j<z; j++)
+                if ( ram->M[j].fileptr != 0 )
+                    close_mappedptr(&ram->M[j]), memset(&ram->M[j],0,sizeof(ram->M[j]));
+            ram_map_bitstreams(&ram->M[0],&sha,&ram->blocks[0],z,fname,0);
+        }
     }
     printf("init_ramchain_directories skipped.%d, n.%d blocknum.%d\n",skipped,n,blocknum);
     ram->blockheight = n = 0;
@@ -4248,7 +4335,7 @@ void init_ramchain(struct ramchain_info *ram)
     double startmilli;
     startmilli = ram_millis();
     ram->RTblockheight = get_RTheight(ram);
-    ram->blockheight = 1;
+    ram->blockheight = 0;
     for (i=0; i<2; i++)
     {
         ptr = calloc(1,n);
@@ -4280,10 +4367,10 @@ void *_process_ramchain(void *_ram)
 
 void *portable_thread_create(void *funcp,void *argp);
 int Numramchains; struct ramchain_info *Ramchains[100];
-void activate_ramchain(struct ramchain_info *ram)
+void activate_ramchain(struct ramchain_info *ram,char *name)
 {
     Ramchains[Numramchains++] = ram;
-    printf("Add ramchain.(%s) Num.%d\n",ram->name,Numramchains);
+    printf("Add ramchain.(%s) (%s) Num.%d\n",ram->name,name,Numramchains);
 }
 
 void process_coinblocks(char *argcoinstr)

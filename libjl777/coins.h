@@ -692,7 +692,7 @@ struct ramchain_info *get_ramchain_info(char *coinstr)
     else return(0);
 }
 
-void activate_ramchain(struct ramchain_info *ram);
+void activate_ramchain(struct ramchain_info *ram,char *name);
 uint32_t get_blockheight(struct coin_info *cp);
 void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp)
 {
@@ -708,13 +708,13 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp)
     ram->min_confirms = cp->min_confirms;
     ram->estblocktime = cp->estblocktime;
     ram->firstiter = 1;
-    printf("%p init_ramchain_info(%s) active.%d (%s %s)\n",ram,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass);
+    printf("%p init_ramchain_info(%s) (%s) active.%d (%s %s)\n",ram,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass);
     //if ( is_active_coin(cp->name) != 0 )
     {
         if ( ram->RTblockheight == 0 )
             ram->RTblockheight = (uint32_t)get_blockheight(cp);
         if ( IS_LIBTEST == 7 )
-            activate_ramchain(ram);
+            activate_ramchain(ram,cp->name);
         //init_compressionvars(0,cp->name,ram->RTblockheight + ((60 * 60 * 24 * 7) / ram->estblocktime));
     } //else printf("(%s) not active\n",cp->name);
 }
