@@ -192,6 +192,7 @@ char *get_blockhashstr(struct ramchain_info *ram,uint32_t blockheight);
 #ifndef ramchain_code_h
 #define ramchain_code_h
 
+// system specific functions
 double ram_millis(void)
 {
     static struct timeval timeval,first_timeval;
@@ -202,6 +203,21 @@ double ram_millis(void)
         return(0);
     }
     return((timeval.tv_sec - first_timeval.tv_sec) * 1000. + (timeval.tv_usec - first_timeval.tv_usec)/1000.);
+}
+
+void ram_deletefile(char *fname)
+{
+    FILE *fp;
+    char cmd[1024];
+    if ( (fp= fopen(fname,"rb")) == 0 )
+        return;
+    fclose(fp);
+#ifdef WIN32
+    printf("delete (%s)\n",fname);
+#else
+    sprintf(cmd,"rm %s",fname);
+    system(cmd);
+#endif
 }
 
 static uint8_t huffmasks[8] = { (1<<0), (1<<1), (1<<2), (1<<3), (1<<4), (1<<5), (1<<6), (1<<7) };
@@ -4113,6 +4129,19 @@ uint64_t verify_block(HUFF **hpp,struct rawblock *tmp,struct ramchain_info *ram,
     return(errs);
 }
 
+void ram_deletefiles(struct ramchain_info *ram,uint32_t blocknum,int32_t num)
+{
+    int32_t i;
+    char fname[1024];
+    for (i=0; i<64; i++)
+    {
+        ram_setfname(fname,ram,blocknum+i,"V");
+        ram_deletefile(fname);
+        ram_setfname(fname,ram,blocknum+i,"B");
+        ram_deletefile(fname);
+    }
+}
+
 uint64_t init_ramchain_directory(struct mappedptr *M,bits256 *sha,struct ramchain_info *ram,uint32_t blocknum)
 {
     static int totalerrs,totalerrs2;
@@ -4123,7 +4152,10 @@ uint64_t init_ramchain_directory(struct mappedptr *M,bits256 *sha,struct ramchai
     //ram_setdirC(0,dirC,ram,blocknum);
     ram_setfname(fname,ram,blocknum,"B64");
     if ( ram_map_bitstreams(M,sha,&ram->blocks[blocknum],64,fname,0) != 0 )
+    {
+        ram_deletefiles(ram,blocknum,64);
         return((uint64_t)-1);
+    }
     for (i=0; i<64; i++)
     {
         //create_ramchain_block(ram,blocknum + i,'V');
@@ -4199,7 +4231,11 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
                             printf("64 verified %d (i.%d j.%d)\n",i*64*64 + j*64,i,j);
                 }
             }
-            else ram->blockflags[n] = (uint64_t)-1;
+            else
+            {
+                ram_deletefiles(ram,blocknum,64);
+                ram->blockflags[n] = (uint64_t)-1;
+            }
             if ( hashfp != 0 )
                 fwrite(&sha,1,sizeof(sha),hashfp), fflush(hashfp);
             if ( ram->blockflags[n] == (uint64_t)-1 )
@@ -4254,28 +4290,6 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
     }
     printf("nonz blocks.%d, contiguous 1 to %d vs RT.%d\n",n,ram->blockheight-1,ram->RTblockheight);
     return(n);
-}
-
-uint32_t process_ramchain(struct ramchain_info *ram,double timebudget,double startmilli)
-{
-    double estimated;
-    int32_t processed = 0;
-    uint32_t RTheight;
-    RTheight = get_RTheight(ram);
-    printf("start process_ramchain %s at %.1f blocknum.%u at RT.%u\n",ram->name,startmilli,ram->blockheight,RTheight);
-    while ( ram->blockheight < (RTheight - ram->min_confirms) && ram_millis() < (startmilli + timebudget) )
-    {
-        ram->Vsum += create_ramchain_block(ram,ram->blockheight,'V');
-        ram->Bsum += create_ramchain_block(ram,ram->blockheight,'B');
-        {
-            ram->V.processed++;
-            processed++;
-            ram->blockheight++;
-            estimated = estimate_completion(ram->name,ram->V.startmilli,ram->V.processed,(int32_t)RTheight-ram->V.blocknum)/60000;
-            printf("%-5s.%d %.1f min left || numtx.%d vins.%d vouts.%d minted %.8f | %.1f/%.1f = %.3f\n",ram->name,(int)ram->blockheight,estimated,ram->raw.numtx,ram->raw.numrawvins,ram->raw.numrawvouts,dstr(ram->raw.minted),ram->Vsum/ram->blockheight,ram->Bsum/ram->blockheight,(ram->Vsum/ram->blockheight)/(ram->Bsum/ram->blockheight));
-        } //else break;
-    }
-    return(processed);
 }
 
 int32_t init_hashtable(struct ramchain_info *ram,char type)
@@ -4346,6 +4360,28 @@ void init_ramchain(struct ramchain_info *ram)
     printf("%.1f seconds to init_ramchain.%s\n",(ram_millis() - startmilli)/1000.,ram->name);
     init_ramchain_directories(ram,".",ram->RTblockheight+10000);
     getchar();
+}
+
+uint32_t process_ramchain(struct ramchain_info *ram,double timebudget,double startmilli)
+{
+    double estimated;
+    int32_t processed = 0;
+    uint32_t RTheight;
+    RTheight = get_RTheight(ram);
+    printf("start process_ramchain %s at %.1f blocknum.%u at RT.%u\n",ram->name,startmilli,ram->blockheight,RTheight);
+    while ( ram->blockheight < (RTheight - ram->min_confirms) && ram_millis() < (startmilli + timebudget) )
+    {
+        ram->Vsum += create_ramchain_block(ram,ram->blockheight,'V');
+        ram->Bsum += create_ramchain_block(ram,ram->blockheight,'B');
+        {
+            ram->V.processed++;
+            processed++;
+            ram->blockheight++;
+            estimated = estimate_completion(ram->name,ram->V.startmilli,ram->V.processed,(int32_t)RTheight-ram->V.blocknum)/60000;
+            printf("%-5s.%d %.1f min left || numtx.%d vins.%d vouts.%d minted %.8f | %.1f/%.1f = %.3f\n",ram->name,(int)ram->blockheight,estimated,ram->raw.numtx,ram->raw.numrawvins,ram->raw.numrawvouts,dstr(ram->raw.minted),ram->Vsum/ram->blockheight,ram->Bsum/ram->blockheight,(ram->Vsum/ram->blockheight)/(ram->Bsum/ram->blockheight));
+        } //else break;
+    }
+    return(processed);
 }
 
 void *_process_ramchain(void *_ram)
