@@ -556,7 +556,7 @@ HUFF *hload(FILE *fp,char *fname)
             free(buf);
         else hp = hopen(buf,len,buf), hp->endpos = (int32_t)endbitpos;
         fseek(fp,0,SEEK_END);
-        printf("HLOAD endbitpos.%d len.%d endfpos.%ld\n",(int)endbitpos,len,ftell(fp));
+        //printf("HLOAD endbitpos.%d len.%d endfpos.%ld\n",(int)endbitpos,len,ftell(fp));
     }
     if ( flag != 0 && fp != 0 )
         fclose(fp);
@@ -3621,8 +3621,8 @@ struct ramchain_token *ram_createtoken(struct ramchain_info *ram,char selector,u
         token->selector = selector;
         token->offset = offset;
         token->type = type;
-        fprintf(stderr,"{%c.%c.%d %03u (%s)} ",token->type>16?token->type : '0'+token->type,token->selector,token->offset,token->rawind&0xffff,hashstr);
-    }  else fprintf(stderr,"{%c.%c.%d %03d ERR } ",type>16?type : '0'+type,selector,offset,rawind);
+        //fprintf(stderr,"{%c.%c.%d %03u (%s)} ",token->type>16?token->type : '0'+token->type,token->selector,token->offset,token->rawind&0xffff,hashstr);
+    }  //else fprintf(stderr,"{%c.%c.%d %03d ERR } ",type>16?type : '0'+type,selector,offset,rawind);
     return(token);
 }
 
@@ -3806,7 +3806,7 @@ struct ramchain_token *extract_and_tokenize(union ramtypes *Uptr,struct ramchain
             if ( hgetbit(hp) != 0 )
                 SETBIT(U.hashdata,i);
         size >>= 3;
-        fprintf(stderr,"[%llx].%d ",(long long)U.val64,hp->bitoffset);
+        //fprintf(stderr,"[%llx].%d ",(long long)U.val64,hp->bitoffset);
     }
     else
     {
@@ -3817,7 +3817,7 @@ struct ramchain_token *extract_and_tokenize(union ramtypes *Uptr,struct ramchain
         else if ( size == 8 )
             U.val64 = ram_extractlong(ram,selector,offset,hp,srcformat);
         else printf("extract_and_tokenize illegalsize %d\n",size);
-        fprintf(stderr,"(%llx).%d ",(long long)U.val64,hp->bitoffset);
+        //fprintf(stderr,"(%llx).%d ",(long long)U.val64,hp->bitoffset);
     }
     *Uptr = U;
     if ( size == 2 )
@@ -4042,6 +4042,7 @@ int32_t ram_expand_bitstream(cJSON **jsonp,struct rawblock *raw,struct ramchain_
     {
         hrewind(hp);
         format = hp->buf[0], hp->ptr++, hp->bitoffset = 8;
+        if ( 0 )
         {
             int i;
             for (i=0; i<=hp->endpos>>3; i++)
@@ -4693,7 +4694,7 @@ uint32_t create_ramchain_block(struct ramchain_info *ram,uint32_t blocknum,char 
             //fwrite(hp->buf,1,datalen,fp);
             //hrewind(hp);
             hflush(fp,hp);
-            printf("CREATE.(%s) size.%ld bitoffset.%d allocsize.%d\n",fname,ftell(fp),hp->bitoffset,hp->allocsize);
+            //printf("CREATE.(%s) size.%ld bitoffset.%d allocsize.%d\n",fname,ftell(fp),hp->bitoffset,hp->allocsize);
             fclose(fp);
         }
         hclose(hp);
@@ -5014,6 +5015,23 @@ void init_ramchain(struct ramchain_info *ram)
     getchar();
 }
 
+void *_process_ramchain(void *_ram)
+{
+    struct ramchain_info *ram = _ram;
+    if ( ram->firstiter != 0 )
+    {
+        printf("call init_ramchain.(%s)\n",ram->name);
+        init_ramchain(ram);
+        ram->firstiter = 0;
+    }
+    while ( 1 )
+    {
+        if ( process_ramchain(ram,1000.,ram_millis()) == 0 )
+            sleep(10);
+    }
+    return(0);
+}
+
 void process_coinblocks(char *argcoinstr)
 {
     int32_t i,n,processed = 0;
@@ -5024,7 +5042,7 @@ void process_coinblocks(char *argcoinstr)
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
-        while ( 1 )
+        //while ( 1 )
         {
             processed = 0;
             for (i=0; i<n; i++)
