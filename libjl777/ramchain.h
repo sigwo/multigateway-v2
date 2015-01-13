@@ -5036,6 +5036,7 @@ void process_coinblocks(char *argcoinstr)
 {
     int32_t i,n;//,processed = 0;
     cJSON *array;
+    struct coin_info *cp;
     char coinstr[1024];
     struct ramchain_info *ram,*ptr;
     printf("process_coinblocks %p\n",argcoinstr);
@@ -5045,13 +5046,13 @@ void process_coinblocks(char *argcoinstr)
             for (i=0; i<n; i++)
             {
                 copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
-                printf("%d of %d: (%s)\n",i,n,coinstr);
-                ram = 0;
-                if ( coinstr[0] != 0 && (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0) && (ram= get_ramchain_info(coinstr)) != 0 )
+                printf("%d of %d: (%s) cp.%p\n",i,n,coinstr,cp);
+                ptr = 0;
+                if ( coinstr[0] != 0 && (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0) && cp != 0 )//(ram= get_ramchain_info(coinstr)) != 0 )
                 {
                     void *portable_thread_create(void *funcp,void *argp);
                     ptr = malloc(sizeof(*ptr));
-                    ptr = ram;
+                    ptr = ram = &cp->RAM;
                     printf("call process_ramchain.(%s)\n",coinstr);
                     if ( portable_thread_create((void *)_process_ramchain,ptr) == 0 )
                         printf("ERROR _process_ramchain.%s\n",coinstr);
@@ -5064,7 +5065,7 @@ void process_coinblocks(char *argcoinstr)
                     }
                     processed += process_ramchain(ram,1000.,ram_millis());*/
                 }
-                printf("%d of %d: (%s) ram.%p\n",i,n,coinstr,ram);
+                printf("%d of %d: (%s) ram.%p\n",i,n,coinstr,ptr);
             }
             /*if ( processed == 0 )
             {
@@ -5072,6 +5073,7 @@ void process_coinblocks(char *argcoinstr)
                 sleep(10);
             }*/
     }
+    while ( 1 ) sleep(1);
 }
 
 #endif
