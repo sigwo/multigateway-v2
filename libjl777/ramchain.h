@@ -2992,11 +2992,11 @@ int32_t convert_to_bitcoinhex(char *scriptasm)
         }
         else if ( strncmp(scriptasm,"OP_RETURN ",strlen("OP_RETURN ")) == 0 )
         {
-            printf("OP_RETURN.(%s) -> ",scriptasm);
+            //printf("OP_RETURN.(%s) -> ",scriptasm);
             add_opcode(scriptasm,0,OP_RETURN_OPCODE);
             for (i=2,j=strlen("OP_RETURN "); j<=len; j++,i++)
                 scriptasm[i] = scriptasm[j];
-            printf("(%s)\n",scriptasm);
+            //printf("(%s)\n",scriptasm);
             return((int32_t)strlen(scriptasm));
         }
     }
@@ -4739,7 +4739,7 @@ uint64_t verify_block(struct rawblock *tmp,struct ramchain_info *ram,uint32_t bl
         ram_setfname(fname,ram,blocknum,strs[n]);
         if ( (hp = hload(0,fname)) != 0 )
         {
-            fprintf(stderr,"\n%c: ",format);
+            //fprintf(stderr,"\n%c: ",format);
             json = 0;
             ram_expand_bitstream(&json,tmp,ram,hp);
             if ( json != 0 )
@@ -4789,7 +4789,7 @@ uint64_t init_ramchain_directory(bits256 *sha,struct ramchain_info *ram,uint32_t
             errs2 = verify_block(&ram->raw,ram,blocknum+i);
         totalerrs += (errs != 0);
         totalerrs2 += (errs2 != 0);
-        printf("BLOCK.%d i.%d %u | %llx -> %llx total.(%d %d)\n\n",blocknum,i,blocknum+i,(long long)errs,(long long)errs2,totalerrs,totalerrs2);
+        printf("%s BLOCK.%d i.%d %u | %llx -> %llx total.(%d %d)\n",ram->name,blocknum,i,blocknum+i,(long long)errs,(long long)errs2,totalerrs,totalerrs2);
         continue;
         
         ram_setfname(fname,ram,blocknum+i,"V");
