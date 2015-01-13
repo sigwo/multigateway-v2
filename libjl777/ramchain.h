@@ -4126,7 +4126,7 @@ uint64_t init_ramchain_directory(struct mappedptr *M,bits256 *sha,struct ramchai
         return((uint64_t)-1);
     for (i=0; i<64; i++)
     {
-        if ( blocknum > 290816 )
+        if ( 0 && blocknum > 290816 )
         {
             create_ramchain_block(ram,blocknum + i,'V');
             create_ramchain_block(ram,blocknum + i,'B');
@@ -4186,9 +4186,11 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
     memset(&hashall,0,sizeof(hashall));
     for (i=n=skipped=0; blocknum<ram->RTblockheight; i++)
     {
+        if ( blocknum+64 >= ram->RTblockheight )
+            break;
         ram_setdirB(1,dirB,ram,i * 64 * 64);
         memset(&hash4096,0,sizeof(hash4096));
-        for (flags=j=0; j<64; j++,blocknum+=64,n++)
+        for (flags=j=0; j<64&&blocknum+64<ram->RTblockheight; j++,blocknum+=64,n++)
         {
             ram_setdirC(1,dirC,ram,blocknum);
             sprintf(fname,"%s/%u.B64",dirB,blocknum);
@@ -4231,7 +4233,7 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
                 save_dirhash(fname,hashall,&z);
             }
         }
-        else if ( skipped++ == 0 )
+        else if ( 0 && skipped++ == 0 )
         {
             for (j=0; j<64; j++)
                 if ( (flags & (1LL << j)) == 0 )
@@ -4247,13 +4249,14 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
         }
     }
     printf("init_ramchain_directories skipped.%d, n.%d blocknum.%d\n",skipped,n,blocknum);
-    ram->blockheight = n = 0;
+    ram->blockheight = blocknum;//=
+    n = 0;
     for (blocknum=1; blocknum<ram->RTblockheight; blocknum++)
     {
         if ( ram->blocks[blocknum] != 0 )
             n++;
-        else if ( ram->blockheight == 0 )
-            ram->blockheight = blocknum;
+        //else if ( ram->blockheight == 0 )
+        //    ram->blockheight = blocknum;
     }
     printf("nonz blocks.%d, contiguous 1 to %d vs RT.%d\n",n,ram->blockheight-1,ram->RTblockheight);
     return(n);
@@ -4326,7 +4329,7 @@ void init_ramchain(struct ramchain_info *ram)
     init_hashtable(ram,'a'), init_hashtable(ram,'s'), init_hashtable(ram,'t');
     printf("%.1f seconds to init_ramchain.%s\n",(ram_millis() - startmilli)/1000.,ram->name);
     init_ramchain_directories(ram,".",ram->RTblockheight+10000);
-    getchar();
+    //getchar();
 }
 
 uint32_t process_ramchain(struct ramchain_info *ram,double timebudget,double startmilli)
@@ -4335,7 +4338,7 @@ uint32_t process_ramchain(struct ramchain_info *ram,double timebudget,double sta
     int32_t processed = 0;
     uint32_t RTheight;
     RTheight = get_RTheight(ram);
-    printf("start process_ramchain %s at %.1f blocknum.%u at RT.%u\n",ram->name,startmilli,ram->blockheight,RTheight);
+    //printf("start process_ramchain %s at %.1f blocknum.%u at RT.%u\n",ram->name,startmilli,ram->blockheight,RTheight);
     while ( ram->blockheight < (RTheight - ram->min_confirms) && ram_millis() < (startmilli + timebudget) )
     {
         ram->Vsum += create_ramchain_block(ram,ram->blockheight,'V');
