@@ -4380,7 +4380,7 @@ void process_coinblocks(char *argcoinstr)
     {
         if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
         {
-            printf("%d of %d: (%s)\n",i,Numramchains,Ramchains[i]->name);
+            printf("%d of %d: (%s) argcoinstr.%s\n",i,Numramchains,Ramchains[i]->name,argcoinstr!=0?argcoinstr:"ALL");
             printf("call process_ramchain.(%s)\n",Ramchains[i]->name);
             if ( portable_thread_create((void *)_process_ramchain,Ramchains[i]) == 0 )
                 printf("ERROR _process_ramchain.%s\n",Ramchains[i]->name);
