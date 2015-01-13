@@ -5032,47 +5032,25 @@ void *_process_ramchain(void *_ram)
     return(0);
 }
 
+void *portable_thread_create(void *funcp,void *argp);
+int Numramchains; struct ramchain_info *Ramchains[100];
+void activate_ramchain(struct ramchain_info *ram)
+{
+    Ramchains[Numramchains++] = ram;
+    printf("Add ramchain.(%s) Num.%d\n",ram->name,Numramchains);
+}
+
 void process_coinblocks(char *argcoinstr)
 {
-    int32_t i,n;//,processed = 0;
-    cJSON *array;
-    struct coin_info *cp;
-    char coinstr[1024];
-    struct ramchain_info *ram,*ptr;
-    printf("process_coinblocks %p\n",argcoinstr);
-    array = cJSON_GetObjectItem(MGWconf,"active");
-    if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    int32_t i;
+    for (i=0; i<Numramchains; i++)
     {
-            for (i=0; i<n; i++)
-            {
-                copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
-                printf("%d of %d: (%s) cp.%p\n",i,n,coinstr,cp);
-                ptr = 0;
-                if ( coinstr[0] != 0 && (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0) && cp != 0 )//(ram= get_ramchain_info(coinstr)) != 0 )
-                {
-                    void *portable_thread_create(void *funcp,void *argp);
-                    ptr = malloc(sizeof(*ptr));
-                    ptr = ram = (void *)cp;
-                    printf("call process_ramchain.(%s)\n",coinstr);
-                    if ( portable_thread_create((void *)_process_ramchain,ptr) == 0 )
-                        printf("ERROR _process_ramchain.%s\n",coinstr);
-                    printf("got ramchain.%p (%s) %s %s\n",ram,coinstr,ram->userpass,ram->serverport);
-                    /*if ( ram->firstiter != 0 )
-                    {
-                        printf("call init_ramchain.(%s)\n",coinstr);
-                        init_ramchain(ram);
-                        ram->firstiter = 0;
-                    }
-                    processed += process_ramchain(ram,1000.,ram_millis());*/
-                }
-                printf("%d of %d: (%s) ram.%p\n",i,n,coinstr,ptr);
-            }
-            /*if ( processed == 0 )
-            {
-                //printf("coinblocks caught up\n");
-                sleep(10);
-            }*/
+        printf("%d of %d: (%s)\n",i,Numramchains,Ramchains[i]->name);
+        printf("call process_ramchain.(%s)\n",Ramchains[i]->name);
+        if ( portable_thread_create((void *)_process_ramchain,Ramchains[i]) == 0 )
+            printf("ERROR _process_ramchain.%s\n",Ramchains[i]->name);
     }
+    printf("process_coinblocks: finished launching\n");
     while ( 1 ) sleep(1);
 }
 
