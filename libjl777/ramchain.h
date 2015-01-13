@@ -4042,9 +4042,8 @@ int32_t ram_map_bitstreams(struct mappedptr *M,bits256 *sha,HUFF *blocks[],int32
                 {
                     blocks[i] = hopen((void *)((long)M->fileptr + offsets[i]),hp->allocsize,0);
                     verified++;
-                    //hclose(hp);
+                    hclose(hp);
                 } else printf("ram_map_bitstreams unexpected null hp at slot.%d\n",i);
-            //close_mappedptr(&M);
         }
         free(offsets);
     }
@@ -4217,7 +4216,7 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
     for (i=n=skipped=0; blocknum<ram->RTblockheight; i++)
     {
         sprintf(fname,"%s/%u.B4096",dirB,i * 64 * 64);
-        if ( ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64*64,fname,0) == 0 )
+        if ( 1 )//ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64*64,fname,0) == 0 )
         {
             ram_setdirB(1,dirB,ram,i * 64 * 64);
             memset(&hash4096,0,sizeof(hash4096));
@@ -4225,7 +4224,7 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
             {
                 ram_setdirC(1,dirC,ram,blocknum);
                 sprintf(fname,"%s/%u.B64",dirB,blocknum);
-                if ( ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64,fname,0) == 0 )
+                if ( 1 )//ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64,fname,0) == 0 )
                 {
                     memset(&sha,0,sizeof(sha));
                     if ( (ram->blockflags[n] = init_ramchain_directory(&ram->M[n],&sha,ram,blocknum)) == (uint64_t)-1 )
@@ -4253,8 +4252,8 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
                 printf("4096 verified %d\n",i*64*64);
                 sprintf(fname,"%s/%u.B4096",dirB,i * 64 * 64);
                 ram_save_bitstreams(fname,&ram->blocks[i * 64 * 64],64 * 64);
-                //for (j=0; j<64; j++)
-                //    close_mappedptr(&ram->M[i*64 + j]), memset(&ram->M[i*64 + j],0,sizeof(ram->M[i*64 + j]));
+                for (j=0; j<64; j++)
+                    close_mappedptr(&ram->M[i*64 + j]), memset(&ram->M[i*64 + j],0,sizeof(ram->M[i*64 + j]));
                 ram_map_bitstreams(&ram->M[i*64],&sha,&ram->blocks[i * 64 * 64],64*64,fname,0);
             }
         }
