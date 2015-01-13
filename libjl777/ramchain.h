@@ -22,6 +22,8 @@
 #define ramchain_h
 
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
+extern void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t rwflag,char *fname);
+extern void calc_sha256cat(unsigned char hash[256 >> 3],unsigned char *src,int32_t len,unsigned char *src2,int32_t len2);
 
 // ramchain functions for external access
 int32_t init_compressionvars(int32_t readonly,char *coinstr,uint32_t maxblocknum);
@@ -155,9 +157,10 @@ struct compressionvars
 
 struct ramchain_info
 {
-    struct rawblock raw;
+    struct rawblock raw,raw2;
     struct compressionvars V;
     HUFF **blocks;
+    uint64_t *blockflags;
     double Vsum,Bsum;
     struct huffhash addrhash,txidhash,scripthash;
     char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport;
@@ -167,7 +170,8 @@ struct ramchain_info
 union ramtypes { double dval; uint64_t val64; float fval; uint32_t val32; uint16_t val16; uint8_t val8,hashdata[8]; };
 struct ramchain_token
 {
-    uint32_t numbits:15,ishuffcode:1,offset:15,israwind;
+    uint32_t numbits:15,ishuffcode:1,offset:16;
+    uint32_t rawind;
     char selector,type;
     union ramtypes U;
 };
@@ -205,19 +209,21 @@ static uint8_t huffoppomasks[8] = { ~(1<<0), ~(1<<1), ~(1<<2), ~(1<<3), ~(1<<4),
 
 void hclose(HUFF *hp)
 {
-    if ( hp->allocptr != 0 )
-        free(hp->allocptr);
     if ( hp != 0 )
-        free(hp);
+    {
+        if ( hp->allocptr != 0 )
+            free(hp->allocptr);
+        if ( hp != 0 )
+            free(hp);
+    }
 }
 
 HUFF *hopen(uint8_t *bits,int32_t num,void *allocptr)
 {
     HUFF *hp = calloc(1,sizeof(*hp));
     hp->ptr = hp->buf = bits;
-    if ( (num & 7) != 0 )
-        num++;
     hp->allocsize = num;
+    hp->endpos = (num << 3);
     hp->allocptr = allocptr;
     return(hp);
 }
@@ -246,7 +252,7 @@ int32_t hseek(HUFF *hp,int32_t offset,int32_t mode)
 {
     if ( mode == SEEK_END )
         offset += hp->endpos;
-    if ( offset >= 0 && (offset>>3) < hp->allocsize )
+    if ( offset >= 0 && (offset>>3) <= hp->allocsize )
     {
         hp->bitoffset = offset, _hseek(hp);
         if ( hp->bitoffset > hp->endpos )
@@ -263,7 +269,7 @@ int32_t hseek(HUFF *hp,int32_t offset,int32_t mode)
 int32_t hgetbit(HUFF *hp)
 {
     int32_t bit = 0;
-    if ( hp->bitoffset < hp->endpos )
+    if ( hp->bitoffset <= hp->endpos )
     {
         if ( (*hp->ptr & huffmasks[hp->maski++]) != 0 )
             bit = 1;
@@ -275,6 +281,7 @@ int32_t hgetbit(HUFF *hp)
         }
         return(bit);
     }
+    printf("hgetbit past EOF: %d >= %d\n",hp->bitoffset,hp->endpos);
     return(-1);
 }
 
@@ -304,6 +311,7 @@ int32_t hmemcpy(void *dest,void *src,HUFF *hp,int32_t datalen)
     if ( (hp->bitoffset & 7) != 0 || ((hp->bitoffset>>3) + datalen) > hp->allocsize )
     {
         printf("misaligned hmemcpy bitoffset.%d or overflow allocsize %d vs %d\n",hp->bitoffset,hp->allocsize,((hp->bitoffset>>3) + datalen));
+        while ( 1 ) sleep(1);
         return(-1);
     }
     if ( dest != 0 && src == 0 )
@@ -359,6 +367,7 @@ int32_t emit_smallbits(HUFF *hp,uint16_t val)
 {
     static long sum,count;
     int32_t numbits = 0;
+    //printf("smallbits.(%d)\n",val);
     if ( val >= 4 )
     {
         if ( val < (1 << 5) )
@@ -447,7 +456,7 @@ int32_t emit_varbits(HUFF *hp,uint32_t val)
         }
     } else numbits += emit_bits(hp,val,4);
     count++, sum += numbits;
-    //if ( (count % 100000) == 0 )
+    if ( (count % 100000) == 0 )
         printf("emit_varbits.(%d) numbits.%d ave varbits %.1f after %ld samples\n",val,numbits,(double)sum/count,count);
     return(numbits);
 }
@@ -530,23 +539,28 @@ int32_t hflush(FILE *fp,HUFF *hp)
     return(numbytes + len);
 }
 
-int32_t hload(HUFF *hp,FILE *fp)
+HUFF *hload(FILE *fp,char *fname)
 {
     long load_varint(uint64_t *x,FILE *fp);
     uint64_t endbitpos;
-    int32_t len;
-    if ( load_varint(&endbitpos,fp) <= 0 )
-        return(-1);
-    if ( (endbitpos >> 3) <= hp->allocsize )
+    int32_t len,flag = 0;
+    uint8_t *buf;
+    HUFF *hp = 0;
+    if ( fp == 0 )
+        fp = fopen(fname,"rb"), flag = 1;
+    if ( load_varint(&endbitpos,fp) > 0 )
     {
         len = conv_bitlen(endbitpos);
-        if ( fread(hp->buf,1,len,fp) != len )
-            return(-1);
-        hp->endpos = (int32_t)endbitpos;
-        return(len);
+        buf = calloc(1,len);
+        if ( fread(buf,1,len,fp) != len )
+            free(buf);
+        else hp = hopen(buf,len,buf), hp->endpos = (int32_t)endbitpos;
+        fseek(fp,0,SEEK_END);
+        printf("HLOAD endbitpos.%d len.%d endfpos.%ld\n",(int)endbitpos,len,ftell(fp));
     }
-    printf("varlen.%lld <= hp->allocsize %u\n",(long long)endbitpos,hp->allocsize);
-    return(-1);
+    if ( flag != 0 && fp != 0 )
+        fclose(fp);
+    return(hp);
 }
 
 // misc display functions:
@@ -885,7 +899,7 @@ int32_t calc_varint(uint8_t *buf,uint64_t x)
         else if ( x <= 0xffffffffL )
         {
             buf[len++] = 0xfe;
-            i = (uint16_t)x;
+            i = (uint32_t)x;
             memcpy(&buf[len],&i,sizeof(i));
             len += 4;
         }
@@ -1004,13 +1018,16 @@ int32_t expand_scriptdata(char *scriptstr,uint8_t *scriptdata,int32_t datalen)
 {
     char *prefix,*suffix;
     int32_t mode,n = 0;
+    scriptstr[0] = 0;
     switch ( (mode= scriptdata[n++]) )
     {
+        case 'z': prefix = "ffff", suffix = ""; break;
+        case 'n': prefix = "nonstandard", suffix = ""; break;
         case 's': prefix = "76a914", suffix = "88ac"; break;
         case 'm': prefix = "a9", suffix = "ac"; break;
         case 'r': prefix = "", suffix = "ac"; break;
         case ' ': prefix = "", suffix = ""; break;
-        default: printf("unexpected scriptmode.(%d)\n",mode); prefix = "", suffix = ""; while ( 1 ) sleep(1); break;
+        default: printf("unexpected scriptmode.(%d) (%c)\n",mode,mode); prefix = "", suffix = ""; return(-1); break;
     }
     strcpy(scriptstr,prefix);
     init_hexbytes_noT(scriptstr+strlen(scriptstr),scriptdata+n,datalen-n);
@@ -1032,7 +1049,19 @@ int32_t calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,
         printf("calc_scriptmode overflow len.%d\n",len);
         return(-1);
     }
-    if ( strncmp(script,"76a914",6) == 0 && strcmp(script+len-4,"88ac") == 0 )
+    if ( strcmp(script,"ffff") == 0 )
+    {
+        mode = 'z';
+        if ( trimflag != 0 )
+            script[0] = 0;
+    }
+    else if ( strcmp(script,"nonstandard") == 0 )
+    {
+        if ( trimflag != 0 )
+            script[0] = 0;
+        mode = 'n';
+    }
+    else if ( strncmp(script,"76a914",6) == 0 && strcmp(script+len-4,"88ac") == 0 )
     {
         if ( trimflag != 0 )
         {
@@ -1062,8 +1091,8 @@ int32_t calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,
     if ( trimflag != 0 )
     {
         scriptdata[n++] = mode;
-        len = (int32_t)(strlen(script) >> 1);
-        decode_hex(scriptdata+n,len,script);
+        if ( (len= (int32_t)(strlen(script) >> 1)) > 0 )
+            decode_hex(scriptdata+n,len,script);
         (*datalenp) = (len + n);
         //printf("set pubkey.(%s).%ld <- (%s)\n",pubkeystr,strlen(pubkeystr),script);
     }
@@ -1427,7 +1456,10 @@ int32_t rawblockcmp(struct rawblock *ref,struct rawblock *raw)
     if ( ref->numrawvins != raw->numrawvins )
         return(-2);
     if ( ref->numrawvouts != raw->numrawvouts )
+    {
+        printf("numrawvouts.%d vs %d\n",ref->numrawvouts,raw->numrawvouts);
         return(-3);
+    }
     if ( ref->numtx != 0 && memcmp(ref->txspace,raw->txspace,ref->numtx*sizeof(*raw->txspace)) != 0 )
     {
         struct rawtx *reftx,*rawtx;
@@ -1454,8 +1486,8 @@ int32_t rawblockcmp(struct rawblock *ref,struct rawblock *raw)
         if ( i != ref->numtx )
         {
             printf("flag.%d numtx.%d\n",flag,ref->numtx);
-            while ( 1 )
-                sleep(1);
+            //while ( 1 )
+            //    sleep(1);
             return(-4);
         }
     }
@@ -1549,18 +1581,6 @@ int32_t huffpair_decodeitemind(int32_t type,int32_t bitflag,uint32_t *rawindp,st
     return(-1);
 }
 
-int32_t load_bitstream_block(HUFF *hp,FILE *fp)
-{
-    int32_t numbytes;
-    if ( fp == 0 )
-    {
-        printf("load_bitstream_block null fp\n");
-        return(-1);
-    }
-    numbytes = hload(hp,fp);
-    return(numbytes);
-}
-
 int32_t save_bitstream_block(FILE *fp,HUFF *hp)
 {
     int32_t numbytes;
@@ -1641,7 +1661,6 @@ char **ram_getalladdrs(int32_t *numaddrsp,struct ramchain_info *ram)
 
 void *huffhash_mapfile(struct huffhash *hash)
 {
-    void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t rwflag,char *fname);
     char fname[1024];
     long offset;
     void *ptr;
@@ -1746,7 +1765,6 @@ struct huffpair_hash *huffhash_get(int32_t *createdflagp,struct huffhash *hash,u
         hp = calloc(1,sizeof(*hp));
         newptr = malloc(datalen);
         memcpy(newptr,hashdata,datalen);
-        //memcpy((void *)((long)newptr + varlen),ptr,datalen);
         *createdflagp = 1;
         if ( hash->newfp != 0 )
         {
@@ -1754,7 +1772,7 @@ struct huffpair_hash *huffhash_get(int32_t *createdflagp,struct huffhash *hash,u
             {
                 char hexstr[8192];
                 init_hexbytes_noT(hexstr,newptr,datalen);
-                printf("save.(%s) at %ld datalen.%d\n",hexstr,ftell(hash->newfp),datalen);
+                printf("save.(%s) at %ld datalen.%d\n",hexstr,ftell(hash->newfp),datalen); //getchar();//while ( 1 ) sleep(1);
             }
             if ( fwrite(newptr,1,datalen,hash->newfp) != datalen )
             {
@@ -2159,7 +2177,7 @@ uint8_t *encode_hashstr(int32_t *datalenp,uint8_t *data,int32_t type,char *hashs
     }
     else
     {
-        printf("huffpair_rawind: unsupported type.%d\n",type);
+        printf("huffpair_rawind: unsupported type.%d (%c)\n",type,type);
         exit(-1);
     }
     if ( datalen > 0 )
@@ -2184,7 +2202,7 @@ char *decode_hashdata(char *strbuf,int32_t type,uint8_t *hashdata)
         if ( (scriptmode= expand_scriptdata(strbuf,hashdata,(uint32_t)datalen)) < 0 )
         {
             printf("huffpair_rawind: scriptmode.%d for (%s)\n",scriptmode,strbuf);
-            exit(-1);
+            return(0);
         }
         //printf("EXPANDSCRIPT.(%c) -> [%s]\n",scriptmode,strbuf);
     }
@@ -2192,7 +2210,8 @@ char *decode_hashdata(char *strbuf,int32_t type,uint8_t *hashdata)
     {
         if ( datalen > 128 )
         {
-            printf("huffpair_rawind: type.%d datalen.%d > sizeof(data) %d\n",type,(int)datalen,128);
+            init_hexbytes_noT(strbuf,hashdata,64);
+            printf("huffpair_rawind: type.%d (%c) datalen.%d > sizeof(data) %d | (%s)\n",type,type,(int)datalen,128,strbuf);
             exit(-1);
         }
         init_hexbytes_noT(strbuf,hashdata,datalen);
@@ -2444,7 +2463,7 @@ struct huffpair_hash *ram_hashdata_search(struct huffhash *hash,uint8_t *hashdat
             {
                 huffhash_setfname(fname,hash,0);
                 hash->newfp = fopen(fname,"wb");
-                //printf("OPENED.(%s)\n",fname), getchar();
+                printf("OPENED.(%s)\n",fname);
             }
             hp = calloc(1,sizeof(*hp));
             newptr = malloc(datalen);
@@ -2454,7 +2473,7 @@ struct huffpair_hash *ram_hashdata_search(struct huffhash *hash,uint8_t *hashdat
             {
                 char hexstr[8192];
                 init_hexbytes_noT(hexstr,newptr,datalen);
-                printf("save.(%s) at %ld datalen.%d newfp.%p\n",hexstr,ftell(hash->newfp),datalen,hash->newfp);
+                printf("save.(%s) at %ld datalen.%d newfp.%p\n",hexstr,ftell(hash->newfp),datalen,hash->newfp);// getchar();//while ( 1 ) sleep(1);
             }
             if ( hash->newfp != 0 )
             {
@@ -2465,9 +2484,10 @@ struct huffpair_hash *ram_hashdata_search(struct huffhash *hash,uint8_t *hashdat
                 }
                 fflush(hash->newfp);
             }
+            //printf("add %d byte entry to hashtable %c\n",datalen,hash->type);
             huffhash_add(hash,hp,newptr,datalen);
-        }
-    }
+        } //else printf("found %d bytes ind.%d\n",datalen,hp->rawind);
+    } else printf("ram_hashdata_search null hashtable\n");
     return(hp);
 }
 
@@ -2476,19 +2496,19 @@ struct huffpair_hash *ram_hashsearch(struct huffhash *hash,char *hashstr,int32_t
     uint8_t data[4097],*hashdata;
     struct huffpair_hash *hp = 0;
     int32_t datalen;
-    hash->type = type;
     if ( hash != 0 && (hashdata= encode_hashstr(&datalen,data,type,hashstr)) != 0 )
-        ram_hashdata_search(hash,hashdata,datalen);
+        hp = ram_hashdata_search(hash,hashdata,datalen);
     return(hp);
 }
 
 uint32_t ram_conv_hashstr(struct ramchain_info *ram,char *hashstr,int32_t type)
 {
+    char nullstr[6] = { 5, 'n', 'u', 'l', 'l', 0 };
     struct huffpair_hash *hp = 0;
     struct huffhash *hash;
+    if ( hashstr == 0 || hashstr[0] == 0 )
+        hashstr = nullstr;
     hash = ram_gethash(ram,type);
-    strcpy(hash->coinstr,ram->name);
-    hash->type = type;
     if ( (hp= ram_hashsearch(hash,hashstr,type)) != 0 )
         return(hp->rawind);
     else return(0xffffffff);
@@ -2598,7 +2618,7 @@ void init_bitstream(int32_t dispflag,struct ramchain_info *ram,FILE *fp,int32_t 
                     if ( iter > calciters ) // calciters is to output to bitfps
                     {
                         memset(&V->raws[j],0,sizeof(V->raws[j]));
-                        load_bitstream_block(V->hps[j],V->bitfps[j]);
+                        V->hps[j] = hload(V->bitfps[j],0);
                     }
                 }
                 checkvins = checkvouts = 0;
@@ -2880,6 +2900,7 @@ int32_t init_compressionvars(int32_t readonly,char *coinstr,uint32_t maxblocknum
 #define OP_DUP_OPCODE 0x76
 #define OP_EQUALVERIFY_OPCODE 0x88
 #define OP_CHECKSIG_OPCODE 0xac
+#define OP_RETURN_OPCODE 0x6a
 
 char _hexbyte(int32_t c)
 {
@@ -2944,7 +2965,7 @@ int32_t origconvert_to_bitcoinhex(char *scriptasm)
 int32_t convert_to_bitcoinhex(char *scriptasm)
 {
     char *hex,pubkey[512],*endstr;
-    int32_t middlelen,len,OP_HASH160_len,OP_EQUAL_len;
+    int32_t i,j,middlelen,len,OP_HASH160_len,OP_EQUAL_len;
     len = (int32_t)strlen(scriptasm);
     OP_HASH160_len = (int32_t)strlen("OP_DUP OP_HASH160");
     OP_EQUAL_len = (int32_t)strlen("OP_EQUALVERIFY OP_CHECKSIG");
@@ -2967,6 +2988,15 @@ int32_t convert_to_bitcoinhex(char *scriptasm)
         {
             strcpy(endstr,"ac");
             //printf("NEWSCRIPT.[%s]\n",scriptasm);
+            return((int32_t)strlen(scriptasm));
+        }
+        else if ( strncmp(scriptasm,"OP_RETURN ",strlen("OP_RETURN ")) == 0 )
+        {
+            printf("OP_RETURN.(%s) -> ",scriptasm);
+            add_opcode(scriptasm,0,OP_RETURN_OPCODE);
+            for (i=2,j=strlen("OP_RETURN "); j<=len; j++,i++)
+                scriptasm[i] = scriptasm[j];
+            printf("(%s)\n",scriptasm);
             return((int32_t)strlen(scriptasm));
         }
     }
@@ -3022,6 +3052,15 @@ int32_t extract_txvals(char *coinaddr,char *script,int32_t nohexout,cJSON *txobj
     return(-1);
 }
 
+void ram_set_string(char type,char *dest,char *src,long max)
+{
+    if ( src == 0 || src[0] == 0 )
+        sprintf(dest,"ffff");
+    else if ( strlen(src) < max-1)
+        strcpy(dest,src);
+    else sprintf(dest,"nonstandard");
+}
+
 int32_t _get_txvouts(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *ram,cJSON *voutsobj)
 {
     int32_t extract_txvals(char *coinaddr,char *script,int32_t nohexout,cJSON *txobj);
@@ -3041,10 +3080,14 @@ int32_t _get_txvouts(struct rawblock *raw,struct rawtx *tx,struct ramchain_info 
             memset(v,0,sizeof(*v));
             v->value = value;
             extract_txvals(coinaddr,script,1,item); // default to nohexout
-            if ( strlen(coinaddr) < sizeof(v->coinaddr)-1 )
-                strcpy(v->coinaddr,coinaddr);//,sizeof(raw->voutspace[numrawvouts].coinaddr));
+            ram_set_string('a',v->coinaddr,coinaddr,sizeof(v->coinaddr));
+            ram_set_string('s',v->script,script,sizeof(v->script));
+            /*if ( strlen(coinaddr) < sizeof(v->coinaddr)-1 )
+                strcpy(v->coinaddr,coinaddr);
+            else strcpy(v->coinaddr,"Aoverflow");
             if ( strlen(script) < sizeof(v->script)-1 )
                 strcpy(v->script,script);
+            else strcpy(v->script,"Soverflow");*/
             //printf("VOUT -> rawnum.%d vout.%d (%s) script.(%s) %.8f\n",raw->numrawvouts,i,v->coinaddr,v->script,dstr(v->value));
         }
     } else printf("error with vouts\n");
@@ -3074,8 +3117,10 @@ int32_t _get_txvins(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *
             v = &raw->vinspace[raw->numrawvins];
             memset(v,0,sizeof(*v));
             v->vout = (int)get_cJSON_int(item,"vout");
-            if ( strlen(txidstr) < sizeof(v->txidstr)-1 )
-                strcpy(v->txidstr,txidstr);
+            ram_set_string('t',v->txidstr,txidstr,sizeof(v->txidstr));
+            //if ( strlen(txidstr) < sizeof(v->txidstr)-1 )
+            //    strcpy(v->txidstr,txidstr);
+            //else strcpy(v->txidstr,"Toverflow");
             //printf("numraw.%d vin.%d (%s).v%d | raw vins.%d vouts.%d\n",raw->numrawvins,i,v->txidstr,v->vout,raw->numrawvins,raw->numrawvouts);
         }
     } else printf("error with vins\n");
@@ -3087,6 +3132,7 @@ char *get_transaction(struct ramchain_info *ram,char *txidstr)
 {
     char *rawtransaction=0,txid[4096];
     sprintf(txid,"[\"%s\", 1]",txidstr);
+    //printf("get_transaction.(%s)\n",txidstr);
     rawtransaction = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getrawtransaction",txid);
     return(rawtransaction);
 }
@@ -3108,7 +3154,7 @@ void _get_txidinfo(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *r
         } else printf("update_txid_infos parse error.(%s)\n",retstr);
         free(retstr);
     } else printf("error getting.(%s)\n",txidstr);
-    //printf("tx.%d: numvins.%d numvouts.%d (raw %d %d)\n",txind,tx->numvins,tx->numvouts,raw->numrawvins,raw->numrawvouts);
+    //printf("tx.%d: (%s) numvins.%d numvouts.%d (raw %d %d)\n",txind,tx->txidstr,tx->numvins,tx->numvouts,raw->numrawvins,raw->numrawvouts);
 }
 
 char *get_blockhashstr(struct ramchain_info *ram,uint32_t blockheight)
@@ -3136,6 +3182,7 @@ cJSON *get_blockjson(uint32_t *heightp,struct ramchain_info *ram,char *blockhash
     if ( blockhashstr != 0 )
     {
         sprintf(buf,"\"%s\"",blockhashstr);
+        //printf("get_blockjson.(%d %s)\n",blocknum,blockhashstr);
         blocktxt = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getblock",buf);
         if ( blocktxt != 0 && blocktxt[0] != 0 && (json= cJSON_Parse(blocktxt)) != 0 && heightp != 0 )
             *heightp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0xffffffff);
@@ -3166,6 +3213,8 @@ uint32_t _get_blockinfo(struct rawblock *raw,struct ramchain_info *ram,uint32_t 
     uint32_t blockid;
     int32_t txind,n;
     clear_rawblock(raw);
+    //raw->blocknum = blockheight;
+    //printf("_get_blockinfo.%d\n",blockheight);
     raw->blocknum = blockheight;
     raw->minted = raw->numtx = raw->numrawvins = raw->numrawvouts = 0;
     if ( (json= get_blockjson(0,ram,0,blockheight)) != 0 )
@@ -3178,6 +3227,7 @@ uint32_t _get_blockinfo(struct rawblock *raw,struct ramchain_info *ram,uint32_t 
             for (txind=0; txind<n; txind++)
             {
                 copy_cJSON(txidstr,cJSON_GetArrayItem(txobj,txind));
+                //printf("block.%d txind.%d TXID.(%s)\n",blockheight,txind,txidstr);
                 _get_txidinfo(raw,&raw->txspace[raw->numtx++],ram,txind,txidstr);
             }
         } else printf("error _get_blocktxarray for block.%d got %d, n.%d vs %d\n",blockheight,blockid,n,MAX_BLOCKTX);
@@ -3325,13 +3375,12 @@ void *ram_getrawdest(struct rawblock *raw,struct ramchain_token *token)
 
 int32_t emit_ramchain_token(int32_t compressflag,HUFF *outbits,struct ramchain_info *ram,struct ramchain_token *token)
 {
-    struct huffpair_hash *hp = 0;
     uint8_t *hashdata;
     int32_t i,bitlen,type;
     hashdata = token->U.hashdata;
     type = token->type;
     //printf("emit token.(%d) datalen.%d\n",token->type,outbits->bitoffset);
-    if ( compressflag != 0 && type != 16 && type > 0 )
+    if ( compressflag != 0 && type != 16 )
     {
         if ( type == 'a' || type == 't' || type == 's' )
         {
@@ -3340,8 +3389,7 @@ int32_t emit_ramchain_token(int32_t compressflag,HUFF *outbits,struct ramchain_i
                 printf("misaligned token numbits.%d\n",token->numbits);
                 return(-1);
             }
-            if ( (hp= ram_hashdata_search(ram_gethash(ram,type),token->U.hashdata,token->numbits >> 3)) != 0 )
-                return(emit_varbits(outbits,hp->rawind));
+            return(emit_varbits(outbits,token->rawind));
         }
         else
         {
@@ -3371,6 +3419,7 @@ uint64_t ram_extract_varint(HUFF *hp)
             hmemcpy(&i,0,hp,4), varint = i;
         else hmemcpy(&varint,0,hp,8);
     } else varint = c;
+    printf("c.%d -> (%llu)\n",c,(long long)varint);
     return(varint);
 }
 
@@ -3381,16 +3430,16 @@ int32_t ram_extract_varstr(uint8_t *data,HUFF *hp)
     if ( c >= 0xfd )
     {
         if ( c == 0xfd )
-            hmemcpy(&s,0,hp,2), memcpy(data,&s,2), datalen = s, ptr += 2;
+            hmemcpy(&s,0,hp,2), memcpy(ptr,&s,2), datalen = s, ptr += 2;
         else if ( c == 0xfe )
-            hmemcpy(&datalen,0,hp,4), memcpy(data,&datalen,4), ptr += 4;
-        else hmemcpy(&varint,0,hp,8),  memcpy(data,&varint,8), datalen = (uint32_t)varint, ptr += 8;
+            hmemcpy(&datalen,0,hp,4), memcpy(ptr,&datalen,4), ptr += 4;
+        else hmemcpy(&varint,0,hp,8),  memcpy(ptr,&varint,8), datalen = (uint32_t)varint, ptr += 8;
     } else datalen = c;
     hmemcpy(ptr,0,hp,datalen);
     return((int32_t)((long)ptr - (long)data));
 }
 
-uint32_t ram_extractstring(char *hashstr,char type,struct ramchain_info *ram,int32_t selector,int32_t offset,int32_t destformat,HUFF *hp,int32_t format)
+uint32_t ram_extractstring(char *hashstr,char type,struct ramchain_info *ram,int32_t selector,int32_t offset,HUFF *hp,int32_t format)
 {
     uint8_t hashdata[8192];
     union ramtypes U;
@@ -3398,7 +3447,12 @@ uint32_t ram_extractstring(char *hashstr,char type,struct ramchain_info *ram,int
     if ( format == 'V' )
     {
         ram_extract_varstr(hashdata,hp);
-        decode_hashdata(hashstr,type,hashdata);
+        if ( decode_hashdata(hashstr,type,hashdata) == 0 )
+        {
+            printf("ram_extractstring.V t.(%c) decode_hashdata error\n",type);
+            return(0);
+        }
+        rawind = ram_conv_hashstr(ram,hashstr,type);
     }
     else
     {
@@ -3411,7 +3465,10 @@ uint32_t ram_extractstring(char *hashstr,char type,struct ramchain_info *ram,int
         }
         else printf("ram_extractstring illegal format.%d\n",format);
         ram_conv_rawind(hashstr,ram,rawind,type);
+        //printf("(%d) ramextract string rawind.%d (%c) -> (%s)\n",rawind,format,type,hashstr);
     }
+    //rawind = ram_conv_hashstr(ram,hashstr,type);
+    //printf("ram_extractstring got rawind.%d\n",rawind);
     return(rawind);
 }
 
@@ -3419,9 +3476,7 @@ uint32_t ram_extractint(struct ramchain_info *ram,int32_t selector,int32_t offse
 {
     uint32_t i = 0;
     union ramtypes U;
-    if ( format == 'V' )
-        return((uint32_t)ram_extract_varint(hp));
-    else if ( format == 'B' )
+    if ( format == 'B' )
         decode_varbits(&i,hp);
     else if ( format == '*' )
     {
@@ -3435,9 +3490,8 @@ uint16_t ram_extractshort(struct ramchain_info *ram,int32_t selector,int32_t off
 {
     uint16_t s = 0;
     union ramtypes U;
-    if ( format == 'V' )
-        return((uint16_t)ram_extract_varint(hp));
-    else if ( format == 'B' )
+    //fprintf(stderr,"s.%d: ",hp->bitoffset);
+    if ( format == 'B' )
         decode_smallbits(&s,hp);
     else if ( format == '*' )
     {
@@ -3449,11 +3503,9 @@ uint16_t ram_extractshort(struct ramchain_info *ram,int32_t selector,int32_t off
 
 uint64_t ram_extractlong(struct ramchain_info *ram,int32_t selector,int32_t offset,HUFF *hp,int32_t format)
 {
-    uint64_t x;
+    uint64_t x = 0;
     union ramtypes U;
-    if ( format == 'V' )
-        return(ram_extract_varint(hp));
-    else if ( format == 'B' )
+    if ( format == 'B' )
         decode_valuebits(&x,hp);
     else if ( format == '*' )
     {
@@ -3463,72 +3515,104 @@ uint64_t ram_extractlong(struct ramchain_info *ram,int32_t selector,int32_t offs
     return(x);
 }
 
-struct ramchain_token *ram_set_token_hashdata(struct ramchain_info *ram,int32_t destformat,char type,char *hashstr,uint32_t rawind)
+struct ramchain_token *ram_set_token_hashdata(struct ramchain_info *ram,char type,char *hashstr,uint32_t rawind)
 {
     uint8_t data[4097],*hashdata;
     char strbuf[8192];
-    union ramtypes U;
+    struct huffpair_hash *hp;
     struct ramchain_token *token = 0;
     int32_t datalen;
-    if ( destformat == 'V' )
+    if ( type == 'a' || type == 't' || type == 's' )
     {
-        if ( hashstr == 0 || hashstr[0] == 0 )
+        if ( hashstr == 0 )
         {
             if ( rawind == 0 || rawind == 0xffffffff )
+            {
+                printf("ram_set_token_hashdata no hashstr and rawind.%d\n",rawind); while ( 1 ) sleep(1);
                 return(0);
+            }
             hashstr = strbuf;
             ram_conv_rawind(hashstr,ram,rawind,type);
+            token->rawind = rawind;
+            printf("ram_set_token converted rawind.%d -> (%c).(%s)\n",rawind,type,hashstr);
         }
-        if ( (hashdata= encode_hashstr(&datalen,data,type,hashstr)) != 0 )
+        else if ( hashstr[0] == 0 )
+            token = calloc(1,sizeof(*token));
+        else if ( (hashdata= encode_hashstr(&datalen,data,type,hashstr)) != 0 )
         {
             token = calloc(1,sizeof(*token) + datalen - sizeof(token->U));
             memcpy(token->U.hashdata,hashdata,datalen);
             token->numbits = (datalen << 3);
-        }
+            hp = ram_hashdata_search(ram_gethash(ram,type),hashdata,datalen);
+            token->rawind = hp->rawind;
+           // printf(">>>>>> rawind.%d -> %d\n",rawind,token->rawind);
+        } else printf("encode_hashstr error for (%c).(%s)\n",type,hashstr);
     }
-    else if ( destformat == 'B' )
+    else //if ( destformat == 'B' )
     {
         token = calloc(1,sizeof(*token));
-        token->israwind = 1;
         token->numbits = (sizeof(rawind) << 3);
         if ( hashstr != 0 && hashstr[0] != 0 )
+        {
             rawind = ram_conv_hashstr(ram,hashstr,type);
-        token->U.val32 = rawind;
+            //printf("(%s) -> %d\n",hashstr,rawind);
+        }
+        token->rawind = rawind;
+        //printf("<<<<<<<<<< rawind.%d -> %d\n",rawind,token->rawind);
     }
-    else if ( destformat == '*' )
+    /*else if ( destformat == '*' )
     {
         token = calloc(1,sizeof(*token));
         token->ishuffcode = 1;
         if ( hashstr != 0 && hashstr[0] != 0 )
             rawind = ram_conv_hashstr(ram,hashstr,type);
-        U.val32 = rawind;
+        token->rawind = rawind;
         token->numbits = ram_huffencode(&token->U.val64,ram,token,&U,sizeof(rawind) << 3);
-    }
+    }*/
     return(token);
 }
 
-struct ramchain_token *ram_createtoken(struct ramchain_info *ram,char selector,uint16_t offset,int32_t destformat,int32_t type,char *hashstr,uint32_t rawind,union ramtypes *U,int32_t datalen)
+void ram_sprintf_number(char *hashstr,union ramtypes *U,int32_t type)
 {
+    switch ( type )
+    {
+        case 8: sprintf(hashstr,"%.8f",dstr(U->val64)); break;
+        case -8: sprintf(hashstr,"%.14f",U->dval); break;
+        case -4: sprintf(hashstr,"%.10f",U->fval); break;
+        case 4: sprintf(hashstr,"%u",U->val32); break;
+        case 2: sprintf(hashstr,"%u",U->val16); break;
+        case 1: sprintf(hashstr,"%u",U->val8); break;
+        default: sprintf(hashstr,"invalid type error.%d",type);
+    }
+}
+
+struct ramchain_token *ram_createtoken(struct ramchain_info *ram,char selector,uint16_t offset,int32_t type,char *hashstr,uint32_t rawind,union ramtypes *U,int32_t datalen)
+{
+    char strbuf[128];
     struct ramchain_token *token;
     switch ( type )
     {
         case 'a': case 't': case 's':
-            //printf("%c.%d: create.(%s) rawind.%d destformat.%c\n",selector,offset,hashstr,rawind,destformat);
-            token = ram_set_token_hashdata(ram,destformat,type,hashstr,rawind);
+            //printf("%c.%d: (%c) token.(%s) rawind.%d destformat.%c\n",selector,offset,type,hashstr,rawind,destformat);
+            token = ram_set_token_hashdata(ram,type,hashstr,rawind);
             break;
         case 16: case 8: case -8: case 4: case -4: case 2: case 1:
             token = calloc(1,sizeof(*token));
-            if ( destformat == '*' )
+            /*if ( destformat == '*' )
             {
                 token->numbits = ram_huffencode(&token->U.val64,ram,token,U,token->numbits);
                 token->ishuffcode = 1;
             }
-            else
+            else*/
             {
                 token->U = *U;
                 token->numbits = ((type >= 0) ? type : -type) << 3;
             }
-            //printf("%c.%d: create.%llu rawind.%d destformat.%c\n",selector,offset,(long long)token->U.val64,rawind,destformat);
+            memcpy(&token->rawind,U->hashdata,sizeof(token->rawind));
+            if ( hashstr == 0 )
+                hashstr = strbuf;
+            ram_sprintf_number(hashstr,U,type);
+            // printf("%c.%d: (%d) token.%llu rawind.%d destformat.%c\n",selector,offset,type,(long long)token->U.val64,rawind,destformat);
             break;
         default: printf("ram_createtoken: illegal tokentype.%d\n",type); return(0); break;
     }
@@ -3537,7 +3621,8 @@ struct ramchain_token *ram_createtoken(struct ramchain_info *ram,char selector,u
         token->selector = selector;
         token->offset = offset;
         token->type = type;
-    }
+        fprintf(stderr,"{%c.%c.%d %03u (%s)} ",token->type>16?token->type : '0'+token->type,token->selector,token->offset,token->rawind&0xffff,hashstr);
+    }  else fprintf(stderr,"{%c.%c.%d %03d ERR } ",type>16?type : '0'+type,selector,offset,rawind);
     return(token);
 }
 
@@ -3555,13 +3640,12 @@ void *ram_tokenstr(void *longspacep,int32_t *datalenp,struct ramchain_info *ram,
             ram_decode_huffcode(&U,ram,token->selector,token->offset);
             rawind = U.val32;
         }
-        else if ( token->israwind != 0 )
-            rawind = token->U.val32;
-        if ( rawind == 0 )
-            return(hashstr);
-        if ( rawind != 0xffffffff )
+        else rawind = token->rawind;
+        //if ( rawind == 0 )
+        //    return(hashstr);
+        if ( rawind != 0xffffffff && rawind != 0 )
             ram_conv_rawind(hashstr,ram,rawind,type);
-        else if ( decode_hashdata(hashstr,token->type,token->U.hashdata) == 0 )
+        if ( decode_hashdata(hashstr,token->type,token->U.hashdata) == 0 )
         {
             *datalenp = 0;
             printf("expand_ramchain_token decode_hashdata error\n");
@@ -3579,17 +3663,8 @@ void *ram_tokenstr(void *longspacep,int32_t *datalenp,struct ramchain_info *ram,
             *datalenp = (token->numbits >> 3);
             U = token->U;
         }
+        ram_sprintf_number(hashstr,&U,type);
         memcpy(longspacep,&U,*datalenp);
-        switch ( type )
-        {
-            case 8: sprintf(hashstr,"%.8f",dstr(U.val64)); break;
-            case -8: sprintf(hashstr,"%.14f",U.dval); break;
-            case -4: sprintf(hashstr,"%.10f",U.fval); break;
-            case 4: sprintf(hashstr,"%u",U.val32); break;
-            case 2: sprintf(hashstr,"%u",U.val16); break;
-            case 1: sprintf(hashstr,"%u",U.val8); break;
-            default: sprintf(hashstr,"invalid type error.%d",type);
-        }
     }
     return(longspacep);
 }
@@ -3599,15 +3674,15 @@ void *ram_tokenstr(void *longspacep,int32_t *datalenp,struct ramchain_info *ram,
 #define num_rawvin_tokens(raw) 2
 #define num_rawvout_tokens(raw) 3
 
-#define ram_createstring(ram,selector,offset,format,type,str,rawind) ram_createtoken(ram,selector,offset,format,type,str,rawind,0,0)
-#define ram_createbyte(ram,selector,offset,format,rawind) ram_createtoken(ram,selector,offset,format,1,0,rawind,&U,1)
-#define ram_createshort(ram,selector,offset,format,rawind) ram_createtoken(ram,selector,offset,format,2,0,rawind,&U,2)
-#define ram_createint(ram,selector,offset,format,rawind) ram_createtoken(ram,selector,offset,format,4,0,rawind,&U,4)
-#define ram_createfloat(ram,selector,offset,format,rawind) ram_createtoken(ram,selector,offset,format,-4,0,rawind,&U,4)
-#define ram_createdouble(ram,selector,offset,format,rawind) ram_createtoken(ram,selector,offset,format,-8,0,rawind,&U,8)
-#define ram_createlong(ram,selector,offset,format,rawind) ram_createtoken(ram,selector,offset,format,8,0,rawind,&U,8)
+#define ram_createstring(ram,selector,offset,type,str,rawind) ram_createtoken(ram,selector,offset,type,str,rawind,0,0)
+#define ram_createbyte(ram,selector,offset,rawind) ram_createtoken(ram,selector,offset,1,0,rawind,&U,1)
+#define ram_createshort(ram,selector,offset,rawind) ram_createtoken(ram,selector,offset,2,0,rawind,&U,2)
+#define ram_createint(ram,selector,offset,rawind) ram_createtoken(ram,selector,offset,4,0,rawind,&U,4)
+#define ram_createfloat(ram,selector,offset,rawind) ram_createtoken(ram,selector,offset,-4,0,rawind,&U,4)
+#define ram_createdouble(ram,selector,offset,rawind) ram_createtoken(ram,selector,offset,-8,0,rawind,&U,8)
+#define ram_createlong(ram,selector,offset,rawind) ram_createtoken(ram,selector,offset,8,0,rawind,&U,8)
 
-int32_t ram_rawvin_scan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,int32_t destformat,struct rawblock *raw,struct rawtx *tx,int32_t vin)
+int32_t ram_rawvin_scan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,struct rawblock *raw,struct rawtx *tx,int32_t vin)
 {
     struct rawvin *vi;
     union ramtypes U;
@@ -3617,15 +3692,16 @@ int32_t ram_rawvin_scan(struct ramchain_info *ram,struct ramchain_token **tokens
     vi = &raw->vinspace[numrawvins];
     if ( tokens != 0 )
     {
-        txid_rawind = (destformat != 'V') ? ram_txidind(ram,vi->txidstr) : 0;
-        tokens[numtokens++] = ram_createstring(ram,'I',numrawvins,destformat,'t',vi->txidstr,txid_rawind);
-        U.val16 = vi->vout, tokens[numtokens++] = ram_createshort(ram,'I',numrawvins,destformat,rawind);
+        if ( (txid_rawind= ram_txidind(ram,vi->txidstr)) != 0 )
+            tokens[numtokens++] = ram_createstring(ram,'I',numrawvins,'t',vi->txidstr,txid_rawind);
+        else tokens[numtokens++] = 0;
+        memset(&U,0,sizeof(U)), U.val16 = vi->vout, tokens[numtokens++] = ram_createshort(ram,'I',numrawvins,rawind);
     }
     else numtokens += num_rawvin_tokens(raw);
     return(numtokens);
 }
 
-int32_t ram_rawvout_scan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,int32_t destformat,struct rawblock *raw,struct rawtx *tx,int32_t vout)
+int32_t ram_rawvout_scan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,struct rawblock *raw,struct rawtx *tx,int32_t vout)
 {
     struct rawvout *vo;
     union ramtypes U;
@@ -3635,16 +3711,18 @@ int32_t ram_rawvout_scan(struct ramchain_info *ram,struct ramchain_token **token
     vo = &raw->voutspace[numrawvouts];
     if ( tokens != 0 )
     {
-        scriptind = (destformat != 'V') ? ram_scriptind(ram,vo->script) : 0;
-        tokens[numtokens++] = ram_createstring(ram,'O',numrawvouts,destformat,'s',vo->script,scriptind);
-        addrind = (destformat != 'V') ? ram_addrind(ram,vo->coinaddr) : 0;
-        tokens[numtokens++] = ram_createstring(ram,'O',numrawvouts,destformat,'a',vo->coinaddr,addrind);
-        U.val64 = vo->value, tokens[numtokens++] = ram_createlong(ram,'O',numrawvouts,destformat,rawind);
+        if ( (scriptind= ram_scriptind(ram,vo->script)) != 0 )
+            tokens[numtokens++] = ram_createstring(ram,'O',numrawvouts,'s',vo->script,scriptind);
+        else tokens[numtokens++] = 0;
+        if ( (addrind= ram_addrind(ram,vo->coinaddr)) != 0 )
+            tokens[numtokens++] = ram_createstring(ram,'O',numrawvouts,'a',vo->coinaddr,addrind);
+        else tokens[numtokens++] = 0;
+        U.val64 = vo->value, tokens[numtokens++] = ram_createlong(ram,'O',numrawvouts,rawind);
     } else numtokens += num_rawvout_tokens(raw);
     return(numtokens);
 }
 
-int32_t ram_rawtx_scan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,int32_t destformat,struct rawblock *raw,int32_t txind)
+int32_t ram_rawtx_scan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,struct rawblock *raw,int32_t txind)
 {
     struct rawtx *tx;
     union ramtypes U;
@@ -3653,20 +3731,21 @@ int32_t ram_rawtx_scan(struct ramchain_info *ram,struct ramchain_token **tokens,
     tx = &raw->txspace[txind];
     if ( tokens != 0 )
     {
-        U.val16 = tx->numvins, tokens[numtokens++] = ram_createshort(ram,'T',(txind<<1) | 0,destformat,rawind);
-        U.val16 = tx->numvouts, tokens[numtokens++] = ram_createshort(ram,'T',(txind<<1) | 1,destformat,rawind);
-        txid_rawind = (destformat != 'V') ? ram_txidind(ram,tx->txidstr) : 0;
-        tokens[numtokens++] = ram_createstring(ram,'T',(txind<<1),destformat,'t',tx->txidstr,txid_rawind);
+        memset(&U,0,sizeof(U)), U.val16 = tx->numvins, tokens[numtokens++] = ram_createshort(ram,'T',(txind<<1) | 0,rawind);
+        U.val16 = tx->numvouts, tokens[numtokens++] = ram_createshort(ram,'T',(txind<<1) | 1,rawind);
+        if ( (txid_rawind= ram_txidind(ram,tx->txidstr)) != 0 )
+            tokens[numtokens++] = ram_createstring(ram,'T',(txind<<1),'t',tx->txidstr,txid_rawind);
+        else tokens[numtokens++] = 0;
     } else numtokens += num_rawtx_tokens(raw);
     if ( (numvins= tx->numvins) > 0 )
     {
         for (i=0; i<numvins; i++)
-            numtokens = ram_rawvin_scan(ram,tokens,numtokens,destformat,raw,tx,i);
+            numtokens = ram_rawvin_scan(ram,tokens,numtokens,raw,tx,i);
     }
     if ( (numvouts= tx->numvouts) > 0 )
     {
         for (i=0; i<numvouts; i++)
-            numtokens = ram_rawvout_scan(ram,tokens,numtokens,destformat,raw,tx,i);
+            numtokens = ram_rawvout_scan(ram,tokens,numtokens,raw,tx,i);
     }
     return(numtokens);
 }
@@ -3675,18 +3754,21 @@ void ram_patch_rawblock(struct rawblock *raw)
 {
     int32_t txind,numtx,firstvin,firstvout;
     struct rawtx *tx;
+    firstvin = firstvout = 0;
     if ( (numtx= raw->numtx) != 0 )
     {
-        for (txind=firstvin=firstvout=0; txind<numtx; txind++)
+        for (txind=0; txind<numtx; txind++)
         {
             tx = &raw->txspace[txind];
             tx->firstvin = firstvin, firstvin += tx->numvins;
             tx->firstvout = firstvout, firstvout += tx->numvouts;
         }
     }
+    raw->numrawvouts = firstvout;
+    raw->numrawvins = firstvin;
 }
 
-struct ramchain_token **ram_tokenize_rawblock(int32_t *numtokensp,struct ramchain_info *ram,int32_t destformat,struct rawblock *raw)
+struct ramchain_token **ram_tokenize_rawblock(int32_t *numtokensp,struct ramchain_info *ram,struct rawblock *raw)
 { // parse structure full of gaps
     union ramtypes U;
     uint32_t rawind = 0;
@@ -3697,14 +3779,14 @@ struct ramchain_token **ram_tokenize_rawblock(int32_t *numtokensp,struct ramchai
     ram_patch_rawblock(raw);
     if ( tokens != 0 )
     {
-        U.val32 = raw->blocknum, tokens[numtokens++] = ram_createint(ram,'B',0,destformat,rawind);
-        U.val16 = raw->numtx, tokens[numtokens++] = ram_createshort(ram,'B',0,destformat,rawind);
-        U.val64 = raw->minted, tokens[numtokens++] = ram_createlong(ram,'B',0,destformat,rawind);
+        memset(&U,0,sizeof(U)), U.val32 = raw->blocknum, tokens[numtokens++] = ram_createint(ram,'B',0,rawind);
+        memset(&U,0,sizeof(U)), U.val16 = raw->numtx, tokens[numtokens++] = ram_createshort(ram,'B',0,rawind);
+        U.val64 = raw->minted, tokens[numtokens++] = ram_createlong(ram,'B',0,rawind);
     } else numtokens += num_rawblock_tokens(raw);
     if ( (n= raw->numtx) > 0 )
     {
         for (i=0; i<n; i++)
-            numtokens = ram_rawtx_scan(ram,tokens,numtokens,destformat,raw,i);
+            numtokens = ram_rawtx_scan(ram,tokens,numtokens,raw,i);
     }
     if ( numtokens > maxtokens )
         printf("numtokens.%d > maxtokens.%d\n",numtokens,maxtokens);
@@ -3712,89 +3794,146 @@ struct ramchain_token **ram_tokenize_rawblock(int32_t *numtokensp,struct ramchai
     return(tokens);
 }
 
-int32_t ram_rawvin_huffscan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,int32_t destformat,HUFF *hp,int32_t format,int32_t numrawvins)
+struct ramchain_token *extract_and_tokenize(union ramtypes *Uptr,struct ramchain_info *ram,int32_t selector,int32_t offset,HUFF *hp,int32_t srcformat,int32_t size)
+{
+    int32_t i;
+    union ramtypes U;
+    memset(&U,0,sizeof(U));
+    if ( srcformat == 'V' )
+    {
+        size <<= 3;
+        for (i=0; i<size; i++)
+            if ( hgetbit(hp) != 0 )
+                SETBIT(U.hashdata,i);
+        size >>= 3;
+        fprintf(stderr,"[%llx].%d ",(long long)U.val64,hp->bitoffset);
+    }
+    else
+    {
+        if ( size == 2 )
+            U.val16 = ram_extractshort(ram,selector,offset,hp,srcformat);
+        else if ( size == 4 )
+            U.val32 = ram_extractint(ram,selector,offset,hp,srcformat);
+        else if ( size == 8 )
+            U.val64 = ram_extractlong(ram,selector,offset,hp,srcformat);
+        else printf("extract_and_tokenize illegalsize %d\n",size);
+        fprintf(stderr,"(%llx).%d ",(long long)U.val64,hp->bitoffset);
+    }
+    *Uptr = U;
+    if ( size == 2 )
+        return(ram_createshort(ram,selector,offset,0));
+    else if ( size == 4 )
+        return(ram_createint(ram,selector,offset,0));
+    else if ( size == 8 )
+        return(ram_createlong(ram,selector,offset,0));
+    printf("bad place you are\n");
+    exit(-1);
+    return(0);
+}
+
+int32_t ram_rawvin_huffscan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,HUFF *hp,int32_t format,int32_t numrawvins)
 {
     union ramtypes U;
-    uint32_t txid_rawind,rawind = 0;
+    uint32_t txid_rawind;
     char txidstr[4096];
     if ( tokens != 0 )
     {
-        txid_rawind = ram_extractstring(txidstr,'t',ram,'I',numrawvins,destformat,hp,format);
-        tokens[numtokens++] = ram_createstring(ram,'I',numrawvins,destformat,'t',txidstr,txid_rawind);
-        U.val16 = ram_extractshort(ram,'I',numrawvins,hp,format), tokens[numtokens++] = ram_createshort(ram,'I',numrawvins,destformat,rawind);
+        if ( (txid_rawind= ram_extractstring(txidstr,'t',ram,'I',numrawvins,hp,format)) != 0 )
+            tokens[numtokens++] = ram_createstring(ram,'I',numrawvins,'t',txidstr,txid_rawind);
+        else tokens[numtokens++] = 0;
+        tokens[numtokens++] = extract_and_tokenize(&U,ram,'I',numrawvins,hp,format,sizeof(uint16_t));
+        //printf("numrawvins.%d: txid_rawind.%d (%s) vout.%d\n",numrawvins,txid_rawind,txidstr,U.val16);
     }
     else numtokens += num_rawvin_tokens(raw);
     return(numtokens);
 }
 
-int32_t ram_rawvout_huffscan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,int32_t destformat,HUFF *hp,int32_t format,int32_t numrawvouts)
+int32_t ram_rawvout_huffscan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,HUFF *hp,int32_t format,int32_t numrawvouts)
 {
     char scriptstr[4096],coinaddr[4096];
-    uint32_t scriptind,addrind,rawind = 0;
+    uint32_t scriptind,addrind;
     union ramtypes U;
     if ( tokens != 0 )
     {
-        scriptind = ram_extractstring(scriptstr,'s',ram,'O',numrawvouts,destformat,hp,format);
-        tokens[numtokens++] = ram_createstring(ram,'O',numrawvouts,destformat,'s',scriptstr,scriptind);
-        addrind = ram_extractstring(coinaddr,'a',ram,'O',numrawvouts,destformat,hp,format);
-        tokens[numtokens++] = ram_createstring(ram,'O',numrawvouts,destformat,'a',coinaddr,addrind);
-        U.val64 = ram_extractlong(ram,'O',numrawvouts,hp,format), tokens[numtokens++] = ram_createlong(ram,'O',numrawvouts,destformat,rawind);
+        if ( (scriptind= ram_extractstring(scriptstr,'s',ram,'O',numrawvouts,hp,format)) != 0 )
+            tokens[numtokens++] = ram_createstring(ram,'O',numrawvouts,'s',scriptstr,scriptind);
+        else tokens[numtokens++] = 0;
+        if ( (addrind= ram_extractstring(coinaddr,'a',ram,'O',numrawvouts,hp,format)) != 0 )
+            tokens[numtokens++] = ram_createstring(ram,'O',numrawvouts,'a',coinaddr,addrind);
+        else tokens[numtokens++] = 0;
+        tokens[numtokens++] = extract_and_tokenize(&U,ram,'O',numrawvouts,hp,format,sizeof(uint64_t));
+        //printf("numrawvouts.%d: scriptind.%d (%s) addrind.%d (%s) value.(%.8f)\n",numrawvouts,scriptind,scriptstr,addrind,coinaddr,dstr(U.val64));
     } else numtokens += num_rawvout_tokens(raw);
     return(numtokens);
 }
 
-int32_t ram_rawtx_huffscan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,int32_t destformat,HUFF *hp,int32_t format,int32_t txind,int32_t *firstvinp,int32_t *firstvoutp)
+int32_t ram_rawtx_huffscan(struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,HUFF *hp,int32_t format,int32_t txind,int32_t *firstvinp,int32_t *firstvoutp)
 {
     union ramtypes U;
     char txidstr[4096];
-    uint32_t txid_rawind,rawind = 0;
+    uint32_t txid_rawind;
     int32_t i,numvins = 0,numvouts = 0;
     if ( tokens != 0 )
     {
-        U.val16 = numvins = ram_extractshort(ram,'T',(txind<<1) | 0,hp,format), tokens[numtokens++] = ram_createshort(ram,'T',(txind<<1) | 0,destformat,rawind);
-        U.val16 = numvouts = ram_extractshort(ram,'T',(txind<<1) | 1,hp,format), tokens[numtokens++] = ram_createshort(ram,'T',(txind<<1) | 1,destformat,rawind);
-        txid_rawind = ram_extractstring(txidstr,'t',ram,'T',(txind<<1),destformat,hp,format);
-        tokens[numtokens++] = ram_createstring(ram,'T',(txind<<1),destformat,'t',txidstr,txid_rawind);
+        tokens[numtokens++] = extract_and_tokenize(&U,ram,'T',(txind<<1) | 0,hp,format,sizeof(uint16_t)), numvins = U.val16;
+        tokens[numtokens++] = extract_and_tokenize(&U,ram,'T',(txind<<1) | 1,hp,format,sizeof(uint16_t)), numvouts = U.val16;
+        if ( (txid_rawind= ram_extractstring(txidstr,'t',ram,'T',(txind<<1),hp,format)) != 0 )
+            tokens[numtokens++] = ram_createstring(ram,'T',(txind<<1),'t',txidstr,txid_rawind);
+        else tokens[numtokens++] = 0;
+        //printf("txind.%d (%d %d) numvins.%d numvouts.%d (%s) txid_rawind.%d\n",txind,*firstvinp,*firstvoutp,numvins,numvouts,txidstr,txid_rawind);
     } else numtokens += num_rawtx_tokens(raw);
     if ( numvins > 0 )
     {
         for (i=0; i<numvins; i++,(*firstvinp)++)
-            numtokens = ram_rawvin_huffscan(ram,tokens,numtokens,destformat,hp,format,*firstvinp);
+            numtokens = ram_rawvin_huffscan(ram,tokens,numtokens,hp,format,*firstvinp);
     }
     if ( numvouts > 0 )
     {
         for (i=0; i<numvouts; i++,(*firstvoutp)++)
-            numtokens = ram_rawvout_huffscan(ram,tokens,numtokens,destformat,hp,format,*firstvoutp);
-        (*firstvoutp) += numvouts;
+            numtokens = ram_rawvout_huffscan(ram,tokens,numtokens,hp,format,*firstvoutp);
     }
+    //printf("1st vout.%d vin.%d\n",*firstvoutp,*firstvinp);
     return(numtokens);
 }
 
-struct ramchain_token **ram_tokenize_bitstream(int32_t *numtokensp,struct ramchain_info *ram,int32_t destformat,HUFF *hp,int32_t format)
+struct ramchain_token **ram_tokenize_bitstream(int32_t *numtokensp,struct ramchain_info *ram,HUFF *hp,int32_t format)
 {
     // 'V' packed structure using varints and varstrs
-    // 'C' bitstream using varbits and rawind substitution for strings
+    // 'B' bitstream using varbits and rawind substitution for strings
     // '*' bitstream using huffman codes
     struct ramchain_token **tokens = 0;
     int32_t i,numtx,firstvin,firstvout,maxtokens,numtokens = 0;
     maxtokens = 65536 * 2;
     union ramtypes U;
     uint64_t minted;
-    uint32_t blocknum,rawind = 0;
+    uint32_t blocknum;
     tokens = calloc(maxtokens,sizeof(*tokens));
     if ( tokens != 0 )
     {
-        U.val32 = blocknum = ram_extractint(ram,'B',0,hp,format), tokens[numtokens++] = ram_createint(ram,'B',0,destformat,rawind);
-        U.val16 = numtx = ram_extractshort(ram,'B',0,hp,format), tokens[numtokens++] = ram_createshort(ram,'B',0,destformat,rawind);
-        U.val64 = minted = ram_extractlong(ram,'B',0,hp,format), tokens[numtokens++] = ram_createlong(ram,'B',0,destformat,rawind);
+        tokens[numtokens++] = extract_and_tokenize(&U,ram,'B',0,hp,format,sizeof(uint32_t)), blocknum = U.val32;
+        tokens[numtokens++] = extract_and_tokenize(&U,ram,'B',0,hp,format,sizeof(uint16_t)), numtx = U.val16;
+        tokens[numtokens++] = extract_and_tokenize(&U,ram,'B',0,hp,format,sizeof(uint64_t)), minted = U.val64;
     } else numtokens += num_rawblock_tokens(raw);
+    //printf("blocknum.%d numt.%d minted %.8f\n",blocknum,numtx,dstr(minted));
     if ( numtx > 0 )
     {
         for (i=firstvin=firstvout=0; i<numtx; i++)
-            numtokens += ram_rawtx_huffscan(ram,tokens,numtokens,destformat,hp,format,i,&firstvin,&firstvout);
+            numtokens = ram_rawtx_huffscan(ram,tokens,numtokens,hp,format,i,&firstvin,&firstvout);
     }
     if ( numtokens > maxtokens )
         printf("numtokens.%d > maxtokens.%d\n",numtokens,maxtokens);
+    for (i=0; i<numtokens; i++)
+        if ( tokens[i] == 0 )
+            break;
+    if ( i != numtokens )
+    {
+        printf("parse error at token %d of %d\n",i,numtokens); while ( 1 ) sleep(1);
+        for (i=0; i<numtokens; i++)
+            if ( tokens[i] != 0 )
+                free(tokens[i]);
+        free(tokens), tokens = 0;
+        numtokens = 0;
+    }
     *numtokensp = numtokens;
     return(tokens);
 }
@@ -3809,6 +3948,7 @@ int32_t expand_ramchain_token(struct rawblock *raw,struct ramchain_info *ram,str
     {
         if ( raw != 0 && (destptr= ram_getrawdest(raw,token)) != 0 )
         {
+            //printf("[%ld] copy %d bytes to (%c.%c.%d)\n",(long)destptr-(long)raw,datalen,token->type>16?token->type:token->type+'0',token->selector,token->offset);
             memcpy(destptr,hashdata,datalen);
             return(datalen);
         }
@@ -3827,6 +3967,9 @@ int32_t emit_and_free(int32_t compressflag,HUFF *hp,struct ramchain_info *ram,st
             free(tokens[i]);
         }
     free(tokens);
+    //for (i=0; i<10; i++)
+    //    printf("%02x ",hp->buf[i]);
+    //printf("emit_and_free\n");
     return(conv_bitlen(hp->endpos));
 }
 
@@ -3840,6 +3983,12 @@ int32_t expand_and_free(cJSON **jsonp,struct rawblock *raw,struct ramchain_info 
             expand_ramchain_token(raw,ram,tokens[i]);
             free(tokens[i]);
         }
+    ram_patch_rawblock(raw);
+    {
+        //cJSON *json = ram_rawblock_json(raw);
+        //printf("%s\n",cJSON_Print(json));
+        //printf("raw numtx.%d numvouts.%d numvins.%d | tx0.(%d %d)\n",raw->numtx,raw->numrawvouts,raw->numrawvins,raw->txspace[0].numvouts,raw->txspace[0].numvins);
+    }
     if ( jsonp != 0 )
         (*jsonp) = ram_rawblock_json(raw);
     free(tokens);
@@ -3855,64 +4004,75 @@ int32_t ram_compress_blockhex(HUFF *hp,struct ramchain_info *ram,uint8_t *data,i
     if ( hp != 0 )
     {
         hrewind(hp);
-        emit_bits(hp,'C',8);
+        emit_bits(hp,'B',8);
         srcbits = hopen(data,datalen,0);
         if ( decode_bits(&format,srcbits,8) != 8 || format != 'V' )
             printf("error decode_bits in ram_expand_rawinds format.%d != (%c) %d",format,'V','V');
-        else if ( (tokens= ram_tokenize_bitstream(&numtokens,ram,'C',srcbits,format)) != 0 )
+        else if ( (tokens= ram_tokenize_bitstream(&numtokens,ram,srcbits,format)) != 0 )
         {
             hclose(srcbits);
             return(emit_and_free(1,hp,ram,tokens,numtokens));
-        }
+        } else printf("error tokenizing blockhex\n");
         hclose(srcbits);
     }
     return(-1);
 }
 
-int32_t ram_emitblock(HUFF *hp,struct ramchain_info *ram,int32_t format,struct rawblock *raw)
+int32_t ram_emitblock(HUFF *hp,int32_t destformat,struct ramchain_info *ram,struct rawblock *raw)
 {
     struct ramchain_token **tokens;
     int32_t numtokens;
     if ( hp != 0 )
     {
         hrewind(hp);
-        emit_bits(hp,format,8);
-        if ( (tokens= ram_tokenize_rawblock(&numtokens,ram,format,raw)) != 0 )
-            return(emit_and_free(0,hp,ram,tokens,numtokens));
+        emit_bits(hp,destformat,8);
+        if ( (tokens= ram_tokenize_rawblock(&numtokens,ram,raw)) != 0 )
+            return(emit_and_free(destformat!='V',hp,ram,tokens,numtokens));
     }
     return(-1);
 }
 
-int32_t ram_expand_bitstream(struct rawblock *raw,struct ramchain_info *ram,HUFF *hp)
+int32_t ram_expand_bitstream(cJSON **jsonp,struct rawblock *raw,struct ramchain_info *ram,HUFF *hp)
 {
     struct ramchain_token **tokens;
     int32_t numtokens;
     uint32_t format;
+    clear_rawblock(raw);
     if ( hp != 0 )
     {
         hrewind(hp);
-        if ( decode_bits(&format,hp,8) != 8 || (format != 'C' && format != 'V' && format != '*') )
-            printf("error decode_bits in ram_expand_rawinds format.%d != (%c/%c/%c) %d/%d/%d\n",format,'V','C','*','V','C','*');
-        else if ( (tokens= ram_tokenize_bitstream(&numtokens,ram,'V',hp,format)) != 0 )
-            return(expand_and_free(0,raw,ram,tokens,numtokens));
+        format = hp->buf[0], hp->ptr++, hp->bitoffset = 8;
+        {
+            int i;
+            for (i=0; i<=hp->endpos>>3; i++)
+                printf("%02x ",hp->buf[i]);
+            printf("(%c).%d\n",format,i);
+        }
+        if ( format == 'C' )
+            format = 'B';
+        if ( format != 'B' && format != 'V' && format != '*' )
+            printf("error decode_bits in ram_expand_rawinds format.%d != (%c/%c/%c) %d/%d/%d\n",format,'V','B','*','V','B','*');
+        else if ( (tokens= ram_tokenize_bitstream(&numtokens,ram,hp,format)) != 0 )
+            return(expand_and_free(jsonp,raw,ram,tokens,numtokens));
+        else printf("error expanding bitstream\n");
     }
     return(-1);
 }
 
 char *ram_blockstr(struct ramchain_info *ram,struct rawblock *raw)
 {
-    cJSON *json = cJSON_CreateObject();
+    cJSON *json = 0;
     struct ramchain_token **tokens;
     int32_t numtokens;
     char *retstr;
-    if ( (tokens= ram_tokenize_rawblock(&numtokens,ram,'V',raw)) != 0 )
+    if ( (tokens= ram_tokenize_rawblock(&numtokens,ram,raw)) != 0 )
         expand_and_free(&json,&ram->V.raw2,ram,tokens,numtokens);
     retstr = cJSON_Print(json);
     free_json(json);
     return(retstr);
 }
 
-HUFF *ram_loadblock(struct ramchain_info *ram,int32_t blocknum,int32_t format)
+HUFF *ram_genblock(struct ramchain_info *ram,int32_t blocknum,int32_t format)
 {
     HUFF *hp = 0;
     int32_t datalen;
@@ -3922,12 +4082,12 @@ HUFF *ram_loadblock(struct ramchain_info *ram,int32_t blocknum,int32_t format)
     if ( _get_blockinfo(&ram->V.raw,ram,blocknum) > 0 )
     {
         hclear(ram->V.hps[0]);
-        if ( (datalen= ram_emitblock(ram->V.hps[0],ram,format,&ram->V.raw)) > 0 )
+        if ( (datalen= ram_emitblock(ram->V.hps[0],format,ram,&ram->V.raw)) > 0 )
         {
             //printf("ram_emitblock datalen.%d bitoffset.%d\n",datalen,ram->V.hps[0]->bitoffset);
             block = calloc(1,datalen);
             memcpy(block,ram->V.hps[0]->buf,datalen);
-            hp = hopen(block,datalen << 3,block);
+            hp = hopen(block,datalen,block);
             hseek(hp,datalen << 3,SEEK_SET);
             //printf("ram_emitblock datalen.%d bitoffset.%d endpos.%d\n",datalen,hp->bitoffset,hp->endpos);
         } else printf("error emitblock.%d\n",blocknum);
@@ -3944,7 +4104,7 @@ HUFF *ram_getblock(struct ramchain_info *ram,uint32_t blocknum,int32_t format)
         ram->maxblocks = (blocknum + 1);
     }
     if ( ram->blocks[blocknum] == 0 )
-        ram->blocks[blocknum] = ram_loadblock(ram,blocknum,format);
+        ram->blocks[blocknum] = ram_genblock(ram,blocknum,format);
     return(ram->blocks[blocknum]);
 }
 
@@ -4085,7 +4245,7 @@ char *ramscript(char *origargstr,char *sender,char *previpaddr,char *destip,char
     if ( (block= ram_getblock(ram,bp->blocknum,'V')) != 0 )
     {
         raw = &ram->V.raw;
-        if ( (datalen= ram_expand_bitstream(raw,ram,block)) > 0 )
+        if ( (datalen= ram_expand_bitstream(0,raw,ram,block)) > 0 )
         {
             if ( (vo= ram_rawvout(raw,bp->txind,bp->v)) != 0 )
             {
@@ -4107,7 +4267,7 @@ char *ramblock(char *origargstr,char *sender,char *previpaddr,char *destip,char 
     if ( ram == 0 )
         return(clonestr("{\"error\":\"no ramchain info\"}"));
     numtx = _get_blockinfo(&ram->V.raw,ram,blocknum);
-    if ( (datalen= ram_emitblock(ram->V.hps[0],ram,'V',&ram->V.raw)) > 0 )
+    if ( (datalen= ram_emitblock(ram->V.hps[0],'V',ram,&ram->V.raw)) > 0 )
     {
         hexstr = calloc(1,datalen*2+1);
         init_hexbytes_noT(hexstr,ram->V.hps[0]->buf,datalen);
@@ -4163,8 +4323,8 @@ char *ramexpand(char *origargstr,char *sender,char *previpaddr,char *destip,char
     datalen >>= 1;
     data = calloc(1,datalen);
     decode_hex(data,datalen,bitstream);
-    hp = hopen(data,datalen*8,0);
-    if ( (expandlen= ram_expand_bitstream(&ram->V.raw,ram,hp)) > 0 )
+    hp = hopen(data,datalen,0);
+    if ( (expandlen= ram_expand_bitstream(0,&ram->V.raw,ram,hp)) > 0 )
     {
         free(retstr);
         retstr = ram_blockstr(ram,&ram->V.raw);
@@ -4398,7 +4558,7 @@ void ram_setdirA(char *dirA,struct ramchain_info *ram)
     sprintf(dirA,"%s/ramchains/%s/bitstream",ram->dirpath,ram->name);
 }
 
-void ram_setdirB(char *dirB,struct ramchain_info *ram,uint32_t blocknum)
+void ram_setdirB(int32_t mkdirflag,char *dirB,struct ramchain_info *ram,uint32_t blocknum)
 {
     static char lastdirB[1024];
     char dirA[1024];
@@ -4407,7 +4567,7 @@ void ram_setdirB(char *dirB,struct ramchain_info *ram,uint32_t blocknum)
     ram_setdirA(dirA,ram);
     i = blocknum / (64 * 64);
     sprintf(dirB,"%s/%05x_%05x",dirA,i*64*64,(i+1)*64*64-1);
-    if ( strcmp(dirB,lastdirB) != 0 )
+    if ( mkdirflag != 0 && strcmp(dirB,lastdirB) != 0 )
     {
         ensure_dir(dirB);
        // printf("DIRB: (%s)\n",dirB);
@@ -4415,17 +4575,17 @@ void ram_setdirB(char *dirB,struct ramchain_info *ram,uint32_t blocknum)
     }
 }
 
-void ram_setdirC(char *dirC,struct ramchain_info *ram,uint32_t blocknum)
+void ram_setdirC(int mkdirflag,char *dirC,struct ramchain_info *ram,uint32_t blocknum)
 {
     static char lastdirC[1024];
     char dirB[1024];
     int32_t i,j;
     blocknum %= (64 * 64 * 64);
-    ram_setdirB(dirB,ram,blocknum);
+    ram_setdirB(mkdirflag,dirB,ram,blocknum);
     i = blocknum / (64 * 64);
     j = (blocknum - (i * 64 * 64)) / 64;
     sprintf(dirC,"%s/%05x_%05x",dirB,i*64*64 + j*64,i*64*64 + (j+1)*64 - 1);
-    if ( strcmp(dirC,lastdirC) != 0 )
+    if ( mkdirflag != 0 && strcmp(dirC,lastdirC) != 0 )
     {
         ensure_dir(dirC);
         //printf("DIRC: (%s)\n",dirC);
@@ -4433,88 +4593,413 @@ void ram_setdirC(char *dirC,struct ramchain_info *ram,uint32_t blocknum)
     }
 }
 
-void ensure_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint32_t maxblock)
-{
-    char dirA[1024],dirB[1024],dirC[1024];
-    int32_t i,j,n = 0;
-    strcpy(ram->dirpath,dirpath);
-    ram_setdirA(dirA,ram);
-    ensure_dir(dirA);
-    for (i=0; i<64; i++)
-    {
-        ram_setdirB(dirB,ram,i * 64 * 64);
-        for (j=0; j<64; j++,n+=64)
-        {
-            ram_setdirC(dirC,ram,n);
-            if ( n >= maxblock )
-                return;
-        }
-    }
-}
-
-void ram_setfname(char *fname,struct ramchain_info *ram,uint32_t blocknum,char type)
+void ram_setfname(char *fname,struct ramchain_info *ram,uint32_t blocknum,char *str)
 {
     char dirC[1024];
-    ram_setdirC(dirC,ram,blocknum);
-    sprintf(fname,"%s/%u.%c",dirC,blocknum,type);
+    ram_setdirC(0,dirC,ram,blocknum);
+    sprintf(fname,"%s/%u.%s",dirC,blocknum,str);
 }
 
-uint32_t process_ramchain_block(struct ramchain_info *ram,uint32_t blocknum,char type)
+HUFF *hload_bitstream(char *fname)
 {
-    char fname[1024];
+    FILE *fp;
+    void *ptr;
+    HUFF *hp = 0;
+    long endpos;
+    if ( (fp= fopen(fname,"rb")) != 0 )
+    {
+        fseek(fp,0,SEEK_END);
+        endpos = ftell(fp);
+        if ( endpos > 0 )
+        {
+            ptr = malloc(endpos);
+            rewind(fp);
+            if ( fread(ptr,1,endpos,fp) == endpos )
+                hp = hopen(ptr,(int32_t)endpos,ptr);
+        }
+        fclose(fp);
+    }
+    return(hp);
+}
+
+int32_t ram_verify_block(struct ramchain_info *ram, HUFF *Vhp,HUFF *Bhp)
+{
+    cJSON *jsonV = 0,*jsonB = 0;
+    if ( Vhp != 0 && Bhp != 0 )
+    {
+        ram_expand_bitstream(&jsonV,&ram->raw,ram,Vhp);
+        ram_expand_bitstream(&jsonB,&ram->raw2,ram,Bhp);
+        printf("jsonV.(%s) vs\njsonB.(%s)\n",cJSON_Print(jsonV),cJSON_Print(jsonB));
+        free_json(jsonV), free_json(jsonB);
+        return(rawblockcmp(&ram->raw,&ram->raw2));
+    }
+    return(-1);
+}
+
+bits256 ram_verify_B64(HUFF *blocks[64],char *fname,bits256 *refsha,uint32_t blocknum)
+{
+    FILE *fp; long offset; uint8_t *ptr; bits256 sha,tmp; struct mappedptr M; uint64_t datalen; int32_t i,varlen,rwflag = 0;
+    if ( (fp= fopen(fname,"rb")) != 0 )
+    {
+        memset(&M,0,sizeof(M));
+        if ( init_mappedptr(0,&M,0,rwflag,fname) != 0 )
+        {
+            if ( fread(sha.bytes,1,sizeof(sha),fp) == sizeof(sha) && (refsha == 0 || memcmp(sha.bytes,refsha,sizeof(sha)) == 0) )
+            {
+                offset = sizeof(sha);
+                memset(sha.bytes,0,sizeof(sha));
+                for (i=0; i<64; i++)
+                {
+                    ptr = (M.fileptr + offset);
+                    if ( (varlen= (int32_t)decode_varint(&datalen,M.fileptr,offset,(long)M.allocsize)) > 0 )
+                    {
+                        if ( blocks[i] != 0 )
+                            hclose(blocks[i]), printf("warning blocks[%d] blocknum.%d nonz\n",i,blocknum);
+                        blocks[i] = hopen(ptr+varlen,(int32_t)datalen,0);
+                        calc_sha256cat(tmp.bytes,sha.bytes,256>>3,ptr+varlen,(int32_t)datalen), sha = tmp;
+                    }
+                    else break;
+                    offset += (datalen + varlen);
+                }
+                if ( i == 64 && refsha != 0 && memcmp(sha.bytes,refsha,sizeof(sha)) == 0 )
+                    printf("%s verified\n",fname);
+                else
+                {
+                    for (i=0; i<64; i++)
+                        if ( blocks[i] != 0 )
+                            hclose(blocks[i]), blocks[i] = 0;
+                }
+            }
+        }
+        fclose(fp);
+    } else memset(sha.bytes,0,sizeof(sha));
+    return(sha);
+}
+
+uint32_t create_ramchain_block(struct ramchain_info *ram,uint32_t blocknum,char format)
+{
+    char fname[1024],formatstr[2];
     FILE *fp;
     HUFF *hp;
     int32_t datalen = 0;
-    if ( (hp= ram_loadblock(ram,ram->blockheight,type)) != 0 )
+    formatstr[1] = 0;
+    formatstr[0] = format;
+    if ( (hp= ram_genblock(ram,blocknum,format)) != 0 )
     {
-        ram_setfname(fname,ram,ram->blockheight,type);
+        ram_setfname(fname,ram,blocknum,formatstr);
         if ( (fp= fopen(fname,"wb")) != 0 )
         {
-            datalen = conv_bitlen(hp->endpos);
-            fwrite(hp->buf,1,datalen,fp);
+            //datalen = conv_bitlen(hp->endpos);
+            //fwrite(hp->buf,1,datalen,fp);
             //hrewind(hp);
-            //hflush(fp,hp);
+            hflush(fp,hp);
+            printf("CREATE.(%s) size.%ld bitoffset.%d allocsize.%d\n",fname,ftell(fp),hp->bitoffset,hp->allocsize);
             fclose(fp);
         }
         hclose(hp);
-    }
+    } else printf("create_ramchain_block block.%d format.%c error\n",blocknum,format);
     return(1 + datalen);
+}
+
+uint64_t verify_block(struct rawblock *tmp,struct ramchain_info *ram,uint32_t blocknum)
+{
+    int32_t format,i,j,m,n = 0;
+    HUFF *hp;
+    cJSON *json;
+    uint64_t errs = 0;
+    char *jsonstrs[3],fname[1024],strs[3][2],*jsonstr;
+    _get_blockinfo(tmp,ram,blocknum);
+    memset(jsonstrs,0,sizeof(jsonstrs));
+    jsonstrs[n++] = ram_blockstr(ram,tmp);
+    if ( (json= ram_rawblock_json(tmp)) != 0 )
+        jsonstr = cJSON_Print(json), free_json(json);
+    if ( strcmp(jsonstr,jsonstrs[0]) != 0 )
+    {
+        printf("ram_blockstr(%s) != ram_rawblock_json(%s)\n",jsonstrs[0],jsonstr);
+        n = (int32_t)strlen(jsonstr);
+        for (i=0; i<n; i++)
+            if ( jsonstr[i] != jsonstrs[0][i] )
+            {
+                j = i - 64;
+                if ( j < 0 )
+                    j = 0;
+                while ( j++ < i+64 && j < n )
+                    putchar(jsonstr[j]);
+                printf("\n");
+                break;
+            }
+        while ( 1 )
+            sleep(1);
+    }
+    memset(strs,0,sizeof(strs));
+    for (format='V'; format>='B'; format-=('V'-'B'),n++)
+    {
+        strs[n][0] = format;
+        ram_setfname(fname,ram,blocknum,strs[n]);
+        if ( (hp = hload(0,fname)) != 0 )
+        {
+            fprintf(stderr,"\n%c: ",format);
+            json = 0;
+            ram_expand_bitstream(&json,tmp,ram,hp);
+            if ( json != 0 )
+            {
+                jsonstrs[n] = cJSON_Print(json);
+                free_json(json), json = 0;
+            }
+            hclose(hp);
+        } else create_ramchain_block(ram,blocknum,format);
+    }
+    for (i=m=0; i<n-1; i++)
+        for (j=i+1; j<n; j++)
+            if ( jsonstrs[i] == 0 || jsonstrs[j] == 0 || strcmp(jsonstrs[i],jsonstrs[j]) != 0 )
+            {
+                errs |= (1LL << m++);
+                if ( jsonstrs[i] != 0 && jsonstrs[j] != 0 )
+                {
+                    printf("(%s).%d vs (%s).%d\n",jsonstrs[i],i,jsonstrs[j],j);
+                    create_ramchain_block(ram,blocknum,strs[j][0]);
+                }
+            }
+    for (i=0; i<n; i++)
+        if ( jsonstrs[i] != 0 )
+            free(jsonstrs[i]);
+    return(errs);
+}
+
+uint64_t init_ramchain_directory(bits256 *sha,struct ramchain_info *ram,uint32_t blocknum)
+{
+    static int totalerrs,totalerrs2;
+    uint8_t data[8192];
+    char dirC[1024],fname[1024];
+    HUFF *Vhp,*Bhps[64],*Bhp;
+    FILE *fp;
+    int32_t i,numtokens,err;
+    bits256 tmp;
+    uint64_t errs,errs2,flags = 0;
+    struct ramchain_token **tokens;
+    memset(Bhps,0,sizeof(Bhps));
+    ram_setdirC(0,dirC,ram,blocknum);
+    for (i=0; i<64; i++)
+    {
+        create_ramchain_block(ram,blocknum + i,'V');
+        create_ramchain_block(ram,blocknum + i,'B');
+        errs2 = 0;
+        if ( (errs= verify_block(&ram->raw,ram,blocknum+i)) != 0 )
+            errs2 = verify_block(&ram->raw,ram,blocknum+i);
+        totalerrs += (errs != 0);
+        totalerrs2 += (errs2 != 0);
+        printf("BLOCK.%d i.%d %u | %llx -> %llx total.(%d %d)\n\n",blocknum,i,blocknum+i,(long long)errs,(long long)errs2,totalerrs,totalerrs2);
+        continue;
+        
+        ram_setfname(fname,ram,blocknum+i,"V");
+        Vhp = hload(0,fname);
+        ram_expand_bitstream(0,&ram->raw,ram,Vhp);
+        if ( (err= rawblockcmp(&ram->raw,&ram->raw2)) != 0 )
+        {
+            printf("miscompare.%d at block.%d\n",err,blocknum+i);
+            hclose(Vhp);
+            create_ramchain_block(ram,blocknum + i,'V');
+            ram_setfname(fname,ram,blocknum+i,"V");
+            Vhp = hload(0,fname);
+            ram_expand_bitstream(0,&ram->raw,ram,Vhp);
+            if ( (err= rawblockcmp(&ram->raw,&ram->raw2)) != 0 )
+            {
+                printf("miscompare2.%d at block.%d\n",err,blocknum+i);
+                continue;
+            }
+        }
+        continue;
+        ram_setfname(fname,ram,blocknum+i,"B");
+        Bhp = hload(0,fname);
+        if ( Vhp != 0 )
+        {
+            if ( 1 || ram_verify_block(ram,Vhp,Bhp) != 0 )
+            {
+                printf("%d miscompares, make new one %p %p\n",blocknum+i,Vhp,Bhp);
+                if ( Bhp != 0 )
+                    hclose(Bhp), Bhp = 0;
+                hrewind(Vhp);
+                Vhp->ptr++, Vhp->bitoffset = 8;
+                if ( (tokens= ram_tokenize_bitstream(&numtokens,ram,Vhp,Vhp->buf[0])) != 0 )
+                {
+                    memset(data,0,sizeof(data));
+                    Bhp = hopen(data,sizeof(data),0);
+                    Bhp->endpos = 0;
+                    emit_bits(Bhp,'B',8);
+                    emit_and_free(1,Bhp,ram,tokens,numtokens);
+                }
+            }
+            if ( ram_verify_block(ram,Vhp,Bhp) == 0 )
+            {
+                Bhps[i] = Bhp;
+                calc_sha256cat(tmp.bytes,sha->bytes,256>>3,Bhps[i]->buf,Bhps[i]->allocsize), *sha = tmp;
+                flags |= (1LL << i);
+            }
+            hclose(Vhp);
+        }
+    }
+    if ( flags == (uint64_t)-1 )
+    {
+        ram_setfname(fname,ram,blocknum,"B64");
+        tmp = ram_verify_B64(&ram->blocks[blocknum>>6],fname,sha,blocknum);
+        if ( memcmp(tmp.bytes,sha,sizeof(tmp)) == 0 || (fp= fopen(fname,"wb")) != 0 )
+        {
+            if ( fwrite(sha,1,sizeof(*sha),fp) == sizeof(*sha) )
+            {
+                for (i=0; i<64; i++)
+                    if ( hflush(fp,Bhps[i]) < Bhps[i]->allocsize )
+                        break;
+                if ( i != 64 )
+                {
+                    fclose(fp);
+                    if ( (fp= fopen(fname,"wb")) != 0 )
+                        fclose(fp), fp = 0;
+                } else printf("%s created\n",fname);
+            }
+            if ( fp != 0 )
+                fclose(fp);
+        }
+    }
+    for (i=0; i<64; i++)
+        if ( Bhps[i] != 0 )
+            hclose(Bhps[i]);
+    return(flags);
+}
+
+void save_dirhash(char *fname,bits256 dirhash)
+{
+    FILE *fp;
+    if ( (fp= fopen(fname,"wb")) != 0 )
+    {
+        fwrite(dirhash.bytes,1,sizeof(dirhash),fp);
+        fclose(fp);
+    }
+}
+
+uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint32_t maxblock)
+{
+    char dirA[1024],dirB[1024],dirC[1024],fname[1024];
+    int32_t i,j,n,skipped,blocknum = 0;
+    uint64_t flags;
+    bits256 sha,dirhash,dirshash,tmp;
+    if ( ram->blockflags == 0 )
+        ram->blockflags = calloc(1,(maxblock>>6) + 1);
+    strcpy(ram->dirpath,dirpath);
+    ram_setdirA(dirA,ram);
+    ensure_dir(dirA);
+    memset(&dirhash,0,sizeof(dirhash));
+    memset(&dirshash,0,sizeof(dirshash));
+    for (i=n=skipped=0; blocknum<ram->RTblockheight; i++)
+    {
+        ram_setdirB(1,dirB,ram,i * 64 * 64);
+        for (flags=j=0; j<64; j++,blocknum+=64)
+        {
+            ram_setdirC(1,dirC,ram,blocknum);
+            memset(&sha,0,sizeof(sha));
+            if ( (ram->blockflags[n++] = init_ramchain_directory(&sha,ram,blocknum)) == (uint64_t)-1 )
+            {
+                sprintf(fname,"%s/dirhash.%u",dirC,i * 64 * 64 + j*64);
+                save_dirhash(fname,sha);
+                flags |= (1LL << j);
+                calc_sha256cat(tmp.bytes,dirhash.bytes,256>>3,sha.bytes,256>>3), dirhash = tmp;
+            }
+            if ( (blocknum+64) >= ram->RTblockheight )
+                break;
+        }
+        if ( flags == (uint64_t)-1 )
+        {
+            sprintf(fname,"%s/dirhash.%u",dirB,i * 64 * 64);
+            save_dirhash(fname,dirhash);
+            if ( skipped == 0 )
+            {
+                calc_sha256cat(tmp.bytes,dirshash.bytes,256>>3,dirhash.bytes,256>>3), dirshash = tmp;
+                sprintf(fname,"%s/dirshash.%u",dirA,(i+1) * 64 * 64 - 1);
+                save_dirhash(fname,dirshash);
+            }
+        } else skipped++;
+    }
+    printf("init_ramchain_directories skipped.%d, n.%d blocknum.%d\n",skipped,n,blocknum);
+    return(n);
 }
 
 uint32_t process_ramchain(struct ramchain_info *ram,double timebudget,double startmilli)
 {
-    //struct compressionvars *V;
     double estimated;
     int32_t processed = 0;
-    uint32_t height;
-    //V = &ram->V;
-    //if (  V->rawfp == 0 )
-    //    init_compressionvars(HUFF_READONLY,ram->name,ram->RTblockheight);
-    //if ( portable_thread_create((void *)_process_coinblocks,cp) == 0 )
-    //    printf("ERROR hist findaddress_loop\n");
-    height = get_RTheight(ram);
-    while ( ram->blockheight < (height - ram->min_confirms) && ram_millis() < (startmilli + timebudget) )
+    uint32_t RTheight;
+    RTheight = get_RTheight(ram);
+    printf("start process_ramchain %s at %.1f blocknum.%u at RT.%u\n",ram->name,startmilli,ram->blockheight,RTheight);
+    while ( ram->blockheight < (RTheight - ram->min_confirms) && ram_millis() < (startmilli + timebudget) )
     {
-        ram->Vsum += process_ramchain_block(ram,ram->blockheight,'V');
-        ram->Bsum += process_ramchain_block(ram,ram->blockheight,'B');
-  //if ( _get_blockinfo(&ram->raw,ram,ram->blockheight) > 0 )
+        ram->Vsum += create_ramchain_block(ram,ram->blockheight,'V');
+        ram->Bsum += create_ramchain_block(ram,ram->blockheight,'B');
         {
-            //save_rawblock(1,ram->V.rawfp,&ram->raw,ram->blockheight);
             ram->V.processed++;
             processed++;
             ram->blockheight++;
-            estimated = estimate_completion(ram->name,ram->V.startmilli,ram->V.processed,(int32_t)height-ram->V.blocknum)/60000;
+            estimated = estimate_completion(ram->name,ram->V.startmilli,ram->V.processed,(int32_t)RTheight-ram->V.blocknum)/60000;
             printf("%-5s.%d %.1f min left || numtx.%d vins.%d vouts.%d minted %.8f | %.1f/%.1f = %.3f\n",ram->name,(int)ram->blockheight,estimated,ram->raw.numtx,ram->raw.numrawvins,ram->raw.numrawvouts,dstr(ram->raw.minted),ram->Vsum/ram->blockheight,ram->Bsum/ram->blockheight,(ram->Vsum/ram->blockheight)/(ram->Bsum/ram->blockheight));
         } //else break;
     }
     return(processed);
 }
 
+int32_t init_hashtable(struct ramchain_info *ram,char type)
+{
+    long offset,fileptr;
+    uint64_t datalen;
+    char fname[1024];
+    uint8_t *hashdata;
+    int32_t varsize,num,rwflag = 0;
+    struct huffhash *hash;
+    struct huffpair_hash *hp;
+    hash = ram_gethash(ram,type);
+    strcpy(hash->coinstr,ram->name);
+    hash->type = type;
+    huffhash_setfname(fname,hash,0);
+    num = 0;
+    if ( (hash->newfp= fopen(fname,"rb+")) != 0 )
+    {
+        if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
+            return(0);
+        fileptr = (long)hash->M.fileptr;
+        offset = 0;
+        while ( (varsize= (int32_t)load_varint(&datalen,hash->newfp)) > 0 && (offset + datalen) <= hash->M.allocsize )
+        {
+            hashdata = (uint8_t *)(fileptr + offset);
+            if ( num < 10 )
+            {
+                char hexbytes[8192];
+                struct huffpair_hash *checkhp;
+                init_hexbytes_noT(hexbytes,hashdata,varsize+datalen);
+                HASH_FIND(hh,hash->table,hashdata,varsize + datalen,checkhp);
+                printf("offset %ld: varsize.%d datalen.%d created.(%s) ind.%d | checkhp.%p\n",offset,(int)varsize,(int)datalen,(type != 'a') ? hexbytes :(void *)((long)hashdata+varsize),hash->ind+1,checkhp);
+            }
+            HASH_FIND(hh,hash->table,hashdata,varsize + datalen,hp);
+            if ( hp != 0 )
+            {
+                printf("corrupted hashtable %s: offset.%ld\n",fname,offset);
+                exit(-1);
+            }
+            hp = calloc(1,sizeof(*hp));
+            huffhash_add(hash,hp,hashdata,(int32_t)(varsize+datalen));
+            offset += (varsize + datalen);
+            fseek(hash->newfp,offset,SEEK_SET);
+            num++;
+        }
+        printf("%s: loaded %d strings, ind.%d, offset.%ld allocsize.%llu %s\n",fname,num,hash->ind,offset,(long long)hash->M.allocsize,(offset != hash->M.allocsize) ? "ERROR":"OK");
+        if ( offset != hash->M.allocsize )
+            exit(-1);
+    } else hash->newfp = fopen(fname,"wb");
+    return(num);
+}
+
 void init_ramchain(struct ramchain_info *ram)
 {
     int32_t i,n = 1000000;
     void *ptr;
-    sleep(3);
+    double startmilli;
+    startmilli = ram_millis();
     ram->RTblockheight = get_RTheight(ram);
     ram->blockheight = 1;
     for (i=0; i<2; i++)
@@ -4522,8 +5007,11 @@ void init_ramchain(struct ramchain_info *ram)
         ptr = calloc(1,n);
         ram->V.hps[i] = hopen(ptr,n,ptr);
     }
-    printf("set ramchain blockheight.%s %d\n",ram->name,ram->V.blocknum);
-    ensure_ramchain_directories(ram,".",ram->RTblockheight+10000);
+    printf("set ramchain blockheight.%s %d vs RT.%d\n",ram->name,ram->blockheight,ram->RTblockheight);
+    init_hashtable(ram,'a'), init_hashtable(ram,'s'), init_hashtable(ram,'t');
+    printf("%.1f seconds to init_ramchain.%s\n",(ram_millis() - startmilli)/1000.,ram->name);
+    init_ramchain_directories(ram,".",ram->RTblockheight+10000);
+    getchar();
 }
 
 void process_coinblocks(char *argcoinstr)
@@ -4532,6 +5020,7 @@ void process_coinblocks(char *argcoinstr)
     cJSON *array;
     char coinstr[1024];
     struct ramchain_info *ram;
+    printf("process_coinblocks\n");
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
@@ -4541,11 +5030,12 @@ void process_coinblocks(char *argcoinstr)
             for (i=0; i<n; i++)
             {
                 copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
-                if ( (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0) && (ram= get_ramchain_info(coinstr)) != 0 )
+                if ( coinstr[0] != 0 && (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0) && (ram= get_ramchain_info(coinstr)) != 0 )
                 {
+                    //printf("got ramchain.%p (%s) %s %s\n",ram,coinstr,ram->userpass,ram->serverport);
                     if ( ram->firstiter != 0 )
                     {
-                        printf("call init_ramchain\n");
+                        printf("call init_ramchain.(%s)\n",coinstr);
                         init_ramchain(ram);
                         ram->firstiter = 0;
                     }
@@ -4555,7 +5045,7 @@ void process_coinblocks(char *argcoinstr)
             if ( processed == 0 )
             {
                 //printf("coinblocks caught up\n");
-                sleep(1);
+                sleep(10);
             }
         }
     }
