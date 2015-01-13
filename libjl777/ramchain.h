@@ -216,7 +216,7 @@ void ram_deletefile(char *fname)
     printf("delete (%s)\n",fname);
 #else
     sprintf(cmd,"rm %s",fname);
-    system(cmd);
+    //system(cmd);
 #endif
 }
 
@@ -4005,6 +4005,7 @@ int32_t ram_save_bitstreams(char *fname,HUFF *bitstreams[],int32_t num)
         len = (int32_t)ftell(fp);
         fclose(fp);
     }
+    if ( 0 )
     {
         bits256 tmp;
         long *offsets;
@@ -4041,7 +4042,7 @@ int32_t ram_map_bitstreams(struct mappedptr *M,bits256 *sha,HUFF *blocks[],int32
                 {
                     blocks[i] = hopen((void *)((long)M->fileptr + offsets[i]),hp->allocsize,0);
                     verified++;
-                    hclose(hp);
+                    //hclose(hp);
                 } else printf("ram_map_bitstreams unexpected null hp at slot.%d\n",i);
             //close_mappedptr(&M);
         }
@@ -4215,54 +4216,61 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
     memset(&hashall,0,sizeof(hashall));
     for (i=n=skipped=0; blocknum<ram->RTblockheight; i++)
     {
-        ram_setdirB(1,dirB,ram,i * 64 * 64);
-        memset(&hash4096,0,sizeof(hash4096));
-        for (flags=j=0; j<64; j++,blocknum+=64,n++)
+        sprintf(fname,"%s/%u.B4096",dirB,i * 64 * 64);
+        if ( ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64*64,fname,0) == 0 )
         {
-            ram_setdirC(1,dirC,ram,blocknum);
-            sprintf(fname,"%s/%u.B64",dirB,blocknum);
-            if ( ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64,fname,0) == 0 )
+            ram_setdirB(1,dirB,ram,i * 64 * 64);
+            memset(&hash4096,0,sizeof(hash4096));
+            for (flags=j=0; j<64; j++,blocknum+=64,n++)
             {
-                memset(&sha,0,sizeof(sha));
-                if ( (ram->blockflags[n] = init_ramchain_directory(&ram->M[n],&sha,ram,blocknum)) == (uint64_t)-1 )
+                ram_setdirC(1,dirC,ram,blocknum);
+                sprintf(fname,"%s/%u.B64",dirB,blocknum);
+                if ( ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64,fname,0) == 0 )
                 {
-                    if ( ram_save_bitstreams(fname,&ram->blocks[blocknum],64) > 0 )
-                        if ( ram_map_bitstreams(&ram->M[n],&tmp,&ram->blocks[blocknum],64,fname,&sha) != 0 )
-                            printf("64 verified %d (i.%d j.%d)\n",i*64*64 + j*64,i,j);
+                    memset(&sha,0,sizeof(sha));
+                    if ( (ram->blockflags[n] = init_ramchain_directory(&ram->M[n],&sha,ram,blocknum)) == (uint64_t)-1 )
+                    {
+                        if ( ram_save_bitstreams(fname,&ram->blocks[blocknum],64) > 0 )
+                            if ( ram_map_bitstreams(&ram->M[n],&tmp,&ram->blocks[blocknum],64,fname,&sha) != 0 )
+                                printf("64 verified %d (i.%d j.%d)\n",i*64*64 + j*64,i,j);
+                    }
                 }
+                else ram->blockflags[n] = (uint64_t)-1;
+                if ( hashfp != 0 )
+                    fwrite(&sha,1,sizeof(sha),hashfp), fflush(hashfp);
+                if ( ram->blockflags[n] == (uint64_t)-1 )
+                {
+                    flags |= (1LL << j);
+                    calc_sha256cat(tmp.bytes,hash4096.bytes,sizeof(hash4096),sha.bytes,sizeof(sha)), hash4096 = tmp;
+                }
+                if ( (blocknum+64) >= ram->RTblockheight )
+                    break;
             }
-            else
+            if ( flags == (uint64_t)-1 )
             {
-                ram_deletefiles(ram,blocknum,64);
-                ram->blockflags[n] = (uint64_t)-1;
+                sprintf(fname,"%s/hash4096.%u",dirB,i * 64 * 64);
+                save_dirhash(fname,hash4096,0);
+                printf("4096 verified %d\n",i*64*64);
+                sprintf(fname,"%s/%u.B4096",dirB,i * 64 * 64);
+                ram_save_bitstreams(fname,&ram->blocks[i * 64 * 64],64 * 64);
+                //for (j=0; j<64; j++)
+                //    close_mappedptr(&ram->M[i*64 + j]), memset(&ram->M[i*64 + j],0,sizeof(ram->M[i*64 + j]));
+                ram_map_bitstreams(&ram->M[i*64],&sha,&ram->blocks[i * 64 * 64],64*64,fname,0);
             }
-            if ( hashfp != 0 )
-                fwrite(&sha,1,sizeof(sha),hashfp), fflush(hashfp);
-            if ( ram->blockflags[n] == (uint64_t)-1 )
-            {
-                flags |= (1LL << j);
-                calc_sha256cat(tmp.bytes,hash4096.bytes,sizeof(hash4096),sha.bytes,sizeof(sha)), hash4096 = tmp;
-            }
-            if ( (blocknum+64) >= ram->RTblockheight )
-                break;
         }
-        if ( flags == (uint64_t)-1 )
+        else
         {
-            sprintf(fname,"%s/hash4096.%u",dirB,i * 64 * 64);
-            save_dirhash(fname,hash4096,0);
-            printf("4096 verified %d\n",i*64*64);
-            sprintf(fname,"%s/%u.B4096",dirB,i * 64 * 64);
-            ram_save_bitstreams(fname,&ram->blocks[i * 64 * 64],64 * 64);
-            for (j=0; j<64; j++)
-                close_mappedptr(&ram->M[i*64 + j]), memset(&ram->M[i*64 + j],0,sizeof(ram->M[i*64 + j]));
-            ram_map_bitstreams(&ram->M[i*64],&sha,&ram->blocks[i * 64 * 64],64*64,fname,0);
-            if ( skipped == 0 )
-            {
-                calc_sha256cat(tmp.bytes,hashall.bytes,sizeof(hashall),hash4096.bytes,sizeof(hash4096)), hashall = tmp;
-                z = ((i+1) * 64 * 64) - 1;
-                sprintf(fname,"%s/hashall.%u",dirA,z);
-                save_dirhash(fname,hashall,&z);
-            }
+            flags = (uint64_t)-1;
+            ram_deletefiles(ram,blocknum,64*64);
+            n += 64;
+            blocknum += 64*64;
+        }
+        if ( flags == (uint64_t)-1 && skipped == 0 )
+        {
+            calc_sha256cat(tmp.bytes,hashall.bytes,sizeof(hashall),hash4096.bytes,sizeof(hash4096)), hashall = tmp;
+            z = ((i+1) * 64 * 64) - 1;
+            sprintf(fname,"%s/hashall.%u",dirA,z);
+            save_dirhash(fname,hashall,&z);
         }
         else if ( skipped++ == 0 )
         {
@@ -4273,9 +4281,9 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
             printf("SAVING.(%s)\n",fname);
             sprintf(fname,"%s/B%d",dirA,z);
             ram_save_bitstreams(fname,ram->blocks,z);
-            for (j=0; j<z; j++)
-                if ( ram->M[j].fileptr != 0 )
-                    close_mappedptr(&ram->M[j]), memset(&ram->M[j],0,sizeof(ram->M[j]));
+            //for (j=0; j<z/64; j++)
+            //    if ( ram->M[j].fileptr != 0 )
+            //        close_mappedptr(&ram->M[j]), memset(&ram->M[j],0,sizeof(ram->M[j]));
             ram_map_bitstreams(&ram->M[0],&sha,&ram->blocks[0],z,fname,0);
         }
     }
