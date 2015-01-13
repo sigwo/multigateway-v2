@@ -4186,6 +4186,8 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
     memset(&hashall,0,sizeof(hashall));
     for (i=n=skipped=0; blocknum<ram->RTblockheight; i++)
     {
+        if ( blocknum < 300000 )
+            continue;
         if ( blocknum+64 >= ram->RTblockheight )
             break;
         ram_setdirB(1,dirB,ram,i * 64 * 64);
