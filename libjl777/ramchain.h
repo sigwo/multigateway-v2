@@ -5052,7 +5052,7 @@ void process_coinblocks(char *argcoinstr)
                 {
                     void *portable_thread_create(void *funcp,void *argp);
                     ptr = malloc(sizeof(*ptr));
-                    ptr = ram = &cp->RAM;
+                    ptr = ram = (void *)cp;
                     printf("call process_ramchain.(%s)\n",coinstr);
                     if ( portable_thread_create((void *)_process_ramchain,ptr) == 0 )
                         printf("ERROR _process_ramchain.%s\n",coinstr);
