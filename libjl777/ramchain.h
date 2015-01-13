@@ -4192,7 +4192,7 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
         memset(&hash4096,0,sizeof(hash4096));
         for (flags=j=0; j<64&&blocknum+64<ram->RTblockheight; j++,blocknum+=64,n++)
         {
-            if ( blocknum < 300000 )
+            if ( blocknum < 50000 )
                 continue;
             ram_setdirC(1,dirC,ram,blocknum);
             sprintf(fname,"%s/%u.B64",dirB,blocknum);
