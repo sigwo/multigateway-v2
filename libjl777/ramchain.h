@@ -4774,7 +4774,7 @@ uint64_t init_ramchain_directory(bits256 *sha,struct ramchain_info *ram,uint32_t
     char dirC[1024],fname[1024];
     HUFF *Vhp,*Bhps[64],*Bhp;
     FILE *fp;
-    int32_t i,numtokens,err;
+    int32_t i,numtokens;
     bits256 tmp;
     uint64_t errs,errs2,flags = 0;
     struct ramchain_token **tokens;
@@ -4782,34 +4782,16 @@ uint64_t init_ramchain_directory(bits256 *sha,struct ramchain_info *ram,uint32_t
     ram_setdirC(0,dirC,ram,blocknum);
     for (i=0; i<64; i++)
     {
-        create_ramchain_block(ram,blocknum + i,'V');
-        create_ramchain_block(ram,blocknum + i,'B');
+        //create_ramchain_block(ram,blocknum + i,'V');
+        //create_ramchain_block(ram,blocknum + i,'B');
         errs2 = 0;
         if ( (errs= verify_block(&ram->raw,ram,blocknum+i)) != 0 )
             errs2 = verify_block(&ram->raw,ram,blocknum+i);
         totalerrs += (errs != 0);
         totalerrs2 += (errs2 != 0);
         printf("%s BLOCK.%d i.%d %u | %llx -> %llx total.(%d %d)\n",ram->name,blocknum,i,blocknum+i,(long long)errs,(long long)errs2,totalerrs,totalerrs2);
-        continue;
-        
-        ram_setfname(fname,ram,blocknum+i,"V");
-        Vhp = hload(0,fname);
-        ram_expand_bitstream(0,&ram->raw,ram,Vhp);
-        if ( (err= rawblockcmp(&ram->raw,&ram->raw2)) != 0 )
-        {
-            printf("miscompare.%d at block.%d\n",err,blocknum+i);
-            hclose(Vhp);
-            create_ramchain_block(ram,blocknum + i,'V');
-            ram_setfname(fname,ram,blocknum+i,"V");
-            Vhp = hload(0,fname);
-            ram_expand_bitstream(0,&ram->raw,ram,Vhp);
-            if ( (err= rawblockcmp(&ram->raw,&ram->raw2)) != 0 )
-            {
-                printf("miscompare2.%d at block.%d\n",err,blocknum+i);
-                continue;
-            }
-        }
-        continue;
+        if ( errs2 != 0 )
+            continue;
         ram_setfname(fname,ram,blocknum+i,"B");
         Bhp = hload(0,fname);
         if ( Vhp != 0 )
@@ -5045,10 +5027,13 @@ void process_coinblocks(char *argcoinstr)
     int32_t i;
     for (i=0; i<Numramchains; i++)
     {
-        printf("%d of %d: (%s)\n",i,Numramchains,Ramchains[i]->name);
-        printf("call process_ramchain.(%s)\n",Ramchains[i]->name);
-        if ( portable_thread_create((void *)_process_ramchain,Ramchains[i]) == 0 )
-            printf("ERROR _process_ramchain.%s\n",Ramchains[i]->name);
+        if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
+        {
+            printf("%d of %d: (%s)\n",i,Numramchains,Ramchains[i]->name);
+            printf("call process_ramchain.(%s)\n",Ramchains[i]->name);
+            if ( portable_thread_create((void *)_process_ramchain,Ramchains[i]) == 0 )
+                printf("ERROR _process_ramchain.%s\n",Ramchains[i]->name);
+        }
     }
     printf("process_coinblocks: finished launching\n");
     while ( 1 ) sleep(1);
