@@ -1758,7 +1758,8 @@ uint32_t expand_huffstr(int32_t bitflag,char *deststr,int32_t type,struct compre
     //fprintf(stderr,"expand_huffstr: bitflag.%d type.%d %s rawind.%d\n",bitflag,type,pair->name,rawind);
     if ( rawind == 0 )
         return(0);
-    huffpair_conv(deststr,&destval,V,type,rawind);
+    // map rawind
+    //huffpair_conv(deststr,&destval,V,type,rawind);
     return((uint32_t)destval);
 }
 
