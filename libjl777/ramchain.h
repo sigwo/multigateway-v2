@@ -5034,7 +5034,7 @@ void *_process_ramchain(void *_ram)
 
 void process_coinblocks(char *argcoinstr)
 {
-    int32_t i,n,processed = 0;
+    int32_t i,n;//,processed = 0;
     cJSON *array;
     char coinstr[1024];
     struct ramchain_info *ram;
@@ -5042,30 +5042,29 @@ void process_coinblocks(char *argcoinstr)
     array = cJSON_GetObjectItem(MGWconf,"active");
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
-        //while ( 1 )
-        {
-            processed = 0;
             for (i=0; i<n; i++)
             {
                 copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
                 if ( coinstr[0] != 0 && (argcoinstr == 0 || strcmp(argcoinstr,coinstr) == 0) && (ram= get_ramchain_info(coinstr)) != 0 )
                 {
+                    void *portable_thread_create(void *funcp,void *argp);
+                    if ( portable_thread_create((void *)_process_ramchain,ram) == 0 )
+                        printf("ERROR _process_ramchain.%s\n",coinstr);
                     //printf("got ramchain.%p (%s) %s %s\n",ram,coinstr,ram->userpass,ram->serverport);
-                    if ( ram->firstiter != 0 )
+                    /*if ( ram->firstiter != 0 )
                     {
                         printf("call init_ramchain.(%s)\n",coinstr);
                         init_ramchain(ram);
                         ram->firstiter = 0;
                     }
-                    processed += process_ramchain(ram,1000.,ram_millis());
+                    processed += process_ramchain(ram,1000.,ram_millis());*/
                 }
             }
-            if ( processed == 0 )
+            /*if ( processed == 0 )
             {
                 //printf("coinblocks caught up\n");
                 sleep(10);
-            }
-        }
+            }*/
     }
 }
 
