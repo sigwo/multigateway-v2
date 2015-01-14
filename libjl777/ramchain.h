@@ -4131,6 +4131,9 @@ uint64_t init_ramchain_directory(struct mappedptr *M,bits256 *sha,struct ramchai
         {
             create_ramchain_block(ram,blocknum + i,'V');
             create_ramchain_block(ram,blocknum + i,'B');
+            fprintf(stderr,".");
+            if ( i == 63 )
+                fprintf(stderr,"%s.%u\n",ram->name,blocknum);
             continue;
         }
         errs2 = 0;
