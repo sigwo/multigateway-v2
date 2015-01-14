@@ -3989,6 +3989,7 @@ int32_t ram_save_bitstreams(char *fname,HUFF *bitstreams[],int32_t num)
         len = (int32_t)ftell(fp);
         fclose(fp);
     }
+    if ( 0 )
     {
         bits256 tmp;
         long *offsets;
@@ -4126,10 +4127,11 @@ uint64_t init_ramchain_directory(struct mappedptr *M,bits256 *sha,struct ramchai
         return((uint64_t)-1);
     for (i=0; i<64; i++)
     {
-        if ( 0 && blocknum > 290816 )
+        if ( 1 )//0 && blocknum > 290816 )
         {
             create_ramchain_block(ram,blocknum + i,'V');
             create_ramchain_block(ram,blocknum + i,'B');
+            continue;
         }
         errs2 = 0;
         if ( (errs= verify_block(&ram->blocks[blocknum+i],&ram->raw,ram,blocknum+i)) != 0 )
@@ -4192,17 +4194,17 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
         memset(&hash4096,0,sizeof(hash4096));
         for (flags=j=0; j<64&&blocknum+64<ram->RTblockheight; j++,blocknum+=64,n++)
         {
-            if ( blocknum < 50000 )
-                continue;
+            //if ( blocknum < 50000 )
+              //  continue;
             ram_setdirC(1,dirC,ram,blocknum);
             sprintf(fname,"%s/%u.B64",dirB,blocknum);
-            if ( ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64,fname,0) == 0 )
+            if ( 1 )//ram_map_bitstreams(&ram->M[n],&sha,&ram->blocks[blocknum],64,fname,0) == 0 )
             {
                 memset(&sha,0,sizeof(sha));
                 if ( (ram->blockflags[n] = init_ramchain_directory(&ram->M[n],&sha,ram,blocknum)) == (uint64_t)-1 )
                 {
                     if ( ram_save_bitstreams(fname,&ram->blocks[blocknum],64) > 0 )
-                        if ( ram_map_bitstreams(&ram->M[n],&tmp,&ram->blocks[blocknum],64,fname,&sha) != 0 )
+                        if ( 0 && ram_map_bitstreams(&ram->M[n],&tmp,&ram->blocks[blocknum],64,fname,&sha) != 0 )
                             printf("64 verified %d (i.%d j.%d)\n",i*64*64 + j*64,i,j);
                 }
             }
@@ -4217,7 +4219,7 @@ uint32_t init_ramchain_directories(struct ramchain_info *ram,char *dirpath,uint3
             if ( (blocknum+64) >= ram->RTblockheight )
                 break;
         }
-        if ( flags == (uint64_t)-1 )
+        if ( 0 && flags == (uint64_t)-1 )
         {
             sprintf(fname,"%s/hash4096.%u",dirB,i * 64 * 64);
             save_dirhash(fname,hash4096,0);
