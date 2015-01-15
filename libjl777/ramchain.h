@@ -3555,7 +3555,7 @@ void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
         estsizeV = (ram->Vblocks.sum / ram->Vblocks.count) * ram->RTblocknum;
     if ( ram->Bblocks.count != 0 )
         estsizeB = (ram->Bblocks.sum / ram->Bblocks.count) * ram->RTblocknum;
-    sprintf(buf,"%-5s: RT.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | estimated completion V%.1f B%.1f\n",ram->name,ram->RTblocknum,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB);
+    sprintf(buf,"%-5s: RT.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | estimated completion V%.1f B%.1f",ram->name,ram->RTblocknum,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB);
 }
 
 char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin)
@@ -4352,7 +4352,7 @@ int32_t init_hashtable(struct ramchain_info *ram,char type)
                 struct huffpair_hash *checkhp;
                 init_hexbytes_noT(hexbytes,hashdata,varsize+datalen);
                 HASH_FIND(hh,hash->table,hashdata,varsize + datalen,checkhp);
-                printf("offset %ld: varsize.%d datalen.%d created.(%s) ind.%d | checkhp.%p\n",offset,(int)varsize,(int)datalen,(type != 'a') ? hexbytes :(char *)((long)hashdata+varsize),hash->ind+1,checkhp);
+                fprintf(stderr,"%s offset %ld: varsize.%d datalen.%d created.(%s) ind.%d | checkhp.%p\n",ram->name,offset,(int)varsize,(int)datalen,(type != 'a') ? hexbytes :(char *)((long)hashdata+varsize),hash->ind+1,checkhp);
             }
             HASH_FIND(hh,hash->table,hashdata,varsize + datalen,hp);
             if ( hp != 0 )
@@ -4392,7 +4392,7 @@ void ram_disp_status(struct ramchain_info *ram)
     char buf[1024];
     ram->blocks.blocknum = ram->RTblocknum = (get_RTheight(ram) - ram->min_confirms);
     ram_setdispstr(buf,ram,ram->startmilli);
-    printf("%s\n",buf);
+    fprintf(stderr,"%s\n",buf);
 }
 
 uint32_t process_ramchain(struct ramchain_info *ram,struct mappedblocks *blocks,struct mappedblocks *prev,double timebudget)
