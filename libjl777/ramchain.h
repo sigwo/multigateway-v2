@@ -2117,7 +2117,11 @@ struct huffpair_hash *ram_hashdata_search(struct huffhash *hash,uint8_t *hashdat
             {
                 huffhash_setfname(fname,hash,0);
                 hash->newfp = fopen(fname,"wb");
-                printf("OPENED.(%s)\n",fname);
+                if ( hash->newfp != 0 )
+                {
+                    printf("couldnt create (%s)\n",fname);
+                    exit(-1);
+                }
             }
             hp = calloc(1,sizeof(*hp));
             newptr = malloc(datalen);
@@ -4308,7 +4312,7 @@ uint32_t create_ramchain_block(int32_t verifyflag,struct ramchain_info *ram,stru
             hps = ram_get_hpptr(blocks,blocknum);
             if ( ram_save_bitstreams(&refsha,fname,prevhps,n) > 0 )
                 datalen = ram_map_bitstreams(verifyflag,ram,blocknum,&blocks->M[blocknum >> blocks->shift],&sha,hps,n,fname,&refsha);
-        } else printf("prev.%d missing blockptr at %d\n",prevblocks->format,blocknum+i);
+        } else printf("%s prev.%d missing blockptr at %d\n",ram->name,prevblocks->format,blocknum+i);
     }
     else
     {
@@ -4416,7 +4420,7 @@ uint32_t process_ramchain(struct ramchain_info *ram,struct mappedblocks *blocks,
 struct mappedblocks *init_ram_blocks(HUFF **copyhps,struct ramchain_info *ram,uint32_t firstblock,struct mappedblocks *blocks,struct mappedblocks *prevblocks,int32_t format,int32_t shift)
 {
     void *ptr;
-    int32_t numblocks,tmpsize = 1000000;
+    int32_t numblocks,tmpsize = 10000000;
     blocks->R = calloc(1,sizeof(*blocks->R));
     blocks->R2 = calloc(1,sizeof(*blocks->R2));
     blocks->ram = ram;
@@ -4450,7 +4454,7 @@ struct mappedblocks *init_ram_blocks(HUFF **copyhps,struct ramchain_info *ram,ui
 
 void init_ramchain(struct ramchain_info *ram)
 {
-    int32_t tmpsize = 1000000;
+    int32_t tmpsize = 10000000;
     uint8_t *ptr;
     double startmilli;
     startmilli = ram_millis();
@@ -4498,7 +4502,7 @@ void *_process_ramchain(void *_ram)
     {
         ram->blocks.blocknum = ram->blocks.contiguous = ram_setcontiguous(&ram->blocks);
         ram_disp_status(ram);
-        sleep(10);
+        sleep(60);
     }
     return(0);
 }
