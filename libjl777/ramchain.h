@@ -3984,7 +3984,7 @@ HUFF *verify_Vblock(struct ramchain_info *ram,uint32_t blocknum,HUFF *hp)
         _get_blockinfo(ram->Vblocks.R2,ram,blocknum);
         if ( (err= rawblockcmp(ram->Vblocks.R2,ram->Vblocks.R)) == 0 )
         {
-            printf("OK ");
+            //printf("OK ");
             return(hp);
         } else printf("verify_Vblock.%d err.%d\n",blocknum,err);
     } else printf("ram_expand_bitstream returned.%d\n",datalen);
@@ -4285,8 +4285,8 @@ uint32_t create_ramchain_block(int32_t verifyflag,struct ramchain_info *ram,stru
                     else
                     {
                         datalen = (1 + hp->allocsize);
-                        if ( blocks->format == 'V' )
-                            fprintf(stderr," %s CREATED.%c block.%d datalen.%d\n",ram->name,blocks->format,blocknum,datalen+1);
+                        //if ( blocks->format == 'V' )
+                        //    fprintf(stderr," %s CREATED.%c block.%d datalen.%d\n",ram->name,blocks->format,blocknum,datalen+1);
                         //else fprintf(stderr,"%s.B.%d ",ram->name,blocknum);
                         *hpptr = hp;
                         if ( ram->blocks.hps[blocknum] == 0 )
@@ -4352,7 +4352,7 @@ int32_t init_hashtable(struct ramchain_info *ram,char type)
                 struct huffpair_hash *checkhp;
                 init_hexbytes_noT(hexbytes,hashdata,varsize+datalen);
                 HASH_FIND(hh,hash->table,hashdata,varsize + datalen,checkhp);
-                printf("offset %ld: varsize.%d datalen.%d created.(%s) ind.%d | checkhp.%p\n",offset,(int)varsize,(int)datalen,(type != 'a') ? hexbytes :(void *)((long)hashdata+varsize),hash->ind+1,checkhp);
+                printf("offset %ld: varsize.%d datalen.%d created.(%s) ind.%d | checkhp.%p\n",offset,(int)varsize,(int)datalen,(type != 'a') ? hexbytes :(char *)((long)hashdata+varsize),hash->ind+1,checkhp);
             }
             HASH_FIND(hh,hash->table,hashdata,varsize + datalen,hp);
             if ( hp != 0 )
@@ -4395,10 +4395,10 @@ void ram_disp_status(struct ramchain_info *ram)
     printf("%s\n",buf);
 }
 
-uint32_t process_ramchain(struct ramchain_info *ram,struct mappedblocks *blocks,struct mappedblocks *prev,double timebudget,double startmilli)
+uint32_t process_ramchain(struct ramchain_info *ram,struct mappedblocks *blocks,struct mappedblocks *prev,double timebudget)
 {
     char formatstr[16];
-    double estimated;
+    double estimated,startmilli = ram_millis();
     int32_t processed = 0;
     ram_setformatstr(formatstr,blocks->format);
     //printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]?\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift));
@@ -4480,7 +4480,7 @@ void *_process_mappedblocks(void *_blocks)
     printf("start _process_mappedblocks.%s format.%d\n",blocks->ram->name,blocks->format);
     while ( 1 )
     {
-        if ( process_ramchain(blocks->ram,blocks,blocks->prevblocks,1000.,ram_millis()) == 0 )
+        if ( process_ramchain(blocks->ram,blocks,blocks->prevblocks,1000.) == 0 )
             sleep(sqrt(1 << blocks->shift));
     }
 }
@@ -4541,7 +4541,7 @@ void process_coinblocks(char *argcoinstr)
                 else
                 {
                     for (pass=1; pass<=4; pass++)
-                        processed += process_ramchain(Ramchains[i],Ramchains[i]->mappedblocks[pass],Ramchains[i]->mappedblocks[pass-1],1000.,ram_millis());
+                        processed += process_ramchain(Ramchains[i],Ramchains[i]->mappedblocks[pass],Ramchains[i]->mappedblocks[pass-1],1000.);
                 }
             }
         }
