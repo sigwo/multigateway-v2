@@ -3152,7 +3152,7 @@ int32_t emit_and_free(int32_t compressflag,HUFF *hp,struct ramchain_info *ram,st
         if ( tokens[i] != 0 )
             emit_ramchain_token(compressflag,hp,ram,tokens[i]);
     ram_purgetokens(0,tokens,numtokens);
-    if ( 1 )
+    if ( 0 )
     {
         for (i=0; i<(hp->bitoffset>>3)+1; i++)
             printf("%02x ",hp->buf[i]);
@@ -4121,7 +4121,7 @@ uint32_t create_ramchain_block(int32_t verifyflag,struct ramchain_info *ram,stru
             //printf("create %s %d\n",formatstr,blocknum);
             if ( *hpptr == 0 && (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
             {
-                printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
+                //printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
                 if ( (fp= fopen(fname,"wb")) != 0 )
                 {
                     hflush(fp,hp);
