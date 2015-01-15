@@ -4464,10 +4464,10 @@ void init_ramchain(struct ramchain_info *ram)
     init_hashtable(ram,'a'), init_hashtable(ram,'s'), init_hashtable(ram,'t');
     printf("%.1f seconds to init_ramchain.%s hashtables\n",(ram_millis() - startmilli)/1000.,ram->name);
     strcpy(ram->dirpath,".");
-    init_ramchain_directories(ram);
-    printf("set ramchain blocknum.%s %d vs RT.%d %.1f seconds to init_ramchain.%s directories\n",ram->name,ram->Vblocks.blocknum,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->blocks.blocknum = ram->RTblocknum = (get_RTheight(ram) - ram->min_confirms);
     ram->maxblock = (ram->RTblocknum + 10000);
+    init_ramchain_directories(ram);
+    printf("set ramchain blocknum.%s %d vs RT.%d %.1f seconds to init_ramchain.%s directories\n",ram->name,ram->Vblocks.blocknum,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->blocks.hps = calloc(ram->maxblock,sizeof(*ram->blocks.hps));
     ram->mappedblocks[4] = init_ram_blocks(ram->blocks.hps,ram,0,&ram->blocks4096,&ram->blocks64,4096,12);
     ram->mappedblocks[3] = init_ram_blocks(ram->blocks.hps,ram,ram->blocks4096.contiguous,&ram->blocks64,&ram->Bblocks,64,6);
@@ -4493,7 +4493,7 @@ void *_process_ramchain(void *_ram)
 {
     struct ramchain_info *ram = _ram;
     int32_t pass;
-    init_ramchain(ram);
+    //init_ramchain(ram);
     ram->startmilli = ram_millis();
     for (pass=1; pass<=4; pass++)
         if ( portable_thread_create((void *)_process_mappedblocks,ram->mappedblocks[pass]) == 0 )
@@ -4523,7 +4523,7 @@ void process_coinblocks(char *argcoinstr)
     ensure_SuperNET_dirs("ramchains");
 
     //argcoinstr = "DOGE";
-    if ( threaded == 0 )
+    //if ( threaded == 0 )
         for (i=0; i<Numramchains; i++)
         if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
         {
