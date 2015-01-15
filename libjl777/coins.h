@@ -703,16 +703,13 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp)
     ram->userpass = clonestr(cp->userpass);
     ram->serverport = clonestr(cp->serverport);
     ram->lastheighttime = (uint32_t)cp->lastheighttime;
-    ram->blockheight = (uint32_t)cp->blockheight;
-    ram->RTblockheight = (uint32_t)cp->RTblockheight;
+    ram->RTblocknum = (uint32_t)cp->RTblockheight;
     ram->min_confirms = cp->min_confirms;
     ram->estblocktime = cp->estblocktime;
     ram->firstiter = 1;
     printf("%p init_ramchain_info(%s) (%s) active.%d (%s %s)\n",ram,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass);
     //if ( is_active_coin(cp->name) != 0 )
     {
-        if ( ram->RTblockheight == 0 )
-            ram->RTblockheight = (uint32_t)get_blockheight(cp);
         if ( IS_LIBTEST == 7 )
             activate_ramchain(ram,cp->name);
         //init_compressionvars(0,cp->name,ram->RTblockheight + ((60 * 60 * 24 * 7) / ram->estblocktime));
@@ -933,6 +930,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         Numcoins++;
                         cp->json = item;
                         parse_ipaddr(cp->myipaddr,myipaddr);
+                        strcpy(cp->name,coinstr);
                         if ( strcmp(coinstr,"BTCD") == 0 )
                         {
                             BTCDaddr = cp->privateaddr;

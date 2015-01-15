@@ -417,9 +417,11 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
     //if ( IS_LIBTEST == 7 )
     //    return(myipaddr);
     if ( IS_LIBTEST != 7 )
-    mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,on_udprecv);
-    if ( (cp= get_coin_info("BTCD")) != 0 && cp->bridgeport != 0 )
-        cp->bridgeudp = start_libuv_udpserver(4,cp->bridgeport,on_bridgerecv);
+    {
+        mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,on_udprecv);
+        if ( (cp= get_coin_info("BTCD")) != 0 && cp->bridgeport != 0 )
+            cp->bridgeudp = start_libuv_udpserver(4,cp->bridgeport,on_bridgerecv);
+    }
     if ( 0 )
     {
         uint32_t before,after;
@@ -435,7 +437,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
 //#ifndef __APPLE__
 //    Coinloop(0);
 //#else
-    if ( IS_LIBTEST > 1 && portable_thread_create((void *)Coinloop,0) == 0 )
+    if ( IS_LIBTEST > 1 && IS_LIBTEST != 7 && portable_thread_create((void *)Coinloop,0) == 0 )
         printf("ERROR hist Coinloop SSL\n");
 //#endif
     Finished_loading = 1;
@@ -443,17 +445,20 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         fprintf(stderr, "run_UVloop\n");
     if ( portable_thread_create((void *)run_UVloop,Global_mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
-    #ifndef _WIN32
-    if ( portable_thread_create((void *)run_libwebsockets,&one) == 0 )
-        printf("ERROR hist run_libwebsockets SSL\n");
-    while ( SSL_done == 0 )
-        usleep(100000);
-    #else
-    SSL_done = 1;
-    #endif
-    if ( portable_thread_create((void *)run_libwebsockets,&zero) == 0 )
-        printf("ERROR hist run_libwebsockets\n");
-    sleep(3);
+    if ( IS_LIBTEST != 7 )
+    {
+        #ifndef _WIN32
+        if ( portable_thread_create((void *)run_libwebsockets,&one) == 0 )
+            printf("ERROR hist run_libwebsockets SSL\n");
+        while ( SSL_done == 0 )
+            usleep(100000);
+        #else
+        SSL_done = 1;
+        #endif
+        if ( portable_thread_create((void *)run_libwebsockets,&zero) == 0 )
+            printf("ERROR hist run_libwebsockets\n");
+        sleep(3);
+    }
     {
         struct coin_info *cp;
         while ( (cp= get_coin_info("BTCD")) == 0 )
@@ -463,7 +468,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         }
         parse_ipaddr(cp->myipaddr,myipaddr);
         bind_NXT_ipaddr(cp->srvpubnxtbits,myipaddr);
-        if ( IS_LIBTEST > 0 )//&& IS_LIBTEST < 7 )
+        if ( IS_LIBTEST > 0 && IS_LIBTEST < 7 )
             init_SuperNET_storage(cp->backupdir);
     }
     return(myipaddr);
