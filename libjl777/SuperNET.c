@@ -26,12 +26,12 @@
 // for IPPROTO_TCP / IPPROTO_UDP
 #include <netinet/in.h>
 #endif
-#ifndef _WIN32
+
 #include "miniupnpc/miniwget.h"
 #include "miniupnpc/miniupnpc.h"
 #include "miniupnpc/upnpcommands.h"
 #include "miniupnpc/upnperrors.h"
-#endif
+
 
 #include "SuperNET.h"
 #include "cJSON.h"
@@ -473,10 +473,10 @@ void *GUIpoll_loop(void *arg)
     }
     return(0);
 }
-#ifndef _WIN32
+
 // redirect port on external upnp enabled router to port on *this* host
 int upnpredirect(const char* eport, const char* iport, const char* proto, const char* description) {
-    
+    fprintf(stderr, "in upnpredirect\n");
     //  Discovery parameters
     struct UPNPDev * devlist = 0;
     struct UPNPUrls urls;
@@ -619,7 +619,7 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     freeUPNPDevlist(devlist);
     return 1; //ok - we are mapped:)
 }
-#endif
+
 
 int main(int argc,const char *argv[])
 {
@@ -707,10 +707,10 @@ int main(int argc,const char *argv[])
     retval = SuperNET_start("SuperNET.conf",ipaddr);
     sprintf(portstr,"%d",SUPERNET_PORT);
     oldport = newport = portstr;
-    #ifndef _WIN32
+
     if ( UPNP != 0 && upnpredirect(oldport,newport,"UDP","SuperNET_https") == 0 )
         printf("TEST ERROR: failed redirect (%s) to (%s)\n",oldport,newport);
-    #endif
+
     //sprintf(portstr,"%d",SUPERNET_PORT+1);
     //oldport = newport = portstr;
     //if ( upnpredirect(oldport,newport,"UDP","SuperNET_http") == 0 )
