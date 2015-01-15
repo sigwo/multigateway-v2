@@ -4513,8 +4513,11 @@ void activate_ramchain(struct ramchain_info *ram,char *name)
            
 void process_coinblocks(char *argcoinstr)
 {
+    void ensure_SuperNET_dirs(char *backupdir);
     int32_t threaded = 1;
     int32_t i,pass,processed = 0;
+    ensure_SuperNET_dirs("ramchains");
+
     //argcoinstr = "DOGE";
     if ( threaded == 0 )
         for (i=0; i<Numramchains; i++)
