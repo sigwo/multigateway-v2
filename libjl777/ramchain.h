@@ -4137,10 +4137,11 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             free(offsets);
             return(0);
         }
+#ifndef _WIN32
         if ( M->fileptr != 0 )
             close_mappedptr(M);
         memset(M,0,sizeof(*M));
-#ifndef _WIN32
+
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
             for (i=0; i<num; i++)
@@ -4162,7 +4163,6 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
                     } else blocks[i] = hp;
                 } else printf("ram_map_bitstreams: ram_map_bitstreams unexpected null hp at slot.%d\n",i);
             }
-#endif
             if ( i == num )
             {
                 retval = (int32_t)M->allocsize;
@@ -4182,6 +4182,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             }
             //close_mappedptr(&M);
         } else printf("Error mapping.(%s)\n",fname);
+#endif
         free(offsets);
     }
     return(retval);
