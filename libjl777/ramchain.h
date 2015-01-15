@@ -4019,6 +4019,7 @@ int32_t ram_map_bitstreams(struct mappedptr *M,bits256 *sha,HUFF *blocks[],int32
             return(0);
         }
         memset(M,0,sizeof(*M));
+#ifndef _WIN32
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
             for (i=0; i<num; i++)
@@ -4030,6 +4031,7 @@ int32_t ram_map_bitstreams(struct mappedptr *M,bits256 *sha,HUFF *blocks[],int32
                 } else printf("ram_map_bitstreams unexpected null hp at slot.%d\n",i);
             //close_mappedptr(&M);
         }
+#endif
         free(offsets);
     }
     return(verified == num);
@@ -4285,8 +4287,10 @@ int32_t init_hashtable(struct ramchain_info *ram,char type)
     num = 0;
     if ( (hash->newfp= fopen(fname,"rb+")) != 0 )
     {
+#ifndef _WIN32
         if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
             return(0);
+#endif
         fileptr = (long)hash->M.fileptr;
         offset = 0;
         while ( (varsize= (int32_t)load_varint(&datalen,hash->newfp)) > 0 && (offset + datalen) <= hash->M.allocsize )
