@@ -97,12 +97,7 @@ struct rawblock
 #define MAX_HUFFBITS 5
 struct huffbits { uint64_t numbits:MAX_HUFFBITS,rawind:(32-MAX_HUFFBITS),bits:32; };
 struct huffpayload { struct address_entry B,spentB; uint64_t value; uint32_t txid_rawind,extra; };
-
-struct huffitem
-{
-    struct huffbits code;
-    uint32_t freq[HUFF_NUMFREQS];
-};
+struct huffitem { struct huffbits code; uint32_t freq[HUFF_NUMFREQS]; };
 
 struct huffcode
 {
@@ -113,7 +108,7 @@ struct huffcode
 
 union data_or_ptr { uint64_t data; void *ptr; };
 struct huffpair { struct huffitem *items; struct huffcode *code; int32_t maxind,nonz,count,wt; char name[16]; };
-struct huffpair_hash { UT_hash_handle hh; void *payloads; uint32_t rawind,numpayloads,maxpayloads; };
+struct huffpair_hash { UT_hash_handle hh; struct huffpayload *payloads; uint32_t rawind,numpayloads,maxpayloads; };
 struct huffhash { char coinstr[16]; struct huffpair_hash *table; struct mappedptr M; FILE *newfp; struct huffpair_hash **ptrs; uint32_t ind,numalloc; uint8_t type; };
 
 struct rawtx_huffs { struct huffpair numvins,numvouts,txid; char numvinsname[32],numvoutsname[32],txidname[32]; };
@@ -4180,6 +4175,11 @@ int32_t ram_rawvout_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint3
     return(-1);
 }
 
+void ram_markspent(struct ramchain_info *ram,struct huffpayload *payload)
+{
+    
+}
+
 int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vin)
 {
     static struct address_entry zeroB;
@@ -4196,15 +4196,18 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
         numbits += decode_smallbits(&vout,hp);
         if ( iter != 0 )
             return(numbits);
-        if ( (ptr= table->ptrs[txid_rawind]) != 0 && (bps= (struct address_entry *)ptr->payloads) != 0 )
+        if ( (ptr= table->ptrs[txid_rawind]) != 0 && ptr->payloads != 0 )
         {
-            B = bps[0], B.spent = 1;
+            memset(&B,0,sizeof(B)), B.blocknum = blocknum, B.txind = txind, B.v = vin, B.spent = 1;
             // need to mark output as spent
             if ( (vout+1) < ptr->numpayloads )
             {
-                bp = &bps[vout + 1];
+                bp = &ptr->payloads[vout + 1].spentB;
                 if ( memcmp(bp,&zeroB,sizeof(zeroB)) == 0 )
+                {
                     *bp = B;
+                    ram_markspent(ram,&ptr->payloads[vout + 1]);
+                }
                 else if ( memcmp(bp,&B,sizeof(B)) == 0 )
                     printf("duplicate spentB (%d %d %d)\n",B.blocknum,B.txind,B.v);
                 else printf("interloper! (%d %d %d).%d vs (%d %d %d).%d\n",bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
@@ -4217,7 +4220,7 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
 
 int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind)
 {
-    struct address_entry B;
+    struct huffpayload payload;
     struct huffpair_hash *ptr;
     uint32_t txid_rawind = 0;
     int32_t i,retval,numbits = 0;
@@ -4233,18 +4236,19 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
         {
             if ( iter == 0 )
             {
+                memset(&payload,0,sizeof(payload));
                 if ( ptr->payloads != 0 )
                 {
-                    B = ((struct address_entry *)ptr->payloads)[0];
-                    printf("%p txid_rawind.%d txid already there: (block.%d txind.%d)[%d] vs B.(%d %d %d)\n",ptr,txid_rawind,blocknum,txind,numvouts,B.blocknum,B.txind,B.v);
+                    payload.B = ((struct address_entry *)ptr->payloads)[0];
+                    printf("%p txid_rawind.%d txid already there: (block.%d txind.%d)[%d] vs B.(%d %d %d)\n",ptr,txid_rawind,blocknum,txind,numvouts,payload.B.blocknum,payload.B.txind,payload.B.v);
                 }
                 else
                 {
-                    memset(&B,0,sizeof(B)), B.blocknum = blocknum, B.txind = txind, B.v = numvouts;
+                    payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = numvouts;
                     ptr->numpayloads = (numvouts + 1);
                     //printf("%p txid_rawind.%d maxpayloads.%d numpayloads.%d (%d %d %d)\n",ptr,txid_rawind,ptr->maxpayloads,ptr->numpayloads,blocknum,txind,numvouts);
-                    ptr->payloads = (struct address_entry *)calloc(ptr->numpayloads,sizeof(B));
-                    ((struct address_entry *)ptr->payloads)[0] = B;
+                    ptr->payloads = (struct huffpayload *)calloc(ptr->numpayloads,sizeof(*ptr->payloads));
+                    ptr->payloads[0] = payload;
                 }
             }
             if ( numvins > 0 )
@@ -4256,7 +4260,7 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
             if ( numvouts > 0 )
             {
                 for (i=0; i<numvouts; i++,numbits+=retval)
-                    if ( (retval= ram_rawvout_update(iter,ram,hp,blocknum,txind,i,txid_rawind)) < 0 )
+                    if ( (retval= ram_rawvout_update(iter!=0?0:&ptr->payloads[i+1],ram,hp,blocknum,txind,i,txid_rawind)) < 0 )
                         return(-2);
             }
             return(numbits);
@@ -4393,18 +4397,24 @@ uint64_t ram_calcunspent(cJSON **arrayp,char *destcoin,double rate,char *coin,ch
 char *ramtxlist(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *coinaddr,int32_t unspentflag)
 {
     char *retstr = 0;
+    int64_t total = 0;
     cJSON *json = 0,*array = 0;
-    int32_t i,numpayloads;
+    int32_t i,n,isunspent,numpayloads;
     struct huffpayload *payloads;
     struct ramchain_info *ram = get_ramchain_info(coin);
     if ( ram == 0 )
         return(clonestr("{\"error\":\"no ramchain info\"}"));
     if ( (payloads= ramchain_addr_payloads(&numpayloads,ram,coinaddr)) != 0 && numpayloads > 0 )
     {
-        for (i=0; i<numpayloads; i++)
+        for (i=n=0; i<numpayloads; i++)
         {
-            if ( unspentflag == 0 || _is_unspent(&payloads[i]) != 0 )
+            if ( (isunspent= _is_unspent(&payloads[i])) != 0 || unspentflag == 0 )
             {
+                if ( isunspent != 0 )
+                {
+                    n++;
+                    total += payloads[i].value;
+                } else total -= payloads[i].value;
                 if ( array == 0 )
                     array = cJSON_CreateArray();
                 cJSON_AddItemToArray(array,gen_addrpayload_json(&payloads[i]));
@@ -4413,6 +4423,9 @@ char *ramtxlist(char *origargstr,char *sender,char *previpaddr,char *destip,char
         json = cJSON_CreateObject();
         if ( array != 0 )
             cJSON_AddItemToObject(json,coinaddr,array);
+        cJSON_AddItemToObject(json,"numtx",cJSON_CreateNumber(numpayloads));
+        cJSON_AddItemToObject(json,"numunspent",cJSON_CreateNumber(n));
+        cJSON_AddItemToObject(json,"unspent",cJSON_CreateNumber(total));
     }
     if ( json != 0 )
     {
@@ -4676,7 +4689,7 @@ void *process_coinblocks(void *_argcoinstr)
     int32_t i,pass,processed = 0;
     ensure_SuperNET_dirs("ramchains");
 #ifdef __APPLE__
-    argcoinstr = "DOGE";//"BTCD";
+    argcoinstr = "BTCD";
 #endif
     startmilli = ram_millis();
     for (i=0; i<Numramchains; i++)
@@ -4703,12 +4716,19 @@ void *process_coinblocks(void *_argcoinstr)
                 }
                 else
                 {
+#ifndef __APPLE__
+                    for (pass=1; pass<=1; pass++)
+                    {
+                        processed += process_ramchain(Ramchains[i],Ramchains[i]->mappedblocks[pass],Ramchains[i]->mappedblocks[pass-1],1000000000.);
+                        //if ( Ramchains[i]->mappedblocks[pass]->blocknum < Ramchains[i]->RTblocknum )
+                        //    break;
+                    }
+#else
                     for (pass=1; pass<=4; pass++)
                     {
                         processed += process_ramchain(Ramchains[i],Ramchains[i]->mappedblocks[pass],Ramchains[i]->mappedblocks[pass-1],1000.);
-                        if ( Ramchains[i]->mappedblocks[pass]->blocknum < Ramchains[i]->RTblocknum )
-                            break;
                     }
+#endif
                 }
             }
         }
