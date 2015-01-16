@@ -678,7 +678,7 @@ int32_t is_active_coin(char *coinstr)
                 break;
             copy_cJSON(str,cJSON_GetArrayItem(array,i));
             if ( strcmp(str,coinstr) == 0 )
-                return(i);
+                return(i+1);
         }
     }
     return(0);
