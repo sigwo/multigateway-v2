@@ -708,7 +708,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp)
     ram->estblocktime = cp->estblocktime;
     ram->firstiter = 1;
     printf("%p init_ramchain_info(%s) (%s) active.%d (%s %s)\n",ram,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass);
-    //if ( is_active_coin(cp->name) != 0 )
+    if ( is_active_coin(cp->name) != 0 )
     {
         if ( IS_LIBTEST > 1 )//== 7 )
             activate_ramchain(ram,cp->name);
