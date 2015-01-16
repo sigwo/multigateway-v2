@@ -55,4 +55,4 @@ cd ../mman-win32
 make
 cp libmman.a ../libs/libmman-win.a
 cd ..
-cp 
+echo ">>>>>>>>>>>>>>>>>>finished with make winpatch"
