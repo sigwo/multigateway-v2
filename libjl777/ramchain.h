@@ -28,7 +28,7 @@ extern void calc_sha256cat(unsigned char hash[256 >> 3],unsigned char *src,int32
 void delete_file(char *fname,int32_t scrubflag);
 
 // ramchain functions for external access
-void process_coinblocks(char *argcoinstr);
+void *process_coinblocks(void *argcoinstr);
 
 char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin);
 char *ramstring(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,uint32_t rawind);
@@ -2359,13 +2359,15 @@ cJSON *ram_rawtx_json(struct rawblock *raw,int32_t txind)
     return(json);
 }
 
-cJSON *ram_rawblock_json(struct rawblock *raw)
+cJSON *ram_rawblock_json(struct rawblock *raw,int32_t allocsize)
 {
     int32_t i,n;
     cJSON *array,*json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"height",cJSON_CreateNumber(raw->blocknum));
     cJSON_AddItemToObject(json,"numtx",cJSON_CreateNumber(raw->numtx));
     cJSON_AddItemToObject(json,"mint",cJSON_CreateNumber(dstr(raw->minted)));
+    if ( allocsize != 0 )
+        cJSON_AddItemToObject(json,"allocsize",cJSON_CreateNumber(allocsize));
     if ( (n= raw->numtx) > 0 )
     {
         array = cJSON_CreateArray();
@@ -2375,6 +2377,16 @@ cJSON *ram_rawblock_json(struct rawblock *raw)
     }
     return(json);
 }
+
+/*cJSON *ram_blockjson(struct rawblock *tmp,struct ramchain_info *ram,struct rawblock *raw)
+{
+    cJSON *json = 0;
+    struct ramchain_token **tokens;
+    int32_t numtokens;
+    if ( (tokens= ram_tokenize_rawblock(&numtokens,ram,raw)) != 0 )
+        expand_and_free(&json,tmp,ram,tokens,numtokens,0);
+    return(json);
+}*/
 
 struct rawvout *ram_rawvout(struct rawblock *raw,int32_t txind,int32_t v)
 {
@@ -3161,7 +3173,7 @@ int32_t emit_and_free(int32_t compressflag,HUFF *hp,struct ramchain_info *ram,st
     return(conv_bitlen(hp->endpos));
 }
 
-int32_t expand_and_free(cJSON **jsonp,struct rawblock *raw,struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens)
+int32_t expand_and_free(cJSON **jsonp,struct rawblock *raw,struct ramchain_info *ram,struct ramchain_token **tokens,int32_t numtokens,int32_t allocsize)
 {
     int32_t i;
     clear_rawblock(raw,0);
@@ -3171,7 +3183,7 @@ int32_t expand_and_free(cJSON **jsonp,struct rawblock *raw,struct ramchain_info 
     ram_purgetokens(0,tokens,numtokens);
     ram_patch_rawblock(raw);
     if ( jsonp != 0 )
-        (*jsonp) = ram_rawblock_json(raw);
+        (*jsonp) = ram_rawblock_json(raw,allocsize);
     return(numtokens);
 }
 
@@ -3234,7 +3246,7 @@ int32_t ram_expand_bitstream(cJSON **jsonp,struct rawblock *raw,struct ramchain_
         if ( format != 'B' && format != 'V' && format != '*' )
             printf("error decode_bits in ram_expand_rawinds format.%d != (%c/%c/%c) %d/%d/%d\n",format,'V','B','*','V','B','*');
         else if ( (tokens= ram_tokenize_bitstream(&blocknum,&numtokens,ram,hp,format)) != 0 )
-            return(expand_and_free(jsonp,raw,ram,tokens,numtokens));
+            return(expand_and_free(jsonp,raw,ram,tokens,numtokens,hp->allocsize));
         else printf("error expanding bitstream\n");
     }
     return(-1);
@@ -3243,13 +3255,12 @@ int32_t ram_expand_bitstream(cJSON **jsonp,struct rawblock *raw,struct ramchain_
 char *ram_blockstr(struct rawblock *tmp,struct ramchain_info *ram,struct rawblock *raw)
 {
     cJSON *json = 0;
-    struct ramchain_token **tokens;
-    int32_t numtokens;
-    char *retstr;
-    if ( (tokens= ram_tokenize_rawblock(&numtokens,ram,raw)) != 0 )
-        expand_and_free(&json,tmp,ram,tokens,numtokens);
-    retstr = cJSON_Print(json);
-    free_json(json);
+    char *retstr = 0;
+    if ( (json= ram_rawblock_json(raw,0)) != 0 )
+    {
+        retstr = cJSON_Print(json);
+        free_json(json);
+    }
     return(retstr);
 }
 
@@ -3531,26 +3542,37 @@ char *ramscript(char *origargstr,char *sender,char *previpaddr,char *destip,char
 
 char *ramblock(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,uint32_t blocknum)
 {
+
     struct ramchain_info *ram = get_ramchain_info(coin);
-    int32_t numtx,datalen;
-    cJSON *json;
-    char *hexstr,*retstr;
+    cJSON *json = 0;
+    HUFF *hp;
+    char *retstr = 0;
     if ( ram == 0 )
         return(clonestr("{\"error\":\"no ramchain info\"}"));
-    numtx = _get_blockinfo(ram->R,ram,blocknum);
-    if ( (datalen= ram_emitblock(ram->tmphp,'V',ram,ram->R)) > 0 )
+    if ( (hp= ram->blocks.hps[blocknum]) == 0 )
+    {
+        _get_blockinfo(ram->R,ram,blocknum);
+        json = ram_rawblock_json(ram->R,0);
+    }
+    else ram_expand_bitstream(&json,ram->R,ram,hp);
+    if ( json != 0 )
+    {
+        retstr = cJSON_Print(json);
+        free_json(json);
+    }
+    /*if ( (datalen= ram_emitblock(ram->tmphp,'V',ram,ram->R)) > 0 )
     {
         hexstr = calloc(1,datalen*2+1);
         init_hexbytes_noT(hexstr,ram->tmphp->buf,datalen);
         json = cJSON_CreateObject();
         cJSON_AddItemToObject(json,"result",cJSON_CreateString(coin));
         cJSON_AddItemToObject(json,"block",cJSON_CreateNumber(blocknum));
-        cJSON_AddItemToObject(json,"blockhex",cJSON_CreateString(hexstr));
         cJSON_AddItemToObject(json,"datalen",cJSON_CreateNumber(datalen));
+        cJSON_AddItemToObject(json,"blockhex",cJSON_CreateString(hexstr));
         retstr = cJSON_Print(json);
         free_json(json);
         free(hexstr);
-    } else retstr = clonestr("{\"error\":\"no block info\"}");
+    } else retstr = clonestr("{\"error\":\"no block info\"}");*/
     return(retstr);
 }
 
@@ -3971,8 +3993,8 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             free(offsets);
             return(0);
         }
-        if ( M->fileptr != 0 )
-            close_mappedptr(M);
+        //if ( M->fileptr != 0 )
+        //    close_mappedptr(M);
         memset(M,0,sizeof(*M));
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
@@ -4499,6 +4521,7 @@ void init_ramchain(struct ramchain_info *ram)
     ram->mappedblocks[1] = init_ram_blocks(ram->blocks.hps,ram,ram->Bblocks.contiguous,&ram->Vblocks,&ram->blocks,'V',0);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s V\n",ram->name,ram->Vblocks.blocknum,ram->Vblocks.firstblock,ram->Vblocks.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[0] = init_ram_blocks(ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
+    if ( 0 )
     {
         HUFF *hp;
         char fname[1024];
@@ -4577,10 +4600,11 @@ void activate_ramchain(struct ramchain_info *ram,char *name)
     printf("ram.%p Add ramchain.(%s) (%s) Num.%d\n",ram,ram->name,name,Numramchains);
 }
            
-void process_coinblocks(char *argcoinstr)
+void *process_coinblocks(void *_argcoinstr)
 {
     void ensure_SuperNET_dirs(char *backupdir);
-    int32_t threaded = 1;
+    char *argcoinstr = _argcoinstr;
+    int32_t threaded = 0;
     double startmilli;
     int32_t i,pass,processed = 0;
     ensure_SuperNET_dirs("ramchains");
@@ -4594,7 +4618,7 @@ void process_coinblocks(char *argcoinstr)
             init_ramchain(Ramchains[i]);
             Ramchains[i]->startmilli = ram_millis();
         }
-    printf("took %.1f seconds to init_ramchains\n",(ram_millis() - startmilli)/1000.);
+    printf("took %.1f seconds to %d init_ramchains\n",(ram_millis() - startmilli)/1000.,Numramchains);
     while ( processed >= 0 )
     {
         processed = 0;
