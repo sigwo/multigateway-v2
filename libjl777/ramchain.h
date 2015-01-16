@@ -3088,8 +3088,8 @@ struct ramchain_token **ram_tokenize_bitstream(uint32_t *blocknump,int32_t *numt
     if ( tokens[numtokens-1] == 0 || tokens[numtokens-2] == 0 || tokens[numtokens-3] == 0 )
     {
         printf("blocknum.%d numt.%d minted %.8f (%p %p %p)\n",*blocknump,numtx,dstr(minted),tokens[numtokens-1],tokens[numtokens-2],tokens[numtokens-3]);
-        while ( 1 )
-            sleep(1);
+        //while ( 1 )
+        //    sleep(1);
         return(ram_purgetokens(numtokensp,tokens,numtokens));
     }
     if ( numtx > 0 )
@@ -3253,17 +3253,97 @@ char *ram_blockstr(struct rawblock *tmp,struct ramchain_info *ram,struct rawbloc
     return(retstr);
 }
 
+void ram_setformatstr(char *formatstr,int32_t format)
+{
+    if ( format == 'V' || format == 'B' )
+    {
+        formatstr[1] = 0;
+        formatstr[0] = format;
+    }
+    else sprintf(formatstr,"B%d",format);
+}
+void ensure_dir(char *dirname) // jl777: does this work in windows?
+{
+    FILE *fp;
+    char fname[512],cmd[512];
+    sprintf(fname,"%s/tmp",dirname);
+    if ( (fp= fopen(fname,"rb")) == 0 )
+    {
+        sprintf(cmd,"mkdir %s",dirname);
+        if ( system(cmd) != 0 )
+            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
+        fp = fopen(fname,"wb");
+        if ( fp != 0 )
+            fclose(fp);
+    }
+    else fclose(fp);
+}
+
+void ram_setdirA(char *dirA,struct ramchain_info *ram)
+{
+    sprintf(dirA,"%s/ramchains/%s/bitstream",ram->dirpath,ram->name);
+}
+
+void ram_setdirB(int32_t mkdirflag,char *dirB,struct ramchain_info *ram,uint32_t blocknum)
+{
+    static char lastdirB[1024];
+    char dirA[1024];
+    int32_t i;
+    blocknum %= (64 * 64 * 64);
+    ram_setdirA(dirA,ram);
+    i = blocknum / (64 * 64);
+    sprintf(dirB,"%s/%05x_%05x",dirA,i*64*64,(i+1)*64*64-1);
+    if ( mkdirflag != 0 && strcmp(dirB,lastdirB) != 0 )
+    {
+        ensure_dir(dirB);
+        // printf("DIRB: (%s)\n",dirB);
+        strcpy(lastdirB,dirB);
+    }
+}
+
+void ram_setdirC(int mkdirflag,char *dirC,struct ramchain_info *ram,uint32_t blocknum)
+{
+    static char lastdirC[1024];
+    char dirB[1024];
+    int32_t i,j;
+    blocknum %= (64 * 64 * 64);
+    ram_setdirB(mkdirflag,dirB,ram,blocknum);
+    i = blocknum / (64 * 64);
+    j = (blocknum - (i * 64 * 64)) / 64;
+    sprintf(dirC,"%s/%05x_%05x",dirB,i*64*64 + j*64,i*64*64 + (j+1)*64 - 1);
+    if ( mkdirflag != 0 && strcmp(dirC,lastdirC) != 0 )
+    {
+        ensure_dir(dirC);
+        //printf("DIRC: (%s)\n",dirC);
+        strcpy(lastdirC,dirC);
+    }
+}
+
+void ram_setfname(char *fname,struct ramchain_info *ram,uint32_t blocknum,char *str)
+{
+    char dirC[1024];
+    ram_setdirC(0,dirC,ram,blocknum);
+    sprintf(fname,"%s/%u.%s",dirC,blocknum,str);
+}
+
 HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,int32_t blocknum,int32_t format,HUFF **prevhpp)
 {
     HUFF *hp = 0;
-    int32_t datalen;
+    int32_t datalen,regenflag = 0;
     void *block = 0;
     if ( format == 0 )
         format = 'V';
     if ( format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )
     {
         if ( ram_expand_bitstream(0,tmp,ram,hp) <= 0 )
+        {
+            char fname[1024],formatstr[16];
+            ram_setformatstr(formatstr,'V');
+            ram_setfname(fname,ram,blocknum,formatstr);
+            delete_file(fname,0);
+            regenflag = 1;
             hp = 0;
+        }
     }
     if ( hp == 0 )
     {
@@ -3728,70 +3808,6 @@ double estimate_completion(char *coinstr,double startmilli,int32_t processed,int
     return(numleft * rate);
 }
 
-void ensure_dir(char *dirname) // jl777: does this work in windows?
-{
-    FILE *fp;
-    char fname[512],cmd[512];
-    sprintf(fname,"%s/tmp",dirname);
-    if ( (fp= fopen(fname,"rb")) == 0 )
-    {
-        sprintf(cmd,"mkdir %s",dirname);
-        if ( system(cmd) != 0 )
-            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
-        fp = fopen(fname,"wb");
-        if ( fp != 0 )
-            fclose(fp);
-    }
-    else fclose(fp);
-}
-
-void ram_setdirA(char *dirA,struct ramchain_info *ram)
-{
-    sprintf(dirA,"%s/ramchains/%s/bitstream",ram->dirpath,ram->name);
-}
-
-void ram_setdirB(int32_t mkdirflag,char *dirB,struct ramchain_info *ram,uint32_t blocknum)
-{
-    static char lastdirB[1024];
-    char dirA[1024];
-    int32_t i;
-    blocknum %= (64 * 64 * 64);
-    ram_setdirA(dirA,ram);
-    i = blocknum / (64 * 64);
-    sprintf(dirB,"%s/%05x_%05x",dirA,i*64*64,(i+1)*64*64-1);
-    if ( mkdirflag != 0 && strcmp(dirB,lastdirB) != 0 )
-    {
-        ensure_dir(dirB);
-       // printf("DIRB: (%s)\n",dirB);
-        strcpy(lastdirB,dirB);
-    }
-}
-
-void ram_setdirC(int mkdirflag,char *dirC,struct ramchain_info *ram,uint32_t blocknum)
-{
-    static char lastdirC[1024];
-    char dirB[1024];
-    int32_t i,j;
-    blocknum %= (64 * 64 * 64);
-    ram_setdirB(mkdirflag,dirB,ram,blocknum);
-    i = blocknum / (64 * 64);
-    j = (blocknum - (i * 64 * 64)) / 64;
-    sprintf(dirC,"%s/%05x_%05x",dirB,i*64*64 + j*64,i*64*64 + (j+1)*64 - 1);
-    if ( mkdirflag != 0 && strcmp(dirC,lastdirC) != 0 )
-    {
-        ensure_dir(dirC);
-        //printf("DIRC: (%s)\n",dirC);
-        strcpy(lastdirC,dirC);
-    }
-}
-
-void ram_setfname(char *fname,struct ramchain_info *ram,uint32_t blocknum,char *str)
-{
-    char dirC[1024];
-    ram_setdirC(0,dirC,ram,blocknum);
-    sprintf(fname,"%s/%u.%s",dirC,blocknum,str);
-}
-
 HUFF *verify_Vblock(struct ramchain_info *ram,uint32_t blocknum,HUFF *hp)
 {
     int32_t datalen,err;
@@ -4003,16 +4019,6 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
     return(retval);
 }
 
-void ram_setformatstr(char *formatstr,int32_t format)
-{
-    if ( format == 'V' || format == 'B' )
-    {
-        formatstr[1] = 0;
-        formatstr[0] = format;
-    }
-    else sprintf(formatstr,"B%d",format);
-}
-
 uint32_t ram_setcontiguous(struct mappedblocks *blocks)
 {
     uint32_t i,n = blocks->firstblock;
@@ -4127,12 +4133,6 @@ uint32_t create_ramchain_block(int32_t verifyflag,struct ramchain_info *ram,stru
                     hflush(fp,hp);
                     fclose(fp);
                 }
-                if ( *hpptr != 0 )
-                {
-                    hclose(*hpptr);
-                    *hpptr = 0;
-                    printf("OVERWRITE.(%s) size.%ld bitoffset.%d allocsize.%d\n",fname,ftell(fp),hp->bitoffset,hp->allocsize);
-                }
                 if ( ram_verify(ram,hp,blocks->format) == blocknum )
                 {
                     if ( verifyflag != 0 && ((blocks->format == 'B') ? verify_Bblock(ram,blocknum,hp) : verify_Vblock(ram,blocknum,hp)) == 0 )
@@ -4146,6 +4146,12 @@ uint32_t create_ramchain_block(int32_t verifyflag,struct ramchain_info *ram,stru
                         //if ( blocks->format == 'V' )
                             fprintf(stderr," %s CREATED.%c block.%d datalen.%d\n",ram->name,blocks->format,blocknum,datalen+1);
                         //else fprintf(stderr,"%s.B.%d ",ram->name,blocknum);
+                        if ( *hpptr != 0 )
+                        {
+                            hclose(*hpptr);
+                            *hpptr = 0;
+                            printf("OVERWRITE.(%s) size.%ld bitoffset.%d allocsize.%d\n",fname,ftell(fp),hp->bitoffset,hp->allocsize);
+                        }
                         *hpptr = hp;
                         if ( blocks->format != 'V' && ram->blocks.hps[blocknum] == 0 )
                             ram->blocks.hps[blocknum] = hp;
@@ -4305,7 +4311,12 @@ struct mappedblocks *init_ram_blocks(HUFF **copyhps,struct ramchain_info *ram,ui
         blocks->flags = calloc(blocks->numblocks >> (shift+6),sizeof(*blocks->flags));
         blocks->M = calloc(blocks->numblocks >> shift,sizeof(*blocks->M));
         blocks->blocknum = load_ram_blocks(ram,blocks,firstblock,blocks->numblocks);
-    } else blocks->blocknum = blocks->contiguous = ram_setcontiguous(blocks);
+    }
+    else
+    {
+        blocks->M = calloc(1,sizeof(*blocks->M));
+        blocks->blocknum = blocks->contiguous = ram_setcontiguous(blocks);
+    }
     {
         char formatstr[16];
         ram_setformatstr(formatstr,blocks->format);
@@ -4340,7 +4351,7 @@ void *update_coinaddr_unspent(int32_t iter,uint32_t blocknum,uint32_t *nump,stru
     {
         (*nump) = ++num;
         payloads = realloc(payloads,sizeof(*payloads) * num);
-        printf("block.%d new UNSPENT (%d %d %d) script.%d tx_rawind.%d %.8f\n",blocknum,bp->blocknum,bp->txind,bp->v,payload->extra,payload->tx_rawind,dstr(payload->value));
+       // printf("block.%d new UNSPENT (%d %d %d) script.%d tx_rawind.%d %.8f\n",blocknum,bp->blocknum,bp->txind,bp->v,payload->extra,payload->tx_rawind,dstr(payload->value));
         //printf("blocknum.%d <<<<<<<<<<<<<< unspent (%d %d %d) numvouts.%d tx_rawind.%d %.8f\n",blocknum,bp->blocknum,bp->txind,bp->v,payload->vout,payload->rawind,dstr(payload->value));
         payloads[i] = *payload;
     }
@@ -4490,9 +4501,11 @@ void init_ramchain(struct ramchain_info *ram)
     ram->mappedblocks[0] = init_ram_blocks(ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
     {
         HUFF *hp;
+        char fname[1024];
         struct ramchain_token **tokens;
         int32_t numtokens;
-        uint32_t i,format,blocknum,errs,good,tmp;
+        bits256 refsha,sha;
+        uint32_t i,format,blocknum,datalen,errs,good,tmp;
         for (errs=good=blocknum=0; blocknum<ram->blocks.contiguous; blocknum++)
         {
             if ( (blocknum % 1000) == 0 )
@@ -4509,11 +4522,19 @@ void init_ramchain(struct ramchain_info *ram)
                             emit_ramchain_token(0,ram->tmphp,ram,tokens[i]);
                     ram_purgetokens(0,tokens,numtokens);
                 }
-                //ram_rawblock_update(ram,ram->R);
+                ram_rawblock_update(ram,ram->R);
                 good++;
             } else errs++;
         }
         fprintf(stderr,"contiguous.%d good.%d errs.%d\n",ram->blocks.contiguous,good,errs);
+        if ( errs == 0 )
+        {
+            sprintf(fname,"ramchains/%s/blocks",ram->name);
+            datalen = -1;
+            if ( ram_save_bitstreams(&refsha,fname,ram->blocks.hps,ram->blocks.contiguous) > 0 )
+                datalen = ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,ram->blocks.contiguous,fname,&refsha);
+            printf("MApped.(%s) datalen.%d\n",fname,datalen);
+        }
     }
     ram_disp_status(ram);
     //getchar();
@@ -4563,7 +4584,9 @@ void process_coinblocks(char *argcoinstr)
     double startmilli;
     int32_t i,pass,processed = 0;
     ensure_SuperNET_dirs("ramchains");
-
+#ifdef __APPLE__
+    argcoinstr = "BTCD";
+#endif
     startmilli = ram_millis();
     for (i=0; i<Numramchains; i++)
         if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
