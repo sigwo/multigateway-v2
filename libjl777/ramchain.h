@@ -1839,7 +1839,7 @@ void *ram_gethashdata(struct ramchain_info *ram,int32_t type,uint32_t rawind)
     return(0);
 }
 
-struct huffpair_hash *ram_hashdata_search(struct huffhash *hash,uint8_t *hashdata,int32_t datalen)
+struct huffpair_hash *ram_hashdata_search(int32_t createflag,struct huffhash *hash,uint8_t *hashdata,int32_t datalen)
 {
     char fname[512];
     void *newptr;
@@ -1847,7 +1847,7 @@ struct huffpair_hash *ram_hashdata_search(struct huffhash *hash,uint8_t *hashdat
     if ( hash != 0 )
     {
         HASH_FIND(hh,hash->table,hashdata,datalen,hp);
-        if ( hp == 0 )
+        if ( hp == 0 && createflag != 0 )
         {
             if ( hash->newfp == 0 )
             {
@@ -1885,17 +1885,17 @@ struct huffpair_hash *ram_hashdata_search(struct huffhash *hash,uint8_t *hashdat
     return(hp);
 }
 
-struct huffpair_hash *ram_hashsearch(struct huffhash *hash,char *hashstr,int32_t type)
+struct huffpair_hash *ram_hashsearch(int32_t createflag,struct huffhash *hash,char *hashstr,int32_t type)
 {
     uint8_t data[4097],*hashdata;
     struct huffpair_hash *hp = 0;
     int32_t datalen;
     if ( hash != 0 && (hashdata= encode_hashstr(&datalen,data,type,hashstr)) != 0 )
-        hp = ram_hashdata_search(hash,hashdata,datalen);
+        hp = ram_hashdata_search(createflag,hash,hashdata,datalen);
     return(hp);
 }
 
-uint32_t ram_conv_hashstr(struct ramchain_info *ram,char *hashstr,int32_t type)
+uint32_t ram_conv_hashstr(int32_t createflag,struct ramchain_info *ram,char *hashstr,int32_t type)
 {
     char nullstr[6] = { 5, 'n', 'u', 'l', 'l', 0 };
     struct huffpair_hash *hp = 0;
@@ -1903,14 +1903,17 @@ uint32_t ram_conv_hashstr(struct ramchain_info *ram,char *hashstr,int32_t type)
     if ( hashstr == 0 || hashstr[0] == 0 )
         hashstr = nullstr;
     hash = ram_gethash(ram,type);
-    if ( (hp= ram_hashsearch(hash,hashstr,type)) != 0 )
+    if ( (hp= ram_hashsearch(createflag,hash,hashstr,type)) != 0 )
         return(hp->rawind);
     else return(0);
 }
 
-#define ram_scriptind(ram,hashstr) ram_conv_hashstr(ram,hashstr,'s')
-#define ram_addrind(ram,hashstr) ram_conv_hashstr(ram,hashstr,'a')
-#define ram_txidind(ram,hashstr) ram_conv_hashstr(ram,hashstr,'t')
+#define ram_scriptind(ram,hashstr) ram_conv_hashstr(1,ram,hashstr,'s')
+#define ram_addrind(ram,hashstr) ram_conv_hashstr(1,ram,hashstr,'a')
+#define ram_txidind(ram,hashstr) ram_conv_hashstr(1,ram,hashstr,'t')
+#define ram_scriptind_RO(ram,hashstr) ram_conv_hashstr(0,ram,hashstr,'s')
+#define ram_addrind_RO(ram,hashstr) ram_conv_hashstr(0,ram,hashstr,'a')
+#define ram_txidind_RO(ram,hashstr) ram_conv_hashstr(0,ram,hashstr,'t')
 
 #define ram_conv_rawind(hashstr,ram,rawind,type) decode_hashdata(hashstr,type,ram_gethashdata(ram,type,rawind))
 #define ram_txid(hashstr,ram,rawind) ram_conv_rawind(hashstr,ram,rawind,'t')
@@ -1921,7 +1924,7 @@ void *ramchain_payloads(int32_t *numpayloadsp,struct ramchain_info *ram,char *ha
 {
     struct huffpair_hash *hp = 0;
     *numpayloadsp = 0;
-    if ( (hp= ram_hashsearch(ram_gethash(ram,type),hashstr,type)) != 0 )
+    if ( (hp= ram_hashsearch(0,ram_gethash(ram,type),hashstr,type)) != 0 )
     {
         *numpayloadsp = hp->numpayloads;
         return(hp->payloads);
@@ -2541,7 +2544,7 @@ uint32_t ram_extractstring(char *hashstr,char type,struct ramchain_info *ram,int
             printf("ram_extractstring.V t.(%c) decode_hashdata error\n",type);
             return(0);
         }
-        rawind = ram_conv_hashstr(ram,hashstr,type);
+        rawind = ram_conv_hashstr(0,ram,hashstr,type);
     }
     else
     {
@@ -2635,7 +2638,7 @@ struct ramchain_token *ram_set_token_hashdata(struct ramchain_info *ram,char typ
             token = calloc(1,sizeof(*token) + datalen - sizeof(token->U));
             memcpy(token->U.hashdata,hashdata,datalen);
             token->numbits = (datalen << 3);
-            hp = ram_hashdata_search(ram_gethash(ram,type),hashdata,datalen);
+            hp = ram_hashdata_search(1,ram_gethash(ram,type),hashdata,datalen);
             token->rawind = hp->rawind;
            // printf(">>>>>> rawind.%d -> %d\n",rawind,token->rawind);
         } else printf("encode_hashstr error for (%c).(%s)\n",type,hashstr);
@@ -2646,7 +2649,7 @@ struct ramchain_token *ram_set_token_hashdata(struct ramchain_info *ram,char typ
         token->numbits = (sizeof(rawind) << 3);
         if ( hashstr != 0 && hashstr[0] != 0 )
         {
-            rawind = ram_conv_hashstr(ram,hashstr,type);
+            rawind = ram_conv_hashstr(0,ram,hashstr,type);
             //printf("(%s) -> %d\n",hashstr,rawind);
         }
         token->rawind = rawind;
@@ -3426,7 +3429,7 @@ char *ram_addrind_json(struct ramchain_info *ram,char *str)
 {
     char retbuf[1024];
     uint32_t rawind;
-    if ( (rawind= ram_addrind(ram,str)) != 0xffffffff )
+    if ( (rawind= ram_addrind_RO(ram,str)) != 0 )
     {
         sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",str,rawind);
         return(clonestr(retbuf));
@@ -3438,7 +3441,7 @@ char *ram_txidind_json(struct ramchain_info *ram,char *str)
 {
     char retbuf[1024];
     uint32_t rawind;
-    if ( (rawind= ram_txidind(ram,str)) != 0xffffffff )
+    if ( (rawind= ram_txidind_RO(ram,str)) != 0 )
     {
         sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",str,rawind);
         return(clonestr(retbuf));
@@ -3450,7 +3453,7 @@ char *ram_scriptind_json(struct ramchain_info *ram,char *str)
 {
     char retbuf[1024];
     uint32_t rawind;
-    if ( (rawind= ram_scriptind(ram,str)) != 0xffffffff )
+    if ( (rawind= ram_scriptind_RO(ram,str)) != 0 )
     {
         sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",str,rawind);
         return(clonestr(retbuf));
@@ -4439,7 +4442,7 @@ void ram_rawvin_update(struct ramchain_info *ram,uint32_t txid_rawind,struct raw
     ram_address_entry(&payload.B,ram,vi->txidstr,vi->vout), payload.B.spent = 1;
     payload.spentB.blocknum = blocknum, payload.spentB.txind = txind, payload.spentB.v = vin;
     payload.extra = vi->vout, payload.tx_rawind = txid_rawind;
-    if ( (hp= ram_hashsearch(ram_gethash(ram,'t'),vi->txidstr,'t')) != 0 )
+    if ( (hp= ram_hashsearch(1,ram_gethash(ram,'t'),vi->txidstr,'t')) != 0 )
         hp->payloads = update_txid_payload(0,&hp->numpayloads,hp->payloads,&payload);
     else printf("ram_rawvin_update: block %d txind.%d couldnt find 't' (%s)\n",blocknum,txind,vi->txidstr);
 }
@@ -4451,11 +4454,11 @@ void ram_rawvout_update(struct ramchain_info *ram,uint32_t txid_rawind,uint16_t 
     uint32_t scriptind;
     memset(&payload,0,sizeof(payload));
     payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = vout;
-    if ( (hp= ram_hashsearch(ram_gethash(ram,'s'),vo->script,'s')) != 0 )
+    if ( (hp= ram_hashsearch(1,ram_gethash(ram,'s'),vo->script,'s')) != 0 )
     {
         scriptind = hp->rawind;
         payload.extra = scriptind, payload.tx_rawind = txid_rawind, payload.value = vo->value;
-        if ( (hp= ram_hashsearch(ram_gethash(ram,'a'),vo->coinaddr,'a')) != 0 )
+        if ( (hp= ram_hashsearch(1,ram_gethash(ram,'a'),vo->coinaddr,'a')) != 0 )
             hp->payloads = update_coinaddr_unspent(0,blocknum,&hp->numpayloads,hp->payloads,&payload);
     } else printf("ram_rawvout_update block.%d txind.%d vout.%d can find script.(%s)\n",blocknum,txind,vout,vo->script);
 }
@@ -4473,7 +4476,7 @@ int32_t ram_rawtx_update(struct ramchain_info *ram,struct rawblock *raw,struct r
             sum += raw->voutspace[tx->firstvout + i].value;
     memset(&payload,0,sizeof(payload)), payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = tx->numvouts;
     payload.extra = tx->numvouts;
-    if ( (hp= ram_hashsearch(ram_gethash(ram,'t'),tx->txidstr,'t')) != 0 )
+    if ( (hp= ram_hashsearch(1,ram_gethash(ram,'t'),tx->txidstr,'t')) != 0 )
         hp->payloads = update_txid_payload(0,&hp->numpayloads,hp->payloads,&payload), txid_rawind = hp->rawind;
     if ( (numvins= tx->numvins) > 0 )
         for (i=0; i<numvins; i++)
