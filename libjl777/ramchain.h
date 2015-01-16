@@ -4260,7 +4260,7 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
             if ( numvouts > 0 )
             {
                 for (i=0; i<numvouts; i++,numbits+=retval)
-                    if ( (retval= ram_rawvout_update(iter!=0?0:&ptr->payloads[i+1],ram,hp,blocknum,txind,i,txid_rawind)) < 0 )
+                    if ( (retval= ram_rawvout_update(iter,ram,hp,blocknum,txind,i,txid_rawind)) < 0 )
                         return(-2);
             }
             return(numbits);
