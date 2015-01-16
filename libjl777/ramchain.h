@@ -3281,7 +3281,11 @@ void ensure_dir(char *dirname) // jl777: does this work in windows?
 
 void ram_setdirA(char *dirA,struct ramchain_info *ram)
 {
+    #ifndef _WIN32
     sprintf(dirA,"%s/ramchains/%s/bitstream",ram->dirpath,ram->name);
+    #else
+    sprintf(dirA,"ramchains\\%s\\bitstream",ram->dirpath,ram->name);
+    #endif
 }
 
 void ram_setdirB(int32_t mkdirflag,char *dirB,struct ramchain_info *ram,uint32_t blocknum)
@@ -3292,7 +3296,11 @@ void ram_setdirB(int32_t mkdirflag,char *dirB,struct ramchain_info *ram,uint32_t
     blocknum %= (64 * 64 * 64);
     ram_setdirA(dirA,ram);
     i = blocknum / (64 * 64);
+    #ifndef _WIN32
     sprintf(dirB,"%s/%05x_%05x",dirA,i*64*64,(i+1)*64*64-1);
+    #else
+    sprintf(dirB,"%s\\%05x_%05x",dirA,i*64*64,(i+1)*64*64-1);
+    #endif
     if ( mkdirflag != 0 && strcmp(dirB,lastdirB) != 0 )
     {
         ensure_dir(dirB);
@@ -3310,7 +3318,11 @@ void ram_setdirC(int mkdirflag,char *dirC,struct ramchain_info *ram,uint32_t blo
     ram_setdirB(mkdirflag,dirB,ram,blocknum);
     i = blocknum / (64 * 64);
     j = (blocknum - (i * 64 * 64)) / 64;
+    #ifndef _WIN32
     sprintf(dirC,"%s/%05x_%05x",dirB,i*64*64 + j*64,i*64*64 + (j+1)*64 - 1);
+    #else
+    sprintf(dirC,"%s\\%05x_%05x",dirB,i*64*64 + j*64,i*64*64 + (j+1)*64 - 1);
+    #endif
     if ( mkdirflag != 0 && strcmp(dirC,lastdirC) != 0 )
     {
         ensure_dir(dirC);
@@ -4206,10 +4218,8 @@ int32_t init_hashtable(struct ramchain_info *ram,char type)
     num = 0;
     if ( (hash->newfp= fopen(fname,"rb+")) != 0 )
     {
-#ifndef _WIN32
         if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
             return(0);
-#endif
         fileptr = (long)hash->M.fileptr;
         offset = 0;
         while ( (varsize= (int32_t)load_varint(&datalen,hash->newfp)) > 0 && (offset + datalen) <= hash->M.allocsize )
@@ -4489,7 +4499,11 @@ void init_ramchain(struct ramchain_info *ram)
     ram->R2 = calloc(1,sizeof(*ram->R2));
     init_hashtable(ram,'a'), init_hashtable(ram,'s'), init_hashtable(ram,'t');
     printf("%.1f seconds to init_ramchain.%s hashtables\n",(ram_millis() - startmilli)/1000.,ram->name);
+    #ifndef _WIN32
     strcpy(ram->dirpath,".");
+    #else
+    strcpy(ram->dirpath, "");
+    #endif
     ram->blocks.blocknum = ram->RTblocknum = (get_RTheight(ram) - ram->min_confirms);
     ram->maxblock = (ram->RTblocknum + 10000);
     init_ramchain_directories(ram);
