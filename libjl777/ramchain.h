@@ -4706,7 +4706,7 @@ void *process_coinblocks(void *_argcoinstr)
                     for (pass=1; pass<=4; pass++)
                     {
                         processed += process_ramchain(Ramchains[i],Ramchains[i]->mappedblocks[pass],Ramchains[i]->mappedblocks[pass-1],1000.);
-                        if ( Ramchains[i]->blocknum < Ramchains[i]->RTblocknum )
+                        if ( Ramchains[i]->mappedblocks[pass]->blocknum < Ramchains[i]->RTblocknum )
                             break;
                     }
                 }
