@@ -4564,7 +4564,6 @@ void process_coinblocks(char *argcoinstr)
     int32_t i,pass,processed = 0;
     ensure_SuperNET_dirs("ramchains");
 
-    argcoinstr = "BTCD";
     startmilli = ram_millis();
     for (i=0; i<Numramchains; i++)
         if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
