@@ -727,7 +727,7 @@ void ensure_SuperNET_dirs(char *backupdir)
         for (i=0; i<n; i++)
         {
             copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
-            //if ( (cp= get_coin_info(coinstr)) != 0 )
+            if ( is_active_coin(coinstr) != 0 )
             {
                 printf("ensure.%s\n",coinstr);
                 sprintf(dirname,"%s/%s",dirstr,coinstr), ensure_directory(dirname);
