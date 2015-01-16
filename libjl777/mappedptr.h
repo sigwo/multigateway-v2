@@ -9,7 +9,10 @@
 #ifndef xcode_mappedptr_h
 #define xcode_mappedptr_h
 
-
+#ifdef _WIN32
+#include <fcntl.h>
+#include "mman-win.h"
+#endif
 
 int32_t portable_mutex_init(portable_mutex_t *mutex)
 {
@@ -112,7 +115,7 @@ void *alloc_aligned_buffer(uint64_t allocsize)
 	return(ptr);
 }
 
-#ifndef WIN32
+
 void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)
 {
 	void *mmap64(void *addr,size_t len,int32_t prot,int32_t flags,int32_t fildes,off_t off);
@@ -139,6 +142,8 @@ void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)
 	if ( enablewrite != 0 )
 		rwflags |= PROT_WRITE;
 #ifdef __APPLE__
+	ptr = mmap(0,filesize,rwflags,flags,fd,0);
+#elif _WIN32
 	ptr = mmap(0,filesize,rwflags,flags,fd,0);
 #else
 	ptr = mmap64(0,filesize,rwflags,flags,fd,0);
@@ -293,7 +298,11 @@ void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t
 				if ( (fp=fopen(fname,"ab")) != 0 )
 				{
 					char *zeroes;
+  		    #ifndef _WIN32
                     zeroes = valloc(16*1024*1024);
+		    #else
+		    zeroes = _aligned_malloc(16*1024*1024, 4096);
+	            #endif
 					memset(zeroes,0,16*1024*1024);
 					n = allocsize - filesize;
 					while ( n > 16*1024*1024 )
@@ -319,6 +328,5 @@ void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t
 		(*ptrp) = mp->fileptr;
     return(mp->fileptr);
 }
-#endif
 
 #endif
