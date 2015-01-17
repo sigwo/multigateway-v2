@@ -14,7 +14,8 @@
 // struct ramchain_info *get_ramchain_info(char *coinstr);
 // also bitcoind_RPC.c, cJSON.h and cJSON.c are needed
 //
-// malloc, calloc, realloc, free, gettimeofday, strcpy, strncmp, strcmp, memcpy and other standard functions
+// malloc, calloc, realloc, free, gettimeofday, strcpy, strncmp, strcmp, memcpy, mmap, munmap, msync, truncate;
+
 //
 
 #ifdef INCLUDE_DEFINES
@@ -22,11 +23,7 @@
 #define ramchain_h
 
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
-extern void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t rwflag,char *fname);
-extern void close_mappedptr(struct mappedptr *mp);
 extern void calc_sha256cat(unsigned char hash[256 >> 3],unsigned char *src,int32_t len,unsigned char *src2,int32_t len2);
-void delete_file(char *fname,int32_t scrubflag);
-void ensure_dir(char *dirname);
 
 // ramchain functions for external access
 void *process_ramchains(void *argcoinstr);
@@ -48,6 +45,7 @@ char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,ch
 #include <memory.h>
 #include <math.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #include "uthash.h"
 #ifndef _WIN32
@@ -67,9 +65,7 @@ char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,ch
 
 #ifdef HUFF_GENMODE
 #define HUFF_NUMFREQS 1
-#define HUFF_READONLY 0
 #else
-#define HUFF_READONLY 1
 #define HUFF_NUMFREQS 1
 #endif
 
@@ -105,6 +101,14 @@ struct huffcode
     double totalbits,totalbytes,freqsum;
     int32_t numitems,maxbits,numnodes,depth,allocsize;
     int32_t tree[];
+};
+
+struct mappedptr
+{
+	char fname[512];
+	void *fileptr,*pending;
+	uint64_t allocsize,changedsize;
+	int32_t rwflag,actually_allocated;
 };
 
 union data_or_ptr { uint64_t data; void *ptr; };
@@ -180,6 +184,23 @@ char *_get_transaction(struct ramchain_info *ram,char *txidstr);
 cJSON *_get_blocktxarray(uint32_t *blockidp,int32_t *numtxp,struct ramchain_info *ram,cJSON *blockjson);
 cJSON *_get_blockjson(uint32_t *heightp,struct ramchain_info *ram,char *blockhashstr,uint32_t blocknum);
 char *_get_blockhashstr(struct ramchain_info *ram,uint32_t blocknum);
+void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
+
+// system functions
+void delete_file(char *fname,int32_t scrubflag);
+void ensure_dir(char *dirname);
+void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t rwflag,char *fname);
+void close_mappedptr(struct mappedptr *mp);
+void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite);
+int32_t release_map_file(void *ptr,uint64_t filesize);
+
+// string functions
+char hexbyte(int32_t c);
+int32_t _unhex(char c);
+int32_t unhex(char c);
+unsigned char _decode_hex(char *hex);
+int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
+int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
 
 #endif
 #endif
@@ -188,6 +209,337 @@ char *_get_blockhashstr(struct ramchain_info *ram,uint32_t blocknum);
 #ifdef INCLUDE_CODE
 #ifndef ramchain_code_h
 #define ramchain_code_h
+
+// >>>>>>>>>>>>>>  start system functions
+
+double _kb(double n) { return(n / 1024.); }
+double _mb(double n) { return(n / (1024.*1024.)); }
+double _gb(double n) { return(n / (1024.*1024.*1024.)); }
+double _hrs(double n) { return(n / 3600.); }
+double _days(double n) { return(n / (3600. * 24.)); }
+
+char *_mbstr(double n)
+{
+	static char str[100];
+	if ( n < 1024*1024*10 )
+		sprintf(str,"%.3fkb",_kb(n));
+	else if ( n < 1024*1024*1024 )
+		sprintf(str,"%.1fMB",_mb(n));
+	else
+		sprintf(str,"%.2fGB",_gb(n));
+	return(str);
+}
+
+char *_mbstr2(double n)
+{
+	static char str[100];
+	if ( n < 1024*1024*10 )
+		sprintf(str,"%.3fkb",_kb(n));
+	else if ( n < 1024*1024*1024 )
+		sprintf(str,"%.1fMB",_mb(n));
+	else
+		sprintf(str,"%.2fGB",_gb(n));
+	return(str);
+}
+
+uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (ptrval & 15); return(ptrval); }
+
+void *alloc_aligned_buffer(uint64_t allocsize)
+{
+	extern int posix_memalign (void **__memptr, size_t __alignment, size_t __size);
+	if ( allocsize > ((uint64_t)192L)*1024*1024*1024 )
+        { printf("%llu negative allocsize\n",(long long)allocsize); while ( 1 ) sleep(666); }
+	void *ptr;
+	allocsize = _align16(allocsize);
+	if ( posix_memalign(&ptr,16,allocsize) != 0 )
+		printf("alloc_aligned_buffer can't get allocsize %llu\n",(long long)allocsize);
+	if ( ((unsigned long)ptr & 15) != 0 )
+        { printf("%p[%llu] alloc_aligned_buffer misaligned\n",ptr,(long long)allocsize); while ( 1 ) sleep(666); }
+	if ( allocsize > 1024*1024*1024L )
+	{
+		void *tmp = ptr;
+		long n = allocsize;
+		while ( n > 1024*1024*1024L )
+		{
+			//printf("ptr %p %ld: tmp %p, n %ld\n",ptr,allocsize,tmp,n);
+			memset(tmp,0,1024*1024*1024L);
+			tmp = (void *)((long)tmp + 1024*1024*1024L);
+			n -= 1024*1024*1024L;
+			//printf("AFTER ptr %p %ld: tmp %p, n %ld\n",ptr,allocsize,tmp,n);
+		}
+		if ( n > 0 )
+			memset(tmp,0,n);
+	}
+	else memset(ptr,0,allocsize);
+	return(ptr);
+}
+
+void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)
+{
+	void *mmap64(void *addr,size_t len,int32_t prot,int32_t flags,int32_t fildes,off_t off);
+	int32_t fd,rwflags,flags = MAP_FILE|MAP_SHARED;
+	uint64_t filesize;
+    void *ptr = 0;
+	*filesizep = 0;
+	if ( enablewrite != 0 )
+		fd = open(fname,O_RDWR);
+	else fd = open(fname,O_RDONLY);
+	if ( fd < 0 )
+	{
+		//printf("map_file: error opening enablewrite.%d %s\n",enablewrite,fname);
+        return(0);
+	}
+    if ( *filesizep == 0 )
+        filesize = (uint64_t)lseek(fd,0,SEEK_END);
+    else
+        filesize = *filesizep;
+    //if ( filesize > MAX_MAPFILE_SIZE ) filesize = MAX_MAPFILE_SIZE;
+	// printf("filesize %ld vs expected %ld\n",filesize,*filesizep);
+	rwflags = PROT_READ;
+	if ( enablewrite != 0 )
+		rwflags |= PROT_WRITE;
+#ifdef __APPLE__
+	ptr = mmap(0,filesize,rwflags,flags,fd,0);
+#else
+	ptr = mmap64(0,filesize,rwflags,flags,fd,0);
+#endif
+	close(fd);
+    if ( ptr == 0 || ptr == MAP_FAILED )
+	{
+		printf("map_file.write%d: mapping %s failed? mp %p\n",enablewrite,fname,ptr);
+		//fatal("FATAL ERROR");
+		return(0);
+	}
+	//if ( 0 && MACHINEID == 2 )
+	//	printf("MAPPED(%s).rw%d %lx %ld %.1fmb    | ",fname,enablewrite,filesize,filesize,(double)filesize/1000000);
+	*filesizep = filesize;
+	return(ptr);
+}
+
+int32_t release_map_file(void *ptr,uint64_t filesize)
+{
+	int32_t retval;
+    if ( ptr == 0 )
+	{
+		printf("release_map_file: null ptr\n");
+		return(-1);
+	}
+	retval = munmap(ptr,filesize);
+	if ( retval != 0 )
+		printf("release_map_file: munmap error %p %llu: err %d\n",ptr,(long long)filesize,retval);
+	//else
+	//	printf("released %p %ld\n",ptr,filesize);
+	return(retval);
+}
+
+void _close_mappedptr(struct mappedptr *mp)
+{
+	//if ( MACHINEID == 2 && mp->actually_allocated == 0 )
+	// {
+	// printf("map_mappedptr warning: (%s) actually_allocated flag is 0?\n",mp->fname);
+	// mp->actually_allocated = 0;
+	// }
+	if ( mp->actually_allocated != 0 && mp->fileptr != 0 )
+		free(mp->fileptr);
+	else if ( mp->fileptr != 0 )
+		release_map_file(mp->fileptr,mp->allocsize);
+	mp->fileptr = 0;
+}
+
+void close_mappedptr(struct mappedptr *mp)
+{
+	struct mappedptr tmp;
+	tmp = *mp;
+	_close_mappedptr(mp);
+	memset(mp,0,sizeof(*mp));
+	mp->actually_allocated = tmp.actually_allocated;
+	mp->allocsize = tmp.allocsize;
+	mp->rwflag = tmp.rwflag;
+	strcpy(mp->fname,tmp.fname);
+}
+
+int32_t open_mappedptr(struct mappedptr *mp)
+{
+	uint64_t allocsize = mp->allocsize;
+	if ( mp->actually_allocated != 0 )
+	{
+		if ( mp->fileptr == 0 )
+			mp->fileptr = alloc_aligned_buffer(mp->allocsize);
+		else memset(mp->fileptr,0,mp->allocsize);
+		return(0);
+	}
+	else
+	{
+		if ( mp->fileptr != 0 )
+		{
+			//printf("opening already open mappedptr, pending %p\n",mp->pending);
+			close_mappedptr(mp);
+		}
+        mp->allocsize = allocsize;
+		// printf("calling map_file with expected %ld\n",mp->allocsize);
+		mp->fileptr = map_file(mp->fname,&mp->allocsize,mp->rwflag);
+		if ( mp->fileptr == 0 || mp->allocsize != allocsize )
+		{
+			//printf("error mapping(%s) ptr %p mapped %ld vs allocsize %ld\n",mp->fname,mp->fileptr,mp->allocsize,allocsize);
+			return(-1);
+		}
+		//if ( 0 && MACHINEID == 2 )
+		//	printf("mapped (%s) -> %p %ld %s\n",mp->fname,mp->fileptr,mp->allocsize,_mbstr(mp->allocsize));
+	}
+	return(0);
+}
+
+void sync_mappedptr(struct mappedptr *mp,uint64_t len)
+{
+    static uint64_t Sync_total;
+	int32_t err;
+	if ( mp->actually_allocated != 0 )
+		return;
+	if ( len == 0 )
+		len = mp->allocsize;
+	//printf("sync mp.%p len.%ld\n",mp,len);
+	err = msync(mp->fileptr,len,MS_ASYNC);
+	if ( err != 0 )
+		printf("sync (%s) len %llu, err %d\n",mp->fname,(long long)len,err);
+	else if ( 0 )
+	{
+		release_map_file(mp->fileptr,mp->allocsize);
+		mp->fileptr = 0;
+		mp->fileptr = map_file(mp->fname,&mp->allocsize,mp->rwflag);
+		if ( mp->fileptr == 0 )
+            { printf("couldn't get mp->fileptr after sync and close: (%s)\n",mp->fname); while ( 1 ) sleep(666); }
+		Sync_total += len;
+	}
+}
+
+void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t rwflag,char *fname)
+{
+	FILE *fp;
+	uint64_t i,n,filesize;
+    if ( fname != 0 )
+	{
+		if ( strcmp(mp->fname,fname) == 0 )
+		{
+			if ( mp->fileptr != 0 )
+			{
+				release_map_file(mp->fileptr,mp->allocsize);
+				mp->fileptr = 0;
+			}
+			open_mappedptr(mp);
+			if ( ptrp != 0 )
+				(*ptrp) = mp->fileptr;
+			return(mp->fileptr);
+		}
+		strcpy(mp->fname,fname);
+	}
+	else mp->actually_allocated = 1;
+	mp->rwflag = rwflag;
+	mp->allocsize = allocsize;
+	if ( open_mappedptr(mp) != 0 )
+	{
+	    //printf("init_mappedptr %s.rwflag.%d\n",fname,rwflag);
+        if ( allocsize != 0 )
+			printf("error mapping(%s) rwflag.%d ptr %p mapped %llu vs allocsize %llu %s\n",fname,rwflag,mp->fileptr,(long long)mp->allocsize,(long long)allocsize,_mbstr(allocsize));
+		if ( rwflag != 0 )
+		{
+			filesize = mp->allocsize;
+			if  ( mp->fileptr != 0 )
+				release_map_file(mp->fileptr,mp->allocsize);
+			mp->allocsize = allocsize;
+			mp->changedsize = (allocsize - filesize);
+			if ( filesize < allocsize )
+			{
+				if ( (fp=fopen(fname,"ab")) != 0 )
+				{
+					char *zeroes;
+                    zeroes = valloc(16*1024*1024);
+					memset(zeroes,0,16*1024*1024);
+					n = allocsize - filesize;
+					while ( n > 16*1024*1024 )
+					{
+						fwrite(zeroes,1,16*1024*1024,fp);
+						n -= 16*1024*1024;
+						fprintf(stderr,".");
+					}
+					for (i=0; i<n; i++)
+						fputc(0,fp);
+					fclose(fp);
+                    free(zeroes);
+                }
+			}
+			else if ( filesize > allocsize )
+				truncate(fname,allocsize);
+			open_mappedptr(mp);
+			if ( mp->fileptr == 0 || mp->allocsize != allocsize )
+				printf("SECOND error mapping(%s) ptr %p mapped %llu vs allocsize %llu\n",fname,mp->fileptr,(long long)mp->allocsize,(long long)allocsize);
+		}
+	}
+	if ( ptrp != 0 )
+		(*ptrp) = mp->fileptr;
+    return(mp->fileptr);
+}
+
+void fix_windows_insanity(char *str)
+{
+#ifdef WIN32
+    int32_t i;
+    for (i=0; str[i]!=0; i++)
+        if ( str[i] == '/' )
+            str[i] = '\\';
+#endif
+}
+
+void ensure_dir(char *dirname) // jl777: does this work in windows?
+{
+    FILE *fp;
+    char fname[512],cmd[512];
+    sprintf(fname,"%s/tmp",dirname);
+    fix_windows_insanity(fname);
+    if ( (fp= fopen(fname,"rb")) == 0 )
+    {
+        sprintf(cmd,"mkdir %s",dirname);
+        fix_windows_insanity(cmd);
+        if ( system(cmd) != 0 )
+            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
+        fp = fopen(fname,"wb");
+        if ( fp != 0 )
+            fclose(fp);
+    }
+    else fclose(fp);
+}
+
+void delete_file(char *fname,int32_t scrubflag)
+{
+    FILE *fp;
+    char cmdstr[1024],*OS_rmstr;
+    long i,fpos;
+#ifdef WIN32
+    char _fname[1024];
+    OS_rmstr = "del";
+    strcpy(_fname,fname);
+    fix_windows_insanity(_fname);
+    fname = _fname;
+#else
+    OS_rmstr = "rm";
+#endif
+    if ( (fp= fopen(fname,"rb+")) != 0 )
+    {
+        printf("delete(%s)\n",fname);
+        if ( scrubflag != 0 )
+        {
+            fseek(fp,0,SEEK_END);
+            fpos = ftell(fp);
+            rewind(fp);
+            for (i=0; i<fpos; i++)
+                fputc(0xff,fp);
+            fflush(fp);
+        }
+        fclose(fp);
+        sprintf(cmdstr,"%s %s",OS_rmstr,fname);
+        fix_windows_insanity(cmdstr);
+        system(cmdstr);
+    }
+}
 
 double ram_millis(void)
 {
@@ -214,30 +566,429 @@ double estimate_completion(char *coinstr,double startmilli,int32_t processed,int
     return(numleft * rate);
 }
 
-int32_t ram_get_blockoffset(struct mappedblocks *blocks,uint32_t blocknum)
+// >>>>>>>>>>>>>>  start string functions
+char hexbyte(int32_t c)
 {
-    int32_t offset = -1;
-    if ( blocknum >= blocks->firstblock )
+    c &= 0xf;
+    if ( c < 10 )
+        return('0'+c);
+    else if ( c < 16 )
+        return('a'+c-10);
+    else return(0);
+}
+
+int32_t _unhex(char c)
+{
+    if ( c >= '0' && c <= '9' )
+        return(c - '0');
+    else if ( c >= 'a' && c <= 'f' )
+        return(c - 'a' + 10);
+    return(-1);
+}
+
+int32_t unhex(char c)
+{
+    int32_t hex;
+    if ( (hex= _unhex(c)) < 0 )
     {
-        offset = (blocknum - blocks->firstblock);
-        if ( offset >= blocks->numblocks )
-            offset = -1;
+        //printf("unhex: illegal hexchar.(%c)\n",c);
     }
-    return(offset);
+    return(hex);
 }
 
-HUFF **ram_get_hpptr(struct mappedblocks *blocks,uint32_t blocknum)
+unsigned char _decode_hex(char *hex)
 {
-    int32_t offset = ram_get_blockoffset(blocks,blocknum);
-    return((offset < 0) ? 0 : &blocks->hps[offset]);
+    return((unhex(hex[0])<<4) | unhex(hex[1]));
 }
 
-struct mappedptr *ram_get_M(struct mappedblocks *blocks,uint32_t blocknum)
+int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex)
 {
-    int32_t offset = ram_get_blockoffset(blocks,blocknum);
-    return((offset < 0) ? 0 : &blocks->M[offset]);
+    int32_t adjust,i = 0;
+    if ( n == 0 || (hex[n*2+1] == 0 && hex[n*2] != 0) )
+    {
+        bytes[0] = unhex(hex[0]);
+        printf("decode_hex n.%d hex[0] (%c) -> %d\n",n,hex[0],bytes[0]);
+        //while ( 1 ) sleep(1);
+        bytes++;
+        hex++;
+        adjust = 1;
+    } else adjust = 0;
+    if ( n > 0 )
+    {
+        for (i=0; i<n; i++)
+            bytes[i] = _decode_hex(&hex[i*2]);
+    }
+    //bytes[i] = 0;
+    return(n + adjust);
 }
 
+int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len)
+{
+    int32_t i;
+    if ( len == 0 )
+    {
+        hexbytes[0] = 0;
+        return(1);
+    }
+    for (i=0; i<len; i++)
+    {
+        hexbytes[i*2] = hexbyte((message[i]>>4) & 0xf);
+        hexbytes[i*2 + 1] = hexbyte(message[i] & 0xf);
+        //printf("i.%d (%02x) [%c%c]\n",i,message[i],hexbytes[i*2],hexbytes[i*2+1]);
+    }
+    hexbytes[len*2] = 0;
+    //printf("len.%ld\n",len*2+1);
+    return((int32_t)len*2+1);
+}
+
+// >>>>>>>>>>>>>>  start bitcoind_RPC interface functions
+#define OP_HASH160_OPCODE 0xa9
+#define OP_EQUAL_OPCODE 0x87
+#define OP_DUP_OPCODE 0x76
+#define OP_EQUALVERIFY_OPCODE 0x88
+#define OP_CHECKSIG_OPCODE 0xac
+#define OP_RETURN_OPCODE 0x6a
+
+int32_t _add_opcode(char *hex,int32_t offset,int32_t opcode)
+{
+    hex[offset + 0] = hexbyte((opcode >> 4) & 0xf);
+    hex[offset + 1] = hexbyte(opcode & 0xf);
+    return(offset+2);
+}
+
+void _calc_script(char *script,char *pubkey,int msigmode)
+{
+    int32_t offset,len;
+    offset = 0;
+    len = (int32_t)strlen(pubkey);
+    offset = _add_opcode(script,offset,OP_DUP_OPCODE);
+    offset = _add_opcode(script,offset,OP_HASH160_OPCODE);
+    offset = _add_opcode(script,offset,len/2);
+    memcpy(script+offset,pubkey,len), offset += len;
+    offset = _add_opcode(script,offset,OP_EQUALVERIFY_OPCODE);
+    offset = _add_opcode(script,offset,OP_CHECKSIG_OPCODE);
+    script[offset] = 0;
+}
+
+int32_t _origconvert_to_bitcoinhex(char *scriptasm)
+{
+    //"asm" : "OP_HASH160 db7f9942da71fd7a28f4a4b2e8c51347240b9e2d OP_EQUAL",
+    char *hex;
+    int32_t middlelen,offset,len,OP_HASH160_len,OP_EQUAL_len;
+    len = (int32_t)strlen(scriptasm);
+    OP_HASH160_len = (int32_t)strlen("OP_HASH160");
+    OP_EQUAL_len = (int32_t)strlen("OP_EQUAL");
+    if ( strncmp(scriptasm,"OP_HASH160",OP_HASH160_len) == 0 && strncmp(scriptasm+len-OP_EQUAL_len,"OP_EQUAL",OP_EQUAL_len) == 0 )
+    {
+        hex = calloc(1,len+1);
+        offset = 0;
+        offset = _add_opcode(hex,offset,OP_HASH160_OPCODE);
+        middlelen = len - OP_HASH160_len - OP_EQUAL_len - 2;
+        offset = _add_opcode(hex,offset,middlelen/2);
+        memcpy(hex+offset,scriptasm+OP_HASH160_len+1,middlelen);
+        hex[offset+middlelen] = hexbyte((OP_EQUAL_OPCODE >> 4) & 0xf);
+        hex[offset+middlelen+1] = hexbyte(OP_EQUAL_OPCODE & 0xf);
+        hex[offset+middlelen+2] = 0;
+        if ( Debuglevel > 2 )
+            printf("(%s) -> (%s)\n",scriptasm,hex);
+        strcpy(scriptasm,hex);
+        free(hex);
+        return((int32_t)(2+middlelen+2));
+    }
+    printf("cant assembly anything but OP_HASH160 + <key> + OP_EQUAL (%s)\n",scriptasm);
+    strcpy(scriptasm,"nonstandard");
+    return(-1);
+}
+
+int32_t _convert_to_bitcoinhex(char *scriptasm)
+{
+    char *hex,pubkey[512],*endstr;
+    int32_t i,j,middlelen,len,OP_HASH160_len,OP_EQUAL_len;
+    len = (int32_t)strlen(scriptasm);
+    OP_HASH160_len = (int32_t)strlen("OP_DUP OP_HASH160");
+    OP_EQUAL_len = (int32_t)strlen("OP_EQUALVERIFY OP_CHECKSIG");
+    if ( strncmp(scriptasm,"OP_DUP OP_HASH160",OP_HASH160_len) == 0 && strncmp(scriptasm+len-OP_EQUAL_len,"OP_EQUALVERIFY OP_CHECKSIG",OP_EQUAL_len) == 0 )
+    {
+        middlelen = len - OP_HASH160_len - OP_EQUAL_len - 2;
+        memcpy(pubkey,scriptasm+OP_HASH160_len+1,middlelen);
+        pubkey[middlelen] = 0;
+        
+        hex = calloc(1,len+1);
+        _calc_script(hex,pubkey,0);
+        strcpy(scriptasm,hex);
+        free(hex);
+        return((int32_t)(2+middlelen+2));
+    }
+    else
+    {
+        endstr = scriptasm + strlen(scriptasm) - strlen(" OP_CHECKSIG");
+        if ( strcmp(endstr," OP_CHECKSIG") == 0 )
+        {
+            strcpy(endstr,"ac");
+            //printf("NEWSCRIPT.[%s]\n",scriptasm);
+            return((int32_t)strlen(scriptasm));
+        }
+        else if ( strncmp(scriptasm,"OP_RETURN ",strlen("OP_RETURN ")) == 0 )
+        {
+            //printf("OP_RETURN.(%s) -> ",scriptasm);
+            _add_opcode(scriptasm,0,OP_RETURN_OPCODE);
+            for (i=2,j=strlen("OP_RETURN "); j<=len; j++,i++)
+                scriptasm[i] = scriptasm[j];
+            //printf("(%s)\n",scriptasm);
+            return((int32_t)strlen(scriptasm));
+        }
+    }
+    return(_origconvert_to_bitcoinhex(scriptasm));
+}
+
+cJSON *_script_has_address(int32_t *nump,cJSON *scriptobj)
+{
+    int32_t i,n;
+    cJSON *addresses,*addrobj;
+    if ( scriptobj == 0 )
+        return(0);
+    addresses = cJSON_GetObjectItem(scriptobj,"addresses");
+    *nump = 0;
+    if ( addresses != 0 )
+    {
+        *nump = n = cJSON_GetArraySize(addresses);
+        for (i=0; i<n; i++)
+        {
+            addrobj = cJSON_GetArrayItem(addresses,i);
+            return(addrobj);
+        }
+    }
+    return(0);
+}
+
+int32_t _extract_txvals(char *coinaddr,char *script,int32_t nohexout,cJSON *txobj)
+{
+    int32_t numaddresses;
+    cJSON *scriptobj,*addrobj,*hexobj;
+    scriptobj = cJSON_GetObjectItem(txobj,"scriptPubKey");
+    if ( scriptobj != 0 )
+    {
+        addrobj = _script_has_address(&numaddresses,scriptobj);
+        if ( coinaddr != 0 )
+            copy_cJSON(coinaddr,addrobj);
+        if ( nohexout != 0 )
+            hexobj = cJSON_GetObjectItem(scriptobj,"asm");
+        else
+        {
+            hexobj = cJSON_GetObjectItem(scriptobj,"hex");
+            if ( hexobj == 0 )
+                hexobj = cJSON_GetObjectItem(scriptobj,"asm"), nohexout = 1;
+        }
+        if ( script != 0 )
+        {
+            copy_cJSON(script,hexobj);
+            if ( nohexout != 0 )
+                _convert_to_bitcoinhex(script);
+        }
+        return(0);
+    }
+    return(-1);
+}
+
+void _set_string(char type,char *dest,char *src,long max)
+{
+    if ( src == 0 || src[0] == 0 )
+        sprintf(dest,"ffff");
+    else if ( strlen(src) < max-1)
+        strcpy(dest,src);
+    else sprintf(dest,"nonstandard");
+}
+
+uint64_t _get_txvouts(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *ram,cJSON *voutsobj)
+{
+    cJSON *item;
+    uint64_t value,total = 0;
+    struct rawvout *v;
+    int32_t i,numvouts = 0;
+    char coinaddr[8192],script[8192];
+    tx->firstvout = raw->numrawvouts;
+    if ( voutsobj != 0 && is_cJSON_Array(voutsobj) != 0 && (numvouts= cJSON_GetArraySize(voutsobj)) > 0 && tx->firstvout+numvouts < MAX_BLOCKTX )
+    {
+        for (i=0; i<numvouts; i++,raw->numrawvouts++)
+        {
+            item = cJSON_GetArrayItem(voutsobj,i);
+            value = conv_cJSON_float(item,"value");
+            v = &raw->voutspace[raw->numrawvouts];
+            memset(v,0,sizeof(*v));
+            v->value = value;
+            total += value;
+            _extract_txvals(coinaddr,script,1,item); // default to nohexout
+            _set_string('a',v->coinaddr,coinaddr,sizeof(v->coinaddr));
+            _set_string('s',v->script,script,sizeof(v->script));
+        }
+    } else printf("error with vouts\n");
+    tx->numvouts = numvouts;
+    return(total);
+}
+
+int32_t _get_txvins(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *ram,cJSON *vinsobj)
+{
+    cJSON *item;
+    struct rawvin *v;
+    int32_t i,numvins = 0;
+    char txidstr[8192],coinbase[8192];
+    tx->firstvin = raw->numrawvins;
+    if ( vinsobj != 0 && is_cJSON_Array(vinsobj) != 0 && (numvins= cJSON_GetArraySize(vinsobj)) > 0 && tx->firstvin+numvins < MAX_BLOCKTX )
+    {
+        for (i=0; i<numvins; i++,raw->numrawvins++)
+        {
+            item = cJSON_GetArrayItem(vinsobj,i);
+            if ( numvins == 1  )
+            {
+                copy_cJSON(coinbase,cJSON_GetObjectItem(item,"coinbase"));
+                if ( strlen(coinbase) > 1 )
+                    return(0);
+            }
+            copy_cJSON(txidstr,cJSON_GetObjectItem(item,"txid"));
+            v = &raw->vinspace[raw->numrawvins];
+            memset(v,0,sizeof(*v));
+            v->vout = (int)get_cJSON_int(item,"vout");
+            _set_string('t',v->txidstr,txidstr,sizeof(v->txidstr));
+        }
+    } else printf("error with vins\n");
+    tx->numvins = numvins;
+    return(numvins);
+}
+
+char *_get_transaction(struct ramchain_info *ram,char *txidstr)
+{
+    char *rawtransaction=0,txid[4096];
+    sprintf(txid,"[\"%s\", 1]",txidstr);
+    //printf("get_transaction.(%s)\n",txidstr);
+    rawtransaction = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getrawtransaction",txid);
+    return(rawtransaction);
+}
+
+uint64_t _get_txidinfo(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *ram,int32_t txind,char *txidstr)
+{
+    char *retstr = 0;
+    cJSON *txjson;
+    uint64_t total = 0;
+    if ( strlen(txidstr) < sizeof(tx->txidstr)-1 )
+        strcpy(tx->txidstr,txidstr);
+    tx->numvouts = tx->numvins = 0;
+    if ( (retstr= _get_transaction(ram,txidstr)) != 0 )
+    {
+        if ( (txjson= cJSON_Parse(retstr)) != 0 )
+        {
+            _get_txvins(raw,tx,ram,cJSON_GetObjectItem(txjson,"vin"));
+            total = _get_txvouts(raw,tx,ram,cJSON_GetObjectItem(txjson,"vout"));
+            free_json(txjson);
+        } else printf("update_txid_infos parse error.(%s)\n",retstr);
+        free(retstr);
+    } else printf("error getting.(%s)\n",txidstr);
+    //printf("tx.%d: (%s) numvins.%d numvouts.%d (raw %d %d)\n",txind,tx->txidstr,tx->numvins,tx->numvouts,raw->numrawvins,raw->numrawvouts);
+    return(total);
+}
+
+char *_get_blockhashstr(struct ramchain_info *ram,uint32_t blocknum)
+{
+    char numstr[128],*blockhashstr=0;
+    sprintf(numstr,"%u",blocknum);
+    blockhashstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getblockhash",numstr);
+    if ( blockhashstr == 0 || blockhashstr[0] == 0 )
+    {
+        printf("couldnt get blockhash for %u\n",blocknum);
+        if ( blockhashstr != 0 )
+            free(blockhashstr);
+        return(0);
+    }
+    return(blockhashstr);
+}
+
+cJSON *_get_blockjson(uint32_t *heightp,struct ramchain_info *ram,char *blockhashstr,uint32_t blocknum)
+{
+    cJSON *json = 0;
+    int32_t flag = 0;
+    char buf[1024],*blocktxt = 0;
+    if ( blockhashstr == 0 )
+        blockhashstr = _get_blockhashstr(ram,blocknum), flag = 1;
+    if ( blockhashstr != 0 )
+    {
+        sprintf(buf,"\"%s\"",blockhashstr);
+        //printf("get_blockjson.(%d %s)\n",blocknum,blockhashstr);
+        blocktxt = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getblock",buf);
+        if ( blocktxt != 0 && blocktxt[0] != 0 && (json= cJSON_Parse(blocktxt)) != 0 && heightp != 0 )
+            *heightp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0xffffffff);
+        if ( flag != 0 && blockhashstr != 0 )
+            free(blockhashstr);
+        if ( blocktxt != 0 )
+            free(blocktxt);
+    }
+    return(json);
+}
+
+cJSON *_get_blocktxarray(uint32_t *blockidp,int32_t *numtxp,struct ramchain_info *ram,cJSON *blockjson)
+{
+    cJSON *txarray = 0;
+    if ( blockjson != 0 )
+    {
+        *blockidp = (uint32_t)get_API_int(cJSON_GetObjectItem(blockjson,"height"),0);
+        txarray = cJSON_GetObjectItem(blockjson,"tx");
+        *numtxp = cJSON_GetArraySize(txarray);
+    }
+    return(txarray);
+}
+
+uint32_t _get_blockinfo(struct rawblock *raw,struct ramchain_info *ram,uint32_t blocknum)
+{
+    char txidstr[8192],mintedstr[8192];
+    cJSON *json,*txobj;
+    uint32_t blockid;
+    int32_t txind,n;
+    uint64_t total = 0;
+    ram_clear_rawblock(raw,1);
+    //raw->blocknum = blocknum;
+    //printf("_get_blockinfo.%d\n",blocknum);
+    raw->minted = raw->numtx = raw->numrawvins = raw->numrawvouts = 0;
+    if ( (json= _get_blockjson(0,ram,0,blocknum)) != 0 )
+    {
+        raw->blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0);
+        copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"mint"));
+        if ( mintedstr[0] != 0 )
+            raw->minted = (uint64_t)(atof(mintedstr) * SATOSHIDEN);
+        if ( (txobj= _get_blocktxarray(&blockid,&n,ram,json)) != 0 && blockid == blocknum && n < MAX_BLOCKTX )
+        {
+            for (txind=0; txind<n; txind++)
+            {
+                copy_cJSON(txidstr,cJSON_GetArrayItem(txobj,txind));
+                //printf("block.%d txind.%d TXID.(%s)\n",blocknum,txind,txidstr);
+                total += _get_txidinfo(raw,&raw->txspace[raw->numtx++],ram,txind,txidstr);
+            }
+        } else printf("error _get_blocktxarray for block.%d got %d, n.%d vs %d\n",blocknum,blockid,n,MAX_BLOCKTX);
+        if ( raw->minted == 0 )
+            raw->minted = total;
+        free_json(json);
+    } else printf("get_blockjson error parsing.(%s)\n",txidstr);
+    //printf("BLOCK.%d: block.%d numtx.%d minted %.8f rawnumvins.%d rawnumvouts.%d\n",blocknum,raw->blocknum,raw->numtx,dstr(raw->minted),raw->numrawvins,raw->numrawvouts);
+    return(raw->numtx);
+}
+
+uint32_t _get_RTheight(struct ramchain_info *ram)
+{
+    char *retstr;
+    cJSON *json;
+    uint32_t height = 0;
+    // printf("RTheight.(%s) (%s) (%s)\n",ram->name,ram->serverport,ram->userpass);
+    retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getinfo","");
+    if ( retstr != 0 )
+    {
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            height = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocks"),0);
+            free_json(json);
+        }
+        free(retstr);
+    }
+    return(height);
+}
+
+// >>>>>>>>>>>>>>  start bitstream functions
 static uint8_t huffmasks[8] = { (1<<0), (1<<1), (1<<2), (1<<3), (1<<4), (1<<5), (1<<6), (1<<7) };
 static uint8_t huffoppomasks[8] = { ~(1<<0), ~(1<<1), ~(1<<2), ~(1<<3), ~(1<<4), ~(1<<5), ~(1<<6), (uint8_t)~(1<<7) };
 
@@ -700,9 +1451,8 @@ HUFF *hload(long *offsetp,FILE *fp,char *fname)
     return(hp);
 }
 
-// misc display functions:
-
-uint64_t _reversebits(uint64_t x,int32_t n)
+// >>>>>>>>>>>>>>  start huffman functions
+uint64_t huff_reversebits(uint64_t x,int32_t n)
 {
     uint64_t rev = 0;
     int32_t i = 0;
@@ -752,7 +1502,7 @@ int32_t huff_dispitem(int32_t dispflag,const struct huffitem *item,int32_t frequ
     {
         if ( dispflag != 0 )
         {
-            codebits = _reversebits(item->code.bits,n);
+            codebits = huff_reversebits(item->code.bits,n);
             printf("%06d: freq.%-6d (%8s).%d\n",item->code.rawind,item->freq[frequi],huff_str(codebits,n),n);
         }
         return(1);
@@ -773,7 +1523,7 @@ void huff_disp(int32_t verboseflag,struct huffcode *huff,struct huffitem *items,
 // huff bitcode calculation functions
 
 struct huffheap { uint32_t *f,*h,n,s,cs; };
-struct huffheap *_heap_create(uint32_t s,uint32_t *f)
+struct huffheap *huff_heap_create(uint32_t s,uint32_t *f)
 {
     struct huffheap *h;
     h = malloc(sizeof(struct huffheap));
@@ -785,15 +1535,15 @@ struct huffheap *_heap_create(uint32_t s,uint32_t *f)
     return(h);
 }
 
-void _heap_destroy(struct huffheap *heap)
+void huff_heap_destroy(struct huffheap *heap)
 {
     free(heap->h);
     free(heap);
 }
 
-#define swap_(I,J) do { int t_; t_ = a[(I)];	\
+#define huffswap_(I,J) do { int t_; t_ = a[(I)];	\
 a[(I)] = a[(J)]; a[(J)] = t_; } while(0)
-void _heap_sort(struct huffheap *heap)
+void huff_heap_sort(struct huffheap *heap)
 {
     uint32_t i=1,j=2; // gnome sort
     uint32_t *a = heap->h;
@@ -803,15 +1553,15 @@ void _heap_sort(struct huffheap *heap)
             i = j, j++;
         else
         {
-            swap_(i-1, i);
+            huffswap_(i-1, i);
             i--;
             i = (i == 0) ? j++ : i;
         }
     }
 }
-#undef swap_
+#undef huffswap_
 
-void _heap_add(struct huffheap *heap,uint32_t ind)
+void huff_heap_add(struct huffheap *heap,uint32_t ind)
 {
     //printf("add to heap ind.%d n.%d s.%d\n",ind,heap->n,heap->s);
     if ( (heap->n + 1) > heap->s )
@@ -820,10 +1570,10 @@ void _heap_add(struct huffheap *heap,uint32_t ind)
         heap->s += heap->cs;
     }
     heap->h[heap->n++] = ind;
-    _heap_sort(heap);
+    huff_heap_sort(heap);
 }
 
-int32_t _heap_remove(struct huffheap *heap)
+int32_t huff_heap_remove(struct huffheap *heap)
 {
     if ( heap->n > 0 )
         return(heap->h[--heap->n]);
@@ -844,7 +1594,7 @@ int32_t huff_init(double *freqsump,int32_t **predsp,uint32_t **revtreep,struct h
     efreqs = calloc(2 * numitems,sizeof(*efreqs));
     for (i=0; i<numitems; i++)
         efreqs[i] = items[i]->freq[frequi];// * ((items[i]->wt != 0) ? items[i]->wt : 1);
-    if ( (heap= _heap_create(numitems*2,efreqs)) == NULL )
+    if ( (heap= huff_heap_create(numitems*2,efreqs)) == NULL )
     {
         printf("error _heap_create for numitems.%d\n",numitems);
         free(efreqs);
@@ -858,28 +1608,28 @@ int32_t huff_init(double *freqsump,int32_t **predsp,uint32_t **revtreep,struct h
         {
             n++;
             freqsum += items[i]->freq[frequi];
-            _heap_add(heap,i);
+            huff_heap_add(heap,i);
         }
     //printf("added n.%d items: freqsum %.0f\n",n,freqsum);
     *freqsump = freqsum;
     depth = 0;
     while ( heap->n > 1 )
     {
-        r1 = _heap_remove(heap);
-        r2 = _heap_remove(heap);
+        r1 = huff_heap_remove(heap);
+        r2 = huff_heap_remove(heap);
         efreqs[extf] = (efreqs[r1] + efreqs[r2]);
         revtree[(depth << 1) + 1] = r1;
         revtree[(depth << 1) + 0] = r2;
         depth++;
-        _heap_add(heap,extf);
+        huff_heap_add(heap,extf);
         preds[r1] = extf;
         preds[r2] = -extf;
         //printf("n.%d: r1.%d (%d) <- %d | r2.%d (%d) <- %d\n",heap->n,r1,efreqs[r1],extf,r2,efreqs[r2],-extf);
         extf++;
     }
-    r1 = _heap_remove(heap);
+    r1 = huff_heap_remove(heap);
     preds[r1] = r1;
-    _heap_destroy(heap);
+    huff_heap_destroy(heap);
     free(efreqs);
     *predsp = preds;
     *revtreep = revtree;
@@ -916,13 +1666,13 @@ int32_t huff_calc(int32_t dispflag,int32_t *nonzp,double *totalbytesp,double *to
             nonz++;
             if ( (item= items[i]) != 0 )
             {
-                //item->codebits = _reversebits(codebits,numbits);
+                //item->codebits = huff_reversebits(codebits,numbits);
                 //item->numbits = numbits;
                 item->code.numbits = numbits;
-                item->code.bits = _reversebits(codebits,numbits);
+                item->code.bits = huff_reversebits(codebits,numbits);
                 //item->code.rawind = item->rawind;
-                if ( numbits > 32 || item->code.numbits != numbits || item->code.bits != _reversebits(codebits,numbits) || item->code.rawind != item->code.rawind )
-                    printf("error setting code.bits: item->code.numbits %d != %d numbits || item->code.bits %u != %llu _reversebits(codebits,numbits) || item->code.rawind %d != %d item->rawind\n",item->code.numbits,numbits,item->code.bits,(long long)_reversebits(codebits,numbits),item->code.rawind,item->code.rawind);
+                if ( numbits > 32 || item->code.numbits != numbits || item->code.bits != huff_reversebits(codebits,numbits) || item->code.rawind != item->code.rawind )
+                    printf("error setting code.bits: item->code.numbits %d != %d numbits || item->code.bits %u != %llu _reversebits(codebits,numbits) || item->code.rawind %d != %d item->rawind\n",item->code.numbits,numbits,item->code.bits,(long long)huff_reversebits(codebits,numbits),item->code.rawind,item->code.rawind);
                 totalbits += numbits * item->freq[frequi];
                 totalbytes += wt * item->freq[frequi];
                 if ( dispflag != 0 )
@@ -938,7 +1688,7 @@ int32_t huff_calc(int32_t dispflag,int32_t *nonzp,double *totalbytesp,double *to
 }
 
 #ifdef HUFF_TESTDECODE
-int32_t decodetest(uint32_t *indp,int32_t *tree,int32_t depth,int32_t val,int32_t numitems)
+int32_t huff_decodetest(uint32_t *indp,int32_t *tree,int32_t depth,int32_t val,int32_t numitems)
 {
     int32_t i,ind;
     *indp = -1;
@@ -993,7 +1743,7 @@ struct huffcode *huff_create(int32_t dispflag,struct huffitem **items,int32_t nu
     for (i=0; i<8; i++)
     {
         int32_t itemi;
-        n = decodetest(&itemi,tree,depth,i,numitems);
+        n = huff_decodetest(&itemi,tree,depth,i,numitems);
         printf("i.%d %s -> %d bits itemi.%d\n",i,huff_str(i,n),n,itemi);
     }
 #endif
@@ -1019,297 +1769,6 @@ int32_t huff_encode(struct huffcode *huff,HUFF *hp,struct huffitem *items,uint32
     return(count);
 }
 
-int32_t expand_scriptdata(char *scriptstr,uint8_t *scriptdata,int32_t datalen)
-{
-    char *prefix,*suffix;
-    int32_t mode,n = 0;
-    scriptstr[0] = 0;
-    switch ( (mode= scriptdata[n++]) )
-    {
-        case 'z': prefix = "ffff", suffix = ""; break;
-        case 'n': prefix = "nonstandard", suffix = ""; break;
-        case 's': prefix = "76a914", suffix = "88ac"; break;
-        case 'm': prefix = "a9", suffix = "ac"; break;
-        case 'r': prefix = "", suffix = "ac"; break;
-        case ' ': prefix = "", suffix = ""; break;
-        default: printf("unexpected scriptmode.(%d) (%c)\n",mode,mode); prefix = "", suffix = ""; return(-1); break;
-    }
-    strcpy(scriptstr,prefix);
-    init_hexbytes_noT(scriptstr+strlen(scriptstr),scriptdata+n,datalen-n);
-    if ( suffix[0] != 0 )
-    {
-        //printf("mode.(%c) suffix.(%s) [%s]\n",mode,suffix,scriptstr);
-        strcat(scriptstr,suffix);
-    }
-    return(mode);
-}
-
-int32_t calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,int32_t trimflag)
-{
-    int32_t n=0,len,mode = 0;
-    len = (int32_t)strlen(script);
-    *datalenp = 0;
-    if ( len >= 8191 )
-    {
-        printf("calc_scriptmode overflow len.%d\n",len);
-        return(-1);
-    }
-    if ( strcmp(script,"ffff") == 0 )
-    {
-        mode = 'z';
-        if ( trimflag != 0 )
-            script[0] = 0;
-    }
-    else if ( strcmp(script,"nonstandard") == 0 )
-    {
-        if ( trimflag != 0 )
-            script[0] = 0;
-        mode = 'n';
-    }
-    else if ( strncmp(script,"76a914",6) == 0 && strcmp(script+len-4,"88ac") == 0 )
-    {
-        if ( trimflag != 0 )
-        {
-            script[len-4] = 0;
-            script += 6;
-        }
-        mode = 's';
-    }
-    else if ( strcmp(script+len-2,"ac") == 0 )
-    {
-        if ( strncmp(script,"a9",2) == 0 )
-        {
-            if ( trimflag != 0 )
-            {
-                script[len-2] = 0;
-                script += 2;
-            }
-            mode = 'm';
-        }
-        else
-        {
-            if ( trimflag != 0 )
-                script[len-2] = 0;
-            mode = 'r';
-        }
-    } else mode = ' ';
-    if ( trimflag != 0 )
-    {
-        scriptdata[n++] = mode;
-        if ( (len= (int32_t)(strlen(script) >> 1)) > 0 )
-            decode_hex(scriptdata+n,len,script);
-        (*datalenp) = (len + n);
-        //printf("set pubkey.(%s).%ld <- (%s)\n",pubkeystr,strlen(pubkeystr),script);
-    }
-    return(mode);
-}
-
-int32_t rawblockcmp(struct rawblock *ref,struct rawblock *raw)
-{
-    int32_t i;
-    if ( ref->numtx != raw->numtx )
-    {
-        printf("ref numtx.%d vs %d\n",ref->numtx,raw->numtx);
-        return(-1);
-    }
-    if ( ref->numrawvins != raw->numrawvins )
-    {
-        printf("numrawvouts.%d vs %d\n",ref->numrawvins,raw->numrawvins);
-        return(-2);
-    }
-    if ( ref->numrawvouts != raw->numrawvouts )
-    {
-        printf("numrawvouts.%d vs %d\n",ref->numrawvouts,raw->numrawvouts);
-        return(-3);
-    }
-    if ( ref->numtx != 0 && memcmp(ref->txspace,raw->txspace,ref->numtx*sizeof(*raw->txspace)) != 0 )
-    {
-        struct rawtx *reftx,*rawtx;
-        int32_t flag = 0;
-        for (i=0; i<ref->numtx; i++)
-        {
-            reftx = &ref->txspace[i];
-            rawtx = &raw->txspace[i];
-            printf("1st.%d %d, %d %d (%s) vs 1st %d %d, %d %d (%s)\n",reftx->firstvin,reftx->firstvout,reftx->numvins,reftx->numvouts,reftx->txidstr,rawtx->firstvin,rawtx->firstvout,rawtx->numvins,rawtx->numvouts,rawtx->txidstr);
-            flag = 0;
-            if ( reftx->firstvin != rawtx->firstvin )
-                flag |= 1;
-            if ( reftx->firstvout != rawtx->firstvout )
-                flag |= 2;
-            if ( reftx->numvins != rawtx->numvins )
-                flag |= 4;
-            if ( reftx->numvouts != rawtx->numvouts )
-                flag |= 8;
-            if ( strcmp(reftx->txidstr,rawtx->txidstr) != 0 )
-                flag |= 16;
-            if ( flag != 0 )
-                break;
-        }
-        if ( i != ref->numtx )
-        {
-            printf("flag.%d numtx.%d\n",flag,ref->numtx);
-            //while ( 1 )
-            //    sleep(1);
-            return(-4);
-        }
-    }
-    if ( ref->numrawvins != 0 && memcmp(ref->vinspace,raw->vinspace,ref->numrawvins*sizeof(*raw->vinspace)) != 0 )
-    {
-        return(-5);
-    }
-    if ( ref->numrawvouts != 0 && memcmp(ref->voutspace,raw->voutspace,ref->numrawvouts*sizeof(*raw->voutspace)) != 0 )
-    {
-        struct rawvout *reftx,*rawtx;
-        int32_t err = 0;
-        for (i=0; i<ref->numrawvouts; i++)
-        {
-            reftx = &ref->voutspace[i];
-            rawtx = &raw->voutspace[i];
-            if ( strcmp(reftx->coinaddr,rawtx->coinaddr) != 0 || strcmp(reftx->script,rawtx->script) || reftx->value != rawtx->value )
-            printf("%d of %d: (%s) (%s) %.8f vs (%s) (%s) %.8f\n",i,ref->numrawvouts,reftx->coinaddr,reftx->script,dstr(reftx->value),rawtx->coinaddr,rawtx->script,dstr(rawtx->value));
-            if ( reftx->value != rawtx->value || strcmp(reftx->coinaddr,rawtx->coinaddr) != 0 || strcmp(reftx->script,rawtx->script) != 0 )
-                err++;
-        }
-        if ( err != 0 )
-        {
-            printf("rawblockcmp error for vouts\n");
-            getchar();
-            return(-6);
-        }
-    }
-    return(0);
-}
-
-int32_t ram_decode_huffcode(union ramtypes *destU,struct ramchain_info *ram,int32_t selector,int32_t offset)
-{
-    int32_t numbits;
-    destU->val64 = 0;
-    return(numbits);
-}
-
-int32_t ram_huffencode(uint64_t *outbitsp,struct ramchain_info *ram,struct ramchain_token *token,void *srcptr,int32_t numbits)
-{
-    int32_t outbits;
-    *outbitsp = 0;
-    return(outbits);
-}
-
-int32_t huffpair_decodeitemind(char type,int32_t bitflag,uint32_t *rawindp,struct huffpair *pair,HUFF *hp)
-{
-    uint16_t s;
-    uint32_t ind;
-    int32_t i,c,*tree,tmp,numitems,numbits,depth,num = 0;
-    *rawindp = 0;
-    if ( bitflag == 0 )
-    {
-        if ( type == 2 )
-        {
-            numbits = hdecode_smallbits(&s,hp);
-            *rawindp = s;
-            return(numbits);
-        }
-        return(hdecode_varbits(rawindp,hp));
-    }
-    if ( pair == 0 || pair->code == 0 || pair->code->tree == 0 )
-        return(-1);
-    numitems = pair->code->numitems;
-    depth = pair->code->depth;
-	while ( 1 )
-    {
-        tree = pair->code->tree;
-        for (i=c=0; i<depth; i++)
-        {
-            if ( (c= hgetbit(hp)) < 0 )
-                break;
-            num++;
-            //printf("%c",c+'0');
-            if ( (tmp= tree[c]) < 0 )
-            {
-                tree -= tmp;
-                continue;
-            }
-            ind = tmp;
-            if ( ind >= numitems )
-            {
-                printf("decode error: val.%x -> ind.%d >= numitems %d\n",c,ind,numitems);
-                return(-1);
-            }
-            *rawindp = pair->items[ind].code.rawind;
-            return(num);
-        }
-        if ( c < 0 )
-            break;
-	}
-    printf("(%s) huffpair_decodeitemind error num.%d\n",pair->name,num);
-    return(-1);
-}
-
-void huffhash_setfname(char fname[1024],struct huffhash *hash,int32_t newflag)
-{
-    char str[128],typestr[128];
-    switch ( hash->type )
-    {
-        case 'a': strcpy(str,"addr"); break;
-        case 't': strcpy(str,"txid"); break;
-        case 's': strcpy(str,"script"); break;
-        default: sprintf(str,"type%d",hash->type); break;
-    }
-    if ( newflag != 0 )
-        sprintf(typestr,"%s.new",str);
-    else strcpy(typestr,str);
-    set_compressionvars_fname(0,fname,hash->coinstr,typestr,-1);
-}
-
-int32_t huffhash_add(struct huffhash *hash,struct huffpair_hash *hp,void *ptr,int32_t datalen)
-{
-    hp->rawind = ++hash->ind;
-    HASH_ADD_KEYPTR(hh,hash->table,ptr,datalen,hp);
-    if ( 0 )
-    {
-        char hexbytes[8192];
-        struct huffpair_hash *checkhp;
-        init_hexbytes_noT(hexbytes,ptr,datalen);
-        HASH_FIND(hh,hash->table,ptr,datalen,checkhp);
-        printf("created.(%s) ind.%d | checkhp.%p\n",hexbytes,hp->rawind,checkhp);
-    }
-    if ( (hash->ind + 1) >= hash->numalloc )
-    {
-        hash->numalloc += 512; // 4K page at a time
-        hash->ptrs = realloc(hash->ptrs,sizeof(*hash->ptrs) * hash->numalloc);
-        memset(&hash->ptrs[hash->ind],0,(hash->numalloc - hash->ind) * sizeof(*hash->ptrs));
-    }
-    hash->ptrs[hp->rawind] = hp;
-    return(0);
-}
-
-struct huffhash *ram_gethash(struct ramchain_info *ram,char type)
-{
-    switch ( type )
-    {
-        case 'a': return(&ram->addrhash); break;
-        case 't': return(&ram->txidhash); break;
-        case 's': return(&ram->scripthash); break;
-    }
-    return(0);
-}
-
-char **ram_getalladdrs(int32_t *numaddrsp,struct ramchain_info *ram)
-{
-    char **addrs = 0;
-    uint64_t varint;
-    int32_t i = 0;
-    struct huffhash *hash;
-    struct huffpair_hash *hp,*tmp;
-    hash = ram_gethash(ram,'a');
-    *numaddrsp = HASH_COUNT(hash->table);
-    addrs = calloc(*numaddrsp,sizeof(*addrs));
-    HASH_ITER(hh,hash->table,hp,tmp)
-    addrs[i++] = (char *)((long)hp->hh.key + hdecode_varint(&varint,hp->hh.key,0,9));
-    if ( i != *numaddrsp )
-        printf("ram_getalladdrs HASH_COUNT.%d vs i.%d\n",*numaddrsp,i);
-    return(addrs);
-}
-
 int32_t huff_itemsave(FILE *fp,struct huffitem *item)
 {
     if ( fwrite(&item->code,1,sizeof(item->code),fp) != sizeof(uint64_t) )
@@ -1317,7 +1776,7 @@ int32_t huff_itemsave(FILE *fp,struct huffitem *item)
     return((int32_t)sizeof(uint64_t));
 }
 
-int32_t huffcode_save(FILE *fp,struct huffcode *code)
+int32_t huff_save(FILE *fp,struct huffcode *code)
 {
     if ( code != 0 )
     {
@@ -1328,6 +1787,7 @@ int32_t huffcode_save(FILE *fp,struct huffcode *code)
     return(-1);
 }
 
+// >>>>>>>>>>>>>>  start huffpair functions, eg. combined items and huffcodes
 int32_t huffpair_save(FILE *fp,struct huffpair *pair)
 {
     int32_t i;
@@ -1344,7 +1804,7 @@ int32_t huffpair_save(FILE *fp,struct huffpair *pair)
             n += val;
         }
     }
-    if ( (val= huffcode_save(fp,pair->code)) <= 0 )
+    if ( (val= huff_save(fp,pair->code)) <= 0 )
         return(-1);
     return((int32_t)(n+val));
 }
@@ -1448,7 +1908,7 @@ int32_t huffpair_gencodes(struct ramchain_info *V,struct rawblock_huffs *H,int32
     return(0);
 }
 
-int32_t set_rawblock_preds(struct rawblock_preds *preds,struct rawblock_huffs *H,int32_t allmode)
+int32_t huffpair_set_preds(struct rawblock_preds *preds,struct rawblock_huffs *H,int32_t allmode)
 {
     memset(preds,0,sizeof(*preds));
     if ( allmode != 0 )
@@ -1546,17 +2006,67 @@ int32_t set_rawblock_preds(struct rawblock_preds *preds,struct rawblock_huffs *H
     return(0);
 }
 
-int32_t huffpair_conv(char *strbuf,uint64_t *valp,struct ramchain_info *V,char type,uint32_t rawind);
-uint32_t expand_huffint(int32_t bitflag,struct ramchain_info *V,struct huffpair *pair,HUFF *hp)
+int32_t huffpair_decodeitemind(char type,int32_t bitflag,uint32_t *rawindp,struct huffpair *pair,HUFF *hp)
+{
+    uint16_t s;
+    uint32_t ind;
+    int32_t i,c,*tree,tmp,numitems,numbits,depth,num = 0;
+    *rawindp = 0;
+    if ( bitflag == 0 )
+    {
+        if ( type == 2 )
+        {
+            numbits = hdecode_smallbits(&s,hp);
+            *rawindp = s;
+            return(numbits);
+        }
+        return(hdecode_varbits(rawindp,hp));
+    }
+    if ( pair == 0 || pair->code == 0 || pair->code->tree == 0 )
+        return(-1);
+    numitems = pair->code->numitems;
+    depth = pair->code->depth;
+	while ( 1 )
+    {
+        tree = pair->code->tree;
+        for (i=c=0; i<depth; i++)
+        {
+            if ( (c= hgetbit(hp)) < 0 )
+                break;
+            num++;
+            //printf("%c",c+'0');
+            if ( (tmp= tree[c]) < 0 )
+            {
+                tree -= tmp;
+                continue;
+            }
+            ind = tmp;
+            if ( ind >= numitems )
+            {
+                printf("decode error: val.%x -> ind.%d >= numitems %d\n",c,ind,numitems);
+                return(-1);
+            }
+            *rawindp = pair->items[ind].code.rawind;
+            return(num);
+        }
+        if ( c < 0 )
+            break;
+	}
+    printf("(%s) huffpair_decodeitemind error num.%d\n",pair->name,num);
+    return(-1);
+}
+
+//int32_t huffpair_conv(char *strbuf,uint64_t *valp,struct ramchain_info *V,char type,uint32_t rawind);
+uint32_t huffpair_expand_int(int32_t bitflag,struct ramchain_info *V,struct huffpair *pair,HUFF *hp)
 {
     uint32_t rawind; int32_t numbits;
     if ( (numbits= huffpair_decodeitemind(2,bitflag,&rawind,pair,hp)) < 0 )
         return(-1);
-   // printf("%s.%d ",pair->name,rawind);
+    // printf("%s.%d ",pair->name,rawind);
     return(rawind);
 }
 
-uint32_t expand_huffstr(int32_t bitflag,char *deststr,char type,struct ramchain_info *V,struct huffpair *pair,HUFF *hp)
+uint32_t huffpair_expand_str(int32_t bitflag,char *deststr,char type,struct ramchain_info *V,struct huffpair *pair,HUFF *hp)
 {
     uint64_t destval;
     uint32_t rawind;
@@ -1564,12 +2074,290 @@ uint32_t expand_huffstr(int32_t bitflag,char *deststr,char type,struct ramchain_
     deststr[0] = 0;
     if ( (numbits= huffpair_decodeitemind(0,bitflag,&rawind,pair,hp)) < 0 )
         return(-1);
-    //fprintf(stderr,"expand_huffstr: bitflag.%d type.%d %s rawind.%d\n",bitflag,type,pair->name,rawind);
+    //fprintf(stderr,"huffexpand_str: bitflag.%d type.%d %s rawind.%d\n",bitflag,type,pair->name,rawind);
     if ( rawind == 0 )
         return(0);
     // map rawind
     //huffpair_conv(deststr,&destval,V,type,rawind);
     return((uint32_t)destval);
+}
+
+uint32_t huffpair_expand_rawbits(int32_t bitflag,struct ramchain_info *V,struct rawblock *raw,HUFF *hp,struct rawblock_preds *preds)
+{
+    struct huffpair *pair,*pair2,*pair3;
+    int32_t txind,numrawvins,numrawvouts,vin,vout;
+    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo;
+    ram_clear_rawblock(raw,0);
+    hrewind(hp);
+    raw->numtx = huffpair_expand_int(bitflag,V,preds->numtx,hp);
+    raw->numrawvins = huffpair_expand_int(bitflag,V,preds->numrawvins,hp);
+    raw->numrawvouts = huffpair_expand_int(bitflag,V,preds->numrawvouts,hp);
+    if ( raw->numtx > 0 )
+    {
+        numrawvins = numrawvouts = 0;
+        for (txind=0; txind<raw->numtx; txind++)
+        {
+            tx = &raw->txspace[txind];
+            tx->firstvin = numrawvins;
+            tx->firstvout = numrawvouts;
+            if ( txind == 0 )
+                pair = preds->tx0_numvins, pair2 = preds->tx0_numvouts, pair3 = preds->tx0_txid;
+            else if ( txind == 1 )
+                pair = preds->tx1_numvins, pair2 = preds->tx1_numvouts, pair3 = preds->tx1_txid;
+            else pair = preds->txi_numvins, pair2 = preds->txi_numvouts, pair3 = preds->txi_txid;
+            tx->numvins = huffpair_expand_int(bitflag,V,pair,hp), numrawvins += tx->numvins;
+            tx->numvouts = huffpair_expand_int(bitflag,V,pair2,hp), numrawvouts += tx->numvouts;
+           // printf("tx->numvins %d, numvouts.%d raw (%d %d) numtx.%d\n",tx->numvins,tx->numvouts,raw->numrawvins,raw->numrawvouts,raw->numtx);
+            huffpair_expand_str(bitflag,tx->txidstr,'t',V,pair3,hp);
+            if ( numrawvins <= raw->numrawvins && numrawvouts <= raw->numrawvouts )
+            {
+                if ( tx->numvins > 0 )
+                {
+                    for (vin=0; vin<tx->numvins; vin++)
+                    {
+                        vi = &raw->vinspace[tx->firstvin + vin];
+                        if ( vin == 0 )
+                            pair = preds->vin0_txid, pair2 = preds->vin0_vout;
+                        else if ( vin == 1 )
+                            pair = preds->vin1_txid, pair2 = preds->vin1_vout;
+                        else pair = preds->vini_txid, pair2 = preds->vini_vout;
+                        huffpair_expand_str(bitflag,vi->txidstr,'t',V,pair,hp);
+                        vi->vout = huffpair_expand_int(bitflag,V,pair2,hp);
+                    }
+                }
+                if ( tx->numvouts > 0 )
+                {
+                    for (vout=0; vout<tx->numvouts; vout++)
+                    {
+                        vo = &raw->voutspace[tx->firstvout + vout];
+                        if ( vout == 0 )
+                            pair = preds->vout0_addr, pair2 = preds->vout0_script;
+                        else if ( vout == 1 )
+                            pair = preds->vout1_addr, pair2 = preds->vout1_script;
+                        else if ( vout == 2 )
+                            pair = preds->vout2_addr, pair2 = preds->vout2_script;
+                        else if ( vout == tx->numvouts-1 )
+                            pair = preds->voutn_addr, pair2 = preds->voutn_script;
+                        else pair = preds->vouti_addr, pair2 = preds->vouti_script;
+                        huffpair_expand_str(bitflag,vo->script,'s',V,pair2,hp);
+                        huffpair_expand_str(bitflag,vo->coinaddr,'a',V,pair,hp);
+                        hdecode_valuebits(&vo->value,hp);
+                    }
+                }
+            }
+            else
+            {
+                printf("overflow during expand_bitstream: numrawvins %d <= %d raw->numrawvins && numrawvouts %d <= %d raw->numrawvouts\n",numrawvins,raw->numrawvins,numrawvouts,raw->numrawvouts);
+                return(0);
+            }
+        }
+        if ( numrawvins != raw->numrawvins || numrawvouts != raw->numrawvouts )
+        {
+            printf("overflow during expand_bitstream: numrawvins %d <= %d raw->numrawvins && numrawvouts %d <= %d raw->numrawvouts\n",numrawvins,raw->numrawvins,numrawvouts,raw->numrawvouts);
+            return(0);
+        }
+    }
+    return(0);
+}
+
+// >>>>>>>>>>>>>>  start ramchain functions
+int32_t ram_decode_huffcode(union ramtypes *destU,struct ramchain_info *ram,int32_t selector,int32_t offset)
+{
+    int32_t numbits;
+    destU->val64 = 0;
+    return(numbits);
+}
+
+int32_t ram_huffencode(uint64_t *outbitsp,struct ramchain_info *ram,struct ramchain_token *token,void *srcptr,int32_t numbits)
+{
+    int32_t outbits;
+    *outbitsp = 0;
+    return(outbits);
+}
+
+int32_t ram_get_blockoffset(struct mappedblocks *blocks,uint32_t blocknum)
+{
+    int32_t offset = -1;
+    if ( blocknum >= blocks->firstblock )
+    {
+        offset = (blocknum - blocks->firstblock);
+        if ( offset >= blocks->numblocks )
+            offset = -1;
+    }
+    return(offset);
+}
+
+HUFF **ram_get_hpptr(struct mappedblocks *blocks,uint32_t blocknum)
+{
+    int32_t offset = ram_get_blockoffset(blocks,blocknum);
+    return((offset < 0) ? 0 : &blocks->hps[offset]);
+}
+
+struct mappedptr *ram_get_M(struct mappedblocks *blocks,uint32_t blocknum)
+{
+    int32_t offset = ram_get_blockoffset(blocks,blocknum);
+    return((offset < 0) ? 0 : &blocks->M[offset]);
+}
+
+int32_t ram_expand_scriptdata(char *scriptstr,uint8_t *scriptdata,int32_t datalen)
+{
+    char *prefix,*suffix;
+    int32_t mode,n = 0;
+    scriptstr[0] = 0;
+    switch ( (mode= scriptdata[n++]) )
+    {
+        case 'z': prefix = "ffff", suffix = ""; break;
+        case 'n': prefix = "nonstandard", suffix = ""; break;
+        case 's': prefix = "76a914", suffix = "88ac"; break;
+        case 'm': prefix = "a9", suffix = "ac"; break;
+        case 'r': prefix = "", suffix = "ac"; break;
+        case ' ': prefix = "", suffix = ""; break;
+        default: printf("unexpected scriptmode.(%d) (%c)\n",mode,mode); prefix = "", suffix = ""; return(-1); break;
+    }
+    strcpy(scriptstr,prefix);
+    init_hexbytes_noT(scriptstr+strlen(scriptstr),scriptdata+n,datalen-n);
+    if ( suffix[0] != 0 )
+    {
+        //printf("mode.(%c) suffix.(%s) [%s]\n",mode,suffix,scriptstr);
+        strcat(scriptstr,suffix);
+    }
+    return(mode);
+}
+
+int32_t ram_calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,int32_t trimflag)
+{
+    int32_t n=0,len,mode = 0;
+    len = (int32_t)strlen(script);
+    *datalenp = 0;
+    if ( len >= 8191 )
+    {
+        printf("calc_scriptmode overflow len.%d\n",len);
+        return(-1);
+    }
+    if ( strcmp(script,"ffff") == 0 )
+    {
+        mode = 'z';
+        if ( trimflag != 0 )
+            script[0] = 0;
+    }
+    else if ( strcmp(script,"nonstandard") == 0 )
+    {
+        if ( trimflag != 0 )
+            script[0] = 0;
+        mode = 'n';
+    }
+    else if ( strncmp(script,"76a914",6) == 0 && strcmp(script+len-4,"88ac") == 0 )
+    {
+        if ( trimflag != 0 )
+        {
+            script[len-4] = 0;
+            script += 6;
+        }
+        mode = 's';
+    }
+    else if ( strcmp(script+len-2,"ac") == 0 )
+    {
+        if ( strncmp(script,"a9",2) == 0 )
+        {
+            if ( trimflag != 0 )
+            {
+                script[len-2] = 0;
+                script += 2;
+            }
+            mode = 'm';
+        }
+        else
+        {
+            if ( trimflag != 0 )
+                script[len-2] = 0;
+            mode = 'r';
+        }
+    } else mode = ' ';
+    if ( trimflag != 0 )
+    {
+        scriptdata[n++] = mode;
+        if ( (len= (int32_t)(strlen(script) >> 1)) > 0 )
+            decode_hex(scriptdata+n,len,script);
+        (*datalenp) = (len + n);
+        //printf("set pubkey.(%s).%ld <- (%s)\n",pubkeystr,strlen(pubkeystr),script);
+    }
+    return(mode);
+}
+
+int32_t raw_blockcmp(struct rawblock *ref,struct rawblock *raw)
+{
+    int32_t i;
+    if ( ref->numtx != raw->numtx )
+    {
+        printf("ref numtx.%d vs %d\n",ref->numtx,raw->numtx);
+        return(-1);
+    }
+    if ( ref->numrawvins != raw->numrawvins )
+    {
+        printf("numrawvouts.%d vs %d\n",ref->numrawvins,raw->numrawvins);
+        return(-2);
+    }
+    if ( ref->numrawvouts != raw->numrawvouts )
+    {
+        printf("numrawvouts.%d vs %d\n",ref->numrawvouts,raw->numrawvouts);
+        return(-3);
+    }
+    if ( ref->numtx != 0 && memcmp(ref->txspace,raw->txspace,ref->numtx*sizeof(*raw->txspace)) != 0 )
+    {
+        struct rawtx *reftx,*rawtx;
+        int32_t flag = 0;
+        for (i=0; i<ref->numtx; i++)
+        {
+            reftx = &ref->txspace[i];
+            rawtx = &raw->txspace[i];
+            printf("1st.%d %d, %d %d (%s) vs 1st %d %d, %d %d (%s)\n",reftx->firstvin,reftx->firstvout,reftx->numvins,reftx->numvouts,reftx->txidstr,rawtx->firstvin,rawtx->firstvout,rawtx->numvins,rawtx->numvouts,rawtx->txidstr);
+            flag = 0;
+            if ( reftx->firstvin != rawtx->firstvin )
+                flag |= 1;
+            if ( reftx->firstvout != rawtx->firstvout )
+                flag |= 2;
+            if ( reftx->numvins != rawtx->numvins )
+                flag |= 4;
+            if ( reftx->numvouts != rawtx->numvouts )
+                flag |= 8;
+            if ( strcmp(reftx->txidstr,rawtx->txidstr) != 0 )
+                flag |= 16;
+            if ( flag != 0 )
+                break;
+        }
+        if ( i != ref->numtx )
+        {
+            printf("flag.%d numtx.%d\n",flag,ref->numtx);
+            //while ( 1 )
+            //    sleep(1);
+            return(-4);
+        }
+    }
+    if ( ref->numrawvins != 0 && memcmp(ref->vinspace,raw->vinspace,ref->numrawvins*sizeof(*raw->vinspace)) != 0 )
+    {
+        return(-5);
+    }
+    if ( ref->numrawvouts != 0 && memcmp(ref->voutspace,raw->voutspace,ref->numrawvouts*sizeof(*raw->voutspace)) != 0 )
+    {
+        struct rawvout *reftx,*rawtx;
+        int32_t err = 0;
+        for (i=0; i<ref->numrawvouts; i++)
+        {
+            reftx = &ref->voutspace[i];
+            rawtx = &raw->voutspace[i];
+            if ( strcmp(reftx->coinaddr,rawtx->coinaddr) != 0 || strcmp(reftx->script,rawtx->script) || reftx->value != rawtx->value )
+                printf("%d of %d: (%s) (%s) %.8f vs (%s) (%s) %.8f\n",i,ref->numrawvouts,reftx->coinaddr,reftx->script,dstr(reftx->value),rawtx->coinaddr,rawtx->script,dstr(rawtx->value));
+            if ( reftx->value != rawtx->value || strcmp(reftx->coinaddr,rawtx->coinaddr) != 0 || strcmp(reftx->script,rawtx->script) != 0 )
+                err++;
+        }
+        if ( err != 0 )
+        {
+            printf("rawblockcmp error for vouts\n");
+            getchar();
+            return(-6);
+        }
+    }
+    return(0);
 }
 
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag)
@@ -1590,96 +2378,71 @@ void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag)
     }
 }
 
-uint32_t huffexpand_rawbits(int32_t bitflag,struct ramchain_info *V,struct rawblock *raw,HUFF *hp,struct rawblock_preds *preds)
+void ram_sethashname(char fname[1024],struct huffhash *hash,int32_t newflag)
 {
-    struct huffpair *pair,*pair2,*pair3;
-    int32_t txind,numrawvins,numrawvouts,vin,vout;
-    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo;
-    ram_clear_rawblock(raw,0);
-    hrewind(hp);
-    raw->numtx = expand_huffint(bitflag,V,preds->numtx,hp);
-    raw->numrawvins = expand_huffint(bitflag,V,preds->numrawvins,hp);
-    raw->numrawvouts = expand_huffint(bitflag,V,preds->numrawvouts,hp);
-    if ( raw->numtx > 0 )
+    char str[128],typestr[128];
+    switch ( hash->type )
     {
-        numrawvins = numrawvouts = 0;
-        for (txind=0; txind<raw->numtx; txind++)
-        {
-            tx = &raw->txspace[txind];
-            tx->firstvin = numrawvins;
-            tx->firstvout = numrawvouts;
-            if ( txind == 0 )
-                pair = preds->tx0_numvins, pair2 = preds->tx0_numvouts, pair3 = preds->tx0_txid;
-            else if ( txind == 1 )
-                pair = preds->tx1_numvins, pair2 = preds->tx1_numvouts, pair3 = preds->tx1_txid;
-            else pair = preds->txi_numvins, pair2 = preds->txi_numvouts, pair3 = preds->txi_txid;
-            tx->numvins = expand_huffint(bitflag,V,pair,hp), numrawvins += tx->numvins;
-            tx->numvouts = expand_huffint(bitflag,V,pair2,hp), numrawvouts += tx->numvouts;
-           // printf("tx->numvins %d, numvouts.%d raw (%d %d) numtx.%d\n",tx->numvins,tx->numvouts,raw->numrawvins,raw->numrawvouts,raw->numtx);
-            expand_huffstr(bitflag,tx->txidstr,'t',V,pair3,hp);
-            if ( numrawvins <= raw->numrawvins && numrawvouts <= raw->numrawvouts )
-            {
-                if ( tx->numvins > 0 )
-                {
-                    for (vin=0; vin<tx->numvins; vin++)
-                    {
-                        vi = &raw->vinspace[tx->firstvin + vin];
-                        if ( vin == 0 )
-                            pair = preds->vin0_txid, pair2 = preds->vin0_vout;
-                        else if ( vin == 1 )
-                            pair = preds->vin1_txid, pair2 = preds->vin1_vout;
-                        else pair = preds->vini_txid, pair2 = preds->vini_vout;
-                        expand_huffstr(bitflag,vi->txidstr,'t',V,pair,hp);
-                        vi->vout = expand_huffint(bitflag,V,pair2,hp);
-                    }
-                }
-                if ( tx->numvouts > 0 )
-                {
-                    for (vout=0; vout<tx->numvouts; vout++)
-                    {
-                        vo = &raw->voutspace[tx->firstvout + vout];
-                        if ( vout == 0 )
-                            pair = preds->vout0_addr, pair2 = preds->vout0_script;
-                        else if ( vout == 1 )
-                            pair = preds->vout1_addr, pair2 = preds->vout1_script;
-                        else if ( vout == 2 )
-                            pair = preds->vout2_addr, pair2 = preds->vout2_script;
-                        else if ( vout == tx->numvouts-1 )
-                            pair = preds->voutn_addr, pair2 = preds->voutn_script;
-                        else pair = preds->vouti_addr, pair2 = preds->vouti_script;
-                        expand_huffstr(bitflag,vo->script,'s',V,pair2,hp);
-                        expand_huffstr(bitflag,vo->coinaddr,'a',V,pair,hp);
-                        hdecode_valuebits(&vo->value,hp);
-                    }
-                }
-            }
-            else
-            {
-                printf("overflow during expand_bitstream: numrawvins %d <= %d raw->numrawvins && numrawvouts %d <= %d raw->numrawvouts\n",numrawvins,raw->numrawvins,numrawvouts,raw->numrawvouts);
-                return(0);
-            }
-        }
-        if ( numrawvins != raw->numrawvins || numrawvouts != raw->numrawvouts )
-        {
-            printf("overflow during expand_bitstream: numrawvins %d <= %d raw->numrawvins && numrawvouts %d <= %d raw->numrawvouts\n",numrawvins,raw->numrawvins,numrawvouts,raw->numrawvouts);
-            return(0);
-        }
+        case 'a': strcpy(str,"addr"); break;
+        case 't': strcpy(str,"txid"); break;
+        case 's': strcpy(str,"script"); break;
+        default: sprintf(str,"type%d",hash->type); break;
+    }
+    if ( newflag != 0 )
+        sprintf(typestr,"%s.new",str);
+    else strcpy(typestr,str);
+    set_compressionvars_fname(0,fname,hash->coinstr,typestr,-1);
+}
+
+int32_t ram_addhash(struct huffhash *hash,struct huffpair_hash *hp,void *ptr,int32_t datalen)
+{
+    hp->rawind = ++hash->ind;
+    HASH_ADD_KEYPTR(hh,hash->table,ptr,datalen,hp);
+    if ( 0 )
+    {
+        char hexbytes[8192];
+        struct huffpair_hash *checkhp;
+        init_hexbytes_noT(hexbytes,ptr,datalen);
+        HASH_FIND(hh,hash->table,ptr,datalen,checkhp);
+        printf("created.(%s) ind.%d | checkhp.%p\n",hexbytes,hp->rawind,checkhp);
+    }
+    if ( (hash->ind + 1) >= hash->numalloc )
+    {
+        hash->numalloc += 512; // 4K page at a time
+        hash->ptrs = realloc(hash->ptrs,sizeof(*hash->ptrs) * hash->numalloc);
+        memset(&hash->ptrs[hash->ind],0,(hash->numalloc - hash->ind) * sizeof(*hash->ptrs));
+    }
+    hash->ptrs[hp->rawind] = hp;
+    return(0);
+}
+
+struct huffhash *ram_gethash(struct ramchain_info *ram,char type)
+{
+    switch ( type )
+    {
+        case 'a': return(&ram->addrhash); break;
+        case 't': return(&ram->txidhash); break;
+        case 's': return(&ram->scripthash); break;
     }
     return(0);
 }
 
-/*#define _decode_rawind conv_to_rawind
-uint32_t ram_conv_to_rawind(char type,uint32_t val)
+char **ram_getalladdrs(int32_t *numaddrsp,struct ramchain_info *ram)
 {
-    uint16_t s;
-    s = val;
-    if ( s != val )
-    {
-        printf("conv_to_rawind: type.%d (%c) val.%d overflow for 16 bits\n",type,type,val);
-        exit(-1);
-    }
-    return(s);
-}*/
+    char **addrs = 0;
+    uint64_t varint;
+    int32_t i = 0;
+    struct huffhash *hash;
+    struct huffpair_hash *hp,*tmp;
+    hash = ram_gethash(ram,'a');
+    *numaddrsp = HASH_COUNT(hash->table);
+    addrs = calloc(*numaddrsp,sizeof(*addrs));
+    HASH_ITER(hh,hash->table,hp,tmp)
+    addrs[i++] = (char *)((long)hp->hh.key + hdecode_varint(&varint,hp->hh.key,0,9));
+    if ( i != *numaddrsp )
+        printf("ram_getalladdrs HASH_COUNT.%d vs i.%d\n",*numaddrsp,i);
+    return(addrs);
+}
 
 uint8_t *ram_encode_hashstr(int32_t *datalenp,uint8_t *data,char type,char *hashstr)
 {
@@ -1692,7 +2455,7 @@ uint8_t *ram_encode_hashstr(int32_t *datalenp,uint8_t *data,char type,char *hash
         if ( hashstr[0] == 0 )
             return(0);
         strcpy(buf,hashstr);
-        if ( (scriptmode = calc_scriptmode(&datalen,&data[9],buf,1)) < 0 )
+        if ( (scriptmode = ram_calc_scriptmode(&datalen,&data[9],buf,1)) < 0 )
         {
             printf("encode_hashstr: scriptmode.%d for (%s)\n",scriptmode,hashstr);
             exit(-1);
@@ -1739,7 +2502,7 @@ char *ram_decode_hashdata(char *strbuf,char type,uint8_t *hashdata)
     datalen = (int32_t)varint;
     if ( type == 's' )
     {
-        if ( (scriptmode= expand_scriptdata(strbuf,hashdata,(uint32_t)datalen)) < 0 )
+        if ( (scriptmode= ram_expand_scriptdata(strbuf,hashdata,(uint32_t)datalen)) < 0 )
         {
             printf("decode_hashdata: scriptmode.%d for (%s)\n",scriptmode,strbuf);
             return(0);
@@ -1804,7 +2567,7 @@ struct huffpair_hash *ram_hashdata_search(int32_t createflag,struct huffhash *ha
         {
             if ( hash->newfp == 0 )
             {
-                huffhash_setfname(fname,hash,0);
+                ram_sethashname(fname,hash,0);
                 hash->newfp = fopen(fname,"wb");
                 if ( hash->newfp != 0 )
                 {
@@ -1832,7 +2595,7 @@ struct huffpair_hash *ram_hashdata_search(int32_t createflag,struct huffhash *ha
                 fflush(hash->newfp);
             }
             //printf("add %d byte entry to hashtable %c\n",datalen,hash->type);
-            huffhash_add(hash,ptr,newptr,datalen);
+            ram_addhash(hash,ptr,newptr,datalen);
         } //else printf("found %d bytes ind.%d\n",datalen,ptr->rawind);
     } else printf("ram_hashdata_search null hashtable\n");
     return(ptr);
@@ -1916,362 +2679,6 @@ struct huffpayload *ram_getpayloadi(struct ramchain_info *ram,char type,uint32_t
 #define ram_txid(hashstr,ram,rawind) ram_conv_rawind(hashstr,ram,rawind,'t')
 #define ram_addr(hashstr,ram,rawind) ram_conv_rawind(hashstr,ram,rawind,'a')
 #define ram_script(hashstr,ram,rawind) ram_conv_rawind(hashstr,ram,rawind,'s')
-
-uint32_t _get_RTheight(struct ramchain_info *ram)
-{
-    char *retstr;
-    cJSON *json;
-    uint32_t height = 0;
-   // printf("RTheight.(%s) (%s) (%s)\n",ram->name,ram->serverport,ram->userpass);
-    retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getinfo","");
-    if ( retstr != 0 )
-    {
-        if ( (json= cJSON_Parse(retstr)) != 0 )
-        {
-            height = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocks"),0);
-            free_json(json);
-        }
-        free(retstr);
-    }
-    return(height);
-}
-
-//// interface code
-#define OP_HASH160_OPCODE 0xa9
-#define OP_EQUAL_OPCODE 0x87
-#define OP_DUP_OPCODE 0x76
-#define OP_EQUALVERIFY_OPCODE 0x88
-#define OP_CHECKSIG_OPCODE 0xac
-#define OP_RETURN_OPCODE 0x6a
-
-char _hexbyte(int32_t c)
-{
-    c &= 0xf;
-    if ( c < 10 )
-        return('0'+c);
-    else if ( c < 16 )
-        return('a'+c-10);
-    else return(0);
-}
-
-int32_t _add_opcode(char *hex,int32_t offset,int32_t opcode)
-{
-    hex[offset + 0] = _hexbyte((opcode >> 4) & 0xf);
-    hex[offset + 1] = _hexbyte(opcode & 0xf);
-    return(offset+2);
-}
-
-void _calc_script(char *script,char *pubkey,int msigmode)
-{
-    int32_t offset,len;
-    offset = 0;
-    len = (int32_t)strlen(pubkey);
-    offset = _add_opcode(script,offset,OP_DUP_OPCODE);
-    offset = _add_opcode(script,offset,OP_HASH160_OPCODE);
-    offset = _add_opcode(script,offset,len/2);
-    memcpy(script+offset,pubkey,len), offset += len;
-    offset = _add_opcode(script,offset,OP_EQUALVERIFY_OPCODE);
-    offset = _add_opcode(script,offset,OP_CHECKSIG_OPCODE);
-    script[offset] = 0;
-}
-
-int32_t _origconvert_to_bitcoinhex(char *scriptasm)
-{
-    //"asm" : "OP_HASH160 db7f9942da71fd7a28f4a4b2e8c51347240b9e2d OP_EQUAL",
-    char *hex;
-    int32_t middlelen,offset,len,OP_HASH160_len,OP_EQUAL_len;
-    len = (int32_t)strlen(scriptasm);
-    OP_HASH160_len = (int32_t)strlen("OP_HASH160");
-    OP_EQUAL_len = (int32_t)strlen("OP_EQUAL");
-    if ( strncmp(scriptasm,"OP_HASH160",OP_HASH160_len) == 0 && strncmp(scriptasm+len-OP_EQUAL_len,"OP_EQUAL",OP_EQUAL_len) == 0 )
-    {
-        hex = calloc(1,len+1);
-        offset = 0;
-        offset = _add_opcode(hex,offset,OP_HASH160_OPCODE);
-        middlelen = len - OP_HASH160_len - OP_EQUAL_len - 2;
-        offset = _add_opcode(hex,offset,middlelen/2);
-        memcpy(hex+offset,scriptasm+OP_HASH160_len+1,middlelen);
-        hex[offset+middlelen] = _hexbyte((OP_EQUAL_OPCODE >> 4) & 0xf);
-        hex[offset+middlelen+1] = _hexbyte(OP_EQUAL_OPCODE & 0xf);
-        hex[offset+middlelen+2] = 0;
-        if ( Debuglevel > 2 )
-            printf("(%s) -> (%s)\n",scriptasm,hex);
-        strcpy(scriptasm,hex);
-        free(hex);
-        return((int32_t)(2+middlelen+2));
-    }
-    // printf("cant assembly anything but OP_HASH160 + <key> + OP_EQUAL (%s)\n",scriptasm);
-    return(-1);
-}
-
-int32_t _convert_to_bitcoinhex(char *scriptasm)
-{
-    char *hex,pubkey[512],*endstr;
-    int32_t i,j,middlelen,len,OP_HASH160_len,OP_EQUAL_len;
-    len = (int32_t)strlen(scriptasm);
-    OP_HASH160_len = (int32_t)strlen("OP_DUP OP_HASH160");
-    OP_EQUAL_len = (int32_t)strlen("OP_EQUALVERIFY OP_CHECKSIG");
-    if ( strncmp(scriptasm,"OP_DUP OP_HASH160",OP_HASH160_len) == 0 && strncmp(scriptasm+len-OP_EQUAL_len,"OP_EQUALVERIFY OP_CHECKSIG",OP_EQUAL_len) == 0 )
-    {
-        middlelen = len - OP_HASH160_len - OP_EQUAL_len - 2;
-        memcpy(pubkey,scriptasm+OP_HASH160_len+1,middlelen);
-        pubkey[middlelen] = 0;
-        
-        hex = calloc(1,len+1);
-        _calc_script(hex,pubkey,0);
-        strcpy(scriptasm,hex);
-        free(hex);
-        return((int32_t)(2+middlelen+2));
-    }
-    else
-    {
-        endstr = scriptasm + strlen(scriptasm) - strlen(" OP_CHECKSIG");
-        if ( strcmp(endstr," OP_CHECKSIG") == 0 )
-        {
-            strcpy(endstr,"ac");
-            //printf("NEWSCRIPT.[%s]\n",scriptasm);
-            return((int32_t)strlen(scriptasm));
-        }
-        else if ( strncmp(scriptasm,"OP_RETURN ",strlen("OP_RETURN ")) == 0 )
-        {
-            //printf("OP_RETURN.(%s) -> ",scriptasm);
-            _add_opcode(scriptasm,0,OP_RETURN_OPCODE);
-            for (i=2,j=strlen("OP_RETURN "); j<=len; j++,i++)
-                scriptasm[i] = scriptasm[j];
-            //printf("(%s)\n",scriptasm);
-            return((int32_t)strlen(scriptasm));
-        }
-    }
-    return(_origconvert_to_bitcoinhex(scriptasm));
-}
-
-cJSON *_script_has_address(int32_t *nump,cJSON *scriptobj)
-{
-    int32_t i,n;
-    cJSON *addresses,*addrobj;
-    if ( scriptobj == 0 )
-        return(0);
-    addresses = cJSON_GetObjectItem(scriptobj,"addresses");
-    *nump = 0;
-    if ( addresses != 0 )
-    {
-        *nump = n = cJSON_GetArraySize(addresses);
-        for (i=0; i<n; i++)
-        {
-            addrobj = cJSON_GetArrayItem(addresses,i);
-            return(addrobj);
-        }
-    }
-    return(0);
-}
-
-int32_t _extract_txvals(char *coinaddr,char *script,int32_t nohexout,cJSON *txobj)
-{
-    int32_t numaddresses;
-    cJSON *scriptobj,*addrobj,*hexobj;
-    scriptobj = cJSON_GetObjectItem(txobj,"scriptPubKey");
-    if ( scriptobj != 0 )
-    {
-        addrobj = _script_has_address(&numaddresses,scriptobj);
-        if ( coinaddr != 0 )
-            copy_cJSON(coinaddr,addrobj);
-        if ( nohexout != 0 )
-            hexobj = cJSON_GetObjectItem(scriptobj,"asm");
-        else
-        {
-            hexobj = cJSON_GetObjectItem(scriptobj,"hex");
-            if ( hexobj == 0 )
-                hexobj = cJSON_GetObjectItem(scriptobj,"asm"), nohexout = 1;
-        }
-        if ( script != 0 )
-        {
-            copy_cJSON(script,hexobj);
-            if ( nohexout != 0 )
-                _convert_to_bitcoinhex(script);
-        }
-        return(0);
-    }
-    return(-1);
-}
-
-void _set_string(char type,char *dest,char *src,long max)
-{
-    if ( src == 0 || src[0] == 0 )
-        sprintf(dest,"ffff");
-    else if ( strlen(src) < max-1)
-        strcpy(dest,src);
-    else sprintf(dest,"nonstandard");
-}
-
-uint64_t _get_txvouts(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *ram,cJSON *voutsobj)
-{
-    cJSON *item;
-    uint64_t value,total = 0;
-    struct rawvout *v;
-    int32_t i,numvouts = 0;
-    char coinaddr[8192],script[8192];
-    tx->firstvout = raw->numrawvouts;
-    if ( voutsobj != 0 && is_cJSON_Array(voutsobj) != 0 && (numvouts= cJSON_GetArraySize(voutsobj)) > 0 && tx->firstvout+numvouts < MAX_BLOCKTX )
-    {
-        for (i=0; i<numvouts; i++,raw->numrawvouts++)
-        {
-            item = cJSON_GetArrayItem(voutsobj,i);
-            value = conv_cJSON_float(item,"value");
-            v = &raw->voutspace[raw->numrawvouts];
-            memset(v,0,sizeof(*v));
-            v->value = value;
-            total += value;
-            _extract_txvals(coinaddr,script,1,item); // default to nohexout
-            _set_string('a',v->coinaddr,coinaddr,sizeof(v->coinaddr));
-            _set_string('s',v->script,script,sizeof(v->script));
-        }
-    } else printf("error with vouts\n");
-    tx->numvouts = numvouts;
-    return(total);
-}
-
-int32_t _get_txvins(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *ram,cJSON *vinsobj)
-{
-    cJSON *item;
-    struct rawvin *v;
-    int32_t i,numvins = 0;
-    char txidstr[8192],coinbase[8192];
-    tx->firstvin = raw->numrawvins;
-    if ( vinsobj != 0 && is_cJSON_Array(vinsobj) != 0 && (numvins= cJSON_GetArraySize(vinsobj)) > 0 && tx->firstvin+numvins < MAX_BLOCKTX )
-    {
-        for (i=0; i<numvins; i++,raw->numrawvins++)
-        {
-            item = cJSON_GetArrayItem(vinsobj,i);
-            if ( numvins == 1  )
-            {
-                copy_cJSON(coinbase,cJSON_GetObjectItem(item,"coinbase"));
-                if ( strlen(coinbase) > 1 )
-                    return(0);
-            }
-            copy_cJSON(txidstr,cJSON_GetObjectItem(item,"txid"));
-            v = &raw->vinspace[raw->numrawvins];
-            memset(v,0,sizeof(*v));
-            v->vout = (int)get_cJSON_int(item,"vout");
-            _set_string('t',v->txidstr,txidstr,sizeof(v->txidstr));
-        }
-    } else printf("error with vins\n");
-    tx->numvins = numvins;
-    return(numvins);
-}
-
-char *_get_transaction(struct ramchain_info *ram,char *txidstr)
-{
-    char *rawtransaction=0,txid[4096];
-    sprintf(txid,"[\"%s\", 1]",txidstr);
-    //printf("get_transaction.(%s)\n",txidstr);
-    rawtransaction = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getrawtransaction",txid);
-    return(rawtransaction);
-}
-
-uint64_t _get_txidinfo(struct rawblock *raw,struct rawtx *tx,struct ramchain_info *ram,int32_t txind,char *txidstr)
-{
-    char *retstr = 0;
-    cJSON *txjson;
-    uint64_t total = 0;
-    if ( strlen(txidstr) < sizeof(tx->txidstr)-1 )
-        strcpy(tx->txidstr,txidstr);
-    tx->numvouts = tx->numvins = 0;
-    if ( (retstr= _get_transaction(ram,txidstr)) != 0 )
-    {
-        if ( (txjson= cJSON_Parse(retstr)) != 0 )
-        {
-            _get_txvins(raw,tx,ram,cJSON_GetObjectItem(txjson,"vin"));
-            total = _get_txvouts(raw,tx,ram,cJSON_GetObjectItem(txjson,"vout"));
-            free_json(txjson);
-        } else printf("update_txid_infos parse error.(%s)\n",retstr);
-        free(retstr);
-    } else printf("error getting.(%s)\n",txidstr);
-    //printf("tx.%d: (%s) numvins.%d numvouts.%d (raw %d %d)\n",txind,tx->txidstr,tx->numvins,tx->numvouts,raw->numrawvins,raw->numrawvouts);
-    return(total);
-}
-
-char *_get_blockhashstr(struct ramchain_info *ram,uint32_t blocknum)
-{
-    char numstr[128],*blockhashstr=0;
-    sprintf(numstr,"%u",blocknum);
-    blockhashstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getblockhash",numstr);
-    if ( blockhashstr == 0 || blockhashstr[0] == 0 )
-    {
-        printf("couldnt get blockhash for %u\n",blocknum);
-        if ( blockhashstr != 0 )
-            free(blockhashstr);
-        return(0);
-    }
-    return(blockhashstr);
-}
-
-cJSON *_get_blockjson(uint32_t *heightp,struct ramchain_info *ram,char *blockhashstr,uint32_t blocknum)
-{
-    cJSON *json = 0;
-    int32_t flag = 0;
-    char buf[1024],*blocktxt = 0;
-    if ( blockhashstr == 0 )
-        blockhashstr = _get_blockhashstr(ram,blocknum), flag = 1;
-    if ( blockhashstr != 0 )
-    {
-        sprintf(buf,"\"%s\"",blockhashstr);
-        //printf("get_blockjson.(%d %s)\n",blocknum,blockhashstr);
-        blocktxt = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getblock",buf);
-        if ( blocktxt != 0 && blocktxt[0] != 0 && (json= cJSON_Parse(blocktxt)) != 0 && heightp != 0 )
-            *heightp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0xffffffff);
-        if ( flag != 0 && blockhashstr != 0 )
-            free(blockhashstr);
-        if ( blocktxt != 0 )
-            free(blocktxt);
-    }
-    return(json);
-}
-
-cJSON *_get_blocktxarray(uint32_t *blockidp,int32_t *numtxp,struct ramchain_info *ram,cJSON *blockjson)
-{
-    cJSON *txarray = 0;
-    if ( blockjson != 0 )
-    {
-        *blockidp = (uint32_t)get_API_int(cJSON_GetObjectItem(blockjson,"height"),0);
-        txarray = cJSON_GetObjectItem(blockjson,"tx");
-        *numtxp = cJSON_GetArraySize(txarray);
-    }
-    return(txarray);
-}
-
-uint32_t _get_blockinfo(struct rawblock *raw,struct ramchain_info *ram,uint32_t blocknum)
-{
-    char txidstr[8192],mintedstr[8192];
-    cJSON *json,*txobj;
-    uint32_t blockid;
-    int32_t txind,n;
-    uint64_t total = 0;
-    ram_clear_rawblock(raw,1);
-    //raw->blocknum = blocknum;
-    //printf("_get_blockinfo.%d\n",blocknum);
-    raw->minted = raw->numtx = raw->numrawvins = raw->numrawvouts = 0;
-    if ( (json= _get_blockjson(0,ram,0,blocknum)) != 0 )
-    {
-        raw->blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0);
-        copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"mint"));
-        if ( mintedstr[0] != 0 )
-            raw->minted = (uint64_t)(atof(mintedstr) * SATOSHIDEN);
-        if ( (txobj= _get_blocktxarray(&blockid,&n,ram,json)) != 0 && blockid == blocknum && n < MAX_BLOCKTX )
-        {
-            for (txind=0; txind<n; txind++)
-            {
-                copy_cJSON(txidstr,cJSON_GetArrayItem(txobj,txind));
-                //printf("block.%d txind.%d TXID.(%s)\n",blocknum,txind,txidstr);
-                total += _get_txidinfo(raw,&raw->txspace[raw->numtx++],ram,txind,txidstr);
-            }
-        } else printf("error _get_blocktxarray for block.%d got %d, n.%d vs %d\n",blocknum,blockid,n,MAX_BLOCKTX);
-        if ( raw->minted == 0 )
-            raw->minted = total;
-        free_json(json);
-    } else printf("get_blockjson error parsing.(%s)\n",txidstr);
-    //printf("BLOCK.%d: block.%d numtx.%d minted %.8f rawnumvins.%d rawnumvouts.%d\n",blocknum,raw->blocknum,raw->numtx,dstr(raw->minted),raw->numrawvins,raw->numrawvouts);
-    return(raw->numtx);
-}
 
 cJSON *ram_rawvin_json(struct rawblock *raw,struct rawtx *tx,int32_t vin)
 {
@@ -3436,132 +3843,6 @@ void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
     sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->numoutputs,dstr(ram->totaloutputs),(long long)ram->numspends,dstr(ram->totalspends),(long long)(ram->numoutputs - ram->numspends),dstr(ram->totaloutputs - ram->totalspends),dstr(ram->totaloutputs - ram->totalspends)/(ram->numoutputs - ram->numspends));
 }
 
-char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin)
-{
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    char retbuf[1024];
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    ram_setdispstr(retbuf,ram,ram->startmilli);
-    return(clonestr(retbuf));
-}
-
-char *ramstring(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,uint32_t rawind)
-{
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    if ( strcmp(typestr,"script") == 0 )
-        return(ram_script_json(ram,rawind));
-    else if ( strcmp(typestr,"addr") == 0 )
-        return(ram_addr_json(ram,rawind));
-    else if ( strcmp(typestr,"txid") == 0 )
-        return(ram_txid_json(ram,rawind));
-    else return(clonestr("{\"error\":\"no ramstring invalid type\"}"));
-}
-
-char *ramrawind(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,char *str)
-{
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    if ( strcmp(typestr,"script") == 0 )
-        return(ram_scriptind_json(ram,str));
-    else if ( strcmp(typestr,"addr") == 0 )
-        return(ram_addrind_json(ram,str));
-    else if ( strcmp(typestr,"txid") == 0 )
-        return(ram_txidind_json(ram,str));
-    else return(clonestr("{\"error\":\"no ramrawind invalid type\"}"));
-}
-
-char *ramblock(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,uint32_t blocknum)
-{
-
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    cJSON *json = 0;
-    HUFF *hp;
-    char *retstr = 0;
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    if ( (hp= ram->blocks.hps[blocknum]) == 0 )
-    {
-        _get_blockinfo(ram->R,ram,blocknum);
-        json = ram_rawblock_json(ram->R,0);
-    }
-    else ram_expand_bitstream(&json,ram->R,ram,hp);
-    if ( json != 0 )
-    {
-        retstr = cJSON_Print(json);
-        free_json(json);
-    }
-    /*if ( (datalen= ram_emitblock(ram->tmphp,'V',ram,ram->R)) > 0 )
-    {
-        hexstr = calloc(1,datalen*2+1);
-        init_hexbytes_noT(hexstr,ram->tmphp->buf,datalen);
-        json = cJSON_CreateObject();
-        cJSON_AddItemToObject(json,"result",cJSON_CreateString(coin));
-        cJSON_AddItemToObject(json,"block",cJSON_CreateNumber(blocknum));
-        cJSON_AddItemToObject(json,"datalen",cJSON_CreateNumber(datalen));
-        cJSON_AddItemToObject(json,"blockhex",cJSON_CreateString(hexstr));
-        retstr = cJSON_Print(json);
-        free_json(json);
-        free(hexstr);
-    } else retstr = clonestr("{\"error\":\"no block info\"}");*/
-    return(retstr);
-}
-
-char *ramcompress(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *blockhex)
-{
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    uint8_t *data;
-    cJSON *json;
-    int32_t datalen,complen;
-    char *retstr,*hexstr;
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    datalen = (int32_t)strlen(blockhex);
-    datalen >>= 1;
-    data = calloc(1,datalen);
-    decode_hex(data,datalen,blockhex);
-    if ( (complen= ram_compress_blockhex(ram->tmphp,ram,data,datalen)) > 0 )
-    {
-        hexstr = calloc(1,complen*2+1);
-        init_hexbytes_noT(hexstr,ram->tmphp->buf,complen);
-        json = cJSON_CreateObject();
-        cJSON_AddItemToObject(json,"result",cJSON_CreateString(coin));
-        cJSON_AddItemToObject(json,"bitstream",cJSON_CreateString(hexstr));
-        cJSON_AddItemToObject(json,"datalen",cJSON_CreateNumber(complen));
-        retstr = cJSON_Print(json);
-        free_json(json);
-    } else retstr = clonestr("{\"error\":\"no block info\"}");
-    free(data);
-    return(retstr);
-}
-
-char *ramexpand(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *bitstream)
-{
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    uint8_t *data;
-    HUFF *hp;
-    int32_t datalen,expandlen;
-    char *retstr;
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    datalen = (int32_t)strlen(bitstream);
-    datalen >>= 1;
-    data = calloc(1,datalen);
-    decode_hex(data,datalen,bitstream);
-    hp = hopen(data,datalen,0);
-    if ( (expandlen= ram_expand_bitstream(0,ram->R,ram,hp)) > 0 )
-    {
-        free(retstr);
-        retstr = ram_blockstr(ram->R2,ram,ram->R);
-    } else clonestr("{\"error\":\"no ram_expand_bitstream info\"}");
-    hclose(hp);
-    free(data);
-    return(retstr);
-}
-
 int32_t ram_is_unspent(struct huffpayload *payload)
 {
     struct address_entry *spentB = &payload->spentB;
@@ -3603,7 +3884,7 @@ HUFF *ram_verify_Vblock(struct ramchain_info *ram,uint32_t blocknum,HUFF *hp)
     if ( (datalen= ram_expand_bitstream(0,ram->Vblocks.R,ram,hp)) > 0 )
     {
         _get_blockinfo(ram->Vblocks.R2,ram,blocknum);
-        if ( (err= rawblockcmp(ram->Vblocks.R2,ram->Vblocks.R)) == 0 )
+        if ( (err= raw_blockcmp(ram->Vblocks.R2,ram->Vblocks.R)) == 0 )
         {
             //printf("OK ");
             return(hp);
@@ -3648,7 +3929,7 @@ HUFF *ram_verify_Bblock(struct ramchain_info *ram,uint32_t blocknum,HUFF *Bhp)
     {
         if ( 1 && jsonstrs[0] != 0 && jsonstrs[1] != 0 )
         {
-            if ( rawblockcmp(ram->Bblocks.R,ram->Bblocks.R2) != 0 )
+            if ( raw_blockcmp(ram->Bblocks.R,ram->Bblocks.R2) != 0 )
             {
                 printf("(%s).V vs (%s).B)\n",jsonstrs[0],jsonstrs[1]);
                 retval = 0;
@@ -3982,7 +4263,7 @@ int32_t ram_init_hashtable(struct ramchain_info *ram,char type)
     hash = ram_gethash(ram,type);
     strcpy(hash->coinstr,ram->name);
     hash->type = type;
-    huffhash_setfname(fname,hash,0);
+    ram_sethashname(fname,hash,0);
     num = 0;
     if ( (hash->newfp= fopen(fname,"rb+")) != 0 )
     {
@@ -4008,7 +4289,7 @@ int32_t ram_init_hashtable(struct ramchain_info *ram,char type)
                 exit(-1);
             }
             hp = calloc(1,sizeof(*hp));
-            huffhash_add(hash,hp,hashdata,(int32_t)(varsize+datalen));
+            ram_addhash(hash,hp,hashdata,(int32_t)(varsize+datalen));
             offset += (varsize + datalen);
             fseek(hash->newfp,offset,SEEK_SET);
             num++;
@@ -4272,38 +4553,6 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
     return(processed);
 }
 
-char *ramscript(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *txidstr,int32_t tx_vout,struct address_entry *bp)
-{
-    char retbuf[1024];
-    struct address_entry B;
-    struct rawvout *vo;
-    struct rawblock *raw;
-    HUFF *block;
-    int32_t datalen;
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    if ( bp == 0 )
-    {
-        bp = &B;
-        if ( ram_address_entry(bp,ram,txidstr,tx_vout) == 0 )
-            return(clonestr("{\"error\":\"no ram_address_entry info\"}"));
-    }
-    if ( (block= ram_getblock(ram,bp->blocknum)) != 0 )
-    {
-        raw = ram->R;
-        if ( (datalen= ram_expand_bitstream(0,raw,ram,block)) > 0 )
-        {
-            if ( (vo= ram_rawvout(raw,bp->txind,bp->v)) != 0 )
-            {
-                sprintf(retbuf,"{\"result\":\"script\",\"txid\":\"%s\",\"vout\":%u,\"hex\":\"%s\"}",txidstr,bp->v,vo->script);
-                return(clonestr(retbuf));
-            }
-        }
-    }
-    return(clonestr("{\"error\":\"no ramchain info\"}"));
-}
-
 uint64_t ram_calc_unspent(struct ramchain_info *ram,char *addr)
 {
     uint64_t unspent = 0;
@@ -4340,6 +4589,164 @@ uint64_t ram_calcunspent(cJSON **arrayp,char *destcoin,double rate,char *coin,ch
             unspent *= rate;
     }
     return(unspent);
+}
+
+// >>>>>>>>>>>>>>  start external and API interface functions
+char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    char retbuf[1024];
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    ram_setdispstr(retbuf,ram,ram->startmilli);
+    return(clonestr(retbuf));
+}
+
+char *ramstring(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,uint32_t rawind)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    if ( strcmp(typestr,"script") == 0 )
+        return(ram_script_json(ram,rawind));
+    else if ( strcmp(typestr,"addr") == 0 )
+        return(ram_addr_json(ram,rawind));
+    else if ( strcmp(typestr,"txid") == 0 )
+        return(ram_txid_json(ram,rawind));
+    else return(clonestr("{\"error\":\"no ramstring invalid type\"}"));
+}
+
+char *ramrawind(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,char *str)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    if ( strcmp(typestr,"script") == 0 )
+        return(ram_scriptind_json(ram,str));
+    else if ( strcmp(typestr,"addr") == 0 )
+        return(ram_addrind_json(ram,str));
+    else if ( strcmp(typestr,"txid") == 0 )
+        return(ram_txidind_json(ram,str));
+    else return(clonestr("{\"error\":\"no ramrawind invalid type\"}"));
+}
+
+char *ramblock(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,uint32_t blocknum)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    cJSON *json = 0;
+    HUFF *hp;
+    char *retstr = 0;
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    if ( (hp= ram->blocks.hps[blocknum]) == 0 )
+    {
+        _get_blockinfo(ram->R,ram,blocknum);
+        json = ram_rawblock_json(ram->R,0);
+    }
+    else ram_expand_bitstream(&json,ram->R,ram,hp);
+    if ( json != 0 )
+    {
+        retstr = cJSON_Print(json);
+        free_json(json);
+    }
+    /*if ( (datalen= ram_emitblock(ram->tmphp,'V',ram,ram->R)) > 0 )
+     {
+     hexstr = calloc(1,datalen*2+1);
+     init_hexbytes_noT(hexstr,ram->tmphp->buf,datalen);
+     json = cJSON_CreateObject();
+     cJSON_AddItemToObject(json,"result",cJSON_CreateString(coin));
+     cJSON_AddItemToObject(json,"block",cJSON_CreateNumber(blocknum));
+     cJSON_AddItemToObject(json,"datalen",cJSON_CreateNumber(datalen));
+     cJSON_AddItemToObject(json,"blockhex",cJSON_CreateString(hexstr));
+     retstr = cJSON_Print(json);
+     free_json(json);
+     free(hexstr);
+     } else retstr = clonestr("{\"error\":\"no block info\"}");*/
+    return(retstr);
+}
+
+char *ramcompress(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *blockhex)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    uint8_t *data;
+    cJSON *json;
+    int32_t datalen,complen;
+    char *retstr,*hexstr;
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    datalen = (int32_t)strlen(blockhex);
+    datalen >>= 1;
+    data = calloc(1,datalen);
+    decode_hex(data,datalen,blockhex);
+    if ( (complen= ram_compress_blockhex(ram->tmphp,ram,data,datalen)) > 0 )
+    {
+        hexstr = calloc(1,complen*2+1);
+        init_hexbytes_noT(hexstr,ram->tmphp->buf,complen);
+        json = cJSON_CreateObject();
+        cJSON_AddItemToObject(json,"result",cJSON_CreateString(coin));
+        cJSON_AddItemToObject(json,"bitstream",cJSON_CreateString(hexstr));
+        cJSON_AddItemToObject(json,"datalen",cJSON_CreateNumber(complen));
+        retstr = cJSON_Print(json);
+        free_json(json);
+    } else retstr = clonestr("{\"error\":\"no block info\"}");
+    free(data);
+    return(retstr);
+}
+
+char *ramexpand(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *bitstream)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    uint8_t *data;
+    HUFF *hp;
+    int32_t datalen,expandlen;
+    char *retstr;
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    datalen = (int32_t)strlen(bitstream);
+    datalen >>= 1;
+    data = calloc(1,datalen);
+    decode_hex(data,datalen,bitstream);
+    hp = hopen(data,datalen,0);
+    if ( (expandlen= ram_expand_bitstream(0,ram->R,ram,hp)) > 0 )
+    {
+        free(retstr);
+        retstr = ram_blockstr(ram->R2,ram,ram->R);
+    } else clonestr("{\"error\":\"no ram_expand_bitstream info\"}");
+    hclose(hp);
+    free(data);
+    return(retstr);
+}
+
+char *ramscript(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *txidstr,int32_t tx_vout,struct address_entry *bp)
+{
+    char retbuf[1024];
+    struct address_entry B;
+    struct rawvout *vo;
+    struct rawblock *raw;
+    HUFF *block;
+    int32_t datalen;
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    if ( bp == 0 )
+    {
+        bp = &B;
+        if ( ram_address_entry(bp,ram,txidstr,tx_vout) == 0 )
+            return(clonestr("{\"error\":\"no ram_address_entry info\"}"));
+    }
+    if ( (block= ram_getblock(ram,bp->blocknum)) != 0 )
+    {
+        raw = ram->R;
+        if ( (datalen= ram_expand_bitstream(0,raw,ram,block)) > 0 )
+        {
+            if ( (vo= ram_rawvout(raw,bp->txind,bp->v)) != 0 )
+            {
+                sprintf(retbuf,"{\"result\":\"script\",\"txid\":\"%s\",\"vout\":%u,\"hex\":\"%s\"}",txidstr,bp->v,vo->script);
+                return(clonestr(retbuf));
+            }
+        }
+    }
+    return(clonestr("{\"error\":\"no ramchain info\"}"));
 }
 
 char *ramtxlist(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *coinaddr,int32_t unspentflag)
@@ -4478,6 +4885,7 @@ char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,ch
     return(clonestr("{\"error\":\"rambalances: numcoins zero or bad ptr\"}"));
 }
 
+// >>>>>>>>>>>>>>  start initialization and runloops
 struct mappedblocks *ram_init_blocks(HUFF **copyhps,struct ramchain_info *ram,uint32_t firstblock,struct mappedblocks *blocks,struct mappedblocks *prevblocks,int32_t format,int32_t shift)
 {
     void *ptr;

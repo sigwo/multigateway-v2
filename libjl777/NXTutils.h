@@ -1771,7 +1771,10 @@ void set_NXTpubkey(char *NXTpubkey,char *NXTacct)
             memcpy(stats->pubkey,&pubkey,sizeof(stats->pubkey));
     } else memcpy(&pubkey,stats->pubkey,sizeof(pubkey));
     if ( NXTpubkey != 0 )
+    {
+        int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
         init_hexbytes_noT(NXTpubkey,pubkey.bytes,sizeof(pubkey));
+    }
 }
 
 
@@ -2229,52 +2232,6 @@ void copy_file(char *src,char *dest) // OS portable
     }
 }
 
-void ensure_dir(char *dirname) // jl777: does this work in windows?
-{
-    FILE *fp;
-    char fname[512],cmd[512];
-    sprintf(fname,"%s/tmp",dirname);
-    if ( (fp= fopen(fname,"rb")) == 0 )
-    {
-        sprintf(cmd,"mkdir %s",dirname);
-        if ( system(cmd) != 0 )
-            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
-        fp = fopen(fname,"wb");
-        if ( fp != 0 )
-            fclose(fp);
-    }
-    else fclose(fp);
-}
-
-void delete_file(char *fname,int32_t scrubflag)
-{
-    FILE *fp;
-    char cmdstr[1024],*OS_rmstr;
-    long i,fpos;
-#ifdef WIN32
-    OS_rmstr = "del";
-#else
-    OS_rmstr = "rm";
-#endif
-    if ( (fp= fopen(fname,"rb+")) != 0 )
-    {
-        printf("delete(%s)\n",fname);
-        if ( scrubflag != 0 )
-        {
-            fseek(fp,0,SEEK_END);
-            fpos = ftell(fp);
-            rewind(fp);
-            for (i=0; i<fpos; i++)
-                fputc(rand()>>8,fp);
-            fflush(fp);
-        }
-        fclose(fp);
-        sprintf(cmdstr,"%s %s",OS_rmstr,fname);
-        system(cmdstr);
-    }
-    //if ( (fp= fopen(fname,"wb")) != 0 )
-    //    fclose(fp);
-}
 
 #ifdef oldway
 
