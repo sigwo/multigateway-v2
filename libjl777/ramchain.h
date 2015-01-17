@@ -2543,10 +2543,10 @@ struct rampayload *ram_gethashpayloads(struct ramchain_info *ram,char type,uint3
 
 struct ramchain_hashptr *ram_hashdata_search(int32_t createflag,struct ramchain_hashtable *hash,uint8_t *hashdata,int32_t datalen)
 {
+    struct ramchain_hashptr *ptr = 0;
+//#ifndef RAM_GENMODE
     char fname[512];
     void *newptr;
-    struct ramchain_hashptr *ptr = 0;
-#ifndef RAM_GENMODE
     if ( hash != 0 )
     {
         HASH_FIND(hh,hash->table,hashdata,datalen,ptr);
@@ -2585,7 +2585,7 @@ struct ramchain_hashptr *ram_hashdata_search(int32_t createflag,struct ramchain_
             ram_addhash(hash,ptr,newptr,datalen);
         } //else printf("found %d bytes ind.%d\n",datalen,ptr->rawind);
     } else printf("ram_hashdata_search null hashtable\n");
-#endif
+//#endif
     return(ptr);
 }
 
@@ -5034,7 +5034,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     ram->maxblock = (ram->RTblocknum + 10000);
     printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
-#ifndef RAM_GENMODE
+//#ifndef RAM_GENMODE
     int32_t tmpsize = 10000000;
     uint8_t *ptr;
     ptr = calloc(1,tmpsize), ram->tmphp = hopen(ptr,tmpsize,ptr);
@@ -5052,11 +5052,11 @@ void ram_init_ramchain(struct ramchain_info *ram)
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s B64\n",ram->name,ram->blocks64.blocknum,ram->blocks64.firstblock,ram->blocks64.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[2] = ram_init_blocks(ram->blocks.hps,ram,ram->blocks64.contiguous,&ram->Bblocks,&ram->Vblocks,'B',0);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s B\n",ram->name,ram->Bblocks.blocknum,ram->Bblocks.firstblock,ram->Bblocks.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
-#endif
+//#endif
     ram->mappedblocks[1] = ram_init_blocks(ram->blocks.hps,ram,ram->Bblocks.contiguous,&ram->Vblocks,&ram->blocks,'V',0);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s V\n",ram->name,ram->Vblocks.blocknum,ram->Vblocks.firstblock,ram->Vblocks.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[0] = ram_init_blocks(ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
-#ifdef RAM_GENMODE
+//#ifdef RAM_GENMODE
     if ( 1 )
     {
         HUFF *hp;
@@ -5094,7 +5094,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
             printf("MApped.(%s) datalen.%d\n",fname,datalen);
         }
     }
-#endif
+//#endif
     ram_disp_status(ram);
     //getchar();
 }
