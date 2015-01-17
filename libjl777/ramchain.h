@@ -17,6 +17,7 @@
 // malloc, calloc, realloc, free, gettimeofday, strcpy, strncmp, strcmp, memcpy, mmap, munmap, msync, truncate;
 
 //
+#define RAM_GENMODE
 
 #ifdef INCLUDE_DEFINES
 #ifndef ramchain_h
@@ -61,7 +62,6 @@ char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,ch
 #endif
 #include "cJSON.h"
 
-#define RAM_GENMODE
 
 #ifdef RAM_GENMODE
 #define HUFF_NUMFREQS 1
@@ -698,7 +698,8 @@ int32_t _origconvert_to_bitcoinhex(char *scriptasm)
         free(hex);
         return((int32_t)(2+middlelen+2));
     }
-    printf("cant assembly anything but OP_HASH160 + <key> + OP_EQUAL (%s)\n",scriptasm);
+    if ( scriptasm[0] != 0 )
+        printf("cant assembly anything but OP_HASH160 + <key> + OP_EQUAL (%s)\n",scriptasm);
     strcpy(scriptasm,"nonstandard");
     return(-1);
 }
@@ -4353,7 +4354,7 @@ int32_t ram_markspent(struct ramchain_info *ram,struct rampayload *txpayload,str
             addrptr->numunspent--;
         }
         else printf("FATAL: spendtxid_rawind.%u != %u addrpayload->otherind for (%d %d %d)\n",spendtxid_rawind,addrpayload->otherind,spendbp->blocknum,spendbp->txind,spendbp->v);
-    } else printf("FATAL: ram_markspent cant find addpayload (%d %d %d) addrind.%d i.%d\n",spendbp->blocknum,spendbp->txind,spendbp->v,txpayload->otherind,txpayload->extra);
+    } else printf("FATAL: ram_markspent cant find addpayload (%d %d %d) addrind.%d i.%d | txpayload.%p txid_rawind.%u\n",spendbp->blocknum,spendbp->txind,spendbp->v,txpayload->otherind,txpayload->extra,txpayload,spendtxid_rawind);
     return(-1);
 }
 
@@ -4363,6 +4364,7 @@ void ram_addunspent(struct ramchain_info *ram,struct rampayload *txpayload,struc
     // it needs to update the corresponding txpayload so exact state can be quickly calculated
     txpayload->B = addrpayload->B;
     txpayload->value = addrpayload->value;
+    printf("set addr_rawind.%d -> %p txid_rawind.%u\n",addr_rawind,txpayload,addrpayload->otherind);
     txpayload->otherind = addr_rawind;  // allows for direct lookup of coin addr payload vector
     txpayload->extra = ind;             // allows for direct lookup of the payload within the vector
     if ( addrpayload->value != 0 )
