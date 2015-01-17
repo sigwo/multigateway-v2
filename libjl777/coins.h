@@ -700,6 +700,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp)
     strcpy(ram->myipaddr,cp->myipaddr);
     strcpy(ram->srvNXTACCTSECRET,cp->srvNXTADDR);
     strcpy(ram->srvNXTADDR,cp->srvNXTADDR);
+    ram->marker = clonestr(cp->marker);
     ram->userpass = clonestr(cp->userpass);
     ram->serverport = clonestr(cp->serverport);
     ram->lastheighttime = (uint32_t)cp->lastheighttime;

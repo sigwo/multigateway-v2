@@ -17,7 +17,7 @@
 // malloc, calloc, realloc, free, gettimeofday, strcpy, strncmp, strcmp, memcpy, mmap, munmap, msync, truncate;
 
 //
-#define RAM_GENMODE
+//#define RAM_GENMODE
 
 #ifdef INCLUDE_DEFINES
 #ifndef ramchain_h
@@ -76,8 +76,7 @@ char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,ch
 struct huffstream { uint8_t *ptr,*buf,*allocptr; int32_t bitoffset,maski,endpos,allocsize; };
 typedef struct huffstream HUFF;
 
-#define MAX_HUFFBITS 5
-struct huffbits { uint64_t numbits:MAX_HUFFBITS,rawind:(32-MAX_HUFFBITS),bits:32; };
+struct huffbits { uint64_t numbits:5,rawind:23,bits:20,freq:16; };
 struct huffitem { struct huffbits code; uint32_t freq[HUFF_NUMFREQS]; };
 
 struct huffcode
@@ -87,11 +86,10 @@ struct huffcode
     int32_t tree[];
 };
 
-union data_or_ptr { uint64_t data; void *ptr; };
-struct huffpair { struct huffitem *items; struct huffcode *code; int32_t maxind,nonz,count,wt; char name[16]; };
-struct rawtx_huffs { struct huffpair numvins,numvouts,txid; char numvinsname[32],numvoutsname[32],txidname[32]; };
-struct rawvin_huffs { struct huffpair txid,vout; char txidname[32],voutname[32]; };
-struct rawvout_huffs { struct huffpair addr,script,value; char addrname[32],scriptname[32],valuename[32]; };
+struct huffpair { struct huffbits *items; struct huffcode *code; int32_t maxind,nonz,count,wt; uint64_t minval,maxval; char name[16]; };
+struct rawtx_huffs { struct huffpair numvins,numvouts,txid; };
+struct rawvin_huffs { struct huffpair txid,vout; };
+struct rawvout_huffs { struct huffpair addr,script,value; };
 struct rawblock_huffs
 {
     struct huffpair numall,numtx,numrawvins,numrawvouts;
@@ -163,11 +161,13 @@ struct ramchain_info
     struct ramchain_hashtable addrhash,txidhash,scripthash;
     double startmilli;
     HUFF *tmphp,*tmphp2;
-    char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport;
-    uint32_t lastheighttime,RTblocknum,min_confirms,estblocktime,firstiter,maxblock,nonzblocks;
-    uint64_t totalspends,numspends,totaloutputs,numoutputs;
+    char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker;
+    uint32_t lastheighttime,RTblocknum,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind;
+    uint64_t totalspends,numspends,totaloutputs,numoutputs,totalbits,totalbytes;
     struct rawblock *R,*R2,*R3;
+    struct rawblock_huffs H;
     void *Tspace; long Tsize;
+    uint64_t minval,maxval,minval2,maxval2,minval4,maxval4,minval8,maxval8;
 };
 
 union ramtypes { double dval; uint64_t val64; float fval; uint32_t val32; uint16_t val16; uint8_t val8,hashdata[8]; };
@@ -1498,23 +1498,23 @@ char *huff_str(uint64_t codebits,int32_t n)
     return(str);
 }
 
-int32_t huff_dispitem(int32_t dispflag,const struct huffitem *item,int32_t frequi)
+int32_t huff_dispitem(int32_t dispflag,const struct huffbits *item,int32_t frequi)
 {
-    int32_t n = item->code.numbits;
+    int32_t n = item->numbits;
     uint64_t codebits;
     if ( n != 0 )
     {
         if ( dispflag != 0 )
         {
-            codebits = huff_reversebits(item->code.bits,n);
-            printf("%06d: freq.%-6d (%8s).%d\n",item->code.rawind,item->freq[frequi],huff_str(codebits,n),n);
+            codebits = huff_reversebits(item->bits,n);
+            printf("%06d: freq.%-6d (%8s).%d\n",item->rawind,item->freq,huff_str(codebits,n),n);
         }
         return(1);
     }
     return(0);
 }
 
-void huff_disp(int32_t verboseflag,struct huffcode *huff,struct huffitem *items,int32_t frequi)
+void huff_disp(int32_t verboseflag,struct huffcode *huff,struct huffbits *items,int32_t frequi)
 {
     int32_t i,n = 0;
     if ( huff->maxbits >= 1024 )
@@ -1584,7 +1584,7 @@ int32_t huff_heap_remove(struct huffheap *heap)
     return(-1);
 }
 
-int32_t huff_init(double *freqsump,int32_t **predsp,uint32_t **revtreep,struct huffitem **items,int32_t numitems,int32_t frequi)
+int32_t huff_init(double *freqsump,int32_t **predsp,uint32_t **revtreep,struct huffbits **items,int32_t numitems,int32_t frequi)
 {
     int32_t depth,r1,r2,i,n,*preds,extf = numitems;
     struct huffheap *heap;
@@ -1597,7 +1597,7 @@ int32_t huff_init(double *freqsump,int32_t **predsp,uint32_t **revtreep,struct h
         return(0);
     efreqs = calloc(2 * numitems,sizeof(*efreqs));
     for (i=0; i<numitems; i++)
-        efreqs[i] = items[i]->freq[frequi];// * ((items[i]->wt != 0) ? items[i]->wt : 1);
+        efreqs[i] = items[i]->freq;// * ((items[i]->wt != 0) ? items[i]->wt : 1);
     if ( (heap= huff_heap_create(numitems*2,efreqs)) == NULL )
     {
         printf("error _heap_create for numitems.%d\n",numitems);
@@ -1611,7 +1611,7 @@ int32_t huff_init(double *freqsump,int32_t **predsp,uint32_t **revtreep,struct h
         if ( efreqs[i] > 0 )
         {
             n++;
-            freqsum += items[i]->freq[frequi];
+            freqsum += items[i]->freq;
             huff_heap_add(heap,i);
         }
     //printf("added n.%d items: freqsum %.0f\n",n,freqsum);
@@ -1640,17 +1640,17 @@ int32_t huff_init(double *freqsump,int32_t **predsp,uint32_t **revtreep,struct h
     return(extf);
 }
 
-int32_t huff_calc(int32_t dispflag,int32_t *nonzp,double *totalbytesp,double *totalbitsp,int32_t *preds,struct huffitem **items,int32_t numitems,int32_t frequi,int32_t wt)
+int32_t huff_calc(int32_t dispflag,int32_t *nonzp,double *totalbytesp,double *totalbitsp,int32_t *preds,struct huffbits **items,int32_t numitems,int32_t frequi,int32_t wt)
 {
     int32_t i,ix,pred,numbits,nonz,maxbits = 0;
     double totalbits,totalbytes;
-    struct huffitem *item;
+    struct huffbits *item;
     uint64_t codebits;
     totalbits = totalbytes = 0.;
     for (i=nonz=0; i<numitems; i++)
     {
         codebits = numbits = 0;
-        if ( items[i]->freq[frequi] != 0 )
+        if ( items[i]->freq != 0 )
         {
             ix = i;
             pred = preds[ix];
@@ -1672,13 +1672,13 @@ int32_t huff_calc(int32_t dispflag,int32_t *nonzp,double *totalbytesp,double *to
             {
                 //item->codebits = huff_reversebits(codebits,numbits);
                 //item->numbits = numbits;
-                item->code.numbits = numbits;
-                item->code.bits = huff_reversebits(codebits,numbits);
+                item->numbits = numbits;
+                item->bits = huff_reversebits(codebits,numbits);
                 //item->code.rawind = item->rawind;
-                if ( numbits > 32 || item->code.numbits != numbits || item->code.bits != huff_reversebits(codebits,numbits) || item->code.rawind != item->code.rawind )
-                    printf("error setting code.bits: item->code.numbits %d != %d numbits || item->code.bits %u != %llu _reversebits(codebits,numbits) || item->code.rawind %d != %d item->rawind\n",item->code.numbits,numbits,item->code.bits,(long long)huff_reversebits(codebits,numbits),item->code.rawind,item->code.rawind);
-                totalbits += numbits * item->freq[frequi];
-                totalbytes += wt * item->freq[frequi];
+                if ( numbits > 32 || item->bits != huff_reversebits(codebits,numbits) )
+                    printf("error setting code.bits: item->code.numbits %d != %d numbits || item->code.bits %u != %llu _reversebits(codebits,numbits) || item->code.rawind %d != %d item->rawind\n",item->numbits,numbits,item->bits,(long long)huff_reversebits(codebits,numbits),item->rawind,item->rawind);
+                totalbits += numbits * item->freq;
+                totalbytes += wt * item->freq;
                 if ( dispflag != 0 )
                 {
                     printf("Total %.0f -> %.0f: ratio %.3f ave %.1f bits/item |",totalbytes,totalbits,totalbytes*8/(totalbits+1),totalbits/nonz);
@@ -1717,7 +1717,7 @@ int32_t huff_decodetest(uint32_t *indp,int32_t *tree,int32_t depth,int32_t val,i
 
 void huff_free(struct huffcode *huff) { free(huff); }
 
-struct huffcode *huff_create(int32_t dispflag,struct huffitem **items,int32_t numitems,int32_t frequi,int32_t wt)
+struct huffcode *huff_create(int32_t dispflag,struct huffbits **items,int32_t numitems,int32_t frequi,int32_t wt)
 {
     int32_t ix2,i,n,extf,*preds,allocsize;
     uint32_t *revtree;
@@ -1773,9 +1773,9 @@ int32_t huff_encode(struct huffcode *huff,HUFF *hp,struct huffitem *items,uint32
     return(count);
 }
 
-int32_t huff_itemsave(FILE *fp,struct huffitem *item)
+int32_t huff_itemsave(FILE *fp,struct huffbits *item)
 {
-    if ( fwrite(&item->code,1,sizeof(item->code),fp) != sizeof(uint64_t) )
+    if ( fwrite(item,1,sizeof(*item),fp) != sizeof(uint64_t) )
         return(-1);
     return((int32_t)sizeof(uint64_t));
 }
@@ -1801,7 +1801,7 @@ int32_t huffpair_save(FILE *fp,struct huffpair *pair)
     n = sizeof(*pair);
     for (i=0; i<=pair->maxind; i++)
     {
-        if ( pair->items[i].freq[0] != 0 )
+        if ( pair->items[i].freq != 0 )
         {
             if ( (val= huff_itemsave(fp,&pair->items[i])) <= 0 )
                 return(-1);
@@ -1813,32 +1813,97 @@ int32_t huffpair_save(FILE *fp,struct huffpair *pair)
     return((int32_t)(n+val));
 }
 
-int32_t huffpair_gencode(struct ramchain_info *V,struct huffpair *pair,int32_t frequi)
+void huff_compressionvars_fname(int32_t readonly,char *fname,char *coinstr,char *typestr,int32_t subgroup)
 {
-    struct huffitem **items;
+    char *dirname = (0*readonly != 0) ? "/Users/jimbolaptop/ramchains" : "ramchains";
+    if ( subgroup < 0 )
+        sprintf(fname,"%s/%s/%s.%s",dirname,coinstr,coinstr,typestr);
+    else sprintf(fname,"%s/%s/%s/%s.%d",dirname,coinstr,typestr,coinstr,subgroup);
+}
+
+int32_t huffpair_gencode(struct ramchain_info *ram,struct huffpair *pair,int32_t frequi)
+{
+    struct huffbits **items;
     int32_t i,n;
     char fname[1024];
     FILE *fp;
-    if ( pair->code == 0 && pair->nonz > 0 )
+    if ( pair->code == 0 && pair->items != 0 )// && pair->nonz > 0 )
     {
+        //fprintf(stderr,"%s n.%d: ",pair->name,pair->nonz+1);
         items = calloc(pair->nonz+1,sizeof(*items));
         for (i=n=0; i<=pair->maxind; i++)
-            if ( pair->items[i].freq[frequi] != 0 )
+            if ( pair->items[i].freq != 0 )
                 items[n++] = &pair->items[i];
-        fprintf(stderr,"%s n.%d: ",pair->name,n);
+        //fprintf(stderr,"%s n.%d: ",pair->name,n);
         pair->code = huff_create(0,items,n,frequi,pair->wt);
-        set_compressionvars_fname(0,fname,V->name,pair->name,-1);
-        if ( pair->code != 0 && (fp= fopen(fname,"wb")) != 0 )
+        huff_compressionvars_fname(0,fname,ram->name,pair->name,-1);
+        if ( pair->code != 0 )//&& (fp= fopen(fname,"wb")) != 0 )
         {
-            if ( huffpair_save(fp,pair) <= 0 )
-                printf("huffpair_gencode: error saving %s\n",fname);
-            else fprintf(stderr,"%s saved ",fname);
-            fclose(fp);
+            ram->totalbits += pair->code->totalbits;
+            ram->totalbytes += pair->code->totalbytes;
+            //if ( huffpair_save(fp,pair) <= 0 )
+            //    printf("huffpair_gencode: error saving %s\n",fname);
+            //else fprintf(stderr,"%s saved ",fname);
+            //fclose(fp);
         } else printf("error creating (%s)\n",fname);
-        huff_disp(0,pair->code,pair->items,frequi);
+        //huff_disp(0,pair->code,pair->items,frequi);
         free(items);
+        huff_free(pair->code);
+        pair->code = 0;
     }
     return(0);
+}
+
+void huffpair_update(char type,struct ramchain_info *ram,char *str,char *name,struct huffpair *pair,uint64_t val,int32_t size)
+{
+    if ( type == 'H' )
+    {
+        if ( pair->name[0] == 0 )
+        {
+            sprintf(pair->name,"%s_%s",str,name);
+            pair->wt = size;
+        }
+        if ( pair->minval == 0 || val < pair->minval )
+            pair->minval = val;
+        if ( pair->maxval == 0 || val > pair->maxval )
+            pair->maxval = val;
+        if ( size == 4 )
+        {
+            if ( ram->minval4 == 0 || val < ram->minval4 )
+                ram->minval4 = val;
+            if ( ram->maxval4 == 0 || val > ram->maxval4 )
+                ram->maxval4 = val;
+        }
+        else if ( size == 2 )
+        {
+            if ( ram->minval2 == 0 || val < ram->minval2 )
+                ram->minval2 = val;
+            if ( ram->maxval2 == 0 || val > ram->maxval2 )
+                ram->maxval2 = val;
+        }
+        else if ( size == 8 )
+        {
+            if ( ram->minval8 == 0 || val < ram->minval8 )
+                ram->minval8 = val;
+            if ( ram->maxval8 == 0 || val > ram->maxval8 )
+                ram->maxval8 = val;
+        }
+    }
+    else if ( size != 8 )
+    {
+        if ( pair->items == 0 )
+        {
+            pair->maxind = pair->nonz = (int32_t)(pair->maxval - pair->minval + 1);
+            pair->items = calloc(size==4?pair->maxind+2:(1<<16),sizeof(*pair->items));
+        }
+        if ( val == 0 )
+            pair->items[0].freq++;
+        else
+        {
+            pair->items[val - pair->minval].freq++;
+            //printf("%s: %llu maxval.%llu | freq.%d\n",pair->name,(long long)val,(long long)pair->maxval,pair->items[val-pair->minval].freq);
+        }
+    }
 }
 
 int32_t huffpair_gentxcode(struct ramchain_info *V,struct rawtx_huffs *tx,int32_t frequi)
@@ -1873,32 +1938,33 @@ int32_t huffpair_genvoutcode(struct ramchain_info *V,struct rawvout_huffs *vout,
 int32_t huffpair_gencodes(struct ramchain_info *V,struct rawblock_huffs *H,int32_t frequi)
 {
     int32_t err;
-    if ( huffpair_gencode(V,&H->numall,frequi) != 0 )
-        return(-1);
-    else if ( huffpair_gencode(V,&H->numtx,frequi) != 0 )
+    //if ( huffpair_gencode(V,&H->numall,frequi) != 0 )
+    //    return(-1);
+    //else
+        if ( huffpair_gencode(V,&H->numtx,frequi) != 0 )
         return(-2);
-    else if ( huffpair_gencode(V,&H->numrawvins,frequi) != 0 )
-        return(-3);
-    else if ( huffpair_gencode(V,&H->numrawvouts,frequi) != 0 )
-        return(-4);
-    else if ( (err= huffpair_gentxcode(V,&H->txall,frequi)) != 0 )
-        return(-100 + err);
+    //else if ( huffpair_gencode(V,&H->numrawvins,frequi) != 0 )
+    //    return(-3);
+    //else if ( huffpair_gencode(V,&H->numrawvouts,frequi) != 0 )
+    //    return(-4);
+    //else if ( (err= huffpair_gentxcode(V,&H->txall,frequi)) != 0 )
+    //    return(-100 + err);
     else if ( (err= huffpair_gentxcode(V,&H->tx0,frequi)) != 0 )
         return(-110 + err);
     else if ( (err= huffpair_gentxcode(V,&H->tx1,frequi)) != 0 )
         return(-120 + err);
     else if ( (err= huffpair_gentxcode(V,&H->txi,frequi)) != 0 )
         return(-130 + err);
-    else if ( (err= huffpair_genvincode(V,&H->vinall,frequi)) != 0 )
-        return(-200 + err);
+   // else if ( (err= huffpair_genvincode(V,&H->vinall,frequi)) != 0 )
+    //    return(-200 + err);
     else if ( (err= huffpair_genvincode(V,&H->vin0,frequi)) != 0 )
         return(-210 + err);
     else if ( (err= huffpair_genvincode(V,&H->vin1,frequi)) != 0 )
         return(-220 + err);
     else if ( (err= huffpair_genvincode(V,&H->vini,frequi)) != 0 )
         return(-230 + err);
-    else if ( (err= huffpair_genvoutcode(V,&H->voutall,frequi)) != 0 )
-        return(-300 + err);
+    //else if ( (err= huffpair_genvoutcode(V,&H->voutall,frequi)) != 0 )
+    //    return(-300 + err);
     else if ( (err= huffpair_genvoutcode(V,&H->vout0,frequi)) != 0 )
         return(-310 + err);
     else if ( (err= huffpair_genvoutcode(V,&H->vout1,frequi)) != 0 )
@@ -2050,7 +2116,7 @@ int32_t huffpair_decodeitemind(char type,int32_t bitflag,uint32_t *rawindp,struc
                 printf("decode error: val.%x -> ind.%d >= numitems %d\n",c,ind,numitems);
                 return(-1);
             }
-            *rawindp = pair->items[ind].code.rawind;
+            *rawindp = pair->items[ind].rawind;
             return(num);
         }
         if ( c < 0 )
@@ -2395,7 +2461,7 @@ void ram_sethashname(char fname[1024],struct ramchain_hashtable *hash,int32_t ne
     if ( newflag != 0 )
         sprintf(typestr,"%s.new",str);
     else strcpy(typestr,str);
-    set_compressionvars_fname(0,fname,hash->coinstr,typestr,-1);
+    huff_compressionvars_fname(0,fname,hash->coinstr,typestr,-1);
 }
 
 int32_t ram_addhash(struct ramchain_hashtable *hash,struct ramchain_hashptr *hp,void *ptr,int32_t datalen)
@@ -2545,7 +2611,7 @@ struct rampayload *ram_gethashpayloads(struct ramchain_info *ram,char type,uint3
 struct ramchain_hashptr *ram_hashdata_search(int32_t createflag,struct ramchain_hashtable *hash,uint8_t *hashdata,int32_t datalen)
 {
     struct ramchain_hashptr *ptr = 0;
-//#ifndef RAM_GENMODE
+#ifndef RAM_GENMODE
     char fname[512];
     void *newptr;
     if ( hash != 0 )
@@ -2586,7 +2652,7 @@ struct ramchain_hashptr *ram_hashdata_search(int32_t createflag,struct ramchain_
             ram_addhash(hash,ptr,newptr,datalen);
         } //else printf("found %d bytes ind.%d\n",datalen,ptr->rawind);
     } else printf("ram_hashdata_search null hashtable\n");
-//#endif
+#endif
     return(ptr);
 }
 
@@ -2609,7 +2675,11 @@ uint32_t ram_conv_hashstr(int32_t createflag,struct ramchain_info *ram,char *has
         hashstr = nullstr;
     hash = ram_gethash(ram,type);
     if ( (ptr= ram_hashsearch(createflag,hash,hashstr,type)) != 0 )
+    {
+        if ( (hash->ind + 1) > ram->maxind )
+            ram->maxind = (hash->ind + 1);
         return(ptr->rawind);
+    }
     else return(0);
 }
 
@@ -2662,14 +2732,10 @@ struct rampayload *ram_getpayloadi(struct ramchain_hashptr **addrptrp,struct ram
     return(0);
 }
 
-//BTC CREATED.V block.150949 datalen.7257
-//BTC CREATED.V block.150950 datalen.15432
-//decode_hex n.4 hex[0] (7) -> 7
-//decode_hex n.4 hex[0] (7) -> 7
-
 #define ram_scriptind(ram,hashstr) ram_conv_hashstr(1,ram,hashstr,'s')
 #define ram_addrind(ram,hashstr) ram_conv_hashstr(1,ram,hashstr,'a')
 #define ram_txidind(ram,hashstr) ram_conv_hashstr(1,ram,hashstr,'t')
+// Make sure queries dont autocreate hashtable entries
 #define ram_scriptind_RO(ram,hashstr) ram_conv_hashstr(0,ram,hashstr,'s')
 #define ram_addrind_RO(ram,hashstr) ram_conv_hashstr(0,ram,hashstr,'a')
 #define ram_txidind_RO(ram,hashstr) ram_conv_hashstr(0,ram,hashstr,'t')
@@ -3849,17 +3915,21 @@ cJSON *ram_address_entry_json(struct address_entry *bp)
     return(array);
 }
 
-cJSON *ram_addrpayload_json(struct rampayload *payload)
+cJSON *ram_addrpayload_json(struct ramchain_info *ram,struct rampayload *payload)
 {
+    char txidstr[8192];
+    ram_txid(txidstr,ram,payload->otherind);
     cJSON *json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txidstr));
+    cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(payload->B.v));
+    cJSON_AddItemToObject(json,"value",cJSON_CreateNumber(dstr(payload->value)));
     cJSON_AddItemToObject(json,"txid_rawind",cJSON_CreateNumber(payload->otherind));
-    cJSON_AddItemToObject(json,"scriptind",cJSON_CreateNumber(payload->extra));
     cJSON_AddItemToObject(json,"txout",ram_address_entry_json(&payload->B));
     if ( payload->B.isinternal != 0 )
         cJSON_AddItemToObject(json,"MGWinternal",cJSON_CreateNumber(1));
     if ( payload->B.spent != 0 )
         cJSON_AddItemToObject(json,"spent",ram_address_entry_json(&payload->spentB));
-    cJSON_AddItemToObject(json,"value",cJSON_CreateNumber(payload->value));
+    cJSON_AddItemToObject(json,"scriptind",cJSON_CreateNumber(payload->extra));
     return(json);
 }
 
@@ -4114,7 +4184,7 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
                 if ( (*hps= hload(0,0,fname)) != 0 )
                 {
 #ifdef RAM_GENMODE
-                    if ( (*hps)->allocsize < 12 )
+                    if ( ram_verify(ram,*hps,blocks->format) != blocknum || (*hps)->allocsize < 12 )
                         delete_file(fname,0);
                     else n++;
                     hclose(*hps);
@@ -4149,6 +4219,12 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     ram_setformatstr(formatstr,blocks->format);
     prevhps = ram_get_hpptr(prevblocks,blocknum);
     ram_setfname(fname,ram,blocknum,formatstr);
+   // printf("check.(%s)\n",fname);
+    if ( (fp= fopen(fname,"rb")) != 0 )
+    {
+        fclose(fp);
+        return(0);
+    }
     if ( 0 && blocks->format == 'V' )
     {
         if ( _get_blockinfo(blocks->R,ram,blocknum) > 0 )
@@ -4185,18 +4261,19 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     }
     else if ( blocks->format == 'V' || blocks->format == 'B' )
     {
-        if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 )
+        //printf("create %s %d\n",formatstr,blocknum);
+        if ( (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
         {
-            //printf("create %s %d\n",formatstr,blocknum);
-            if ( *hpptr == 0 && (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
+            //printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
+            fprintf(stderr," %s CREATED.%c block.%d datalen.%d\n",ram->name,blocks->format,blocknum,datalen+1);
+            if ( (fp= fopen(fname,"wb")) != 0 )
             {
-                //printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
-                if ( (fp= fopen(fname,"wb")) != 0 )
-                {
-                    hflush(fp,hp);
-                    fclose(fp);
-                }
-                if ( ram_verify(ram,hp,blocks->format) == blocknum )
+                hflush(fp,hp);
+                fclose(fp);
+            }
+            if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 &&  *hpptr == 0 )
+            {
+                if ( verifyflag == 0 || ram_verify(ram,hp,blocks->format) == blocknum )
                 {
                     if ( verifyflag != 0 && ((blocks->format == 'B') ? ram_verify_Bblock(ram,blocknum,hp) : ram_verify_Vblock(ram,blocknum,hp)) == 0 )
                     {
@@ -4207,7 +4284,6 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
                     {
                         datalen = (1 + hp->allocsize);
                         //if ( blocks->format == 'V' )
-                            fprintf(stderr," %s CREATED.%c block.%d datalen.%d\n",ram->name,blocks->format,blocknum,datalen+1);
                         //else fprintf(stderr,"%s.B.%d ",ram->name,blocknum);
                         if ( *hpptr != 0 )
                         {
@@ -4224,7 +4300,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
 #endif
                     }
                 } else delete_file(fname,0), hclose(hp);
-            }
+            } else hclose(hp);
         } else printf("%s.%u couldnt get hpp\n",formatstr,blocknum);
     }
     else if ( blocks->format == 64 || blocks->format == 4096 )
@@ -4301,6 +4377,8 @@ int32_t ram_init_hashtable(struct ramchain_info *ram,char type)
         if ( offset != hash->M.allocsize )
             exit(-1);
     } else hash->newfp = fopen(fname,"wb");
+    if ( (hash->ind + 1) > ram->maxind )
+        ram->maxind = (hash->ind + 1);
     return(num);
 }
 
@@ -4322,7 +4400,6 @@ void ram_disp_status(struct ramchain_info *ram)
 {
     char buf[1024];
     int32_t i,n = 0;
-    ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     for (i=0; i<ram->RTblocknum; i++)
     {
         if ( ram->blocks.hps[i] != 0 )
@@ -4333,7 +4410,7 @@ void ram_disp_status(struct ramchain_info *ram)
     fprintf(stderr,"%s\n",buf);
 }
 
-int32_t ram_markspent(struct ramchain_info *ram,struct rampayload *txpayload,struct address_entry *spendbp,uint32_t spendtxid_rawind)
+int32_t ram_markspent(struct ramchain_info *ram,struct rampayload *txpayload,struct address_entry *spendbp,uint32_t txid_rawind)
 {
     struct ramchain_hashptr *addrptr;
     struct rampayload *addrpayload;
@@ -4346,15 +4423,19 @@ int32_t ram_markspent(struct ramchain_info *ram,struct rampayload *txpayload,str
     // now we need to update the addrpayload
     if ( (addrpayload= ram_getpayloadi(&addrptr,ram,'a',txpayload->otherind,txpayload->extra)) != 0 )
     {
-        if ( spendtxid_rawind == addrpayload->otherind )
+        if ( txid_rawind == addrpayload->otherind )
         {
             addrpayload->spentB = *spendbp;
             addrpayload->B.spent = 1;
             addrptr->unspent -= addrpayload->value;
             addrptr->numunspent--;
+            //printf("SPENT %.8f\n",dstr(addrpayload->value));
+            //printf("MATCH: spendtxid_rawind.%u == %u addrpayload->otherind for (%d %d %d)\n",txid_rawind,addrpayload->otherind,spendbp->blocknum,spendbp->txind,spendbp->v);
         }
-        else printf("FATAL: spendtxid_rawind.%u != %u addrpayload->otherind for (%d %d %d)\n",spendtxid_rawind,addrpayload->otherind,spendbp->blocknum,spendbp->txind,spendbp->v);
-    } else printf("FATAL: ram_markspent cant find addpayload (%d %d %d) addrind.%d i.%d | txpayload.%p txid_rawind.%u\n",spendbp->blocknum,spendbp->txind,spendbp->v,txpayload->otherind,txpayload->extra,txpayload,spendtxid_rawind);
+        else printf("FATAL: txpayload.%p[%d] addrpayload.%p spendtxid_rawind.%u != %u addrpayload->otherind for (%d %d %d)\n",txpayload,txpayload->extra,addrpayload,txid_rawind,addrpayload->otherind,spendbp->blocknum,spendbp->txind,spendbp->v);
+    } else printf("FATAL: ram_markspent cant find addpayload (%d %d %d) addrind.%d i.%d | txpayload.%p txid_rawind.%u\n",spendbp->blocknum,spendbp->txind,spendbp->v,txpayload->otherind,txpayload->extra,txpayload,txid_rawind);
+    if ( addrpayload->value != txpayload->value )
+        printf("FATAL: addrpayload %.8f vs txpayload %.8f\n",dstr(addrpayload->value),dstr(txpayload->value));
     return(-1);
 }
 
@@ -4364,11 +4445,12 @@ void ram_addunspent(struct ramchain_info *ram,struct rampayload *txpayload,struc
     // it needs to update the corresponding txpayload so exact state can be quickly calculated
     txpayload->B = addrpayload->B;
     txpayload->value = addrpayload->value;
-    printf("set addr_rawind.%d -> %p txid_rawind.%u\n",addr_rawind,txpayload,addrpayload->otherind);
+    //printf("txpayload.%p addrpayload.%p set addr_rawind.%d -> %p txid_rawind.%u\n",txpayload,addrpayload,addr_rawind,txpayload,addrpayload->otherind);
     txpayload->otherind = addr_rawind;  // allows for direct lookup of coin addr payload vector
     txpayload->extra = ind;             // allows for direct lookup of the payload within the vector
     if ( addrpayload->value != 0 )
     {
+        //printf("UNSPENT %.8f\n",dstr(addrpayload->value));
         ram->totaloutputs += addrpayload->value;
         ram->numoutputs++;
         addrptr->unspent += addrpayload->value;
@@ -4376,18 +4458,35 @@ void ram_addunspent(struct ramchain_info *ram,struct rampayload *txpayload,struc
     }
 }
 
-int32_t ram_rawvout_update(uint32_t *addr_rawindp,struct rampayload *txpayload,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vout,uint32_t txid_rawind,int32_t isinternal)
+int32_t ram_rawvout_update(int32_t iter,uint32_t *addr_rawindp,struct rampayload *txpayload,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vout,uint16_t numvouts,uint32_t txid_rawind,int32_t isinternal)
 {
     struct rampayload payload;
     struct ramchain_hashtable *table;
     struct ramchain_hashptr *addrptr;
+    struct rawvout_huffs *pair;
     uint32_t scriptind,addrind;
+    char *str;
     uint64_t value;
     int32_t numbits = 0;
     *addr_rawindp = 0;
     numbits += hdecode_varbits(&scriptind,hp);
     numbits += hdecode_varbits(&addrind,hp);
     numbits += hdecode_valuebits(&value,hp);
+    if ( toupper(iter) == 'H' )
+    {
+        if ( vout == 0 )
+            pair = &ram->H.vout0, str = "vout0";
+        else if ( vout == (numvouts - 1) )
+            pair = &ram->H.voutn, str = "voutn";
+        else if ( vout == 1 )
+            pair = &ram->H.vout1, str = "vout1";
+        else if ( vout == 2 )
+            pair = &ram->H.vout2, str = "vout2";
+        else pair = &ram->H.vouti, str = "vouti";
+        huffpair_update(iter,ram,str,"script",&pair->script,scriptind,4);
+        huffpair_update(iter,ram,str,"addr",&pair->addr,addrind,4);
+        huffpair_update(iter,ram,str,"value",&pair->value,value,8);
+    }
     table = ram_gethash(ram,'s');
     if ( scriptind > 0 && scriptind <= table->ind )
     {
@@ -4411,11 +4510,14 @@ int32_t ram_rawvout_update(uint32_t *addr_rawindp,struct rampayload *txpayload,s
                     addrptr->maxpayloads = (addrptr->numpayloads + 1);
                     addrptr->payloads = realloc(addrptr->payloads,addrptr->maxpayloads * sizeof(struct rampayload));
                 }
-                memset(&payload,0,sizeof(payload));
-                payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = vout, payload.B.isinternal = isinternal;
-                payload.otherind = txid_rawind, payload.extra = scriptind, payload.value = value;
-                ram_addunspent(ram,txpayload,addrptr,&payload,addrind,addrptr->numpayloads);
-                addrptr->payloads[addrptr->numpayloads++] = payload;
+                if ( iter <= 2 )
+                {
+                    memset(&payload,0,sizeof(payload));
+                    payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = vout, payload.B.isinternal = isinternal;
+                    payload.otherind = txid_rawind, payload.extra = scriptind, payload.value = value;
+                    ram_addunspent(ram,txpayload,addrptr,&payload,addrind,addrptr->numpayloads);
+                    addrptr->payloads[addrptr->numpayloads++] = payload;
+                }
             }
             return(numbits);
         } else printf("ram_rawvout_update block.%d txind.%d vout.%d can find addrind.%d ptr.%p\n",blocknum,txind,vout,addrind,addrptr);
@@ -4423,12 +4525,14 @@ int32_t ram_rawvout_update(uint32_t *addr_rawindp,struct rampayload *txpayload,s
     return(-1);
 }
 
-int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vin,uint32_t spendtxid_rawind)
+int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vin,uint16_t numvins,uint32_t spendtxid_rawind)
 {
     static struct address_entry zeroB;
     struct address_entry *bps,B,*bp;
     struct ramchain_hashptr *txptr;
     struct ramchain_hashtable *table;
+    struct rawvin_huffs *pair;
+    char *str;
     uint32_t txid_rawind;
     int32_t numbits = 0;
     uint16_t vout;
@@ -4437,19 +4541,32 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
     if ( txid_rawind > 0 && txid_rawind <= table->ind )
     {
         numbits += hdecode_smallbits(&vout,hp);
-        if ( iter != 0 )
+        if ( iter == 0 )
             return(numbits);
+        else if ( toupper(iter) == 'H' )
+        {
+            if ( vin == 0 )
+                pair = &ram->H.vin0, str = "vin0";
+            else if ( vin == 1 )
+                pair = &ram->H.vin1, str = "vin1";
+            else pair = &ram->H.vini, str = "vini";
+            huffpair_update(iter,ram,str,"txid",&pair->txid,txid_rawind,4);
+            huffpair_update(iter,ram,str,"vout",&pair->vout,vout,2);
+        }
         if ( (txptr= table->ptrs[txid_rawind]) != 0 && txptr->payloads != 0 )
         {
             memset(&B,0,sizeof(B)), B.blocknum = blocknum, B.txind = txind, B.v = vin, B.spent = 1;
             if ( (vout+1) < txptr->numpayloads )
             {
-                bp = &txptr->payloads[vout + 1].spentB;
-                if ( memcmp(bp,&zeroB,sizeof(zeroB)) == 0 )
-                    ram_markspent(ram,&txptr->payloads[vout + 1],&B,spendtxid_rawind);
-                else if ( memcmp(bp,&B,sizeof(B)) == 0 )
-                    printf("duplicate spentB (%d %d %d)\n",B.blocknum,B.txind,B.v);
-                else printf("interloper! (%d %d %d).%d vs (%d %d %d).%d\n",bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
+                if ( iter <= 2 )
+                {
+                    bp = &txptr->payloads[vout + 1].spentB;
+                    if ( memcmp(bp,&zeroB,sizeof(zeroB)) == 0 )
+                        ram_markspent(ram,&txptr->payloads[vout + 1],&B,txid_rawind);
+                    else if ( memcmp(bp,&B,sizeof(B)) == 0 )
+                        printf("duplicate spentB (%d %d %d)\n",B.blocknum,B.txind,B.v);
+                    else printf("interloper! (%d %d %d).%d vs (%d %d %d).%d\n",bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
+                }
                 return(numbits);
             } else printf("(%d %d %d) vout.%d overflows bp->v.%d\n",blocknum,txind,vin,vout,B.v);
         } else printf("rawvin_update: unexpected null table->ptrs[%d] or no payloads.%p\n",txid_rawind,bps);
@@ -4461,19 +4578,32 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
 {
     struct rampayload payload;
     struct ramchain_hashptr *txptr;
+    char *str;
     uint32_t addr_rawind,txid_rawind = 0;
     int32_t i,retval,isinternal,numbits = 0;
     uint16_t numvins,numvouts;
+    struct rawtx_huffs *pair;
     struct ramchain_hashtable *table;
     table = ram_gethash(ram,'t');
     numbits += hdecode_smallbits(&numvins,hp);
     numbits += hdecode_smallbits(&numvouts,hp);
     numbits += hdecode_varbits(&txid_rawind,hp);
+    if ( toupper(iter) == 'H' )
+    {
+        if ( txind == 0 )
+            pair = &ram->H.tx0, str = "tx0";
+        else if ( txind == 1 )
+            pair = &ram->H.tx1, str = "tx1";
+        else pair = &ram->H.txi, str = "txi";
+        huffpair_update(iter,ram,str,"numvins",&pair->numvins,numvins,2);
+        huffpair_update(iter,ram,str,"numvouts",&pair->numvouts,numvouts,2);
+        huffpair_update(iter,ram,str,"txid",&pair->txid,txid_rawind,4);
+    }
     if ( txid_rawind > 0 && txid_rawind <= table->ind )
     {
         if ( (txptr= table->ptrs[txid_rawind]) != 0 )
         {
-            if ( iter == 0 )
+            if ( iter == 0 || iter == 2 )
             {
                 memset(&payload,0,sizeof(payload));
                 if ( txptr->payloads != 0 )
@@ -4493,15 +4623,17 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
             if ( numvins > 0 ) // alloc and update payloads in iter 0, no payload operations in iter 1
             {
                 for (i=0; i<numvins; i++,numbits+=retval)
-                    if ( (retval= ram_rawvin_update(iter,ram,hp,blocknum,txind,i,txid_rawind)) < 0 )
+                    if ( (retval= ram_rawvin_update(iter,ram,hp,blocknum,txind,i,numvins,txid_rawind)) < 0 )
                         return(-1);
             }
             if ( numvouts > 0 ) // just count number of payloads needed in iter 0, iter 1 allocates and updates
             {
                 for (i=isinternal=0; i<numvouts; i++,numbits+=retval)
                 {
-                    if ( (retval= ram_rawvout_update(&addr_rawind,iter==0?0:&txptr->payloads[i+1],ram,hp,blocknum,txind,i,txid_rawind,isinternal*(i==(numvouts-1)))) < 0 )
+                    if ( (retval= ram_rawvout_update(iter,&addr_rawind,iter==0?0:&txptr->payloads[i+1],ram,hp,blocknum,txind,i,numvouts,txid_rawind,isinternal*(i==(numvouts-1)))) < 0 )
                         return(-2);
+                    if ( i == 0 && addr_rawind == ram->marker_rawind )
+                        isinternal = 1;
                 }
             }
             return(numbits);
@@ -4529,8 +4661,14 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
         printf("ram_rawblock_update: blocknum.%d vs checkblocknum.%d\n",blocknum,checkblocknum);
         return(-1);
     }
+    
     numbits += hdecode_smallbits(&numtx,hp);
     numbits += hdecode_valuebits(&minted,hp);
+    if ( toupper(iter) == 'H' )
+    {
+        huffpair_update(iter,ram,"","numtx",&ram->H.numtx,numtx,2);
+        //huffpair_update(iter,ram,"minted",&ram->H.minted,minted,8);
+    }
     if ( numtx > 0 )
     {
         for (txind=0; txind<numtx; txind++,numbits+=retval)
@@ -4538,29 +4676,38 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
                 return(-1);
     }
     datalen += hconv_bitlen(numbits);
-    return(datalen == hp->allocsize);
+    return(datalen);
 }
 
 uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,struct mappedblocks *prev,double timebudget)
 {
-    HUFF **hpptr,*hp;
+    HUFF **hpptr,*hp = 0;
     char formatstr[16];
     double estimated,startmilli = ram_millis();
-    int32_t newflag,processed = 0;
+    int32_t newflag,verifyflag=1,processed = 0;
     ram_setformatstr(formatstr,blocks->format);
+#ifdef RAM_GENMODE
+    verifyflag = 0;
+#endif
     //printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]?\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift));
     while ( (blocks->blocknum >> blocks->shift) < (prev->blocknum >> blocks->shift) && ram_millis() < (startmilli + timebudget) )
     {
         newflag = (ram->blocks.hps[blocks->blocknum] == 0);
-        ram_create_block(1,ram,blocks,prev,blocks->blocknum), processed++;
-        if ( (hpptr= ram_get_hpptr(blocks,blocks->blocknum)) != 0 && (hp= *hpptr) != 0 )
+        if ( ram_create_block(verifyflag,ram,blocks,prev,blocks->blocknum) > 0 )
         {
-            if ( blocks->format == 'B' && newflag != 0 && ram->blocks.hps[blocks->blocknum] == 0 )
-                ram_rawblock_update(1,ram,hp,blocks->blocknum);
+#ifndef RAM_GENMODE
+            processed++;
+            if ( (hpptr= ram_get_hpptr(blocks,blocks->blocknum)) != 0 && (hp= *hpptr) != 0 )
+            {
+                if ( blocks->format == 'B' && newflag != 0 )//&& ram->blocks.hps[blocks->blocknum] == 0 )
+                    ram_rawblock_update(2,ram,hp,blocks->blocknum);
+                //else printf("hpptr.%p hp.%p newflag.%d\n",hpptr,hp,newflag);
+            } //else printf("ram_process_blocks hpptr.%p hp.%p\n",hpptr,hp);
+#endif
+            estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->RTblocknum-blocks->blocknum) / 60000.;
         }
         blocks->processed += (1 << blocks->shift);
         blocks->blocknum += (1 << blocks->shift);
-        estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->RTblocknum-blocks->blocknum) / 60000.;
     }
     //printf("(%d >> %d) < (%d >> %d)\n",blocks->blocknum,blocks->shift,prev->blocknum,blocks->shift);
     return(processed);
@@ -4797,7 +4944,7 @@ char *ramtxlist(char *origargstr,char *sender,char *previpaddr,char *destip,char
                 }
                 if ( array == 0 )
                     array = cJSON_CreateArray();
-                cJSON_AddItemToArray(array,ram_addrpayload_json(&payloads[i]));
+                cJSON_AddItemToArray(array,ram_addrpayload_json(ram,&payloads[i]));
             }
         }
         json = cJSON_CreateObject();
@@ -4805,9 +4952,9 @@ char *ramtxlist(char *origargstr,char *sender,char *previpaddr,char *destip,char
             cJSON_AddItemToObject(json,coinaddr,array);
         cJSON_AddItemToObject(json,"numtx",cJSON_CreateNumber(numpayloads));
         cJSON_AddItemToObject(json,"calc_numunspent",cJSON_CreateNumber(n));
-        cJSON_AddItemToObject(json,"calc_unspent",cJSON_CreateNumber(total));
+        cJSON_AddItemToObject(json,"calc_unspent",cJSON_CreateNumber(dstr(total)));
         cJSON_AddItemToObject(json,"numunspent",cJSON_CreateNumber(addrptr->numunspent));
-        cJSON_AddItemToObject(json,"unspent",cJSON_CreateNumber(addrptr->unspent));
+        cJSON_AddItemToObject(json,"unspent",cJSON_CreateNumber(dstr(addrptr->unspent)));
     }
     if ( json != 0 )
     {
@@ -4883,7 +5030,7 @@ char *ramrichlist(char *origargstr,char *sender,char *previpaddr,char *destip,ch
     char coinaddr[1024];
     struct ramchain_hashptr **addrs,*addrptr;
     char *retstr;
-    double *sortbuf;
+    double *sortbuf,startmilli = ram_millis();
     uint64_t unspent;
     struct ramchain_info *ram = get_ramchain_info(coin);
     if ( ram == 0 )
@@ -4917,12 +5064,14 @@ char *ramrichlist(char *origargstr,char *sender,char *previpaddr,char *destip,ch
                     memcpy(&ind,&sortbuf[(i << 1) + 1],sizeof(i));
                     ram_decode_hashdata(coinaddr,'a',addrs[ind]->hh.key);
                     cJSON_AddItemToObject(item,coinaddr,cJSON_CreateNumber(sortbuf[i<<1]));
-                    cJSON_AddItemToObject(item,"unspent",cJSON_CreateNumber(addrs[ind]->unspent));
+                    cJSON_AddItemToObject(item,"unspent",cJSON_CreateNumber(dstr(addrs[ind]->unspent)));
                     cJSON_AddItemToArray(array,item);
                 }
                 item = cJSON_CreateObject();
-                cJSON_AddItemToObject(item,"good",cJSON_CreateNumber(good));
-                cJSON_AddItemToObject(item,"bad",cJSON_CreateNumber(bad));
+                cJSON_AddItemToObject(item,"cumulative errors",cJSON_CreateNumber(bad));
+                cJSON_AddItemToObject(item,"cumulative correct",cJSON_CreateNumber(good));
+                cJSON_AddItemToObject(item,"calculation milliseconds",cJSON_CreateNumber(ram_millis()-startmilli));
+                cJSON_AddItemToArray(array,item);
             }
             free(sortbuf);
         }
@@ -5014,9 +5163,11 @@ struct mappedblocks *ram_init_blocks(HUFF **copyhps,struct ramchain_info *ram,ui
         blocks->hps = calloc(blocks->numblocks,sizeof(*blocks->hps));
     if ( format != 0 )
     {
+//#ifndef RAM_GENMODE
         //blocks->flags = calloc(blocks->numblocks >> (shift+6),sizeof(*blocks->flags));
         blocks->M = calloc(blocks->numblocks >> shift,sizeof(*blocks->M));
         blocks->blocknum = ram_load_blocks(ram,blocks,firstblock,blocks->numblocks);
+//#endif
     }
     else
     {
@@ -5040,7 +5191,6 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     ram->maxblock = (ram->RTblocknum + 10000);
     printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
-//#ifndef RAM_GENMODE
     int32_t tmpsize = 10000000;
     uint8_t *ptr;
     ptr = calloc(1,tmpsize), ram->tmphp = hopen(ptr,tmpsize,ptr);
@@ -5049,20 +5199,23 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->R = calloc(1,sizeof(*ram->R));
     ram->R2 = calloc(1,sizeof(*ram->R2));
     ram->R3 = calloc(1,sizeof(*ram->R3));
-    ram_init_hashtable(ram,'a'), ram_init_hashtable(ram,'s'), ram_init_hashtable(ram,'t');
-    printf("%.1f seconds to init_ramchain.%s hashtables\n",(ram_millis() - startmilli)/1000.,ram->name);
     ram->blocks.hps = calloc(ram->maxblock,sizeof(*ram->blocks.hps));
+#ifndef RAM_GENMODE
+    ram_init_hashtable(ram,'a'), ram_init_hashtable(ram,'s'), ram_init_hashtable(ram,'t');
+    if ( ram->marker != 0 && ram->marker[0] != 0 && (ram->marker_rawind= ram_addrind_RO(ram,ram->marker)) == 0 )
+        printf("WARNING: MARKER.(%s) set but no rawind. need to have it appear in blockchain first\n",ram->marker);
+    printf("%.1f seconds to init_ramchain.%s hashtables marker.(%s) %u\n",(ram_millis() - startmilli)/1000.,ram->name,ram->marker,ram->marker_rawind);
     ram->mappedblocks[4] = ram_init_blocks(ram->blocks.hps,ram,0,&ram->blocks4096,&ram->blocks64,4096,12);
     printf("set ramchain blocknum.%s %d (1st %d num %d) vs RT.%d %.1f seconds to init_ramchain.%s B4096\n",ram->name,ram->blocks4096.blocknum,ram->blocks4096.firstblock,ram->blocks4096.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[3] = ram_init_blocks(ram->blocks.hps,ram,ram->blocks4096.contiguous,&ram->blocks64,&ram->Bblocks,64,6);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s B64\n",ram->name,ram->blocks64.blocknum,ram->blocks64.firstblock,ram->blocks64.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[2] = ram_init_blocks(ram->blocks.hps,ram,ram->blocks64.contiguous,&ram->Bblocks,&ram->Vblocks,'B',0);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s B\n",ram->name,ram->Bblocks.blocknum,ram->Bblocks.firstblock,ram->Bblocks.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
-//#endif
+#endif
     ram->mappedblocks[1] = ram_init_blocks(ram->blocks.hps,ram,ram->Bblocks.contiguous,&ram->Vblocks,&ram->blocks,'V',0);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s V\n",ram->name,ram->Vblocks.blocknum,ram->Vblocks.firstblock,ram->Vblocks.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[0] = ram_init_blocks(ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
-//#ifdef RAM_GENMODE
+#ifndef RAM_GENMODE
     if ( 1 )
     {
         HUFF *hp;
@@ -5070,7 +5223,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
         //struct ramchain_token **tokens;
         //int32_t numtokens;
         bits256 refsha,sha;
-        uint32_t blocknum,datalen,errs=0,good=0,iter;
+        uint32_t blocknum,datalen,errs=0,good=0,iter,i;
         for (iter=0; iter<2; iter++)
         for (errs=good=blocknum=0; blocknum<ram->blocks.contiguous; blocknum++)
         {
@@ -5091,6 +5244,31 @@ void ram_init_ramchain(struct ramchain_info *ram)
             } else errs++;
         }
         fprintf(stderr,"contiguous.%d good.%d errs.%d\n",ram->blocks.contiguous,good,errs);
+        for (blocknum=0; blocknum<ram->blocks.contiguous; blocknum+=64)
+        {break;
+            ram->minval = ram->maxval = ram->minval2 = ram->maxval2 = ram->minval4 = ram->maxval4 = ram->minval8 = ram->maxval8 = 0;
+            memset(&ram->H,0,sizeof(ram->H));
+            for (iter=0; iter<2; iter++)
+                for (i=0; i<64; i++)
+                {
+                    if ( (hp= ram->blocks.hps[blocknum+i]) != 0 )
+                        ram_rawblock_update(iter==0?'H':'h',ram,hp,blocknum+i);
+                }
+            huffpair_gencodes(ram,&ram->H,0);
+            /*free(ram->H.numtx.items);
+            free(ram->H.tx0.numvins.items), free(ram->H.tx0.numvouts.items), free(ram->H.tx0.txid.items);
+            free(ram->H.tx1.numvins.items), free(ram->H.tx1.numvouts.items), free(ram->H.tx1.txid.items);
+            free(ram->H.txi.numvins.items), free(ram->H.txi.numvouts.items), free(ram->H.txi.txid.items);
+            free(ram->H.vin0.txid.items), free(ram->H.vin0.vout.items);
+            free(ram->H.vin1.txid.items), free(ram->H.vin1.vout.items);
+            free(ram->H.vini.txid.items), free(ram->H.vini.vout.items);
+            free(ram->H.vout0.addr.items), free(ram->H.vout0.script.items);
+            free(ram->H.vout1.addr.items), free(ram->H.vout1.script.items);
+            free(ram->H.vouti.addr.items), free(ram->H.vout2.script.items);
+            free(ram->H.vout2.addr.items), free(ram->H.vouti.script.items);
+            free(ram->H.voutn.addr.items), free(ram->H.voutn.script.items);*/
+        }
+        fprintf(stderr,"totalbytes.%lld %s -> %s totalbits.%lld R%.3f\n",(long long)ram->totalbits,_mbstr((double)ram->totalbytes),_mbstr2((double)ram->totalbits/8),(long long)ram->totalbytes,(double)ram->totalbytes*8/ram->totalbits);
         if ( 0 && errs == 0 )
         {
             sprintf(fname,"ramchains/%s/blocks",ram->name);
@@ -5100,9 +5278,27 @@ void ram_init_ramchain(struct ramchain_info *ram)
             printf("MApped.(%s) datalen.%d\n",fname,datalen);
         }
     }
-//#endif
+#endif
     ram_disp_status(ram);
     //getchar();
+}
+
+uint32_t ram_update_RTblock(struct ramchain_info *ram)
+{
+    ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
+    return(ram->RTblocknum);
+}
+
+uint32_t ram_update_disp(struct ramchain_info *ram)
+{
+    if ( ram_update_RTblock(ram) > ram->lastdisp )
+    {
+        ram->blocks.blocknum = ram->blocks.contiguous = ram_setcontiguous(&ram->blocks);
+        ram_disp_status(ram);
+        ram->lastdisp = ram_update_RTblock(ram);
+        return(ram->lastdisp);
+    }
+    return(0);
 }
 
 void *ram_process_blocks_loop(void *_blocks)
@@ -5111,6 +5307,7 @@ void *ram_process_blocks_loop(void *_blocks)
     printf("start _process_mappedblocks.%s format.%d\n",blocks->ram->name,blocks->format);
     while ( 1 )
     {
+        ram_update_RTblock(blocks->ram);
         if ( ram_process_blocks(blocks->ram,blocks,blocks->prevblocks,1000.) == 0 )
             sleep(sqrt(1 << blocks->shift));
     }
@@ -5132,9 +5329,8 @@ void *ram_process_ramchain(void *_ram)
     }
     while ( 1 )
     {
-        ram->blocks.blocknum = ram->blocks.contiguous = ram_setcontiguous(&ram->blocks);
-        ram_disp_status(ram);
-        sleep(60);
+        ram_update_disp(ram);
+        sleep(1);
     }
     return(0);
 }
@@ -5151,8 +5347,9 @@ void *process_ramchains(void *_argcoinstr)
 {
     void ensure_SuperNET_dirs(char *backupdir);
     char *argcoinstr = _argcoinstr;
-    int32_t threaded = 1;
+    int32_t threaded = 0;
     double startmilli;
+    struct ramchain_info *ram;
     int32_t i,pass,processed = 0;
     ensure_SuperNET_dirs("ramchains");
 #ifdef __APPLE__
@@ -5171,25 +5368,27 @@ void *process_ramchains(void *_argcoinstr)
         processed = 0;
         for (i=0; i<Numramchains; i++)
         {
-            if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
+            ram = Ramchains[i];
+            if ( argcoinstr == 0 || strcmp(argcoinstr,ram->name) == 0 )
             {
                 if ( threaded != 0 )
                 {
-                    printf("%d of %d: (%s) argcoinstr.%s\n",i,Numramchains,Ramchains[i]->name,argcoinstr!=0?argcoinstr:"ALL");
-                    printf("call process_ramchain.(%s)\n",Ramchains[i]->name);
-                    if ( portable_thread_create((void *)ram_process_ramchain,Ramchains[i]) == 0 )
-                        printf("ERROR _process_ramchain.%s\n",Ramchains[i]->name);
+                    printf("%d of %d: (%s) argcoinstr.%s\n",i,Numramchains,ram->name,argcoinstr!=0?argcoinstr:"ALL");
+                    printf("call process_ramchain.(%s)\n",ram->name);
+                    if ( portable_thread_create((void *)ram_process_ramchain,ram) == 0 )
+                        printf("ERROR _process_ramchain.%s\n",ram->name);
                     processed--;
                 }
                 else
                 {
-                    for (pass=1; pass<=4; pass++)
+                    for (pass=2; pass<=4; pass++)
                     {
-                        processed += ram_process_blocks(Ramchains[i],Ramchains[i]->mappedblocks[pass],Ramchains[i]->mappedblocks[pass-1],1000.);
+                        ram_update_disp(ram);
+                        processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],1000.);
 #ifdef RAM_GENMODE
                         break;
 #endif
-                        if ( Ramchains[i]->mappedblocks[pass]->blocknum < Ramchains[i]->RTblocknum )
+                        if ( ram->mappedblocks[pass]->blocknum < ram->RTblocknum )
                             break;
                    }
                 }
@@ -5198,12 +5397,12 @@ void *process_ramchains(void *_argcoinstr)
         if ( processed == 0 )
         {
             for (i=0; i<Numramchains; i++)
-                if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
-                {
-                    Ramchains[i]->blocks.blocknum = Ramchains[i]->blocks.contiguous = ram_setcontiguous(&Ramchains[i]->blocks);
-                    ram_disp_status(Ramchains[i]);
-                }
-            sleep(60);
+            {
+                ram = Ramchains[i];
+                if ( argcoinstr == 0 || strcmp(argcoinstr,ram->name) == 0 )
+                    ram_update_disp(ram);
+            }
+            sleep(1);
         }
     }
     printf("process_ramchains: finished launching\n");
