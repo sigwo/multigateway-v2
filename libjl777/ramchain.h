@@ -4664,19 +4664,12 @@ void *process_ramchains(void *_argcoinstr)
                 }
                 else
                 {
-#ifndef __APPLE__
-                    for (pass=1; pass<=1; pass++)
-                    {
-                        processed += ram_process_blocks(Ramchains[i],Ramchains[i]->mappedblocks[pass],Ramchains[i]->mappedblocks[pass-1],1000000000.);
-                        //if ( Ramchains[i]->mappedblocks[pass]->blocknum < Ramchains[i]->RTblocknum )
-                        //    break;
-                    }
-#else
                     for (pass=1; pass<=4; pass++)
                     {
                         processed += ram_process_blocks(Ramchains[i],Ramchains[i]->mappedblocks[pass],Ramchains[i]->mappedblocks[pass-1],1000.);
-                    }
-#endif
+                        if ( Ramchains[i]->mappedblocks[pass]->blocknum < Ramchains[i]->RTblocknum )
+                            break;
+                   }
                 }
             }
         }
