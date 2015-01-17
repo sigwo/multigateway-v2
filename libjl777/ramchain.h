@@ -17,7 +17,7 @@
 // malloc, calloc, realloc, free, gettimeofday, strcpy, strncmp, strcmp, memcpy, mmap, munmap, msync, truncate;
 
 //
-//#define RAM_GENMODE
+#define RAM_GENMODE
 
 #ifdef INCLUDE_DEFINES
 #ifndef ramchain_h
