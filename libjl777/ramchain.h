@@ -23,6 +23,10 @@
 #ifndef ramchain_h
 #define ramchain_h
 
+#ifdef _WIN32
+#include "mman-win.h"
+#endif
+
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
 extern void calc_sha256cat(unsigned char hash[256 >> 3],unsigned char *src,int32_t len,unsigned char *src2,int32_t len2);
 
