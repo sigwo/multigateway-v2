@@ -2611,7 +2611,7 @@ struct rampayload *ram_gethashpayloads(struct ramchain_info *ram,char type,uint3
 struct ramchain_hashptr *ram_hashdata_search(int32_t createflag,struct ramchain_hashtable *hash,uint8_t *hashdata,int32_t datalen)
 {
     struct ramchain_hashptr *ptr = 0;
-#ifndef RAM_GENMODE
+//#ifndef RAM_GENMODE
     char fname[512];
     void *newptr;
     if ( hash != 0 )
@@ -2652,7 +2652,7 @@ struct ramchain_hashptr *ram_hashdata_search(int32_t createflag,struct ramchain_
             ram_addhash(hash,ptr,newptr,datalen);
         } //else printf("found %d bytes ind.%d\n",datalen,ptr->rawind);
     } else printf("ram_hashdata_search null hashtable\n");
-#endif
+//#endif
     return(ptr);
 }
 
@@ -4184,7 +4184,7 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
                 if ( (*hps= hload(0,0,fname)) != 0 )
                 {
 #ifdef RAM_GENMODE
-                    if ( ram_verify(ram,*hps,blocks->format) != blocknum || (*hps)->allocsize < 12 )
+                    if ( (*hps)->allocsize < 12 )
                         delete_file(fname,0);
                     else n++;
                     hclose(*hps);
@@ -4219,12 +4219,6 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     ram_setformatstr(formatstr,blocks->format);
     prevhps = ram_get_hpptr(prevblocks,blocknum);
     ram_setfname(fname,ram,blocknum,formatstr);
-   // printf("check.(%s)\n",fname);
-    if ( (fp= fopen(fname,"rb")) != 0 )
-    {
-        fclose(fp);
-        return(0);
-    }
     if ( 0 && blocks->format == 'V' )
     {
         if ( _get_blockinfo(blocks->R,ram,blocknum) > 0 )
@@ -4261,19 +4255,18 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     }
     else if ( blocks->format == 'V' || blocks->format == 'B' )
     {
-        //printf("create %s %d\n",formatstr,blocknum);
-        if ( (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
+        if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 )
         {
-            //printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
-            fprintf(stderr," %s CREATED.%c block.%d datalen.%d\n",ram->name,blocks->format,blocknum,datalen+1);
-            if ( (fp= fopen(fname,"wb")) != 0 )
+            //printf("create %s %d\n",formatstr,blocknum);
+            if ( *hpptr == 0 && (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
             {
-                hflush(fp,hp);
-                fclose(fp);
-            }
-            if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 &&  *hpptr == 0 )
-            {
-                if ( verifyflag == 0 || ram_verify(ram,hp,blocks->format) == blocknum )
+                //printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
+                if ( (fp= fopen(fname,"wb")) != 0 )
+                {
+                    hflush(fp,hp);
+                    fclose(fp);
+                }
+                if ( ram_verify(ram,hp,blocks->format) == blocknum )
                 {
                     if ( verifyflag != 0 && ((blocks->format == 'B') ? ram_verify_Bblock(ram,blocknum,hp) : ram_verify_Vblock(ram,blocknum,hp)) == 0 )
                     {
@@ -4284,6 +4277,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
                     {
                         datalen = (1 + hp->allocsize);
                         //if ( blocks->format == 'V' )
+                            fprintf(stderr," %s CREATED.%c block.%d datalen.%d\n",ram->name,blocks->format,blocknum,datalen+1);
                         //else fprintf(stderr,"%s.B.%d ",ram->name,blocknum);
                         if ( *hpptr != 0 )
                         {
@@ -4300,7 +4294,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
 #endif
                     }
                 } else delete_file(fname,0), hclose(hp);
-            } else hclose(hp);
+            }
         } else printf("%s.%u couldnt get hpp\n",formatstr,blocknum);
     }
     else if ( blocks->format == 64 || blocks->format == 4096 )
@@ -4684,30 +4678,22 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
     HUFF **hpptr,*hp = 0;
     char formatstr[16];
     double estimated,startmilli = ram_millis();
-    int32_t newflag,verifyflag=1,processed = 0;
+    int32_t newflag,processed = 0;
     ram_setformatstr(formatstr,blocks->format);
-#ifdef RAM_GENMODE
-    verifyflag = 0;
-#endif
     //printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]?\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift));
     while ( (blocks->blocknum >> blocks->shift) < (prev->blocknum >> blocks->shift) && ram_millis() < (startmilli + timebudget) )
     {
         newflag = (ram->blocks.hps[blocks->blocknum] == 0);
-        if ( ram_create_block(verifyflag,ram,blocks,prev,blocks->blocknum) > 0 )
+        ram_create_block(1,ram,blocks,prev,blocks->blocknum), processed++;
+        if ( (hpptr= ram_get_hpptr(blocks,blocks->blocknum)) != 0 && (hp= *hpptr) != 0 )
         {
-#ifndef RAM_GENMODE
-            processed++;
-            if ( (hpptr= ram_get_hpptr(blocks,blocks->blocknum)) != 0 && (hp= *hpptr) != 0 )
-            {
-                if ( blocks->format == 'B' && newflag != 0 )//&& ram->blocks.hps[blocks->blocknum] == 0 )
-                    ram_rawblock_update(2,ram,hp,blocks->blocknum);
-                //else printf("hpptr.%p hp.%p newflag.%d\n",hpptr,hp,newflag);
-            } //else printf("ram_process_blocks hpptr.%p hp.%p\n",hpptr,hp);
-#endif
-            estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->RTblocknum-blocks->blocknum) / 60000.;
-        }
+            if ( blocks->format == 'B' && newflag != 0 )//&& ram->blocks.hps[blocks->blocknum] == 0 )
+                ram_rawblock_update(2,ram,hp,blocks->blocknum);
+            else printf("hpptr.%p hp.%p newflag.%d\n",hpptr,hp,newflag);
+        } else printf("hpptr.%p hp.%p\n",hpptr,hp);
         blocks->processed += (1 << blocks->shift);
         blocks->blocknum += (1 << blocks->shift);
+        estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->RTblocknum-blocks->blocknum) / 60000.;
     }
     //printf("(%d >> %d) < (%d >> %d)\n",blocks->blocknum,blocks->shift,prev->blocknum,blocks->shift);
     return(processed);
@@ -5163,11 +5149,9 @@ struct mappedblocks *ram_init_blocks(HUFF **copyhps,struct ramchain_info *ram,ui
         blocks->hps = calloc(blocks->numblocks,sizeof(*blocks->hps));
     if ( format != 0 )
     {
-//#ifndef RAM_GENMODE
         //blocks->flags = calloc(blocks->numblocks >> (shift+6),sizeof(*blocks->flags));
         blocks->M = calloc(blocks->numblocks >> shift,sizeof(*blocks->M));
         blocks->blocknum = ram_load_blocks(ram,blocks,firstblock,blocks->numblocks);
-//#endif
     }
     else
     {
@@ -5191,6 +5175,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     ram->maxblock = (ram->RTblocknum + 10000);
     printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
+//#ifndef RAM_GENMODE
     int32_t tmpsize = 10000000;
     uint8_t *ptr;
     ptr = calloc(1,tmpsize), ram->tmphp = hopen(ptr,tmpsize,ptr);
@@ -5199,23 +5184,22 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->R = calloc(1,sizeof(*ram->R));
     ram->R2 = calloc(1,sizeof(*ram->R2));
     ram->R3 = calloc(1,sizeof(*ram->R3));
-    ram->blocks.hps = calloc(ram->maxblock,sizeof(*ram->blocks.hps));
-#ifndef RAM_GENMODE
     ram_init_hashtable(ram,'a'), ram_init_hashtable(ram,'s'), ram_init_hashtable(ram,'t');
     if ( ram->marker != 0 && ram->marker[0] != 0 && (ram->marker_rawind= ram_addrind_RO(ram,ram->marker)) == 0 )
         printf("WARNING: MARKER.(%s) set but no rawind. need to have it appear in blockchain first\n",ram->marker);
     printf("%.1f seconds to init_ramchain.%s hashtables marker.(%s) %u\n",(ram_millis() - startmilli)/1000.,ram->name,ram->marker,ram->marker_rawind);
+    ram->blocks.hps = calloc(ram->maxblock,sizeof(*ram->blocks.hps));
     ram->mappedblocks[4] = ram_init_blocks(ram->blocks.hps,ram,0,&ram->blocks4096,&ram->blocks64,4096,12);
     printf("set ramchain blocknum.%s %d (1st %d num %d) vs RT.%d %.1f seconds to init_ramchain.%s B4096\n",ram->name,ram->blocks4096.blocknum,ram->blocks4096.firstblock,ram->blocks4096.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[3] = ram_init_blocks(ram->blocks.hps,ram,ram->blocks4096.contiguous,&ram->blocks64,&ram->Bblocks,64,6);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s B64\n",ram->name,ram->blocks64.blocknum,ram->blocks64.firstblock,ram->blocks64.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[2] = ram_init_blocks(ram->blocks.hps,ram,ram->blocks64.contiguous,&ram->Bblocks,&ram->Vblocks,'B',0);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s B\n",ram->name,ram->Bblocks.blocknum,ram->Bblocks.firstblock,ram->Bblocks.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
-#endif
+//#endif
     ram->mappedblocks[1] = ram_init_blocks(ram->blocks.hps,ram,ram->Bblocks.contiguous,&ram->Vblocks,&ram->blocks,'V',0);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s V\n",ram->name,ram->Vblocks.blocknum,ram->Vblocks.firstblock,ram->Vblocks.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[0] = ram_init_blocks(ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
-#ifndef RAM_GENMODE
+//#ifdef RAM_GENMODE
     if ( 1 )
     {
         HUFF *hp;
@@ -5278,7 +5262,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
             printf("MApped.(%s) datalen.%d\n",fname,datalen);
         }
     }
-#endif
+//#endif
     ram_disp_status(ram);
     //getchar();
 }
