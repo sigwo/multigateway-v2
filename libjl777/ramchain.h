@@ -4681,9 +4681,10 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
     double estimated,startmilli = ram_millis();
     int32_t newflag,processed = 0;
     ram_setformatstr(formatstr,blocks->format);
-    printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]? timebudget %f\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift),timebudget);
+    printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]? %f %f timebudget %f\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift),ram_millis(),(startmilli + timebudget),timebudget);
     while ( (blocks->blocknum >> blocks->shift) < (prev->blocknum >> blocks->shift) && ram_millis() < (startmilli + timebudget) )
     {
+        printf("inside\n");
         newflag = (ram->blocks.hps[blocks->blocknum] == 0);
         ram_create_block(1,ram,blocks,prev,blocks->blocknum), processed++;
         if ( (hpptr= ram_get_hpptr(blocks,blocks->blocknum)) != 0 && (hp= *hpptr) != 0 )
