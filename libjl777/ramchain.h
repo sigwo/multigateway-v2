@@ -5027,8 +5027,8 @@ void ram_init_ramchain(struct ramchain_info *ram)
 {
     double startmilli;
     startmilli = ram_millis();
-    ram_init_directories(ram);
     strcpy(ram->dirpath,".");
+    ram_init_directories(ram);
     ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     ram->maxblock = (ram->RTblocknum + 10000);
     printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
