@@ -1314,7 +1314,7 @@ void finalize_destamounts(struct multisig_addr **msigs,int32_t nummsigs,struct c
     for (i=0; i<rp->numredeems; i++)
         fprintf(stderr,"\"%llu\",",(long long)rp->redeems[i]);
     fprintf(stderr,"FINISHED numredeems.%d\n",rp->numredeems);
-    if ( up != 0 && up->minvp != 0 && up->minvp->coinaddr != 0 && up->minvp->coinaddr[0] != 0 )
+    if ( up != 0 && up->minvp != 0 && up->minvp->coinaddr[0] != 0 )
     {
         for (i=0; i<rp->numoutputs; i++)
             if ( strcmp(up->minvp->coinaddr,rp->destaddrs[i]) == 0 )
@@ -3337,7 +3337,7 @@ uint64_t process_consensus(cJSON **jsonp,struct coin_info *cp,int32_t sendmoney)
         fprintf(stderr,"all gateways match\n");
         if ( readyflag != 0 )//Global_mp->gatewayid == 0 )
         {
-            if ( rp->batchsigned != 0 && (cointxid= sign_and_sendmoney(&AMtxid,cp,(uint32_t)cp->RTblockheight)) != 0 )
+            if ( (cointxid= sign_and_sendmoney(&AMtxid,cp,(uint32_t)cp->RTblockheight)) != 0 )
             {
                 cJSON_AddItemToObject(*jsonp,"batchsigned",cJSON_CreateString(rp->batchsigned));
                 cJSON_AddItemToObject(*jsonp,"cointxid",cJSON_CreateString(cointxid));
@@ -3866,7 +3866,7 @@ char *MGW(char *issuerNXT,int32_t rescan,int32_t actionflag,char *coin,char *ass
     if ( json != 0 )
     {
         cJSON *array;
-        if ( NXTaddr == 0 || NXTaddr[0] == 0 )
+        if ( NXTaddr[0] == 0 )
             strcpy(NXTaddr,cp->name);
         if ( (cp= get_coin_info("BTCD")) != 0 )
             cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(cp->srvNXTADDR));

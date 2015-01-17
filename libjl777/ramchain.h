@@ -4376,7 +4376,7 @@ void ram_addunspent(struct ramchain_info *ram,struct rampayload *txpayload,struc
     }
 }
 
-int32_t ram_rawvout_update(struct rampayload *txpayload,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vout,uint32_t txid_rawind)
+int32_t ram_rawvout_update(uint32_t *addr_rawindp,struct rampayload *txpayload,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vout,uint32_t txid_rawind,int32_t isinternal)
 {
     struct rampayload payload;
     struct ramchain_hashtable *table;
@@ -4384,6 +4384,7 @@ int32_t ram_rawvout_update(struct rampayload *txpayload,struct ramchain_info *ra
     uint32_t scriptind,addrind;
     uint64_t value;
     int32_t numbits = 0;
+    *addr_rawindp = 0;
     numbits += hdecode_varbits(&scriptind,hp);
     numbits += hdecode_varbits(&addrind,hp);
     numbits += hdecode_valuebits(&value,hp);
@@ -4393,6 +4394,7 @@ int32_t ram_rawvout_update(struct rampayload *txpayload,struct ramchain_info *ra
         table = ram_gethash(ram,'a');
         if ( addrind > 0 && addrind <= table->ind && (addrptr= table->ptrs[addrind]) != 0 )
         {
+            *addr_rawindp = addrind;
             if ( txpayload == 0 )
                 addrptr->maxpayloads++;
             else
@@ -4410,7 +4412,7 @@ int32_t ram_rawvout_update(struct rampayload *txpayload,struct ramchain_info *ra
                     addrptr->payloads = realloc(addrptr->payloads,addrptr->maxpayloads * sizeof(struct rampayload));
                 }
                 memset(&payload,0,sizeof(payload));
-                payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = vout;
+                payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = vout, payload.B.isinternal = isinternal;
                 payload.otherind = txid_rawind, payload.extra = scriptind, payload.value = value;
                 ram_addunspent(ram,txpayload,addrptr,&payload,addrind,addrptr->numpayloads);
                 addrptr->payloads[addrptr->numpayloads++] = payload;
@@ -4459,8 +4461,8 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
 {
     struct rampayload payload;
     struct ramchain_hashptr *txptr;
-    uint32_t txid_rawind = 0;
-    int32_t i,retval,numbits = 0;
+    uint32_t addr_rawind,txid_rawind = 0;
+    int32_t i,retval,isinternal,numbits = 0;
     uint16_t numvins,numvouts;
     struct ramchain_hashtable *table;
     table = ram_gethash(ram,'t');
@@ -4496,9 +4498,11 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
             }
             if ( numvouts > 0 ) // just count number of payloads needed in iter 0, iter 1 allocates and updates
             {
-                for (i=0; i<numvouts; i++,numbits+=retval)
-                    if ( (retval= ram_rawvout_update(iter==0?0:&txptr->payloads[i+1],ram,hp,blocknum,txind,i,txid_rawind)) < 0 )
+                for (i=isinternal=0; i<numvouts; i++,numbits+=retval)
+                {
+                    if ( (retval= ram_rawvout_update(&addr_rawind,iter==0?0:&txptr->payloads[i+1],ram,hp,blocknum,txind,i,txid_rawind,isinternal*(i==(numvouts-1)))) < 0 )
                         return(-2);
+                }
             }
             return(numbits);
         }
@@ -4506,7 +4510,7 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
     return(-3);
 }
 
-int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_t checkblocknum)//struct rawblock *raw)
+int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_t checkblocknum)
 {
     uint16_t numtx;
     uint64_t minted;
@@ -5147,7 +5151,7 @@ void *process_ramchains(void *_argcoinstr)
 {
     void ensure_SuperNET_dirs(char *backupdir);
     char *argcoinstr = _argcoinstr;
-    int32_t threaded = 0;
+    int32_t threaded = 1;
     double startmilli;
     int32_t i,pass,processed = 0;
     ensure_SuperNET_dirs("ramchains");
