@@ -201,6 +201,8 @@ int32_t unhex(char c);
 unsigned char _decode_hex(char *hex);
 int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
 int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
+char *_mbstr(double n);
+char *_mbstr2(double n);
 
 #endif
 #endif
