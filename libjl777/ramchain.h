@@ -5381,7 +5381,7 @@ void *process_ramchains(void *_argcoinstr)
                 }
                 else
                 {
-                    for (pass=2; pass<=4; pass++)
+                    for (pass=1; pass<=4; pass++)
                     {
                         ram_update_disp(ram);
                         processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],1000.);
