@@ -544,7 +544,8 @@ void delete_file(char *fname,int32_t scrubflag)
     }
 }
 
-double ram_millis(void)
+#define ram_millis milliseconds
+/*double ram_millis(void)
 {
     static struct timeval timeval,first_timeval;
     gettimeofday(&timeval,0);
@@ -554,7 +555,7 @@ double ram_millis(void)
         return(0);
     }
     return((timeval.tv_sec - first_timeval.tv_sec) * 1000. + (timeval.tv_usec - first_timeval.tv_usec)/1000.);
-}
+}*/
 
 double estimate_completion(char *coinstr,double startmilli,int32_t processed,int32_t numleft)
 {
