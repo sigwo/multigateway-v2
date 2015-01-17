@@ -633,14 +633,14 @@ int main(int argc,const char *argv[])
     if ( 0 && argc > 1 && strcmp(argv[1],"genfiles") == 0 )
 //#endif
     {
-        void *process_coinblocks(void *argcoinstr);
+        void *process_ramchains(void *argcoinstr);
         char *coinstr;
         retval = SuperNET_start("SuperNET.conf","127.0.0.1");
         printf("process coinblocks\n");
         if ( argc > 2 )
             coinstr = (char *)argv[2];
         else coinstr = 0;
-        process_coinblocks(coinstr);
+        process_ramchains(coinstr);
         printf("finished genfiles.%s\n",coinstr);
         getchar();
     }

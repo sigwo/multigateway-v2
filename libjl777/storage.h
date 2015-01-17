@@ -881,7 +881,7 @@ void close_SuperNET_dbs()
     int32_t i,selector;
     for (selector=0; selector<NUM_SUPERNET_DBS; selector++)
         close_SuperNET_db(&SuperNET_dbs[selector],selector);
-    if ( Num_pricedbs != 0 && Price_dbs != 0 )
+    if ( Num_pricedbs != 0 )//&& Price_dbs != 0 )
     {
         for (i=0; i<Num_pricedbs; i++)
         {

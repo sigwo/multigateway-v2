@@ -114,9 +114,7 @@
 //#include <sys/socket.h>
 #include <sys/wait.h>
 //#include <sys/time.h>
-#include <sys/mman.h>
 
-#include <fcntl.h>
 
 #define ENABLE_DIRENT
 #ifdef ENABLE_DIRENT
