@@ -2546,6 +2546,7 @@ struct ramchain_hashptr *ram_hashdata_search(int32_t createflag,struct ramchain_
     char fname[512];
     void *newptr;
     struct ramchain_hashptr *ptr = 0;
+#ifndef RAM_GENMODE
     if ( hash != 0 )
     {
         HASH_FIND(hh,hash->table,hashdata,datalen,ptr);
@@ -2584,6 +2585,7 @@ struct ramchain_hashptr *ram_hashdata_search(int32_t createflag,struct ramchain_
             ram_addhash(hash,ptr,newptr,datalen);
         } //else printf("found %d bytes ind.%d\n",datalen,ptr->rawind);
     } else printf("ram_hashdata_search null hashtable\n");
+#endif
     return(ptr);
 }
 
@@ -2982,7 +2984,7 @@ struct ramchain_token *ram_set_token_hashdata(struct ramchain_info *ram,char typ
 {
     uint8_t data[4097],*hashdata;
     char strbuf[8192];
-    struct ramchain_hashptr *hp;
+    struct ramchain_hashptr *ptr;
     struct ramchain_token *token = 0;
     int32_t datalen;
     if ( type == 'a' || type == 't' || type == 's' )
@@ -3007,8 +3009,8 @@ struct ramchain_token *ram_set_token_hashdata(struct ramchain_info *ram,char typ
             token = calloc(1,sizeof(*token) + datalen - sizeof(token->U));
             memcpy(token->U.hashdata,hashdata,datalen);
             token->numbits = (datalen << 3);
-            hp = ram_hashdata_search(1,ram_gethash(ram,type),hashdata,datalen);
-            token->rawind = hp->rawind;
+            if ( (ptr= ram_hashdata_search(1,ram_gethash(ram,type),hashdata,datalen)) != 0 )
+                token->rawind = ptr->rawind;
            // printf(">>>>>> rawind.%d -> %d\n",rawind,token->rawind);
         } else printf("encode_hashstr error for (%c).(%s)\n",type,hashstr);
     }
