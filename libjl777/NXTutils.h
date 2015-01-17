@@ -2145,6 +2145,57 @@ char *verify_tokenized_json(unsigned char *pubkey,char *sender,int32_t *validp,c
     return(0);
 }
 
+/*int32_t save_varfilestr(FILE *fp,char *str)
+{
+    long n,savepos,len = strlen(str) + 1;
+    if ( fp == 0 )
+        return(-1);
+    savepos = ftell(fp);
+    //printf("save.(%s) at %ld\n",str,ftell(fp));
+    if ( (n= hemit_varint(fp,len)) > 0 )
+    {
+        if ( fwrite(str,1,len,fp) != len )
+            return(-1);
+        fflush(fp);
+        return((int32_t)(n + len));
+    }
+    else fseek(fp,savepos,SEEK_SET);
+    return(-1);
+}
+
+long load_varfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
+{
+    int32_t retval;
+    long savepos,fpos = 0;
+    uint64_t len;
+    *lenp = 0;
+    if ( fp == 0 )
+        return(-1);
+    savepos = ftell(fp);
+    if ( (retval= (int32_t)hload_varint(&len,fp)) > 0 && len < maxlen )
+    {
+        fpos = ftell(fp);
+        if ( len > 0 )
+        {
+            if ( fread(str,1,len,fp) != len )
+            {
+                printf("load_filestr: error reading len.%lld at %ld, truncate to %ld\n",(long long)len,ftell(fp),savepos);
+                fseek(fp,savepos,SEEK_SET);
+                return(-1);
+            }
+            else
+            {
+                //str[len] = 0;
+                *lenp = (int32_t)len;
+                //printf("fpos.%ld got string.(%s) len.%d\n",ftell(fp),str,(int)len);
+                return(fpos);
+            }
+        } else return(fpos);
+    } else printf("load_varint got %d at %ld: len.%lld maxlen.%d\n",retval,ftell(fp),(long long)len,maxlen);
+    fseek(fp,savepos,SEEK_SET);
+    return(-1);
+}*/
+
 void ensure_directory(char *dirname) // jl777: does this work in windows?
 {
     FILE *fp;
@@ -2176,6 +2227,23 @@ void copy_file(char *src,char *dest) // OS portable
         }
         fclose(srcfp);
     }
+}
+
+void ensure_dir(char *dirname) // jl777: does this work in windows?
+{
+    FILE *fp;
+    char fname[512],cmd[512];
+    sprintf(fname,"%s/tmp",dirname);
+    if ( (fp= fopen(fname,"rb")) == 0 )
+    {
+        sprintf(cmd,"mkdir %s",dirname);
+        if ( system(cmd) != 0 )
+            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
+        fp = fopen(fname,"wb");
+        if ( fp != 0 )
+            fclose(fp);
+    }
+    else fclose(fp);
 }
 
 void delete_file(char *fname,int32_t scrubflag)

@@ -462,9 +462,9 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         bind_NXT_ipaddr(cp->srvpubnxtbits,myipaddr);
         if ( IS_LIBTEST > 0 )//&& IS_LIBTEST < 7 )
         {
-            void *process_coinblocks(void *_argcoinstr);
+            void *process_ramchains(void *_argcoinstr);
             init_SuperNET_storage(cp->backupdir);
-            if ( IS_LIBTEST > 1 && portable_thread_create((void *)process_coinblocks,0) == 0 )
+            if ( IS_LIBTEST > 1 && portable_thread_create((void *)process_ramchains,0) == 0 )
                 printf("ERROR hist run_libwebsockets\n");
         }
     }

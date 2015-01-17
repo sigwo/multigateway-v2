@@ -902,7 +902,7 @@ uint64_t get_txvout(char *blockhash,int32_t *numvoutsp,char *coinaddr,char *scri
         script[0] = 0;
     if ( txjson == 0 && txidstr != 0 && txidstr[0] != 0 )
     {
-        retstr = get_transaction(&cp->RAM,txidstr);
+        retstr = _get_transaction(&cp->RAM,txidstr);
         if ( retstr != 0 && retstr[0] != 0 )
             txjson = cJSON_Parse(retstr), flag = 1;
         if ( retstr != 0 )
@@ -921,7 +921,7 @@ uint64_t get_txvout(char *blockhash,int32_t *numvoutsp,char *coinaddr,char *scri
             obj = cJSON_GetArrayItem(vouts,vout);
             if ( (value = conv_cJSON_float(obj,"value")) > 0 )
             {
-                extract_txvals(coinaddr,script,cp->nohexout,obj);
+                _extract_txvals(coinaddr,script,cp->nohexout,obj);
                 if ( coinaddr[0] == 0 )
                     printf("(%s) obj.%p vouts.%p num.%d vs %d %s\n",coinaddr,obj,vouts,vout,numvouts,cJSON_Print(txjson));
                 if ( script != 0 && script[0] == 0 && value > 0 )
@@ -1001,7 +1001,7 @@ void update_txid_infos(struct coin_info *cp,uint32_t blockheight,int32_t txind,c
     int32_t v,tmp,numvouts,numvins,isinternal = 0;
     uint64_t value,remainder,inputsum = 0;
     cJSON *txjson;
-    if ( (retstr= get_transaction(&cp->RAM,txidstr)) != 0 )
+    if ( (retstr= _get_transaction(&cp->RAM,txidstr)) != 0 )
     {
         if ( (txjson= cJSON_Parse(retstr)) != 0 )
         {
@@ -1034,7 +1034,7 @@ uint32_t get_blocktxind(int32_t *txindp,struct coin_info *cp,uint32_t blockheigh
     uint64_t minted = 0;
     uint32_t blockid = 0;
     *txindp = -1;
-    if ( (json= get_blockjson(0,&cp->RAM,blockhashstr,blockheight)) != 0 )
+    if ( (json= _get_blockjson(0,&cp->RAM,blockhashstr,blockheight)) != 0 )
     {
         copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"mint"));
         if ( mintedstr[0] != 0 )
@@ -1068,7 +1068,7 @@ int32_t update_address_infos(struct coin_info *cp,uint32_t blockheight)
     char *blockhashstr=0;
     int32_t txind,flag = 0;
     uint32_t height;
-    if ( (blockhashstr = get_blockhashstr(&cp->RAM,blockheight)) != 0 )
+    if ( (blockhashstr = _get_blockhashstr(&cp->RAM,blockheight)) != 0 )
     {
         if ( (height= get_blocktxind(&txind,cp,blockheight,blockhashstr,0)) != blockheight )
             printf("mismatched blockheight %u != %u (%s)\n",blockheight,height,blockhashstr);
@@ -1084,7 +1084,7 @@ uint64_t get_txoutstr(int32_t *numvoutsp,char *txidstr,char *coinaddr,char *scri
     cJSON *json,*txobj;
     int32_t n;
     uint32_t blockid = 0;
-    if ( (json= get_blockjson(0,&cp->RAM,0,blockheight)) != 0 )
+    if ( (json= _get_blockjson(0,&cp->RAM,0,blockheight)) != 0 )
     {
         if ( (txobj= _get_blocktxarray(&blockid,&n,&cp->RAM,json)) != 0 && txind < n )
         {
@@ -1107,7 +1107,7 @@ uint32_t get_txidind(int32_t *txindp,struct coin_info *cp,char *reftxidstr,int32
     *txindp = -1;
     if ( txidstr[0] != 0 && get_txvout(blockhash,&numvouts,coinaddr,script,cp,0,reftxidstr,vout) != 0 && blockhash[0] != 0 )
     {
-        if ( (json= get_blockjson(&blocknum,&cp->RAM,blockhash,blocknum)) != 0 )
+        if ( (json= _get_blockjson(&blocknum,&cp->RAM,blockhash,blocknum)) != 0 )
         {
             if ( (txarray= _get_blocktxarray(&blockid,&n,&cp->RAM,json)) != 0 )
             {
@@ -1133,14 +1133,14 @@ int32_t get_txinstr(char *txidstr,struct coin_info *cp,uint32_t blockheight,int3
     cJSON *obj,*json,*txobj,*vins,*txjson;
     int32_t n,numvins,origvout = -1;
     uint32_t blockid = 0;
-    if ( (json= get_blockjson(0,&cp->RAM,0,blockheight)) != 0 )
+    if ( (json= _get_blockjson(0,&cp->RAM,0,blockheight)) != 0 )
     {
         if ( (txobj= _get_blocktxarray(&blockid,&n,&cp->RAM,json)) != 0 && txind < n )
         {
             copy_cJSON(input_txid,cJSON_GetArrayItem(txobj,txind));
             if ( Debuglevel > 3 )
                 printf("%-5s blocktxt.%ld i.%d of n.%d %s\n",cp->name,(long)blockheight,txind,n,input_txid);
-            if ( input_txid[0] != 0 && (retstr= get_transaction(&cp->RAM,input_txid)) != 0 )
+            if ( input_txid[0] != 0 && (retstr= _get_transaction(&cp->RAM,input_txid)) != 0 )
             {
                 if ( (txjson= cJSON_Parse(retstr)) != 0 )
                 {
