@@ -4257,10 +4257,10 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     {
         if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 )
         {
-            //printf("create %s %d\n",formatstr,blocknum);
+            printf("create %s %d\n",formatstr,blocknum);
             if ( *hpptr == 0 && (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
             {
-                //printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
+                printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
                 if ( (fp= fopen(fname,"wb")) != 0 )
                 {
                     hflush(fp,hp);
