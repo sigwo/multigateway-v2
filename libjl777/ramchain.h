@@ -4111,7 +4111,7 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
                 if ( (*hps= hload(0,0,fname)) != 0 )
                 {
 #ifdef RAM_GENMODE
-                    if ( (*hps)->allocsize < 100 && ram_verify_Vblock(ram,blocknum,*hps) == 0 )
+                    if ( (*hps)->allocsize < 12 )
                         delete_file(fname,0);
                     else n++;
                     hclose(*hps);
