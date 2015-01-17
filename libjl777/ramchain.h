@@ -4219,7 +4219,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     ram_setformatstr(formatstr,blocks->format);
     prevhps = ram_get_hpptr(prevblocks,blocknum);
     ram_setfname(fname,ram,blocknum,formatstr);
-    printf("check create.(%s)\n",fname);
+   // printf("check create.(%s)\n",fname);
     if ( 0 && blocks->format == 'V' )
     {
         if ( _get_blockinfo(blocks->R,ram,blocknum) > 0 )
@@ -4681,7 +4681,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
     double estimated,startmilli = ram_millis();
     int32_t newflag,processed = 0;
     ram_setformatstr(formatstr,blocks->format);
-    printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]?\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift));
+    printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]? timebudget %f\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift),timebudget);
     while ( (blocks->blocknum >> blocks->shift) < (prev->blocknum >> blocks->shift) && ram_millis() < (startmilli + timebudget) )
     {
         newflag = (ram->blocks.hps[blocks->blocknum] == 0);
