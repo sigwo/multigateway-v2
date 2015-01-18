@@ -620,7 +620,7 @@ int main(int argc,const char *argv[])
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
 //#ifdef __APPLE__
 //#else
-    if ( 0 && argc > 1 && strcmp(argv[1],"genfiles") == 0 )
+    if ( 1 && argc > 1 && strcmp(argv[1],"genfiles") == 0 )
 //#endif
     {
         void *process_ramchains(void *argcoinstr);

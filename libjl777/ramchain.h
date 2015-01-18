@@ -5620,7 +5620,7 @@ void *process_ramchains(void *_argcoinstr)
             ram_init_ramchain(Ramchains[i]);
             Ramchains[i]->startmilli = ram_millis();
         }
-    printf("took %.1f seconds to init_ramchains %d coins\n",(ram_millis() - startmilli)/1000.,Numramchains);
+    printf("took %.1f seconds to init_ramchains %d coins argcoinstr.%p\n",(ram_millis() - startmilli)/1000.,Numramchains,argcoinstr);
     while ( processed >= 0 )
     {
         processed = 0;
