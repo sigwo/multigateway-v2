@@ -433,7 +433,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
 //#ifndef __APPLE__
 //    Coinloop(0);
 //#else
-    if ( IS_LIBTEST > 1 && portable_thread_create((void *)Coinloop,0) == 0 ) //IS_LIBTEST != 7 &&
+    if ( IS_LIBTEST > 1 && portable_thread_create((void *)Coinloop,0) == 0 && IS_LIBTEST != 7 )
         printf("ERROR hist Coinloop SSL\n");
 //#endif
     Finished_loading = 1;
@@ -441,7 +441,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         printf("run_UVloop\n");
     if ( portable_thread_create((void *)run_UVloop,Global_mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
-    //if ( IS_LIBTEST != 7 )
+    if ( IS_LIBTEST != 7 )
     {
         if ( portable_thread_create((void *)run_libwebsockets,&one) == 0 )
             printf("ERROR hist run_libwebsockets SSL\n");
