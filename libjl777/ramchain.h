@@ -4508,7 +4508,7 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
                     //    hclose(bitstreams[i]);
                     if ( (bitstreams[i]= hload(ram,&offsets[i],fp,0)) != 0 && bitstreams[i]->buf != 0 )
                     {
-                        fprintf(stderr,"%d ",i);
+                        //fprintf(stderr,"%d ",i);
                         calc_sha256cat(tmp.bytes,sha->bytes,sizeof(*sha),bitstreams[i]->buf,bitstreams[i]->allocsize), *sha = tmp;
                     }
                     else printf("unexpected null bitstream at %d %p offset.%ld\n",i,bitstreams[i],offsets[i]);
@@ -4534,7 +4534,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
     retval = n = 0;
     if ( (offsets= ram_load_bitstreams(ram,sha,fname,blocks,&num)) != 0 )
     {
-        fprintf(stderr,"offset.%p num.%d sha.%p M.%p\n",offsets,num,sha,M);
+        fprintf(stderr,"offset.%p num.%d refsha.%p sha.%p M.%p\n",offsets,num,refsha,sha,M);
         if ( refsha != 0 && memcmp(sha->bytes,refsha,sizeof(*sha)) != 0 )
         {
             fprintf(stderr,"refsha cmp error for %s %llx vs %llx\n",fname,(long long)sha->txid,(long long)refsha->txid);
@@ -4542,8 +4542,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             free(offsets);
             return(0);
         }
-        //if ( M->fileptr != 0 )
-        //    close_mappedptr(M);
+        fprintf(stderr,"about clear M\n");
         memset(M,0,sizeof(*M));
         fprintf(stderr,"about to init_mappedptr\n");
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
@@ -4628,6 +4627,7 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
         {
             if ( blocks->format == 64 || blocks->format == 4096 )
             {
+                fprintf(stderr,"MAP blocks%d[%d] %p\n",blocks->format,blocknum >> blocks->shift,&blocks->M[blocknum >> blocks->shift]);
                 if ( ram_map_bitstreams(flag,ram,blocknum,&blocks->M[blocknum >> blocks->shift],&sha,hps,incr,fname,0) <= 0 )
                 {
                     //break;
