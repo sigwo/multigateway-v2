@@ -4490,7 +4490,7 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
     if ( (fp= fopen(fname,"rb")) != 0 )
     {
         memset(sha,0,sizeof(*sha));
-        //printf("loading %s\n",fname);
+        printf("loading %s\n",fname);
         if ( fread(&x,1,sizeof(x),fp) == sizeof(x) && ((*nump) == 0 || x == (*nump)) )
         {
             if ( (*nump) == 0 )
@@ -4540,6 +4540,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
         memset(M,0,sizeof(*M));
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
+            printf("opened (%s) filesize.%ld\n",fname,M.allocsize);
             for (i=0; i<num; i++)
             {
                 if ( i > 0 && (i % 4096) == 4095 )
