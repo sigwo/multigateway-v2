@@ -548,7 +548,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                 if ( cp->MGWissuer[0] == 'N' && cp->MGWissuer[1] == 'X' && cp->MGWissuer[2] == 'T' )
                     expand_nxt64bits(cp->MGWissuer,conv_rsacctstr(cp->MGWissuer,0));
                 if ( Debuglevel > 0 )
-                    printf("MGW issuer.(%s)\n",cp->MGWissuer);
+                    printf("MGW issuer.(%s) marker.(%s)\n",cp->MGWissuer,cp->marker!=0?cp->marker:"no marker");
                 //cp->coinid = conv_coinstr(coinstr);
                 cp->limboarray = limboarray;
                 //if ( cp->coinid >= 0 && cp->coinid < 256 )
