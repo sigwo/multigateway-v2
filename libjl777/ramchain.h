@@ -455,7 +455,7 @@ void ensure_filesize(char *fname,long filesize)
         //printf("filesize.%ld is less than %ld\n",filesize,allocsize);
         if ( (fp=fopen(fname,"ab")) != 0 )
         {
-            zeroes = malloc(16*1024*1024);
+            zeroes = valloc(16*1024*1024);
             memset(zeroes,0,16*1024*1024);
             n = filesize - allocsize;
             while ( n > 16*1024*1024 )
@@ -1877,7 +1877,7 @@ HUFF *hload(struct ramchain_info *ram,long *offsetp,FILE *fp,char *fname)
             free(buf);
         else hp = hopen(ram->name,&ram->Perm,buf,len,0), hp->endpos = (int32_t)endbitpos;
         //fseek(fp,0,SEEK_END);
-        //printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
+        printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
     }
     if ( flag != 0 && fp != 0 )
         fclose(fp);
@@ -4512,7 +4512,7 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
     if ( (fp= fopen(fname,"rb")) != 0 )
     {
         memset(sha,0,sizeof(*sha));
-        //printf("loading %s\n",fname);
+        fprintf(stderr,"loading %s\n",fname);
         if ( fread(&x,1,sizeof(x),fp) == sizeof(x) && ((*nump) == 0 || x == (*nump)) )
         {
             if ( (*nump) == 0 )
@@ -4523,12 +4523,16 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
             offsets = calloc((*nump),sizeof(*offsets));
             if ( fread(&stored,1,sizeof(stored),fp) == sizeof(stored) )
             {
+                fprintf(stderr,"reading %s num.%d stored.%llx\n",fname,*nump,(long long)stored.txid);
                 for (i=0; i<(*nump); i++)
                 {
                     //if ( bitstreams[i] != 0 )
                     //    hclose(bitstreams[i]);
                     if ( (bitstreams[i]= hload(ram,&offsets[i],fp,0)) != 0 && bitstreams[i]->buf != 0 )
+                    {
+                        fprintf(stderr,"%p[%d] ",bitstreams[i]->buf,bitstreams[i]->allocsize);
                         calc_sha256cat(tmp.bytes,sha->bytes,sizeof(*sha),bitstreams[i]->buf,bitstreams[i]->allocsize), *sha = tmp;
+                    }
                     else printf("unexpected null bitstream at %d %p offset.%ld\n",i,bitstreams[i],offsets[i]);
                 }
                 if ( memcmp(sha,&stored,sizeof(stored)) != 0 )
@@ -4563,9 +4567,10 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
 
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
+            fprintf(stderr,"opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
             for (i=0; i<num; i++)
             {
-                if ( i > 0 && (i % 4096) == 4095 )
+                if ( i > 0 && (i % 4096) == 0 )
                     fprintf(stderr,"%.1f%% ",100.*(double)i/num);
                 if ( (hp= blocks[i]) != 0 )
                 {
@@ -4587,19 +4592,20 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             if ( i == num )
             {
                 retval = (int32_t)M->allocsize;
+                printf("loaded.%d from %d\n",num,blocknum);
                 for (i=0; i<num; i++)
                     if ( (hp= blocks[i]) != 0 && ram->blocks.hps[blocknum+i] == 0 )
                         ram->blocks.hps[blocknum+i] = hp, n++;
             }
             else
             {
+                printf("%s: only %d of %d blocks verified\n",fname,verified,num);
                 for (i=0; i<num; i++)
                     if ( (hp= blocks[i]) != 0 )
                         hclose(hp), blocks[i] = 0;
                 close_mappedptr(M);
                 memset(M,0,sizeof(*M));
                 delete_file(fname,0);
-                printf("%s: only %d of %d blocks verified\n",fname,verified,num);
             }
             //close_mappedptr(&M);
         } else printf("Error mapping.(%s)\n",fname);
