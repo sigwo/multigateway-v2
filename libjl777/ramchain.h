@@ -1867,7 +1867,7 @@ HUFF *hload(struct ramchain_info *ram,long *offsetp,FILE *fp,char *fname)
             free(buf);
         else hp = hopen(ram->name,&ram->Perm,buf,len,0), hp->endpos = (int32_t)endbitpos;
         //fseek(fp,0,SEEK_END);
-        printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
+        //printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
     }
     if ( flag != 0 && fp != 0 )
         fclose(fp);
