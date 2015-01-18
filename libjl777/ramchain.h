@@ -526,7 +526,7 @@ void ensure_dir(char *dirname) // jl777: does this work in windows?
     char fname[512],cmd[512];
     sprintf(fname,"%s/tmp",dirname);
     fix_windows_insanity(fname);
-    printf("ensure.(%s)\n",fname);
+    //printf("ensure.(%s)\n",fname);
     if ( (fp= fopen(fname,"rb")) == 0 )
     {
         sprintf(cmd,"mkdir %s",dirname);
@@ -540,7 +540,7 @@ void ensure_dir(char *dirname) // jl777: does this work in windows?
         {
             printf("failed to create.(%s) in (%s)\n",fname,dirname);
             exit(-1);
-        }
+        } else printf("ensure_dir(%s) created.(%s)\n",dirname,fname);
     }
     else fclose(fp);
 }
@@ -3903,7 +3903,7 @@ void ram_setdirB(int32_t mkdirflag,char *dirB,struct ramchain_info *ram,uint32_t
     if ( mkdirflag != 0 && strcmp(dirB,lastdirB) != 0 )
     {
         ensure_dir(dirB);
-        printf("DIRB: (%s)\n",dirB);
+        //printf("DIRB: (%s)\n",dirB);
         strcpy(lastdirB,dirB);
     }
 }
@@ -3921,7 +3921,7 @@ void ram_setdirC(int mkdirflag,char *dirC,struct ramchain_info *ram,uint32_t blo
     if ( mkdirflag != 0 && strcmp(dirC,lastdirC) != 0 )
     {
         ensure_dir(dirC);
-        printf("DIRC: (%s)\n",dirC);
+        //printf("DIRC: (%s)\n",dirC);
         strcpy(lastdirC,dirC);
     }
 }
