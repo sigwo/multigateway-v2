@@ -535,6 +535,11 @@ void ensure_dir(char *dirname) // jl777: does this work in windows?
         fp = fopen(fname,"wb");
         if ( fp != 0 )
             fclose(fp);
+        if ( (fp= fopen(fname,"rb")) == 0 )
+        {
+            printf("failed to create.(%s) in (%s)\n",fname,dirname);
+            exit(-1);
+        }
     }
     else fclose(fp);
 }
