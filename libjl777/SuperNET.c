@@ -643,9 +643,9 @@ int main(int argc,const char *argv[])
 #endif
         if ( IS_LIBTEST == 7 )
         {
-            printf(">>>>>>>>>>>>> process coinblocks.(%s)\n",args[0]);
+            printf(">>>>>>>>>>>>> process coinblocks.(%s)\n",(char *)args[0]);
             process_ramchains(args);
-            printf("finished genfiles.(%s)\n",args[0]!=0?args[0]:"");
+            printf("finished genfiles.(%s)\n",(char *)(args[0]!=0?args[0]:""));
             getchar();
         }
     }
