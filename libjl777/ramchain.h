@@ -542,7 +542,7 @@ void ensure_dir(char *dirname) // jl777: does this work in windows?
             exit(-1);
         } else printf("ensure_dir(%s) created.(%s)\n",dirname,fname);
     }
-    else fclose(fp);
+    fclose(fp);
 }
 
 int32_t compare_files(char *fname,char *fname2) // OS portable
