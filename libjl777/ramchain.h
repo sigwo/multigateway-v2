@@ -4540,7 +4540,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
         memset(M,0,sizeof(*M));
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
-            printf("opened (%s) filesize.%ld\n",fname,M.allocsize);
+            printf("opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
             for (i=0; i<num; i++)
             {
                 if ( i > 0 && (i % 4096) == 4095 )
