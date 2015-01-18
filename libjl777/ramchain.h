@@ -5433,12 +5433,12 @@ void ram_init_ramchain(struct ramchain_info *ram)
     char fname[1024];
     startmilli = ram_millis();
     strcpy(ram->dirpath,".");
-    ram_init_directories(ram);
     ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     ram->maxblock = (ram->RTblocknum + 10000);
+    ram_init_directories(ram);
     ram->blocks.M = calloc(1,sizeof(*ram->blocks.M));
     ram->blocks.hps = calloc(ram->maxblock,sizeof(*ram->blocks.hps));
-   printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
+    printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
 //#ifndef RAM_GENMODE
     ram_init_alloc_space(&ram->Tmp,tmpsize);
     permalloc(ram->name,&ram->Perm,PERMALLOC_SPACE_INCR,0);
