@@ -22,7 +22,7 @@
 #ifndef ramchain_h
 #define ramchain_h
 
-#define TMPALLOC_SPACE_INCR 1300000
+#define TMPALLOC_SPACE_INCR 3000000
 #define PERMALLOC_SPACE_INCR (1024 * 1024 * 128)
 
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
@@ -3701,7 +3701,7 @@ struct ramchain_token **ram_tokenize_bitstream(uint32_t *blocknump,int32_t *numt
     // '*' bitstream using huffman codes
     struct ramchain_token **tokens = 0;
     int32_t i,numtx = 0,firstvin,firstvout,maxtokens,numtokens = 0;
-    maxtokens = MAX_BLOCKTX;
+    maxtokens = MAX_BLOCKTX * 2;
     union ramtypes U;
     uint64_t minted = 0;
     uint32_t blocknum,lastnumtokens;
