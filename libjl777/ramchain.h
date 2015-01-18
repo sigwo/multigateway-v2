@@ -5610,13 +5610,14 @@ void *process_ramchains(void *_argcoinstr)
     struct ramchain_info *ram;
     int32_t i,pass,processed = 0;
     ensure_SuperNET_dirs("ramchains");
-//#ifdef __APPLE__
-//    argcoinstr = "BTCD";
-//#endif
+#ifdef __APPLE__
+    argcoinstr = "BTCD";
+#endif
     startmilli = ram_millis();
     for (i=0; i<Numramchains; i++)
         if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
         {
+            printf("i.%d of %d: argcoinstr.%p (%s)\n",i,Numramchains,argcoinstr,argcoinstr!=0?argcoinstr:"");
             ram_init_ramchain(Ramchains[i]);
             Ramchains[i]->startmilli = ram_millis();
         }
