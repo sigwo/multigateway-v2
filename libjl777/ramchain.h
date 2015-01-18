@@ -4534,9 +4534,10 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
     retval = n = 0;
     if ( (offsets= ram_load_bitstreams(ram,sha,fname,blocks,&num)) != 0 )
     {
+        fprintf(stderr,"offset.%p num.%d sha.%p M.%p\n",offsets,num,sha,M);
         if ( refsha != 0 && memcmp(sha->bytes,refsha,sizeof(*sha)) != 0 )
         {
-            printf("refsha cmp error for %s %llx vs %llx\n",fname,(long long)sha->txid,(long long)refsha->txid);
+            fprintf(stderr,"refsha cmp error for %s %llx vs %llx\n",fname,(long long)sha->txid,(long long)refsha->txid);
             hpurge(blocks,num);
             free(offsets);
             return(0);
@@ -4544,6 +4545,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
         //if ( M->fileptr != 0 )
         //    close_mappedptr(M);
         memset(M,0,sizeof(*M));
+        fprintf(stderr,"about to init_mappedptr\n");
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
             fprintf(stderr,"opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
