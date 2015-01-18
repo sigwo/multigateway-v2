@@ -1867,7 +1867,7 @@ HUFF *hload(struct ramchain_info *ram,long *offsetp,FILE *fp,char *fname)
             free(buf);
         else hp = hopen(ram->name,&ram->Perm,buf,len,0), hp->endpos = (int32_t)endbitpos;
         //fseek(fp,0,SEEK_END);
-        //printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
+        printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
     }
     if ( flag != 0 && fp != 0 )
         fclose(fp);
@@ -4490,7 +4490,7 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
     if ( (fp= fopen(fname,"rb")) != 0 )
     {
         memset(sha,0,sizeof(*sha));
-        printf("loading %s\n",fname);
+        fprintf(stderr,"loading %s\n",fname);
         if ( fread(&x,1,sizeof(x),fp) == sizeof(x) && ((*nump) == 0 || x == (*nump)) )
         {
             if ( (*nump) == 0 )
@@ -4501,12 +4501,16 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
             offsets = calloc((*nump),sizeof(*offsets));
             if ( fread(&stored,1,sizeof(stored),fp) == sizeof(stored) )
             {
+                fprintf(stderr,"reading %s num.%d stored.%llx\n",fname,*nump,(long long)stored.txid);
                 for (i=0; i<(*nump); i++)
                 {
                     //if ( bitstreams[i] != 0 )
                     //    hclose(bitstreams[i]);
                     if ( (bitstreams[i]= hload(ram,&offsets[i],fp,0)) != 0 && bitstreams[i]->buf != 0 )
+                    {
+                        fprintf(stderr,"%p[%d] ",bitstreams[i]->buf,bitstreams[i]->allocsize);
                         calc_sha256cat(tmp.bytes,sha->bytes,sizeof(*sha),bitstreams[i]->buf,bitstreams[i]->allocsize), *sha = tmp;
+                    }
                     else printf("unexpected null bitstream at %d %p offset.%ld\n",i,bitstreams[i],offsets[i]);
                 }
                 if ( memcmp(sha,&stored,sizeof(stored)) != 0 )
@@ -4540,7 +4544,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
         memset(M,0,sizeof(*M));
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
-            printf("opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
+            fprintf(stderr,"opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
             for (i=0; i<num; i++)
             {
                 if ( i > 0 && (i % 4096) == 0 )
