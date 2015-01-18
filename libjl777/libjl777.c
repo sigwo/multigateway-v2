@@ -412,7 +412,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
     myipaddr = init_MGWconf(JSON_or_fname,myipaddr);
     //if ( IS_LIBTEST == 7 )
     //    return(myipaddr);
-    //if ( IS_LIBTEST != 7 )
+    if ( IS_LIBTEST != 7 )
     {
         mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,on_udprecv);
         if ( (cp= get_coin_info("BTCD")) != 0 && cp->bridgeport != 0 )
