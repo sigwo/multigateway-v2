@@ -4543,7 +4543,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             printf("opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
             for (i=0; i<num; i++)
             {
-                if ( i > 0 && (i % 4096) == 4095 )
+                if ( i > 0 && (i % 4096) == 0 )
                     fprintf(stderr,"%.1f%% ",100.*(double)i/num);
                 if ( (hp= blocks[i]) != 0 )
                 {
@@ -4565,19 +4565,20 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             if ( i == num )
             {
                 retval = (int32_t)M->allocsize;
+                printf("loaded.%d from %d\n",num,blocknum);
                 for (i=0; i<num; i++)
                     if ( (hp= blocks[i]) != 0 && ram->blocks.hps[blocknum+i] == 0 )
                         ram->blocks.hps[blocknum+i] = hp, n++;
             }
             else
             {
+                printf("%s: only %d of %d blocks verified\n",fname,verified,num);
                 for (i=0; i<num; i++)
                     if ( (hp= blocks[i]) != 0 )
                         hclose(hp), blocks[i] = 0;
                 close_mappedptr(M);
                 memset(M,0,sizeof(*M));
                 delete_file(fname,0);
-                printf("%s: only %d of %d blocks verified\n",fname,verified,num);
             }
             //close_mappedptr(&M);
         } else printf("Error mapping.(%s)\n",fname);
