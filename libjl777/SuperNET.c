@@ -612,7 +612,7 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     return 1; //ok - we are mapped:)
 }
 
-#include "lua-regex.h"
+#include "regex/lua-regex.h"
 
 void luatest(char *str,char *pattern)
 {
