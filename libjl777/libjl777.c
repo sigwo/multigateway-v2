@@ -464,7 +464,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         {
             void *process_ramchains(void *_argcoinstr);
             init_SuperNET_storage(cp->backupdir);
-            if ( IS_LIBTEST > 1 && portable_thread_create((void *)process_ramchains,0) == 0 )
+            if ( IS_LIBTEST > 1 && IS_LIBTEST < 7 && portable_thread_create((void *)process_ramchains,0) == 0 )
                 printf("ERROR hist run_libwebsockets\n");
         }
     }
