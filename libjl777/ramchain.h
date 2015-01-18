@@ -4272,8 +4272,8 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
     HUFF *hp;
     long *offsets;
     uint32_t checkblock;
-    int32_t i,retval = 0,verified=0,rwflag = 0;
-    retval = 0;
+    int32_t i,n,retval = 0,verified=0,rwflag = 0;
+    retval = n = 0;
     if ( (offsets= ram_load_bitstreams(ram,sha,fname,blocks,&num)) != 0 )
     {
         if ( refsha != 0 && memcmp(sha->bytes,refsha,sizeof(*sha)) != 0 )
@@ -4290,6 +4290,8 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
         {
             for (i=0; i<num; i++)
             {
+                if ( i > 0 && (i % 4096) == 4095 )
+                    fprintf(stderr,"%.1f%% ",100.*(double)i/num);
                 if ( (hp= blocks[i]) != 0 )
                 {
                     if ( (blocks[i]= hopen(ram->name,&ram->Perm,(void *)((long)M->fileptr + offsets[i]),hp->allocsize,0)) != 0 )
@@ -4312,7 +4314,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
                 retval = (int32_t)M->allocsize;
                 for (i=0; i<num; i++)
                     if ( (hp= blocks[i]) != 0 && ram->blocks.hps[blocknum+i] == 0 )
-                        ram->blocks.hps[blocknum+i] = hp;
+                        ram->blocks.hps[blocknum+i] = hp, n++;
             }
             else
             {
@@ -4328,8 +4330,9 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
         } else printf("Error mapping.(%s)\n",fname);
         free(offsets);
     }
+    //printf("mapped.%d from %d\n",n,blocknum);
     //ram_clear_alloc_space(&ram->Tmp);
-    return(retval);
+    return(n);
 }
 
 uint32_t ram_setcontiguous(struct mappedblocks *blocks)
@@ -4353,6 +4356,7 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
     incr = (1 << blocks->shift);
     ram_setformatstr(formatstr,blocks->format);
     flag = blocks->format == 'B';
+    firstblock &= ~(incr - 1);
     for (i=0; i<numblocks; i+=incr)
     {
         blocknum = (firstblock + i);
@@ -4362,7 +4366,7 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
         {
             if ( blocks->format == 64 || blocks->format == 4096 )
             {
-                if ( ram_map_bitstreams(flag,ram,blocknum,&blocks->M[blocknum >> blocks->shift],&sha,hps,blocks->format,fname,0) <= 0 )
+                if ( ram_map_bitstreams(flag,ram,blocknum,&blocks->M[blocknum >> blocks->shift],&sha,hps,incr,fname,0) <= 0 )
                 {
                     //break;
                 }
@@ -4566,6 +4570,7 @@ int32_t ram_init_hashtable(uint32_t *blocknump,struct ramchain_info *ram,char ty
     hash->type = type;
     ram_sethashname(fname,hash,0);
     num = 0;
+    printf("inithashtable.(%s.%d) -> [%s]\n",ram->name,type,fname);
     if ( (hash->newfp= fopen(fname,"rb+")) != 0 )
     {
         if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
@@ -4597,7 +4602,7 @@ int32_t ram_init_hashtable(uint32_t *blocknump,struct ramchain_info *ram,char ty
             fseek(hash->newfp,offset,SEEK_SET);
             num++;
         }
-        printf("%s: loaded %d strings, ind.%d, offset.%ld allocsize.%llu %s\n",fname,num,hash->ind,offset,(long long)hash->M.allocsize,((sizeof(uint64_t)+offset) != hash->M.allocsize) ? "ERROR":"OK");
+        printf("%s: loaded %d strings, ind.%d, offset.%ld allocsize.%llu %s\n",fname,num,hash->ind,offset,(long long)hash->M.allocsize,((sizeof(uint64_t)+offset) != hash->M.allocsize && offset != hash->M.allocsize) ? "ERROR":"OK");
         if ( offset != hash->M.allocsize )
         {
             *blocknump = ram_load_blockcheck(hash->newfp);
@@ -4921,7 +4926,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
     double estimated,startmilli = ram_millis();
     int32_t newflag,processed = 0;
     ram_setformatstr(formatstr,blocks->format);
-    printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]? %f %f timebudget %f\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift),ram_millis(),(startmilli + timebudget),timebudget);
+    //printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]? %f %f timebudget %f\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift),ram_millis(),(startmilli + timebudget),timebudget);
     while ( (blocks->blocknum >> blocks->shift) < (prev->blocknum >> blocks->shift) && ram_millis() < (startmilli + timebudget) )
     {
         //printf("inside\n");
@@ -5434,7 +5439,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     startmilli = ram_millis();
     strcpy(ram->dirpath,".");
     ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
-    ram->maxblock = (ram->RTblocknum + 10000);
+    ram->blocks.numblocks = ram->maxblock = (ram->RTblocknum + 10000);
     ram_init_directories(ram);
     ram->blocks.M = calloc(1,sizeof(*ram->blocks.M));
     ram->blocks.hps = calloc(ram->maxblock,sizeof(*ram->blocks.hps));
@@ -5446,7 +5451,10 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->R = calloc(1,sizeof(*ram->R));
     ram->R2 = calloc(1,sizeof(*ram->R2));
     ram->R3 = calloc(1,sizeof(*ram->R3));
-    nofile = ram_init_hashtable(&blocknums[0],ram,'a'), nofile += ram_init_hashtable(&blocknums[1],ram,'s'), nofile += ram_init_hashtable(&blocknums[2],ram,'t');
+    memset(blocknums,0,sizeof(blocknums));
+    nofile = ram_init_hashtable(&blocknums[0],ram,'a');
+    nofile += ram_init_hashtable(&blocknums[1],ram,'s');
+    nofile += ram_init_hashtable(&blocknums[2],ram,'t');
     if ( nofile == 3 )
     {
         printf("REGEN\n");
@@ -5466,13 +5474,14 @@ void ram_init_ramchain(struct ramchain_info *ram)
         printf("WARNING: MARKER.(%s) set but no rawind. need to have it appear in blockchain first\n",ram->marker);
     printf("%.1f seconds to init_ramchain.%s hashtables marker.(%s) %u\n",(ram_millis() - startmilli)/1000.,ram->name,ram->marker,ram->marker_rawind);
     sprintf(fname,"ramchains/%s.blocks",ram->name);
-    minblocknum = numblocks = ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,0,fname,&refsha);
+    minblocknum = numblocks = ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,0,fname,0);
     for (i=0; i<3; i++)
         if ( minblocknum == 0 || (blocknums[i] != 0 && blocknums[i] < minblocknum) )
             minblocknum = blocknums[i];
     printf("Mapped.(%s) numblocks.%d: sha %llx (%d %d %d) -> minblocknum.%u\n",fname,numblocks,(long long)sha.txid,blocknums[0],blocknums[1],blocknums[2],minblocknum);
+    numblocks = ram_setcontiguous(&ram->blocks);
 
-    ram->mappedblocks[4] = ram_init_blocks(0,ram->blocks.hps,ram,(minblocknum>>12)<<12,&ram->blocks4096,&ram->blocks64,4096,12);
+    ram->mappedblocks[4] = ram_init_blocks(0,ram->blocks.hps,ram,(numblocks>>12)<<12,&ram->blocks4096,&ram->blocks64,4096,12);
     printf("set ramchain blocknum.%s %d (1st %d num %d) vs RT.%d %.1f seconds to init_ramchain.%s B4096\n",ram->name,ram->blocks4096.blocknum,ram->blocks4096.firstblock,ram->blocks4096.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[3] = ram_init_blocks(0,ram->blocks.hps,ram,ram->blocks4096.contiguous,&ram->blocks64,&ram->Bblocks,64,6);
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s B64\n",ram->name,ram->blocks64.blocknum,ram->blocks64.firstblock,ram->blocks64.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
@@ -5532,11 +5541,12 @@ void ram_init_ramchain(struct ramchain_info *ram)
             free(ram->H.vout2.addr.items), free(ram->H.vouti.script.items);
             free(ram->H.voutn.addr.items), free(ram->H.voutn.script.items);*/
         }
-        fprintf(stderr,"totalbytes.%lld %s -> %s totalbits.%lld R%.3f\n",(long long)ram->totalbits,_mbstr((double)ram->totalbytes),_mbstr2((double)ram->totalbits/8),(long long)ram->totalbytes,(double)ram->totalbytes*8/ram->totalbits);
-        if ( 1 && errs == 0 )
+        //fprintf(stderr,"totalbytes.%lld %s -> %s totalbits.%lld R%.3f\n",(long long)ram->totalbits,_mbstr((double)ram->totalbytes),_mbstr2((double)ram->totalbits/8),(long long)ram->totalbytes,(double)ram->totalbytes*8/ram->totalbits);
+        if ( numblocks == 0 && errs == 0 && ram->blocks.contiguous > 4096 )
         {
             datalen = -1;
             sprintf(fname,"ramchains/%s.blocks",ram->name);
+            printf("&refsha.%p (%s) hps.%p cont.%d\n",&refsha,fname,ram->blocks.hps,ram->blocks.contiguous);
             if ( ram_save_bitstreams(&refsha,fname,ram->blocks.hps,ram->blocks.contiguous) > 0 )
                 datalen = ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,ram->blocks.contiguous,fname,&refsha);
             printf("MApped.(%s) datalen.%d\n",fname,datalen);
@@ -5604,16 +5614,21 @@ void activate_ramchain(struct ramchain_info *ram,char *name)
 void *process_ramchains(void *_argcoinstr)
 {
     void ensure_SuperNET_dirs(char *backupdir);
-    char *argcoinstr = _argcoinstr;
-    int32_t threaded = 0;
+    char *argcoinstr = (_argcoinstr != 0) ? ((char **)_argcoinstr)[0] : 0;
+    int32_t modval,numinterleaves,threaded = 0;
     double startmilli;
     struct ramchain_info *ram;
     int32_t i,pass,processed = 0;
+    while ( IS_LIBTEST != 7 && Finished_init == 0 )
+        sleep(1);
     ensure_SuperNET_dirs("ramchains");
-#ifdef __APPLE__
-    argcoinstr = "BTCD";
-#endif
     startmilli = ram_millis();
+    if ( _argcoinstr != 0 && ((long *)_argcoinstr)[1] != 0 && ((long *)_argcoinstr)[2] != 0 )
+    {
+        modval = (int32_t)((long *)_argcoinstr)[1];
+        numinterleaves = (int32_t)((long *)_argcoinstr)[2];
+        printf("modval.%d numinterleaves.%d\n",modval,numinterleaves);
+    } else modval = 0, numinterleaves = 1;
     for (i=0; i<Numramchains; i++)
         if ( argcoinstr == 0 || strcmp(argcoinstr,Ramchains[i]->name) == 0 )
         {

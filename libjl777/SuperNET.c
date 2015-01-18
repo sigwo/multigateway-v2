@@ -616,23 +616,38 @@ int main(int argc,const char *argv[])
 {
     FILE *fp;
     cJSON *json = 0;
-    int32_t retval;
+    int32_t retval = -666;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
-//#ifdef __APPLE__
-//#else
+#ifdef __APPLE__
+#else
     if ( 1 && argc > 1 && strcmp(argv[1],"genfiles") == 0 )
-//#endif
+#endif
     {
         void *process_ramchains(void *argcoinstr);
-        char *coinstr;
+        void *args[4];
         retval = SuperNET_start("SuperNET.conf","127.0.0.1");
-        printf("process coinblocks\n");
+        memset(args,0,sizeof(args));
+#ifdef __APPLE__
+        args[0] = "BTCD";
+        *(long *)&args[1] = 0;
+        *(long *)&args[2] = 2;
+#else
         if ( argc > 2 )
-            coinstr = (char *)argv[2];
-        else coinstr = 0;
-        process_ramchains(coinstr);
-        printf("finished genfiles.%s\n",coinstr);
-        getchar();
+             args[0] = (char *)argv[2];
+        else args[0] = 0;
+        if ( argc > 4 )
+        {
+            *(long *)&args[1] = atol(argv[3]);
+            *(long *)&args[2] = atol(argv[4]);
+        }
+#endif
+        if ( IS_LIBTEST == 7 )
+        {
+            printf(">>>>>>>>>>>>> process coinblocks.(%s)\n",args[0]);
+            process_ramchains(args);
+            printf("finished genfiles.(%s)\n",args[0]!=0?args[0]:"");
+            getchar();
+        }
     }
 #ifdef fortesting
     if ( 0 )
@@ -695,7 +710,8 @@ int main(int argc,const char *argv[])
         else strcpy(ipaddr,argv[1]);
     }
     else strcpy(ipaddr,"127.0.0.1");
-    retval = SuperNET_start("SuperNET.conf",ipaddr);
+    if ( retval == -666 )
+        retval = SuperNET_start("SuperNET.conf",ipaddr);
     sprintf(portstr,"%d",SUPERNET_PORT);
     oldport = newport = portstr;
     if ( UPNP != 0 && upnpredirect(oldport,newport,"UDP","SuperNET_https") == 0 )
