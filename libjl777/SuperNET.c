@@ -611,7 +611,7 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     freeUPNPDevlist(devlist);
     return 1; //ok - we are mapped:)
 }
-
+/*
 #include "regex/lua-regex.h"
 
 void luatest(char *str,char *pattern)
@@ -635,13 +635,11 @@ void luatest(char *str,char *pattern)
 }
 #include <regex.h>
 
-/* The following is the size of a buffer to contain any error messages
- encountered when the regular expression is compiled. */
+// The following is the size of a buffer to contain any error messages encountered when the regular expression is compiled.
 
 #define MAX_ERROR_MSG 0x1000
 
-/* Compile the regular expression described by "regex_text" into
- "r". */
+// Compile the regular expression described by "regex_text" into "r".
 
 static int compile_regex (regex_t * r, const char * regex_text)
 {
@@ -656,19 +654,16 @@ static int compile_regex (regex_t * r, const char * regex_text)
     return 0;
 }
 
-/*
- Match the string in "to_match" against the compiled regular
- expression in "r".
- */
+// Match the string in "to_match" against the compiled regular expression in "r".
+ 
 
 static int match_regex (regex_t * r, const char * to_match)
 {
-    /* "P" is a pointer into the string which points to the end of the
-     previous match. */
+    // "P" is a pointer into the string which points to the end of the previous match.
     const char * p = to_match;
-    /* "N_matches" is the maximum number of matches allowed. */
+    // "N_matches" is the maximum number of matches allowed.
     const int n_matches = 10;
-    /* "M" contains the matches found. */
+    // "M" contains the matches found.
     regmatch_t m[n_matches];
     
     while (1)
@@ -718,23 +713,6 @@ int regexptest()
     return 0;
 }
 
-/*
-BTC CREATED.V block.265507 datalen.83265
-decode_hex n.1 hex[0] (6) -> 6
-decode_hex n.1 hex[0] (6) -> 6
-18 of 1170: (ffff) (6a0) 0.00000001 vs (ffff) (06) 0.00000001
-rawblockcmp error for vouts
-
-{
-    "value" : 0.00000001,
-    "n" : 1,
-    "scriptPubKey" : {
-        "asm" : "OP_RETURN 0",
-        "hex" : "6a00",
-        "type" : "nulldata"
-    }
-}*/
-
 
 int32_t bitcoin_assembler(char *script);
 
@@ -749,7 +727,7 @@ void unscript()
         printf("i.%d r.%d {%s}\n",i,r,buf);
     }
     getchar();
-}
+}*/
 
 int main(int argc,const char *argv[])
 {
