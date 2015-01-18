@@ -51,6 +51,11 @@ patch: doesntexist; \
     cp libminiupnpc.a ../libs; \
     cd ..;\
 
+ramchains: doesntexist; \
+    mkdir ramchains; \
+    cd ramchains; \
+    unzip ../ramchains.zip; \
+    cd ..;\
 
 patch1: doesntexist; \
    export LIBDIR="/usr/local/BerkeleyDB.6.1/lib"; \

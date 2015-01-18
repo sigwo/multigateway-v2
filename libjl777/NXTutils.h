@@ -2225,22 +2225,6 @@ void ensure_directory(char *dirname) // jl777: does this work in windows?
     else fclose(fp);
 }
 
-void copy_file(char *src,char *dest) // OS portable
-{
-    int c;
-    FILE *srcfp,*destfp;
-    if ( (srcfp= fopen(src,"rb")) != 0 )
-    {
-        if ( (destfp= fopen(dest,"wb")) != 0 )
-        {
-            while ( (c= fgetc(srcfp)) != EOF )
-                fputc(c,destfp);
-            fclose(destfp);
-        }
-        fclose(srcfp);
-    }
-}
-
 
 #ifdef oldway
 
