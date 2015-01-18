@@ -4508,7 +4508,7 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
                     //    hclose(bitstreams[i]);
                     if ( (bitstreams[i]= hload(ram,&offsets[i],fp,0)) != 0 && bitstreams[i]->buf != 0 )
                     {
-                        fprintf(stderr,"%p[%d] ",bitstreams[i]->buf,bitstreams[i]->allocsize);
+                        fprintf(stderr,"%d ",i);
                         calc_sha256cat(tmp.bytes,sha->bytes,sizeof(*sha),bitstreams[i]->buf,bitstreams[i]->allocsize), *sha = tmp;
                     }
                     else printf("unexpected null bitstream at %d %p offset.%ld\n",i,bitstreams[i],offsets[i]);
@@ -4518,8 +4518,10 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
             } else printf("error loading sha\n");
         } else printf("num mismatch %d != num.%d\n",x,(*nump));
         len = (int32_t)ftell(fp);
+        fprintf(stderr," len.%d ",len);
         fclose(fp);
     }
+    fprintf(stderr," return offsets.%p \n",offsets);
     return(offsets);
 }
 
@@ -5303,11 +5305,6 @@ struct ramchain_hashptr **ram_getallstrptrs(int32_t *numstrsp,struct ramchain_in
     *numstrsp = hash->ind;
     strs = calloc(*numstrsp+1,sizeof(*strs));
     memcpy(strs,hash->ptrs+1,(*numstrsp) * sizeof(*strs));
-    //*numaddrsp = HASH_COUNT(hash->table);
-    //HASH_ITER(hh,hash->table,hp,tmp)
-    //    addrs[i++] = hp;
-    //if ( i != *numaddrsp )
-    //    printf("ram_getallstrs HASH_COUNT.%d vs i.%d\n",*numstrsp,i);
     return(strs);
 }
 
