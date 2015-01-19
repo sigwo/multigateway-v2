@@ -4490,18 +4490,18 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
     if ( (fp= fopen(fname,"rb")) != 0 )
     {
         memset(sha,0,sizeof(*sha));
-        fprintf(stderr,"loading %s\n",fname);
+        //fprintf(stderr,"loading %s\n",fname);
         if ( fread(&x,1,sizeof(x),fp) == sizeof(x) && ((*nump) == 0 || x == (*nump)) )
         {
             if ( (*nump) == 0 )
             {
                 (*nump) = x;
-                printf("set num to %d\n",x);
+                //printf("set num to %d\n",x);
             }
             offsets = calloc((*nump),sizeof(*offsets));
             if ( fread(&stored,1,sizeof(stored),fp) == sizeof(stored) )
             {
-                fprintf(stderr,"reading %s num.%d stored.%llx\n",fname,*nump,(long long)stored.txid);
+                //fprintf(stderr,"reading %s num.%d stored.%llx\n",fname,*nump,(long long)stored.txid);
                 for (i=0; i<(*nump); i++)
                 {
                     if ( (bitstreams[i]= hload(ram,&offsets[i],fp,0)) != 0 && bitstreams[i]->buf != 0 )
@@ -4513,10 +4513,10 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
             } else printf("error loading sha\n");
         } else printf("num mismatch %d != num.%d\n",x,(*nump));
         len = (int32_t)ftell(fp);
-        fprintf(stderr," len.%d ",len);
+        //fprintf(stderr," len.%d ",len);
         fclose(fp);
     }
-    fprintf(stderr," return offsets.%p \n",offsets);
+    //fprintf(stderr," return offsets.%p \n",offsets);
     return(offsets);
 }
 
@@ -4529,7 +4529,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
     retval = n = 0;
     if ( (offsets= ram_load_bitstreams(ram,sha,fname,blocks,&num)) != 0 )
     {
-        fprintf(stderr,"offset.%p num.%d refsha.%p sha.%p M.%p\n",offsets,num,refsha,sha,M);
+       // fprintf(stderr,"offset.%p num.%d refsha.%p sha.%p M.%p\n",offsets,num,refsha,sha,M);
         if ( refsha != 0 && memcmp(sha->bytes,refsha,sizeof(*sha)) != 0 )
         {
             fprintf(stderr,"refsha cmp error for %s %llx vs %llx\n",fname,(long long)sha->txid,(long long)refsha->txid);
@@ -4537,14 +4537,14 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             free(offsets);
             return(0);
         }
-        fprintf(stderr,"about clear M\n");
+        //fprintf(stderr,"about clear M\n");
         if ( M->fileptr != 0 )
             close_mappedptr(M);
         memset(M,0,sizeof(*M));
-        fprintf(stderr,"about to init_mappedptr\n");
+        //fprintf(stderr,"about to init_mappedptr\n");
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
-            fprintf(stderr,"opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
+            //fprintf(stderr,"opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
             for (i=0; i<num; i++)
             {
                 if ( i > 0 && (i % 4096) == 0 )
@@ -4567,7 +4567,7 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             if ( i == num )
             {
                 retval = (int32_t)M->allocsize;
-                printf("loaded.%d from %d\n",num,blocknum);
+                //printf("loaded.%d from %d\n",num,blocknum);
                 for (i=0; i<num; i++)
                     if ( (hp= blocks[i]) != 0 && ram->blocks.hps[blocknum+i] == 0 )
                         ram->blocks.hps[blocknum+i] = hp, n++;
@@ -4615,7 +4615,6 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
 #endif
     incr = (1 << blocks->shift);
     M = &blocks->M[0];
-    printf("loading numblocks.%d into M[%d]\n",numblocks,firstblock>>blocks->shift);
     ram_setformatstr(formatstr,blocks->format);
     flag = blocks->format == 'B';
     for (i=0; i<numblocks; i+=incr,M++)
