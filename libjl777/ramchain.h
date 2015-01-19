@@ -22,7 +22,7 @@
 #ifndef ramchain_h
 #define ramchain_h
 
-#define TMPALLOC_SPACE_INCR 3000000
+#define TMPALLOC_SPACE_INCR 10000000
 #define PERMALLOC_SPACE_INCR (1024 * 1024 * 128)
 
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
@@ -655,13 +655,6 @@ void ram_clear_alloc_space(struct alloc_space *mem)
     mem->used = 0;
 }
 
-void ram_init_alloc_space(struct alloc_space *mem,long size)
-{
-    mem->ptr = malloc(size);
-    mem->size = size;
-    ram_clear_alloc_space(mem);
-}
-
 void *memalloc(struct alloc_space *mem,long size)
 {
     void *ptr = 0;
@@ -715,6 +708,14 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
         }
     }
     return(memalloc(mem,size));
+}
+
+void ram_init_tmpspace(struct ramchain_info *ram,long size)
+{
+    ram->Tmp.ptr = permalloc(ram->name,&ram->Perm,size,8);
+    // mem->ptr = malloc(size);
+    ram->Tmp.size = size;
+    ram_clear_alloc_space(&ram->Tmp);
 }
 
 // >>>>>>>>>>>>>>  start string functions
@@ -5390,6 +5391,7 @@ char *ramcompress(char *origargstr,char *sender,char *previpaddr,char *destip,ch
         cJSON_AddItemToObject(json,"compressed",cJSON_CreateNumber(complen));
         retstr = cJSON_Print(json);
         free_json(json);
+        free(hexstr);
     } else retstr = clonestr("{\"error\":\"no block info\"}");
     free(data);
     return(retstr);
@@ -5624,13 +5626,13 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
 {
     void *ptr;
     int32_t numblocks,tmpsize = TMPALLOC_SPACE_INCR;
-    blocks->R = calloc(1,sizeof(*blocks->R));
-    blocks->R2 = calloc(1,sizeof(*blocks->R2));
-    blocks->R3 = calloc(1,sizeof(*blocks->R3));
+    blocks->R = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R),8);
+    blocks->R2 = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R2),8);
+    blocks->R3 = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R3),8);
     blocks->ram = ram;
     blocks->prevblocks = prevblocks;
     blocks->format = format;
-    ptr = calloc(1,tmpsize), blocks->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
+    ptr = permalloc(ram->name,&ram->Perm,tmpsize,8), blocks->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
     if ( (blocks->shift = shift) != 0 )
         firstblock &= ~((1 << shift) - 1);
     blocks->firstblock = firstblock;
@@ -5643,12 +5645,11 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
     }
     blocks->numblocks = numblocks;
     if ( blocks->hps == 0 )
-        blocks->hps = calloc(blocks->numblocks,sizeof(*blocks->hps));
+        blocks->hps = permalloc(ram->name,&ram->Perm,blocks->numblocks*sizeof(*blocks->hps),8);
     if ( format != 0 )
     {
 #ifndef RAM_GENMODE
-        //blocks->flags = calloc(blocks->numblocks >> (shift+6),sizeof(*blocks->flags));
-        blocks->M = calloc((blocks->numblocks >> shift) + 1,sizeof(*blocks->M));
+        blocks->M = permalloc(ram->name,&ram->Perm,((blocks->numblocks >> shift) + 1)*sizeof(*blocks->M),8);
         if ( noload == 0 )
             blocks->blocknum = ram_load_blocks(ram,blocks,firstblock,blocks->numblocks);
 #endif
@@ -5685,16 +5686,16 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     ram->blocks.numblocks = ram->maxblock = (ram->RTblocknum + 10000);
     ram_init_directories(ram);
-    ram->blocks.M = calloc(1,sizeof(*ram->blocks.M));
-    ram->blocks.hps = calloc(ram->maxblock,sizeof(*ram->blocks.hps));
+    permalloc(ram->name,&ram->Perm,PERMALLOC_SPACE_INCR,0);
+    ram->blocks.M = permalloc(ram->name,&ram->Perm,sizeof(*ram->blocks.M),8);
+    ram->blocks.hps = permalloc(ram->name,&ram->Perm,ram->maxblock*sizeof(*ram->blocks.hps),8);
     printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
 //#ifndef RAM_GENMODE
-    ram_init_alloc_space(&ram->Tmp,tmpsize);
-    permalloc(ram->name,&ram->Perm,PERMALLOC_SPACE_INCR,0);
-    ptr = calloc(1,tmpsize), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
-    ram->R = calloc(1,sizeof(*ram->R));
-    ram->R2 = calloc(1,sizeof(*ram->R2));
-    ram->R3 = calloc(1,sizeof(*ram->R3));
+    ram_init_tmpspace(ram,tmpsize);
+    ptr = permalloc(ram->name,&ram->Perm,tmpsize,8), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
+    ram->R = permalloc(ram->name,&ram->Perm,sizeof(*ram->R),8);
+    ram->R2 = permalloc(ram->name,&ram->Perm,sizeof(*ram->R2),8);
+    ram->R3 = permalloc(ram->name,&ram->Perm,sizeof(*ram->R3),8);
     memset(blocknums,0,sizeof(blocknums));
     nofile = ram_init_hashtable(&blocknums[0],ram,'a');
     nofile += ram_init_hashtable(&blocknums[1],ram,'s');
