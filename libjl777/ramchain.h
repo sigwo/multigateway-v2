@@ -454,7 +454,11 @@ void ensure_filesize(char *fname,long filesize)
         //printf("filesize.%ld is less than %ld\n",filesize,allocsize);
         if ( (fp=fopen(fname,"ab")) != 0 )
         {
+	    #ifndef _WIN32
             zeroes = valloc(16*1024*1024);
+	    #else
+	    zeroes = _aligned_malloc(16*1024*1024, 16);
+	    #endif
             memset(zeroes,0,16*1024*1024);
             n = filesize - allocsize;
             while ( n > 16*1024*1024 )
