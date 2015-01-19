@@ -5635,6 +5635,7 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
         firstblock &= ~((1 << shift) - 1);
     blocks->firstblock = firstblock;
     numblocks = (ram->maxblock+1) - firstblock;
+    printf("initblocks.%d 1st.%d num.%d n.%d\n",format,firstblock,numblocks,numblocks>>shift);
     if ( numblocks < 0 )
     {
         printf("illegal numblocks %d with firstblock.%d vs maxblock.%d\n",blocks->numblocks,firstblock,ram->maxblock);
