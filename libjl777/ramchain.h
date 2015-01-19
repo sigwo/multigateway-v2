@@ -5859,7 +5859,7 @@ void *process_ramchains(void *_argcoinstr)
 {
     void ensure_SuperNET_dirs(char *backupdir);
     char *argcoinstr = (_argcoinstr != 0) ? ((char **)_argcoinstr)[0] : 0;
-    int32_t modval,numinterleaves,threaded = 0;
+    int32_t modval,numinterleaves;
     double startmilli;
     struct ramchain_info *ram;
     int32_t i,pass,processed = 0;
@@ -5889,7 +5889,7 @@ void *process_ramchains(void *_argcoinstr)
             ram = Ramchains[i];
             if ( argcoinstr == 0 || strcmp(argcoinstr,ram->name) == 0 )
             {
-                if ( threaded != 0 )
+                if ( MULTITHREADS != 0 )
                 {
                     printf("%d of %d: (%s) argcoinstr.%s\n",i,Numramchains,ram->name,argcoinstr!=0?argcoinstr:"ALL");
                     printf("call process_ramchain.(%s)\n",ram->name);

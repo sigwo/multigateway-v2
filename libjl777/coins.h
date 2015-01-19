@@ -819,6 +819,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             extract_cJSON_str(MGWROOT,sizeof(MGWROOT),MGWconf,"MGWROOT");
              if ( IS_LIBTEST >= 0 )
                 IS_LIBTEST = get_API_int(cJSON_GetObjectItem(MGWconf,"LIBTEST"),1);
+            MULTITHREADS = get_API_int(cJSON_GetObjectItem(MGWconf,"MULTITHREADS"),0);
             SOFTWALL = get_API_int(cJSON_GetObjectItem(MGWconf,"SOFTWALL"),0);
             FASTMODE = get_API_int(cJSON_GetObjectItem(MGWconf,"FASTMODE"),1);
             SERVER_PORT = get_API_int(cJSON_GetObjectItem(MGWconf,"SERVER_PORT"),3000);
