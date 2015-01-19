@@ -1134,11 +1134,11 @@ int32_t bitcoin_assembler(char *script)
             {
                 op = calloc(1,sizeof(*op));
                 HASH_ADD_KEYPTR(hh,optable,opname,strlen(opname),op);
-                printf("{%-16s %02x} ",opname,i);
+                //printf("{%-16s %02x} ",opname,i);
                 op->opcode = i;
             }
         }
-        printf("bitcoin opcodes\n");
+        //printf("bitcoin opcodes\n");
     }
     if ( script[0] == 0 )
     {
@@ -4289,118 +4289,6 @@ HUFF *ram_getblock(struct ramchain_info *ram,uint32_t blocknum)
     return(0);
 }
 
-char *ram_script_json(struct ramchain_info *ram,uint32_t rawind)
-{
-    char hashstr[8193],retbuf[1024],*str;
-    if ( (str= ram_script(hashstr,ram,rawind)) != 0 )
-    {
-        sprintf(retbuf,"{\"result\":\"%u\",\"script\":\"%s\"}",rawind,str);
-        return(clonestr(retbuf));
-    }
-    return(clonestr("{\"error\":\"no script info\"}"));
-}
-
-char *ram_addr_json(struct ramchain_info *ram,uint32_t rawind)
-{
-    char hashstr[8193],retbuf[1024],*str;
-    if ( (str= ram_addr(hashstr,ram,rawind)) != 0 )
-    {
-        sprintf(retbuf,"{\"result\":\"%u\",\"addr\":\"%s\"}",rawind,str);
-        return(clonestr(retbuf));
-    }
-    return(clonestr("{\"error\":\"no addr info\"}"));
-}
-
-char *ram_txid_json(struct ramchain_info *ram,uint32_t rawind)
-{
-    cJSON *json = cJSON_CreateObject();
-    char hashstr[8193],*txidstr,*retstr;
-    if ( (txidstr= ram_txid(hashstr,ram,rawind)) != 0 )
-    {
-        cJSON_AddItemToObject(json,"result",cJSON_CreateNumber(rawind));
-        cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txidstr));
-        retstr = cJSON_Print(json);
-        free_json(json);
-        return(retstr);
-    }
-    return(clonestr("{\"error\":\"no txid info\"}"));
-}
-
-char *ram_addrind_json(struct ramchain_info *ram,char *str)
-{
-    char retbuf[1024];
-    uint32_t rawind;
-    if ( (rawind= ram_addrind_RO(ram,str)) != 0 )
-    {
-        sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",str,rawind);
-        return(clonestr(retbuf));
-    }
-    return(clonestr("{\"error\":\"no addr info\"}"));
-}
-
-char *ram_txidind_json(struct ramchain_info *ram,char *str)
-{
-    char retbuf[1024];
-    uint32_t rawind;
-    if ( (rawind= ram_txidind_RO(ram,str)) != 0 )
-    {
-        sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",str,rawind);
-        return(clonestr(retbuf));
-    }
-    return(clonestr("{\"error\":\"no txid info\"}"));
-}
-
-char *ram_scriptind_json(struct ramchain_info *ram,char *str)
-{
-    char retbuf[1024];
-    uint32_t rawind;
-    if ( (rawind= ram_scriptind_RO(ram,str)) != 0 )
-    {
-        sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",str,rawind);
-        return(clonestr(retbuf));
-    }
-    return(clonestr("{\"error\":\"no script info\"}"));
-}
-
-void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
-{
-    double estimatedV,estimatedB,estsizeV,estsizeB;
-    estimatedV = estimate_completion(ram->name,startmilli,ram->Vblocks.processed,(int32_t)ram->RTblocknum-ram->Vblocks.blocknum)/60000;
-    estimatedB = estimate_completion(ram->name,startmilli,ram->Bblocks.processed,(int32_t)ram->RTblocknum-ram->Bblocks.blocknum)/60000;
-    if ( ram->Vblocks.count != 0 )
-        estsizeV = (ram->Vblocks.sum / ram->Vblocks.count) * ram->RTblocknum;
-    if ( ram->Bblocks.count != 0 )
-        estsizeB = (ram->Bblocks.sum / ram->Bblocks.count) * ram->RTblocknum;
-    sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->numoutputs,dstr(ram->totaloutputs),(long long)ram->numspends,dstr(ram->totalspends),(long long)(ram->numoutputs - ram->numspends),dstr(ram->totaloutputs - ram->totalspends),dstr(ram->totaloutputs - ram->totalspends)/(ram->numoutputs - ram->numspends));
-}
-
-cJSON *ram_address_entry_json(struct address_entry *bp)
-{
-    cJSON *array = cJSON_CreateArray();
-    cJSON_AddItemToArray(array,cJSON_CreateNumber(bp->blocknum));
-    cJSON_AddItemToArray(array,cJSON_CreateNumber(bp->txind));
-    cJSON_AddItemToArray(array,cJSON_CreateNumber(bp->v));
-    return(array);
-}
-
-cJSON *ram_addrpayload_json(struct ramchain_info *ram,struct rampayload *payload)
-{
-    char txidstr[8192];
-    ram_txid(txidstr,ram,payload->otherind);
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txidstr));
-    cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(payload->B.v));
-    cJSON_AddItemToObject(json,"value",cJSON_CreateNumber(dstr(payload->value)));
-    cJSON_AddItemToObject(json,"txid_rawind",cJSON_CreateNumber(payload->otherind));
-    cJSON_AddItemToObject(json,"txout",ram_address_entry_json(&payload->B));
-    if ( payload->B.isinternal != 0 )
-        cJSON_AddItemToObject(json,"MGWinternal",cJSON_CreateNumber(1));
-    if ( payload->B.spent != 0 )
-        cJSON_AddItemToObject(json,"spent",ram_address_entry_json(&payload->spentB));
-    cJSON_AddItemToObject(json,"scriptind",cJSON_CreateNumber(payload->extra));
-    return(json);
-}
-
 HUFF *ram_verify_Vblock(struct ramchain_info *ram,uint32_t blocknum,HUFF *hp)
 {
     int32_t datalen,err;
@@ -4916,6 +4804,18 @@ void ram_init_directories(struct ramchain_info *ram)
     }
 }
 
+void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
+{
+    double estimatedV,estimatedB,estsizeV,estsizeB;
+    estimatedV = estimate_completion(ram->name,startmilli,ram->Vblocks.processed,(int32_t)ram->RTblocknum-ram->Vblocks.blocknum)/60000;
+    estimatedB = estimate_completion(ram->name,startmilli,ram->Bblocks.processed,(int32_t)ram->RTblocknum-ram->Bblocks.blocknum)/60000;
+    if ( ram->Vblocks.count != 0 )
+        estsizeV = (ram->Vblocks.sum / ram->Vblocks.count) * ram->RTblocknum;
+    if ( ram->Bblocks.count != 0 )
+        estsizeB = (ram->Bblocks.sum / ram->Bblocks.count) * ram->RTblocknum;
+    sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->numoutputs,dstr(ram->totaloutputs),(long long)ram->numspends,dstr(ram->totalspends),(long long)(ram->numoutputs - ram->numspends),dstr(ram->totaloutputs - ram->totalspends),dstr(ram->totaloutputs - ram->totalspends)/(ram->numoutputs - ram->numspends));
+}
+
 void ram_disp_status(struct ramchain_info *ram)
 {
     char buf[1024];
@@ -5330,6 +5230,144 @@ struct ramchain_hashptr **ram_getallstrptrs(int32_t *numstrsp,struct ramchain_in
     return(strs);
 }
 
+cJSON *ram_address_entry_json(struct address_entry *bp)
+{
+    cJSON *array = cJSON_CreateArray();
+    cJSON_AddItemToArray(array,cJSON_CreateNumber(bp->blocknum));
+    cJSON_AddItemToArray(array,cJSON_CreateNumber(bp->txind));
+    cJSON_AddItemToArray(array,cJSON_CreateNumber(bp->v));
+    return(array);
+}
+
+cJSON *ram_addrpayload_json(struct ramchain_info *ram,struct rampayload *payload)
+{
+    char txidstr[8192];
+    ram_txid(txidstr,ram,payload->otherind);
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txidstr));
+    cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(payload->B.v));
+    cJSON_AddItemToObject(json,"value",cJSON_CreateNumber(dstr(payload->value)));
+    cJSON_AddItemToObject(json,"txid_rawind",cJSON_CreateNumber(payload->otherind));
+    cJSON_AddItemToObject(json,"txout",ram_address_entry_json(&payload->B));
+    if ( payload->B.isinternal != 0 )
+        cJSON_AddItemToObject(json,"MGWinternal",cJSON_CreateNumber(1));
+    if ( payload->B.spent != 0 )
+        cJSON_AddItemToObject(json,"spent",ram_address_entry_json(&payload->spentB));
+    cJSON_AddItemToObject(json,"scriptind",cJSON_CreateNumber(payload->extra));
+    return(json);
+}
+
+cJSON *ram_coinaddr_json(struct ramchain_info *ram,char *coinaddr,int32_t unspentflag)
+{
+    int64_t total = 0;
+    cJSON *json = 0,*array = 0;
+    int32_t i,n,numpayloads;
+    struct ramchain_hashptr *addrptr;
+    struct rampayload *payloads;
+    if ( (payloads= ram_addrpayloads(&addrptr,&numpayloads,ram,coinaddr)) != 0 && addrptr != 0 && numpayloads > 0 )
+    {
+        for (i=n=0; i<numpayloads; i++)
+        {
+            if ( unspentflag == 0 || payloads[i].B.spent == 0 )
+            {
+                if ( payloads[i].B.spent == 0 && payloads[i].B.isinternal == 0 )
+                {
+                    n++;
+                    total += payloads[i].value;
+                }
+                if ( array == 0 )
+                    array = cJSON_CreateArray();
+                cJSON_AddItemToArray(array,ram_addrpayload_json(ram,&payloads[i]));
+            }
+        }
+        json = cJSON_CreateObject();
+        if ( array != 0 )
+            cJSON_AddItemToObject(json,coinaddr,array);
+        cJSON_AddItemToObject(json,"numtx",cJSON_CreateNumber(numpayloads));
+        cJSON_AddItemToObject(json,"calc_numunspent",cJSON_CreateNumber(n));
+        cJSON_AddItemToObject(json,"calc_unspent",cJSON_CreateNumber(dstr(total)));
+        cJSON_AddItemToObject(json,"numunspent",cJSON_CreateNumber(addrptr->numunspent));
+        cJSON_AddItemToObject(json,"unspent",cJSON_CreateNumber(dstr(addrptr->unspent)));
+        cJSON_AddItemToObject(json,"rawind",cJSON_CreateNumber(addrptr->rawind));
+        cJSON_AddItemToObject(json,ram->name,cJSON_CreateString(coinaddr));
+    }
+    return(json);
+}
+
+char *ram_coinaddr_str(struct ramchain_info *ram,char *coinaddr)
+{
+    cJSON *json;
+    char *retstr;
+    if ( coinaddr != 0 && coinaddr[0] != 0 && (json= ram_coinaddr_json(ram,coinaddr,1)) != 0 )
+    {
+        retstr = cJSON_Print(json);
+        free_json(json);
+        return(retstr);
+    }
+    return(clonestr("{\"error\":\"no addr info\"}"));
+}
+
+char *ram_addr_json(struct ramchain_info *ram,uint32_t rawind)
+{
+    char hashstr[8193];
+    return(ram_coinaddr_str(ram,ram_addr(hashstr,ram,rawind)));
+}
+
+char *ram_addrind_json(struct ramchain_info *ram,char *coinaddr)
+{
+    return(ram_coinaddr_str(ram,coinaddr));
+}
+
+char *ram_txid_json(struct ramchain_info *ram,uint32_t rawind)
+{
+    cJSON *json = cJSON_CreateObject();
+    char hashstr[8193],*txidstr,*retstr;
+    if ( (txidstr= ram_txid(hashstr,ram,rawind)) != 0 )
+    {
+        cJSON_AddItemToObject(json,"result",cJSON_CreateNumber(rawind));
+        cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txidstr));
+        retstr = cJSON_Print(json);
+        free_json(json);
+        return(retstr);
+    }
+    return(clonestr("{\"error\":\"no txid info\"}"));
+}
+
+char *ram_txidind_json(struct ramchain_info *ram,char *txidstr)
+{
+    char retbuf[1024];
+    uint32_t rawind;
+    if ( (rawind= ram_txidind_RO(ram,txidstr)) != 0 )
+    {
+        sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",txidstr,rawind);
+        return(clonestr(retbuf));
+    }
+    return(clonestr("{\"error\":\"no txid info\"}"));
+}
+
+char *ram_script_json(struct ramchain_info *ram,uint32_t rawind)
+{
+    char hashstr[8193],retbuf[1024],*str;
+    if ( (str= ram_script(hashstr,ram,rawind)) != 0 )
+    {
+        sprintf(retbuf,"{\"result\":\"%u\",\"script\":\"%s\"}",rawind,str);
+        return(clonestr(retbuf));
+    }
+    return(clonestr("{\"error\":\"no script info\"}"));
+}
+
+char *ram_scriptind_json(struct ramchain_info *ram,char *str)
+{
+    char retbuf[1024];
+    uint32_t rawind;
+    if ( (rawind= ram_scriptind_RO(ram,str)) != 0 )
+    {
+        sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",str,rawind);
+        return(clonestr(retbuf));
+    }
+    return(clonestr("{\"error\":\"no script info\"}"));
+}
+
 // >>>>>>>>>>>>>>  start external and API interface functions
 char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin)
 {
@@ -5367,91 +5405,6 @@ char *ramrawind(char *origargstr,char *sender,char *previpaddr,char *destip,char
     else if ( strcmp(typestr,"txid") == 0 )
         return(ram_txidind_json(ram,str));
     else return(clonestr("{\"error\":\"no ramrawind invalid type\"}"));
-}
-
-char *ramblock(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,uint32_t blocknum)
-{
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    char hexstr[8192];
-    cJSON *json = 0;
-    HUFF *hp;
-    char *retstr = 0;
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    if ( (hp= ram->blocks.hps[blocknum]) == 0 )
-    {
-        _get_blockinfo(ram->R,ram,blocknum);
-        json = ram_rawblock_json(ram->R,0);
-    }
-    else
-    {
-        ram_expand_bitstream(&json,ram->R,ram,hp);
-        if ( json != 0 && hp->allocsize < (sizeof(hexstr)/2-1) )
-        {
-            init_hexbytes_noT(hexstr,hp->buf,hp->allocsize);
-            cJSON_AddItemToObject(json,"data",cJSON_CreateString(hexstr));
-        }
-    }
-    if ( json != 0 )
-    {
-        retstr = cJSON_Print(json);
-        free_json(json);
-    }
-    return(retstr);
-}
-
-char *ramcompress(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *blockhex)
-{
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    uint8_t *data;
-    cJSON *json;
-    int32_t datalen,complen;
-    char *retstr,*hexstr;
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    datalen = (int32_t)strlen(blockhex);
-    datalen >>= 1;
-    data = calloc(1,datalen);
-    decode_hex(data,datalen,blockhex);
-    if ( (complen= ram_compress(ram->tmphp,ram,data,datalen)) > 0 )
-    {
-        hexstr = calloc(1,complen*2+1);
-        init_hexbytes_noT(hexstr,ram->tmphp->buf,complen);
-        json = cJSON_CreateObject();
-        cJSON_AddItemToObject(json,"result",cJSON_CreateString(coin));
-        cJSON_AddItemToObject(json,"bitstream",cJSON_CreateString(hexstr));
-        cJSON_AddItemToObject(json,"datalen",cJSON_CreateNumber(datalen));
-        cJSON_AddItemToObject(json,"compressed",cJSON_CreateNumber(complen));
-        retstr = cJSON_Print(json);
-        free_json(json);
-        free(hexstr);
-    } else retstr = clonestr("{\"error\":\"no block info\"}");
-    free(data);
-    return(retstr);
-}
-
-char *ramexpand(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *bitstream)
-{
-    struct ramchain_info *ram = get_ramchain_info(coin);
-    uint8_t *data;
-    HUFF *hp;
-    int32_t datalen,expandlen;
-    char *retstr;
-    if ( ram == 0 )
-        return(clonestr("{\"error\":\"no ramchain info\"}"));
-    datalen = (int32_t)strlen(bitstream);
-    datalen >>= 1;
-    data = calloc(1,datalen);
-    decode_hex(data,datalen,bitstream);
-    hp = hopen(ram->name,&ram->Perm,data,datalen,0);
-    if ( (expandlen= ram_expand_bitstream(0,ram->R,ram,hp)) > 0 )
-    {
-        free(retstr);
-        retstr = ram_blockstr(ram->R2,ram,ram->R);
-    } else clonestr("{\"error\":\"no ram_expand_bitstream info\"}");
-    hclose(hp);
-    free(data);
-    return(retstr);
 }
 
 char *ramscript(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *txidstr,int32_t tx_vout,struct address_entry *bp)
@@ -5498,40 +5451,12 @@ char *ramscript(char *origargstr,char *sender,char *previpaddr,char *destip,char
 
 char *ramtxlist(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *coinaddr,int32_t unspentflag)
 {
+    cJSON *json;
     char *retstr = 0;
-    int64_t total = 0;
-    cJSON *json = 0,*array = 0;
-    int32_t i,n,numpayloads;
-    struct ramchain_hashptr *addrptr;
-    struct rampayload *payloads;
     struct ramchain_info *ram = get_ramchain_info(coin);
     if ( ram == 0 )
         return(clonestr("{\"error\":\"no ramchain info\"}"));
-    if ( (payloads= ram_addrpayloads(&addrptr,&numpayloads,ram,coinaddr)) != 0 && addrptr != 0 && numpayloads > 0 )
-    {
-        for (i=n=0; i<numpayloads; i++)
-        {
-            if ( unspentflag == 0 || payloads[i].B.spent == 0 )
-            {
-                if ( payloads[i].B.spent == 0 && payloads[i].B.isinternal == 0 )
-                {
-                    n++;
-                    total += payloads[i].value;
-                }
-                if ( array == 0 )
-                    array = cJSON_CreateArray();
-                cJSON_AddItemToArray(array,ram_addrpayload_json(ram,&payloads[i]));
-            }
-        }
-        json = cJSON_CreateObject();
-        if ( array != 0 )
-            cJSON_AddItemToObject(json,coinaddr,array);
-        cJSON_AddItemToObject(json,"numtx",cJSON_CreateNumber(numpayloads));
-        cJSON_AddItemToObject(json,"calc_numunspent",cJSON_CreateNumber(n));
-        cJSON_AddItemToObject(json,"calc_unspent",cJSON_CreateNumber(dstr(total)));
-        cJSON_AddItemToObject(json,"numunspent",cJSON_CreateNumber(addrptr->numunspent));
-        cJSON_AddItemToObject(json,"unspent",cJSON_CreateNumber(dstr(addrptr->unspent)));
-    }
+    json = ram_coinaddr_json(ram,coinaddr,unspentflag);
     if ( json != 0 )
     {
         retstr = cJSON_Print(json);
@@ -5652,6 +5577,91 @@ char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,ch
         free_json(retjson);
     }
     return(clonestr("{\"error\":\"rambalances: numcoins zero or bad ptr\"}"));
+}
+
+char *ramblock(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,uint32_t blocknum)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    char hexstr[8192];
+    cJSON *json = 0;
+    HUFF *hp;
+    char *retstr = 0;
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    if ( (hp= ram->blocks.hps[blocknum]) == 0 )
+    {
+        _get_blockinfo(ram->R,ram,blocknum);
+        json = ram_rawblock_json(ram->R,0);
+    }
+    else
+    {
+        ram_expand_bitstream(&json,ram->R,ram,hp);
+        if ( json != 0 && hp->allocsize < (sizeof(hexstr)/2-1) )
+        {
+            init_hexbytes_noT(hexstr,hp->buf,hp->allocsize);
+            cJSON_AddItemToObject(json,"data",cJSON_CreateString(hexstr));
+        }
+    }
+    if ( json != 0 )
+    {
+        retstr = cJSON_Print(json);
+        free_json(json);
+    }
+    return(retstr);
+}
+
+char *ramcompress(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *blockhex)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    uint8_t *data;
+    cJSON *json;
+    int32_t datalen,complen;
+    char *retstr,*hexstr;
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    datalen = (int32_t)strlen(blockhex);
+    datalen >>= 1;
+    data = calloc(1,datalen);
+    decode_hex(data,datalen,blockhex);
+    if ( (complen= ram_compress(ram->tmphp,ram,data,datalen)) > 0 )
+    {
+        hexstr = calloc(1,complen*2+1);
+        init_hexbytes_noT(hexstr,ram->tmphp->buf,complen);
+        json = cJSON_CreateObject();
+        cJSON_AddItemToObject(json,"result",cJSON_CreateString(coin));
+        cJSON_AddItemToObject(json,"bitstream",cJSON_CreateString(hexstr));
+        cJSON_AddItemToObject(json,"datalen",cJSON_CreateNumber(datalen));
+        cJSON_AddItemToObject(json,"compressed",cJSON_CreateNumber(complen));
+        retstr = cJSON_Print(json);
+        free_json(json);
+        free(hexstr);
+    } else retstr = clonestr("{\"error\":\"no block info\"}");
+    free(data);
+    return(retstr);
+}
+
+char *ramexpand(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *bitstream)
+{
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    uint8_t *data;
+    HUFF *hp;
+    int32_t datalen,expandlen;
+    char *retstr;
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    datalen = (int32_t)strlen(bitstream);
+    datalen >>= 1;
+    data = calloc(1,datalen);
+    decode_hex(data,datalen,bitstream);
+    hp = hopen(ram->name,&ram->Perm,data,datalen,0);
+    if ( (expandlen= ram_expand_bitstream(0,ram->R,ram,hp)) > 0 )
+    {
+        free(retstr);
+        retstr = ram_blockstr(ram->R2,ram,ram->R);
+    } else clonestr("{\"error\":\"no ram_expand_bitstream info\"}");
+    hclose(hp);
+    free(data);
+    return(retstr);
 }
 
 // >>>>>>>>>>>>>>  start initialization and runloops
