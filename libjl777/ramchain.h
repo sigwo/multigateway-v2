@@ -1140,6 +1140,11 @@ int32_t bitcoin_assembler(char *script)
         }
         printf("bitcoin opcodes\n");
     }
+    if ( script[0] == 0 )
+    {
+        strcpy(script,"ffff");
+        return(-1);
+    }
     len = strlen(script);
     hex = (len < sizeof(hexstr)-2) ? hexstr : calloc(1,len+1);
     strcpy(hex,"ffff");
