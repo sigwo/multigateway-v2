@@ -26,7 +26,7 @@
 #include "mman-win.h"
 #endif
 
-#define TMPALLOC_SPACE_INCR 3000000
+#define TMPALLOC_SPACE_INCR 10000000
 #define PERMALLOC_SPACE_INCR (1024 * 1024 * 128)
 
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
@@ -155,7 +155,6 @@ struct mappedblocks
     struct mappedblocks *prevblocks;
     struct rawblock *R,*R2,*R3;
     HUFF **hps,*tmphp;
-    //uint64_t *flags;
     struct mappedptr *M;
     double sum;
     uint32_t blocknum,count,firstblock,numblocks,processed,format,shift,contiguous;
@@ -666,13 +665,6 @@ void ram_clear_alloc_space(struct alloc_space *mem)
     mem->used = 0;
 }
 
-void ram_init_alloc_space(struct alloc_space *mem,long size)
-{
-    mem->ptr = malloc(size);
-    mem->size = size;
-    ram_clear_alloc_space(mem);
-}
-
 void *memalloc(struct alloc_space *mem,long size)
 {
     void *ptr = 0;
@@ -726,6 +718,14 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
         }
     }
     return(memalloc(mem,size));
+}
+
+void ram_init_tmpspace(struct ramchain_info *ram,long size)
+{
+    ram->Tmp.ptr = permalloc(ram->name,&ram->Perm,size,8);
+    // mem->ptr = malloc(size);
+    ram->Tmp.size = size;
+    ram_clear_alloc_space(&ram->Tmp);
 }
 
 // >>>>>>>>>>>>>>  start string functions
@@ -1870,14 +1870,15 @@ HUFF *hload(struct ramchain_info *ram,long *offsetp,FILE *fp,char *fname)
     if ( hload_varint(&endbitpos,fp) > 0 )
     {
         len = hconv_bitlen(endbitpos);
-        buf = permalloc(ram->name,&ram->Perm,len,2);
         if ( offsetp != 0 )
+        {
             *offsetp = ftell(fp);
+            buf = ram->tmphp->buf;
+        }
+        else buf = permalloc(ram->name,&ram->Perm,len,2);
         if ( fread(buf,1,len,fp) != len )
-            free(buf);
+            fprintf(stderr,"HLOAD error (%s) endbitpos.%d len.%d | fpos.%ld\n",fname!=0?fname:ram->name,(int)endbitpos,len,ftell(fp));
         else hp = hopen(ram->name,&ram->Perm,buf,len,0), hp->endpos = (int32_t)endbitpos;
-        //fseek(fp,0,SEEK_END);
-        printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
     }
     if ( flag != 0 && fp != 0 )
         fclose(fp);
@@ -4512,27 +4513,22 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
     if ( (fp= fopen(fname,"rb")) != 0 )
     {
         memset(sha,0,sizeof(*sha));
-        fprintf(stderr,"loading %s\n",fname);
+        //fprintf(stderr,"loading %s\n",fname);
         if ( fread(&x,1,sizeof(x),fp) == sizeof(x) && ((*nump) == 0 || x == (*nump)) )
         {
             if ( (*nump) == 0 )
             {
                 (*nump) = x;
-                printf("set num to %d\n",x);
+                //printf("set num to %d\n",x);
             }
             offsets = calloc((*nump),sizeof(*offsets));
             if ( fread(&stored,1,sizeof(stored),fp) == sizeof(stored) )
             {
-                fprintf(stderr,"reading %s num.%d stored.%llx\n",fname,*nump,(long long)stored.txid);
+                //fprintf(stderr,"reading %s num.%d stored.%llx\n",fname,*nump,(long long)stored.txid);
                 for (i=0; i<(*nump); i++)
                 {
-                    //if ( bitstreams[i] != 0 )
-                    //    hclose(bitstreams[i]);
                     if ( (bitstreams[i]= hload(ram,&offsets[i],fp,0)) != 0 && bitstreams[i]->buf != 0 )
-                    {
-                        fprintf(stderr,"%p[%d] ",bitstreams[i]->buf,bitstreams[i]->allocsize);
                         calc_sha256cat(tmp.bytes,sha->bytes,sizeof(*sha),bitstreams[i]->buf,bitstreams[i]->allocsize), *sha = tmp;
-                    }
                     else printf("unexpected null bitstream at %d %p offset.%ld\n",i,bitstreams[i],offsets[i]);
                 }
                 if ( memcmp(sha,&stored,sizeof(stored)) != 0 )
@@ -4540,8 +4536,10 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
             } else printf("error loading sha\n");
         } else printf("num mismatch %d != num.%d\n",x,(*nump));
         len = (int32_t)ftell(fp);
+        //fprintf(stderr," len.%d ",len);
         fclose(fp);
     }
+    //fprintf(stderr," return offsets.%p \n",offsets);
     return(offsets);
 }
 
@@ -4554,45 +4552,45 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
     retval = n = 0;
     if ( (offsets= ram_load_bitstreams(ram,sha,fname,blocks,&num)) != 0 )
     {
+       // fprintf(stderr,"offset.%p num.%d refsha.%p sha.%p M.%p\n",offsets,num,refsha,sha,M);
         if ( refsha != 0 && memcmp(sha->bytes,refsha,sizeof(*sha)) != 0 )
         {
-            printf("refsha cmp error for %s %llx vs %llx\n",fname,(long long)sha->txid,(long long)refsha->txid);
+            fprintf(stderr,"refsha cmp error for %s %llx vs %llx\n",fname,(long long)sha->txid,(long long)refsha->txid);
             hpurge(blocks,num);
             free(offsets);
             return(0);
         }
-        //if ( M->fileptr != 0 )
-        //    close_mappedptr(M);
+        //fprintf(stderr,"about clear M\n");
+        if ( M->fileptr != 0 )
+            close_mappedptr(M);
         memset(M,0,sizeof(*M));
-
+        //fprintf(stderr,"about to init_mappedptr\n");
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
         {
-            fprintf(stderr,"opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
+            //fprintf(stderr,"opened (%s) filesize.%lld\n",fname,(long long)M->allocsize);
             for (i=0; i<num; i++)
             {
                 if ( i > 0 && (i % 4096) == 0 )
                     fprintf(stderr,"%.1f%% ",100.*(double)i/num);
                 if ( (hp= blocks[i]) != 0 )
                 {
-                    if ( (blocks[i]= hopen(ram->name,&ram->Perm,(void *)((long)M->fileptr + offsets[i]),hp->allocsize,0)) != 0 )
+                    hp->buf = (void *)((long)M->fileptr + offsets[i]);
+                    //if ( (blocks[i]= hopen(ram->name,&ram->Perm,(void *)((long)M->fileptr + offsets[i]),hp->allocsize,0)) != 0 )
                     {
-                        if ( verifyflag == 0 || (checkblock= ram_verify(ram,blocks[i],'B')) == blocknum+i )
-                        {
+                        if ( verifyflag == 0 || (checkblock= ram_verify(ram,hp,'B')) == blocknum+i )
                             verified++;
-                            hclose(hp);
-                        }
                         else
                         {
                             printf("checkblock.%d vs %d (blocknum.%d + i.%d)\n",checkblock,blocknum+i,blocknum,i);
                             break;
                         }
-                    } else blocks[i] = hp;
+                    }
                 } else printf("ram_map_bitstreams: ram_map_bitstreams unexpected null hp at slot.%d\n",i);
             }
             if ( i == num )
             {
                 retval = (int32_t)M->allocsize;
-                printf("loaded.%d from %d\n",num,blocknum);
+                //printf("loaded.%d from %d\n",num,blocknum);
                 for (i=0; i<num; i++)
                     if ( (hp= blocks[i]) != 0 && ram->blocks.hps[blocknum+i] == 0 )
                         ram->blocks.hps[blocknum+i] = hp, n++;
@@ -4607,7 +4605,6 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
                 memset(M,0,sizeof(*M));
                 delete_file(fname,0);
             }
-            //close_mappedptr(&M);
         } else printf("Error mapping.(%s)\n",fname);
         free(offsets);
     }
@@ -4632,13 +4629,18 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
 {
     HUFF **hps;
     bits256 sha;
+    struct mappedptr *M;
     char fname[1024],formatstr[16];
     uint32_t blocknum,i,flag,incr,n = 0;
+#ifdef RAM_GENMODE
+    printf("ram_load_blocks not supported in RAM_GENMODE\n");
+    exit(-1);
+#endif
     incr = (1 << blocks->shift);
+    M = &blocks->M[0];
     ram_setformatstr(formatstr,blocks->format);
     flag = blocks->format == 'B';
-    firstblock &= ~(incr - 1);
-    for (i=0; i<numblocks; i+=incr)
+    for (i=0; i<numblocks; i+=incr,M++)
     {
         blocknum = (firstblock + i);
         ram_setfname(fname,ram,blocknum,formatstr);
@@ -4647,26 +4649,15 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
         {
             if ( blocks->format == 64 || blocks->format == 4096 )
             {
-                if ( ram_map_bitstreams(flag,ram,blocknum,&blocks->M[blocknum >> blocks->shift],&sha,hps,incr,fname,0) <= 0 )
+                if ( ram_map_bitstreams(flag,ram,blocknum,M,&sha,hps,incr,fname,0) <= 0 )
                 {
                     //break;
                 }
             }
             else
             {
-//#ifdef RAM_GENMODE
-//              if ( (*hps= hload(&ram->Tmp,0,0,fname)) != 0 )
-//#else
                 if ( (*hps= hload(ram,0,0,fname)) != 0 )
-//#endif
                 {
-#ifdef RAM_GENMODE
-                    if ( (*hps)->allocsize < 12 )
-                        delete_file(fname,0);
-                    else n++;
-                    hclose(*hps);
-                    ram_clear_alloc_space(&ram->Tmp);
-#else
                     if ( flag == 0 || ram_verify(ram,*hps,blocks->format) == blocknum )
                     {
                         //if ( flag != 0 )
@@ -4676,7 +4667,6 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
                             ram->blocks.hps[blocknum] = *hps;
                     }
                     else hclose(*hps), *hps = 0;
-#endif
                     if ( (n % 100) == 0 )
                         fprintf(stderr," total.%d loaded.(%s)\n",n,fname);
                 } //else break;
@@ -4789,7 +4779,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
             ram_setfname(fname,ram,blocknum,formatstr);
             hps = ram_get_hpptr(blocks,blocknum);
             if ( ram_save_bitstreams(&refsha,fname,prevhps,n) > 0 )
-                numblocks = ram_map_bitstreams(verifyflag,ram,blocknum,&blocks->M[blocknum >> blocks->shift],&sha,hps,n,fname,&refsha);
+                numblocks = ram_map_bitstreams(verifyflag,ram,blocknum,&blocks->M[(blocknum-blocks->firstblock) >> blocks->shift],&sha,hps,n,fname,&refsha);
         } else printf("%s prev.%d missing blockptr at %d\n",ram->name,prevblocks->format,blocknum+i);
     }
     else
@@ -5326,11 +5316,6 @@ struct ramchain_hashptr **ram_getallstrptrs(int32_t *numstrsp,struct ramchain_in
     *numstrsp = hash->ind;
     strs = calloc(*numstrsp+1,sizeof(*strs));
     memcpy(strs,hash->ptrs+1,(*numstrsp) * sizeof(*strs));
-    //*numaddrsp = HASH_COUNT(hash->table);
-    //HASH_ITER(hh,hash->table,hp,tmp)
-    //    addrs[i++] = hp;
-    //if ( i != *numaddrsp )
-    //    printf("ram_getallstrs HASH_COUNT.%d vs i.%d\n",*numstrsp,i);
     return(strs);
 }
 
@@ -5428,6 +5413,7 @@ char *ramcompress(char *origargstr,char *sender,char *previpaddr,char *destip,ch
         cJSON_AddItemToObject(json,"compressed",cJSON_CreateNumber(complen));
         retstr = cJSON_Print(json);
         free_json(json);
+        free(hexstr);
     } else retstr = clonestr("{\"error\":\"no block info\"}");
     free(data);
     return(retstr);
@@ -5662,17 +5648,18 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
 {
     void *ptr;
     int32_t numblocks,tmpsize = TMPALLOC_SPACE_INCR;
-    blocks->R = calloc(1,sizeof(*blocks->R));
-    blocks->R2 = calloc(1,sizeof(*blocks->R2));
-    blocks->R3 = calloc(1,sizeof(*blocks->R3));
+    blocks->R = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R),8);
+    blocks->R2 = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R2),8);
+    blocks->R3 = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R3),8);
     blocks->ram = ram;
     blocks->prevblocks = prevblocks;
     blocks->format = format;
-    ptr = calloc(1,tmpsize), blocks->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
+    ptr = permalloc(ram->name,&ram->Perm,tmpsize,8), blocks->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
     if ( (blocks->shift = shift) != 0 )
         firstblock &= ~((1 << shift) - 1);
     blocks->firstblock = firstblock;
     numblocks = (ram->maxblock+1) - firstblock;
+    printf("initblocks.%d 1st.%d num.%d n.%d\n",format,firstblock,numblocks,numblocks>>shift);
     if ( numblocks < 0 )
     {
         printf("illegal numblocks %d with firstblock.%d vs maxblock.%d\n",blocks->numblocks,firstblock,ram->maxblock);
@@ -5680,12 +5667,11 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
     }
     blocks->numblocks = numblocks;
     if ( blocks->hps == 0 )
-        blocks->hps = calloc(blocks->numblocks,sizeof(*blocks->hps));
+        blocks->hps = permalloc(ram->name,&ram->Perm,blocks->numblocks*sizeof(*blocks->hps),8);
     if ( format != 0 )
     {
 #ifndef RAM_GENMODE
-        //blocks->flags = calloc(blocks->numblocks >> (shift+6),sizeof(*blocks->flags));
-        blocks->M = calloc(blocks->numblocks >> shift,sizeof(*blocks->M));
+        blocks->M = permalloc(ram->name,&ram->Perm,((blocks->numblocks >> shift) + 1)*sizeof(*blocks->M),8);
         if ( noload == 0 )
             blocks->blocknum = ram_load_blocks(ram,blocks,firstblock,blocks->numblocks);
 #endif
@@ -5726,16 +5712,16 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     ram->blocks.numblocks = ram->maxblock = (ram->RTblocknum + 10000);
     ram_init_directories(ram);
-    ram->blocks.M = calloc(1,sizeof(*ram->blocks.M));
-    ram->blocks.hps = calloc(ram->maxblock,sizeof(*ram->blocks.hps));
+    permalloc(ram->name,&ram->Perm,PERMALLOC_SPACE_INCR,0);
+    ram->blocks.M = permalloc(ram->name,&ram->Perm,sizeof(*ram->blocks.M),8);
+    ram->blocks.hps = permalloc(ram->name,&ram->Perm,ram->maxblock*sizeof(*ram->blocks.hps),8);
     printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
 //#ifndef RAM_GENMODE
-    ram_init_alloc_space(&ram->Tmp,tmpsize);
-    permalloc(ram->name,&ram->Perm,PERMALLOC_SPACE_INCR,0);
-    ptr = calloc(1,tmpsize), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
-    ram->R = calloc(1,sizeof(*ram->R));
-    ram->R2 = calloc(1,sizeof(*ram->R2));
-    ram->R3 = calloc(1,sizeof(*ram->R3));
+    ram_init_tmpspace(ram,tmpsize);
+    ptr = permalloc(ram->name,&ram->Perm,tmpsize,8), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
+    ram->R = permalloc(ram->name,&ram->Perm,sizeof(*ram->R),8);
+    ram->R2 = permalloc(ram->name,&ram->Perm,sizeof(*ram->R2),8);
+    ram->R3 = permalloc(ram->name,&ram->Perm,sizeof(*ram->R3),8);
     memset(blocknums,0,sizeof(blocknums));
     nofile = ram_init_hashtable(&blocknums[0],ram,'a');
     nofile += ram_init_hashtable(&blocknums[1],ram,'s');
@@ -5898,9 +5884,10 @@ void activate_ramchain(struct ramchain_info *ram,char *name)
            
 void *process_ramchains(void *_argcoinstr)
 {
+    extern int32_t MULTITHREADS;
     void ensure_SuperNET_dirs(char *backupdir);
     char *argcoinstr = (_argcoinstr != 0) ? ((char **)_argcoinstr)[0] : 0;
-    int32_t modval,numinterleaves,threaded = 0;
+    int32_t modval,numinterleaves;
     double startmilli;
     struct ramchain_info *ram;
     int32_t i,pass,processed = 0;
@@ -5930,7 +5917,7 @@ void *process_ramchains(void *_argcoinstr)
             ram = Ramchains[i];
             if ( argcoinstr == 0 || strcmp(argcoinstr,ram->name) == 0 )
             {
-                if ( threaded != 0 )
+                if ( MULTITHREADS != 0 )
                 {
                     printf("%d of %d: (%s) argcoinstr.%s\n",i,Numramchains,ram->name,argcoinstr!=0?argcoinstr:"ALL");
                     printf("call process_ramchain.(%s)\n",ram->name);
