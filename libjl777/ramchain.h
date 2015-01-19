@@ -5244,9 +5244,11 @@ cJSON *ram_txpayload_json(struct ramchain_info *ram,struct rampayload *txpayload
     cJSON *item;
     HUFF *hp;
     int32_t datalen;
-    char coinaddr[8192];
+    char coinaddr[8192],scriptstr[8192];
     struct rawvin *vi;
     struct rawtx *tx;
+    struct ramchain_hashptr *addrptr;
+    struct rampayload *addrpayload;
     ram_addr(coinaddr,ram,txpayload->otherind);
     cJSON *json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"address",cJSON_CreateString(coinaddr));
@@ -5272,6 +5274,15 @@ cJSON *ram_txpayload_json(struct ramchain_info *ram,struct rampayload *txpayload
                 cJSON_AddItemToObject(item,"txid",cJSON_CreateString(tx->txidstr));
         }
         cJSON_AddItemToObject(json,"spent",item);
+    }
+    else
+    {
+        if ( (addrpayload= ram_getpayloadi(&addrptr,ram,'a',txpayload->otherind,txpayload->extra)) != 0 )
+        {
+            ram_script(scriptstr,ram,addrpayload->extra);
+            cJSON_AddItemToObject(json,"script",cJSON_CreateString(scriptstr));
+            cJSON_AddItemToObject(json,"script_rawind",cJSON_CreateNumber(addrpayload->extra));
+        }
     }
     return(json);
 }
