@@ -5253,12 +5253,12 @@ cJSON *ram_txpayload_json(struct ramchain_info *ram,struct rampayload *txpayload
     cJSON_AddItemToObject(json,"addr_rawind",cJSON_CreateNumber(txpayload->otherind));
     cJSON_AddItemToObject(json,"addr_txlisti",cJSON_CreateNumber(txpayload->extra));
     ram_payload_json(json,txpayload,0);
-    if ( txpayload->B.spent != 0 )
+    if ( txpayload->spentB.spent != 0 )
     {
         item = cJSON_CreateObject();
-        cJSON_AddItemToObject(json,"height",cJSON_CreateNumber(txpayload->spentB.blocknum));
-        cJSON_AddItemToObject(json,"txind",cJSON_CreateNumber(txpayload->spentB.txind));
-        cJSON_AddItemToObject(json,"vin",cJSON_CreateNumber(txpayload->spentB.v));
+        cJSON_AddItemToObject(item,"height",cJSON_CreateNumber(txpayload->spentB.blocknum));
+        cJSON_AddItemToObject(item,"txind",cJSON_CreateNumber(txpayload->spentB.txind));
+        cJSON_AddItemToObject(item,"vin",cJSON_CreateNumber(txpayload->spentB.v));
         if ( (hp= ram->blocks.hps[txpayload->spentB.blocknum]) != 0 && (datalen= ram_expand_bitstream(0,ram->R,ram,hp)) > 0 )
         {
             if ( (vi= ram_rawvin(ram->R,txpayload->spentB.txind,txpayload->spentB.v)) != 0 )
@@ -5269,7 +5269,7 @@ cJSON *ram_txpayload_json(struct ramchain_info *ram,struct rampayload *txpayload
                     cJSON_AddItemToObject(item,"vin_error",cJSON_CreateNumber(spent_vout));
             }
             if ( (tx= ram_rawtx(ram->R,txpayload->spentB.txind)) != 0 )
-                cJSON_AddItemToObject(json,"txid",cJSON_CreateString(tx->txidstr));
+                cJSON_AddItemToObject(item,"txid",cJSON_CreateString(tx->txidstr));
         }
         cJSON_AddItemToObject(json,"spent",item);
     }
@@ -5362,7 +5362,7 @@ cJSON *ram_txidstr_json(struct ramchain_info *ram,char *txidstr)
         cJSON_AddItemToObject(json,"total",cJSON_CreateNumber(dstr(total)));
         cJSON_AddItemToObject(json,"unspent",cJSON_CreateNumber(dstr(unspent)));
         cJSON_AddItemToObject(json,"rawind",cJSON_CreateNumber(txptr->rawind));
-        cJSON_AddItemToObject(json,ram->name,cJSON_CreateString(txidstr));
+        cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txidstr));
     }
     return(json);
 }
