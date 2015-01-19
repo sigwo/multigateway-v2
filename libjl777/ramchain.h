@@ -5857,6 +5857,7 @@ void activate_ramchain(struct ramchain_info *ram,char *name)
            
 void *process_ramchains(void *_argcoinstr)
 {
+    extern int32_t MULTITHREADS;
     void ensure_SuperNET_dirs(char *backupdir);
     char *argcoinstr = (_argcoinstr != 0) ? ((char **)_argcoinstr)[0] : 0;
     int32_t modval,numinterleaves;
