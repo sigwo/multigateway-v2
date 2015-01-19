@@ -24,6 +24,10 @@
 
 #ifdef _WIN32
 #include "mman-win.h"
+#include <io.h>
+#include <share.h>
+#include <errno.h>
+#include <string.h>
 #endif
 
 #define TMPALLOC_SPACE_INCR 10000000
@@ -297,14 +301,24 @@ void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)
 	uint64_t filesize;
     void *ptr = 0;
 	*filesizep = 0;
+fprintf(stderr, "\n\tAbout to map_file\n");
+        #ifndef _WIN32
 	if ( enablewrite != 0 )
 		fd = open(fname,O_RDWR);
 	else fd = open(fname,O_RDONLY);
+        #else
+	if ( enablewrite != 0 )
+		fd = _sopen(fname, _O_RDWR | _O_BINARY , _SH_DENYNO);
+	else fd = _sopen(fname, _O_RDONLY | _O_BINARY , _SH_DENYNO);
+        #endif
+fprintf(stderr, "\n\topened file\n");
 	if ( fd < 0 )
 	{
-		printf("map_file: error opening enablewrite.%d %s\n",enablewrite,fname);
+		fprintf(stderr,"\nmap_file: error opening enablewrite.%d %s\n",enablewrite,fname);
+fprintf(stderr,"\n\t_sopen(fd) returns: %d (%s)\n", fd, strerror(errno));
         return(0);
 	}
+fprintf(stderr, "\nmap_file opened\n");
     if ( *filesizep == 0 )
         filesize = (uint64_t)lseek(fd,0,SEEK_END);
     else
@@ -317,11 +331,17 @@ void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)
 #ifdef __APPLE__
 	ptr = mmap(0,filesize,rwflags,flags,fd,0);
 #elif _WIN32
+fprintf(stderr, "\nmmap(0, %d, %d, %d, %d,0) being called\n", filesize, rwflags,flags,fd);
 	ptr = mmap(0,filesize,rwflags,flags,fd,0);
 #else
 	ptr = mmap64(0,filesize,rwflags,flags,fd,0);
 #endif
+fprintf(stderr, "\nafter mmap\n");
+        #ifndef _WIN32
 	close(fd);
+        #else
+	_close(fd);
+	#endif
     if ( ptr == 0 || ptr == MAP_FAILED )
 	{
 		printf("map_file.write%d: mapping %s failed? mp %p\n",enablewrite,fname,ptr);
@@ -542,10 +562,11 @@ void ensure_dir(char *dirname) // jl777: does this work in windows?
     //printf("ensure.(%s)\n",fname);
     if ( (fp= fopen(fname,"rb")) == 0 )
     {
+fprintf(stderr, "\n%s doesn't exist. building\n", dirname);
         sprintf(cmd,"mkdir %s",dirname);
         fix_windows_insanity(cmd);
         if ( system(cmd) != 0 )
-            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
+            fprintf(stderr, "error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
         fp = fopen(fname,"wb");
         if ( fp != 0 )
             fclose(fp);
@@ -706,6 +727,9 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
         memset(&M,0,sizeof(M));
         sprintf(fname,"ramchains/%s/bitstream/space.%ld",coinstr,n);
         fix_windows_insanity(fname);
+        #ifdef _WIN32
+	ensure_dir(fname);
+	#endif
        // delete_file(fname,0);
         if ( size > mem->size )
             mem->size = size;
@@ -4219,6 +4243,7 @@ void ram_setfname(char *fname,struct ramchain_info *ram,uint32_t blocknum,char *
     char dirC[1024];
     ram_setdirC(0,dirC,ram,blocknum);
     sprintf(fname,"%s/%u.%s",dirC,blocknum,str);
+    fix_windows_insanity(fname);
 }
 
 void ram_purge_badblock(struct ramchain_info *ram,uint32_t blocknum)
