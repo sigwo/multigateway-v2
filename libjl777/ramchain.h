@@ -3156,7 +3156,7 @@ struct address_entry *ram_address_entry(struct address_entry *destbp,struct ramc
     {
         if ( vout < payloads[0].B.v )
         {
-            *destbp = payloads[vout+1].B;
+            *destbp = payloads[vout].B;
             return(destbp);
         }
     }
@@ -3274,13 +3274,15 @@ cJSON *ram_rawblock_json(struct rawblock *raw,int32_t allocsize)
     return(json);
 }*/
 
+#define ram_rawtx(raw,txind) (((txind) < (raw)->numtx) ? &(raw)->txspace[txind] : 0)
+
 struct rawvout *ram_rawvout(struct rawblock *raw,int32_t txind,int32_t v)
 {
     struct rawtx *tx;
     if ( txind < raw->numtx )
     {
-        tx = &raw->txspace[txind];
-        return(&raw->voutspace[tx->firstvout + v]);
+        if ( (tx= ram_rawtx(raw,txind)) != 0 )
+            return(&raw->voutspace[tx->firstvout + v]);
     }
     return(0);
 }
@@ -3290,8 +3292,8 @@ struct rawvin *ram_rawvin(struct rawblock *raw,int32_t txind,int32_t v)
     struct rawtx *tx;
     if ( txind < raw->numtx )
     {
-        tx = &raw->txspace[txind];
-        return(&raw->vinspace[tx->firstvin + v]);
+        if ( (tx= ram_rawtx(raw,txind)) != 0 )
+            return(&raw->vinspace[tx->firstvin + v]);
     }
     return(0);
 }
@@ -4975,13 +4977,13 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
         if ( (txptr= table->ptrs[txid_rawind]) != 0 && txptr->payloads != 0 )
         {
             memset(&B,0,sizeof(B)), B.blocknum = blocknum, B.txind = txind, B.v = vin, B.spent = 1;
-            if ( (vout+1) < txptr->numpayloads )
+            if ( vout < txptr->numpayloads )
             {
                 if ( iter <= 2 )
                 {
-                    bp = &txptr->payloads[vout + 1].spentB;
+                    bp = &txptr->payloads[vout].spentB;
                     if ( memcmp(bp,&zeroB,sizeof(zeroB)) == 0 )
-                        ram_markspent(ram,&txptr->payloads[vout + 1],&B,txid_rawind);
+                        ram_markspent(ram,&txptr->payloads[vout],&B,txid_rawind);
                     else if ( memcmp(bp,&B,sizeof(B)) == 0 )
                         printf("duplicate spentB (%d %d %d)\n",B.blocknum,B.txind,B.v);
                     else printf("interloper! (%d %d %d).%d vs (%d %d %d).%d\n",bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
@@ -5032,11 +5034,12 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
                 }
                 else
                 {
-                    payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = numvouts;
-                    txptr->numpayloads = (numvouts + 1);
+                    payload.B.blocknum = blocknum, payload.B.txind = txind;
+                    txptr->numpayloads = numvouts;
                     //printf("%p txid_rawind.%d maxpayloads.%d numpayloads.%d (%d %d %d)\n",txptr,txid_rawind,txptr->maxpayloads,txptr->numpayloads,blocknum,txind,numvouts);
                     txptr->payloads = (struct rampayload *)permalloc(ram->name,&ram->Perm,txptr->numpayloads * sizeof(*txptr->payloads),7);
-                    txptr->payloads[0] = payload;
+                    for (payload.B.v=0; payload.B.v<numvouts; payload.B.v++)
+                        txptr->payloads[payload.B.v] = payload;
                 }
             }
             if ( numvins > 0 ) // alloc and update payloads in iter 0, no payload operations in iter 1
@@ -5049,7 +5052,7 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
             {
                 for (i=isinternal=0; i<numvouts; i++,numbits+=retval)
                 {
-                    if ( (retval= ram_rawvout_update(iter,&addr_rawind,iter==0?0:&txptr->payloads[i+1],ram,hp,blocknum,txind,i,numvouts,txid_rawind,isinternal*(i==(numvouts-1)))) < 0 )
+                    if ( (retval= ram_rawvout_update(iter,&addr_rawind,iter==0?0:&txptr->payloads[i],ram,hp,blocknum,txind,i,numvouts,txid_rawind,isinternal*(i==(numvouts-1)))) < 0 )
                         return(-2);
                     if ( i == 0 && addr_rawind == ram->marker_rawind )
                         isinternal = 1;
@@ -5239,21 +5242,74 @@ cJSON *ram_address_entry_json(struct address_entry *bp)
     return(array);
 }
 
+void ram_payload_json(cJSON *json,struct rampayload *payload,int32_t spentflag)
+{
+    cJSON_AddItemToObject(json,"n",cJSON_CreateNumber(payload->B.v));
+    cJSON_AddItemToObject(json,"value",cJSON_CreateNumber(dstr(payload->value)));
+    if ( payload->B.isinternal != 0 )
+        cJSON_AddItemToObject(json,"MGWinternal",cJSON_CreateNumber(1));
+    if ( spentflag != 0 && payload->B.spent != 0 )
+        cJSON_AddItemToObject(json,"spent",ram_address_entry_json(&payload->spentB));
+}
+
 cJSON *ram_addrpayload_json(struct ramchain_info *ram,struct rampayload *payload)
 {
     char txidstr[8192];
     ram_txid(txidstr,ram,payload->otherind);
     cJSON *json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txidstr));
-    cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(payload->B.v));
-    cJSON_AddItemToObject(json,"value",cJSON_CreateNumber(dstr(payload->value)));
     cJSON_AddItemToObject(json,"txid_rawind",cJSON_CreateNumber(payload->otherind));
     cJSON_AddItemToObject(json,"txout",ram_address_entry_json(&payload->B));
-    if ( payload->B.isinternal != 0 )
-        cJSON_AddItemToObject(json,"MGWinternal",cJSON_CreateNumber(1));
-    if ( payload->B.spent != 0 )
-        cJSON_AddItemToObject(json,"spent",ram_address_entry_json(&payload->spentB));
     cJSON_AddItemToObject(json,"scriptind",cJSON_CreateNumber(payload->extra));
+    ram_payload_json(json,payload,1);
+    return(json);
+}
+
+cJSON *ram_txpayload_json(struct ramchain_info *ram,struct rampayload *txpayload,char *spent_txidstr,int32_t spent_vout)
+{
+    cJSON *item;
+    HUFF *hp;
+    int32_t datalen;
+    char coinaddr[8192],scriptstr[8192];
+    struct rawvin *vi;
+    struct rawtx *tx;
+    struct ramchain_hashptr *addrptr;
+    struct rampayload *addrpayload;
+    ram_addr(coinaddr,ram,txpayload->otherind);
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"address",cJSON_CreateString(coinaddr));
+    cJSON_AddItemToObject(json,"addr_rawind",cJSON_CreateNumber(txpayload->otherind));
+    cJSON_AddItemToObject(json,"addr_txlisti",cJSON_CreateNumber(txpayload->extra));
+    ram_payload_json(json,txpayload,0);
+    if ( txpayload->spentB.spent != 0 )
+    {
+        item = cJSON_CreateObject();
+        cJSON_AddItemToObject(item,"height",cJSON_CreateNumber(txpayload->spentB.blocknum));
+        cJSON_AddItemToObject(item,"txind",cJSON_CreateNumber(txpayload->spentB.txind));
+        cJSON_AddItemToObject(item,"vin",cJSON_CreateNumber(txpayload->spentB.v));
+        if ( (hp= ram->blocks.hps[txpayload->spentB.blocknum]) != 0 && (datalen= ram_expand_bitstream(0,ram->R,ram,hp)) > 0 )
+        {
+            if ( (vi= ram_rawvin(ram->R,txpayload->spentB.txind,txpayload->spentB.v)) != 0 )
+            {
+                if ( strcmp(vi->txidstr,spent_txidstr) != 0 )
+                    cJSON_AddItemToObject(item,"vin_txid_error",cJSON_CreateString(vi->txidstr));
+                if ( vi->vout != spent_vout )
+                    cJSON_AddItemToObject(item,"vin_error",cJSON_CreateNumber(spent_vout));
+            }
+            if ( (tx= ram_rawtx(ram->R,txpayload->spentB.txind)) != 0 )
+                cJSON_AddItemToObject(item,"txid",cJSON_CreateString(tx->txidstr));
+        }
+        cJSON_AddItemToObject(json,"spent",item);
+    }
+    else
+    {
+        if ( (addrpayload= ram_getpayloadi(&addrptr,ram,'a',txpayload->otherind,txpayload->extra)) != 0 )
+        {
+            ram_script(scriptstr,ram,addrpayload->extra);
+            cJSON_AddItemToObject(json,"script",cJSON_CreateString(scriptstr));
+            cJSON_AddItemToObject(json,"script_rawind",cJSON_CreateNumber(addrpayload->extra));
+        }
+    }
     return(json);
 }
 
@@ -5318,14 +5374,42 @@ char *ram_addrind_json(struct ramchain_info *ram,char *coinaddr)
     return(ram_coinaddr_str(ram,coinaddr));
 }
 
-char *ram_txid_json(struct ramchain_info *ram,uint32_t rawind)
+cJSON *ram_txidstr_json(struct ramchain_info *ram,char *txidstr)
 {
-    cJSON *json = cJSON_CreateObject();
-    char hashstr[8193],*txidstr,*retstr;
-    if ( (txidstr= ram_txid(hashstr,ram,rawind)) != 0 )
+    int64_t unspent = 0,total = 0;
+    cJSON *json = 0,*array = 0;
+    int32_t i,n,numpayloads;
+    struct ramchain_hashptr *txptr;
+    struct rampayload *txpayloads;
+    if ( (txpayloads= ram_txpayloads(&txptr,&numpayloads,ram,txidstr)) != 0 && txptr != 0 && numpayloads > 0 )
     {
-        cJSON_AddItemToObject(json,"result",cJSON_CreateNumber(rawind));
+        json = cJSON_CreateObject();
+        cJSON_AddItemToObject(json,"height",cJSON_CreateNumber(txpayloads->B.blocknum));
+        cJSON_AddItemToObject(json,"txind",cJSON_CreateNumber(txpayloads->B.txind));
+        cJSON_AddItemToObject(json,"numvouts",cJSON_CreateNumber(numpayloads));
+        array = cJSON_CreateArray();
+        for (i=n=0; i<numpayloads; i++)
+        {
+            total += txpayloads[i].value;
+            if ( txpayloads[i].spentB.spent == 0 )
+                unspent += txpayloads[i].value;
+            cJSON_AddItemToArray(array,ram_txpayload_json(ram,&txpayloads[i],txidstr,i));
+        }
+        cJSON_AddItemToObject(json,"vouts",array);
+        cJSON_AddItemToObject(json,"total",cJSON_CreateNumber(dstr(total)));
+        cJSON_AddItemToObject(json,"unspent",cJSON_CreateNumber(dstr(unspent)));
+        cJSON_AddItemToObject(json,"rawind",cJSON_CreateNumber(txptr->rawind));
         cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txidstr));
+    }
+    return(json);
+}
+
+char *ram_txidstr(struct ramchain_info *ram,char *txidstr)
+{
+    cJSON *json;
+    char *retstr;
+    if ( txidstr != 0 && txidstr[0] != 0 && (json= ram_txidstr_json(ram,txidstr)) != 0 )
+    {
         retstr = cJSON_Print(json);
         free_json(json);
         return(retstr);
@@ -5333,16 +5417,15 @@ char *ram_txid_json(struct ramchain_info *ram,uint32_t rawind)
     return(clonestr("{\"error\":\"no txid info\"}"));
 }
 
+char *ram_txid_json(struct ramchain_info *ram,uint32_t rawind)
+{
+    char hashstr[8193];
+    return(ram_txidstr(ram,ram_txid(hashstr,ram,rawind)));
+}
+
 char *ram_txidind_json(struct ramchain_info *ram,char *txidstr)
 {
-    char retbuf[1024];
-    uint32_t rawind;
-    if ( (rawind= ram_txidind_RO(ram,txidstr)) != 0 )
-    {
-        sprintf(retbuf,"{\"result\":\"%s\",\"rawind\":\"%u\"}",txidstr,rawind);
-        return(clonestr(retbuf));
-    }
-    return(clonestr("{\"error\":\"no txid info\"}"));
+    return(ram_txidstr(ram,txidstr));
 }
 
 char *ram_script_json(struct ramchain_info *ram,uint32_t rawind)
@@ -5422,9 +5505,9 @@ char *ramscript(char *origargstr,char *sender,char *previpaddr,char *destip,char
     {
         if ( (txpayloads= ram_txpayloads(&txptr,&numpayloads,ram,txidstr)) != 0 )
         {
-            if ( (tx_vout+1) < txptr->numpayloads )
+            if ( tx_vout < txptr->numpayloads )
             {
-                txpayload = &txpayloads[tx_vout+1];
+                txpayload = &txpayloads[tx_vout];
                 if ( (addrpayload= ram_getpayloadi(&addrptr,ram,'a',txpayload->otherind,txpayload->extra)) != 0 )
                 {
                     ram_script(scriptstr,ram,addrpayload->extra);
