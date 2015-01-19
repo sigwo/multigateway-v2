@@ -4614,7 +4614,8 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
     exit(-1);
 #endif
     incr = (1 << blocks->shift);
-    M = &blocks->M[firstblock >> blocks->shift];
+    M = &blocks->M[0];
+    printf("loading numblocks.%d into M[%d]\n",numblocks,firstblock>>blocks->shift);
     ram_setformatstr(formatstr,blocks->format);
     flag = blocks->format == 'B';
     for (i=0; i<numblocks; i+=incr,M++)
