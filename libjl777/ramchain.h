@@ -703,7 +703,9 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
         sprintf(fname,"ramchains/%s/bitstream/space.%ld",coinstr,n);
         fix_windows_insanity(fname);
        // delete_file(fname,0);
-        if ( init_mappedptr(0,&M,mem->size != 0 ? mem->size : size,1,fname) == 0 )
+        if ( size > mem->size )
+            mem->size = size;
+        if ( init_mappedptr(0,&M,mem->size,1,fname) == 0 )
         {
             printf("couldnt create mapped file.(%s)\n",fname);
             exit(-1);
