@@ -151,7 +151,6 @@ struct mappedblocks
     struct mappedblocks *prevblocks;
     struct rawblock *R,*R2,*R3;
     HUFF **hps,*tmphp;
-    //uint64_t *flags;
     struct mappedptr *M;
     double sum;
     uint32_t blocknum,count,firstblock,numblocks,processed,format,shift,contiguous;
@@ -1860,14 +1859,15 @@ HUFF *hload(struct ramchain_info *ram,long *offsetp,FILE *fp,char *fname)
     if ( hload_varint(&endbitpos,fp) > 0 )
     {
         len = hconv_bitlen(endbitpos);
-        buf = permalloc(ram->name,&ram->Perm,len,2);
         if ( offsetp != 0 )
+        {
             *offsetp = ftell(fp);
+            buf = ram->tmphp->buf;
+        }
+        else buf = permalloc(ram->name,&ram->Perm,len,2);
         if ( fread(buf,1,len,fp) != len )
-            free(buf);
+            fprintf(stderr,"HLOAD error (%s) endbitpos.%d len.%d | fpos.%ld\n",fname!=0?fname:ram->name,(int)endbitpos,len,ftell(fp));
         else hp = hopen(ram->name,&ram->Perm,buf,len,0), hp->endpos = (int32_t)endbitpos;
-        //fseek(fp,0,SEEK_END);
-        //printf("HLOAD endbitpos.%d len.%d | fpos.%ld\n",(int)endbitpos,len,ftell(fp));
     }
     if ( flag != 0 && fp != 0 )
         fclose(fp);
@@ -4504,13 +4504,8 @@ long *ram_load_bitstreams(struct ramchain_info *ram,bits256 *sha,char *fname,HUF
                 fprintf(stderr,"reading %s num.%d stored.%llx\n",fname,*nump,(long long)stored.txid);
                 for (i=0; i<(*nump); i++)
                 {
-                    //if ( bitstreams[i] != 0 )
-                    //    hclose(bitstreams[i]);
                     if ( (bitstreams[i]= hload(ram,&offsets[i],fp,0)) != 0 && bitstreams[i]->buf != 0 )
-                    {
-                        //fprintf(stderr,"%d ",i);
                         calc_sha256cat(tmp.bytes,sha->bytes,sizeof(*sha),bitstreams[i]->buf,bitstreams[i]->allocsize), *sha = tmp;
-                    }
                     else printf("unexpected null bitstream at %d %p offset.%ld\n",i,bitstreams[i],offsets[i]);
                 }
                 if ( memcmp(sha,&stored,sizeof(stored)) != 0 )
@@ -4543,6 +4538,8 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
             return(0);
         }
         fprintf(stderr,"about clear M\n");
+        if ( M->fileptr != 0 )
+            close_mappedptr(M);
         memset(M,0,sizeof(*M));
         fprintf(stderr,"about to init_mappedptr\n");
         if ( init_mappedptr(0,M,0,rwflag,fname) != 0 )
@@ -4554,19 +4551,17 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
                     fprintf(stderr,"%.1f%% ",100.*(double)i/num);
                 if ( (hp= blocks[i]) != 0 )
                 {
-                    if ( (blocks[i]= hopen(ram->name,&ram->Perm,(void *)((long)M->fileptr + offsets[i]),hp->allocsize,0)) != 0 )
+                    hp->buf = (void *)((long)M->fileptr + offsets[i]);
+                    //if ( (blocks[i]= hopen(ram->name,&ram->Perm,(void *)((long)M->fileptr + offsets[i]),hp->allocsize,0)) != 0 )
                     {
-                        if ( verifyflag == 0 || (checkblock= ram_verify(ram,blocks[i],'B')) == blocknum+i )
-                        {
+                        if ( verifyflag == 0 || (checkblock= ram_verify(ram,hp,'B')) == blocknum+i )
                             verified++;
-                            hclose(hp);
-                        }
                         else
                         {
                             printf("checkblock.%d vs %d (blocknum.%d + i.%d)\n",checkblock,blocknum+i,blocknum,i);
                             break;
                         }
-                    } else blocks[i] = hp;
+                    }
                 } else printf("ram_map_bitstreams: ram_map_bitstreams unexpected null hp at slot.%d\n",i);
             }
             if ( i == num )
@@ -4587,7 +4582,6 @@ int32_t ram_map_bitstreams(int32_t verifyflag,struct ramchain_info *ram,int32_t 
                 memset(M,0,sizeof(*M));
                 delete_file(fname,0);
             }
-            //close_mappedptr(&M);
         } else printf("Error mapping.(%s)\n",fname);
         free(offsets);
     }
@@ -4612,13 +4606,18 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
 {
     HUFF **hps;
     bits256 sha;
+    struct mappedptr *M;
     char fname[1024],formatstr[16];
     uint32_t blocknum,i,flag,incr,n = 0;
+#ifdef RAM_GENMODE
+    printf("ram_load_blocks not supported in RAM_GENMODE\n");
+    exit(-1);
+#endif
     incr = (1 << blocks->shift);
+    M = &blocks->M[firstblock >> blocks->shift];
     ram_setformatstr(formatstr,blocks->format);
     flag = blocks->format == 'B';
-    firstblock &= ~(incr - 1);
-    for (i=0; i<numblocks; i+=incr)
+    for (i=0; i<numblocks; i+=incr,M++)
     {
         blocknum = (firstblock + i);
         ram_setfname(fname,ram,blocknum,formatstr);
@@ -4627,27 +4626,15 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
         {
             if ( blocks->format == 64 || blocks->format == 4096 )
             {
-                fprintf(stderr,"MAP blocks%d[%d] %p\n",blocks->format,blocknum >> blocks->shift,&blocks->M[blocknum >> blocks->shift]);
-                if ( ram_map_bitstreams(flag,ram,blocknum,&blocks->M[blocknum >> blocks->shift],&sha,hps,incr,fname,0) <= 0 )
+                if ( ram_map_bitstreams(flag,ram,blocknum,M,&sha,hps,incr,fname,0) <= 0 )
                 {
                     //break;
                 }
             }
             else
             {
-//#ifdef RAM_GENMODE
-//              if ( (*hps= hload(&ram->Tmp,0,0,fname)) != 0 )
-//#else
                 if ( (*hps= hload(ram,0,0,fname)) != 0 )
-//#endif
                 {
-#ifdef RAM_GENMODE
-                    if ( (*hps)->allocsize < 12 )
-                        delete_file(fname,0);
-                    else n++;
-                    hclose(*hps);
-                    ram_clear_alloc_space(&ram->Tmp);
-#else
                     if ( flag == 0 || ram_verify(ram,*hps,blocks->format) == blocknum )
                     {
                         //if ( flag != 0 )
@@ -4657,7 +4644,6 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
                             ram->blocks.hps[blocknum] = *hps;
                     }
                     else hclose(*hps), *hps = 0;
-#endif
                     if ( (n % 100) == 0 )
                         fprintf(stderr," total.%d loaded.(%s)\n",n,fname);
                 } //else break;
@@ -4770,7 +4756,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
             ram_setfname(fname,ram,blocknum,formatstr);
             hps = ram_get_hpptr(blocks,blocknum);
             if ( ram_save_bitstreams(&refsha,fname,prevhps,n) > 0 )
-                numblocks = ram_map_bitstreams(verifyflag,ram,blocknum,&blocks->M[blocknum >> blocks->shift],&sha,hps,n,fname,&refsha);
+                numblocks = ram_map_bitstreams(verifyflag,ram,blocknum,&blocks->M[(blocknum-blocks->firstblock) >> blocks->shift],&sha,hps,n,fname,&refsha);
         } else printf("%s prev.%d missing blockptr at %d\n",ram->name,prevblocks->format,blocknum+i);
     }
     else
@@ -5661,7 +5647,7 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
     {
 #ifndef RAM_GENMODE
         //blocks->flags = calloc(blocks->numblocks >> (shift+6),sizeof(*blocks->flags));
-        blocks->M = calloc(blocks->numblocks >> shift,sizeof(*blocks->M));
+        blocks->M = calloc((blocks->numblocks >> shift) + 1,sizeof(*blocks->M));
         if ( noload == 0 )
             blocks->blocknum = ram_load_blocks(ram,blocks,firstblock,blocks->numblocks);
 #endif
