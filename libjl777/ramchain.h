@@ -5354,7 +5354,7 @@ cJSON *ram_txidstr_json(struct ramchain_info *ram,char *txidstr)
         for (i=n=0; i<numpayloads; i++)
         {
             total += txpayloads[i].value;
-            if ( txpayloads[i].B.spent == 0 )
+            if ( txpayloads[i].spentB.spent == 0 )
                 unspent += txpayloads[i].value;
             cJSON_AddItemToArray(array,ram_txpayload_json(ram,&txpayloads[i],txidstr,i));
         }
