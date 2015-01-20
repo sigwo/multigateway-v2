@@ -5367,7 +5367,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     }
     else if ( blocks->format == 'V' || blocks->format == 'B' )
     {
-        //printf("create %s %d\n",formatstr,blocknum);
+        printf("create %s %d\n",formatstr,blocknum);
         if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 )
         {
             if ( *hpptr == 0 && (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
