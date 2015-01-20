@@ -4791,7 +4791,7 @@ uint32_t ram_load_blockcheck(FILE *fp)
     return(blocknum);
 }
 
-int32_t ram_init_hashtable(uint32_t *blocknump,struct ramchain_info *ram,char type)
+int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchain_info *ram,char type)
 {
     long offset,len,fileptr;
     uint64_t datalen;
@@ -4806,7 +4806,7 @@ int32_t ram_init_hashtable(uint32_t *blocknump,struct ramchain_info *ram,char ty
     ram_sethashname(fname,hash,0);
     num = 0;
     printf("inithashtable.(%s.%d) -> [%s]\n",ram->name,type,fname);
-    if ( (hash->newfp= fopen(fname,"rb+")) != 0 )
+    if ( deletefile == 0 && (hash->newfp= fopen(fname,"rb+")) != 0 )
     {
         if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
             return(1);
@@ -5976,9 +5976,9 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->R2 = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,sizeof(*ram->R2),8) : calloc(1,sizeof(*ram->R2));
     ram->R3 = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,sizeof(*ram->R3),8) : calloc(1,sizeof(*ram->R3));
     memset(blocknums,0,sizeof(blocknums));
-    nofile = ram_init_hashtable(&blocknums[0],ram,'a');
-    nofile += ram_init_hashtable(&blocknums[1],ram,'s');
-    nofile += ram_init_hashtable(&blocknums[2],ram,'t');
+    nofile = ram_init_hashtable(0,&blocknums[0],ram,'a');
+    nofile += ram_init_hashtable(0,&blocknums[1],ram,'s');
+    nofile += ram_init_hashtable(0,&blocknums[2],ram,'t');
     if ( nofile == 3 )
     {
         printf("REGEN\n");
@@ -5988,8 +5988,16 @@ void ram_init_ramchain(struct ramchain_info *ram)
         ram->mappedblocks[1] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->Vblocks,&ram->blocks,'V',0);
         ram->mappedblocks[0] = ram_init_blocks(0,ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
         ram_update_RTblock(ram);
-        for (pass=2; pass<=4; pass++)
+        for (pass=1; pass<=4; pass++)
+        {
+            if ( pass == 2 )
+            {
+                nofile = ram_init_hashtable(1,&blocknums[0],ram,'a');
+                nofile += ram_init_hashtable(1,&blocknums[1],ram,'s');
+                nofile += ram_init_hashtable(1,&blocknums[2],ram,'t');
+            }
             ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],100000000.);
+        }
         printf("FINISHED REGEN\n");
         exit(1);
     } else printf("nofile.%d\n",nofile);
