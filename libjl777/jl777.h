@@ -406,6 +406,7 @@ struct coin_info
     uint32_t uptodate,boughtNXT;
     int32_t maxevolveiters,initdone,nohexout,use_addmultisig,min_confirms,minconfirms,estblocktime,forkheight,backupcount,enabled,savedtelepods,M,N,numlogs,clonesmear,pending_ptrmaxlen,srvport,numnxtaccts;
     uint16_t bridgeport;
+    char multisigchar;
 };
 
 
@@ -612,7 +613,7 @@ char Server_NXTaddrs[256][MAX_JSON_FIELD],SERVER_PORTSTR[MAX_JSON_FIELD];
 char *MGW_blacklist[256],*MGW_whitelist[256],ORIGBLOCK[MAX_JSON_FIELD],NXTISSUERACCT[MAX_JSON_FIELD];
 cJSON *MGWconf,**MGWcoins;
 uint64_t MIN_NQTFEE = SATOSHIDEN;
-int32_t SOFTWALL,SUPERNET_PORT = 7777;
+int32_t SOFTWALL,MAP_HUFF,SUPERNET_PORT = 7777;
 int32_t FASTMODE,SERVER_PORT,MIN_NXTCONFIRMS = 10;
 uint32_t GATEWAY_SIG,FIRST_NXTBLOCK,FIRST_NXTTIMESTAMP,UPNP,MULTIPORT;   // 3134975738 = 0xbadbeefa;
 int32_t MULTITHREADS,DGSBLOCK = 213000;

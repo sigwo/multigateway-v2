@@ -474,7 +474,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
     char *get_telepod_privkey(char **podaddrp,char *pubkey,struct coin_info *cp);
     int32_t i,j,n,useaddmultisig,nohexout,estblocktime,minconfirms,pollseconds,blockheight,forkblock,*cipherids;
     char numstr[64],rpcuserpass[512],asset[256],_marker[512],confstr[512],conf_filename[512],tradebotfname[512],serverip_port[512],buf[512];
-    char *marker,*privkey,*coinaddr,**privkeys;
+    char *marker,*privkey,*coinaddr,**privkeys,multisigchar[32];
     cJSON *ciphersobj,*limbo;
     //struct coinaddr *addrp = 0;
     struct nodestats *stats;
@@ -629,6 +629,8 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                 if ( dust == 0 )
                     dust = 10000;
                 cp->dust = dust;
+                    if ( extract_cJSON_str(multisigchar,sizeof(multisigchar),json,"multisigchar") > 0 )
+                    cp->multisigchar = multisigchar[0];
                 cp->maxevolveiters = get_API_int(cJSON_GetObjectItem(json,"maxevolveiters"),100);
                 cp->M = get_API_int(cJSON_GetObjectItem(json,"telepod_M"),1);
                 cp->N = get_API_int(cJSON_GetObjectItem(json,"telepod_N"),1);
@@ -706,9 +708,10 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp)
     ram->lastheighttime = (uint32_t)cp->lastheighttime;
     ram->RTblocknum = (uint32_t)cp->RTblockheight;
     ram->min_confirms = cp->min_confirms;
+    ram->multisigchar = cp->multisigchar;
     ram->estblocktime = cp->estblocktime;
     ram->firstiter = 1;
-    printf("%p init_ramchain_info(%s) (%s) active.%d (%s %s)\n",ram,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass);
+    printf("%p init_ramchain_info(%s) (%s) active.%d (%s %s) multisigchar.(%c)\n",ram,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass,ram->multisigchar);
     if ( is_active_coin(cp->name) > 0 )
     {
         if ( IS_LIBTEST > 0 )//== 7 )
@@ -822,6 +825,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                 IS_LIBTEST = get_API_int(cJSON_GetObjectItem(MGWconf,"LIBTEST"),1);
             MULTITHREADS = get_API_int(cJSON_GetObjectItem(MGWconf,"MULTITHREADS"),0);
             SOFTWALL = get_API_int(cJSON_GetObjectItem(MGWconf,"SOFTWALL"),0);
+            MAP_HUFF = get_API_int(cJSON_GetObjectItem(MGWconf,"MAP_HUFF"),1);
             FASTMODE = get_API_int(cJSON_GetObjectItem(MGWconf,"FASTMODE"),1);
             SERVER_PORT = get_API_int(cJSON_GetObjectItem(MGWconf,"SERVER_PORT"),3000);
             SUPERNET_PORT = get_API_int(cJSON_GetObjectItem(MGWconf,"SUPERNET_PORT"),_SUPERNET_PORT);
