@@ -3742,10 +3742,10 @@ char *ram_decode_hashdata(char *strbuf,char type,uint8_t *hashdata)
     }
     else if ( type == 't' )
     {
-        if ( datalen > 128 )
+        if ( datalen > 256 )
         {
             init_hexbytes_noT(strbuf,hashdata,64);
-            printf("decode_hashdata: type.%d (%c) datalen.%d > sizeof(data) %d | (%s)\n",type,type,(int)datalen,128,strbuf);
+            printf("decode_hashdata: type.%d (%c) datalen.%d > sizeof(data) %d | (%s)\n",type,type,(int)datalen,256,strbuf);
             exit(-1);
         }
         init_hexbytes_noT(strbuf,hashdata,datalen);
