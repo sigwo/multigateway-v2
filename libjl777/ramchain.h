@@ -41,6 +41,7 @@ char *ramscript(char *origargstr,char *sender,char *previpaddr,char *destip,char
 char *ramtxlist(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *coinaddr,int32_t unspentflag);
 char *ramrichlist(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,int32_t numwhales,int32_t recalcflag);
 char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char **coins,double *rates,char ***coinaddrs,int32_t numcoins);
+char *ramaddrlist(char *origargstr,char *sender,char *previpaddr,char *coin);
 
 
 #include <stdio.h>
@@ -126,7 +127,7 @@ struct mappedptr
 };
 
 struct rampayload { struct address_entry B,spentB; uint64_t value; uint32_t otherind,extra; };
-struct ramchain_hashptr { int64_t unspent; UT_hash_handle hh; struct rampayload *payloads; uint32_t rawind,numpayloads,maxpayloads; int32_t numunspent; };
+struct ramchain_hashptr { int64_t unspent; UT_hash_handle hh; struct rampayload *payloads; uint32_t rawind,numpayloads:29,maxpayloads:29,mine:1,multisig:1,verified:1,nonstandard:1,tbd:2; int32_t numunspent; };
 struct ramchain_hashtable { char coinstr[16]; struct ramchain_hashptr *table; struct mappedptr M; FILE *newfp; struct ramchain_hashptr **ptrs; uint32_t ind,numalloc; uint8_t type; };
 
 
@@ -170,6 +171,7 @@ struct ramchain_info
     struct rawblock_huffs H;
     struct alloc_space Tmp,Perm;
     uint64_t minval,maxval,minval2,maxval2,minval4,maxval4,minval8,maxval8;
+    char multisigchar;
 };
 
 union ramtypes { double dval; uint64_t val64; float fval; uint32_t val32; uint16_t val16; uint8_t val8,hashdata[8]; };
@@ -209,6 +211,8 @@ int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
 int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
 char *_mbstr(double n);
 char *_mbstr2(double n);
+extern int32_t MAP_HUFF;
+struct ramchain_hashptr *ram_hashsearch(char *coinstr,struct alloc_space *mem,int32_t createflag,struct ramchain_hashtable *hash,char *hashstr,char type);
 
 #endif
 #endif
@@ -714,7 +718,7 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
 
 void ram_init_tmpspace(struct ramchain_info *ram,long size)
 {
-    ram->Tmp.ptr = permalloc(ram->name,&ram->Perm,size,8);
+    ram->Tmp.ptr = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,size,8) : calloc(1,size);
     // mem->ptr = malloc(size);
     ram->Tmp.size = size;
     ram_clear_alloc_space(&ram->Tmp);
@@ -1398,6 +1402,72 @@ uint32_t _get_blockinfo(struct rawblock *raw,struct ramchain_info *ram,uint32_t 
     return(raw->numtx);
 }
 
+cJSON *_get_localaddresses(struct ramchain_info *ram)
+{
+    char *retstr;
+    cJSON *json = 0;
+    retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"listaddressgroupings","");
+    if ( retstr != 0 )
+    {
+        json = cJSON_Parse(retstr);
+        free(retstr);
+    }
+    return(json);
+}
+
+int32_t _verify_coinaddress(int32_t *ismultisigp,int32_t *isminep,struct ramchain_info *ram,char *coinaddr)
+{
+    char arg[1024],str[MAX_JSON_FIELD],addr[MAX_JSON_FIELD],*retstr;
+    cJSON *json,*array;
+    struct ramchain_hashptr *addrptr;
+    int32_t i,n,verified = 0;
+    sprintf(arg,"\"%s\"",coinaddr);
+    *ismultisigp = *isminep = 0;
+   /* {
+        "isvalid" : true,
+        "address" : "bRmhenKFGwcHmv5pcegMGqqaKPMqshU58E",
+        "ismine" : true,
+        "isscript" : true,
+        "script" : "multisig",
+        "hex" : "5221029bf3b4fefa011740daed0f3815e83cce1381a629736bd960a21638fa729f3341210231235cb93cc25ffc7007b26b7f2fd36c4f56d1b8eac9c4de61cb879340da30be2103551df8201b37bb3c4eb203df3308ec825ccbb839ca8a929c88f348e8e0042de953ae",
+        "addresses" : [
+                       "RD1TCgFqe6YfHzctMzHsNMeqc2CR8Ah5q3",
+                       "RHLdUmazy1K1NCcrevxHdLEMQwLLxMobrp",
+                       "RBbYnYcC9arv4wivkix38u6c6uozu96coJ"
+                       ],
+        "sigsrequired" : 2,
+        "account" : "11634703838614499263"
+    }*/
+    retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"validateaddress",arg);
+    if ( retstr != 0 )
+    {
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            //if ( is_cJSON_True(cJSON_GetObjectItem(json,"ismine")) != 0 )
+            //    *isminep = 1;
+            copy_cJSON(str,cJSON_GetObjectItem(json,"script"));
+            if ( strcmp(str,"multisig") == 0 )
+                *ismultisigp = 1;
+            if ( (array= cJSON_GetObjectItem(json,"addresses")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    copy_cJSON(addr,cJSON_GetArrayItem(array,i));
+                    if ( addr[0] != 0 && (addrptr= ram_hashsearch(ram->name,0,0,&ram->addrhash,coinaddr,'a')) != 0 && addrptr->mine != 0 )
+                    {
+                        *isminep = 1;
+                        break;
+                    }
+                }
+            }
+            verified = 1;
+            free_json(json);
+        }
+        free(retstr);
+    }
+    return(verified);
+}
+
 uint32_t _get_RTheight(struct ramchain_info *ram)
 {
     char *retstr;
@@ -1772,7 +1842,7 @@ void hpurge(HUFF *hps[],int32_t num)
 
 HUFF *hopen(char *coinstr,struct alloc_space *mem,uint8_t *bits,int32_t num,int32_t allocated)
 {
-    HUFF *hp = permalloc(coinstr,mem,sizeof(*hp),1);
+    HUFF *hp = (MAP_HUFF != 0) ? permalloc(coinstr,mem,sizeof(*hp),1) : calloc(1,sizeof(*hp));
     hp->ptr = hp->buf = bits;
     hp->allocsize = num;
     hp->endpos = (num << 3);
@@ -3031,6 +3101,25 @@ void *ram_gethashdata(struct ramchain_info *ram,char type,uint32_t rawind)
     return(0);
 }
 
+int32_t ram_script_multisig(struct ramchain_info *ram,uint32_t scriptind)
+{
+    char *hex;
+    if ( (hex= ram_gethashdata(ram,'s',scriptind)) != 0 && hex[1] == 'm' )
+    {
+        printf("(%02x %02x %02x (%c)) ",hex[0],hex[1],hex[2],hex[1]);
+        return(1);
+    }
+    return(0);
+}
+
+int32_t ram_script_nonstandard(struct ramchain_info *ram,uint32_t scriptind)
+{
+    char *hex;
+    if ( (hex= ram_gethashdata(ram,'s',scriptind)) != 0 && hex[2] != 'm' && hex[2] != 's' )
+        return(1);
+    return(0);
+}
+
 struct rampayload *ram_gethashpayloads(struct ramchain_info *ram,char type,uint32_t rawind)
 {
     struct ramchain_hashptr *ptr;
@@ -3060,8 +3149,8 @@ struct ramchain_hashptr *ram_hashdata_search(char *coinstr,struct alloc_space *m
                     exit(-1);
                 }
             }
-            ptr = permalloc(coinstr,mem,sizeof(*ptr),3);
-            newptr = permalloc(coinstr,mem,datalen,4);
+            ptr = (MAP_HUFF != 0) ? permalloc(coinstr,mem,sizeof(*ptr),3) : calloc(1,sizeof(*ptr));
+            newptr = (MAP_HUFF != 0) ? permalloc(coinstr,mem,datalen,4) : calloc(1,datalen);
             memcpy(newptr,hashdata,datalen);
             //*createdflagp = 1;
             if ( 0 )
@@ -4623,7 +4712,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
                     {
                         datalen = (1 + hp->allocsize);
                         //if ( blocks->format == 'V' )
-                            fprintf(stderr," %s CREATED.%c block.%d datalen.%d\n",ram->name,blocks->format,blocknum,datalen+1);
+                            fprintf(stderr," %s CREATED.%c block.%d datalen.%d | RT.%u lag.%d\n",ram->name,blocks->format,blocknum,datalen+1,ram->RTblocknum,ram->RTblocknum-blocknum);
                         //else fprintf(stderr,"%s.B.%d ",ram->name,blocknum);
                         if ( *hpptr != 0 )
                         {
@@ -4742,7 +4831,7 @@ int32_t ram_init_hashtable(uint32_t *blocknump,struct ramchain_info *ram,char ty
                 printf("corrupted hashtable %s: offset.%ld\n",fname,offset);
                 exit(-1);
             }
-            hp = permalloc(ram->name,&ram->Perm,sizeof(*hp),6);
+            hp = (MAP_HUFF != 0 ) ? permalloc(ram->name,&ram->Perm,sizeof(*hp),6) : calloc(1,sizeof(*hp));
             ram_addhash(hash,hp,hashdata,(int32_t)(varsize+datalen));
             offset += (varsize + datalen);
             fseek(hash->newfp,offset,SEEK_SET);
@@ -4860,7 +4949,7 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *addr_rawindp,struct rampayload
     struct ramchain_hashptr *addrptr;
     struct rawvout_huffs *pair;
     uint32_t scriptind,addrind;
-    char *str;
+    char *str,coinaddr[1024];
     uint64_t value;
     int32_t numbits = 0;
     *addr_rawindp = 0;
@@ -4910,6 +4999,12 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *addr_rawindp,struct rampayload
                     memset(&payload,0,sizeof(payload));
                     payload.B.blocknum = blocknum, payload.B.txind = txind, payload.B.v = vout, payload.B.isinternal = isinternal;
                     payload.otherind = txid_rawind, payload.extra = scriptind, payload.value = value;
+                    //if ( ram_script_nonstandard(ram,scriptind) != 0 )
+                    //    addrptr->nonstandard = 1;
+                    //if ( ram_script_multisig(ram,scriptind) != 0 )
+                    //    addrptr->multisig = 1;
+                    if ( ram_addr(coinaddr,ram,addrind) != 0 && coinaddr[0] == ram->multisigchar )
+                        addrptr->multisig = 1;
                     ram_addunspent(ram,txpayload,addrptr,&payload,addrind,addrptr->numpayloads);
                     addrptr->payloads[addrptr->numpayloads++] = payload;
                 }
@@ -5011,7 +5106,7 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
                     payload.B.blocknum = blocknum, payload.B.txind = txind;
                     txptr->numpayloads = numvouts;
                     //printf("%p txid_rawind.%d maxpayloads.%d numpayloads.%d (%d %d %d)\n",txptr,txid_rawind,txptr->maxpayloads,txptr->numpayloads,blocknum,txind,numvouts);
-                    txptr->payloads = (struct rampayload *)permalloc(ram->name,&ram->Perm,txptr->numpayloads * sizeof(*txptr->payloads),7);
+                    txptr->payloads = (MAP_HUFF != 0) ? (struct rampayload *)permalloc(ram->name,&ram->Perm,txptr->numpayloads * sizeof(*txptr->payloads),7) : calloc(1,txptr->numpayloads * sizeof(*txptr->payloads));
                     for (payload.B.v=0; payload.B.v<numvouts; payload.B.v++)
                         txptr->payloads[payload.B.v] = payload;
                 }
@@ -5205,6 +5300,87 @@ struct ramchain_hashptr **ram_getallstrptrs(int32_t *numstrsp,struct ramchain_in
     strs = calloc(*numstrsp+1,sizeof(*strs));
     memcpy(strs,hash->ptrs+1,(*numstrsp) * sizeof(*strs));
     return(strs);
+}
+
+char *ramaddrlist(char *origargstr,char *sender,char *previpaddr,char *coin)
+{
+    cJSON *json,*array,*item;
+    char retbuf[1024],coinaddr[MAX_JSON_FIELD],account[MAX_JSON_FIELD],*retstr = 0;
+    uint64_t value;
+    uint32_t rawind;
+    struct ramchain_hashtable *addrhash;
+    struct ramchain_hashptr *addrptr;
+    struct rampayload *payloads;
+    int32_t i,j,k,z,n,m,num,numpayloads,errs,ismine,ismultisig,count = 0;
+    struct ramchain_info *ram = get_ramchain_info(coin);
+    if ( ram == 0 )
+        return(clonestr("{\"error\":\"no ramchain info\"}"));
+    errs = 0;
+    addrhash = ram_gethash(ram,'a');
+    if ( (json= _get_localaddresses(ram)) != 0 )
+    {
+        if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
+        {
+            for (i=0; i<n; i++)
+            {
+                if ( (array= cJSON_GetArrayItem(json,i)) != 0 && is_cJSON_Array(array) != 0 && (m= cJSON_GetArraySize(array)) > 0 )
+                {
+                    for (j=0; j<m; j++)
+                    {
+                        item = cJSON_GetArrayItem(array,j);
+                        if ( (item= cJSON_GetArrayItem(array,j)) != 0 && is_cJSON_Array(item) != 0 && (num= cJSON_GetArraySize(item)) > 0 )
+                        {
+                            value = coinaddr[0] = account[0] = 0;
+                            for (k=0; k<num; k++)
+                            {
+                                if ( k == 0 )
+                                    copy_cJSON(coinaddr,cJSON_GetArrayItem(item,0));
+                                else if ( k == 1 )
+                                    value = (SATOSHIDEN * get_API_float(cJSON_GetArrayItem(item,1)));
+                                else if ( k == 2 )
+                                    copy_cJSON(account,cJSON_GetArrayItem(item,2));
+                                else printf("ramaddrlist unexpected item array size: %d\n",num);
+                            }
+                            rawind = 0;
+                            if ( coinaddr[0] != 0 && (rawind= ram_addrind(ram,coinaddr)) != 0 )
+                            {
+                                if ( (payloads= ram_addrpayloads(&addrptr,&numpayloads,ram,coinaddr)) != 0 && addrptr != 0 && numpayloads > 0 )
+                                {
+                                    addrptr->mine = 1;
+                                    printf("%d: (%s).%-6d %.8f %.8f (%s) %s\n",count,coinaddr,rawind,dstr(addrptr->unspent),dstr(value),account,(addrptr->unspent != value) ? "STAKING": "");
+                                    errs += (addrptr->unspent != value);
+                                    count++;
+                                } else printf("ramaddrlist error finding rawind.%d\n",rawind);
+                            } else printf("ramaddrlist no coinaddr for item or null rawind.%d\n",rawind);
+                        } else printf("ramaddrlist unexpected item not array\n");
+                    }
+                } else printf("ramaddrlist unexpected array not array\n");
+            }
+        } else printf("ramaddrlist unexpected json not array\n");
+        free_json(json);
+        n = m = 0;
+        for (z=1; z<=addrhash->ind; z++)
+        {
+            if ( (addrptr= addrhash->ptrs[z]) != 0 && (addrptr->multisig != 0 || addrptr->mine != 0) && ram_decode_hashdata(coinaddr,'a',addrptr->hh.key) != 0 )
+            {
+                if ( 0 && addrptr->mine == 0 && addrptr->verified == 0 )
+                {
+                    addrptr->verified = _verify_coinaddress(&ismultisig,&ismine,ram,coinaddr);
+                    if ( ismultisig != 0 )
+                        addrptr->multisig = 1;
+                    if ( ismine != 0 )
+                        addrptr->mine = 1;
+                }
+                if ( addrptr->mine != 0 )
+                    m++;
+                if ( addrptr->multisig != 0 || addrptr->mine != 0 )
+                    printf("n.%d check.(%s) multisig.%d nonstandard.%d mine.%d verified.%d\n",n,coinaddr,addrptr->multisig,addrptr->nonstandard,addrptr->mine,addrptr->verified), n++;
+            }
+        }
+        sprintf(retbuf,"{\"result\":\"addrlist\",\"multisig\":%d,\"mine\":%d,\"total\":%d}",n,m,count);
+        retstr = clonestr(retbuf);
+    } else retstr = clonestr("{\"error\":\"ramaddrlist no data\"}");
+    return(retstr);
 }
 
 cJSON *ram_address_entry_json(struct address_entry *bp)
@@ -5588,6 +5764,9 @@ char *ramrichlist(char *origargstr,char *sender,char *previpaddr,char *destip,ch
                     cJSON_AddItemToObject(item,coinaddr,cJSON_CreateNumber(addrs[i]->unspent));
                     cJSON_AddItemToArray(array,item);
                 }
+                item = cJSON_CreateObject();
+                cJSON_AddItemToObject(item,"milliseconds",cJSON_CreateNumber(ram_millis()-startmilli));
+                cJSON_AddItemToArray(array,item);
             }
         }
         free(addrs);
@@ -5726,13 +5905,13 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
 {
     void *ptr;
     int32_t numblocks,tmpsize = TMPALLOC_SPACE_INCR;
-    blocks->R = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R),8);
-    blocks->R2 = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R2),8);
-    blocks->R3 = permalloc(ram->name,&ram->Perm,sizeof(*blocks->R3),8);
+    blocks->R = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,sizeof(*blocks->R),8) : calloc(1,sizeof(*blocks->R));
+    blocks->R2 = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,sizeof(*blocks->R2),8) : calloc(1,sizeof(*blocks->R2));
+    blocks->R3 = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,sizeof(*blocks->R3),8) : calloc(1,sizeof(*blocks->R3));
     blocks->ram = ram;
     blocks->prevblocks = prevblocks;
     blocks->format = format;
-    ptr = permalloc(ram->name,&ram->Perm,tmpsize,8), blocks->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
+    ptr = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,tmpsize,8) : calloc(1,tmpsize), blocks->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
     if ( (blocks->shift = shift) != 0 )
         firstblock &= ~((1 << shift) - 1);
     blocks->firstblock = firstblock;
@@ -5745,11 +5924,11 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
     }
     blocks->numblocks = numblocks;
     if ( blocks->hps == 0 )
-        blocks->hps = permalloc(ram->name,&ram->Perm,blocks->numblocks*sizeof(*blocks->hps),8);
+        blocks->hps = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,blocks->numblocks*sizeof(*blocks->hps),8) : calloc(1,blocks->numblocks*sizeof(*blocks->hps));
     if ( format != 0 )
     {
 #ifndef RAM_GENMODE
-        blocks->M = permalloc(ram->name,&ram->Perm,((blocks->numblocks >> shift) + 1)*sizeof(*blocks->M),8);
+        blocks->M = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,((blocks->numblocks >> shift) + 1)*sizeof(*blocks->M),8) : calloc(1,((blocks->numblocks >> shift) + 1)*sizeof(*blocks->M));
         if ( noload == 0 )
             blocks->blocknum = ram_load_blocks(ram,blocks,firstblock,blocks->numblocks);
 #endif
@@ -5792,10 +5971,10 @@ void ram_init_ramchain(struct ramchain_info *ram)
     printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
 //#ifndef RAM_GENMODE
     ram_init_tmpspace(ram,tmpsize);
-    ptr = permalloc(ram->name,&ram->Perm,tmpsize,8), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
-    ram->R = permalloc(ram->name,&ram->Perm,sizeof(*ram->R),8);
-    ram->R2 = permalloc(ram->name,&ram->Perm,sizeof(*ram->R2),8);
-    ram->R3 = permalloc(ram->name,&ram->Perm,sizeof(*ram->R3),8);
+    ptr = (MAP_HUFF != 0 ) ? permalloc(ram->name,&ram->Perm,tmpsize,8) : calloc(1,tmpsize), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
+    ram->R = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,sizeof(*ram->R),8) : calloc(1,sizeof(*ram->R));
+    ram->R2 = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,sizeof(*ram->R2),8) : calloc(1,sizeof(*ram->R2));
+    ram->R3 = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,sizeof(*ram->R3),8) : calloc(1,sizeof(*ram->R3));
     memset(blocknums,0,sizeof(blocknums));
     nofile = ram_init_hashtable(&blocknums[0],ram,'a');
     nofile += ram_init_hashtable(&blocknums[1],ram,'s');
@@ -5809,7 +5988,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
         ram->mappedblocks[1] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->Vblocks,&ram->blocks,'V',0);
         ram->mappedblocks[0] = ram_init_blocks(0,ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
         ram_update_RTblock(ram);
-        for (pass=1; pass<=4; pass++)
+        for (pass=2; pass<=4; pass++)
             ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],100000000.);
         printf("FINISHED REGEN\n");
         exit(1);
@@ -5819,7 +5998,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
         printf("WARNING: MARKER.(%s) set but no rawind. need to have it appear in blockchain first\n",ram->marker);
     printf("%.1f seconds to init_ramchain.%s hashtables marker.(%s) %u\n",(ram_millis() - startmilli)/1000.,ram->name,ram->marker,ram->marker_rawind);
     sprintf(fname,"ramchains/%s.blocks",ram->name);
-    minblocknum = numblocks = ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,0,fname,0);
+    minblocknum = numblocks = ram_map_bitstreams(0,ram,0,ram->blocks.M,&sha,ram->blocks.hps,0,fname,0);
     for (i=0; i<3; i++)
         if ( minblocknum == 0 || (blocknums[i] != 0 && blocknums[i] < minblocknum) )
             minblocknum = blocknums[i];
