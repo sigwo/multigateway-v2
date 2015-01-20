@@ -30,8 +30,9 @@
 #include <string.h>
 #endif
 
-#define TMPALLOC_SPACE_INCR 10000000
 #define PERMALLOC_SPACE_INCR (1024 * 1024 * 128)
+#define TMPALLOC_SPACE_INCR 10000000
+
 
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
 extern void calc_sha256cat(unsigned char hash[256 >> 3],unsigned char *src,int32_t len,unsigned char *src2,int32_t len2);
@@ -382,7 +383,11 @@ void _close_mappedptr(struct mappedptr *mp)
 	// mp->actually_allocated = 0;
 	// }
 	if ( mp->actually_allocated != 0 && mp->fileptr != 0 )
+        	#ifndef _WIN32
 		free(mp->fileptr);
+	        #else
+		_aligned_free(mp->fileptr);
+		#endif
 	else if ( mp->fileptr != 0 )
 		release_map_file(mp->fileptr,mp->allocsize);
 	mp->fileptr = 0;
@@ -403,6 +408,7 @@ void close_mappedptr(struct mappedptr *mp)
 int32_t open_mappedptr(struct mappedptr *mp)
 {
 	uint64_t allocsize = mp->allocsize;
+
 	if ( mp->actually_allocated != 0 )
 	{
 		if ( mp->fileptr == 0 )
@@ -494,7 +500,11 @@ void ensure_filesize(char *fname,long filesize)
             for (i=0; i<n; i++)
                 fputc(0,fp);
             fclose(fp);
+	    #ifndef _WIN32
             free(zeroes);
+	    #else
+	    _aligned_free(zeroes);
+	    #endif
         }
     }
     else if ( allocsize > filesize )
@@ -729,11 +739,14 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
         printf(" | ");
         printf("permalloc new space.%ld %s | selector.%d itemsize.%ld total.%ld n.%ld ave %.1f | total %s n.%ld ave %.1f\n",mem->size,_mbstr(mem->size),selector,size,totals[selector],counts[selector],(double)totals[selector]/counts[selector],_mbstr2(totals[0]),counts[0],(double)totals[0]/counts[0]);
         memset(&M,0,sizeof(M));
+	#ifndef _WIN32
         sprintf(fname,"ramchains/%s/bitstream/space.%ld",coinstr,n);
-        fix_windows_insanity(fname);
-        #ifdef _WIN32
+	#else
+	sprintf(fname, "ramchains\\%s\\bitstream", coinstr);
 	ensure_dir(fname);
+	sprintf(fname,"ramchains/%s/bitstream/space.%ld",coinstr,n);
 	#endif
+        fix_windows_insanity(fname);
        // delete_file(fname,0);
         if ( size > mem->size )
             mem->size = size;
