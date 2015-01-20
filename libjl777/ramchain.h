@@ -4801,6 +4801,8 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
     struct ramchain_hashtable *hash;
     struct ramchain_hashptr *hp;
     hash = ram_gethash(ram,type);
+    if ( deletefile != 0 )
+        memset(hash,0,sizeof(*hash));
     strcpy(hash->coinstr,ram->name);
     hash->type = type;
     ram_sethashname(fname,hash,0);
