@@ -699,7 +699,7 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
             if ( counts[i] != 0 )
                 printf("(%s %.1f).%d ",_mbstr(totals[i]),(double)totals[i]/counts[i],i);
         printf(" | ");
-        printf("permalloc new space.%ld %s | selector.%d itemsize.%ld total.%ld n.%ld ave %.1f | total %s n.%ld ave %.1f\n",mem->size,_mbstr(mem->size),selector,size,totals[selector],counts[selector],(double)totals[selector]/counts[selector],_mbstr2(totals[0]),counts[0],(double)totals[0]/counts[0]);
+        printf("permalloc new space.%ld: %ld %s | selector.%d itemsize.%ld total.%ld n.%ld ave %.1f | total %s n.%ld ave %.1f\n",n,mem->size,_mbstr(mem->size),selector,size,totals[selector],counts[selector],(double)totals[selector]/counts[selector],_mbstr2(totals[0]),counts[0],(double)totals[0]/counts[0]);
         memset(&M,0,sizeof(M));
         sprintf(fname,"ramchains/%s/bitstream/space.%ld",coinstr,n);
         fix_windows_insanity(fname);
@@ -4995,7 +4995,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
             regenflag = 1;
             hp = 0;
             printf("ram_genblock fatal error generating %s blocknum.%d\n",ram->name,blocknum);
-            exit(-1);
+            return(0);//exit(-1);
         }
     }
     if ( hp == 0 )
