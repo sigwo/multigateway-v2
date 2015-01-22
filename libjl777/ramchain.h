@@ -4995,7 +4995,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
             regenflag = 1;
             hp = 0;
             printf("ram_genblock fatal error generating %s blocknum.%d\n",ram->name,blocknum);
-            return(0);//exit(-1);
+            exit(-1);
         }
     }
     if ( hp == 0 )
@@ -5318,6 +5318,25 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
     return(blocks->contiguous);
 }
 
+uint32_t ram_find_firstgap(struct ramchain_info *ram,int32_t format)
+{
+    char fname[1024],formatstr[15];
+    uint32_t blocknum;
+    FILE *fp;
+    ram_setformatstr(formatstr,format);
+    for (blocknum=0; blocknum<ram->RTblocknum; blocknum++)
+    {
+        ram_setfname(fname,ram,blocknum,formatstr);
+        if ( (fp= fopen(fname,"rb")) != 0 )
+        {
+            fclose(fp);
+            continue;
+        }
+        break;
+    }
+    return(blocknum);
+}
+
 uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct mappedblocks *blocks,struct mappedblocks *prevblocks,uint32_t blocknum)
 {
     char fname[1024],formatstr[16];
@@ -5367,7 +5386,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     }
     else if ( blocks->format == 'V' || blocks->format == 'B' )
     {
-        printf("create %s %d\n",formatstr,blocknum);
+        //printf("create %s %d\n",formatstr,blocknum);
         if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 )
         {
             if ( *hpptr == 0 && (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
@@ -6626,7 +6645,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
 {
     int32_t i,datalen,nofile,pass,numblocks,tmpsize = TMPALLOC_SPACE_INCR;
     uint8_t *ptr;
-    uint32_t blocknums[3],minblocknum = 0;
+    uint32_t blocknums[3],firstblock,minblocknum = 0;
     bits256 refsha,sha;
     double startmilli;
     char fname[1024];
@@ -6665,6 +6684,14 @@ void ram_init_ramchain(struct ramchain_info *ram)
                 nofile = ram_init_hashtable(1,&blocknums[0],ram,'a');
                 nofile += ram_init_hashtable(1,&blocknums[1],ram,'s');
                 nofile += ram_init_hashtable(1,&blocknums[2],ram,'t');
+            }
+            else if ( pass == 1 )
+            {
+                firstblock = ram_find_firstgap(ram,ram->mappedblocks[pass]->format);
+                if ( firstblock < 100 )
+                    ram->mappedblocks[pass]->blocknum = 0;
+                else ram->mappedblocks[pass]->blocknum = (firstblock - 100);
+                printf("firstblock.%u -> %u\n",firstblock,ram->mappedblocks[pass]->blocknum);
             }
             ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],100000000.);
         }
