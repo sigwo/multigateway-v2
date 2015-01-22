@@ -1487,7 +1487,7 @@ uint32_t _get_RTheight(struct ramchain_info *ram)
     uint32_t height = 0;
     if ( ram_millis() > ram->lastgetinfo+10000 )
     {
-        printf("RTheight.(%s) (%s)\n",ram->name,ram->serverport);
+        //printf("RTheight.(%s) (%s)\n",ram->name,ram->serverport);
         retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"getinfo","");
         if ( retstr != 0 )
         {
