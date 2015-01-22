@@ -6688,9 +6688,9 @@ void ram_init_ramchain(struct ramchain_info *ram)
             else if ( pass == 1 )
             {
                 firstblock = ram_find_firstgap(ram,ram->mappedblocks[pass]->format);
-                if ( firstblock < 1000 )
+                if ( firstblock < 10 )
                     ram->mappedblocks[pass]->blocknum = 0;
-                else ram->mappedblocks[pass]->blocknum = (firstblock - 1000);
+                else ram->mappedblocks[pass]->blocknum = (firstblock - 10);
                 printf("firstblock.%u -> %u\n",firstblock,ram->mappedblocks[pass]->blocknum);
             }
             ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],100000000.);

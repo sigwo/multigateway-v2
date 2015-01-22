@@ -462,7 +462,7 @@ struct NXT_asset *init_asset(struct NXT_asset *ap,char *assetidstr)
             }
             free_json(json);
         } else printf("init_asset: couldnt parse.(%s)\n",jsonstr);
-        printf("init_asset(%s) decimals.%d mult.%ld\n",assetidstr,ap->decimals,(long)ap->mult);
+        printf("init_asset(%s) decimals.%d mult.%ld (%s)\n",assetidstr,ap->decimals,(long)ap->mult,jsonstr);
         free(jsonstr);
         if ( ap->mult != 0 )
             return(ap);
