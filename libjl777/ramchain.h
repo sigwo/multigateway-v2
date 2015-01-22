@@ -5348,7 +5348,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     prevhps = ram_get_hpptr(prevblocks,blocknum);
     ram_setfname(fname,ram,blocknum,formatstr);
     //printf("check create.(%s)\n",fname);
-    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 )
+    if ( verifyflag == 0 && blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 )
     {
         fclose(fp);
         return(0);
@@ -6688,9 +6688,9 @@ void ram_init_ramchain(struct ramchain_info *ram)
             else if ( pass == 1 )
             {
                 firstblock = ram_find_firstgap(ram,ram->mappedblocks[pass]->format);
-                if ( firstblock < 100 )
+                if ( firstblock < 1000 )
                     ram->mappedblocks[pass]->blocknum = 0;
-                else ram->mappedblocks[pass]->blocknum = (firstblock - 100);
+                else ram->mappedblocks[pass]->blocknum = (firstblock - 1000);
                 printf("firstblock.%u -> %u\n",firstblock,ram->mappedblocks[pass]->blocknum);
             }
             ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],100000000.);
