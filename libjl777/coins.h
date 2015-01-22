@@ -808,11 +808,12 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     ram->multisigchar = cp->multisigchar;
     ram->estblocktime = cp->estblocktime;
     ram->firstiter = 1;
+    ram->gatewayid = Global_mp->gatewayid;
     ram->NXTfee_equiv = cp->NXTfee_equiv;
     ram->txfee = cp->txfee;
     ram->min_NXTconfirms = MIN_NXTCONFIRMS;
     ram->DEPOSIT_XFER_DURATION = get_API_int(cJSON_GetObjectItem(cp->json,"DEPOSIT_XFER_DURATION"),DEPOSIT_XFER_DURATION);
-    printf("%p init_ramchain_info(%s) (%s) active.%d (%s %s) multisigchar.(%c)\n",ram,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass,ram->multisigchar);
+    printf("gatewayid.%d init_ramchain_info(%s) (%s) active.%d (%s %s) multisigchar.(%c)\n",ram->gatewayid,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass,ram->multisigchar);
     if ( IS_LIBTEST > 0 && is_active_coin(cp->name) > 0 )
     {
         init_ram_MGWconfs(ram,cp->json,(cp->MGWissuer[0] != 0) ? cp->MGWissuer : NXTISSUERACCT,0);
