@@ -588,25 +588,26 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                     if ( extract_cJSON_str(cp->srvpubaddr,sizeof(cp->srvpubaddr),json,"srvpubaddr") > 0 )
                     {
                         coinaddr = cp->srvpubaddr;
-                        if ( strcmp("randvals",cp->srvpubaddr) != 0 && (privkey= get_telepod_privkey(&coinaddr,cp->srvcoinpubkey,cp)) != 0 )
+                        if ( cp->srvNXTACCTSECRET[0] == 0 )
                         {
-                            if ( cp->srvNXTACCTSECRET[0] == 0 )
+                            if ( strcmp("randvals",cp->srvpubaddr) != 0 && (privkey= get_telepod_privkey(&coinaddr,cp->srvcoinpubkey,cp)) != 0 )
+                            {
                                 safecopy(cp->srvNXTACCTSECRET,privkey,sizeof(cp->srvNXTACCTSECRET));
-                            cp->srvpubnxtbits = issue_getAccountId(0,privkey);
+                                free(privkey);
+                            }
+                            else
+                            {
+                                gen_randomacct(0,33,cp->srvNXTADDR,cp->srvNXTACCTSECRET,"randvals");
+                                cp->srvpubnxtbits = calc_nxt64bits(cp->srvNXTADDR);
+                            }
+                            cp->srvpubnxtbits = issue_getAccountId(0,cp->srvNXTACCTSECRET);
                             expand_nxt64bits(cp->srvNXTADDR,cp->srvpubnxtbits);
                             if ( Debuglevel > 0 )
                                 printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->srvpubaddr,cp->srvNXTACCTSECRET,(long long)cp->srvpubnxtbits);
-                            free(privkey);
-                        }
-                        else if ( cp->srvNXTACCTSECRET[0] == 0 )
-                        {
-                            gen_randomacct(0,33,cp->srvNXTADDR,cp->srvNXTACCTSECRET,"randvals");
-                            cp->srvpubnxtbits = calc_nxt64bits(cp->srvNXTADDR);
-
                         }
                         conv_NXTpassword(Global_mp->loopback_privkey,Global_mp->loopback_pubkey,cp->srvNXTACCTSECRET);
                         init_hexbytes_noT(Global_mp->pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
-                        printf("SRV pubaddr.(%s) secret.(%s)\n",cp->srvpubaddr,cp->srvNXTACCTSECRET);
+                        printf("SRV pubaddr.(%s) secret.(%s) -> %llu\n",cp->srvpubaddr,cp->srvNXTACCTSECRET,(long long)cp->srvpubnxtbits);
                         if ( (stats= get_nodestats(cp->srvpubnxtbits)) != 0 )
                         {
                             stats->ipbits = calc_ipbits(cp->myipaddr);
