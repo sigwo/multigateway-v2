@@ -5264,7 +5264,7 @@ int32_t ram_expand_bitstream(cJSON **jsonp,struct rawblock *raw,struct ramchain_
     {
         hrewind(hp);
         format = hp->buf[0], hp->ptr++, hp->bitoffset = 8;
-        if ( 0 )
+        if ( 1 )
         {
             int i;
             for (i=0; i<=hp->endpos>>3; i++)
@@ -5274,7 +5274,10 @@ int32_t ram_expand_bitstream(cJSON **jsonp,struct rawblock *raw,struct ramchain_
         if ( format != 'B' && format != 'V' && format != 'H' )
             printf("error hdecode_bits in ram_expand_rawinds format.%d != (%c/%c/%c) %d/%d/%d\n",format,'V','B','H','V','B','H');
         else if ( (tokens= ram_tokenize_bitstream(&blocknum,&numtokens,ram,hp,format)) != 0 )
+        {
+            printf("tokenized %d tokens (%c)\n",numtokens,format);
             return(ram_expand_and_free(jsonp,raw,ram,tokens,numtokens,hp->allocsize));
+        }
         else printf("error expanding bitstream\n");
     }
     return(-1);
