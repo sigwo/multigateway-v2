@@ -821,7 +821,7 @@ int32_t init_SuperNET_storage(char *backupdir)
                     char url[1024];
                     for (j=0; j<3; j++)
                     {
-                        sprintf(url,"http://%s/MGW/msig/ALL",Server_names[i]);
+                        sprintf(url,"http://%s/MGW/msig/ALL",Server_names[j]);
                         if ( (retstr= issue_curl(0,url)) != 0 )
                         {
                             if ( (json= cJSON_Parse(retstr)) != 0 )
