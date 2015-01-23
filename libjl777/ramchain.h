@@ -1734,8 +1734,8 @@ uint64_t _calc_circulation(int32_t minconfirms,struct NXT_asset *ap,struct ramch
                         continue;
                     if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,acct) == 0 && (quantity= get_API_nxt64bits(cJSON_GetObjectItem(item,"quantityQNT"))) != 0 )
                     {
-                        if ( quantity > 2000*ap->mult )
-                            printf("Whale %s: %.8f\n",acct,dstr(quantity*ap->mult));
+                        //if ( quantity > 2000 )
+                        //    printf("Whale %s: %.8f\n",acct,dstr(quantity*ap->mult));
                         circulation += quantity;
                     }
                 }
