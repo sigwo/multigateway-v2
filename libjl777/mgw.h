@@ -1973,15 +1973,21 @@ int32_t msigcmp(struct multisig_addr *ref,struct multisig_addr *msig)
     return(0);
 }
 
-char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coinstr,char *refacct,int32_t M,int32_t N,struct contact_info **contacts,int32_t n,char *userpubkey,char *email,uint32_t buyNXT)
+char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coinstr,char *refacct,int32_t M,int32_t N,struct contact_info **oldcontacts,int32_t n,char *userpubkey,char *email,uint32_t buyNXT)
 {
     struct coin_info *cp = get_coin_info(coinstr);
     struct multisig_addr *msig;//,*dbmsig;
     struct nodestats *stats;
-    struct contact_info *contact;
+    struct contact_info *contact,*contacts[4],_contacts[4];
     char refNXTaddr[64],hopNXTaddr[64],destNXTaddr[64],mypubkey[1024],myacctcoinaddr[1024],pubkey[1024],acctcoinaddr[1024],buf[1024],*retstr = 0;
     uint64_t refbits = 0;
     int32_t i,iter,flag,valid = 0;
+    for (i=0; i<3; i++)
+    {
+        contacts[i] = &_contacts[i];
+        memset(contacts[i],0,sizeof(*contacts[i]));
+        contacts[i]->nxt64bits = calc_nxt64bits(Server_NXTaddrs[i]);
+    }
     refbits = conv_acctstr(refacct);
     expand_nxt64bits(refNXTaddr,refbits);
     if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
@@ -1994,6 +2000,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     for (iter=0; iter<2; iter++)
     for (i=0; i<n; i++)
     {
+        fprintf(stderr,"iter.%d i.%d\n",iter,i);
         if ( (contact= contacts[i]) != 0 && contact->nxt64bits != 0 )
         {
             if ( iter == 0 && ismynxtbits(contact->nxt64bits) != 0 )//|| (stats->ipbits != 0 && calc_ipbits(cp->myipaddr) == stats->ipbits)) )
