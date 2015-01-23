@@ -1988,6 +1988,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
         memset(contacts[i],0,sizeof(*contacts[i]));
         contacts[i]->nxt64bits = calc_nxt64bits(Server_NXTaddrs[i]);
     }
+    n = i;
     refbits = conv_acctstr(refacct);
     expand_nxt64bits(refNXTaddr,refbits);
     if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
