@@ -606,6 +606,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                         }
                         conv_NXTpassword(Global_mp->loopback_privkey,Global_mp->loopback_pubkey,cp->srvNXTACCTSECRET);
                         init_hexbytes_noT(Global_mp->pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
+                        printf("SRV pubaddr.(%s) secret.(%s)\n",cp->srvpubaddr,cp->srvNXTACCTSECRET);
                         if ( (stats= get_nodestats(cp->srvpubnxtbits)) != 0 )
                         {
                             stats->ipbits = calc_ipbits(cp->myipaddr);
