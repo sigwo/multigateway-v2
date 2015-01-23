@@ -300,7 +300,7 @@ void broadcast_bindAM(char *refNXTaddr,struct multisig_addr *msig,char *origargs
     struct coin_info *cp = get_coin_info("BTCD");
     char *jsontxt,*AMtxid,AM[4096];
     struct json_AM *ap = (struct json_AM *)AM;
-    if ( cp != 0 && (jsontxt= create_multisig_json(msig,0)) != 0 )
+    if ( cp != 0 && (jsontxt= create_multisig_json(msig,1)) != 0 )
     {
         printf(">>>>>>>>>>>>>>>>>>>>>>>>>> send bind address AM\n");
         set_json_AM(ap,GATEWAY_SIG,BIND_DEPOSIT_ADDRESS,refNXTaddr,0,origargstr!=0?origargstr:jsontxt,1);
@@ -1688,7 +1688,7 @@ struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char
 long calc_pubkey_jsontxt(int32_t truncated,char *jsontxt,struct pubkey_info *ptr,char *postfix)
 {
     if ( truncated != 0 )
-        sprintf(jsontxt,"{\"pubkey\":\"%s\",\"srv\":\"%llu\"}%s",ptr->pubkey,(long long)ptr->nxt64bits,postfix);
+        sprintf(jsontxt,"{\"address\":\"%s\"}%s",ptr->coinaddr,postfix);
     else sprintf(jsontxt,"{\"address\":\"%s\",\"pubkey\":\"%s\",\"srv\":\"%llu\"}%s",ptr->coinaddr,ptr->pubkey,(long long)ptr->nxt64bits,postfix);
     return(strlen(jsontxt));
 }
@@ -2059,7 +2059,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                 if ( msig != 0 )
                 {
                     update_MGW_msig(msig,NXTaddr);
-                    if ( 0 && flag != 0 ) // let the client do this
+                    if ( Global_mp->gatewayid == 2 && flag != 0 ) // let the client do this
                         broadcast_bindAM(refNXTaddr,msig,0);
                     free(msig);
                 }
