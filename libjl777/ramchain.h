@@ -6225,16 +6225,13 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
             if ( payloads[i].B.spent == 0 )
                 unspent += payloads[i].value, n++;
             if ( payloads[i].pendingdeposit != 0 )
-            {
                 pending += payloads[i].value, numpending++;
-                printf("numpending.%d %.8f\n",numpending,dstr(pending));
-            }
         }
     }
     if ( calc_numunspentp != 0 )
         *calc_numunspentp = n;
     if ( pendingp != 0 )
-        *pendingp = pending;
+        (*pendingp) += pending;
     return(unspent);
 }
 
