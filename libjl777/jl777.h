@@ -62,7 +62,7 @@
 #define NXT_COINASSET "0"
 
 #define GENESISACCT "1739068987193023818"
-#define NODECOIN_SIG 0x63968736
+//#define NODECOIN_SIG 0x63968736
 //#define NXTCOINSCO_PORT 8777
 //#define NXTPROTOCOL_WEBJSON 7777
 #define BTCD_PORT 14631
@@ -202,8 +202,8 @@ long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NUL
 #include "jl777str.h"
 #include "cJSON.c"
 #include "bitcoind_RPC.c"
-#include "jsoncodec.h"
 #include "SuperNET.h"
+#include "jsoncodec.h"
 #include "mappedptr.h"
 #include "ramchain.h"
 
@@ -234,29 +234,6 @@ struct pingpong_queue
 
 union NXTtype { uint64_t nxt64bits; uint32_t uval; int32_t val; int64_t lval; double dval; char *str; cJSON *json; };
 
-struct NXT_AMhdr
-{
-    uint32_t sig;
-    int32_t size;
-    uint64_t nxt64bits;
-};
-
-union _json_AM_data { unsigned char binarydata[sizeof(struct compressed_json)]; char jsonstr[sizeof(struct compressed_json)]; struct compressed_json jsn; };
-
-struct json_AM
-{
-    struct NXT_AMhdr H;
-	uint32_t funcid,gatewayid,timestamp,jsonflag;
-    union _json_AM_data U;
-};
-
-union _NXT_str_buf { char txid[MAX_NXTTXID_LEN]; char NXTaddr[MAX_NXTADDR_LEN];  char assetid[MAX_NXT_STRLEN]; };
-
-struct NXT_str
-{
-    uint64_t modified,nxt64bits;
-    union _NXT_str_buf U;
-};
 
 struct NXT_protocol_parms
 {
