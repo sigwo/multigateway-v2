@@ -1785,8 +1785,8 @@ uint64_t _calc_circulation(int32_t minconfirms,struct NXT_asset *ap,struct ramch
                         continue;
                     if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,acct) == 0 && (quantity= get_API_nxt64bits(cJSON_GetObjectItem(item,"quantityQNT"))) != 0 )
                     {
-                        if ( quantity > 2000*ap->mult )
-                            printf("Whale %s: %.8f\n",acct,dstr(quantity*ap->mult));
+                        //if ( quantity > 2000 )
+                        //    printf("Whale %s: %.8f\n",acct,dstr(quantity*ap->mult));
                         circulation += quantity;
                     }
                 }
@@ -2029,7 +2029,7 @@ int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid 
                         printf("deposit complete %s.%s %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
                         addrpayload->pendingdeposit = 0;
                         tp->completed = 1;
-                    } else printf("deposit NOT PENDING? complete %s.%s %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
+                    } //else printf("deposit NOT PENDING? complete %s.%s %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
 
                     return(1);
                 } else printf("ram_mark_depositcomplete: mismatched rawind or value (%u vs %d) (%.8f vs %.8f)\n",txptr->rawind,addrpayload->otherind,dstr(txpayload->value),dstr(addrpayload->value));
@@ -6295,7 +6295,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
     if ( calc_numunspentp != 0 )
         *calc_numunspentp = n;
     if ( pendingp != 0 )
-        *pendingp = pending;
+        (*pendingp) += pending;
     return(unspent);
 }
 
@@ -7374,7 +7374,7 @@ void *process_ramchains(void *_argcoinstr)
                 ram_update_disp(ram);
         }
         if ( processed == 0 )
-            sleep(1);
+            sleep(60);
     }
     printf("process_ramchains: finished launching\n");
     while ( 1 )
