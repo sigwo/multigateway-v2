@@ -2267,7 +2267,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     struct NXT_assettxid *tp;
     int32_t createdflag;
     struct NXT_asset *ap;
-    cJSON *json,*cointxidobj;
+    cJSON *json,*cointxidobj,*obj;
     char sender[64],cointxid[512],coinstr[512];
     if ( (ap= ram->ap) == 0 )
         return(0);
@@ -2297,7 +2297,9 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
             tp->buyNXT = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
             tp->coinblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"coinblocknum"),0);
             tp->cointxind = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"cointxind"),0);
-            tp->coinv = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"coinv"),0);
+            if ( (obj= cJSON_GetObjectItem(json,"coinv")) == 0 )
+                obj = cJSON_GetObjectItem(json,"vout");
+            tp->coinv = (uint32_t)get_API_int(obj,0);
             if ( ram->NXTfee_equiv != 0 && ram->txfee != 0 )
                 tp->estNXT = (((double)ram->NXTfee_equiv / ram->txfee) * tp->U.assetoshis / SATOSHIDEN);
             if ( (cointxidobj= cJSON_GetObjectItem(json,"cointxid")) != 0 )
@@ -2372,7 +2374,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 numconfs = (ram->NXT_RTblocknum - height);
         } else numconfs = 0;
         copy_cJSON(txid,cJSON_GetObjectItem(txobj,"transaction"));
-        printf("TX.(%s)\n",txid);
+       // printf("TX.(%s)\n",txid);
         type = get_cJSON_int(txobj,"type");
         subtype = get_cJSON_int(txobj,"subtype");
         timestamp = (int32_t)get_cJSON_int(txobj,"blockTimestamp");
