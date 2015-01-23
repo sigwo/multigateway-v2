@@ -2001,7 +2001,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     for (iter=0; iter<2; iter++)
     for (i=0; i<n; i++)
     {
-        fprintf(stderr,"iter.%d i.%d\n",iter,i);
+        //fprintf(stderr,"iter.%d i.%d\n",iter,i);
         if ( (contact= contacts[i]) != 0 && contact->nxt64bits != 0 )
         {
             if ( iter == 0 && ismynxtbits(contact->nxt64bits) != 0 )//|| (stats->ipbits != 0 && calc_ipbits(cp->myipaddr) == stats->ipbits)) )
@@ -2037,7 +2037,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                 }
                 if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
                     printf("check %llu with get_NXT_coininfo i.%d valid.%d\n",(long long)contact->nxt64bits,i,valid);
-            } else printf("iter.%d reject %llu\n",iter,(long long)contact->nxt64bits);
+            } //else printf("iter.%d reject %llu\n",iter,(long long)contact->nxt64bits);
         }
     }
     fprintf(stderr,"call gen_multisig_addr\n");
