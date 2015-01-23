@@ -1995,7 +1995,9 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     if ( refNXTaddr[0] == 0 )
         return(clonestr("\"error\":\"genmultisig couldnt find refcontact\"}"));
     flag = 0;
+    fprintf(stderr,"calling nodestats\n");
     stats = get_nodestats(refbits);
+    fprintf(stderr,"got %p nodestats\n",stats);
     myacctcoinaddr[0] = mypubkey[0] = 0;
     for (iter=0; iter<2; iter++)
     for (i=0; i<n; i++)

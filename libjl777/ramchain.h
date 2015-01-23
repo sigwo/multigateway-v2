@@ -7276,7 +7276,7 @@ void *process_ramchains(void *_argcoinstr)
                         printf("ERROR _process_ramchain.%s\n",ram->name);
                     processed--;
                 }
-                else // if ( ram->NXTblocknum < _get_NXTheight() || ram->mappedblocks[1]->blocknum < _get_RTheight(ram) ) unconfirmed tx!
+                else if ( ram->NXTblocknum < _get_NXTheight() || ram->mappedblocks[1]->blocknum < _get_RTheight(ram) )
                 {
                     ram->NXTblocknum = _update_ramMGW(ram,ram->NXTblocknum - ram->min_NXTconfirms); // possible for tx to disappear
                     for (pass=1; pass<=4; pass++)
