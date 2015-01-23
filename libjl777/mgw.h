@@ -2059,7 +2059,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                 if ( msig != 0 )
                 {
                     update_MGW_msig(msig,NXTaddr);
-                    if ( Global_mp->gatewayid == 2 && flag != 0 ) // let the client do this
+                    if ( MGW_initdone != 0 && Global_mp->gatewayid == 2 && flag != 0 ) // let the client do this
                         broadcast_bindAM(refNXTaddr,msig,0);
                     free(msig);
                 }
