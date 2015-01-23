@@ -728,6 +728,11 @@ void init_Specialaddrs()
             if ( Debuglevel > 0 )
                 printf("%s ",NXTADDR);
             strcpy(Server_NXTaddrs[i],NXTADDR);
+            if ( i < 3 )
+            {
+                void bind_NXT_ipaddr(uint64_t nxt64bits,char *ip_port);
+                bind_NXT_ipaddr(calc_nxt64bits(NXTADDR),Server_names[i]);
+            }
             MGW_blacklist[i] = MGW_whitelist[i] = clonestr(NXTADDR);
         }
         if ( Debuglevel > 0 )
