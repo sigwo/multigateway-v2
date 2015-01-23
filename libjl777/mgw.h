@@ -2107,23 +2107,29 @@ struct multisig_addr *find_NXT_msig(int32_t fixflag,char *NXTaddr,char *coinstr,
 void update_coinacct_addresses(uint64_t nxt64bits,cJSON *json,char *txid)
 {
     struct coin_info *cp,*refcp = get_coin_info("BTCD");
-    int32_t i,n,M,N=3;
+    int32_t i,M,N=3;
     struct multisig_addr *msig;
     char coinaddr[512],NXTaddr[64],NXTpubkey[128],*retstr;
     cJSON *coinjson;
-    struct contact_info *contacts[4];
+    struct contact_info *contacts[4],_contacts[4];
     expand_nxt64bits(NXTaddr,nxt64bits);
     memset(contacts,0,sizeof(contacts));
     M = (N - 1);
     if ( Global_mp->gatewayid < 0 || refcp == 0 )
         return;
-    if ( (n= get_MGW_contacts(contacts,N)) != N )
+    /*if ( (n= get_MGW_contacts(contacts,N)) != N )
     {
         printf("get_MGW_contacts(%d) only returned %d\n",N,n);
         for (i=0; i<n; i++)
             if ( contacts[i] != 0 )
                 free(contacts[i]);
         return;
+    }*/
+    for (i=0; i<3; i++)
+    {
+        contacts[i] = &_contacts[i];
+        memset(contacts[i],0,sizeof(*contacts[i]));
+        contacts[i]->nxt64bits = calc_nxt64bits(Server_NXTaddrs[i]);
     }
     if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
         printf("update_coinacct_addresses.(%s)\n",NXTaddr);
