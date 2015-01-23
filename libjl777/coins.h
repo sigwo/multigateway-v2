@@ -578,10 +578,12 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                         if ( Debuglevel > 0 )
                             printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->privateaddr,cp->privateNXTACCTSECRET,(long long)cp->privatebits);
                         free(privkey);
-                        stats = get_nodestats(cp->privatebits);
-                        add_new_node(cp->privatebits);
-                        memcpy(stats->pubkey,Global_mp->mypubkey.bytes,sizeof(stats->pubkey));
-                        //conv_NXTpassword(Global_mp->private_privkey,Global_mp->private_pubkey,cp->privateNXTACCTSECRET);
+                        if ( (stats = get_nodestats(cp->privatebits)) != 0 )
+                        {
+                            add_new_node(cp->privatebits);
+                            memcpy(stats->pubkey,Global_mp->mypubkey.bytes,sizeof(stats->pubkey));
+                            //conv_NXTpassword(Global_mp->private_privkey,Global_mp->private_pubkey,cp->privateNXTACCTSECRET);
+                        } else { printf("null return from get_nodestats in init_coin_info\n"); exit(1); }
                     }
                     if ( extract_cJSON_str(cp->srvpubaddr,sizeof(cp->srvpubaddr),json,"srvpubaddr") > 0 )
                     {
@@ -604,10 +606,12 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                         }
                         conv_NXTpassword(Global_mp->loopback_privkey,Global_mp->loopback_pubkey,cp->srvNXTACCTSECRET);
                         init_hexbytes_noT(Global_mp->pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
-                        stats = get_nodestats(cp->srvpubnxtbits);
-                        stats->ipbits = calc_ipbits(cp->myipaddr);
-                        add_new_node(cp->srvpubnxtbits);
-                        memcpy(stats->pubkey,Global_mp->loopback_pubkey,sizeof(stats->pubkey));
+                        if ( (stats= get_nodestats(cp->srvpubnxtbits)) != 0 )
+                        {
+                            stats->ipbits = calc_ipbits(cp->myipaddr);
+                            add_new_node(cp->srvpubnxtbits);
+                            memcpy(stats->pubkey,Global_mp->loopback_pubkey,sizeof(stats->pubkey));
+                        } else { printf("null return from get_nodestats in init_coin_info B\n"); exit(1); }
                     }
                 }
                 else if ( IS_LIBTEST > 0 && strcmp(cp->name,"BTCD") == 0 )
