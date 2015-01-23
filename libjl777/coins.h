@@ -830,12 +830,12 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     ram->txfee = cp->txfee;
     ram->min_NXTconfirms = MIN_NXTCONFIRMS;
     ram->DEPOSIT_XFER_DURATION = get_API_int(cJSON_GetObjectItem(cp->json,"DEPOSIT_XFER_DURATION"),DEPOSIT_XFER_DURATION);
-    printf("gatewayid.%d MGWissuer.(%s) init_ramchain_info(%s) (%s) active.%d (%s %s) multisigchar.(%c)\n",ram->gatewayid,cp->MGWissuer,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass,ram->multisigchar);
     if ( IS_LIBTEST > 0 && is_active_coin(cp->name) > 0 )
     {
+        printf("gatewayid.%d MGWissuer.(%s) init_ramchain_info(%s) (%s) active.%d (%s %s) multisigchar.(%c)\n",ram->gatewayid,cp->MGWissuer,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass,ram->multisigchar);
         init_ram_MGWconfs(ram,cp->json,(cp->MGWissuer[0] != 0) ? cp->MGWissuer : NXTISSUERACCT,get_NXTasset(&createdflag,Global_mp,cp->assetid));
         activate_ramchain(ram,cp->name);
-    } else printf("skip activate ramchains\n");
+    } //else printf("skip activate ramchains\n");
 }
 
 int32_t is_trusted_issuer(char *issuer)
