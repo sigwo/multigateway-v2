@@ -304,7 +304,7 @@ void broadcast_bindAM(char *refNXTaddr,struct multisig_addr *msig,char *origargs
     {
         printf(">>>>>>>>>>>>>>>>>>>>>>>>>> send bind address AM\n");
         set_json_AM(ap,GATEWAY_SIG,BIND_DEPOSIT_ADDRESS,refNXTaddr,0,origargstr!=0?origargstr:jsontxt,1);
-        AMtxid = submit_AM(0,cp->srvNXTADDR,&ap->H,0,cp->srvNXTACCTSECRET);
+        AMtxid = submit_AM(0,refNXTaddr,&ap->H,0,cp->srvNXTACCTSECRET);
         if ( AMtxid != 0 )
             free(AMtxid);
         free(jsontxt);
