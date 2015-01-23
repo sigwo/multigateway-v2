@@ -815,7 +815,7 @@ int32_t init_SuperNET_storage(char *backupdir)
                 char *retstr;
                 cJSON *json;
                 sdb = &SuperNET_dbs[MULTISIG_DATA];
-                if ( 1 )
+                if ( 0 )
                 {
                     int j;
                     char url[1024];
