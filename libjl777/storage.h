@@ -763,7 +763,7 @@ void init_rambases()
 int32_t init_SuperNET_storage(char *backupdir)
 {
     static int didinit;
-    int i,m,n,createdflag;
+    int i,m,n;
     struct coin_info *cp = get_coin_info("BTCD");
     struct SuperNET_db *sdb;
     if ( didinit == 0 )

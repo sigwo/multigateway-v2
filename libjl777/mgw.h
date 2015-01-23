@@ -368,7 +368,7 @@ struct multisig_addr *ram_add_msigaddr(char *msigaddr,int32_t n)
 int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender)
 {
     DBT key,data,*datap;
-    int32_t i,ret = 0,createdflag;
+    int32_t i,ret = 0;
     struct multisig_addr *msigram;
     struct SuperNET_db *sdb = &SuperNET_dbs[MULTISIG_DATA];
     update_MGW_msig(msig,sender);
@@ -398,7 +398,7 @@ int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sende
         safecopy(msig->NXTpubkey,msigram->NXTpubkey,sizeof(msig->NXTpubkey));
     //if ( msigram->sender == 0 && msig->sender != 0 )
     //    createdflag = 1;
-    if ( memcmp(msigram,msig,msig->H.size) != 0 ) //createdflag != 0 || 
+    if ( memcmp(msigram,msig,msig->H.size) != 0 ) //createdflag != 0 ||
     {
         clear_pair(&key,&data);
         key.data = msig->multisigaddr;
@@ -2115,8 +2115,8 @@ void update_coinacct_addresses(uint64_t nxt64bits,cJSON *json,char *txid)
     expand_nxt64bits(NXTaddr,nxt64bits);
     memset(contacts,0,sizeof(contacts));
     M = (N - 1);
-    //if ( Global_mp->gatewayid < 0 || refcp == 0 )
-    //    return;
+    if ( Global_mp->gatewayid < 0 || refcp == 0 )
+        return;
     if ( (n= get_MGW_contacts(contacts,N)) != N )
     {
         printf("get_MGW_contacts(%d) only returned %d\n",N,n);
