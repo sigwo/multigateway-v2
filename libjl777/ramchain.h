@@ -1975,10 +1975,10 @@ int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid 
                 {
                     if ( addrpayload->pendingdeposit != 0 )
                     {
-                        printf("deposit complete %s.%s %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,dstr(tp->U.assetoshis),(long long)tp->receiverbits,tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
+                        printf("deposit complete %s.%s %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
                         addrpayload->pendingdeposit = 0;
                         tp->completed = 1;
-                    } else printf("deposit NOT PENDING? complete %s.%s %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,dstr(tp->U.assetoshis),(long long)tp->receiverbits,tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
+                    } else printf("deposit NOT PENDING? complete %s.%s %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
 
                     return(1);
                 } else printf("ram_mark_depositcomplete: mismatched rawind or value (%u vs %d) (%.8f vs %.8f)\n",txptr->rawind,addrpayload->otherind,dstr(txpayload->value),dstr(addrpayload->value));
