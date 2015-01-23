@@ -1995,9 +1995,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     if ( refNXTaddr[0] == 0 )
         return(clonestr("\"error\":\"genmultisig couldnt find refcontact\"}"));
     flag = 0;
-    fprintf(stderr,"calling nodestats\n");
     stats = get_nodestats(refbits);
-    fprintf(stderr,"got %p nodestats\n",stats);
     myacctcoinaddr[0] = mypubkey[0] = 0;
     for (iter=0; iter<2; iter++)
     for (i=0; i<n; i++)
@@ -2038,9 +2036,10 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                 }
                 if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
                     printf("check %llu with get_NXT_coininfo i.%d valid.%d\n",(long long)contact->nxt64bits,i,valid);
-            } //else printf("iter.%d reject %llu\n",iter,(long long)contact->nxt64bits);
+            } else printf("iter.%d reject %llu\n",iter,(long long)contact->nxt64bits);
         }
     }
+    fprintf(stderr,"call gen_multisig_addr\n");
     if ( (msig= gen_multisig_addr(NXTaddr,M,N,cp,refNXTaddr,userpubkey,contacts)) != 0 )
     {
         msig->valid = valid;
@@ -2066,6 +2065,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
             }
         }
     }
+    fprintf(stderr,"return valid.%d\n",valid);
     if ( valid != N || retstr == 0 )
     {
         sprintf(buf,"{\"error\":\"missing msig info\",\"refacct\":\"%s\",\"coin\":\"%s\",\"M\":%d,\"N\":%d,\"valid\":%d}",refacct,coinstr,M,N,valid);
