@@ -575,7 +575,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                         cp->privatebits = issue_getAccountId(0,privkey);
                         expand_nxt64bits(cp->privateNXTADDR,cp->privatebits);
                         conv_NXTpassword(Global_mp->myprivkey.bytes,Global_mp->mypubkey.bytes,cp->privateNXTACCTSECRET);
-                        if ( Debuglevel > 0 )
+                        if ( Debuglevel > 2 )
                             printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->privateaddr,cp->privateNXTACCTSECRET,(long long)cp->privatebits);
                         free(privkey);
                         if ( (stats = get_nodestats(cp->privatebits)) != 0 )
@@ -603,7 +603,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                         }
                         cp->srvpubnxtbits = issue_getAccountId(0,cp->srvNXTACCTSECRET);
                         expand_nxt64bits(cp->srvNXTADDR,cp->srvpubnxtbits);
-                        if ( Debuglevel > 0 )
+                        if ( Debuglevel > 2 )
                             printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->srvpubaddr,cp->srvNXTACCTSECRET,(long long)cp->srvpubnxtbits);
                         conv_NXTpassword(Global_mp->loopback_privkey,Global_mp->loopback_pubkey,cp->srvNXTACCTSECRET);
                         init_hexbytes_noT(Global_mp->pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));

@@ -6082,7 +6082,6 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
                     else
                     {
                         printf("interloper at (blocknum.%d txind.%d vin.%d)! (%d %d %d).%d vs (%d %d %d).%d >>>>>>> delete? <<<<<<<<\n",blocknum,txind,vin,bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
-                        //if ( getchar() == 'y' )
                         ram_purge_badblock(ram,bp->blocknum);
                         ram_purge_badblock(ram,blocknum);
                         exit(-1);
