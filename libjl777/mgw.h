@@ -2040,7 +2040,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
             } //else printf("iter.%d reject %llu\n",iter,(long long)contact->nxt64bits);
         }
     }
-    fprintf(stderr,"call gen_multisig_addr\n");
+    //fprintf(stderr,"call gen_multisig_addr\n");
     if ( (msig= gen_multisig_addr(NXTaddr,M,N,cp,refNXTaddr,userpubkey,contacts)) != 0 )
     {
         msig->valid = valid;
