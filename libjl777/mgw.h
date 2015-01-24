@@ -355,7 +355,7 @@ struct multisig_addr *ram_add_msigaddr(char *msigaddr,int32_t n)
             portable_mutex_init(&MSIGmutex);
             didMSIGinit = 1;
         }
-        printf("add MSIG[%s]\n",msigaddr);
+        //printf("add MSIG[%s]\n",msigaddr);
         portable_mutex_lock(&MSIGmutex);
         MSIGS = realloc(MSIGS,(1+Num_MSIGS) * sizeof(*MSIGS));
         MSIGS[Num_MSIGS++] = msig;

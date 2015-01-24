@@ -843,7 +843,7 @@ int32_t init_SuperNET_storage(char *backupdir)
                     for (i=m=0; i<n; i++)
                     {
                         msigram = ram_add_msigaddr(msigs[i]->multisigaddr,msigs[i]->n);//MTadd_hashtable(&createdflag,&sdb->ramtable,msigs[i]->multisigaddr);
-                        printf("%d of %d: (%s)\n",i,n,msigs[i]->multisigaddr);
+                        printf("%d of %d: (%s) NXT.(%s) NXTpubkey.(%s)\n",i,n,msigs[i]->multisigaddr,msigs[i]->NXTaddr,msigs[i]->NXTpubkey);
                         //if ( createdflag != 0 )
                             *msigram = *msigs[i], m++;
                         //else printf("unexpected duplicate.(%s)\n",msigram->multisigaddr);
