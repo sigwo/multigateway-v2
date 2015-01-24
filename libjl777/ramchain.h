@@ -2009,7 +2009,12 @@ int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid 
                         printf("deposit complete %s.%s/v%d %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,tp->coinv,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
                         addrpayload->pendingdeposit = 0;
                         tp->completed = 1;
-                    } else printf("deposit NOT PENDING? complete %s.%s/v%d %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,tp->coinv,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
+                    }
+                    else
+                    {
+                        if ( tp->completed == 0 )
+                            printf("deposit NOT PENDING? complete %s.%s/v%d %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,tp->coinv,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
+                    }
                     return(1);
                 } else printf("ram_mark_depositcomplete: mismatched rawind or value (%u vs %d) (%.8f vs %.8f)\n",txptr->rawind,addrpayload->otherind,dstr(txpayload->value),dstr(addrpayload->value));
             } else printf("ram_mark_depositcomplete: couldnt find addrpayload for %s vout.%d\n",tp->cointxid,tp->coinv);
@@ -2336,7 +2341,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
                 }
                 if ( tp->completed == 0 )
                 {
-                    //if ( (tp->completed= (_is_limbo_redeem(ram,tp->redeemtxid) != 0)) == 0 )
+                    if ( (tp->completed= (_is_limbo_redeem(ram,tp->redeemtxid) != 0)) == 0 )
                         tp->completed = ram_mark_depositcomplete(ram,tp);
                 }
                 if ( Debuglevel > 2 )
@@ -5743,7 +5748,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     prevhps = ram_get_hpptr(prevblocks,blocknum);
     ram_setfname(fname,ram,blocknum,formatstr);
     //printf("check create.(%s)\n",fname);
-    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 )//&& verifyflag == 0 )
+    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 && verifyflag == 0 )
     {
         fclose(fp);
         return(0);
@@ -6265,7 +6270,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                         tp = ap->txids[j];
                         if ( tp->cointxid != 0 && strcmp(tp->cointxid,addr) == 0 )
                         {
-                            if ( tp->completed == 0 )
+                            //if ( tp->completed == 0 )
                                 tp->completed = ram_mark_depositcomplete(ram,tp);
                             break;
                         }
