@@ -1977,13 +1977,18 @@ int32_t msigcmp(struct multisig_addr *ref,struct multisig_addr *msig)
 
 struct multisig_addr *http_search_msig(char *external_NXTaddr,char *external_ipaddr,char *NXTaddr)
 {
-    cJSON *json;
+    int32_t i,n;
+    cJSON *array;
     struct multisig_addr *msig = 0;
-    if ( (json= http_search(external_ipaddr,"MGW/msig",NXTaddr)) != 0 )
+    if ( (array= http_search(external_ipaddr,"MGW/msig",NXTaddr)) != 0 )
     {
-        if ( (msig= decode_msigjson(0,json,external_NXTaddr)) != 0 )
-            msig = find_msigaddr(msig->multisigaddr);
-        free_json(json);
+        if ( is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+        {
+            for (i=0; i<n; i++)
+                if ( (msig= decode_msigjson(0,cJSON_GetArrayItem(array,i),external_NXTaddr)) != 0 && (msig= find_msigaddr(msig->multisigaddr)) != 0 )
+                    break;
+        }
+        free_json(array);
     }
     return(msig);
 }
