@@ -2685,9 +2685,9 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
         {
             str = cJSON_Print(pair);
             stripwhite_ns(str,strlen(str));
-            //fprintf(stderr,"updatedeposit.ALL (%s)\n",str);
+            fprintf(stderr,"updatedeposit.ALL (%s)\n",str);
             update_MGW_jsonfile(set_MGW_depositfname,extract_jsonints,jsonstrcmp,0,str,"coinv","cointxind");
-            //fprintf(stderr,"updatedeposit.%s (%s)\n",NXTaddr,str);
+            fprintf(stderr,"updatedeposit.%s (%s)\n",NXTaddr,str);
             update_MGW_jsonfile(set_MGW_depositfname,extract_jsonints,jsonstrcmp,NXTaddr,str,"coinv","cointxind");
             free(str);
         }
