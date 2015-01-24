@@ -1558,8 +1558,9 @@ uint32_t _get_RTheight(struct ramchain_info *ram)
 #define BIND_DEPOSIT_ADDRESS 'b'
 #define DEPOSIT_CONFIRMED 'd'
 #define MONEY_SENT 'm'
-extern char NXTAPIURL[MAX_JSON_FIELD];
+extern char NXTAPIURL[MAX_JSON_FIELD],NXTSERVER[];
 #define _issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl",NXTAPIURL,0,0,cmdstr)
+#define _issue_curl(cmdstr) bitcoind_RPC(0,"curl",cmdstr,0,0,0)
 struct NXT_assettxid *find_NXT_assettxid(int32_t *createdflagp,struct NXT_asset *ap,char *txid);
 
 int32_t _expand_nxt64bits(char *NXTaddr,uint64_t nxt64bits)
@@ -1635,9 +1636,10 @@ int32_t _in_specialNXTaddrs(char **specialNXTaddrs,int32_t n,char *NXTaddr)
 char *_issue_getAsset(char *assetidstr)
 {
     char cmd[4096];
-    sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
+    //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
+    sprintf(cmd,"%s=getAsset&asset=%s",NXTSERVER,assetidstr);
     printf("cmd.(%s)\n",cmd);
-    return(_issue_NXTPOST(cmd));
+    return(_issue_curl(cmd));
 }
 
 uint32_t _get_NXTheight()
