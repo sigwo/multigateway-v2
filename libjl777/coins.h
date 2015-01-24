@@ -505,8 +505,8 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                     printf("LIMBO ARRAY of %d of %d redeemtxids\n",j,n);
             }
         }
-        nohexout = get_API_int(cJSON_GetObjectItem(json,"nohexout"),0);
-        useaddmultisig = get_API_int(cJSON_GetObjectItem(json,"useaddmultisig"),0);
+        nohexout = get_API_int(cJSON_GetObjectItem(json,"nohexout"),1);
+        useaddmultisig = get_API_int(cJSON_GetObjectItem(json,"useaddmultisig"),1);
         blockheight = get_API_int(cJSON_GetObjectItem(json,"blockheight"),0);
         forkblock = get_API_int(cJSON_GetObjectItem(json,"forkblock"),0);
         pollseconds = get_API_int(cJSON_GetObjectItem(json,"pollseconds"),60);
