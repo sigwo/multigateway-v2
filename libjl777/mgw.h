@@ -1771,7 +1771,7 @@ struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
                     if ( Debuglevel > 3 )
                         fprintf(stderr,"{(%s) (%s) %llu ip.(%s)}.%d ",msig->pubkeys[j].coinaddr,msig->pubkeys[j].pubkey,(long long)msig->pubkeys[j].nxt64bits,ipaddr,j);
                     if ( ipaddr[0] == 0 && j < 3 )
-                        strcpy(ipaddr,Server_names[j]);
+                        strcpy(ipaddr,Server_ipaddrs[j]);
                     msig->pubkeys[j].ipbits = calc_ipbits(ipaddr);
                 } else { free(msig); msig = 0; }
             }
@@ -1975,6 +1975,19 @@ int32_t msigcmp(struct multisig_addr *ref,struct multisig_addr *msig)
     return(0);
 }
 
+struct multisig_addr *http_search_msig(char *external_NXTaddr,char *external_ipaddr,char *NXTaddr)
+{
+    cJSON *json;
+    struct multisig_addr *msig = 0;
+    if ( (json= http_search(external_ipaddr,"MGW/msig",NXTaddr)) != 0 )
+    {
+        if ( (msig= decode_msigjson(0,json,external_NXTaddr)) != 0 )
+            msig = find_msigaddr(msig->multisigaddr);
+        free_json(json);
+    }
+    return(msig);
+}
+
 char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coinstr,char *refacct,int32_t M,int32_t N,struct contact_info **oldcontacts,int32_t n,char *userpubkey,char *email,uint32_t buyNXT)
 {
     struct coin_info *cp = get_coin_info(coinstr);
@@ -2019,7 +2032,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                 }
                 else printf("error getting msigaddr for cp.%p ref.(%s) addr.(%s) pubkey.(%s)\n",cp,refNXTaddr,myacctcoinaddr,mypubkey);
             }
-            else if ( iter == 1 && ismynxtbits(contact->nxt64bits) == 0 )
+            else if ( iter == 1 && ismynxtbits(contact->nxt64bits) == 0 && http_search_msig(Server_NXTaddrs[i],Server_ipaddrs[i],refacct) == 0 )
             {
                 acctcoinaddr[0] = pubkey[0] = 0;
                 if ( get_NXT_coininfo(contact->nxt64bits,acctcoinaddr,pubkey,refbits,cp->name) == 0 || acctcoinaddr[0] == 0 || pubkey[0] == 0 )
@@ -2027,7 +2040,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                     if ( myacctcoinaddr[0] != 0 && mypubkey[0] != 0 )
                         sprintf(buf,"{\"requestType\":\"getmsigpubkey\",\"NXT\":\"%s\",\"myaddr\":\"%s\",\"mypubkey\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"userpubkey\":\"%s\"}",NXTaddr,myacctcoinaddr,mypubkey,coinstr,refNXTaddr,userpubkey);
                     else sprintf(buf,"{\"requestType\":\"getmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"userpubkey\":\"%s\"}",NXTaddr,coinstr,refNXTaddr,userpubkey);
-                    if ( Debuglevel > 2 )
+                    if ( Debuglevel > 1 )
                         printf("SENDREQ.(%s)\n",buf);
                     hopNXTaddr[0] = 0;
                     expand_nxt64bits(destNXTaddr,contact->nxt64bits);
@@ -2055,7 +2068,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
             retstr = create_multisig_json(msig,0);
             if ( retstr != 0 )
             {
-                if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
+                if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
                     printf("retstr.(%s) previp.(%s)\n",retstr,previpaddr);
                 if ( retstr != 0 && previpaddr != 0 && previpaddr[0] != 0 )
                     send_to_ipaddr(0,1,previpaddr,retstr,NXTACCTSECRET);
@@ -2235,7 +2248,7 @@ void publish_withdraw_info(struct coin_info *cp,struct batch_info *wp)
         else
         {
             printf("send balance %.8f, unspent %.8f pendingdeposits %.8f\n",dstr(W.C.balance),dstr(W.C.unspent),dstr(W.C.pendingdeposits));
-            retstr = start_transfer(0,refcp->srvNXTADDR,refcp->srvNXTADDR,refcp->srvNXTACCTSECRET,Server_names[gatewayid],batchname,(uint8_t *)&W,(int32_t)sizeof(W),300,"mgw",1);
+            retstr = start_transfer(0,refcp->srvNXTADDR,refcp->srvNXTADDR,refcp->srvNXTACCTSECRET,Server_ipaddrs[gatewayid],batchname,(uint8_t *)&W,(int32_t)sizeof(W),300,"mgw",1);
             if ( retstr != 0 )
                 free(retstr);
         }
@@ -2920,7 +2933,7 @@ void init_specialNXTaddrs(char *specialNXTaddrs[],char *ipaddrs[],char *specialN
         if ( specialNXTaddrs[i] == 0 )
             specialNXTaddrs[i] = "";
         if ( ipaddrs[i] == 0 )
-            strcpy(ipaddrs[i],Server_names[i]);
+            strcpy(ipaddrs[i],Server_ipaddrs[i]);
     }
     if ( exclude0 != 0 && exclude0[0] != 0 )
         specialNXTaddrs[n++] = clonestr(exclude0);
@@ -3805,7 +3818,7 @@ cJSON *auto_process_MGW(char **specialNXTaddrs,struct coin_info *cp,cJSON *origj
     }
     ap = get_NXTasset(&createdflag,Global_mp,cp->assetid);
     for (i=0; i<3; i++)
-        ipaddrs[i] = Server_names[i];
+        ipaddrs[i] = Server_ipaddrs[i];
     portable_mutex_lock(&mutex);
     if ( cmp_batch_depositinfo(&cp->withdrawinfos[2].C,&cp->withdrawinfos[1].C) == 0 && cmp_batch_depositinfo(&cp->withdrawinfos[0].C,&cp->withdrawinfos[2].C) == 0 )
     {
@@ -3993,7 +4006,7 @@ char *invoke_MGW(char **specialNXTaddrs,struct coin_info *cp,struct multisig_add
     update_NXTblockchain_info(cp,specialNXTaddrs,cp->MGWissuer);
     ap = get_NXTasset(&createdflag,Global_mp,cp->assetid);
     for (j=0; j<3; j++)
-        ipaddrs[j] = Server_names[j];
+        ipaddrs[j] = Server_ipaddrs[j];
     if ( actionflag == 0 || msig == 0 )
     {
         json = process_MGW(actionflag,cp,ap,ipaddrs,specialNXTaddrs,cp->MGWissuer,milliseconds(),0,0);
