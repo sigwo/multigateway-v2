@@ -1889,6 +1889,7 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct ramchain_
             if ( _calc_withdrawaddr(withdrawaddr,ram,tp,argjson) == 0 )
             {
                 printf("no withdraw.(%s) or autoconvert.(%s)\n",withdrawaddr,tp->comment);
+                tp->completed = 1;
                 retstr = 0;
             }
         }
@@ -1898,16 +1899,19 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct ramchain_
             if ( amount <= minwithdraw )
             {
                 printf("minimum withdrawal must be more than %.8f %s\n",dstr(minwithdraw),ram->name);
+                tp->completed = 1;
                 retstr = 0;
             }
             else if ( withdrawaddr[0] == 0 )
             {
                 printf("no withdraw address for %.8f | ",dstr(amount));
+                tp->completed = 1;
                 retstr = 0;
             }
             else if ( ram != 0 && _validate_coinaddr(pubkey,ram,withdrawaddr) < 0 )
             {
                 printf("invalid address.(%s) for NXT.%s %.8f validate.%d\n",withdrawaddr,NXTaddr,dstr(amount),_validate_coinaddr(pubkey,ram,withdrawaddr));
+                tp->completed = 1;
                 retstr = 0;
             }
         }
