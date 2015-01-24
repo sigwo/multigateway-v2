@@ -1642,7 +1642,7 @@ char *_issue_getAsset(char *assetidstr)
     return(_issue_curl(cmd));
 }
 
-uint32_t _get_NXTheight()
+uint32_t _get_NXTheight(uint32_t *firsttimep)
 {
     cJSON *json;
     uint32_t height = 0;
@@ -1652,6 +1652,8 @@ uint32_t _get_NXTheight()
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
+            if ( firsttimep != 0 )
+                *firsttimep = (int32_t)get_cJSON_int(json,"timestamp");
             height = (int32_t)get_cJSON_int(json,"numberOfBlocks");
             if ( height > 0 )
                 height--;
@@ -1672,7 +1674,7 @@ uint64_t _calc_circulation(int32_t minconfirms,struct NXT_asset *ap,struct ramch
         return(0);
     if ( minconfirms != 0 )
     {
-        ram->NXT_RTblocknum = _get_NXTheight();
+        ram->NXT_RTblocknum = _get_NXTheight(0);
         height = ram->NXT_RTblocknum - ram->min_NXTconfirms;
     }
     sprintf(cmd,"requestType=getAssetAccounts&asset=%llu",(long long)ap->assetbits);
@@ -2408,7 +2410,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
     return(height);
 }
 
-uint32_t _update_ramMGW(struct ramchain_info *ram,uint32_t mostrecent)
+uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t mostrecent)
 {
     cJSON *redemptions=0,*transfers,*array,*json;
     char cmd[1024],txid[512],*jsonstr,*txidjsonstr;
@@ -2421,7 +2423,7 @@ uint32_t _update_ramMGW(struct ramchain_info *ram,uint32_t mostrecent)
         printf("no MGWbits for %s\n",ram->name);
         return(0);
     }
-    i = _get_NXTheight();
+    i = _get_NXTheight(firsttimep);
     if ( i != ram->NXT_RTblocknum )
     {
         ram->NXT_RTblocknum = i;
@@ -7241,7 +7243,7 @@ void *process_ramchains(void *_argcoinstr)
             {
                 if ( iter > 0 )
                 {
-                    Ramchains[i]->NXTblocknum = _update_ramMGW(Ramchains[i],0);
+                    Ramchains[i]->NXTblocknum = _update_ramMGW(&Ramchains[i]->firsttime,Ramchains[i],0);
                     if ( Ramchains[i]->NXTblocknum > 1000 )
                         Ramchains[i]->NXTblocknum -= 1000;
                     else Ramchains[i]->NXTblocknum = 0;
@@ -7276,7 +7278,7 @@ void *process_ramchains(void *_argcoinstr)
                 else //if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
                 {
                     //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
-                        ram->NXTblocknum = _update_ramMGW(ram,ram->NXTblocknum - ram->min_NXTconfirms); // possible for tx to disappear
+                        ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms); // possible for tx to disappear
                     for (pass=1; pass<=4; pass++)
                     {
                         ram_update_RTblock(ram);
@@ -7289,7 +7291,7 @@ void *process_ramchains(void *_argcoinstr)
                             break;
                     }
                     //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
-                    //    ram->NXTblocknum = _update_ramMGW(ram,ram->NXTblocknum - ram->min_NXTconfirms);
+                    //    ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms);
                     ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
                     if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
                         printf("\n");
