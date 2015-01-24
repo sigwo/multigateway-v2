@@ -7334,8 +7334,8 @@ void *process_ramchains(void *_argcoinstr)
                         if ( (ram->mappedblocks[pass]->blocknum >> ram->mappedblocks[pass]->shift) < (ram->mappedblocks[pass-1]->blocknum >> ram->mappedblocks[pass]->shift) )
                             break;
                     }
-                    if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
-                        ram->NXTblocknum = _update_ramMGW(ram,ram->NXTblocknum - ram->min_NXTconfirms);
+                    //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
+                    //    ram->NXTblocknum = _update_ramMGW(ram,ram->NXTblocknum - ram->min_NXTconfirms);
                     printf("unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) orphans %.8f NXT.%d %s.%d\n",dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
                     /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
                     {

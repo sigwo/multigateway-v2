@@ -1668,7 +1668,7 @@ int32_t map_msigaddr(char *redeemScript,struct coin_info *cp,char *normaladdr,ch
     return(-1);
 }
 
-struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char *NXTaddr,char *refpubkey,char *sender)
+struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char *NXTaddr,char *userpubkey,char *sender)
 {
     struct multisig_addr *msig;
     int32_t size = (int32_t)(sizeof(*msig) + n*sizeof(struct pubkey_info));
@@ -1680,7 +1680,7 @@ struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char
         msig->sender = calc_nxt64bits(sender);
     safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
     safecopy(msig->NXTaddr,NXTaddr,sizeof(msig->NXTaddr));
-    safecopy(msig->NXTpubkey,refpubkey,sizeof(msig->NXTpubkey));
+    safecopy(msig->NXTpubkey,userpubkey,sizeof(msig->NXTpubkey));
     msig->m = m;
     return(msig);
 }
@@ -1704,7 +1704,7 @@ char *create_multisig_json(struct multisig_addr *msig,int32_t truncated)
         pubkeyjsontxt[0] = 0;
         for (i=0; i<msig->n; i++)
             len += calc_pubkey_jsontxt(truncated,pubkeyjsontxt+strlen(pubkeyjsontxt),&msig->pubkeys[i],(i<(msig->n - 1)) ? ", " : "");
-        sprintf(jsontxt,"{%s\"sender\":\"%llu\",\"buyNXT\":%u,\"created\":%u,\"M\":%d,\"N\":%d,\"NXTaddr\":\"%s\",\"RS\":\"%s\",\"address\":\"%s\",\"redeemScript\":\"%s\",\"coin\":\"%s\",\"gatewayid\":\"%d\",\"pubkey\":[%s]}",truncated==0?"\"requestType\":\"MGWaddr\",":"",(long long)msig->sender,msig->buyNXT,msig->created,msig->m,msig->n,msig->NXTaddr,rsacct,msig->multisigaddr,msig->redeemScript,msig->coinstr,Global_mp->gatewayid,pubkeyjsontxt);
+        sprintf(jsontxt,"{%s\"sender\":\"%llu\",\"buyNXT\":%u,\"created\":%u,\"M\":%d,\"N\":%d,\"NXTaddr\":\"%s\",\"NXTpubkey\":\"%s\",\"RS\":\"%s\",\"address\":\"%s\",\"redeemScript\":\"%s\",\"coin\":\"%s\",\"gatewayid\":\"%d\",\"pubkey\":[%s]}",truncated==0?"\"requestType\":\"MGWaddr\",":"",(long long)msig->sender,msig->buyNXT,msig->created,msig->m,msig->n,msig->NXTaddr,msig->NXTpubkey,rsacct,msig->multisigaddr,msig->redeemScript,msig->coinstr,Global_mp->gatewayid,pubkeyjsontxt);
         if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
             printf("(%s) pubkeys len.%ld msigjsonlen.%ld\n",jsontxt,len,strlen(jsontxt));
         return(clonestr(jsontxt));
@@ -1751,7 +1751,9 @@ struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
         {
             n = cJSON_GetArraySize(pubkeysobj);
             M = (int32_t)get_API_int(cJSON_GetObjectItem(obj,"M"),n-1);
-            set_NXTpubkey(NXTpubkey,nxtstr);
+            copy_cJSON(NXTpubkey,cJSON_GetObjectItem(obj,"pubkey"));
+            if ( NXTpubkey[0] == 0 )
+                set_NXTpubkey(NXTpubkey,nxtstr);
             msig = alloc_multisig_addr(coinstr,M,n,nxtstr,NXTpubkey,sender);
             safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
             copy_cJSON(msig->redeemScript,redeemobj);
@@ -1900,7 +1902,7 @@ struct multisig_addr *finalize_msig(struct multisig_addr *msig,uint64_t *srvbits
     return(msig);
 }
 
-struct multisig_addr *gen_multisig_addr(char *sender,int32_t M,int32_t N,struct coin_info *cp,char *refNXTaddr,char *refpubkey,struct contact_info **contacts)
+struct multisig_addr *gen_multisig_addr(char *sender,int32_t M,int32_t N,struct coin_info *cp,char *refNXTaddr,char *userpubkey,struct contact_info **contacts)
 {
     uint64_t refbits,srvbits[16];
     int32_t i,flag = 0;
@@ -1908,7 +1910,7 @@ struct multisig_addr *gen_multisig_addr(char *sender,int32_t M,int32_t N,struct 
     if ( cp == 0 )
         return(0);
     refbits = calc_nxt64bits(refNXTaddr);
-    msig = alloc_multisig_addr(cp->name,M,N,refNXTaddr,refpubkey,sender);
+    msig = alloc_multisig_addr(cp->name,M,N,refNXTaddr,userpubkey,sender);
     for (i=0; i<N; i++)
         srvbits[i] = contacts[i]->nxt64bits;
     if ( (msig= finalize_msig(msig,srvbits,refbits)) != 0 )
@@ -3006,7 +3008,7 @@ uint64_t process_deposits(cJSON **jsonp,uint64_t *unspentp,struct multisig_addr 
                 if ( max > 0 && valid_msig(msig,cp->name,refNXTaddr,specialNXTaddrs,ipaddrs,2,3) != 0 )//&& (depositor == 0 || strcmp(depositor,refNXTaddr) == 0) )
                 {
                     if ( Debuglevel > 2 )
-                        printf("MULTISIG: %s: %d of %d %s %s (%s)\n",cp->name,i,nummsigs,msig->coinstr,msig->multisigaddr,msig->NXTpubkey);
+                        printf("MULTISIG: %s: %d of %d %s %s NXTpubkey.(%s)\n",cp->name,i,nummsigs,msig->coinstr,msig->multisigaddr,msig->NXTpubkey);
                     update_NXT_transactions(specialNXTaddrs,2,msig->NXTaddr,cp);
                     if ( transferassets == 0 || (readyflag > 0 && pendingtxid == 0) )
                     {
