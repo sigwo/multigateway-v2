@@ -1976,7 +1976,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                 else if ( tp->completed == 0 && specialsender != 0 ) // deposit complete w/o cointxid (shouldnt happen normally)
                 {
                     orphans += tp->U.assetoshis;
-                    printf("find_pending_transfers: unexpected orphan deposit.%llu limbo.%d complete %s %.8f to NXT.%s\n",(long long)tp->redeemtxid,_is_limbo_redeem(ram,tp->redeemtxid),ram->name,dstr(tp->U.assetoshis),receiver);
+                    //printf("find_pending_transfers: internal transfer.%llu limbo.%d complete %s %.8f to NXT.%s\n",(long long)tp->redeemtxid,_is_limbo_redeem(ram,tp->redeemtxid),ram->name,dstr(tp->U.assetoshis),receiver);
                 }
             }
         }
@@ -6231,8 +6231,11 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
 
 uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ramchain_hashptr **addrptrp,struct ramchain_info *ram,char *addr)
 {
-    uint64_t pending,unspent = 0;
+    uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt64bits,char *depositors_pubkey,struct NXT_asset *ap,uint64_t value,char *coinaddr,char *txidstr,struct address_entry *entry,uint32_t *buyNXTp,char *srvNXTADDR,char *srvNXTACCTSECRET);
+    uint64_t nxt64bits,pending,unspent = 0;
+    char txidstr[4096];
     struct NXT_asset *ap;
+    struct multisig_addr *msig;
     struct NXT_assettxid *tp;
     int32_t i,j,numpending,numpayloads,n = 0;
     struct rampayload *payloads;
@@ -6261,10 +6264,17 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                             break;
                         }
                     }
-                    if ( j == ap->num && _valid_txamount(ram,payloads[i].value) > 0 )
+                    if ( j == ap->num && _valid_txamount(ram,payloads[i].value) > 0 && (msig= find_msigaddr(addr)) != 0 )
                     {
+                        ram_txid(txidstr,ram,payloads[i].extra);
                         printf ("pendingdeposit.(%s %.8f) ",addr,dstr(payloads[i].value));
                         pending += payloads[i].value, numpending++;
+                        nxt64bits = _calc_nxt64bits(msig->NXTaddr);
+                        if ( ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
+                        {
+                            if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ram->ap,payloads[i].value,msig->multisigaddr,txidstr,&payloads[i].B,&msig->buyNXT,ram->srvNXTADDR,ram->srvNXTACCTSECRET) == payloads[i].value )
+                                payloads[i].pendingdeposit = 0;
+                        }
                     }
                 }
             }
@@ -7338,7 +7348,7 @@ void *process_ramchains(void *_argcoinstr)
                     ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
                     if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
                         printf("\n");
-                    printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) orphans %.8f NXT.%d %s.%d\n",ram->name,dstr(ram->MGWunspent-ram->circulation-ram->MGWpendingredeems-ram->MGWpendingdeposits),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
+                    printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",ram->name,dstr(ram->MGWunspent-ram->circulation-ram->MGWpendingredeems-ram->MGWpendingdeposits),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
                     /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
                     {
                         // prune tx that dont exist anymore, eg. blockchain rewinds
