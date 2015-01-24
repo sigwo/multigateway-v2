@@ -1751,7 +1751,7 @@ struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
         {
             n = cJSON_GetArraySize(pubkeysobj);
             M = (int32_t)get_API_int(cJSON_GetObjectItem(obj,"M"),n-1);
-            copy_cJSON(NXTpubkey,cJSON_GetObjectItem(obj,"pubkey"));
+            copy_cJSON(NXTpubkey,cJSON_GetObjectItem(obj,"NXTpubkey"));
             if ( NXTpubkey[0] == 0 )
                 set_NXTpubkey(NXTpubkey,nxtstr);
             msig = alloc_multisig_addr(coinstr,M,n,nxtstr,NXTpubkey,sender);
