@@ -1662,73 +1662,6 @@ uint32_t _get_NXTheight()
     return(height);
 }
 
-/*uint64_t _add_pendingxfer(struct ramchain_info *ram,uint32_t height,int32_t removeflag,uint64_t txid)
-{
-    int32_t nonz,i = 0;
-    uint64_t pendingtxid = 0;
-    nonz = 0;
-    if ( ram->numpending > 0 )
-    {
-        for (i=0; i<ram->numpending; i++)
-        {
-            if ( removeflag == 0 )
-            {
-                if ( ram->pendingxfers[i] == 0 )
-                {
-                    ram->pendingxfers[i] = txid;
-                    break;
-                } else nonz++;
-            }
-            else if ( ram->pendingxfers[i] == txid )
-            {
-                printf("PENDING.(%llu) removed\n",(long long)txid);
-                ram->pendingxfers[i] = 0;
-                return(0);
-            }
-        }
-    }
-    if ( i == ram->numpending && txid != 0 && removeflag == 0 )
-    {
-        ram->pendingxfers = realloc(ram->pendingxfers,sizeof(*ram->pendingxfers) * (ram->numpending+1));
-        ram->pendingxfers[ram->numpending++] = txid;
-        printf("(%d) PENDING.(%llu) added\n",ram->numpending,(long long)txid);
-    }
-    if ( ram->numpending > 0 )
-    {
-        for (i=0; i<ram->numpending; i++)
-        {
-            if ( pendingtxid == 0 && ram->pendingxfers[i] != 0 )
-            {
-                pendingtxid = ram->pendingxfers[i];
-                break;
-            }
-        }
-    }
-    return(pendingtxid);
-}
-
-int32_t _ready_to_xferassets(struct ramchain_info *ram,uint64_t *txidp)
-{
-    // if fresh reboot, need to wait the xfer max duration + 1 block before running this
-    static int32_t firsttime,firstNXTblock;
-    *txidp = 0;
-    printf("(%d %d) lag.%ld %d\n",firsttime,firstNXTblock,time(NULL)-firsttime,_get_NXTheight()-firstNXTblock);
-    if ( ram->firsttime == 0 )
-        ram->firsttime = (uint32_t)time(NULL);
-    if ( ram->firstNXTblock <= 0 )
-        ram->firstNXTblock = _get_NXTheight();
-    if ( time(NULL) < (ram->firsttime + ram->DEPOSIT_XFER_DURATION*60) )
-        return(0);
-    if ( ram->firstNXTblock <= 0 || _get_NXTheight() < (ram->firstNXTblock + ram->DEPOSIT_XFER_DURATION) )
-        return(0);
-    if ( (*txidp= _add_pendingxfer(ram,0,0,0)) != 0 )
-    {
-        printf("waiting for pendingxfer\n");
-        return(0);
-    }
-    return(1);
-}*/
-
 uint64_t _calc_circulation(int32_t minconfirms,struct NXT_asset *ap,struct ramchain_info *ram)
 {
     uint64_t quantity,circulation = 0;
@@ -2006,14 +1939,14 @@ int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid 
                 {
                     if ( addrpayload->pendingdeposit != 0 )
                     {
-                        printf("deposit complete %s.%s/v%d %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,tp->coinv,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
+                        printf("deposit complete %s.%s/v%d %.8f -> NXT.%llu txid.%llu\n",ram->name,tp->cointxid,tp->coinv,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid);
                         addrpayload->pendingdeposit = 0;
                         tp->completed = 1;
                     }
                     else
                     {
                         if ( tp->completed == 0 )
-                            printf("deposit NOT PENDING? complete %s.%s/v%d %.8f -> NXT.%llu txid.%llu | %d seconds\n",ram->name,tp->cointxid,tp->coinv,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid,(uint32_t)(time(NULL) - addrpayload->pendingdeposit));
+                            printf("deposit NOT PENDING? complete %s.%s/v%d %.8f -> NXT.%llu txid.%llu\n",ram->name,tp->cointxid,tp->coinv,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid);
                     }
                     return(1);
                 } else printf("ram_mark_depositcomplete: mismatched rawind or value (%u vs %d) (%.8f vs %.8f)\n",txptr->rawind,addrpayload->otherind,dstr(txpayload->value),dstr(addrpayload->value));
@@ -2341,7 +2274,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
                 }
                 if ( tp->completed == 0 )
                 {
-                    if ( (tp->completed= (_is_limbo_redeem(ram,tp->redeemtxid) != 0)) == 0 )
+                    //if ( (tp->completed= (_is_limbo_redeem(ram,tp->redeemtxid) != 0)) == 0 )
                         tp->completed = ram_mark_depositcomplete(ram,tp);
                 }
                 if ( Debuglevel > 2 )
