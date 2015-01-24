@@ -2123,14 +2123,14 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                         send_to_ipaddr(0,1,previpaddr,retstr,NXTACCTSECRET);
                     if ( msig != 0 )
                     {
-                        if ( update_MGW_msig(msig,NXTaddr) > 0 && Global_mp->gatewayid == 2 )
+                        if ( 0 && update_MGW_msig(msig,NXTaddr) > 0 && Global_mp->gatewayid == 2 )
                             broadcast_bindAM(refNXTaddr,msig,0);
                         free(msig);
                     }
                 }
             }
         }
-        fprintf(stderr,"return valid.%d\n",valid);
+        //fprintf(stderr,"return valid.%d\n",valid);
     } else free(msig), valid = N;
     if ( valid != N || retstr == 0 )
     {
