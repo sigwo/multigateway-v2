@@ -178,7 +178,7 @@ struct ramchain_info
     
     struct NXT_asset *ap;
     uint64_t boughtNXT,circulation,*pendingxfers,MGWbits,MGWpendingredeems,orphans,*limboarray,MGWunspent,MGWpendingdeposits;
-    uint32_t min_NXTconfirms,NXT_RTblocknum,NXTblocknum,numspecials,numpending,firstNXTblock,firsttime,DEPOSIT_XFER_DURATION;
+    uint32_t min_NXTconfirms,NXT_RTblocknum,NXTblocknum,NXTtimestamp,numspecials,numpending,firsttime,DEPOSIT_XFER_DURATION,enable_deposits;
     char multisigchar,**special_NXTaddrs,*MGWredemption,gatewayid;
     float lastgetinfo;
 };
@@ -1653,7 +1653,7 @@ uint32_t _get_NXTheight(uint32_t *firsttimep)
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( firsttimep != 0 )
-                *firsttimep = (int32_t)get_cJSON_int(json,"timestamp");
+                *firsttimep = (uint32_t)get_cJSON_int(json,"timestamp");
             height = (int32_t)get_cJSON_int(json,"numberOfBlocks");
             if ( height > 0 )
                 height--;
@@ -2415,7 +2415,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
     cJSON *redemptions=0,*transfers,*array,*json;
     char cmd[1024],txid[512],*jsonstr,*txidjsonstr;
     struct NXT_asset *ap;
-    uint32_t i,j,n,height;
+    uint32_t i,j,n,height,timestamp;
     while ( (ap= ram->ap) == 0 )
         sleep(1);
     if ( ram->MGWbits == 0 )
@@ -2439,6 +2439,14 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                 //printf("getBlock.%d (%s)\n",mostrecent,jsonstr);
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 {
+                    timestamp = (uint32_t)get_cJSON_int(json,"timestamp");
+                    if ( ram->NXTtimestamp != 0 && timestamp > ram->NXTtimestamp )
+                    {
+                        if ( (timestamp - ram->firsttime) > (ram->DEPOSIT_XFER_DURATION+1)*60 )
+                            ram->enable_deposits = 1;
+                        printf("ram->NXTtimestamp %d -> %d: enable_deposits.%d\n",ram->NXTtimestamp,timestamp,ram->enable_deposits);
+                        ram->NXTtimestamp = timestamp;
+                    }
                     if ( (array= cJSON_GetObjectItem(json,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                     {
                         for (i=0; i<n; i++)
@@ -2470,6 +2478,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
     {
         for (j=0; j<ram->numspecials; j++)
         {
+            printf("init NXT special.%d of %d (%s)\n",j,ram->numspecials,ram->special_NXTaddrs[j]);
             sprintf(cmd,"requestType=getAccountTransactions&account=%s",ram->special_NXTaddrs[j]);
             if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
             {
@@ -5871,7 +5880,7 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
             num++;
         }
         printf("%s: loaded %d strings, ind.%d, offset.%ld allocsize.%llu %s\n",fname,num,hash->ind,offset,(long long)hash->M.allocsize,((sizeof(uint64_t)+offset) != hash->M.allocsize && offset != hash->M.allocsize) ? "ERROR":"OK");
-        if ( offset != hash->M.allocsize )
+        if ( offset < (hash->M.allocsize-sizeof(uint64_t)) )
         {
             *blocknump = ram_load_blockcheck(hash->newfp);
             if ( (offset+sizeof(uint64_t)) != hash->M.allocsize )
@@ -6216,7 +6225,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                         nxt64bits = _calc_nxt64bits(msig->NXTaddr);
                         printf ("deposit.(%s/%d %d,%d %s %.8f).g%d ",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),(int32_t)(nxt64bits % NUM_GATEWAYS));
                         pending += payloads[i].value, numpending++;
-                        if ( ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
+                        if ( ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
                         {
                             if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ram->ap,payloads[i].value,msig->multisigaddr,txidstr,&payloads[i].B,&msig->buyNXT,ram->srvNXTADDR,ram->srvNXTACCTSECRET) == payloads[i].value )
                                 payloads[i].pendingdeposit = 0;
