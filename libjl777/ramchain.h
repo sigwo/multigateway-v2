@@ -6325,7 +6325,6 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
         blocks->blocknum += (1 << blocks->shift);
         estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->RTblocknum-blocks->blocknum) / 60000.;
     }
-    ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
     //printf("(%d >> %d) < (%d >> %d)\n",blocks->blocknum,blocks->shift,prev->blocknum,blocks->shift);
     return(processed);
 }
@@ -7336,6 +7335,7 @@ void *process_ramchains(void *_argcoinstr)
                     }
                     //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
                     //    ram->NXTblocknum = _update_ramMGW(ram,ram->NXTblocknum - ram->min_NXTconfirms);
+                    ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
                     printf("unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) orphans %.8f NXT.%d %s.%d\n",dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
                     /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
                     {
