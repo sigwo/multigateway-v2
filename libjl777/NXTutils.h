@@ -426,11 +426,14 @@ cJSON *issue_getAccountInfo(CURL *curl_handle,int64_t *amountp,char *name,char *
 char *issue_getAsset(CURL *curl_handle,char *assetidstr)
 {
     char cmd[4096];
-    sprintf(cmd,"%s=getAsset&asset=%s",_NXTSERVER,assetidstr);
-    printf("cmd.(%s)\n",cmd);
+    //sprintf(cmd,"%s=getAsset&asset=%s",_NXTSERVER,assetidstr);
+    //printf("cmd.(%s)\n",cmd);
     //return(issue_curl(0,cmd));
-    return(issue_NXTPOST(0,cmd));
+    //return(issue_NXTPOST(0,cmd));
     //printf("calculated.(%s)\n",ret.str);
+    sprintf(cmd,"%s=getAsset&asset=%s",NXTSERVER,assetidstr);
+    printf("cmd.(%s)\n",cmd);
+    return(issue_curl(0,cmd));
 }
 
 struct NXT_asset *init_asset(struct NXT_asset *ap,char *assetidstr)

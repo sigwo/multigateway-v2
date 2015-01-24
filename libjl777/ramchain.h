@@ -1638,7 +1638,7 @@ char *_issue_getAsset(char *assetidstr)
     char cmd[4096];
     //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
     sprintf(cmd,"%s=getAsset&asset=%s",NXTSERVER,assetidstr);
-    printf("cmd.(%s)\n",cmd);
+    printf("_cmd.(%s)\n",cmd);
     return(_issue_curl(cmd));
 }
 
