@@ -6198,10 +6198,11 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
             {
                 if ( ap != 0 )
                 {
+                    ram_txid(txidstr,ram,payloads[i].otherind);
                     for (j=0; j<ap->num; j++)
                     {
                         tp = ap->txids[j];
-                        if ( tp->cointxid != 0 && strcmp(tp->cointxid,addr) == 0 )
+                        if ( tp->cointxid != 0 && strcmp(tp->cointxid,txidstr) == 0 )
                         {
                             //if ( tp->completed == 0 )
                                 tp->completed = ram_mark_depositcomplete(ram,tp);
@@ -6210,7 +6211,6 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                     }
                     if ( j == ap->num && _valid_txamount(ram,payloads[i].value) > 0 && (msig= find_msigaddr(addr)) != 0 )
                     {
-                        ram_txid(txidstr,ram,payloads[i].otherind);
                         nxt64bits = _calc_nxt64bits(msig->NXTaddr);
                         printf ("deposit.(%s/%d %d,%d %s %.8f).g%d ",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),(int32_t)(nxt64bits % NUM_GATEWAYS));
                         pending += payloads[i].value, numpending++;
