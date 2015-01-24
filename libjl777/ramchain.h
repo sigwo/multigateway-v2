@@ -6266,9 +6266,9 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                     }
                     if ( j == ap->num && _valid_txamount(ram,payloads[i].value) > 0 && (msig= find_msigaddr(addr)) != 0 )
                     {
-                        ram_txid(txidstr,ram,payloads[i].extra);
+                        ram_txid(txidstr,ram,payloads[i].otherind);
                         nxt64bits = _calc_nxt64bits(msig->NXTaddr);
-                        printf ("deposit.(%s %.8f).g%d ",addr,dstr(payloads[i].value),(int32_t)(nxt64bits % NUM_GATEWAYS));
+                        printf ("deposit.(%s/%d %d,%d %s %.8f).g%d ",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),(int32_t)(nxt64bits % NUM_GATEWAYS));
                         pending += payloads[i].value, numpending++;
                         if ( ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
                         {
