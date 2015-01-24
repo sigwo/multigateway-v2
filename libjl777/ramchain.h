@@ -7279,6 +7279,7 @@ void *process_ramchains(void *_argcoinstr)
                         ram->NXTblocknum = _update_ramMGW(ram,ram->NXTblocknum - ram->min_NXTconfirms); // possible for tx to disappear
                     for (pass=1; pass<=4; pass++)
                     {
+                        ram_update_RTblock(ram);
                         processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],10000.);
                         ram_update_disp(ram);
 #ifdef RAM_GENMODE
