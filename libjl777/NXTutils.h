@@ -2554,5 +2554,17 @@ long force_fpos(char *fname,FILE **fpp,long setfpos)
     return(setfpos);
 }
 
+cJSON *http_search(char *destip,char *type,char *file)
+{
+    cJSON *json = 0;
+    char url[1024],*retstr;
+    sprintf(url,"http://%s/%s/%s",destip,type,file);
+    if ( (retstr= issue_curl(0,url)) != 0 )
+    {
+        json = cJSON_Parse(retstr);
+        free(retstr);
+    }
+    return(json);
+}
 
 #endif
