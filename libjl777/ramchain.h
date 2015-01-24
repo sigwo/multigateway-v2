@@ -7329,9 +7329,9 @@ void *process_ramchains(void *_argcoinstr)
                         printf("ERROR _process_ramchain.%s\n",ram->name);
                     processed--;
                 }
-                else if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
+                else //if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
                 {
-                    if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
+                    //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
                         ram->NXTblocknum = _update_ramMGW(ram,ram->NXTblocknum - ram->min_NXTconfirms); // possible for tx to disappear
                     for (pass=1; pass<=4; pass++)
                     {
@@ -7348,7 +7348,7 @@ void *process_ramchains(void *_argcoinstr)
                     ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
                     if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
                         printf("\n");
-                    printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",ram->name,dstr(ram->MGWunspent-ram->circulation-ram->MGWpendingredeems-ram->MGWpendingdeposits),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
+                    printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",ram->name,(dstr(ram->MGWunspent)-dstr(ram->circulation)-dstr(ram->MGWpendingredeems)-dstr(ram->MGWpendingdeposits)),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
                     /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
                     {
                         // prune tx that dont exist anymore, eg. blockchain rewinds
