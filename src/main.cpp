@@ -4137,7 +4137,7 @@ int32_t got_newpeer(const char *ip_port)
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     while ( did_SuperNET_init == 0 )
     {
-        fprintf(stderr,"got_newpeer(%s) %d before initialized\n",ip_port,numearly);
+        printf("got_newpeer(%s) %d before initialized\n",ip_port,numearly);
         numearly++;
         earlybirds = (char **)realloc(earlybirds,(numearly+1) * sizeof(*earlybirds));
         earlybirds[numearly] = 0;
