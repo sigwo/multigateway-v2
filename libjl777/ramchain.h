@@ -177,7 +177,7 @@ struct ramchain_info
     uint64_t minval,maxval,minval2,maxval2,minval4,maxval4,minval8,maxval8;
     
     struct NXT_asset *ap;
-    uint64_t boughtNXT,circulation,*pendingxfers,MGWbits,MGWpendingredeems,orphans,*limboarray,MGWunspent,MGWpendingdeposits;
+    uint64_t boughtNXT,circulation,*pendingxfers,MGWbits,MGWpendingredeems,orphans,*limboarray,MGWunspent,MGWpendingdeposits,MGWbalance;
     uint32_t min_NXTconfirms,NXT_RTblocknum,NXTblocknum,NXTtimestamp,numspecials,numpending,firsttime,DEPOSIT_XFER_DURATION,enable_deposits;
     char multisigchar,**special_NXTaddrs,*MGWredemption,gatewayid;
     float lastgetinfo;
@@ -1917,6 +1917,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                 else if ( tp->completed == 0 && specialsender != 0 ) // deposit complete w/o cointxid (shouldnt happen normally)
                 {
                     orphans += tp->U.assetoshis;
+                    tp->completed = 1;
                     //printf("find_pending_transfers: internal transfer.%llu limbo.%d complete %s %.8f to NXT.%s\n",(long long)tp->redeemtxid,_is_limbo_redeem(ram,tp->redeemtxid),ram->name,dstr(tp->U.assetoshis),receiver);
                 }
             }
@@ -2440,11 +2441,11 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 {
                     timestamp = (uint32_t)get_cJSON_int(json,"timestamp");
-                    if ( ram->NXTtimestamp != 0 && timestamp > ram->NXTtimestamp )
+                    if ( timestamp != 0 && timestamp > ram->NXTtimestamp )
                     {
                         if ( (timestamp - ram->firsttime) > (ram->DEPOSIT_XFER_DURATION+1)*60 )
                             ram->enable_deposits = 1;
-                        printf("ram->NXTtimestamp %d -> %d: enable_deposits.%d\n",ram->NXTtimestamp,timestamp,ram->enable_deposits);
+                        printf("1st.%d ram->NXTtimestamp %d -> %d: enable_deposits.%d | %d > %d\n",ram->firsttime,ram->NXTtimestamp,timestamp,ram->enable_deposits,(timestamp - ram->firsttime),(ram->DEPOSIT_XFER_DURATION+1)*60);
                         ram->NXTtimestamp = timestamp;
                     }
                     if ( (array= cJSON_GetObjectItem(json,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -5883,8 +5884,11 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
         if ( offset < (hash->M.allocsize-sizeof(uint64_t)) )
         {
             *blocknump = ram_load_blockcheck(hash->newfp);
-            if ( (offset+sizeof(uint64_t)) != hash->M.allocsize )
+            if ( (offset+sizeof(uint64_t)) > hash->M.allocsize )
+            {
+                printf("offset.%ld + 8 %ld < %ld allocsize\n",offset,(offset+sizeof(uint64_t)),(long)hash->M.allocsize);
                 exit(-1);
+            }
         }
         if ( (hash->ind + 1) > ram->maxind )
             ram->maxind = (hash->ind + 1);
@@ -6225,7 +6229,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                         nxt64bits = _calc_nxt64bits(msig->NXTaddr);
                         printf ("deposit.(%s/%d %d,%d %s %.8f).g%d ",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),(int32_t)(nxt64bits % NUM_GATEWAYS));
                         pending += payloads[i].value, numpending++;
-                        if ( ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
+                        if ( ram->MGWbalance > payloads[i].value && ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
                         {
                             if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ram->ap,payloads[i].value,msig->multisigaddr,txidstr,&payloads[i].B,&msig->buyNXT,ram->srvNXTADDR,ram->srvNXTACCTSECRET) == payloads[i].value )
                                 payloads[i].pendingdeposit = 0;
@@ -7256,7 +7260,7 @@ void *process_ramchains(void *_argcoinstr)
                     if ( Ramchains[i]->NXTblocknum > 1000 )
                         Ramchains[i]->NXTblocknum -= 1000;
                     else Ramchains[i]->NXTblocknum = 0;
-                    printf("i.%d of %d: NXTblock.%d (%s)\n",i,Numramchains,Ramchains[i]->NXTblocknum,Ramchains[i]->name);
+                    printf("i.%d of %d: NXTblock.%d (%s) 1sttime %d\n",i,Numramchains,Ramchains[i]->NXTblocknum,Ramchains[i]->name,Ramchains[i]->firsttime);
                 }
                 else
                 {
@@ -7302,9 +7306,10 @@ void *process_ramchains(void *_argcoinstr)
                     //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
                     //    ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms);
                     ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
+                    ram->MGWbalance = ram->MGWunspent - ram->circulation - ram->MGWpendingredeems - ram->MGWpendingdeposits;
                     if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
                         printf("\n");
-                    printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",ram->name,(dstr(ram->MGWunspent)-dstr(ram->circulation)-dstr(ram->MGWpendingredeems)-dstr(ram->MGWpendingdeposits)),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
+                    printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",ram->name,dstr(ram->MGWbalance),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
                     /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
                     {
                         // prune tx that dont exist anymore, eg. blockchain rewinds
