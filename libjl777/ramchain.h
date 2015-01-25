@@ -179,7 +179,7 @@ struct ramchain_info
     struct NXT_asset *ap;
     uint64_t boughtNXT,circulation,*pendingxfers,MGWbits,MGWpendingredeems,orphans,*limboarray,MGWunspent,MGWpendingdeposits;
     int64_t MGWbalance;
-    uint32_t min_NXTconfirms,NXT_RTblocknum,NXTblocknum,NXTtimestamp,numspecials,numpending,firsttime,DEPOSIT_XFER_DURATION,enable_deposits;
+    uint32_t min_NXTconfirms,NXT_RTblocknum,NXTblocknum,NXTtimestamp,numspecials,depositconfirms,firsttime,DEPOSIT_XFER_DURATION,enable_deposits;
     char multisigchar,**special_NXTaddrs,*MGWredemption,gatewayid;
     float lastgetinfo;
 };
@@ -1676,7 +1676,7 @@ uint64_t _calc_circulation(int32_t minconfirms,struct NXT_asset *ap,struct ramch
     if ( minconfirms != 0 )
     {
         ram->NXT_RTblocknum = _get_NXTheight(0);
-        height = ram->NXT_RTblocknum - ram->min_NXTconfirms;
+        height = ram->NXT_RTblocknum;// - ram->min_NXTconfirms;
     }
     sprintf(cmd,"requestType=getAssetAccounts&asset=%llu",(long long)ap->assetbits);
     if ( height > 0 )
@@ -2446,7 +2446,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                     {
                         if ( ram->firsttime == 0 )
                             ram->firsttime = timestamp;
-                        if ( ram->enable_deposits == 0 && (timestamp - ram->firsttime) > (ram->DEPOSIT_XFER_DURATION+1)*60 )
+                        if ( ram->enable_deposits == 0 && timestamp > (ram->firsttime + (ram->DEPOSIT_XFER_DURATION+1)*60) )
                         {
                             ram->enable_deposits = 1;
                             printf("1st.%d ram->NXTtimestamp %d -> %d: enable_deposits.%d | %d > %d\n",ram->firsttime,ram->NXTtimestamp,timestamp,ram->enable_deposits,(timestamp - ram->firsttime),(ram->DEPOSIT_XFER_DURATION+1)*60);
@@ -5805,7 +5805,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     return(datalen);
 }
 
-long ram_emit_blockcheck(FILE *fp,uint64_t blocknum)
+/*long ram_emit_blockcheck(FILE *fp,uint64_t blocknum)
 {
     long fpos,retval = 0;
     uint64_t blockcheck;
@@ -5835,7 +5835,7 @@ uint32_t ram_load_blockcheck(FILE *fp)
     }
     fseek(fp,fpos,SEEK_SET);
     return(blocknum);
-}
+}*/
 
 int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchain_info *ram,char type)
 {
@@ -5886,9 +5886,9 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
             num++;
         }
         printf("%s: loaded %d strings, ind.%d, offset.%ld allocsize.%llu %s\n",fname,num,hash->ind,offset,(long long)hash->M.allocsize,((sizeof(uint64_t)+offset) != hash->M.allocsize && offset != hash->M.allocsize) ? "ERROR":"OK");
-        if ( offset < (hash->M.allocsize-sizeof(uint64_t)) )
+        if ( offset != hash->M.allocsize && offset != (hash->M.allocsize-sizeof(uint64_t)) )
         {
-            *blocknump = ram_load_blockcheck(hash->newfp);
+            //*blocknump = ram_load_blockcheck(hash->newfp);
             if ( (offset+sizeof(uint64_t)) != hash->M.allocsize )
             {
                 printf("offset.%ld + 8 %ld != %ld allocsize\n",offset,(offset+sizeof(uint64_t)),(long)hash->M.allocsize);
@@ -6234,7 +6234,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                         nxt64bits = _calc_nxt64bits(msig->NXTaddr);
                         printf ("deposit.(%s/%d %d,%d %s %.8f).g%d ",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),(int32_t)(nxt64bits % NUM_GATEWAYS));
                         pending += payloads[i].value, numpending++;
-                        if ( ram->MGWbalance > payloads[i].value && ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
+                        if ( (payloads[i].B.blocknum+ram->depositconfirms) > ram->RTblocknum && ram->MGWbalance > payloads[i].value && ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
                         {
                             if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ram->ap,payloads[i].value,msig->multisigaddr,txidstr,&payloads[i].B,&msig->buyNXT,ram->srvNXTADDR,ram->srvNXTACCTSECRET,ram->DEPOSIT_XFER_DURATION) == payloads[i].value )
                                 payloads[i].pendingdeposit = 0;
@@ -6291,9 +6291,9 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
         } //else printf("ram_process_blocks: hpptr.%p hp.%p\n",hpptr,hp);
         if ( blocks->format == 'B' && blocks->blocknum >= ram->RTblocknum-1 )
         {
-            ram_emit_blockcheck(ram_gethash(ram,'a')->newfp,blocks->blocknum);
-            ram_emit_blockcheck(ram_gethash(ram,'t')->newfp,blocks->blocknum);
-            ram_emit_blockcheck(ram_gethash(ram,'s')->newfp,blocks->blocknum);
+            //ram_emit_blockcheck(ram_gethash(ram,'a')->newfp,blocks->blocknum);
+            //ram_emit_blockcheck(ram_gethash(ram,'t')->newfp,blocks->blocknum);
+            //ram_emit_blockcheck(ram_gethash(ram,'s')->newfp,blocks->blocknum);
         }
         blocks->processed += (1 << blocks->shift);
         blocks->blocknum += (1 << blocks->shift);
@@ -7297,7 +7297,7 @@ void *process_ramchains(void *_argcoinstr)
                 else //if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
                 {
                     //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
-                        ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms); // possible for tx to disappear
+                        ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - 0*ram->min_NXTconfirms); // possible for tx to disappear
                     for (pass=1; pass<=4; pass++)
                     {
                         ram_update_RTblock(ram);
