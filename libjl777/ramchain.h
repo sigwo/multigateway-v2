@@ -7306,7 +7306,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     printf("set ramchain blocknum.%s %d vs (1st %d num %d) RT.%d %.1f seconds to init_ramchain.%s V\n",ram->name,ram->Vblocks.blocknum,ram->Vblocks.firstblock,ram->Vblocks.numblocks,ram->blocks.blocknum,(ram_millis() - startmilli)/1000.,ram->name);
     ram->mappedblocks[0] = ram_init_blocks(0,ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
 #ifndef RAM_GENMODE
-    if ( 1 )
+    if ( strcmp(ram->name,"BTC") != 0 )
     {
         HUFF *hp;
         uint32_t blocknum,errs=0,good=0,iter,i;
