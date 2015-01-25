@@ -531,13 +531,12 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
             senderNXTaddr[0] = 0;
             memset(pubkey,0,sizeof(pubkey));
             parmstxt = verify_tokenized_json(pubkey,senderNXTaddr,&valid,argjson);
-           // if ( Debuglevel > 2 )
-                fprintf(stderr,">>>>>>>>>>>> len.%d parmslen.%d datalen.%d (%s) valid.%d\n",len,parmslen,datalen,parmstxt,valid);
+            if ( Debuglevel > 2 )
+                fprintf(stderr,"len.%d parmslen.%d datalen.%d (%s) valid.%d\n",len,parmslen,datalen,parmstxt,valid);
             if ( valid > 0 && parmstxt != 0 && parmstxt[0] != 0 )
             {
                 tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
                 tmpjson = cJSON_Parse(parmstxt);
-                printf(">>>>>>>>>> tokenized_np.%p for (%s) tmpjson.%p\n",tokenized_np,senderNXTaddr,tmpjson);
                 if ( tmpjson != 0 )
                 {
                     char nxtip[64];
@@ -546,16 +545,14 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     copy_cJSON(nxtip,cJSON_GetObjectItem(tmpjson,"ipaddr"));
                     if ( is_illegal_ipaddr(nxtip) != 0 || notlocalip(nxtip) == 0 )
                         strcpy(nxtip,sender);
-                   // if ( Debuglevel > 2 )
+                    if ( Debuglevel > 2 )
                         fprintf(stderr,"nxtip.(%s) %s\n",nxtip,parmstxt);
                     nxtport = (int32_t)get_API_int(cJSON_GetObjectItem(tmpjson,"port"),0);
                     if ( strcmp(nxtip,sender) == 0 )
                         nxtport = port;
                     noqueue = prevent_queueing(checkstr);
-                    printf(">>>>>>>>>>>> (%s) noqueue.%d\n",checkstr,noqueue);
                     if ( encrypted == 0 )
                     {
-                        printf(">>>>>>>>>>>> call update_routing_probs (%s) (%s/%d) %s\n",tokenized_np->H.U.NXTaddr,nxtip,nxtport,pubkey);
                         if ( /*strcmp("ping",checkstr) == 0 &&*/ internalflag == 0 && dontupdate == 0 )
                             update_routing_probs(tokenized_np->H.U.NXTaddr,1,udp == 0,&tokenized_np->stats,nxtip,nxtport,pubkey);
                         if ( strcmp("ping",checkstr) == 0 || strcmp("getdb",checkstr) == 0 || strcmp("genmultisig",checkstr) == 0 || strcmp("MGW",checkstr) == 0 || strcmp("MGWaddr",checkstr) == 0 )
@@ -568,7 +565,6 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                         strcpy(checkstr,"valid");
                     }
                     valueobj = cJSON_GetObjectItem(tmpjson,"data");
-                    printf(">>>>>>>>>>>> (%s) noqueue.%d encrypted.%d valueobj.%d\n",checkstr,noqueue,encrypted,is_cJSON_Number(valueobj));
                     if ( is_cJSON_Number(valueobj) != 0 )
                     {
                         copy_cJSON(datalenstr,valueobj);
@@ -591,11 +587,10 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     {
                         char previpaddr[64];
                         struct udp_queuecmd *qp;
-                        printf(">>>>>>>>>> prevaddr.%p\n",prevaddr);
                         if ( prevaddr != 0 )
                             extract_nameport(previpaddr,sizeof(previpaddr),(struct sockaddr_in *)prevaddr);
                         else previpaddr[0] = 0;
-                        fprintf(stderr,"GOT.(%s) decoded.%p (%s)\n",parmstxt,decoded,decoded);
+                        //fprintf(stderr,"GOT.(%s) decoded.%p (%s)\n",parmstxt,decoded,decoded);
                         if ( noqueue == 0 && FASTMODE == 0 )//IS_LIBTEST < 2 )
                         {
                             qp = calloc(1,sizeof(*qp));
@@ -605,7 +600,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                             qp->valid = valid;
                             qp->tokenized_np = tokenized_np;
                             qp->decoded = clonestr((char *)decoded);
-                            printf(">>>>>>>>>> queue argjson.%p\n",argjson);
+                            //printf("queue argjson.%p\n",argjson);
                             queue_enqueue(&udp_JSON,qp);
                             argjson = 0;
                         }

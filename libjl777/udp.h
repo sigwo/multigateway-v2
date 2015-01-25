@@ -163,7 +163,7 @@ void update_nodestats_data(struct nodestats *stats)
     expand_nxt64bits(NXTaddr,stats->nxt64bits);
     if ( Debuglevel > 2 )
         printf("Update nodestats.%s (%s) lastcontact %u\n",NXTaddr,ipaddr,stats->lastcontact);
-    update_storage(&SuperNET_dbs[NODESTATS_DATA],NXTaddr,&stats->H);
+    //update_storage(&SuperNET_dbs[NODESTATS_DATA],NXTaddr,&stats->H);
 }
 
 // helper and completion funcs
@@ -221,9 +221,7 @@ void process_udpentry(struct udp_entry *up)
     if ( notlocalip(ipaddr) == 0 )
         strcpy(ipaddr,cp->myipaddr);
     retjsonstr[0] = 0;
-    fprintf(stderr,"UDP process %d from %s/%d crc.%x\n",up->len,ipaddr,supernet_port,_crc32(0,up->buf,up->len));
     process_packet(up->internalflag,retjsonstr,up->buf,up->len,up->udp,&up->addr,ipaddr,supernet_port);
-    fprintf(stderr,"UDP processed %d from %s/%d crc.%x\n",up->len,ipaddr,supernet_port,_crc32(0,up->buf,up->len));
     free(up->buf);
     free(up);
 }
@@ -268,7 +266,6 @@ void _on_udprecv(int32_t queueflag,int32_t internalflag,uv_udp_t *udp,ssize_t nr
             queue_enqueue(&UDP_Q,up);
         }
         else process_packet(internalflag,retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,ipaddr,supernet_port);
-        fprintf(stderr,"UDP %s %ld from %s/%d crc.%x\n",queueflag?"queued":"processed",nread,ipaddr,supernet_port,_crc32(0,rcvbuf->base,nread));
     }
     else if ( rcvbuf->base != 0 )
         free(rcvbuf->base);
