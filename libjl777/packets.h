@@ -531,7 +531,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
             senderNXTaddr[0] = 0;
             memset(pubkey,0,sizeof(pubkey));
             parmstxt = verify_tokenized_json(pubkey,senderNXTaddr,&valid,argjson);
-            if ( Debuglevel > 2 )
+           // if ( Debuglevel > 2 )
                 fprintf(stderr,"len.%d parmslen.%d datalen.%d (%s) valid.%d\n",len,parmslen,datalen,parmstxt,valid);
             if ( valid > 0 && parmstxt != 0 && parmstxt[0] != 0 )
             {
@@ -590,7 +590,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                         if ( prevaddr != 0 )
                             extract_nameport(previpaddr,sizeof(previpaddr),(struct sockaddr_in *)prevaddr);
                         else previpaddr[0] = 0;
-                        //fprintf(stderr,"GOT.(%s) decoded.%p (%s)\n",parmstxt,decoded,decoded);
+                        fprintf(stderr,"GOT.(%s) decoded.%p (%s)\n",parmstxt,decoded,decoded);
                         if ( noqueue == 0 && FASTMODE == 0 )//IS_LIBTEST < 2 )
                         {
                             qp = calloc(1,sizeof(*qp));
@@ -600,7 +600,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                             qp->valid = valid;
                             qp->tokenized_np = tokenized_np;
                             qp->decoded = clonestr((char *)decoded);
-                            //printf("queue argjson.%p\n",argjson);
+                            printf("queue argjson.%p\n",argjson);
                             queue_enqueue(&udp_JSON,qp);
                             argjson = 0;
                         }
