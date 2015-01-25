@@ -7447,6 +7447,7 @@ void *process_ramchains(void *_argcoinstr)
     int32_t i,pass,processed = 0;
     while ( IS_LIBTEST != 7 && Finished_init == 0 )
         sleep(1);
+while ( 1 ) sleep(1);
     ensure_SuperNET_dirs("ramchains");
     startmilli = ram_millis();
     /*if ( _argcoinstr != 0 && ((long *)_argcoinstr)[1] != 0 && ((long *)_argcoinstr)[2] != 0 )
@@ -7456,7 +7457,7 @@ void *process_ramchains(void *_argcoinstr)
         printf("modval.%d numinterleaves.%d\n",modval,numinterleaves);
     } else*/
         modval = 0, numinterleaves = 1;
-    for (iter=0; iter<1; iter++)
+    for (iter=0; iter<3; iter++)
     {
         for (i=0; i<Numramchains; i++)
         {
@@ -7480,7 +7481,6 @@ void *process_ramchains(void *_argcoinstr)
         }
     }
     printf("took %.1f seconds to update_ramMGW for %d coins\n",(ram_millis() - startmilli)/1000.,Numramchains);
-while ( 1 ) sleep(1);
     MGW_initdone = 1;
     while ( processed >= 0 )
     {
