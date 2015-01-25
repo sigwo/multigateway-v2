@@ -5853,13 +5853,16 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
     strcpy(hash->coinstr,ram->name);
     hash->type = type;
     num = 0;
-    ram_sethashname(fname,hash,0);
-    strcat(fname,".perm");
-    hash->permfp = fopen(fname,"wb");
-    if ( hash->permfp == 0 )
+    if ( 0 )
     {
-        printf("couldnt create (%s)\n",fname);
-        exit(-1);
+        ram_sethashname(fname,hash,0);
+        strcat(fname,".perm");
+        hash->permfp = fopen(fname,"wb");
+        if ( hash->permfp == 0 )
+        {
+            printf("couldnt create (%s)\n",fname);
+            exit(-1);
+        }
     }
     ram_sethashname(fname,hash,0);
     printf("inithashtable.(%s.%d) -> [%s]\n",ram->name,type,fname);
@@ -5959,14 +5962,17 @@ void ram_write_permentry(struct ramchain_hashtable *table,struct ramchain_hashpt
 {
     int32_t datalen,varlen;
     uint64_t varint;
-    varlen += hdecode_varint(&varint,ptr->hh.key,0,9);
-    datalen = ((int32_t)varint + varlen);
-    if ( fwrite(ptr->hh.key,1,datalen,table->permfp) != datalen )
+    if ( table->permfp != 0 )
     {
-        printf("error saving type.%d ind.%d datalen.%d\n",table->type,ptr->permind,datalen);
-        exit(-1);
+        varlen += hdecode_varint(&varint,ptr->hh.key,0,9);
+        datalen = ((int32_t)varint + varlen);
+        if ( fwrite(ptr->hh.key,1,datalen,table->permfp) != datalen )
+        {
+            printf("error saving type.%d ind.%d datalen.%d\n",table->type,ptr->permind,datalen);
+            exit(-1);
+        }
+        fflush(table->permfp);
     }
-    fflush(table->permfp);
 }
 
 int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_rawindp,struct rampayload *txpayload,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vout,uint16_t numvouts,uint32_t txid_rawind,int32_t isinternal)
