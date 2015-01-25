@@ -5884,9 +5884,9 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
         if ( offset < (hash->M.allocsize-sizeof(uint64_t)) )
         {
             *blocknump = ram_load_blockcheck(hash->newfp);
-            if ( (offset+sizeof(uint64_t)) > hash->M.allocsize )
+            if ( (offset+sizeof(uint64_t)) != hash->M.allocsize )
             {
-                printf("offset.%ld + 8 %ld < %ld allocsize\n",offset,(offset+sizeof(uint64_t)),(long)hash->M.allocsize);
+                printf("offset.%ld + 8 %ld != %ld allocsize\n",offset,(offset+sizeof(uint64_t)),(long)hash->M.allocsize);
                 exit(-1);
             }
         }
