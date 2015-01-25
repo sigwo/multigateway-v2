@@ -131,8 +131,8 @@ struct mappedptr
 };
 
 struct rampayload { struct address_entry B,spentB; uint64_t value; uint32_t otherind; uint32_t extra:30,pendingdeposit:1,tbd:1; };
-struct ramchain_hashptr { int64_t unspent; UT_hash_handle hh; struct rampayload *payloads; uint32_t rawind,numpayloads:29,maxpayloads:29,mine:1,multisig:1,verified:1,nonstandard:1,tbd:2; int32_t numunspent; };
-struct ramchain_hashtable { char coinstr[16]; struct ramchain_hashptr *table; struct mappedptr M; FILE *newfp; struct ramchain_hashptr **ptrs; uint32_t ind,numalloc; uint8_t type; };
+struct ramchain_hashptr { int64_t unspent; UT_hash_handle hh; struct rampayload *payloads; uint32_t rawind,permind,numpayloads:29,maxpayloads:29,mine:1,multisig:1,verified:1,nonstandard:1,tbd:2; int32_t numunspent; };
+struct ramchain_hashtable { char coinstr[16]; struct ramchain_hashptr *table; struct mappedptr M; FILE *newfp,*permfp; struct ramchain_hashptr **ptrs; uint32_t ind,numalloc; uint8_t type; };
 
 
 #define MAX_BLOCKTX 0xffff
@@ -169,6 +169,7 @@ struct ramchain_info
     double startmilli;
     HUFF *tmphp,*tmphp2;
     char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker;
+    uint32_t next_blocknum,next_txid_permind,next_addr_permind,next_script_permind,permind_changes;
     uint32_t lastheighttime,RTblocknum,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind;
     uint64_t totalspends,numspends,totaloutputs,numoutputs,totalbits,totalbytes,txfee,NXTfee_equiv;
     struct rawblock *R,*R2,*R3;
@@ -5845,14 +5846,22 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
     uint8_t *hashdata;
     int32_t varsize,num,rwflag = 0;
     struct ramchain_hashtable *hash;
-    struct ramchain_hashptr *hp;
+    struct ramchain_hashptr *ptr;
     hash = ram_gethash(ram,type);
     if ( deletefile != 0 )
         memset(hash,0,sizeof(*hash));
     strcpy(hash->coinstr,ram->name);
     hash->type = type;
-    ram_sethashname(fname,hash,0);
     num = 0;
+    ram_sethashname(fname,hash,0);
+    strcat(fname,".perm");
+    hash->permfp = fopen(fname,"wb");
+    if ( hash->permfp == 0 )
+    {
+        printf("couldnt create (%s)\n",fname);
+        exit(-1);
+    }
+    ram_sethashname(fname,hash,0);
     printf("inithashtable.(%s.%d) -> [%s]\n",ram->name,type,fname);
     if ( deletefile == 0 && (hash->newfp= fopen(fname,"rb+")) != 0 )
     {
@@ -5868,19 +5877,19 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
             if ( num < 10 )
             {
                 char hexbytes[8192];
-                struct ramchain_hashptr *checkhp;
+                struct ramchain_hashptr *checkptr;
                 init_hexbytes_noT(hexbytes,hashdata,varsize+datalen);
-                HASH_FIND(hh,hash->table,hashdata,varsize + datalen,checkhp);
-                fprintf(stderr,"%s offset %ld: varsize.%d datalen.%d created.(%s) ind.%d | checkhp.%p\n",ram->name,offset,(int)varsize,(int)datalen,(type != 'a') ? hexbytes :(char *)((long)hashdata+varsize),hash->ind+1,checkhp);
+                HASH_FIND(hh,hash->table,hashdata,varsize + datalen,checkptr);
+                fprintf(stderr,"%s offset %ld: varsize.%d datalen.%d created.(%s) ind.%d | checkptr.%p\n",ram->name,offset,(int)varsize,(int)datalen,(type != 'a') ? hexbytes :(char *)((long)hashdata+varsize),hash->ind+1,checkptr);
             }
-            HASH_FIND(hh,hash->table,hashdata,varsize + datalen,hp);
-            if ( hp != 0 )
+            HASH_FIND(hh,hash->table,hashdata,varsize + datalen,ptr);
+            if ( ptr != 0 )
             {
                 printf("corrupted hashtable %s: offset.%ld\n",fname,offset);
                 exit(-1);
             }
-            hp = (MAP_HUFF != 0 ) ? permalloc(ram->name,&ram->Perm,sizeof(*hp),6) : calloc(1,sizeof(*hp));
-            ram_addhash(hash,hp,hashdata,(int32_t)(varsize+datalen));
+            ptr = (MAP_HUFF != 0 ) ? permalloc(ram->name,&ram->Perm,sizeof(*ptr),6) : calloc(1,sizeof(*ptr));
+            ram_addhash(hash,ptr,hashdata,(int32_t)(varsize+datalen));
             offset += (varsize + datalen);
             fseek(hash->newfp,offset,SEEK_SET);
             num++;
@@ -5946,11 +5955,25 @@ void ram_disp_status(struct ramchain_info *ram)
     fprintf(stderr,"%s\n",buf);
 }
 
+void ram_write_permentry(struct ramchain_hashtable *table,struct ramchain_hashptr *ptr)
+{
+    int32_t datalen,varlen;
+    uint64_t varint;
+    varlen += hdecode_varint(&varint,ptr->hh.key,0,9);
+    datalen = ((int32_t)varint + varlen);
+    if ( fwrite(ptr->hh.key,1,datalen,table->permfp) != datalen )
+    {
+        printf("error saving type.%d ind.%d datalen.%d\n",table->type,ptr->permind,datalen);
+        exit(-1);
+    }
+    fflush(table->permfp);
+}
+
 int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_rawindp,struct rampayload *txpayload,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vout,uint16_t numvouts,uint32_t txid_rawind,int32_t isinternal)
 {
     struct rampayload payload;
     struct ramchain_hashtable *table;
-    struct ramchain_hashptr *addrptr;
+    struct ramchain_hashptr *addrptr,*scriptptr;
     struct rawvout_huffs *pair;
     uint32_t scriptind,addrind;
     char *str,coinaddr[1024];
@@ -5976,11 +5999,25 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
         huffpair_update(iter,ram,str,"value",&pair->value,value,8);
     }
     table = ram_gethash(ram,'s');
-    if ( scriptind > 0 && scriptind <= table->ind )
+    if ( scriptind > 0 && scriptind <= table->ind && (scriptptr= table->ptrs[scriptind]) != 0 )
     {
+        if ( iter != 1 && scriptptr->permind == 0 )
+        {
+            scriptptr->permind = ++ram->next_script_permind;
+            ram_write_permentry(table,scriptptr);
+            if ( scriptptr->permind != scriptptr->rawind )
+                ram->permind_changes++;
+        }
         table = ram_gethash(ram,'a');
         if ( addrind > 0 && addrind <= table->ind && (addrptr= table->ptrs[addrind]) != 0 )
         {
+            if ( iter != 1 && addrptr->permind == 0 )
+            {
+                addrptr->permind = ++ram->next_addr_permind;
+                ram_write_permentry(table,addrptr);
+                if ( addrptr->permind != addrptr->rawind )
+                    ram->permind_changes++;
+            }
             *addr_rawindp = addrind;
             *script_rawindp = scriptind;
             if ( txpayload == 0 )
@@ -6023,7 +6060,7 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
 int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vin,uint16_t numvins,uint32_t spendtxid_rawind)
 {
     static struct address_entry zeroB;
-    struct address_entry *bps,B,*bp;
+    struct address_entry B,*bp;
     struct ramchain_hashptr *txptr;
     struct ramchain_hashtable *table;
     struct rawvin_huffs *pair;
@@ -6050,6 +6087,8 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
         }
         if ( (txptr= table->ptrs[txid_rawind]) != 0 && txptr->payloads != 0 )
         {
+            if ( iter != 1 && txptr->permind == 0 )
+                printf("raw_rawvin_update: unexpected null permind for txid_rawind.%d in blocknum.%d txind.%d\n",txid_rawind,blocknum,txind);
             memset(&B,0,sizeof(B)), B.blocknum = blocknum, B.txind = txind, B.v = vin, B.spent = 1;
             if ( vout < txptr->numpayloads )
             {
@@ -6071,7 +6110,7 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
                 }
                 return(numbits);
             } else printf("(%d %d %d) vout.%d overflows bp->v.%d\n",blocknum,txind,vin,vout,B.v);
-        } else printf("rawvin_update: unexpected null table->ptrs[%d] or no payloads.%p\n",txid_rawind,bps);
+        } else printf("rawvin_update: unexpected null table->ptrs[%d] or no payloads.%p\n",txid_rawind,txptr->payloads);
     } else printf("txid_rawind.%u out of range %d\n",txid_rawind,table->ind);
     return(-1);
 }
@@ -6106,6 +6145,13 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
     {
         if ( (txptr= table->ptrs[txid_rawind]) != 0 )
         {
+            if ( iter != 1 && txptr->permind == 0 )
+            {
+                txptr->permind = ++ram->next_txid_permind;
+                ram_write_permentry(table,txptr);
+                if ( txptr->permind != txptr->rawind )
+                    ram->permind_changes++;
+            }
             if ( iter == 0 || iter == 2 )
             {
                 memset(&payload,0,sizeof(payload));
@@ -6175,7 +6221,16 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
         printf("ram_rawblock_update: blocknum.%d vs checkblocknum.%d\n",blocknum,checkblocknum);
         return(-1);
     }
-    
+    if ( iter != 1 )
+    {
+        if ( blocknum != ram->next_blocknum )
+        {
+            printf("ram_rawblock_update: blocknum.%d vs ram->next_blocknum.%d\n",blocknum,ram->next_blocknum);
+            return(-1);
+        }
+        //printf("block.%d vs %d\n",blocknum,ram->next_blocknum);
+        ram->next_blocknum++;
+    }
     numbits += hdecode_smallbits(&numtx,hp);
     numbits += hdecode_valuebits(&minted,hp);
     if ( toupper(iter) == 'H' )
@@ -6191,6 +6246,128 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
     }
     datalen += hconv_bitlen(numbits);
     return(datalen);
+}
+
+int32_t ram_rawvout_conv(HUFF *permhp,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vout,uint16_t numvouts)
+{
+    struct ramchain_hashtable *table;
+    struct ramchain_hashptr *addrptr,*scriptptr;
+    uint32_t scriptind,addrind;
+    uint64_t value;
+    int32_t numbits = 0;
+    numbits += hdecode_varbits(&scriptind,hp);
+    numbits += hdecode_varbits(&addrind,hp);
+    table = ram_gethash(ram,'s');
+    if ( scriptind > 0 && scriptind <= table->ind && (scriptptr= table->ptrs[scriptind]) != 0 )
+    {
+        hemit_varbits(permhp,scriptptr->permind);
+        table = ram_gethash(ram,'a');
+        if ( addrind > 0 && addrind <= table->ind && (addrptr= table->ptrs[addrind]) != 0 )
+        {
+            hemit_varbits(permhp,addrptr->permind);
+            numbits += hdecode_valuebits(&value,hp), hemit_valuebits(permhp,value);
+            return(numbits);
+        } else printf("ram_rawvout_update block.%d txind.%d vout.%d can find addrind.%d ptr.%p\n",blocknum,txind,vout,addrind,addrptr);
+    } else printf("ram_rawvout_update block.%d txind.%d vout.%d can find scriptind.%d\n",blocknum,txind,vout,scriptind);
+    return(-1);
+}
+
+int32_t ram_rawvin_conv(HUFF *permhp,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind,uint16_t vin,uint16_t numvins)
+{
+    struct ramchain_hashptr *txptr;
+    struct ramchain_hashtable *table;
+    uint32_t txid_rawind;
+    int32_t numbits = 0;
+    uint16_t vout;
+    table = ram_gethash(ram,'t');
+    numbits = hdecode_varbits(&txid_rawind,hp);
+    if ( txid_rawind > 0 && txid_rawind <= table->ind )
+    {
+        numbits += hdecode_smallbits(&vout,hp);
+        if ( (txptr= table->ptrs[txid_rawind]) != 0 && txptr->payloads != 0 )
+        {
+            if ( vout < txptr->numpayloads )
+            {
+                hemit_varbits(permhp,txptr->permind);
+                hemit_smallbits(permhp,vout);
+                return(numbits);
+            }
+            else printf("(%d %d %d) vout.%d overflows bp->v.%d\n",blocknum,txind,vin,vout,vin);
+        } else printf("rawvin_update: unexpected null table->ptrs[%d] or no payloads.%p\n",txid_rawind,txptr->payloads);
+    } else printf("txid_rawind.%u out of range %d\n",txid_rawind,table->ind);
+    return(-1);
+}
+
+int32_t ram_rawtx_conv(HUFF *permhp,struct ramchain_info *ram,HUFF *hp,uint32_t blocknum,uint16_t txind)
+{
+    struct ramchain_hashptr *txptr;
+    uint32_t txid_rawind = 0;
+    int32_t i,retval,numbits = 0;
+    uint16_t numvins,numvouts;
+    struct ramchain_hashtable *table;
+    table = ram_gethash(ram,'t');
+    numbits += hdecode_smallbits(&numvins,hp), hemit_smallbits(permhp,numvins);
+    numbits += hdecode_smallbits(&numvouts,hp), hemit_smallbits(permhp,numvouts);
+    numbits += hdecode_varbits(&txid_rawind,hp);
+    if ( txid_rawind > 0 && txid_rawind <= table->ind )
+    {
+        if ( (txptr= table->ptrs[txid_rawind]) != 0 )
+        {
+            hemit_varbits(permhp,txptr->permind);
+            if ( numvins > 0 ) // alloc and update payloads in iter 0, no payload operations in iter 1
+            {
+                for (i=0; i<numvins; i++,numbits+=retval)
+                    if ( (retval= ram_rawvin_conv(permhp,ram,hp,blocknum,txind,i,numvins)) < 0 )
+                        return(-1);
+            }
+            if ( numvouts > 0 ) // just count number of payloads needed in iter 0, iter 1 allocates and updates
+            {
+                for (i=0; i<numvouts; i++,numbits+=retval)
+                {
+                    if ( (retval= ram_rawvout_conv(permhp,ram,hp,blocknum,txind,i,numvouts)) < 0 )
+                        return(-2);
+                }
+            }
+            return(numbits);
+        }
+    } else printf("ram_rawtx_conv: parse error\n");
+    return(-3);
+}
+
+HUFF *ram_conv_permind(struct ramchain_info *ram,HUFF *hp,uint32_t checkblocknum)
+{
+    uint64_t minted; uint16_t numtx; uint32_t blocknum; int32_t txind,numbits,retval,format,datalen = 0;
+    HUFF *permhp; void *buf;
+    buf = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,hp->allocsize*2,9) : calloc(1,hp->allocsize*2);
+    permhp = hopen(ram->name,&ram->Perm,buf,hp->allocsize*2,0);
+    hrewind(hp);
+    hclear(permhp);
+    format = hp->buf[datalen++], hp->ptr++, hp->bitoffset = 8;
+    permhp->buf[datalen++] = format, permhp->ptr++, permhp->bitoffset = 8;
+    if ( format != 'B' )
+    {
+        printf("only format B supported for now\n");
+        return(0);
+    }
+    numbits = hdecode_varbits(&blocknum,hp), hemit_varbits(permhp,blocknum);
+    if ( blocknum != checkblocknum )
+    {
+        printf("ram_conv_permind: blocknum.%d vs checkblocknum.%d\n",blocknum,checkblocknum);
+        return(0);
+    }
+    numbits += hdecode_smallbits(&numtx,hp), hemit_smallbits(permhp,numtx);
+    numbits += hdecode_valuebits(&minted,hp), hemit_valuebits(permhp,minted);
+    if ( numtx > 0 )
+    {
+        for (txind=0; txind<numtx; txind++,numbits+=retval)
+            if ( (retval= ram_rawtx_conv(permhp,ram,hp,blocknum,txind)) < 0 )
+            {
+                printf("ram_conv_permind: blocknum.%d txind.%d parse error\n",blocknum,txind);
+                return(0);
+            }
+    }
+    datalen += hconv_bitlen(numbits);
+    return(permhp);
 }
 
 uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ramchain_hashptr **addrptrp,struct ramchain_info *ram,char *addr)
@@ -6286,7 +6463,11 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
         if ( (hpptr= ram_get_hpptr(blocks,blocks->blocknum)) != 0 && (hp= *hpptr) != 0 )
         {
             if ( blocks->format == 'B' && newflag != 0 )//&& ram->blocks.hps[blocks->blocknum] == 0 )
-                ram_rawblock_update(2,ram,hp,blocks->blocknum);
+                if ( ram_rawblock_update(2,ram,hp,blocks->blocknum) < 0 )
+                {
+                    printf("FATAL: error updating block.%d %c\n",blocks->blocknum,blocks->format);
+                    while ( 1 ) sleep(1);
+                }
             //else printf("hpptr.%p hp.%p newflag.%d\n",hpptr,hp,newflag);
         } //else printf("ram_process_blocks: hpptr.%p hp.%p\n",hpptr,hp);
         if ( blocks->format == 'B' && blocks->blocknum >= ram->RTblocknum-1 )
@@ -7052,7 +7233,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     permalloc(ram->name,&ram->Perm,PERMALLOC_SPACE_INCR,0);
     ram->blocks.M = permalloc(ram->name,&ram->Perm,sizeof(*ram->blocks.M),8);
     ram->blocks.hps = permalloc(ram->name,&ram->Perm,ram->maxblock*sizeof(*ram->blocks.hps),8);
-    printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.);
+    printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories: next.(%d %d %d %d)\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.,ram->next_blocknum,ram->next_txid_permind,ram->next_script_permind,ram->next_addr_permind);
     //#ifndef RAM_GENMODE
     ram_init_tmpspace(ram,tmpsize);
     ptr = (MAP_HUFF != 0 ) ? permalloc(ram->name,&ram->Perm,tmpsize,8) : calloc(1,tmpsize), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
@@ -7121,6 +7302,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
         HUFF *hp;
         uint32_t blocknum,errs=0,good=0,iter,i;
         for (iter=0; iter<2; iter++)
+        {
             for (errs=good=blocknum=0; blocknum<ram->blocks.contiguous; blocknum++)
             {
                 if ( (blocknum % 1000) == 0 )
@@ -7133,13 +7315,26 @@ void ram_init_ramchain(struct ramchain_info *ram)
                     }
                     else
                     {
-                        printf("iter.%d error on block.%d\n",iter,blocknum);
-                        ram_purge_badblock(ram,blocknum);
+                        printf("iter.%d error on block.%d purge it\n",iter,blocknum);
+                        while ( 1 ) sleep(1);
+                        //ram_purge_badblock(ram,blocknum);
                         errs++;
                         exit(-1);
                     }
                 } else errs++;
             }
+            if ( 0 && iter == 0 && ram->permind_changes != 0 )
+            {
+                printf("permind_changes.%d\n",ram->permind_changes);
+                for (blocknum=0; blocknum<ram->blocks.contiguous; blocknum++)
+                    if ( (hp= ram->blocks.hps[blocknum]) != 0 )
+                        ram->blocks.hps[blocknum] = ram_conv_permind(ram,hp,blocknum);
+                printf("converted to permind, please copy over files with .perm files and restart\n");
+                sprintf(fname,"ramchains/%s.perm",ram->name);
+                ram_save_bitstreams(&refsha,fname,ram->blocks.hps,ram->blocks.contiguous);
+                exit(1);
+            }
+        }
         fprintf(stderr,"contiguous.%d good.%d errs.%d\n",ram->blocks.contiguous,good,errs);
         for (blocknum=0; blocknum<ram->blocks.contiguous; blocknum+=64)
         {break;
@@ -7173,7 +7368,8 @@ void ram_init_ramchain(struct ramchain_info *ram)
             printf("&refsha.%p (%s) hps.%p cont.%d\n",&refsha,fname,ram->blocks.hps,ram->blocks.contiguous);
             if ( ram_save_bitstreams(&refsha,fname,ram->blocks.hps,ram->blocks.contiguous) > 0 )
                 datalen = ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,ram->blocks.contiguous,fname,&refsha);
-            printf("MApped.(%s) datalen.%d\n",fname,datalen);
+            printf("Created.(%s) datalen.%d | please restart\n",fname,datalen);
+            exit(1);
         }
     }
 #endif
@@ -7267,7 +7463,7 @@ void *process_ramchains(void *_argcoinstr)
                     else Ramchains[i]->NXTblocknum = 0;
                     printf("i.%d of %d: NXTblock.%d (%s) 1sttime %d\n",i,Numramchains,Ramchains[i]->NXTblocknum,Ramchains[i]->name,Ramchains[i]->firsttime);
                 }
-                else if ( iter == 0 )
+                else if ( iter == 1 )
                 {
                     ram_init_ramchain(Ramchains[i]);
                     Ramchains[i]->startmilli = ram_millis();
