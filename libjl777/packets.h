@@ -552,6 +552,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     if ( strcmp(nxtip,sender) == 0 )
                         nxtport = port;
                     noqueue = prevent_queueing(checkstr);
+                    printf("(%s) noqueue.%d\n",checkstr,noqueue);
                     if ( encrypted == 0 )
                     {
                         if ( /*strcmp("ping",checkstr) == 0 &&*/ internalflag == 0 && dontupdate == 0 )
@@ -566,6 +567,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                         strcpy(checkstr,"valid");
                     }
                     valueobj = cJSON_GetObjectItem(tmpjson,"data");
+                    printf("(%s) noqueue.%d encrypted.%d valueobj.%d\n",checkstr,noqueue,encrypted,is_cJSON_Number(valueobj));
                     if ( is_cJSON_Number(valueobj) != 0 )
                     {
                         copy_cJSON(datalenstr,valueobj);
@@ -588,6 +590,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     {
                         char previpaddr[64];
                         struct udp_queuecmd *qp;
+                        printf("prevaddr.%p\n",prevaddr);
                         if ( prevaddr != 0 )
                             extract_nameport(previpaddr,sizeof(previpaddr),(struct sockaddr_in *)prevaddr);
                         else previpaddr[0] = 0;
