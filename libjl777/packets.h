@@ -537,6 +537,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
             {
                 tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
                 tmpjson = cJSON_Parse(parmstxt);
+                printf("tokenized_np.%p for (%s) tmpjson.%p\n",tokenized_np,senderNXTaddr,tmpjson);
                 if ( tmpjson != 0 )
                 {
                     char nxtip[64];
@@ -545,7 +546,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     copy_cJSON(nxtip,cJSON_GetObjectItem(tmpjson,"ipaddr"));
                     if ( is_illegal_ipaddr(nxtip) != 0 || notlocalip(nxtip) == 0 )
                         strcpy(nxtip,sender);
-                    if ( Debuglevel > 2 )
+                   // if ( Debuglevel > 2 )
                         fprintf(stderr,"nxtip.(%s) %s\n",nxtip,parmstxt);
                     nxtport = (int32_t)get_API_int(cJSON_GetObjectItem(tmpjson,"port"),0);
                     if ( strcmp(nxtip,sender) == 0 )
