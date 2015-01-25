@@ -5,6 +5,9 @@
 //  by jl777 on 12/29/14.
 //  MIT license
 
+// BTC?
+// 0x7fa44dede4a0 txid_rawind.142727 txid already there: (block.91842 txind.0)[1] vs B.(91812 0 0)
+// 0x7fa44dedaae0 txid_rawind.142573 txid already there: (block.91880 txind.0)[1] vs B.(91722 0 0)
 
 // to port ramchains, the following is needed
 // void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp) or the equivalent needs to create the required ramchain_info

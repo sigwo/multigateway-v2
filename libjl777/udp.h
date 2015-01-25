@@ -221,6 +221,7 @@ void process_udpentry(struct udp_entry *up)
     if ( notlocalip(ipaddr) == 0 )
         strcpy(ipaddr,cp->myipaddr);
     retjsonstr[0] = 0;
+    fprintf(stderr,"UDP process %d from %s/%d crc.%x\n",up->len,ipaddr,supernet_port,_crc32(0,up->buf,up->len));
     process_packet(up->internalflag,retjsonstr,up->buf,up->len,up->udp,&up->addr,ipaddr,supernet_port);
     fprintf(stderr,"UDP processed %d from %s/%d crc.%x\n",up->len,ipaddr,supernet_port,_crc32(0,up->buf,up->len));
     free(up->buf);

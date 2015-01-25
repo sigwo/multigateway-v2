@@ -291,6 +291,7 @@ void SuperNET_idler(uv_idle_t *handle)
         process_sendQ_item(wr);
     }
 #endif
+    printf("check queue\n");
     while ( (up= queue_dequeue(&UDP_Q)) != 0 )
         process_udpentry(up);
     if ( millis > (lastclock + 1000) )
