@@ -222,6 +222,7 @@ void process_udpentry(struct udp_entry *up)
         strcpy(ipaddr,cp->myipaddr);
     retjsonstr[0] = 0;
     process_packet(up->internalflag,retjsonstr,up->buf,up->len,up->udp,&up->addr,ipaddr,supernet_port);
+    fprintf(stderr,"UDP processed %d from %s/%d crc.%x\n",up->len,ipaddr,supernet_port,_crc32(0,up->buf,up->len));
     free(up->buf);
     free(up);
 }
@@ -266,6 +267,7 @@ void _on_udprecv(int32_t queueflag,int32_t internalflag,uv_udp_t *udp,ssize_t nr
             queue_enqueue(&UDP_Q,up);
         }
         else process_packet(internalflag,retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,ipaddr,supernet_port);
+        fprintf(stderr,"UDP %s %ld from %s/%d crc.%x\n",queueflag?"queued":"processed",nread,ipaddr,supernet_port,_crc32(0,rcvbuf->base,nread));
     }
     else if ( rcvbuf->base != 0 )
         free(rcvbuf->base);
