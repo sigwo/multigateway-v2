@@ -854,6 +854,7 @@ int32_t init_SuperNET_storage(char *backupdir)
         if ( IS_LIBTEST > 0 && IS_LIBTEST != 7 )
         {
             open_database(MULTISIG_DATA,&SuperNET_dbs[MULTISIG_DATA],"multisig.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct multisig_addr),sizeof(struct multisig_addr) + sizeof(struct pubkey_info)*16,0);
+            init_multisigDB();
             if ( Global_mp->gatewayid < 0 )
             {
                 open_database(PUBLIC_DATA,&SuperNET_dbs[PUBLIC_DATA],"public.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096,0);
