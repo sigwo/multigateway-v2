@@ -7545,14 +7545,16 @@ void *process_ramchains(void *_argcoinstr)
                 }
             }
         }
-        for (i=0; i<Numramchains; i++)
-        {
-            ram = Ramchains[i];
-            if ( argcoinstr == 0 || strcmp(argcoinstr,ram->name) == 0 )
-                ram_update_disp(ram);
-        }
         if ( processed == 0 )
+        {
+            for (i=0; i<Numramchains; i++)
+            {
+                ram = Ramchains[i];
+                if ( argcoinstr == 0 || strcmp(argcoinstr,ram->name) == 0 )
+                    ram_update_disp(ram);
+            }
             sleep(10);
+        }
         MGW_initdone++;
     }
     printf("process_ramchains: finished launching\n");
