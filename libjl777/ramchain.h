@@ -6425,7 +6425,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                         nxt64bits = _calc_nxt64bits(msig->NXTaddr);
                         printf ("deposit.(%s/%d %d,%d %s %.8f)rt%d.g%d ",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),ram->NXT_is_realtime,(int32_t)(nxt64bits % NUM_GATEWAYS));
                         pending += payloads[i].value, numpending++;
-                        if ( ram->NXT_is_realtime != 0 && (payloads[i].B.blocknum + ram->depositconfirms) <= ram->RTblocknum && ram->MGWbalance > payloads[i].value && ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
+                        if ( ram->NXT_is_realtime != 0 && (payloads[i].B.blocknum + ram->depositconfirms) <= ram->RTblocknum && ram->MGWbalance >= 0 && ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
                         {
                             if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ram->ap,payloads[i].value,msig->multisigaddr,txidstr,&payloads[i].B,&msig->buyNXT,ram->srvNXTADDR,ram->srvNXTACCTSECRET,ram->DEPOSIT_XFER_DURATION) == payloads[i].value )
                                 payloads[i].pendingdeposit = 0;
