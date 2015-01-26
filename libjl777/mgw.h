@@ -2079,7 +2079,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                 }
                 else printf("error getting msigaddr for cp.%p ref.(%s) addr.(%s) pubkey.(%s)\n",cp,refNXTaddr,myacctcoinaddr,mypubkey);
             }
-            else if ( iter == 1 && ismynxtbits(contact->nxt64bits) == 0 && http_search_msig(Server_NXTaddrs[i],Server_ipaddrs[i],refacct) == 0 )
+            else if ( iter == 1 && ismynxtbits(contact->nxt64bits) == 0 )//&& http_search_msig(Server_NXTaddrs[i],Server_ipaddrs[i],refacct) == 0 )
             {
                 acctcoinaddr[0] = pubkey[0] = 0;
                 if ( get_NXT_coininfo(contact->nxt64bits,acctcoinaddr,pubkey,refbits,cp->name) == 0 || acctcoinaddr[0] == 0 || pubkey[0] == 0 )
