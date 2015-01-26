@@ -822,6 +822,11 @@ int32_t init_multisigDB()
                             if ( (msigram= decode_msigjson(0,cJSON_GetArrayItem(json,i),Server_NXTaddrs[j])) != 0 && find_msigaddr(msigram->multisigaddr) == 0 )
                             {
                                 printf("ADD (%s) NXT.(%s) NXTpubkey.(%s)\n",msigram->multisigaddr,msigram->NXTaddr,msigram->NXTpubkey);
+                                if ( msigram->NXTpubkey[0] == 0 )
+                                {
+                                    set_NXTpubkey(msigram->NXTpubkey,msigram->NXTaddr);
+                                    printf("FIX (%s) NXT.(%s) NXTpubkey.(%s)\n",msigram->multisigaddr,msigram->NXTaddr,msigram->NXTpubkey);
+                                }
                                 update_msig_info(msigram,i == n-1,Server_NXTaddrs[j]), added++;
                             }
                     }
