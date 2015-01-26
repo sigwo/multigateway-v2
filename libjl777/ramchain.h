@@ -5354,7 +5354,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
     void *block = 0;
     if ( format == 0 )
         format = 'V';
-    if ( strcmp(ram->name,"BTC") != 0 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )
+    if ( 0 && strcmp(ram->name,"BTC") != 0 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )
     {
         if ( ram_expand_bitstream(0,tmp,ram,hp) <= 0 )
         {
@@ -5702,7 +5702,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     prevhps = ram_get_hpptr(prevblocks,blocknum);
     ram_setfname(fname,ram,blocknum,formatstr);
     //printf("check create.(%s)\n",fname);
-    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 )//&& verifyflag == 0 )
+    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 && verifyflag == 0 )
     {
         fclose(fp);
         return(0);
