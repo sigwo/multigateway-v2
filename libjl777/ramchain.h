@@ -6477,7 +6477,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
         ram_create_block(1,ram,blocks,prev,blocks->blocknum), processed++;
         if ( (hpptr= ram_get_hpptr(blocks,blocks->blocknum)) != 0 && (hp= *hpptr) != 0 )
         {
-            if ( (blocks->format == 'B' || blocks->format == 'V') && newflag != 0 )//&& ram->blocks.hps[blocks->blocknum] == 0 )
+            if ( blocks->format == 'B' && newflag != 0 )//&& ram->blocks.hps[blocks->blocknum] == 0 )
                 if ( ram_rawblock_update(2,ram,hp,blocks->blocknum) < 0 )
                 {
                     printf("FATAL: error updating block.%d %c\n",blocks->blocknum,blocks->format);
