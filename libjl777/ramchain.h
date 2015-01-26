@@ -5843,6 +5843,7 @@ uint32_t ram_load_blockcheck(FILE *fp)
 
 int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchain_info *ram,char type)
 {
+    extern int32_t PERMUTE_RAWINDS;
     long offset,len,fileptr;
     uint64_t datalen;
     char fname[1024],destfname[1024],str[64];
@@ -5856,7 +5857,7 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
     strcpy(hash->coinstr,ram->name);
     hash->type = type;
     num = 0;
-    if ( 1 )
+    if ( PERMUTE_RAWINDS != 0 )
     {
         ram_sethashname(fname,hash,0);
         strcat(fname,".perm");
@@ -7340,9 +7341,9 @@ void ram_init_ramchain(struct ramchain_info *ram)
                     }
                 } else errs++;
             }
-            if ( 1 && iter == 0 && ram->permind_changes != 0 )
+            printf(">>>>>>>>>>>>> permind_changes.%d <<<<<<<<<<<<\n",ram->permind_changes);
+            if ( ram->addrhash.permfp != 0 && ram->txidhash.permfp != 0 && ram->scripthash.permfp != 0 && iter == 0 && ram->permind_changes != 0 )
             {
-                printf("permind_changes.%d\n",ram->permind_changes);
                 for (blocknum=0; blocknum<ram->blocks.contiguous; blocknum++)
                 {
                     if ( (hp= ram->blocks.hps[blocknum]) != 0 )
@@ -7520,7 +7521,7 @@ void *process_ramchains(void *_argcoinstr)
                     for (pass=1; pass<=4; pass++)
                     {
                         ram_update_RTblock(ram);
-                        processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],10000.);
+                        processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],600000.);
                         ram_update_disp(ram);
 #ifdef RAM_GENMODE
                         break;

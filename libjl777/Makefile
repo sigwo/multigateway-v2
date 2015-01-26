@@ -54,7 +54,7 @@ patch: doesntexist; \
 ramchains: doesntexist; \
     mkdir ramchains; \
     cd ramchains; \
-    unzip ../ramchains.zip; \
+    unzip ../ramchains.zip; mv BTCD.addr BTCD.script BTCD.txid BTCD; \
     cd ..;\
 
 patch1: doesntexist; \
