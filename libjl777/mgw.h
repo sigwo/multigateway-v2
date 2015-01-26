@@ -361,17 +361,16 @@ struct multisig_addr *ram_add_msigaddr(char *msigaddr,int32_t n,char *NXTaddr,ch
             msig->buyNXT = buyNXT;
         if ( didMSIGinit == 0 )
         {
-            portable_mutex_init(&MSIGmutex);
+            //portable_mutex_init(&MSIGmutex);
             didMSIGinit = 1;
         }
-        printf("ram_add_msigaddr MSIG[%s] NXT.%s (%s) buyNXT.%d\n",msigaddr,msig->NXTaddr,msig->NXTpubkey,msig->buyNXT);
-        portable_mutex_lock(&MSIGmutex);
+        //printf("ram_add_msigaddr MSIG[%s] NXT.%s (%s) buyNXT.%d\n",msigaddr,msig->NXTaddr,msig->NXTpubkey,msig->buyNXT);
+        //portable_mutex_lock(&MSIGmutex);
         MSIGS = realloc(MSIGS,(1+Num_MSIGS) * sizeof(*MSIGS));
-        MSIGS[Num_MSIGS] = msig;
-        Num_MSIGS++;
+        MSIGS[Num_MSIGS] = msig, Num_MSIGS++;
         //HASH_ADD_KEYPTR(hh,MSIG_table,clonestr(msigaddr),strlen(msigaddr),msig);
-        portable_mutex_unlock(&MSIGmutex);
-        printf("done ram_add_msigaddr MSIG[%s] NXT.%s (%s) buyNXT.%d\n",msigaddr,msig->NXTaddr,msig->NXTpubkey,msig->buyNXT);
+        //portable_mutex_unlock(&MSIGmutex);
+        //printf("done ram_add_msigaddr MSIG[%s] NXT.%s (%s) buyNXT.%d\n",msigaddr,msig->NXTaddr,msig->NXTpubkey,msig->buyNXT);
     }
     return(msig);
 }
