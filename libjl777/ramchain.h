@@ -5337,14 +5337,14 @@ void ram_setfname(char *fname,struct ramchain_info *ram,uint32_t blocknum,char *
 void ram_purge_badblock(struct ramchain_info *ram,uint32_t blocknum)
 {
     char fname[1024];
-    ram_setfname(fname,ram,blocknum,"V");
-    delete_file(fname,0);
+    //ram_setfname(fname,ram,blocknum,"V");
+    //delete_file(fname,0);
     ram_setfname(fname,ram,blocknum,"B");
     delete_file(fname,0);
-    ram_setfname(fname,ram,blocknum,"B64");
-    delete_file(fname,0);
-    ram_setfname(fname,ram,blocknum,"B4096");
-    delete_file(fname,0);
+    //ram_setfname(fname,ram,blocknum,"B64");
+    //delete_file(fname,0);
+    //ram_setfname(fname,ram,blocknum,"B4096");
+   // delete_file(fname,0);
 }
 
 HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,int32_t blocknum,int32_t format,HUFF **prevhpp)
