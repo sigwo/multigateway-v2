@@ -7523,6 +7523,8 @@ void *process_ramchains(void *_argcoinstr)
                             break;
 #endif
                     }
+                    //BTCD CREATED.B block.341327 datalen.53 | RT.341715 lag.388
+                   // BTCD CREATED.B block.341614 datalen.56 | RT.341715 lag.101
                     if ( ram_update_disp(ram) != 0 )
                     {
                         if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
