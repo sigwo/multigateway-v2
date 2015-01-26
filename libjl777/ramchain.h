@@ -29,7 +29,7 @@
 #define TMPALLOC_SPACE_INCR 10000000
 #define PERMALLOC_SPACE_INCR (1024 * 1024 * 128)
 
-extern int32_t MGW_initdone;
+extern int32_t MGW_initdone,PERMUTE_RAWINDS;
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
 extern void calc_sha256cat(unsigned char hash[256 >> 3],unsigned char *src,int32_t len,unsigned char *src2,int32_t len2);
 extern struct multisig_addr *find_msigaddr(char *msigaddr);
@@ -5843,7 +5843,6 @@ uint32_t ram_load_blockcheck(FILE *fp)
 
 int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchain_info *ram,char type)
 {
-    extern int32_t PERMUTE_RAWINDS;
     long offset,len,fileptr;
     uint64_t datalen;
     char fname[1024],destfname[1024],str[64];
@@ -6233,7 +6232,7 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
     }
     if ( iter != 1 )
     {
-        if ( blocknum != ram->next_blocknum )
+        if ( PERMUTE_RAWINDS != 0 && blocknum != ram->next_blocknum )
         {
             printf("ram_rawblock_update: blocknum.%d vs ram->next_blocknum.%d\n",blocknum,ram->next_blocknum);
             return(-1);
