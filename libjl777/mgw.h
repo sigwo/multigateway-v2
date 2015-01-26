@@ -2115,15 +2115,17 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
         }
         //fprintf(stderr,"return valid.%d\n",valid);
     } else valid = N;
-    if ( valid == N )
+    if ( valid == N && msig != 0 )
     {
         retstr = create_multisig_json(msig,0);
         if ( retstr != 0 )
         {
-            if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
-                printf("retstr.(%s) previp.(%s)\n",retstr,previpaddr);
             if ( retstr != 0 && previpaddr != 0 && previpaddr[0] != 0 )
+            {
+                //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
+                    printf("retstr.(%s) previp.(%s)\n",retstr,previpaddr);
                 send_to_ipaddr(0,1,previpaddr,retstr,NXTACCTSECRET);
+            }
             if ( msig != 0 )
             {
                 if ( 0 && update_MGW_msig(msig,NXTaddr) > 0 && Global_mp->gatewayid == 2 )
