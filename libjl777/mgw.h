@@ -2112,30 +2112,32 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
             safecopy(msig->email,email,sizeof(msig->email));
             msig->buyNXT = buyNXT;
             update_msig_info(msig,1,NXTaddr);
-            if ( valid == N )
-            {
-                retstr = create_multisig_json(msig,0);
-                if ( retstr != 0 )
-                {
-                    if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
-                        printf("retstr.(%s) previp.(%s)\n",retstr,previpaddr);
-                    if ( retstr != 0 && previpaddr != 0 && previpaddr[0] != 0 )
-                        send_to_ipaddr(0,1,previpaddr,retstr,NXTACCTSECRET);
-                    if ( msig != 0 )
-                    {
-                        if ( 0 && update_MGW_msig(msig,NXTaddr) > 0 && Global_mp->gatewayid == 2 )
-                            broadcast_bindAM(refNXTaddr,msig,0);
-                        free(msig);
-                    }
-                }
-            }
         }
         //fprintf(stderr,"return valid.%d\n",valid);
-    } else free(msig), valid = N;
+    } else valid = N;
+    if ( valid == N )
+    {
+        retstr = create_multisig_json(msig,0);
+        if ( retstr != 0 )
+        {
+            if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
+                printf("retstr.(%s) previp.(%s)\n",retstr,previpaddr);
+            if ( retstr != 0 && previpaddr != 0 && previpaddr[0] != 0 )
+                send_to_ipaddr(0,1,previpaddr,retstr,NXTACCTSECRET);
+            if ( msig != 0 )
+            {
+                if ( 0 && update_MGW_msig(msig,NXTaddr) > 0 && Global_mp->gatewayid == 2 )
+                    broadcast_bindAM(refNXTaddr,msig,0);
+            }
+        }
+    }
+    if ( msig != 0 )
+        free(msig);
     if ( valid != N || retstr == 0 )
     {
         sprintf(buf,"{\"error\":\"missing msig info\",\"refacct\":\"%s\",\"coin\":\"%s\",\"M\":%d,\"N\":%d,\"valid\":%d}",refacct,coinstr,M,N,valid);
         retstr = clonestr(buf);
+        printf("%s\n",buf);
     }
     return(retstr);
 }
