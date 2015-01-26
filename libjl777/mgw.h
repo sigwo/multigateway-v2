@@ -326,7 +326,7 @@ struct multisig_addr *find_msigaddr(char *msigaddr)
         portable_mutex_init(&MSIGmutex);
         didMSIGinit = 1;
     }
-    //portable_mutex_lock(&MSIGmutex);
+    portable_mutex_lock(&MSIGmutex);
     //HASH_FIND(hh,MSIG_table,msigaddr,strlen(msigaddr),msig);
     for (i=0; i<Num_MSIGS; i++)
         if ( strcmp(msigaddr,MSIGS[i]->multisigaddr) == 0 )
@@ -334,7 +334,7 @@ struct multisig_addr *find_msigaddr(char *msigaddr)
             msig = MSIGS[i];
             break;
         }
-    //portable_mutex_unlock(&MSIGmutex);
+    portable_mutex_unlock(&MSIGmutex);
     return(msig);
     /*if ( MTsearch_hashtable(&SuperNET_dbs[MULTISIG_DATA].ramtable,msigaddr) == HASHSEARCH_ERROR )
      {
@@ -365,11 +365,11 @@ struct multisig_addr *ram_add_msigaddr(char *msigaddr,int32_t n,char *NXTaddr,ch
             didMSIGinit = 1;
         }
         //printf("ram_add_msigaddr MSIG[%s] NXT.%s (%s) buyNXT.%d\n",msigaddr,msig->NXTaddr,msig->NXTpubkey,msig->buyNXT);
-        //portable_mutex_lock(&MSIGmutex);
+        portable_mutex_lock(&MSIGmutex);
         MSIGS = realloc(MSIGS,(1+Num_MSIGS) * sizeof(*MSIGS));
         MSIGS[Num_MSIGS] = msig, Num_MSIGS++;
         //HASH_ADD_KEYPTR(hh,MSIG_table,clonestr(msigaddr),strlen(msigaddr),msig);
-        //portable_mutex_unlock(&MSIGmutex);
+        portable_mutex_unlock(&MSIGmutex);
         //printf("done ram_add_msigaddr MSIG[%s] NXT.%s (%s) buyNXT.%d\n",msigaddr,msig->NXTaddr,msig->NXTpubkey,msig->buyNXT);
     }
     return(msig);
