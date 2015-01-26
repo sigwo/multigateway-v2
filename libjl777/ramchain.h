@@ -7259,12 +7259,13 @@ void ram_init_ramchain(struct ramchain_info *ram)
         ram->mappedblocks[4] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->blocks4096,&ram->blocks64,4096,12);
         ram->mappedblocks[3] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->blocks64,&ram->Bblocks,64,6);
         ram->mappedblocks[2] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->Bblocks,&ram->Vblocks,'B',0);
-        //ram->mappedblocks[1] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->Vblocks,&ram->blocks,'V',0);
+        ram->mappedblocks[1] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->Vblocks,&ram->blocks,'V',0);
         ram->mappedblocks[0] = ram_init_blocks(0,ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
-        //ram_update_RTblock(ram);
+        ram_update_RTblock(ram);
         for (pass=1; pass<=4; pass++)
         {
-            if ( 0 && pass == 2 )
+            printf("pass.%d\n",pass);
+            if ( 1 && pass == 2 )
             {
                 nofile = ram_init_hashtable(1,&blocknums[0],ram,'a');
                 nofile += ram_init_hashtable(1,&blocknums[1],ram,'s');
@@ -7273,6 +7274,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
             else if ( pass == 1 )
             {
                 firstblock = ram_find_firstgap(ram,ram->mappedblocks[pass]->format);
+                printf("firstblock.%d\n",firstblock);
                 if ( firstblock < 10 )
                     ram->mappedblocks[pass]->blocknum = 0;
                 else ram->mappedblocks[pass]->blocknum = (firstblock - 10);
