@@ -608,9 +608,9 @@ int32_t compare_files(char *fname,char *fname2) // OS portable
                     printf("compare error at offset.%d: (%s) src.%ld vs. (%s) dest.%ld\n",offset,fname,ftell(fp),fname2,ftell(fp2)), errs++;
             //while ( (c= fgetc(srcfp)) != EOF )
             //   fputc(c,destfp);
-            fclose(fp2);
+            fclose(fp);
         }
-        fclose(fp);
+        fclose(fp2);
     }
     return(errs);
 }
@@ -5354,7 +5354,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
     void *block = 0;
     if ( format == 0 )
         format = 'V';
-    if ( 1 && strcmp(ram->name,"BTC") != 0 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )
+    if ( strcmp(ram->name,"BTC") != 0 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )
     {
         if ( ram_expand_bitstream(0,tmp,ram,hp) <= 0 )
         {
@@ -5694,7 +5694,7 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
 uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct mappedblocks *blocks,struct mappedblocks *prevblocks,uint32_t blocknum)
 {
     char fname[1024],formatstr[16];
-    FILE *fp = 0;
+    FILE *fp;
     bits256 sha,refsha;
     HUFF *hp,**hpptr,**hps,**prevhps;
     int32_t i,n,numblocks,datalen = 0;
@@ -5702,13 +5702,11 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     prevhps = ram_get_hpptr(prevblocks,blocknum);
     ram_setfname(fname,ram,blocknum,formatstr);
     //printf("check create.(%s)\n",fname);
-    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 && verifyflag == 0 )
+    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 )//&& verifyflag == 0 )
     {
         fclose(fp);
         return(0);
     }
-    if ( fp != 0 )
-        fclose(fp);
     if ( 0 && blocks->format == 'V' )
     {
         if ( _get_blockinfo(blocks->R,ram,blocknum) > 0 )
@@ -5873,12 +5871,10 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
     printf("inithashtable.(%s.%d) -> [%s]\n",ram->name,type,fname);
     if ( deletefile == 0 && (hash->newfp= fopen(fname,"rb+")) != 0 )
     {
-        if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 || hash->M.allocsize == 0 )
-        {
-            fclose(hash->newfp);
-            hash->newfp = 0;
+        if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
             return(1);
-        }
+        if ( hash->M.allocsize == 0 )
+            return(1);
         fileptr = (long)hash->M.fileptr;
         offset = 0;
         while ( (varsize= (int32_t)hload_varint(&datalen,hash->newfp)) > 0 && (offset + datalen) <= hash->M.allocsize )
@@ -6105,27 +6101,17 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
             memset(&B,0,sizeof(B)), B.blocknum = blocknum, B.txind = txind, B.v = vin, B.spent = 1;
             if ( vout < txptr->numpayloads )
             {
-                char txidstr[256];
                 if ( iter <= 2 )
                 {
                     bp = &txptr->payloads[vout].spentB;
                     if ( memcmp(bp,&zeroB,sizeof(zeroB)) == 0 )
-                    {
-                        if ( bp->blocknum == 341327 && bp->txind == 1 )
-                        {
-                            ram_txid(txidstr,ram,txid_rawind);
-                            printf("vin.(%d %d %d) -> txid.(%s/v%d)\n",bp->blocknum,bp->txind,bp->v,txidstr,vout);
-                        }
                         ram_markspent(ram,&txptr->payloads[vout],&B,txid_rawind);
-                    }
                     else if ( memcmp(bp,&B,sizeof(B)) == 0 )
                         printf("duplicate spentB (%d %d %d)\n",B.blocknum,B.txind,B.v);
                     else
                     {
-                        ram_txid(txidstr,ram,txid_rawind);
-                        printf("%s tx@%d: interloper.%u perm.%u at (blocknum.%d txind.%d vin.%d)! (%d %d %d).%d vs (%d %d %d).%d >>>>>>> delete? <<<<<<<<\n",txidstr,txptr->payloads[0].B.blocknum,txid_rawind,txptr->permind,blocknum,txind,vin,bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
+                        printf("interloper.%u perm.%u at (blocknum.%d txind.%d vin.%d)! (%d %d %d).%d vs (%d %d %d).%d >>>>>>> delete? <<<<<<<<\n",txid_rawind,txptr->permind,blocknum,txind,vin,bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
                         //if ( getchar() == 'y' )
-                        ram_purge_badblock(ram,txptr->payloads[0].B.blocknum);
                         ram_purge_badblock(ram,bp->blocknum);
                         ram_purge_badblock(ram,blocknum);
                         exit(-1);
@@ -6507,6 +6493,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
         blocks->processed += (1 << blocks->shift);
         blocks->blocknum += (1 << blocks->shift);
         estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->RTblocknum-blocks->blocknum) / 60000.;
+//break;
     }
     //printf("(%d >> %d) < (%d >> %d)\n",blocks->blocknum,blocks->shift,prev->blocknum,blocks->shift);
     return(processed);
@@ -7272,7 +7259,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     nofile = ram_init_hashtable(0,&blocknums[0],ram,'a');
     nofile += ram_init_hashtable(0,&blocknums[1],ram,'s');
     nofile += ram_init_hashtable(0,&blocknums[2],ram,'t');
-    if ( nofile == 3 )//|| strcmp(ram->name,"BTC") == 0 )
+    if ( nofile == 3 || strcmp(ram->name,"BTC") == 0 )
     {
         printf("REGEN\n");
         ram->mappedblocks[4] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->blocks4096,&ram->blocks64,4096,12);
@@ -7525,22 +7512,24 @@ void *process_ramchains(void *_argcoinstr)
                         printf("ERROR _process_ramchain.%s\n",ram->name);
                     processed--;
                 }
-                else
+                else //if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
                 {
+                    if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
+                        ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - 0*ram->min_NXTconfirms); // possible for tx to disappear
                     ram->NXT_is_realtime = (ram->NXTblocknum >= _get_NXTheight(0)-1);
+                    ram_update_RTblock(ram);
                     for (pass=1; pass<=4; pass++)
                     {
                         processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],10000.);
+#ifdef RAM_GENMODE
                         if ( (ram->mappedblocks[pass]->blocknum >> ram->mappedblocks[pass]->shift) < (ram->mappedblocks[pass-1]->blocknum >> ram->mappedblocks[pass]->shift) )
                             break;
+#endif
                     }
-                    //BTCD CREATED.B block.341327 datalen.53 | RT.341715 lag.388
-                   // BTCD CREATED.B block.341614 datalen.56 | RT.341715 lag.101
+                    //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
+                    //    ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms);
                     if ( ram_update_disp(ram) != 0 )
                     {
-                        if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
-                            ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - 0*ram->min_NXTconfirms); // possible for tx to disappear
-                        ram_update_RTblock(ram);
                         ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
                         ram->MGWbalance = ram->MGWunspent - ram->circulation - ram->MGWpendingredeems - ram->MGWpendingdeposits;
                         if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
@@ -7556,16 +7545,14 @@ void *process_ramchains(void *_argcoinstr)
                 }
             }
         }
-        if ( processed == 0 )
+        for (i=0; i<Numramchains; i++)
         {
-            for (i=0; i<Numramchains; i++)
-            {
-                ram = Ramchains[i];
-                if ( argcoinstr == 0 || strcmp(argcoinstr,ram->name) == 0 )
-                    ram_update_disp(ram);
-            }
-            sleep(10);
+            ram = Ramchains[i];
+            if ( argcoinstr == 0 || strcmp(argcoinstr,ram->name) == 0 )
+                ram_update_disp(ram);
         }
+        if ( processed == 0 )
+            sleep(10);
         MGW_initdone++;
     }
     printf("process_ramchains: finished launching\n");
