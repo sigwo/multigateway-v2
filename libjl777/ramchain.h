@@ -6468,7 +6468,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
     double estimated,startmilli = ram_millis();
     int32_t newflag,processed = 0;
     ram_setformatstr(formatstr,blocks->format);
-    printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]? %f %f timebudget %f\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift),ram_millis(),(startmilli + timebudget),timebudget);
+    //printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]? %f %f timebudget %f\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift),ram_millis(),(startmilli + timebudget),timebudget);
     while ( (blocks->blocknum >> blocks->shift) < (prev->blocknum >> blocks->shift) && ram_millis() < (startmilli + timebudget) )
     {
         //printf("inside\n");
@@ -7463,7 +7463,6 @@ void *process_ramchains(void *_argcoinstr)
     int32_t i,pass,processed = 0;
     while ( IS_LIBTEST != 7 && Finished_init == 0 )
         sleep(1);
-//while ( 1 ) sleep(1);
     ensure_SuperNET_dirs("ramchains");
     startmilli = ram_millis();
     if ( _argcoinstr != 0 && ((long *)_argcoinstr)[1] != 0 && ((long *)_argcoinstr)[2] != 0 )
@@ -7471,8 +7470,7 @@ void *process_ramchains(void *_argcoinstr)
         modval = (int32_t)((long *)_argcoinstr)[1];
         numinterleaves = (int32_t)((long *)_argcoinstr)[2];
         printf("modval.%d numinterleaves.%d\n",modval,numinterleaves);
-    } else
-        modval = 0, numinterleaves = 1;
+    } else modval = 0, numinterleaves = 1;
     for (iter=0; iter<3; iter++)
     {
         for (i=0; i<Numramchains; i++)
@@ -7519,19 +7517,18 @@ void *process_ramchains(void *_argcoinstr)
                     if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
                         ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - 0*ram->min_NXTconfirms); // possible for tx to disappear
                     ram->NXT_is_realtime = (ram->NXTblocknum >= _get_NXTheight(0)-1);
+                    ram_update_RTblock(ram);
                     for (pass=1; pass<=4; pass++)
                     {
-                        ram_update_RTblock(ram);
                         processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],10000.);
-                        ram_update_disp(ram);
 #ifdef RAM_GENMODE
-                        break;
-#endif
                         if ( (ram->mappedblocks[pass]->blocknum >> ram->mappedblocks[pass]->shift) < (ram->mappedblocks[pass-1]->blocknum >> ram->mappedblocks[pass]->shift) )
                             break;
+#endif
                     }
                     //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
                     //    ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms);
+                    ram_update_disp(ram);
                     ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
                     ram->MGWbalance = ram->MGWunspent - ram->circulation - ram->MGWpendingredeems - ram->MGWpendingdeposits;
                     if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
