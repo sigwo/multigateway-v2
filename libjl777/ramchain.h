@@ -4040,7 +4040,7 @@ int32_t ram_addhash(struct ramchain_hashtable *hash,struct ramchain_hashptr *hp,
 {
     hp->rawind = ++hash->ind;
     HASH_ADD_KEYPTR(hh,hash->table,ptr,datalen,hp);
-    if ( hash->type == 't' )
+    if ( 0 && hash->type == 't' )
     {
         char hexbytes[8192];
         struct ramchain_hashptr *checkhp;
@@ -7516,7 +7516,7 @@ void *process_ramchains(void *_argcoinstr)
                 }
                 else //if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
                 {
-                    if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
+                    //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
                         ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - 0*ram->min_NXTconfirms); // possible for tx to disappear
                     ram->NXT_is_realtime = (ram->NXTblocknum >= _get_NXTheight(0)-1);
                     for (pass=1; pass<=4; pass++)
