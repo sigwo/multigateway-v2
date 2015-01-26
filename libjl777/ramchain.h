@@ -608,9 +608,9 @@ int32_t compare_files(char *fname,char *fname2) // OS portable
                     printf("compare error at offset.%d: (%s) src.%ld vs. (%s) dest.%ld\n",offset,fname,ftell(fp),fname2,ftell(fp2)), errs++;
             //while ( (c= fgetc(srcfp)) != EOF )
             //   fputc(c,destfp);
-            fclose(fp);
+            fclose(fp2);
         }
-        fclose(fp2);
+        fclose(fp);
     }
     return(errs);
 }
@@ -5694,7 +5694,7 @@ uint32_t ram_load_blocks(struct ramchain_info *ram,struct mappedblocks *blocks,u
 uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct mappedblocks *blocks,struct mappedblocks *prevblocks,uint32_t blocknum)
 {
     char fname[1024],formatstr[16];
-    FILE *fp;
+    FILE *fp = 0;
     bits256 sha,refsha;
     HUFF *hp,**hpptr,**hps,**prevhps;
     int32_t i,n,numblocks,datalen = 0;
@@ -5707,6 +5707,8 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
         fclose(fp);
         return(0);
     }
+    if ( fp != 0 )
+        fclose(fp);
     if ( 0 && blocks->format == 'V' )
     {
         if ( _get_blockinfo(blocks->R,ram,blocknum) > 0 )
@@ -5871,10 +5873,12 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
     printf("inithashtable.(%s.%d) -> [%s]\n",ram->name,type,fname);
     if ( deletefile == 0 && (hash->newfp= fopen(fname,"rb+")) != 0 )
     {
-        if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 )
+        if ( init_mappedptr(0,&hash->M,0,rwflag,fname) == 0 || hash->M.allocsize == 0 )
+        {
+            fclose(hash->newfp);
+            hash->newfp = 0;
             return(1);
-        if ( hash->M.allocsize == 0 )
-            return(1);
+        }
         fileptr = (long)hash->M.fileptr;
         offset = 0;
         while ( (varsize= (int32_t)hload_varint(&datalen,hash->newfp)) > 0 && (offset + datalen) <= hash->M.allocsize )
