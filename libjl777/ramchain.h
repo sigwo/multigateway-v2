@@ -7262,7 +7262,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
         ram->mappedblocks[1] = ram_init_blocks(1,ram->blocks.hps,ram,0,&ram->Vblocks,&ram->blocks,'V',0);
         ram->mappedblocks[0] = ram_init_blocks(0,ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
         ram_update_RTblock(ram);
-        for (pass=1; pass<=4; pass++)
+        for (pass=2; pass<=4; pass++)
         {
             printf("pass.%d\n",pass);
             if ( 1 && pass == 2 )
