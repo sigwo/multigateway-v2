@@ -6101,16 +6101,23 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
             memset(&B,0,sizeof(B)), B.blocknum = blocknum, B.txind = txind, B.v = vin, B.spent = 1;
             if ( vout < txptr->numpayloads )
             {
+                char txidstr[256];
                 if ( iter <= 2 )
                 {
                     bp = &txptr->payloads[vout].spentB;
                     if ( memcmp(bp,&zeroB,sizeof(zeroB)) == 0 )
+                    {
+                        if ( bp->blocknum == 341327 && bp->txind == 1 )
+                        {
+                            ram_txid(txidstr,ram,txid_rawind);
+                            printf("vin.(%d %d %d) -> txid.(%s/v%d)\n",bp->blocknum,bp->txind,bp->v,txidstr,vout);
+                        }
                         ram_markspent(ram,&txptr->payloads[vout],&B,txid_rawind);
+                    }
                     else if ( memcmp(bp,&B,sizeof(B)) == 0 )
                         printf("duplicate spentB (%d %d %d)\n",B.blocknum,B.txind,B.v);
                     else
                     {
-                        char txidstr[256];
                         ram_txid(txidstr,ram,txid_rawind);
                         printf("%s tx@%d: interloper.%u perm.%u at (blocknum.%d txind.%d vin.%d)! (%d %d %d).%d vs (%d %d %d).%d >>>>>>> delete? <<<<<<<<\n",txidstr,txptr->payloads[0].B.blocknum,txid_rawind,txptr->permind,blocknum,txind,vin,bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
                         //if ( getchar() == 'y' )
