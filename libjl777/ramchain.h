@@ -5486,7 +5486,7 @@ int32_t ram_save_bitstreams(bits256 *refsha,char *fname,HUFF *bitstreams[],int32
         {
             //printf("i.%d %p\n",i,bitstreams[i]);
             if ( bitstreams[i] != 0 && bitstreams[i]->buf != 0 )
-                calc_sha256cat(tmp.bytes,refsha->bytes,sizeof(*refsha),bitstreams[i]->buf,bitstreams[i]->allocsize), *refsha = tmp;
+                calc_sha256cat(tmp.bytes,refsha->bytes,sizeof(*refsha),bitstreams[i]->buf,hconv_bitlen(bitstreams[i]->endpos)), *refsha = tmp;
             else
             {
                 printf("bitstreams[%d] == 0? %p\n",i,bitstreams[i]);
@@ -5856,7 +5856,7 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
     strcpy(hash->coinstr,ram->name);
     hash->type = type;
     num = 0;
-    if ( 0 )
+    if ( 1 )
     {
         ram_sethashname(fname,hash,0);
         strcat(fname,".perm");
@@ -6221,7 +6221,7 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
     format = hp->buf[datalen++], hp->ptr++, hp->bitoffset = 8;
     if ( format != 'B' )
     {
-        printf("only format B supported for now\n");
+        printf("only format B supported for now: (%c) %d not\n",format,format);
         return(-1);
     }
     numbits = hdecode_varbits(&blocknum,hp);
@@ -6345,14 +6345,14 @@ int32_t ram_rawtx_conv(HUFF *permhp,struct ramchain_info *ram,HUFF *hp,uint32_t 
 
 HUFF *ram_conv_permind(struct ramchain_info *ram,HUFF *hp,uint32_t checkblocknum)
 {
-    uint64_t minted; uint16_t numtx; uint32_t blocknum; int32_t txind,numbits,retval,format,datalen = 0;
+    uint64_t minted; uint16_t numtx; uint32_t blocknum,checkblock; int32_t txind,numbits,retval,format,datalen = 0;
     HUFF *permhp; void *buf;
     buf = (MAP_HUFF != 0) ? permalloc(ram->name,&ram->Perm,hp->allocsize*2,9) : calloc(1,hp->allocsize*2);
     permhp = hopen(ram->name,&ram->Perm,buf,hp->allocsize*2,0);
     hrewind(hp);
     hclear(permhp);
     format = hp->buf[datalen++], hp->ptr++, hp->bitoffset = 8;
-    permhp->buf[datalen++] = format, permhp->ptr++, permhp->bitoffset = 8;
+    permhp->buf[0] = format, permhp->ptr++, permhp->endpos = permhp->bitoffset = 8;
     if ( format != 'B' )
     {
         printf("only format B supported for now\n");
@@ -6376,6 +6376,11 @@ HUFF *ram_conv_permind(struct ramchain_info *ram,HUFF *hp,uint32_t checkblocknum
             }
     }
     datalen += hconv_bitlen(numbits);
+    //printf("hp.%d (end.%d bit.%d) -> permhp.%d (end.%d bit.%d)\n",datalen,hp->endpos,hp->bitoffset,hconv_bitlen(permhp->bitoffset),permhp->endpos,permhp->bitoffset);
+    permhp->allocsize = hconv_bitlen(permhp->endpos);
+    if ( 0 && (checkblock= ram_verify(ram,permhp,'B')) != checkblocknum )
+        printf("ram_verify(%d) -> %d?\n",checkblocknum,checkblock);
+
     return(permhp);
 }
 
@@ -7335,15 +7340,19 @@ void ram_init_ramchain(struct ramchain_info *ram)
                     }
                 } else errs++;
             }
-            if ( 0 && iter == 0 && ram->permind_changes != 0 )
+            if ( 1 && iter == 0 && ram->permind_changes != 0 )
             {
                 printf("permind_changes.%d\n",ram->permind_changes);
                 for (blocknum=0; blocknum<ram->blocks.contiguous; blocknum++)
+                {
                     if ( (hp= ram->blocks.hps[blocknum]) != 0 )
                         ram->blocks.hps[blocknum] = ram_conv_permind(ram,hp,blocknum);
-                printf("converted to permind, please copy over files with .perm files and restart\n");
+                    else { printf("unexpected gap at %d\n",blocknum); exit(-1); }
+                }
                 sprintf(fname,"ramchains/%s.perm",ram->name);
                 ram_save_bitstreams(&refsha,fname,ram->blocks.hps,ram->blocks.contiguous);
+                ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,ram->blocks.contiguous,fname,&refsha);
+                printf("converted to permind, please copy over files with .perm files and restart\n");
                 exit(1);
             }
         }
