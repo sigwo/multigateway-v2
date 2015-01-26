@@ -346,19 +346,25 @@ struct multisig_addr *find_msigaddr(char *msigaddr)
     //return((struct multisig_addr *)find_storage(MULTISIG_DATA,msigaddr,0));
 }
 
-struct multisig_addr *ram_add_msigaddr(char *msigaddr,int32_t n)
+struct multisig_addr *ram_add_msigaddr(char *msigaddr,int32_t n,char *NXTaddr,char *NXTpubkey,int32_t buyNXT)
 {
     struct multisig_addr *msig;
     if ( (msig= find_msigaddr(msigaddr)) == 0 )
     {
         msig = calloc(1,sizeof(*msig) + n*sizeof(struct pubkey_info));
         strcpy(msig->multisigaddr,msigaddr);
+        if ( NXTaddr != 0 )
+            strcpy(msig->NXTaddr,NXTaddr);
+        if ( NXTpubkey != 0 )
+            strcpy(msig->NXTpubkey,NXTpubkey);
+        if ( buyNXT >= 0 )
+            msig->buyNXT = buyNXT;
         if ( didMSIGinit == 0 )
         {
             portable_mutex_init(&MSIGmutex);
             didMSIGinit = 1;
         }
-        //printf("add MSIG[%s]\n",msigaddr);
+        printf("ram_add_msigaddr MSIG[%s] NXT.%s (%s) buyNXT.%d\n",msigaddr,msig->NXTaddr,msig->NXTpubkey,msig->buyNXT);
         portable_mutex_lock(&MSIGmutex);
         MSIGS = realloc(MSIGS,(1+Num_MSIGS) * sizeof(*MSIGS));
         MSIGS[Num_MSIGS++] = msig;
@@ -388,7 +394,7 @@ int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sende
             add_NXT_coininfo(msig->pubkeys[i].nxt64bits,calc_nxt64bits(msig->NXTaddr),msig->coinstr,msig->pubkeys[i].coinaddr,msig->pubkeys[i].pubkey);
     if ( msig->H.size == 0 )
         msig->H.size = sizeof(*msig) + (msig->n * sizeof(msig->pubkeys[0]));
-    msigram = ram_add_msigaddr(msig->multisigaddr,msig->n);//MTadd_hashtable(&createdflag,&sdb->ramtable,msig->multisigaddr);
+    msigram = ram_add_msigaddr(msig->multisigaddr,msig->n,msig->NXTaddr,msig->NXTpubkey,msig->buyNXT);//MTadd_hashtable(&createdflag,&sdb->ramtable,msig->multisigaddr);
     if ( msigram->created != 0 && msig->created != 0 )
     {
         if ( msigram->created < msig->created )

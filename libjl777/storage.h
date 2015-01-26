@@ -785,7 +785,7 @@ int32_t init_multisigDB()
     struct multisig_addr *find_msigaddr(char *msigaddr);
     int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender);
     struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender);
-    struct multisig_addr *ram_add_msigaddr(char *msigaddr,int32_t n);
+    struct multisig_addr *ram_add_msigaddr(char *msigaddr,int32_t n,char *NXTaddr,char *NXTpubkey,int32_t buyNXT);
     struct multisig_addr **msigs,*msigram;
     struct SuperNET_db *sdb;
     char url[1024],*retstr;
@@ -799,7 +799,7 @@ int32_t init_multisigDB()
         {
             for (i=m=0; i<n; i++)
             {
-                msigram = ram_add_msigaddr(msigs[i]->multisigaddr,msigs[i]->n);//MTadd_hashtable(&createdflag,&sdb->ramtable,msigs[i]->multisigaddr);
+                msigram = ram_add_msigaddr(msigs[i]->multisigaddr,msigs[i]->n,msigs[i]->NXTaddr,msigs[i]->NXTpubkey,msigs[i]->buyNXT);//MTadd_hashtable(&createdflag,&sdb->ramtable,msigs[i]->multisigaddr);
                 printf("%d of %d: (%s) NXT.(%s) NXTpubkey.(%s)\n",i,n,msigs[i]->multisigaddr,msigs[i]->NXTaddr,msigs[i]->NXTpubkey);
                 //if ( createdflag != 0 )
                 *msigram = *msigs[i], m++;
