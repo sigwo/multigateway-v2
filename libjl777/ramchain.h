@@ -2453,8 +2453,8 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                         if ( ram->enable_deposits == 0 && timestamp > (ram->firsttime + (ram->DEPOSIT_XFER_DURATION+1)*60) )
                         {
                             ram->enable_deposits = 1;
-                            printf("1st.%d ram->NXTtimestamp %d -> %d: enable_deposits.%d | %d > %d\n",ram->firsttime,ram->NXTtimestamp,timestamp,ram->enable_deposits,(timestamp - ram->firsttime),(ram->DEPOSIT_XFER_DURATION+1)*60);
                         }
+                        printf("1st.%d ram->NXTtimestamp %d -> %d: enable_deposits.%d | %d > %d\n",ram->firsttime,ram->NXTtimestamp,timestamp,ram->enable_deposits,(timestamp - ram->firsttime),(ram->DEPOSIT_XFER_DURATION+1)*60);
                         ram->NXTtimestamp = timestamp;
                     }
                     if ( (array= cJSON_GetObjectItem(json,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
