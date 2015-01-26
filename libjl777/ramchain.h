@@ -6423,7 +6423,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                     if ( j == ap->num && _valid_txamount(ram,payloads[i].value) > 0 && (msig= find_msigaddr(addr)) != 0 )
                     {
                         nxt64bits = _calc_nxt64bits(msig->NXTaddr);
-                        printf ("deposit.(%s/%d %d,%d %s %.8f).g%d ",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),(int32_t)(nxt64bits % NUM_GATEWAYS));
+                        printf ("deposit.(%s/%d %d,%d %s %.8f)rt%d.g%d ",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),ram->NXT_is_realtime,(int32_t)(nxt64bits % NUM_GATEWAYS));
                         pending += payloads[i].value, numpending++;
                         if ( ram->NXT_is_realtime != 0 && (payloads[i].B.blocknum + ram->depositconfirms) <= ram->RTblocknum && ram->MGWbalance > payloads[i].value && ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
                         {
@@ -7520,7 +7520,7 @@ void *process_ramchains(void *_argcoinstr)
                         if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
                             printf("\n");
                     }
-                    ram->NXT_is_realtime = (ram->NXTblocknum >= _get_NXTheight(0)-1);
+                    ram->NXT_is_realtime = (ram->NXTblocknum >= _get_NXTheight(0)-10);
                     ram_update_RTblock(ram);
                     for (pass=1; pass<=4; pass++)
                     {
