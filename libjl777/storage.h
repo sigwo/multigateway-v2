@@ -780,6 +780,17 @@ void close_SuperNET_dbs()
     memset(SuperNET_dbs,0,sizeof(SuperNET_dbs));
 }
 
+int32_t is_zeroes(char *str)
+{
+    int32_t i;
+    if ( str == 0 || str[0] == 0 )
+        return(1);
+    for (i=0; str[i]!=0; i++)
+        if ( str[i] != '0' )
+            return(0);
+    return(1);
+}
+
 int32_t init_multisigDB()
 {
     struct multisig_addr *find_msigaddr(char *msigaddr);
@@ -822,7 +833,7 @@ int32_t init_multisigDB()
                             if ( (msigram= decode_msigjson(0,cJSON_GetArrayItem(json,i),Server_NXTaddrs[j])) != 0 && find_msigaddr(msigram->multisigaddr) == 0 )
                             {
                                 printf("ADD (%s) NXT.(%s) NXTpubkey.(%s)\n",msigram->multisigaddr,msigram->NXTaddr,msigram->NXTpubkey);
-                                if ( msigram->NXTpubkey[0] == 0 )
+                                if ( is_zeroes(msigram->NXTpubkey) != 0 )
                                 {
                                     set_NXTpubkey(msigram->NXTpubkey,msigram->NXTaddr);
                                     printf("FIX (%s) NXT.(%s) NXTpubkey.(%s)\n",msigram->multisigaddr,msigram->NXTaddr,msigram->NXTpubkey);
