@@ -7528,18 +7528,20 @@ void *process_ramchains(void *_argcoinstr)
                     }
                     //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
                     //    ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms);
-                    ram_update_disp(ram);
-                    ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
-                    ram->MGWbalance = ram->MGWunspent - ram->circulation - ram->MGWpendingredeems - ram->MGWpendingdeposits;
-                    if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
-                        printf("\n");
-                    printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",ram->name,dstr(ram->MGWbalance),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
-                    /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
+                    if ( ram_update_disp(ram) != 0 )
                     {
-                        // prune tx that dont exist anymore, eg. blockchain rewinds
-                        ram_sync_MGW(ram);
-                        ram_process_pendings(ram);
-                    }*/
+                        ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
+                        ram->MGWbalance = ram->MGWunspent - ram->circulation - ram->MGWpendingredeems - ram->MGWpendingdeposits;
+                        if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
+                            printf("\n");
+                        printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",ram->name,dstr(ram->MGWbalance),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
+                        /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
+                         {
+                         // prune tx that dont exist anymore, eg. blockchain rewinds
+                         ram_sync_MGW(ram);
+                         ram_process_pendings(ram);
+                         }*/
+                    }
                 }
             }
         }
