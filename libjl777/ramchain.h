@@ -5125,7 +5125,7 @@ struct ramchain_token **ram_tokenize_bitstream(uint32_t *blocknump,int32_t *numt
         for (i=firstvin=firstvout=0; i<numtx; i++)
             if ( (numtokens= ram_rawtx_huffscan(ram,tokens,numtokens,hp,format,i,&firstvin,&firstvout)) == lastnumtokens )
             {
-                printf("parse error at token %d of %d | firstvin.%d firstvout.%d\n",i,numtokens,firstvin,firstvout);
+                printf("block.%d parse error at token %d of %d | firstvin.%d firstvout.%d\n",blocknum,i,numtokens,firstvin,firstvout);
                 return(ram_purgetokens(numtokensp,tokens,numtokens));
             }
     }
