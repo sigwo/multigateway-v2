@@ -6110,8 +6110,11 @@ int32_t ram_rawvin_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32
                         printf("duplicate spentB (%d %d %d)\n",B.blocknum,B.txind,B.v);
                     else
                     {
-                        printf("interloper.%u perm.%u at (blocknum.%d txind.%d vin.%d)! (%d %d %d).%d vs (%d %d %d).%d >>>>>>> delete? <<<<<<<<\n",txid_rawind,txptr->permind,blocknum,txind,vin,bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
+                        char txidstr[256];
+                        ram_txid(txidstr,ram,txid_rawind);
+                        printf("%s tx@%d: interloper.%u perm.%u at (blocknum.%d txind.%d vin.%d)! (%d %d %d).%d vs (%d %d %d).%d >>>>>>> delete? <<<<<<<<\n",txidstr,txptr->payloads[0].B.blocknum,txid_rawind,txptr->permind,blocknum,txind,vin,bp->blocknum,bp->txind,bp->v,bp->spent,B.blocknum,B.txind,B.v,B.spent);
                         //if ( getchar() == 'y' )
+                        ram_purge_badblock(ram,txptr->payloads[0].B.blocknum);
                         ram_purge_badblock(ram,bp->blocknum);
                         ram_purge_badblock(ram,blocknum);
                         exit(-1);
