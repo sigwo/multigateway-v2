@@ -7512,12 +7512,9 @@ void *process_ramchains(void *_argcoinstr)
                         printf("ERROR _process_ramchain.%s\n",ram->name);
                     processed--;
                 }
-                else //if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
+                else
                 {
-                    if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
-                        ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - 0*ram->min_NXTconfirms); // possible for tx to disappear
                     ram->NXT_is_realtime = (ram->NXTblocknum >= _get_NXTheight(0)-1);
-                    ram_update_RTblock(ram);
                     for (pass=1; pass<=4; pass++)
                     {
                         processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],10000.);
@@ -7526,10 +7523,11 @@ void *process_ramchains(void *_argcoinstr)
                             break;
 #endif
                     }
-                    //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
-                    //    ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms);
                     if ( ram_update_disp(ram) != 0 )
                     {
+                        if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
+                            ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - 0*ram->min_NXTconfirms); // possible for tx to disappear
+                        ram_update_RTblock(ram);
                         ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
                         ram->MGWbalance = ram->MGWunspent - ram->circulation - ram->MGWpendingredeems - ram->MGWpendingdeposits;
                         if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )

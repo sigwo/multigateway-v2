@@ -2087,7 +2087,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                     if ( myacctcoinaddr[0] != 0 && mypubkey[0] != 0 )
                         sprintf(buf,"{\"requestType\":\"getmsigpubkey\",\"NXT\":\"%s\",\"myaddr\":\"%s\",\"mypubkey\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"userpubkey\":\"%s\"}",NXTaddr,myacctcoinaddr,mypubkey,coinstr,refNXTaddr,userpubkey);
                     else sprintf(buf,"{\"requestType\":\"getmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"userpubkey\":\"%s\"}",NXTaddr,coinstr,refNXTaddr,userpubkey);
-                    if ( Debuglevel > 1 )
+                    if ( Debuglevel > 2 )
                         printf("SENDREQ.(%s)\n",buf);
                     hopNXTaddr[0] = 0;
                     expand_nxt64bits(destNXTaddr,contact->nxt64bits);
