@@ -6,6 +6,9 @@
 #ifndef gateway_NXTutils_h
 #define gateway_NXTutils_h
 
+#ifndef in_addr_t
+#define in_addr_t uint32_t
+#endif
 
 char *load_file(char *fname,char **bufp,int64_t  *lenp,int64_t  *allocsizep)
 {

@@ -387,7 +387,11 @@ int32_t scan_address_entries()
     uniq = m = 0;
     if ( cursorp != 0 )
     {
+		#ifndef _WIN32
         bigbuf = valloc(bulksize);
+		#else
+		bigbuf = _aligned_malloc(bulksize, 16);
+		#endif
         clear_pair(&key,&data);
         key.data = buf;
         key.ulen = sizeof(buf);
@@ -529,7 +533,11 @@ struct storage_header *find_storage(int32_t selector,char *keystr,uint32_t bulks
         reqflags = DB_MULTIPLE;
         data.ulen = bulksize;
         data.flags = DB_DBT_USERMEM;
+		#ifndef _WIN32
         data.data = ptr = valloc(data.ulen);
+		#else
+		data.data = ptr = _aligned_malloc(data.ulen,16);
+		#endif
     }
     if ( (ret= dbget(&SuperNET_dbs[selector],NULL,&key,&data,reqflags)) != 0 || data.data == 0 || data.size < sizeof(*hp) )
     {
