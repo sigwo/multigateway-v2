@@ -6,9 +6,6 @@
 #ifndef gateway_NXTutils_h
 #define gateway_NXTutils_h
 
-#ifndef in_addr_t
-#define in_addr_t uint32_t
-#endif
 
 char *load_file(char *fname,char **bufp,int64_t  *lenp,int64_t  *allocsizep)
 {
@@ -354,6 +351,8 @@ uint64_t issue_transferAsset(char **retstrp,CURL *curl_handle,char *secret,char 
         strcat(cmd,"&message=");
         strcat(cmd,comment);
     }
+//printf("would have (%s)\n",cmd);
+//return(0);
     jsontxt = issue_NXTPOST(curl_handle,cmd);
     if ( jsontxt != 0 )
     {
@@ -427,11 +426,14 @@ cJSON *issue_getAccountInfo(CURL *curl_handle,int64_t *amountp,char *name,char *
 char *issue_getAsset(CURL *curl_handle,char *assetidstr)
 {
     char cmd[4096];
-    sprintf(cmd,"%s=getAsset&asset=%s",_NXTSERVER,assetidstr);
-    printf("cmd.(%s)\n",cmd);
+    //sprintf(cmd,"%s=getAsset&asset=%s",_NXTSERVER,assetidstr);
+    //printf("cmd.(%s)\n",cmd);
     //return(issue_curl(0,cmd));
-    return(issue_NXTPOST(0,cmd));
+    //return(issue_NXTPOST(0,cmd));
     //printf("calculated.(%s)\n",ret.str);
+    sprintf(cmd,"%s=getAsset&asset=%s",NXTSERVER,assetidstr);
+    printf("cmd.(%s)\n",cmd);
+    return(issue_curl(0,cmd));
 }
 
 struct NXT_asset *init_asset(struct NXT_asset *ap,char *assetidstr)
@@ -572,7 +574,7 @@ uint16_t extract_nameport(char *name,long namesize,struct sockaddr_in *addr)
         return(0);
     }
     port = ntohs(addr->sin_port);
-    //printf("sender.(%s) port.%d\n",name,port);
+//printf("extract_nameport: sender.(%s) port.%d\n",name,port);
     return(port);
 }
 
@@ -1329,7 +1331,7 @@ int32_t gen_randomacct(CURL *curl_handle,uint32_t randchars,char *NXTaddr,char *
         }
     }
     expand_nxt64bits(NXTaddr,issue_getAccountId(curl_handle,NXTsecret));
-    if ( Debuglevel > 0 )
+    if ( Debuglevel > 2 )
        printf("NXT.%s NXTsecret.(%s)\n",NXTaddr,NXTsecret);
     return(0);
 }
@@ -1700,9 +1702,9 @@ char *conv_ipv6(char *ipv6addr)
             bytes += 12;
             ipv4bin = (in_addr_t *)bytes;
 	    #ifndef _WIN32
-            if ( inet_ntop(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str)) == 0 )
-		isok = 0;
+        if ( inet_ntop(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str)) == 0 )
 	    #endif
+			isok = 0;
         } else isok = 0;
     }
     if ( isok != 0 )
