@@ -1,5 +1,5 @@
 echo ">>>>>>>>>>>>>>>>>>Building mxe. This may take a while."
-sudo apt-get install autopoint bison bzip2 cmake flex gcc g++ gperf intltool libtool ruby scons wine
+sudo apt-get install autopoint bison bzip2 cmake flex gcc g++ gperf intltool libtool ruby scons wine zlib1g-dev libffi-dev
 cd mxe
 make pkgconf MXE_TARGETS='x86_64-w64-mingw32.static'
 make binutils MXE_TARGETS='x86_64-w64-mingw32.static'
