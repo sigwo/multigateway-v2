@@ -131,7 +131,7 @@ struct NXT_assettxid
     double minconvrate;
     union _asset_price U; // price 0 -> not buy/sell but might be deposit amount
     uint32_t coinblocknum,cointxind,coinv,height,redeemstarted;
-    void *pendingsend;
+    void *pendingsends[3];
     char *cointxid;
     char *comment,*convwithdrawaddr,convname[16],teleport[64];
     float estNXT;
