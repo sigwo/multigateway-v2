@@ -2678,7 +2678,8 @@ double _enough_confirms(double redeemed,double estNXT,int32_t numconfs,int32_t m
 
 int32_t ram_MGW_ready(struct ramchain_info *ram,uint32_t blocknum,uint32_t NXTheight,uint64_t nxt64bits,uint64_t amount)
 {
-
+    if ( ram->gatewayid >= 0 && ram->gatewayid < 3 && strcmp(ram->srvNXTADDR,ram->special_NXTaddrs[ram->gatewayid]) != 0 )
+        return(0);
     if ( ram->gatewayid < 0 || (nxt64bits != 0 && (nxt64bits % NUM_GATEWAYS) != ram->gatewayid) || ram->MGWbalance < 0 )
         return(0);
     else if ( blocknum != 0 && ram->NXT_is_realtime != 0 && (blocknum + ram->depositconfirms) <= ram->RTblocknum && ram->enable_deposits != 0 )
