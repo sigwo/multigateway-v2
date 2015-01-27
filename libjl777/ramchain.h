@@ -2461,7 +2461,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 }
                 else if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0 && type == 0 && subtype == 0 && commentobj != 0 )
                 {
-                    buyNXT = get_API_int(cJSON_GetObjectItem(attachment,"buyNXT"),0);
+                    buyNXT = get_API_int(cJSON_GetObjectItem(commentobj,"buyNXT"),0);
                     satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
                     if ( buyNXT*SATOSHIDEN == satoshis )
                     {
