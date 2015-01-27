@@ -146,14 +146,16 @@ struct rawvin { char txidstr[128]; uint16_t vout; };
 struct rawvout { char coinaddr[64],script[256]; uint64_t value; };
 struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; };
 
-struct cointx_input { struct rawvin tx; struct rawvout vin; int32_t used; };
+#define MAX_COINTX_INPUTS 16
+#define MAX_COINTX_OUTPUTS 8
+struct cointx_input { struct rawvin tx; struct rawvout vin; char used; };
 struct cointx_info
 {
     char coinstr[16];
     uint64_t inputsum,amount,change,redeemtxid;
     uint32_t allocsize,batchsize,batchcrc,numinputs,numoutputs,gatewayid;
-    struct cointx_input inputs[16];
-    struct rawvout outputs[16];
+    struct cointx_input inputs[MAX_COINTX_INPUTS];
+    struct rawvout outputs[MAX_COINTX_OUTPUTS];
     char signedtx[];
 };
 
@@ -2047,6 +2049,158 @@ int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
     return(size);
 }
 
+struct cointx_info *_decode_rawtransaction(char *hexstr)
+{
+    long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize);
+    uint8_t data[8192];
+    long len,offset;
+    uint64_t numinputs;
+    uint32_t i,version;
+    if ( (len= strlen(hexstr)) >= sizeof(data)*2-1 || is_hexstr(hexstr) == 0 || (len & 1) != 0 )
+    {
+        printf("_decode_rawtransaction: hexstr too long %ld vs %ld || is_hexstr.%d || oddlen.%ld\n",strlen(hexstr),sizeof(data)*2-1,is_hexstr(hexstr),(len & 1));
+        return(0);
+    }
+    len >>= 1;
+    decode_hex(data,(int32_t)len,hexstr);
+    for (version=offset=0; offset<4; i++)
+        version <<= 8, version |= data[offset];
+    offset = hdecode_varint(&numinputs,data,offset,len);
+    if ( numinputs > MAX_COINTX_INPUTS )
+    {
+        printf("_decode_rawtransaction: numinputs %lld > %d MAX_COINTX_INPUTS\n",(long long)numinputs,MAX_COINTX_INPUTS);
+        return(0);
+    }
+    return(0);
+}
+
+/*
+function coinspark_unpack_raw_txn($raw_txn_hex)
+{
+    // see: https://en.bitcoin.it/wiki/Transactions
+    
+    $binary=pack('H*', $raw_txn_hex);
+    
+    $txn=array();
+    
+    $txn['version']=coinspark_string_shift_unpack($binary, 4, 'V'); // small-endian 32-bits
+    for ($inputs=coinspark_string_shift_unpack_varint($binary); $inputs>0; $inputs--) {
+        $input=array();
+        
+        $input['txid']=coinspark_string_shift_unpack($binary, 32, 'H*', true);
+        $input['vout']=coinspark_string_shift_unpack($binary, 4, 'V');
+        $length=coinspark_string_shift_unpack_varint($binary);
+        $input['scriptSig']=coinspark_string_shift_unpack($binary, $length, 'H*');
+        $input['sequence']=coinspark_string_shift_unpack($binary, 4, 'V');
+        
+        $txn['vin'][]=$input;
+    }
+    
+    for ($outputs=coinspark_string_shift_unpack_varint($binary); $outputs>0; $outputs--) {
+        $output=array();
+        
+        $output['value']=coinspark_string_shift_unpack_uint64($binary)/100000000;
+        $length=coinspark_string_shift_unpack_varint($binary);
+        $output['scriptPubKey']=coinspark_string_shift_unpack($binary, $length, 'H*');
+        
+        $txn['vout'][]=$output;
+    }
+    
+    $txn['locktime']=coinspark_string_shift_unpack($binary, 4, 'V');
+    
+    if (strlen($binary))
+        die('More data in transaction than expected');
+    
+    return $txn;
+}
+
+function coinspark_pack_raw_txn($txn)
+{
+    $binary='';
+    
+    $binary.=pack('V', $txn['version']);
+    
+    $binary.=coinspark_pack_varint(count($txn['vin']));
+    
+    foreach ($txn['vin'] as $input) {
+        $binary.=strrev(pack('H*', $input['txid']));
+        $binary.=pack('V', $input['vout']);
+        $binary.=coinspark_pack_varint(strlen($input['scriptSig'])/2); // divide by 2 because it is currently in hex
+        $binary.=pack('H*', $input['scriptSig']);
+        $binary.=pack('V', $input['sequence']);
+    }
+    
+    $binary.=coinspark_pack_varint(count($txn['vout']));
+    
+    foreach ($txn['vout'] as $output) {
+        $binary.=coinspark_pack_uint64(round($output['value']*100000000));
+        $binary.=coinspark_pack_varint(strlen($output['scriptPubKey'])/2); // divide by 2 because it is currently in hex
+        $binary.=pack('H*', $output['scriptPubKey']);
+    }
+    
+    $binary.=pack('V', $txn['locktime']);
+    
+    return reset(unpack('H*', $binary));
+}
+
+function coinspark_string_shift(&$string, $chars)
+{
+    $prefix=substr($string, 0, $chars);
+    $string=substr($string, $chars);
+    return $prefix;
+}
+
+function coinspark_string_shift_unpack(&$string, $chars, $format, $reverse=false)
+{
+    $data=coinspark_string_shift($string, $chars);
+    if ($reverse)
+        $data=strrev($data);
+    $unpack=unpack($format, $data);
+    return reset($unpack);
+}
+
+function coinspark_string_shift_unpack_varint(&$string)
+{
+    $value=coinspark_string_shift_unpack($string, 1, 'C');
+    
+    if ($value==0xFF)
+        $value=coinspark_string_shift_unpack_uint64($string);
+    elseif ($value==0xFE)
+    $value=coinspark_string_shift_unpack($string, 4, 'V');
+    elseif ($value==0xFD)
+    $value=coinspark_string_shift_unpack($string, 2, 'v');
+    
+    return $value;
+}
+
+function coinspark_string_shift_unpack_uint64(&$string)
+{
+    return coinspark_string_shift_unpack($string, 4, 'V')+(coinspark_string_shift_unpack($string, 4, 'V')*4294967296);
+}
+
+function coinspark_pack_varint($integer)
+{
+    if ($integer>0xFFFFFFFF)
+        $packed="\xFF".coinspark_pack_uint64($integer);
+    elseif ($integer>0xFFFF)
+    $packed="\xFE".pack('V', $integer);
+    elseif ($integer>0xFC)
+    $packed="\xFD".pack('v', $integer);
+    else
+        $packed=pack('C', $integer);
+    
+    return $packed;
+}
+
+function coinspark_pack_uint64($integer)
+{
+    $upper=floor($integer/4294967296);
+    $lower=$integer-$upper*4294967296;
+    
+    return pack('V', $lower).pack('V', $upper);
+}
+*/
+
 char *_replace_with_OP_RETURN(char *rawtx,int32_t replace_vout,char *replace_addr,uint64_t *redeems,int32_t numredeems)
 {
     char scriptstr[1024];
@@ -2837,15 +2991,15 @@ int32_t _ram_update_redeembits(struct ramchain_info *ram,uint64_t redeembits,uin
     if ( num == 0 )
     {
         if ( ram->limboarray != 0 )
+        {
             for (n=0; ram->limboarray[n]!=0; n++)
                 if ( ram->limboarray[n] == redeembits )
                     break;
-        if ( ram->limboarray[n] != redeembits )
-        {
-            ram->limboarray = realloc(ram->limboarray,sizeof(*ram->limboarray) * (n+2));
-            ram->limboarray[n++] = redeembits;
-            ram->limboarray[n] = 0;
-        }
+            if ( ram->limboarray[n] != redeembits )
+                ram->limboarray = realloc(ram->limboarray,sizeof(*ram->limboarray) * (n+2));
+        } else ram->limboarray = realloc(ram->limboarray,sizeof(*ram->limboarray) * 2);
+        ram->limboarray[n++] = redeembits;
+        ram->limboarray[n] = 0;
     }
     if ( AMtxidbits == 0 && num == 0 )
         printf("_ram_update_redeembits: unexpected no pending redeems when AMtxidbits.0\n");
