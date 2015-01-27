@@ -849,7 +849,7 @@ int32_t init_multisigDB()
         printf("added.%d multisig addrs\n",added);
         if ( added > 3 )
         {
-            printf("too many msig addrs added, need to RESTART, risk of miscalculating pending deposits\n");
+            printf("too many msig addrs added, need to RESTART MGW, risk of miscalculating pending deposits\n");
             close_SuperNET_db(&SuperNET_dbs[MULTISIG_DATA],MULTISIG_DATA);
             exit(1);
         }

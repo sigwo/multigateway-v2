@@ -181,7 +181,7 @@ struct ramchain_info
     uint64_t minval,maxval,minval2,maxval2,minval4,maxval4,minval8,maxval8;
     
     struct NXT_asset *ap;
-    uint64_t boughtNXT,circulation,*pendingxfers,MGWbits,MGWpendingredeems,orphans,*limboarray,MGWunspent,MGWpendingdeposits;
+    uint64_t boughtNXT,circulation,*pendingxfers,MGWbits,MGWpendingredeems,orphans,*limboarray,MGWunspent,MGWpendingdeposits,sentNXT;
     int64_t MGWbalance;
     uint32_t min_NXTconfirms,NXT_RTblocknum,NXTblocknum,NXTtimestamp,numspecials,depositconfirms,firsttime,DEPOSIT_XFER_DURATION,enable_deposits;
     char multisigchar,**special_NXTaddrs,*MGWredemption,gatewayid,NXT_is_realtime;
@@ -2319,9 +2319,9 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
     struct NXT_asset *ap = ram->ap;
     struct NXT_assettxid *tp;
     uint64_t units;
-    uint32_t height = 0;
+    uint32_t buyNXT,height = 0;
     int32_t funcid,numconfs,timestamp=0;
-    int64_t type,subtype,n,assetoshis = 0;
+    int64_t type,subtype,n,satoshis,assetoshis = 0;
     if ( txobj != 0 )
     {
         hdr = 0;
@@ -2407,6 +2407,16 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                         if ( funcid >= 0 && (commentobj= _process_MGW_message(ram,height,funcid,commentobj,_calc_nxt64bits(assetidstr),units,sender,receiver,txid)) != 0 )
                             free_json(commentobj);
                     }
+                }
+                else if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0 && type == 0 && subtype == 0 && commentobj != 0 )
+                {
+                    buyNXT = get_API_int(cJSON_GetObjectItem(attachment,"buyNXT"),0);
+                    satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                    if ( buyNXT*SATOSHIDEN == satoshis )
+                    {
+                        ram->sentNXT += buyNXT;
+                        printf("%s sent %d NXT, total sent %.0f\n",sender,buyNXT,dstr(ram->sentNXT));
+                    } else printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
                 }
             }
         }
@@ -7536,9 +7546,12 @@ void *process_ramchains(void *_argcoinstr)
                     //    ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms);
                     if ( ram_update_disp(ram) != 0 || 1 )
                     {
+                        static char dispbuf[1000],lastdisp[1000];
                         ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
                         ram->MGWbalance = ram->MGWunspent - ram->circulation - ram->MGWpendingredeems - ram->MGWpendingdeposits;
-                        printf("%s.[%.8f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",ram->name,dstr(ram->MGWbalance),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
+                        sprintf(dispbuf,"[+%.8f %s - %.8f NXT rate %.2f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",dstr(ram->MGWbalance),ram->name,dstr(ram->sentNXT),dstr(ram->MGWunspent),dstr(ram->sentNXT)/dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
+                        if ( strcmp(dispbuf,lastdisp) != 0 )
+                            printf("%s",dispbuf), strcpy(lastdisp,dispbuf);
                         /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
                          {
                          // prune tx that dont exist anymore, eg. blockchain rewinds
