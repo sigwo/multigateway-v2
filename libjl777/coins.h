@@ -823,6 +823,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     strcpy(ram->srvNXTACCTSECRET,cp->srvNXTACCTSECRET);
     strcpy(ram->srvNXTADDR,cp->srvNXTADDR);
     ram->marker = clonestr(cp->marker);
+    ram->dust = cp->dust;
     ram->userpass = clonestr(cp->userpass);
     ram->serverport = clonestr(cp->serverport);
     ram->lastheighttime = (uint32_t)cp->lastheighttime;
