@@ -1987,7 +1987,7 @@ cJSON *_create_vouts_json_params(struct cointx_info *cointx)
         else
         {
             // int32_t ram_make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
-
+            cJSON_AddItemToObject(json,cointx->outputs[0].coinaddr,obj);
         }
     }
     printf("numdests.%d (%s)\n",cointx->numoutputs,cJSON_Print(json));
@@ -2016,9 +2016,76 @@ char *_createrawtxid_json_params(struct ramchain_info *ram,struct cointx_info *c
     return(paramstr);
 }
 
+int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
+{
+    uint8_t hashdata[256],*ptr;
+    uint64_t redeemtxid;
+    int32_t i,j,size;
+    scriptstr[0] = 0;
+    if ( numredeems >= (sizeof(hashdata)/sizeof(uint64_t))-1 )
+    {
+        printf("ram_make_OP_RETURN numredeems.%d is crazy\n",numredeems);
+        return(-1);
+    }
+    hashdata[1] = OP_RETURN_OPCODE;
+    hashdata[2] = 'M', hashdata[3] = 'G', hashdata[4] = 'W';
+    hashdata[5] = numredeems;
+    ptr = &hashdata[6];
+    for (i=0; i<numredeems; i++)
+    {
+        redeemtxid = redeems[i];
+        for (j=0; j<(int32_t)sizeof(uint64_t); j++,redeemtxid>>=8)
+            *ptr++ = (redeemtxid & 0xff);
+    }
+    hashdata[0] = size = (int32_t)(5 + sizeof(uint64_t)*numredeems);
+    init_hexbytes_noT(scriptstr,hashdata+1,hashdata[0]);
+    if ( size > 0xfc )
+    {
+        printf("ram_make_OP_RETURN numredeems.%d -> size.%d too big\n",numredeems,size);
+        return(-1);
+    }
+    return(size);
+}
+
+char *_replace_with_OP_RETURN(char *rawtx,int32_t replace_vout,char *replace_addr,uint64_t *redeems,int32_t numredeems)
+{
+    char scriptstr[1024];
+    if ( _make_OP_RETURN(scriptstr,redeems,numredeems) > 0 )
+    {
+        
+    }
+    return(0);
+}
+
+int32_t ram_is_MGW_OP_RETURN(uint64_t *redeemtxids,struct ramchain_info *ram,uint32_t script_rawind)
+{
+    void *ram_gethashdata(struct ramchain_info *ram,char type,uint32_t rawind);
+    int32_t i,j,len,numredeems = 0;
+    uint8_t *hashdata;
+    uint64_t redeemtxid;
+    if ( (hashdata= ram_gethashdata(ram,'s',script_rawind)) != 0 )
+    {
+        if ( (len= hashdata[0]) < 256 && hashdata[1] == OP_RETURN_OPCODE && hashdata[2] == 'M' && hashdata[3] == 'G' && hashdata[4] == 'W' )
+        {
+            numredeems = hashdata[5];
+            if ( (numredeems*sizeof(uint64_t) + 5) == len )
+            {
+                hashdata = &hashdata[6];
+                for (i=0; i<numredeems; i++)
+                {
+                    for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
+                        redeemtxid <<= 8, redeemtxid |= (*hashdata++ & 0xff);
+                    redeemtxids[i] = redeemtxid;
+                }
+            } else printf("ram_is_MGW_OP_RETURN: numredeems.%d + 5 != %d len\n",numredeems,len);
+        }
+    }
+    return(numredeems);
+}
+
 struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destaddr,uint64_t value,uint64_t redeemtxid)
 {
-    char *rawparams,*signedtx,*changeaddr,*retstr = 0;
+    char *rawparams,*signedtx,*changeaddr,*with_op_return,*retstr = 0;
     int64_t MGWfee,sum,amount;
     int32_t allocsize;
     struct cointx_info *cointx,TX,*rettx = 0;
@@ -2032,8 +2099,8 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     cointx->outputs[0].value = MGWfee;
     strcpy(cointx->outputs[1].coinaddr,destaddr);
     cointx->outputs[1].value = value;
-    strcpy(cointx->outputs[2].coinaddr,"OP_RETURN");
-    cointx->outputs[2].value = redeemtxid;
+    strcpy(cointx->outputs[2].coinaddr,ram->marker);
+    cointx->outputs[2].value = 0;
     cointx->numoutputs = 3;
     cointx->amount = amount = (MGWfee + value);
     fprintf(stderr,"calc_withdraw.%s %llu amount %.8f -> balance %.8f\n",ram->name,(long long)redeemtxid,dstr(cointx->amount),dstr(ram->MGWbalance));
@@ -2062,20 +2129,25 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                 if ( retstr != 0 && retstr[0] != 0 )
                 {
                     fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
-                    if ( (signedtx= _sign_localtx(ram,cointx,retstr)) != 0 )
+                    if ( (with_op_return= _replace_with_OP_RETURN(retstr,2,ram->marker,&redeemtxid,1)) != 0 )
                     {
-                        allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
-                        rettx = calloc(1,allocsize);
-                        *rettx = *cointx;
-                        rettx->allocsize = allocsize;
-                        strcpy(rettx->signedtx,signedtx);
-                        free(signedtx);
-                        cointx = 0;
-                    }
+                        if ( (signedtx= _sign_localtx(ram,cointx,retstr)) != 0 )
+                        {
+                            allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
+                            rettx = calloc(1,allocsize);
+                            *rettx = *cointx;
+                            rettx->allocsize = allocsize;
+                            strcpy(rettx->signedtx,signedtx);
+                            free(signedtx);
+                            cointx = 0;
+                        } else printf("error _sign_localtx.(%s)\n",with_op_return);
+                    } else printf("error replacing with OP_RETURN\n");
                 } else fprintf(stderr,"error creating rawtransaction\n");
                 free(rawparams);
                 if ( retstr != 0 )
                     free(retstr);
+                if ( with_op_return != 0 )
+                    free(with_op_return);
             } else fprintf(stderr,"error creating rawparams\n");
         } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(sum),dstr(cointx->amount),dstr(ram->txfee));
     } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",ram->name,dstr(ram->MGWbalance),dstr(cointx->amount),dstr(ram->txfee));
@@ -2821,63 +2893,6 @@ int32_t ram_update_redeembits(struct ramchain_info *ram,cJSON *argjson,uint64_t 
     if ( 0 && num == 0 )
         printf("unexpected num.0 for ram_update_redeembits.(%s)\n",cJSON_Print(argjson));
     return(num);
-}
-
-int32_t ram_make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
-{
-    uint8_t hashdata[256],*ptr;
-    uint64_t redeemtxid;
-    int32_t i,j,size;
-    scriptstr[0] = 0;
-    if ( numredeems >= (sizeof(hashdata)/sizeof(uint64_t))-1 )
-    {
-        printf("ram_make_OP_RETURN numredeems.%d is crazy\n",numredeems);
-        return(-1);
-    }
-    hashdata[1] = OP_RETURN_OPCODE;
-    hashdata[2] = 'M', hashdata[3] = 'G', hashdata[4] = 'W';
-    hashdata[5] = numredeems;
-    ptr = &hashdata[6];
-    for (i=0; i<numredeems; i++)
-    {
-        redeemtxid = redeems[i];
-        for (j=0; j<(int32_t)sizeof(uint64_t); j++,redeemtxid>>=8)
-            *ptr++ = (redeemtxid & 0xff);
-    }
-    hashdata[0] = size = (int32_t)(5 + sizeof(uint64_t)*numredeems);
-    init_hexbytes_noT(scriptstr,hashdata+1,hashdata[0]);
-    if ( size > 0xfc )
-    {
-        printf("ram_make_OP_RETURN numredeems.%d -> size.%d too big\n",numredeems,size);
-        return(-1);
-    }
-    return(size);
-}
-
-int32_t ram_is_MGW_OP_RETURN(uint64_t *redeemtxids,struct ramchain_info *ram,uint32_t script_rawind)
-{
-    void *ram_gethashdata(struct ramchain_info *ram,char type,uint32_t rawind);
-    int32_t i,j,len,numredeems = 0;
-    uint8_t *hashdata;
-    uint64_t redeemtxid;
-    if ( (hashdata= ram_gethashdata(ram,'s',script_rawind)) != 0 )
-    {
-        if ( (len= hashdata[0]) < 256 && hashdata[1] == OP_RETURN_OPCODE && hashdata[2] == 'M' && hashdata[3] == 'G' && hashdata[4] == 'W' )
-        {
-            numredeems = hashdata[5];
-            if ( (numredeems*sizeof(uint64_t) + 5) == len )
-            {
-                hashdata = &hashdata[6];
-                for (i=0; i<numredeems; i++)
-                {
-                    for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
-                        redeemtxid <<= 8, redeemtxid |= (*hashdata++ & 0xff);
-                    redeemtxids[i] = redeemtxid;
-                }
-            } else printf("ram_is_MGW_OP_RETURN: numredeems.%d + 5 != %d len\n",numredeems,len);
-        }
-    }
-    return(numredeems);
 }
 
 int32_t ram_markspent(struct ramchain_info *ram,struct rampayload *txpayload,struct address_entry *spendbp,uint32_t txid_rawind)

@@ -1022,9 +1022,15 @@ void init_legacyMGW(char *myipaddr)
     //if ( ORIGBLOCK[0] == 0 )
     //   strcpy(ORIGBLOCK,origblock);
     extract_cJSON_str(Server_ipaddrs[0],sizeof(Server_ipaddrs[0]),MGWconf,"MGW0_ipaddr");
+    if ( Server_ipaddrs[0][0] == 0 )
+        strcpy(Server_ipaddrs[0],MGW0_IPADDR);
     extract_cJSON_str(Server_ipaddrs[1],sizeof(Server_ipaddrs[1]),MGWconf,"MGW1_ipaddr");
+    if ( Server_ipaddrs[1][0] == 0 )
+        strcpy(Server_ipaddrs[1],MGW1_IPADDR);
     extract_cJSON_str(Server_ipaddrs[2],sizeof(Server_ipaddrs[2]),MGWconf,"MGW2_ipaddr");
-   // extract_cJSON_str(NXTACCTSECRET,sizeof(NXTACCTSECRET),MGWconf,"secret");
+    if ( Server_ipaddrs[2][0] == 0 )
+        strcpy(Server_ipaddrs[2],MGW2_IPADDR);
+  // extract_cJSON_str(NXTACCTSECRET,sizeof(NXTACCTSECRET),MGWconf,"secret");
     Global_mp->gatewayid = -1;
     for (i=0; i<3; i++)
     {
