@@ -1820,7 +1820,7 @@ char *_sign_and_sendmoney(char *cointxid,struct ramchain_info *ram,struct cointx
         else
         {
             for (i=0; i<numredeems; i++)
-                printf("(%llu %.8f) ",redeems[i],dstr(amounts[i]));
+                printf("(%llu %.8f) ",(long long)redeems[i],dstr(amounts[i]));
             printf("_sign_and_sendmoney: unexpected return.(%s)\n",retstr);
             exit(1);
         }
@@ -5893,7 +5893,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
     void *block = 0;
     if ( format == 0 )
         format = 'V';
-    if ( format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 ) //strcmp(ram->name,"BTC") == 0 &&
+    if ( format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 && strcmp(ram->name,"BTC") != 0 )
     {
         if ( ram_expand_bitstream(0,tmp,ram,hp) <= 0 )
         {
