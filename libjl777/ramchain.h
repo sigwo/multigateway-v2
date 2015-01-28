@@ -7564,13 +7564,12 @@ uint64_t ram_verify_txstillthere(struct ramchain_info *ram,char *txidstr,struct 
     return(value);
 }
 
-uint64_t calc_addr_unspent(struct ramchain_info *ram,char *addr,struct rampayload *addrpayload)
+uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,char *addr,struct rampayload *addrpayload)
 {
     uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt64bits,char *depositors_pubkey,struct NXT_asset *ap,uint64_t value,char *coinaddr,char *txidstr,struct address_entry *entry,uint32_t *buyNXTp,char *srvNXTADDR,char *srvNXTACCTSECRET,int32_t deadline);
     uint64_t nxt64bits,pending = 0;
     char txidstr[4096];
     struct NXT_asset *ap = ram->ap;
-    struct multisig_addr *msig;
     struct NXT_assettxid *tp;
     int32_t j;
     if ( ap != 0 )
@@ -7630,7 +7629,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                     ram_update_MGWunspents(ram,addr,payloads[i].B.v,payloads[i].otherind,payloads[i].extra,payloads[i].value);
             }
             if ( payloads[i].pendingdeposit != 0 )
-                pending += calc_addr_unspent(ram,addr,&payloads[i]);
+                pending += calc_addr_unspent(ram,msig,addr,&payloads[i]);
         }
     }
     if ( calc_numunspentp != 0 )
