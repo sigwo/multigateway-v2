@@ -2032,9 +2032,9 @@ char *_createrawtxid_json_params(struct ramchain_info *ram,struct cointx_info *c
 int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
 {
     long _emit_uint32(uint8_t *data,long offset,uint32_t x);
-    uint8_t hashdata[256];
+    uint8_t hashdata[256],revbuf[8];
     uint64_t redeemtxid;
-    int32_t i,size;
+    int32_t i,j,size;
     long offset;
     scriptstr[0] = 0;
     if ( numredeems >= (sizeof(hashdata)/sizeof(uint64_t))-1 )
@@ -2049,6 +2049,9 @@ int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
     for (i=0; i<numredeems; i++)
     {
         redeemtxid = redeems[i];
+        for (j=0; j<8; j++)
+            revbuf[j] = ((uint8_t *)&redeemtxid)[7-j];
+        memcpy(&redeemtxid,revbuf,sizeof(redeemtxid));
         offset = _emit_uint32(hashdata,offset,(uint32_t)redeemtxid);
         offset = _emit_uint32(hashdata,offset,(uint32_t)(redeemtxid >> 32));
     }
@@ -2907,7 +2910,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     struct NXT_asset *ap;
     uint64_t orphans = 0;
     *pendingredeemsp = 0;
-    disable_newsends = (ram->numpendingsends > 0);
+    disable_newsends = 1;//(ram->numpendingsends > 0);
     if ( (ap= ram->ap) == 0 )
         return(0);
     for (j=0; j<ap->num; j++)
