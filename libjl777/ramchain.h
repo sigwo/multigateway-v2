@@ -1876,12 +1876,13 @@ int32_t _sign_rawtransaction(char *deststr,unsigned long destsize,struct ramchai
                 copy_cJSON(deststr,hexobj);
                 if ( strlen(deststr) > destsize )
                     printf("sign_rawtransaction: strlen(deststr) %ld > %ld destize\n",strlen(deststr),destsize);
-                //printf("got signedtransaction.(%s) ret.(%s)\n",deststr,retstr);
+                printf("got signedtransaction.(%s) ret.(%s) completed.%d\n",deststr,retstr,completed);
                 free_json(json);
             } else printf("json parse error.(%s)\n",retstr);
             free(retstr);
         } else printf("error signing rawtx\n");
-        free(signparams);
+        printf("free signparams.%p\n",signparams);
+        //free(signparams);
     } else printf("error generating signparams\n");
     return(completed);
 }
@@ -2492,6 +2493,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                     {
                         if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
                         {
+                            printf("signedtx returns.(%s)\n",signedtx);
                             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
                             rettx = calloc(1,allocsize);
                             *rettx = *cointx;
