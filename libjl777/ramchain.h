@@ -3071,11 +3071,12 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
     char batchname[512],fname[512],*retstr;
     int32_t gatewayid;
     FILE *fp;
-    printf("ram_send_cointx\n");
-    cointx->crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize-sizeof(cointx->crc)));
+    printf("ram_send_cointx.%p\n",cointx);
     _set_batchname(batchname,cointx->coinstr,cointx->gatewayid,cointx->redeemtxid);
+    printf("batchname.%s\n",batchname);
     set_handler_fname(fname,"RTmgw",batchname);
-    printf("save to (%s)\n",fname);
+    cointx->crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize - sizeof(cointx->crc)));
+    printf("save to (%s) crc.%x\n",fname,cointx->crc);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
         fwrite(cointx,1,sizeof(*cointx),fp);
@@ -3162,7 +3163,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                             {
                                 if ( (cointx= _calc_cointx_withdraw(ram,tp->convwithdrawaddr,tp->U.assetoshis,tp->redeemtxid)) != 0 )
                                 {
-                                    ram_send_cointx(ram,tp->pendingsends[ram->gatewayid]);
+                                    ram_send_cointx(ram,cointx);
                                     ram_add_pendingsend(0,ram,tp,cointx);
                                 }
                             }
