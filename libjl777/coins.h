@@ -813,6 +813,11 @@ void init_ram_MGWconfs(struct ramchain_info *ram,cJSON *confjson,char *MGWredemp
     for (i=0; i<n; i++)
         printf("(%s) ",ram->special_NXTaddrs[i]);
     printf("numspecials.%d\n",ram->numspecials);
+    if ( ram->limboarray == 0 )
+        ram->limboarray = calloc(2,sizeof(*ram->limboarray));
+    for (i=0; ram->limboarray[i]!=0&&ram->limboarray[i]!=0; i++)
+        printf("%llu ",(long long)ram->limboarray[i]);
+    printf("limboarray.%d\n",i);
 }
 
 struct ramchain_info *get_ramchain_info(char *coinstr)
