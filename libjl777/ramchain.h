@@ -3584,7 +3584,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                 {
                     sprintf(cmd,"requestType=getAccountTransactions&account=%s&timestamp=%u",ram->special_NXTaddrs[j],timestamp);
                     jsonstr = _issue_NXTPOST(cmd);
-                    if ( (fp= fopen(fname,"wb")) != 0 )
+                    if ( fp == 0 && (fp= fopen(fname,"wb")) != 0 )
                     {
                         fwrite(&oldest,1,sizeof(oldest),fp);
                         fwrite(jsonstr,1,strlen(jsonstr)+1,fp);
