@@ -1666,7 +1666,7 @@ cJSON *_create_privkeys_json_params(struct ramchain_info *ram,struct cointx_info
     }
     if ( nonz == 0 )
         free_json(array), array = 0;
-    else printf("privkeys.%d of %d: %s\n",nonz,numinputs,cJSON_Print(array));
+   // else printf("privkeys.%d of %d: %s\n",nonz,numinputs,cJSON_Print(array));
     if ( allocflag != 0 )
     {
         for (i=0; i<numinputs; i++)
