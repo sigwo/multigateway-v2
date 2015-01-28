@@ -2262,7 +2262,7 @@ struct cointx_info *_decode_rawtransaction(char *hexstr)
     return(cointx);
 }
 
-char *_replace_with_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32_t numredeems)
+char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32_t numredeems)
 {
     char scriptstr[1024],*retstr = 0;
     long len;
@@ -2270,17 +2270,17 @@ char *_replace_with_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems
     struct cointx_info *cointx;
     if ( _make_OP_RETURN(scriptstr,redeems,numredeems) > 0 && (cointx= _decode_rawtransaction(rawtx)) != 0 )
     {
-        if ( replace_vout < cointx->numoutputs )
-        {
-            vout = &cointx->outputs[replace_vout];
-            vout->value = 0;
-            vout->coinaddr[0] = 0;
-            safecopy(vout->script,scriptstr,sizeof(vout->script));
-            len = strlen(rawtx) * 2;
-            retstr = calloc(1,len);
-            if ( _emit_cointx(retstr,len,cointx) < 0 )
-                free(retstr), retstr = 0;
-        } else printf("_replace_with_OP_RETURN cant replace_vout.%d with only numoutputs.%d\n",replace_vout,cointx->numoutputs);
+        if ( replace_vout == cointx->numoutputs-1 )
+            cointx->outputs[cointx->numoutputs] = cointx->outputs[cointx->numoutputs-1];
+        cointx->numoutputs++;
+        vout = &cointx->outputs[replace_vout];
+        vout->value = 0;
+        vout->coinaddr[0] = 0;
+        safecopy(vout->script,scriptstr,sizeof(vout->script));
+        len = strlen(rawtx) * 2;
+        retstr = calloc(1,len);
+        if ( _emit_cointx(retstr,len,cointx) < 0 )
+            free(retstr), retstr = 0;
         free(cointx);
     }
     return(retstr);
@@ -2314,7 +2314,7 @@ int32_t ram_is_MGW_OP_RETURN(uint64_t *redeemtxids,struct ramchain_info *ram,uin
 
 struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destaddr,uint64_t value,uint64_t redeemtxid)
 {
-    char *rawparams,*signedtx,*changeaddr,*with_op_return,*retstr = 0;
+    char *rawparams,*signedtx,*changeaddr,*with_op_return=0,*retstr = 0;
     int64_t MGWfee,sum,amount;
     int32_t allocsize;
     struct cointx_info *cointx,TX,*rettx = 0;
@@ -2328,9 +2328,9 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     cointx->outputs[0].value = MGWfee;
     strcpy(cointx->outputs[1].coinaddr,destaddr);
     cointx->outputs[1].value = value;
-    strcpy(cointx->outputs[2].coinaddr,ram->marker);
-    cointx->outputs[2].value = 0;
-    cointx->numoutputs = 3;
+    //strcpy(cointx->outputs[2].coinaddr,ram->marker);
+    //cointx->outputs[2].value = 0;
+    cointx->numoutputs = 2;
     cointx->amount = amount = (MGWfee + value);
     fprintf(stderr,"calc_withdraw.%s %llu amount %.8f -> balance %.8f\n",ram->name,(long long)redeemtxid,dstr(cointx->amount),dstr(ram->MGWbalance));
    // if ( (cointx->amount + ram->txfee) <= ram->MGWbalance )
@@ -2359,7 +2359,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                 if ( retstr != 0 && retstr[0] != 0 )
                 {
                     fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
-                    if ( (with_op_return= _replace_with_OP_RETURN(retstr,2,&redeemtxid,1)) != 0 )
+                    if ( (with_op_return= _insert_OP_RETURN(retstr,2,&redeemtxid,1)) != 0 )
                     {
                         if ( (signedtx= _sign_localtx(ram,cointx,retstr)) != 0 )
                         {
