@@ -2114,6 +2114,7 @@ long _emit_cointx_input(uint8_t *data,long offset,struct cointx_input *vin)
     offset = _emit_uint32(data,offset,vin->tx.vout);
     siglen = strlen(vin->sigs) >> 1;
     offset += hcalc_varint(&data[offset],siglen);
+    printf("decodesiglen.%ld\n",siglen);
     decode_hex(&data[offset],(int32_t)siglen,vin->sigs), offset += siglen;
     offset = _emit_uint32(data,offset,vin->sequence);
     return(offset);
@@ -2126,6 +2127,7 @@ long _emit_cointx_output(uint8_t *data,long offset,struct rawvout *vout)
     offset = _emit_uint32(data,offset,(uint32_t)(vout->value >> 32));
     scriptlen = strlen(vout->script) >> 1;
     offset += hcalc_varint(&data[offset],scriptlen);
+    printf("scriptlen.%ld\n",scriptlen);
     decode_hex(&data[offset],(int32_t)scriptlen,vout->script), offset += scriptlen;
     return(offset);
 }
@@ -2221,6 +2223,7 @@ struct cointx_info *_decode_rawtransaction(char *hexstr)
         return(0);
     }
     len >>= 1;
+    printf("hexstrlen.%ld\n",len);
     decode_hex(data,(int32_t)len,hexstr);
     cointx = calloc(1,sizeof(*cointx));
     offset = _decode_uint32(&cointx->version,data,offset,len);
