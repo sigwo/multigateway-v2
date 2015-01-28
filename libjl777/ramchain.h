@@ -1861,7 +1861,7 @@ int32_t _sign_rawtransaction(char *deststr,unsigned long destsize,struct ramchai
     if ( (signparams= _createsignraw_json_params(ram,cointx,rawbytes,privkeys)) != 0 )
     {
         _stripwhite(signparams,0);
-        printf("got signparams.(%s)\n",signparams);
+        //printf("got signparams.(%s)\n",signparams);
         retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"signrawtransaction",signparams);
         if ( retstr != 0 )
         {
@@ -1876,13 +1876,12 @@ int32_t _sign_rawtransaction(char *deststr,unsigned long destsize,struct ramchai
                 copy_cJSON(deststr,hexobj);
                 if ( strlen(deststr) > destsize )
                     printf("sign_rawtransaction: strlen(deststr) %ld > %ld destize\n",strlen(deststr),destsize);
-                printf("got signedtransaction.(%s) ret.(%s) completed.%d\n",deststr,retstr,completed);
+                //printf("got signedtransaction.(%s) ret.(%s) completed.%d\n",deststr,retstr,completed);
                 free_json(json);
             } else printf("json parse error.(%s)\n",retstr);
             free(retstr);
         } else printf("error signing rawtx\n");
-        printf("free signparams.%p\n",signparams);
-        //free(signparams);
+        free(signparams);
     } else printf("error generating signparams\n");
     return(completed);
 }
@@ -2493,8 +2492,8 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                     {
                         if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
                         {
-                            printf("signedtx returns.(%s)\n",signedtx);
                             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
+                            printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
                             rettx = calloc(1,allocsize);
                             *rettx = *cointx;
                             rettx->allocsize = allocsize;
@@ -2502,16 +2501,18 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                             free(signedtx);
                             cointx = 0;
                         } else printf("error _sign_localtx.(%s)\n",with_op_return);
+                        free(with_op_return);
                     } else printf("error replacing with OP_RETURN\n");
                 } else fprintf(stderr,"error creating rawtransaction\n");
+                printf("free rawparams\n");
                 free(rawparams);
+                       printf("free retstr\n");
                 if ( retstr != 0 )
                     free(retstr);
-                if ( with_op_return != 0 )
-                    free(with_op_return);
             } else fprintf(stderr,"error creating rawparams\n");
         } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(sum),dstr(cointx->amount),dstr(ram->txfee));
     } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",ram->name,dstr(ram->MGWbalance),dstr(cointx->amount),dstr(ram->txfee));
+    printf("return rettx.%p\n",rettx);
     return(rettx);
 }
 
@@ -3070,9 +3071,11 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
     char batchname[512],fname[512],*retstr;
     int32_t gatewayid;
     FILE *fp;
+    printf("ram_send_cointx\n");
     cointx->crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize-sizeof(cointx->crc)));
     _set_batchname(batchname,cointx->coinstr,cointx->gatewayid,cointx->redeemtxid);
     set_handler_fname(fname,"RTmgw",batchname);
+    printf("save to (%s)\n",fname);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
         fwrite(cointx,1,sizeof(*cointx),fp);
