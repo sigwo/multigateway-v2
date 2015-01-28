@@ -3570,7 +3570,8 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
             fp = 0;
             sprintf(fname,"ramchains/NXT.%s",ram->special_NXTaddrs[j]);
             printf("init NXT special.%d of %d (%s) [%s]\n",j,ram->numspecials,ram->special_NXTaddrs[j],fname);
-            for (iter=timestamp=0; iter<2; iter++)
+            timestamp = 0;
+            for (iter=1; iter<2; iter++)
             {
                 if ( iter == 0 )
                 {
@@ -8712,7 +8713,7 @@ void *process_ramchains(void *_argcoinstr)
                 }
                 else //if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
                 {
-                    //if ( ram->mappedblocks[1]->blocknum >= (_get_RTheight(ram) - 2*ram->min_confirms - 10) )
+                    if ( ram->mappedblocks[1]->blocknum >= (_get_RTheight(ram) - 2*ram->min_confirms - 10) )
                     {
                         ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum); // possible for tx to disappear
                         if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
