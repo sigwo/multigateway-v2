@@ -3064,6 +3064,8 @@ int32_t _ram_update_redeembits(struct ramchain_info *ram,uint64_t redeembits,uin
         return(0);
     _expand_nxt64bits(txid,redeembits);
     tp = find_NXT_assettxid(&createdflag,ap,txid);
+    tp->assetbits = ap->assetbits;
+    tp->redeemtxid = redeembits;
 
     //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
         printf("_ram_update_redeembits.apnum.%d set AMtxidbits.%llu -> %s redeem (%llu) cointxid.%p tp.%p\n",ap->num,(long long)AMtxidbits,ram->name,(long long)redeembits,cointxid,tp);
@@ -3571,7 +3573,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
             sprintf(fname,"ramchains/NXT.%s",ram->special_NXTaddrs[j]);
             printf("init NXT special.%d of %d (%s) [%s]\n",j,ram->numspecials,ram->special_NXTaddrs[j],fname);
             timestamp = 0;
-            for (iter=1; iter<2; iter++)
+            for (iter=0; iter<2; iter++)
             {
                 if ( iter == 0 )
                 {
