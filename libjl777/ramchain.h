@@ -2279,6 +2279,7 @@ char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32
         safecopy(vout->script,scriptstr,sizeof(vout->script));
         len = strlen(rawtx) * 2;
         retstr = calloc(1,len);
+        disp_cointx(cointx);
         if ( _emit_cointx(retstr,len,cointx) < 0 )
             free(retstr), retstr = 0;
         free(cointx);
@@ -2361,7 +2362,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                     fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
                     if ( (with_op_return= _insert_OP_RETURN(retstr,2,&redeemtxid,1)) != 0 )
                     {
-                        if ( (signedtx= _sign_localtx(ram,cointx,retstr)) != 0 )
+                        if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
                         {
                             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
                             rettx = calloc(1,allocsize);
