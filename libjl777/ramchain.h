@@ -2031,9 +2031,11 @@ char *_createrawtxid_json_params(struct ramchain_info *ram,struct cointx_info *c
 
 int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
 {
-    uint8_t hashdata[256],*ptr;
+    long _emit_uint32(uint8_t *data,long offset,uint32_t x);
+    uint8_t hashdata[256];
     uint64_t redeemtxid;
-    int32_t i,j,size;
+    int32_t i,size;
+    long offset;
     scriptstr[0] = 0;
     if ( numredeems >= (sizeof(hashdata)/sizeof(uint64_t))-1 )
     {
@@ -2043,12 +2045,12 @@ int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
     hashdata[1] = OP_RETURN_OPCODE;
     hashdata[2] = 'M', hashdata[3] = 'G', hashdata[4] = 'W';
     hashdata[5] = numredeems;
-    ptr = &hashdata[6];
+    offset = 6;
     for (i=0; i<numredeems; i++)
     {
         redeemtxid = redeems[i];
-        for (j=0; j<(int32_t)sizeof(uint64_t); j++,redeemtxid>>=8)
-            *ptr++ = (redeemtxid & 0xff);
+        offset = _emit_uint32(hashdata,offset,(uint32_t)redeemtxid);
+        offset = _emit_uint32(hashdata,offset,(uint32_t)(redeemtxid >> 32));
     }
     hashdata[0] = size = (int32_t)(5 + sizeof(uint64_t)*numredeems);
     init_hexbytes_noT(scriptstr,hashdata+1,hashdata[0]);
