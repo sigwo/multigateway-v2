@@ -1468,6 +1468,8 @@ char *calc_batchwithdraw(struct multisig_addr **msigs,int32_t nummsigs,struct co
                     fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
                     batchsigned = sign_localtx(cp,rp,retstr);
                 } else fprintf(stderr,"error creating rawtransaction\n");
+                if ( retstr != 0 )
+                    free(retstr);
                 free(rawparams);
             } else fprintf(stderr,"error creating rawparams\n");
         } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(retA),dstr(rp->amount),dstr(cp->txfee));

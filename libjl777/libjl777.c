@@ -95,6 +95,7 @@ void send_async_message(char *msg)
 
 void handler_gotfile(struct transfer_args *args,uint8_t *data,int32_t len,uint32_t crc)
 {
+    void _RTmgw_handler(struct transfer_args *args);
     void bridge_handler(struct transfer_args *args);
     FILE *fp;
     char buf[512];
@@ -109,7 +110,7 @@ void handler_gotfile(struct transfer_args *args,uint8_t *data,int32_t len,uint32
         args->handlercrc = crc;
         args->handlertime = now;
     }
-    if ( strcmp(args->handler,"mgw") == 0 )
+    if ( strcmp(args->handler,"mgw") == 0 || strcmp(args->handler,"RTmgw") == 0 )
     {
         set_handler_fname(buf,args->handler,args->name);
         if ( (fp= fopen(buf,"wb")) != 0 )
@@ -117,7 +118,9 @@ void handler_gotfile(struct transfer_args *args,uint8_t *data,int32_t len,uint32
             fwrite(args->data,1,args->totallen,fp);
             fclose(fp);
         }
-        MGW_handler(args);
+        if ( strcmp(args->handler,"RTmgw") == 0 )
+            _RTmgw_handler(args);
+        else MGW_handler(args);
     }
     else if ( strcmp(args->handler,"bridge") == 0 )
         bridge_handler(args);

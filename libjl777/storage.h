@@ -757,17 +757,20 @@ void ensure_SuperNET_dirs(char *backupdir)
     }
     #ifndef _WIN32
     printf("ensure_SuperNET_dirs backupdir.%s MGWROOT.%s\n",backupdir,MGWROOT);
-    sprintf(dirname,"%s/%s",MGWROOT,"MGW"), ensure_directory(dirname);
-    sprintf(dirname,"%s/%s",MGWROOT,"MGW/msig"), ensure_directory(dirname);
-    sprintf(dirname,"%s/%s",MGWROOT,"MGW/status"), ensure_directory(dirname);
-    sprintf(dirname,"%s/%s",MGWROOT,"MGW/sent"), ensure_directory(dirname);
-    sprintf(dirname,"%s/%s",MGWROOT,"MGW/deposit"), ensure_directory(dirname);
-    
-    if ( DATADIR[0] != 0 && DATADIR[0] != '.' )
-        ensure_directory(DATADIR);
-    sprintf(dirname,"%s/%s",DATADIR,"mgw"), ensure_directory(dirname);
-    sprintf(dirname,"%s/%s",DATADIR,"bridge"), ensure_directory(dirname);
-    
+    if ( Global_mp->gatewayid >= 0 )
+    {
+        sprintf(dirname,"%s/%s",MGWROOT,"MGW"), ensure_directory(dirname);
+        sprintf(dirname,"%s/%s",MGWROOT,"MGW/msig"), ensure_directory(dirname);
+        sprintf(dirname,"%s/%s",MGWROOT,"MGW/status"), ensure_directory(dirname);
+        sprintf(dirname,"%s/%s",MGWROOT,"MGW/sent"), ensure_directory(dirname);
+        sprintf(dirname,"%s/%s",MGWROOT,"MGW/deposit"), ensure_directory(dirname);
+        
+        if ( DATADIR[0] != 0 && DATADIR[0] != '.' )
+            ensure_directory(DATADIR);
+        sprintf(dirname,"%s/%s",DATADIR,"RTmgw"), ensure_directory(dirname);
+        sprintf(dirname,"%s/%s",DATADIR,"mgw"), ensure_directory(dirname);
+        sprintf(dirname,"%s/%s",DATADIR,"bridge"), ensure_directory(dirname);
+    }
     if ( backupdir == 0 || backupdir[0] == 0 )
         backupdir = ".";
     if ( backupdir[0] != '.' )

@@ -743,12 +743,23 @@ void init_Specialaddrs()
         }
         if ( Debuglevel > 0 )
             printf("special_addrs.%d\n",n);
-        MGW_blacklist[n] = MGW_whitelist[n] = NXTISSUERACCT, n++;
-        MGW_blacklist[n] = MGW_whitelist[n] = GENESISACCT, n++;
-        MGW_whitelist[n] = "";
-        MGW_blacklist[n++] = "4551058913252105307";    // from accidental transfer
-        MGW_blacklist[n++] = "";
     }
+    else
+    {
+        n = 0;
+        MGW_whitelist[n++] = "423766016895692955";
+        MGW_whitelist[n++] = "12240549928875772593";
+        MGW_whitelist[n++] = "8279528579993996036";
+        MGW_whitelist[n++] = "13434315136155299987";
+        MGW_whitelist[n++] = "10694781281555936856";
+        MGW_whitelist[n++] = "7581814105672729429";
+        MGW_whitelist[n++] = "15467703240466266079";
+    }
+    MGW_blacklist[n] = MGW_whitelist[n] = NXTISSUERACCT, n++;
+    MGW_blacklist[n] = MGW_whitelist[n] = GENESISACCT, n++;
+    MGW_whitelist[n] = "";
+    MGW_blacklist[n++] = "4551058913252105307";    // from accidental transfer
+    MGW_blacklist[n++] = "";
 }
 
 void init_ram_MGWconfs(struct ramchain_info *ram,cJSON *confjson,char *MGWredemption,struct NXT_asset *ap)
@@ -822,7 +833,10 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     strcpy(ram->myipaddr,cp->myipaddr);
     strcpy(ram->srvNXTACCTSECRET,cp->srvNXTACCTSECRET);
     strcpy(ram->srvNXTADDR,cp->srvNXTADDR);
+    if ( cp->marker == 0 )
+        cp->marker = clonestr(get_marker(cp->name));
     ram->marker = clonestr(cp->marker);
+    ram->dust = cp->dust;
     ram->userpass = clonestr(cp->userpass);
     ram->serverport = clonestr(cp->serverport);
     ram->lastheighttime = (uint32_t)cp->lastheighttime;
@@ -835,6 +849,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     ram->gatewayid = Global_mp->gatewayid;
     ram->NXTfee_equiv = cp->NXTfee_equiv;
     ram->txfee = cp->txfee;
+    ram->NXTconvrate = (ram->NXTfee_equiv / ram->txfee);
     ram->min_NXTconfirms = MIN_NXTCONFIRMS;
     ram->DEPOSIT_XFER_DURATION = get_API_int(cJSON_GetObjectItem(cp->json,"DEPOSIT_XFER_DURATION"),DEPOSIT_XFER_DURATION);
     if ( IS_LIBTEST > 0 && is_active_coin(cp->name) > 0 )
@@ -1008,9 +1023,15 @@ void init_legacyMGW(char *myipaddr)
     //if ( ORIGBLOCK[0] == 0 )
     //   strcpy(ORIGBLOCK,origblock);
     extract_cJSON_str(Server_ipaddrs[0],sizeof(Server_ipaddrs[0]),MGWconf,"MGW0_ipaddr");
+    if ( Server_ipaddrs[0][0] == 0 )
+        strcpy(Server_ipaddrs[0],MGW0_IPADDR);
     extract_cJSON_str(Server_ipaddrs[1],sizeof(Server_ipaddrs[1]),MGWconf,"MGW1_ipaddr");
+    if ( Server_ipaddrs[1][0] == 0 )
+        strcpy(Server_ipaddrs[1],MGW1_IPADDR);
     extract_cJSON_str(Server_ipaddrs[2],sizeof(Server_ipaddrs[2]),MGWconf,"MGW2_ipaddr");
-   // extract_cJSON_str(NXTACCTSECRET,sizeof(NXTACCTSECRET),MGWconf,"secret");
+    if ( Server_ipaddrs[2][0] == 0 )
+        strcpy(Server_ipaddrs[2],MGW2_IPADDR);
+  // extract_cJSON_str(NXTACCTSECRET,sizeof(NXTACCTSECRET),MGWconf,"secret");
     Global_mp->gatewayid = -1;
     for (i=0; i<3; i++)
     {
