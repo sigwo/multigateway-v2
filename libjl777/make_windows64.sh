@@ -37,7 +37,7 @@ cp .libs/libuv.a ../libs/libuv-x64-win.a
 cd ..
 mkdir db_win
 unzip db-6.1.19.zip -d db_64_win
-cd db_win/db-6.1.19
+cd db_64_win/db-6.1.19
 echo ">>>>>>>>>>>>>>>>>>building libdb"
 mkdir build_mxe
 cd build_mxe
