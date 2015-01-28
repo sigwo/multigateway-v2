@@ -4248,12 +4248,12 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
 extern "C" void *poll_for_broadcasts(void *args)
 {
     cJSON *json;
-    int32_t duration,len;
+    int32_t duration,len,sleeptime = 1;
     unsigned char data[4098];
     char params[4096],buf[8192],destip[1024],txidstr[64],*retstr;
     while ( did_SuperNET_init != 0 )
     {
-        sleep(1);
+        sleep(sleeptime++);
         //printf("ISSUE BTCDpoll\n");
         sprintf(params,"{\"requestType\":\"BTCDpoll\"}");
         retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url,(char *)"",(char *)"SuperNET",params);
@@ -4266,6 +4266,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                 copy_cJSON(destip,cJSON_GetObjectItem(json,"ip_port"));
                 if ( destip[0] != 0 && duration < 0 )
                 {
+                    sleeptime = 1;
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"));
                     len = ((int32_t)strlen(buf) >> 1);
                     decode_hex(data,len,buf);
@@ -4277,6 +4278,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"));
                     if ( buf[0] != 0 )
                     {
+                        sleeptime = 1;
                         unstringify(buf);
                         fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
                         SuperNET_broadcast(buf,duration);
@@ -4290,6 +4292,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                         Pending_RPC = 0;
                         unstringify(buf);
                         copy_cJSON(txidstr,cJSON_GetObjectItem(json,"txid"));
+                        sleeptime = 1;
                         if ( txidstr[0] != 0 )
                             fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: (%s) for [%s]\n",buf,txidstr);
                     }

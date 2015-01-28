@@ -52,21 +52,23 @@
 #endif
 #include "cJSON.h"
 
-extern long stripwhite(char *buf,long len);
-extern int32_t MGW_initdone,PERMUTE_RAWINDS;
-extern struct ramchain_info *get_ramchain_info(char *coinstr);
+// from libtom
+extern uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 extern void calc_sha256cat(unsigned char hash[256 >> 3],unsigned char *src,int32_t len,unsigned char *src2,int32_t len2);
-extern struct multisig_addr *find_msigaddr(char *msigaddr);
-extern int32_t is_trusted_issuer(char *issuer);
-extern int32_t update_MGW_jsonfile(void (*setfname)(char *fname,char *NXTaddr),void *(*extract_jsondata)(cJSON *item,void *arg,void *arg2),int32_t (*jsoncmp)(void *ref,void *item),char *NXTaddr,char *jsonstr,void *arg,void *arg2);
+
+// init and setup
+extern int32_t MGW_initdone,PERMUTE_RAWINDS;
 extern char Server_ipaddrs[256][MAX_JSON_FIELD];
-int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender);
+extern int32_t is_trusted_issuer(char *issuer);
+extern struct ramchain_info *get_ramchain_info(char *coinstr);
+
+// DB functions
+extern struct multisig_addr *find_msigaddr(char *msigaddr);
+extern int32_t update_MGW_jsonfile(void (*setfname)(char *fname,char *NXTaddr),void *(*extract_jsondata)(cJSON *item,void *arg,void *arg2),int32_t (*jsoncmp)(void *ref,void *item),char *NXTaddr,char *jsonstr,void *arg,void *arg2);
+extern int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender);
 
 // ramchain functions for external access
 void *process_ramchains(void *argcoinstr);
-long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize);
-int32_t hcalc_varint(uint8_t *buf,uint64_t x);
-
 char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin);
 char *ramstring(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,uint32_t rawind);
 char *ramrawind(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,char *str);
@@ -79,6 +81,9 @@ char *ramrichlist(char *origargstr,char *sender,char *previpaddr,char *destip,ch
 char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char **coins,double *rates,char ***coinaddrs,int32_t numcoins);
 char *ramaddrlist(char *origargstr,char *sender,char *previpaddr,char *coin);
 
+int32_t portable_mutex_init(portable_mutex_t *mutex);
+void portable_mutex_lock(portable_mutex_t *mutex);
+void portable_mutex_unlock(portable_mutex_t *mutex);
 
 
 #ifdef RAM_GENMODE
@@ -156,6 +161,7 @@ struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; 
 struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t value; uint32_t sequence; char used; };
 struct cointx_info
 {
+    uint32_t crc; // MUST be first
     char coinstr[16];
     uint64_t inputsum,amount,change,redeemtxid;
     uint32_t allocsize,batchsize,batchcrc,gatewayid;
@@ -199,7 +205,7 @@ struct ramchain_info
     HUFF *tmphp,*tmphp2;
     char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker;
     uint32_t next_blocknum,next_txid_permind,next_addr_permind,next_script_permind,permind_changes;
-    uint32_t lastheighttime,RTblocknum,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind;
+    uint32_t lastheighttime,RTblocknum,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind,numgateways;
     uint64_t totalspends,numspends,totaloutputs,numoutputs,totalbits,totalbytes,txfee,dust,NXTfee_equiv;
     struct rawblock *R,*R2,*R3;
     struct rawblock_huffs H;
@@ -700,6 +706,23 @@ void delete_file(char *fname,int32_t scrubflag)
     }
 }
 
+int32_t portable_mutex_init(portable_mutex_t *mutex)
+{
+    return(uv_mutex_init(mutex)); //pthread_mutex_init(mutex,NULL);
+}
+
+void portable_mutex_lock(portable_mutex_t *mutex)
+{
+    //printf("lock.%p\n",mutex);
+    uv_mutex_lock(mutex); // pthread_mutex_lock(mutex);
+}
+
+void portable_mutex_unlock(portable_mutex_t *mutex)
+{
+    // printf("unlock.%p\n",mutex);
+    uv_mutex_unlock(mutex); //pthread_mutex_unlock(mutex);
+}
+
 #define ram_millis milliseconds
 /*double ram_millis(void)
  {
@@ -797,6 +820,88 @@ void ram_init_tmpspace(struct ramchain_info *ram,long size)
     ram_clear_alloc_space(&ram->Tmp);
 }
 
+// >>>>>>>>>>>>>>  start varint functions
+int32_t hcalc_varint(uint8_t *buf,uint64_t x)
+{
+    uint16_t s; uint32_t i; int32_t len = 0;
+    if ( x < 0xfd )
+        buf[len++] = (uint8_t)(x & 0xff);
+    else
+    {
+        if ( x <= 0xffff )
+        {
+            buf[len++] = 0xfd;
+            s = (uint16_t)x;
+            memcpy(&buf[len],&s,sizeof(s));
+            len += 2;
+        }
+        else if ( x <= 0xffffffffL )
+        {
+            buf[len++] = 0xfe;
+            i = (uint32_t)x;
+            memcpy(&buf[len],&i,sizeof(i));
+            len += 4;
+        }
+        else
+        {
+            buf[len++] = 0xff;
+            memcpy(&buf[len],&x,sizeof(x));
+            len += 8;
+        }
+    }
+    return(len);
+}
+
+long hemit_varint(FILE *fp,uint64_t x)
+{
+    uint8_t buf[9];
+    int32_t len;
+    if ( fp == 0 )
+        return(-1);
+    long retval = -1;
+    if ( (len= hcalc_varint(buf,x)) > 0 )
+        retval = fwrite(buf,1,len,fp);
+    return(retval);
+}
+
+long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize)
+{
+    uint16_t s; uint32_t i; int32_t c;
+    if ( ptr == 0 )
+        return(-1);
+    *valp = 0;
+    if ( offset < 0 || offset >= mappedsize )
+        return(-1);
+    c = ptr[offset++];
+    switch ( c )
+    {
+        case 0xfd: if ( offset+sizeof(s) > mappedsize ) return(-1); memcpy(&s,&ptr[offset],sizeof(s)), *valp = s, offset += sizeof(s); break;
+        case 0xfe: if ( offset+sizeof(i) > mappedsize ) return(-1); memcpy(&i,&ptr[offset],sizeof(i)), *valp = i, offset += sizeof(i); break;
+        case 0xff: if ( offset+sizeof(*valp) > mappedsize ) return(-1); memcpy(valp,&ptr[offset],sizeof(*valp)), offset += sizeof(*valp); break;
+        default: *valp = c; break;
+    }
+    return(offset);
+}
+
+long hload_varint(uint64_t *valp,FILE *fp)
+{
+    uint16_t s; uint32_t i; int32_t c; int32_t retval = 1;
+    if ( fp == 0 )
+        return(-1);
+    *valp = 0;
+    if ( (c= fgetc(fp)) == EOF )
+        return(0);
+    c &= 0xff;
+    switch ( c )
+    {
+        case 0xfd: retval = (sizeof(s) + 1) * (fread(&s,1,sizeof(s),fp) == sizeof(s)), *valp = s; break;
+        case 0xfe: retval = (sizeof(i) + 1) * (fread(&i,1,sizeof(i),fp) == sizeof(i)), *valp = i; break;
+        case 0xff: retval = (sizeof(*valp) + 1) * (fread(valp,1,sizeof(*valp),fp) == sizeof(*valp)); break;
+        default: *valp = c; break;
+    }
+    return(retval);
+}
+
 // >>>>>>>>>>>>>>  start string functions
 char hexbyte(int32_t c)
 {
@@ -881,6 +986,21 @@ int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len)
     hexbytes[len*2] = 0;
     //printf("len.%ld\n",len*2+1);
     return((int32_t)len*2+1);
+}
+
+long _stripwhite(char *buf,int accept)
+{
+    int32_t i,j,c;
+    if ( buf == 0 || buf[0] == 0 )
+        return(0);
+    for (i=j=0; buf[i]!=0; i++)
+    {
+        buf[j] = c = buf[i];
+        if ( c == accept || (c != ' ' && c != '\n' && c != '\r' && c != '\t') )
+            j++;
+    }
+    buf[j] = 0;
+    return(j);
 }
 
 // >>>>>>>>>>>>>>  start bitcoind_RPC interface functions
@@ -1740,7 +1860,7 @@ int32_t _sign_rawtransaction(char *deststr,unsigned long destsize,struct ramchai
     //printf("sign_rawtransaction rawbytes.(%s) %p\n",rawbytes,privkeys);
     if ( (signparams= _createsignraw_json_params(ram,cointx,rawbytes,privkeys)) != 0 )
     {
-        stripwhite(signparams,strlen(signparams));
+        _stripwhite(signparams,0);
         printf("got signparams.(%s)\n",signparams);
         retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"signrawtransaction",signparams);
         if ( retstr != 0 )
@@ -1977,7 +2097,6 @@ void sort_rawinputs(struct cointx_info *cointx)
 
 char *_sign_localtx(struct ramchain_info *ram,struct cointx_info *cointx,char *rawbytes)
 {
-    uint32_t _crc32(uint32_t crc, const void *buf, size_t size);
     char *batchsigned;
     fprintf(stderr,"sign_localtx\n");
     cointx->batchsize = (uint32_t)strlen(rawbytes) + 1;
@@ -2364,7 +2483,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
             if ( rawparams != 0 )
             {
                 //fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
-                stripwhite(rawparams,strlen(rawparams));
+                _stripwhite(rawparams,0);
                 retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"createrawtransaction",rawparams);
                 if ( retstr != 0 && retstr[0] != 0 )
                 {
@@ -2791,10 +2910,64 @@ int32_t ram_MGW_ready(struct ramchain_info *ram,uint32_t blocknum,uint32_t NXThe
     return(0);
 }
 
-struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info **ramp,struct cointx_info *cointx)
+struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *ram,struct NXT_assettxid *tp,struct cointx_info *cointx)
 {
-    int32_t gatewayid,i;
-    struct NXT_assettxid *tp;
+    static portable_mutex_t mutex;
+    static int didinit;
+    int32_t createdflag,i,gatewayid = cointx->gatewayid;
+    char redeemtxidstr[64];
+    if ( didinit == 0 )
+    {
+        portable_mutex_init(&mutex);
+        didinit = 1;
+    }
+    if ( cointx == 0 )
+    {
+        i = *slotp;
+        portable_mutex_lock(&mutex);
+        ram->pendingsends[i] = ram->pendingsends[--ram->numpendingsends];
+        for (i=0; i<3; i++)
+            free(tp->pendingsends[i]), tp->pendingsends[i] = 0;
+        portable_mutex_unlock(&mutex);
+        printf("_RTmgw_handler: completed NXT.%llu redeem.%llu %.8f %.1f minutes | numpending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(double)tp->redeemstarted/60.,ram->numpendingsends);
+        return(tp);
+    }
+    portable_mutex_lock(&mutex);
+    if ( tp == 0 && ram->numpendingsends > 0 )
+    {
+        for (i=0; i<ram->numpendingsends; i++)
+        {
+            tp = ram->pendingsends[i];
+            if ( cointx->redeemtxid == tp->redeemtxid )
+                break;
+        }
+    } else i = 0;
+    if ( i == ram->numpendingsends )
+    {
+        if ( tp == 0 )
+        {
+            _expand_nxt64bits(redeemtxidstr,cointx->redeemtxid);
+            tp = find_NXT_assettxid(&createdflag,ram->ap,redeemtxidstr);
+        }
+        ram->pendingsends[ram->numpendingsends++] = tp;
+    }
+    portable_mutex_unlock(&mutex);
+    *slotp = i;
+    if ( tp->pendingsends[gatewayid] != 0 )
+    {
+        printf("got another redeem.%llu from gateway.%d\n",(long long)cointx->redeemtxid,gatewayid);
+        free(tp->pendingsends[gatewayid]);
+    }
+    tp->pendingsends[gatewayid] = cointx;
+    printf("GOT <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
+    return(tp);
+}
+
+struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info **ramp,struct cointx_info *cointx,char *sender,char *recvname)
+{
+    uint32_t crc;
+    int32_t gatewayid;
+    char redeemtxidstr[64];
     struct ramchain_info *ram;
     *ramp = 0;
     *sendip = -1;
@@ -2803,17 +2976,33 @@ struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info
     else
     {
         *ramp = ram;
-        gatewayid = cointx->gatewayid;
-        for (i=0; i<ram->numpendingsends; i++)
+        if ( strncmp(recvname,ram->name,strlen(ram->name)) != 0 )
         {
-            tp = ram->pendingsends[i];
-            if ( cointx->redeemtxid == tp->redeemtxid )
-            {
-                *sendip = i;
-                tp->pendingsends[gatewayid] = cointx;
-                printf("GOT <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
-                return(tp);
-            }
+            printf("_process_realtime_MGW: coin mismatch recvname.(%s) vs %s\n",recvname,ram->name);
+            return(0);
+        }
+        crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize-sizeof(cointx->crc)));
+        if ( crc != cointx->crc )
+        {
+            printf("_process_realtime_MGW: crc mismatch %x vs %x\n",crc,cointx->crc);
+            return(0);
+        }
+        _expand_nxt64bits(redeemtxidstr,cointx->redeemtxid);
+        if ( strcmp(recvname+strlen(ram->name)+1,redeemtxidstr) != 0 )
+        {
+            printf("_process_realtime_MGW: redeemtxid mismatch (%s) vs (%s)\n",recvname+strlen(ram->name)+1,redeemtxidstr);
+            return(0);
+        }
+        gatewayid = cointx->gatewayid;
+        if ( gatewayid < 0 || gatewayid >= ram->numgateways )
+        {
+            printf("_process_realtime_MGW: illegal gatewayid.%d\n",gatewayid);
+            return(0);
+        }
+        if ( strcmp(ram->special_NXTaddrs[gatewayid],sender) != 0 )
+        {
+            printf("_process_realtime_MGW: gatewayid mismatch %d.(%s) vs %s\n",gatewayid,ram->special_NXTaddrs[gatewayid],sender);
+            return(0);
         }
         printf("GOT UNMATCHED <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
     }
@@ -2836,9 +3025,9 @@ void _RTmgw_handler(struct transfer_args *args)
     struct NXT_assettxid *tp;
     struct ramchain_info *ram;
     struct cointx_info *othercointx;
-    int32_t i,sendi;
+    int32_t sendi;
     printf("_RTmgw_handler(%s %d bytes)\n",args->name,args->totallen);
-    if ( (tp= _process_realtime_MGW(&sendi,&ram,(struct cointx_info *)args->data)) != 0 )
+    if ( (tp= _process_realtime_MGW(&sendi,&ram,(struct cointx_info *)args->data,args->sender,args->name)) != 0 )
     {
         if ( sendi >= ram->numpendingsends || sendi < 0 || ram->pendingsends[sendi] != tp )
         {
@@ -2858,10 +3047,7 @@ void _RTmgw_handler(struct transfer_args *args)
                 if ( (cointxid= _sign_and_sendmoney(txidstr,ram,tp->pendingsends[ram->gatewayid],othercointx->signedtx,&tp->redeemtxid,&tp->U.assetoshis,1)) != 0 )
                 {
                     _complete_assettxid(ram,tp);
-                    ram->pendingsends[sendi] = ram->pendingsends[--ram->numpendingsends];
-                    printf("_RTmgw_handler: completed NXT.%llu redeem.%llu %.8f %.1f minutes | numpending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(double)tp->redeemstarted/60.,ram->numpendingsends);
-                    for (i=0; i<3; i++)
-                        free(tp->pendingsends[i]), tp->pendingsends[i] = 0;
+                    ram_add_pendingsend(&sendi,ram,tp,0);
                 }
                 else printf("_RTmgw_handler: error _sign_and_sendmoney for NXT.%llu redeem.%llu %.8f (%s)\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),othercointx->signedtx);
             }
@@ -2870,9 +3056,9 @@ void _RTmgw_handler(struct transfer_args *args)
     //getchar();
 }
 
-void _set_batchname(char *batchname,char *coinstr,int32_t gatewayid)
+void _set_batchname(char *batchname,char *coinstr,int32_t gatewayid,uint64_t redeemtxid)
 {
-    sprintf(batchname,"%s.MGW%d",coinstr,gatewayid);
+    sprintf(batchname,"%s.%llu",coinstr,(long long)redeemtxid);
 }
 
 void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
@@ -2882,7 +3068,8 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
     char batchname[512],fname[512],*retstr;
     int32_t gatewayid;
     FILE *fp;
-    _set_batchname(batchname,cointx->coinstr,cointx->gatewayid);
+    cointx->crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize-sizeof(cointx->crc)));
+    _set_batchname(batchname,cointx->coinstr,cointx->gatewayid,cointx->redeemtxid);
     set_handler_fname(fname,"RTmgw",batchname);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
@@ -2908,6 +3095,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     char sender[64],receiver[64],withdrawaddr[512],*destaddr;
     struct NXT_assettxid *tp;
     struct NXT_asset *ap;
+    struct cointx_info *cointx;
     uint64_t orphans = 0;
     *pendingredeemsp = 0;
     disable_newsends = 1;//(ram->numpendingsends > 0);
@@ -2967,10 +3155,10 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                             printf("NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->is_realtime,(tp->height + ram->min_NXTconfirms) <= ram->NXT_RTblocknum,ram->MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends);
                             if ( disable_newsends == 0 && ram_MGW_ready(ram,0,tp->height,0,tp->U.assetoshis) > 0 && tp->pendingsends[ram->gatewayid] == 0 )
                             {
-                                if ( (tp->pendingsends[ram->gatewayid]= _calc_cointx_withdraw(ram,tp->convwithdrawaddr,tp->U.assetoshis,tp->redeemtxid)) != 0 )
+                                if ( (cointx= _calc_cointx_withdraw(ram,tp->convwithdrawaddr,tp->U.assetoshis,tp->redeemtxid)) != 0 )
                                 {
                                     ram_send_cointx(ram,tp->pendingsends[ram->gatewayid]);
-                                    ram->pendingsends[ram->numpendingsends++] = tp;
+                                    ram_add_pendingsend(0,ram,tp,cointx);
                                 }
                             }
                             //printf("(%llu %.8f).%d ",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(int32_t)(time(NULL) - tp->redeemstarted));
@@ -3322,7 +3510,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
             if ( tp->comment != 0 )
                 free(tp->comment);
             tp->comment = clonestr(commentstr);
-            stripwhite_ns(tp->comment,strlen(tp->comment));
+            _stripwhite(tp->comment,' ');
             tp->buyNXT = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
             tp->coinblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"coinblocknum"),0);
             tp->cointxind = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"cointxind"),0);
@@ -3944,87 +4132,6 @@ int32_t hdecode_valuebits(uint64_t *valuep,HUFF *hp)
     *valuep = (tmp[0] | ((uint64_t)tmp[1] << 32));
     // printf("[%llx] ",(long long)(*valuep));
     return(numbits);
-}
-
-int32_t hcalc_varint(uint8_t *buf,uint64_t x)
-{
-    uint16_t s; uint32_t i; int32_t len = 0;
-    if ( x < 0xfd )
-        buf[len++] = (uint8_t)(x & 0xff);
-    else
-    {
-        if ( x <= 0xffff )
-        {
-            buf[len++] = 0xfd;
-            s = (uint16_t)x;
-            memcpy(&buf[len],&s,sizeof(s));
-            len += 2;
-        }
-        else if ( x <= 0xffffffffL )
-        {
-            buf[len++] = 0xfe;
-            i = (uint32_t)x;
-            memcpy(&buf[len],&i,sizeof(i));
-            len += 4;
-        }
-        else
-        {
-            buf[len++] = 0xff;
-            memcpy(&buf[len],&x,sizeof(x));
-            len += 8;
-        }
-    }
-    return(len);
-}
-
-long hemit_varint(FILE *fp,uint64_t x)
-{
-    uint8_t buf[9];
-    int32_t len;
-    if ( fp == 0 )
-        return(-1);
-    long retval = -1;
-    if ( (len= hcalc_varint(buf,x)) > 0 )
-        retval = fwrite(buf,1,len,fp);
-    return(retval);
-}
-
-long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize)
-{
-    uint16_t s; uint32_t i; int32_t c;
-    if ( ptr == 0 )
-        return(-1);
-    *valp = 0;
-    if ( offset < 0 || offset >= mappedsize )
-        return(-1);
-    c = ptr[offset++];
-    switch ( c )
-    {
-        case 0xfd: if ( offset+sizeof(s) > mappedsize ) return(-1); memcpy(&s,&ptr[offset],sizeof(s)), *valp = s, offset += sizeof(s); break;
-        case 0xfe: if ( offset+sizeof(i) > mappedsize ) return(-1); memcpy(&i,&ptr[offset],sizeof(i)), *valp = i, offset += sizeof(i); break;
-        case 0xff: if ( offset+sizeof(*valp) > mappedsize ) return(-1); memcpy(valp,&ptr[offset],sizeof(*valp)), offset += sizeof(*valp); break;
-        default: *valp = c; break;
-    }
-    return(offset);
-}
-
-long hload_varint(uint64_t *valp,FILE *fp)
-{
-    uint16_t s; uint32_t i; int32_t c; int32_t retval = 1;
-    if ( fp == 0 )
-        return(-1);
-    *valp = 0;
-    if ( (c= fgetc(fp)) == EOF )
-        return(0);
-    c &= 0xff;
-    switch ( c )
-    {
-        case 0xfd: retval = (sizeof(s) + 1) * (fread(&s,1,sizeof(s),fp) == sizeof(s)), *valp = s; break;
-        case 0xfe: retval = (sizeof(i) + 1) * (fread(&i,1,sizeof(i),fp) == sizeof(i)), *valp = i; break;
-        case 0xff: retval = (sizeof(*valp) + 1) * (fread(valp,1,sizeof(*valp),fp) == sizeof(*valp)); break;
-        default: *valp = c; break;
-    }
-    return(retval);
 }
 
 // HUFF bitstream functions, uses model similar to fopen/fread/fwrite/fseek but for bitstream

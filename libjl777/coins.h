@@ -851,6 +851,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     ram->multisigchar = cp->multisigchar;
     ram->estblocktime = cp->estblocktime;
     ram->firstiter = 1;
+    ram->numgateways = NUM_GATEWAYS;
     ram->gatewayid = Global_mp->gatewayid;
     ram->NXTfee_equiv = cp->NXTfee_equiv;
     ram->txfee = cp->txfee;

@@ -126,7 +126,6 @@
 #include <dirent.h>     //only NXTmembers.h
 #endif
 
-#include "includes/uv.h"
 #include <curl/curl.h>
 #include <curl/easy.h>
 
@@ -136,7 +135,6 @@
 
 #include <windows.h>
 //#include "utils/pthread.h"
-#include "includes/uv.h"
 #include "includes/gettimeofday.h"
 
 FILE *jl777fopen(char *fname,char *mode)
