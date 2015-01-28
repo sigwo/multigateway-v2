@@ -2333,7 +2333,8 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     cointx->numoutputs = 3;
     cointx->amount = amount = (MGWfee + value);
     fprintf(stderr,"calc_withdraw.%s %llu amount %.8f -> balance %.8f\n",ram->name,(long long)redeemtxid,dstr(cointx->amount),dstr(ram->MGWbalance));
-    if ( (cointx->amount + ram->txfee) <= ram->MGWbalance )
+   // if ( (cointx->amount + ram->txfee) <= ram->MGWbalance )
+    if ( ram->MGWbalance >= 0 )
     {
         if ( (sum= _calc_cointx_inputs(ram,cointx,cointx->amount)) >= (cointx->amount + ram->txfee) )
         {
