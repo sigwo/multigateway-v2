@@ -3156,7 +3156,6 @@ int32_t ram_update_redeembits(struct ramchain_info *ram,cJSON *argjson,uint64_t 
         for (i=0; i<n; i++)
         {
             copy_cJSON(redeemtxid,cJSON_GetArrayItem(array,i));
-            printf("update_redeem.(%s)\n",redeemtxid);
             redeembits = _calc_nxt64bits(redeemtxid);
             if ( redeemtxid[0] != 0 )
                 num += _ram_update_redeembits(ram,redeembits,AMtxidbits,cointxid,&B);
@@ -7587,7 +7586,7 @@ uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,
         }
         if ( j == ap->num && _valid_txamount(ram,addrpayload->value) > 0 && msig != 0 )
         {
-            printf("addr_unspent.(%s)\n",msig->NXTaddr);
+            //printf("addr_unspent.(%s)\n",msig->NXTaddr);
             if ( (nxt64bits= _calc_nxt64bits(msig->NXTaddr)) != 0 )
             {
                 printf("deposit.(%s/%d %d,%d %s %.8f)rt%d_%d_%d_%d.g%d -> NXT.%s\n",txidstr,addrpayload->B.v,addrpayload->B.blocknum,addrpayload->B.txind,addr,dstr(addrpayload->value),ram->NXT_is_realtime,ram->enable_deposits,(addrpayload->B.blocknum + ram->depositconfirms) <= ram->RTblocknum,ram->MGWbalance >= 0,(int32_t)(nxt64bits % NUM_GATEWAYS),msig->NXTaddr);
