@@ -3573,7 +3573,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
             sprintf(fname,"ramchains/NXT.%s",ram->special_NXTaddrs[j]);
             printf("init NXT special.%d of %d (%s) [%s]\n",j,ram->numspecials,ram->special_NXTaddrs[j],fname);
             timestamp = 0;
-            for (iter=0; iter<2; iter++)
+            for (iter=1; iter<2; iter++)
             {
                 if ( iter == 0 )
                 {
