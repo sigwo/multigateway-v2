@@ -3089,10 +3089,14 @@ int32_t _ram_update_redeembits(struct ramchain_info *ram,uint64_t redeembits,uin
                 {
                     if ( tp->cointxid != 0 )
                     {
-                        printf("_ram_update_redeembits: unexpected cointxid.(%s) already there for redeem.%llu (%s)\n",tp->cointxid,(long long)redeembits,cointxid);
-                        free(tp->cointxid);
+                        if ( strcmp(tp->cointxid,cointxid) != 0 )
+                        {
+                            printf("_ram_update_redeembits: unexpected cointxid.(%s) already there for redeem.%llu (%s)\n",tp->cointxid,(long long)redeembits,cointxid);
+                            free(tp->cointxid);
+                            tp->cointxid = clonestr(cointxid);
+                        }
                     }
-                    tp->cointxid = clonestr(cointxid);
+                    else tp->cointxid = clonestr(cointxid);
                 }
                 num++;
             }
