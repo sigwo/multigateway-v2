@@ -1618,7 +1618,7 @@ int32_t _map_msigaddr(char *redeemScript,struct ramchain_info *ram,char *normala
                     }
                     if ( ismine != 0 )
                     {
-                        printf("(%s) ismine.%d\n",addr,ismine);
+                        //printf("(%s) ismine.%d\n",addr,ismine);
                         strcpy(normaladdr,addr);
                         copy_cJSON(redeemScript,cJSON_GetObjectItem(json,"hex"));
                         break;
@@ -1638,7 +1638,7 @@ cJSON *_create_privkeys_json_params(struct ramchain_info *ram,struct cointx_info
     int32_t allocflag,i,ret,nonz = 0;
     cJSON *array;
     char args[1024],normaladdr[1024],redeemScript[4096];
-    printf("create privkeys %p numinputs.%d\n",privkeys,numinputs);
+    //printf("create privkeys %p numinputs.%d\n",privkeys,numinputs);
     if ( privkeys == 0 )
     {
         privkeys = calloc(numinputs,sizeof(*privkeys));
@@ -1647,12 +1647,12 @@ cJSON *_create_privkeys_json_params(struct ramchain_info *ram,struct cointx_info
             if ( (ret= _map_msigaddr(redeemScript,ram,normaladdr,cointx->inputs[i].coinaddr)) >= 0 )
             {
                 sprintf(args,"[\"%s\"]",normaladdr);
-                fprintf(stderr,"(%s) -> (%s).%d ",normaladdr,normaladdr,i);
+                //fprintf(stderr,"(%s) -> (%s).%d ",normaladdr,normaladdr,i);
                 privkeys[i] = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"dumpprivkey",args);
             } else fprintf(stderr,"ret.%d for %d (%s)\n",ret,i,normaladdr);
         }
         allocflag = 1;
-        fprintf(stderr,"allocated\n");
+        //fprintf(stderr,"allocated\n");
     } else allocflag = 0;
     array = cJSON_CreateArray();
     for (i=0; i<numinputs; i++)
@@ -1660,7 +1660,7 @@ cJSON *_create_privkeys_json_params(struct ramchain_info *ram,struct cointx_info
         if ( ram != 0 && privkeys[i] != 0 )
         {
             nonz++;
-            printf("(%s %s) ",privkeys[i],cointx->inputs[i].coinaddr);
+            //printf("(%s %s) ",privkeys[i],cointx->inputs[i].coinaddr);
             cJSON_AddItemToArray(array,cJSON_CreateString(privkeys[i]));
         }
     }
@@ -1726,7 +1726,7 @@ char *_createsignraw_json_params(struct ramchain_info *ram,struct cointx_info *c
             else free_json(vinsobj);
         }
         else free_json(rawobj);
-        printf("vinsobj.%p keysobj.%p rawobj.%p\n",vinsobj,keysobj,rawobj);
+        //printf("vinsobj.%p keysobj.%p rawobj.%p\n",vinsobj,keysobj,rawobj);
     }
     return(paramstr);
 }
@@ -1737,7 +1737,7 @@ int32_t _sign_rawtransaction(char *deststr,unsigned long destsize,struct ramchai
     int32_t completed = -1;
     char *retstr,*signparams;
     deststr[0] = 0;
-    printf("sign_rawtransaction rawbytes.(%s) %p\n",rawbytes,privkeys);
+    //printf("sign_rawtransaction rawbytes.(%s) %p\n",rawbytes,privkeys);
     if ( (signparams= _createsignraw_json_params(ram,cointx,rawbytes,privkeys)) != 0 )
     {
         stripwhite(signparams,strlen(signparams));
@@ -2025,7 +2025,7 @@ char *_createrawtxid_json_params(struct ramchain_info *ram,struct cointx_info *c
         }
         else free_json(vinsobj);
     } else printf("_error create_vins_json_params\n");
-    printf("_createrawtxid_json_params.%s\n",paramstr);
+    //printf("_createrawtxid_json_params.%s\n",paramstr);
     return(paramstr);
 }
 
@@ -2114,8 +2114,9 @@ long _emit_cointx_input(uint8_t *data,long offset,struct cointx_input *vin)
     offset = _emit_uint32(data,offset,vin->tx.vout);
     siglen = strlen(vin->sigs) >> 1;
     offset += hcalc_varint(&data[offset],siglen);
-    printf("decodesiglen.%ld\n",siglen);
-    decode_hex(&data[offset],(int32_t)siglen,vin->sigs), offset += siglen;
+    //printf("decodesiglen.%ld\n",siglen);
+    if ( siglen != 0 )
+        decode_hex(&data[offset],(int32_t)siglen,vin->sigs), offset += siglen;
     offset = _emit_uint32(data,offset,vin->sequence);
     return(offset);
 }
@@ -2127,8 +2128,9 @@ long _emit_cointx_output(uint8_t *data,long offset,struct rawvout *vout)
     offset = _emit_uint32(data,offset,(uint32_t)(vout->value >> 32));
     scriptlen = strlen(vout->script) >> 1;
     offset += hcalc_varint(&data[offset],scriptlen);
-    printf("scriptlen.%ld\n",scriptlen);
-    decode_hex(&data[offset],(int32_t)scriptlen,vout->script), offset += scriptlen;
+   // printf("scriptlen.%ld\n",scriptlen);
+    if ( scriptlen != 0 )
+        decode_hex(&data[offset],(int32_t)scriptlen,vout->script), offset += scriptlen;
     return(offset);
 }
 
@@ -2223,7 +2225,6 @@ struct cointx_info *_decode_rawtransaction(char *hexstr)
         return(0);
     }
     len >>= 1;
-    printf("hexstrlen.%ld\n",len);
     decode_hex(data,(int32_t)len,hexstr);
     cointx = calloc(1,sizeof(*cointx));
     offset = _decode_uint32(&cointx->version,data,offset,len);
@@ -2357,7 +2358,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
             rawparams = _createrawtxid_json_params(ram,cointx);
             if ( rawparams != 0 )
             {
-                fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
+                //fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
                 stripwhite(rawparams,strlen(rawparams));
                 retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"createrawtransaction",rawparams);
                 if ( retstr != 0 && retstr[0] != 0 )
