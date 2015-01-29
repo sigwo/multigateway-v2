@@ -1622,7 +1622,10 @@ char *ramstatus_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     if ( retstr == 0 )
         retstr = clonestr(_retstr);
     if ( previpaddr != 0 )
+    {
+        printf("sendback.(%s) to (%s)\n",retstr,previpaddr);
         send_to_ipaddr(0,1,previpaddr,retstr,NXTACCTSECRET);
+    }
     return(retstr);
 }
 
