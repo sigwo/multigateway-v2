@@ -1611,7 +1611,14 @@ char *ramstatus_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     copy_cJSON(destip,objs[0]);
     copy_cJSON(coin,objs[1]);
     if ( coin[0] != 0 && sender[0] != 0 && valid > 0 )
-        retstr = ramstatus(origargstr,sender,previpaddr,destip,coin);
+    {
+        if ( destip[0] != 0 )
+        {
+            send_to_ipaddr(0,0,destip,origargstr,NXTACCTSECRET);
+            retstr = clonestr("{\"status\":\"sent request to destip\"}");
+        }
+        else retstr = ramstatus(origargstr,sender,previpaddr,destip,coin);
+    }
     if ( retstr == 0 )
         retstr = clonestr(_retstr);
     if ( previpaddr != 0 )
