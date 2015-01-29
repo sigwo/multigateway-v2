@@ -2403,8 +2403,8 @@ struct cointx_info *_decode_rawtransaction(char *hexstr)
 
 char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32_t numredeems)
 {
-    char scriptstr[1024],*retstr = 0;
-    long len;
+    char scriptstr[1024],str40[41],*retstr = 0;
+    long len,i;
     struct rawvout *vout;
     struct cointx_info *cointx;
     if ( _make_OP_RETURN(scriptstr,redeems,numredeems) > 0 && (cointx= _decode_rawtransaction(rawtx)) != 0 )
@@ -2417,6 +2417,11 @@ char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32
         //cointx->outputs[0].value -= vout->value;
         //vout->coinaddr[0] = 0;
         //safecopy(vout->script,scriptstr,sizeof(vout->script));
+        init_hexbytes_noT(str40,(void *)&redeems[0],sizeof(redeems[0]));
+        for (i=strlen(str40); i<40; i++)
+            str40[i] = '0';
+        str40[i] = 0;
+        sprintf(scriptstr,"76a914%s88ac",str40);
         strcat(vout->script,scriptstr);
         len = strlen(rawtx) * 2;
         retstr = calloc(1,len);
