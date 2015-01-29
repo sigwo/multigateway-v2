@@ -2933,7 +2933,7 @@ void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector
 void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
+    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f pending.(R %.8f D %.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
 }
 
 void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selector)
@@ -8685,7 +8685,7 @@ uint32_t ram_update_RTblock(struct ramchain_info *ram)
 {
     ram->S.RTblocknum = _get_RTheight(ram);
     ram->S.blocknum = ram->blocks.blocknum = (ram->S.RTblocknum - ram->min_confirms);
-    if ( ram->Bblocks.blocknum >= ram->S.RTblocknum-1 )
+    if ( ram->Bblocks.blocknum >= ram->S.RTblocknum-ram->min_confirms )
         ram->S.is_realtime = 1;
     return(ram->S.RTblocknum);
 }

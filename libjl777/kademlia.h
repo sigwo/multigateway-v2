@@ -1073,9 +1073,12 @@ void update_Kbucket(int32_t bucketid,struct nodestats *buckets[],int32_t n,struc
                     for (k=matchflag; k<j-1; k++)
                         buckets[k] = buckets[k+1];
                     buckets[k] = stats;
-                    for (k=0; k<j; k++)
-                        printf("%llu ",(long long)buckets[k]->nxt64bits);
-                    printf("ROTATE.%d: bucket[%d] <- %llu %s | bucketid.%d\n",j-1,matchflag,(long long)stats->nxt64bits,ipaddr,bucketid);
+                    if (  Debuglevel > 2 )
+                    {
+                        for (k=0; k<j; k++)
+                            printf("%llu ",(long long)buckets[k]->nxt64bits);
+                        printf("ROTATE.%d: bucket[%d] <- %llu %s | bucketid.%d\n",j-1,matchflag,(long long)stats->nxt64bits,ipaddr,bucketid);
+                    }
                 }
             } else printf("update_Kbucket.%d: impossible case matchflag.%d j.%d\n",bucketid,matchflag,j);
             return;
