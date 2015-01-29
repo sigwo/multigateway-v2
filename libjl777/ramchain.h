@@ -2950,18 +2950,19 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
             tp = find_NXT_assettxid(&createdflag,ram->ap,redeemtxidstr);
             printf("find tp.%p\n",tp);
         }
-        ram->pendingsends[ram->numpendingsends++] = tp;
+        if ( ram->numpendingsends < (int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)) )
+            ram->pendingsends[ram->numpendingsends++] = tp;
     }
     portable_mutex_unlock(&mutex);
-    printf("set slotp.%p <- %d gatewayid.%d cointx.%p\n",slotp,*slotp,gatewayid,cointx);
+    printf("set slotp.%p <- gatewayid.%d cointx.%p\n",slotp,gatewayid,cointx);
     *slotp = i;
     if ( tp->pendingsends[gatewayid] != 0 )
     {
         printf("got another redeem.%llu from gateway.%d\n",(long long)cointx->redeemtxid,gatewayid);
         free(tp->pendingsends[gatewayid]);
     }
-    tp->pendingsends[gatewayid] = cointx;
     printf("GOT <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
+    tp->pendingsends[gatewayid] = cointx;
     return(tp);
 }
 
