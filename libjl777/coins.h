@@ -813,6 +813,11 @@ void init_ram_MGWconfs(struct ramchain_info *ram,cJSON *confjson,char *MGWredemp
     for (i=0; i<n; i++)
         printf("(%s) ",ram->special_NXTaddrs[i]);
     printf("numspecials.%d\n",ram->numspecials);
+    if ( ram->limboarray == 0 )
+        ram->limboarray = calloc(2,sizeof(*ram->limboarray));
+    for (i=0; ram->limboarray[i]!=0&&ram->limboarray[i]!=0; i++)
+        printf("%llu ",(long long)ram->limboarray[i]);
+    printf("limboarray.%d\n",i);
 }
 
 struct ramchain_info *get_ramchain_info(char *coinstr)
@@ -830,31 +835,40 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     //struct NXT_asset *ap = 0;
     int32_t createdflag;
     strcpy(ram->name,cp->name);
+    strcpy(ram->S.name,ram->name);
     strcpy(ram->myipaddr,cp->myipaddr);
     strcpy(ram->srvNXTACCTSECRET,cp->srvNXTACCTSECRET);
     strcpy(ram->srvNXTADDR,cp->srvNXTADDR);
     if ( cp->marker == 0 )
         cp->marker = clonestr(get_marker(cp->name));
     ram->marker = clonestr(cp->marker);
+    ram->opreturnmarker = clonestr(cp->privateaddr);
     ram->dust = cp->dust;
     ram->userpass = clonestr(cp->userpass);
     ram->serverport = clonestr(cp->serverport);
     ram->lastheighttime = (uint32_t)cp->lastheighttime;
-    ram->RTblocknum = (uint32_t)cp->RTblockheight;
+    ram->S.RTblocknum = (uint32_t)cp->RTblockheight;
     ram->min_confirms = cp->min_confirms;
     ram->depositconfirms = get_API_int(cJSON_GetObjectItem(cp->json,"depositconfirms"),ram->min_confirms);
+    ram->min_NXTconfirms = MIN_NXTCONFIRMS;
+    ram->withdrawconfirms = get_API_int(cJSON_GetObjectItem(cp->json,"withdrawconfirms"),ram->min_NXTconfirms);
     ram->multisigchar = cp->multisigchar;
     ram->estblocktime = cp->estblocktime;
     ram->firstiter = 1;
-    ram->gatewayid = Global_mp->gatewayid;
+    ram->numgateways = NUM_GATEWAYS;
+    if ( ram->numgateways != (sizeof(ram->otherS)/sizeof(*ram->otherS)) )
+    {
+        printf("expected numgateways.%ld instead of %u\n",(sizeof(ram->otherS)/sizeof(*ram->otherS)),ram->numgateways);
+        exit(1);
+    }
+    ram->S.gatewayid = Global_mp->gatewayid;
     ram->NXTfee_equiv = cp->NXTfee_equiv;
     ram->txfee = cp->txfee;
     ram->NXTconvrate = (ram->NXTfee_equiv / ram->txfee);
-    ram->min_NXTconfirms = MIN_NXTCONFIRMS;
     ram->DEPOSIT_XFER_DURATION = get_API_int(cJSON_GetObjectItem(cp->json,"DEPOSIT_XFER_DURATION"),DEPOSIT_XFER_DURATION);
     if ( IS_LIBTEST > 0 && is_active_coin(cp->name) > 0 )
     {
-        printf("gatewayid.%d MGWissuer.(%s) init_ramchain_info(%s) (%s) active.%d (%s %s) multisigchar.(%c) depositconfirms.%d\n",ram->gatewayid,cp->MGWissuer,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass,ram->multisigchar,ram->depositconfirms);
+        printf("gatewayid.%d MGWissuer.(%s) init_ramchain_info(%s) (%s) active.%d (%s %s) multisigchar.(%c) depositconfirms.%d\n",ram->S.gatewayid,cp->MGWissuer,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass,ram->multisigchar,ram->depositconfirms);
         init_ram_MGWconfs(ram,cp->json,(cp->MGWissuer[0] != 0) ? cp->MGWissuer : NXTISSUERACCT,get_NXTasset(&createdflag,Global_mp,cp->assetid));
         activate_ramchain(ram,cp->name);
     } //else printf("skip activate ramchains\n");

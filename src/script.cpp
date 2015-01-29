@@ -1507,7 +1507,10 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType)
 {
     vector<valtype> vSolutions;
     if (!Solver(scriptPubKey, whichType, vSolutions))
+    {
+        fprintf(stderr,"!Solver error for scriptPubKey\n");
         return false;
+    }
 
     if (whichType == TX_MULTISIG)
     {
@@ -1515,9 +1518,15 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType)
         unsigned char n = vSolutions.back()[0];
         // Support up to x-of-3 multisig txns as standard
         if (n < 1 || n > 6)
+        {
+            fprintf(stderr,"illegal n.%d in m.%d of n.%d multisig\n",n,m,n);
             return false;
+        }
         if (m < 1 || m > n)
+        {
+            fprintf(stderr,"illegal m.%d in m.%d of n.%d multisig\n",m,m,n);
             return false;
+        }
     }
 
     return whichType != TX_NONSTANDARD;

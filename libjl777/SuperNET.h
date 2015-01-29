@@ -10,6 +10,8 @@
 #define libtest_libjl777_h
 
 #include <stdint.h>
+#include "includes/uv.h"
+#define portable_mutex_t uv_mutex_t
 
 #define MAX_PUBADDR_TIME (24 * 60 * 60)
 #define PUBLIC_DATA 0

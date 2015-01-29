@@ -342,10 +342,17 @@ bool CTransaction::IsStandard() const
         // pay-to-script-hash, which is 3 ~80-byte signatures, 3
         // ~65-byte public keys, plus a few script ops.
         if (txin.scriptSig.size() > 1000)
+        {
+            fprintf(stderr,"input sigsize too big %d\n",(int)txin.scriptSig.size());
             return false;
+        }
         if (!txin.scriptSig.IsPushOnly())
+        {
+            fprintf(stderr,"txin no pushonly\n");
             return false;
+        }
         if (fEnforceCanonical && !txin.scriptSig.HasCanonicalPushes()) {
+            fprintf(stderr,"vin canonical error\n");
             return false;
         }
     }
@@ -354,18 +361,26 @@ bool CTransaction::IsStandard() const
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, vout) {
         if (!::IsStandard(txout.scriptPubKey, whichType))
+        {
+            fprintf(stderr,"vout is not standard\n");
             return false;
-        if (whichType == TX_NULL_DATA)
+        }
+        if ( whichType == TX_NULL_DATA )
             nDataOut++;
-        if (txout.nValue == 0)
+        /* else */ if (txout.nValue == 0)
+        {
+            fprintf(stderr,"vout has zero value\n");
             return false;
+        }
         if (fEnforceCanonical && !txout.scriptPubKey.HasCanonicalPushes()) {
+            fprintf(stderr,"vin canonical error\n");
             return false;
         }
     }
     
     // only one OP_RETURN txout is permitted
     if (nDataOut > 1) {
+        fprintf(stderr,"nDataOut.%d is too many\n",nDataOut);
         return false;
     }
     
@@ -619,8 +634,8 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         return error("CTxMemPool::accept() : not accepting nLockTime beyond 2038 yet");
     
     // Rather not work on nonstandard transactions (unless -testnet)
-   // if (!fTestNet && !tx.IsStandard())
-   //     return error("CTxMemPool::accept() : nonstandard transaction type");
+    if (!fTestNet && !tx.IsStandard())
+        return error("CTxMemPool::accept() : nonstandard transaction type");
     
     // Do we already have it?
     uint256 hash = tx.GetHash();
@@ -3996,7 +4011,7 @@ int32_t get_API_int(cJSON *obj,int32_t val)
     return(val);
 }
 
-char *stringifyM(char *str)
+/*char *stringifyM(char *str)
 {
     char *newstr;
     int32_t i,j,n;
@@ -4037,6 +4052,7 @@ char *unstringify(char *str)
     str[j] = 0;
     return(str);
 }
+*/
 
 extern "C" const char* getDataDir()
 {
@@ -4254,12 +4270,12 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
 extern "C" void *poll_for_broadcasts(void *args)
 {
     cJSON *json;
-    int32_t duration,len;
+    int32_t duration,len,sleeptime = 1;
     unsigned char data[4098];
     char params[4096],buf[8192],destip[1024],txidstr[64],*retstr;
     while ( did_SuperNET_init != 0 )
     {
-        sleep(1);
+        sleep(sleeptime++);
         //printf("ISSUE BTCDpoll\n");
         sprintf(params,"{\"requestType\":\"BTCDpoll\"}");
         retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url,(char *)"",(char *)"SuperNET",params);
@@ -4272,6 +4288,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                 copy_cJSON(destip,cJSON_GetObjectItem(json,"ip_port"));
                 if ( destip[0] != 0 && duration < 0 )
                 {
+                    sleeptime = 1;
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"));
                     len = ((int32_t)strlen(buf) >> 1);
                     decode_hex(data,len,buf);
@@ -4283,6 +4300,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"));
                     if ( buf[0] != 0 )
                     {
+                        sleeptime = 1;
                         unstringify(buf);
                         fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
                         SuperNET_broadcast(buf,duration);
@@ -4296,6 +4314,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                         Pending_RPC = 0;
                         unstringify(buf);
                         copy_cJSON(txidstr,cJSON_GetObjectItem(json,"txid"));
+                        sleeptime = 1;
                         if ( txidstr[0] != 0 )
                             fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: (%s) for [%s]\n",buf,txidstr);
                     }

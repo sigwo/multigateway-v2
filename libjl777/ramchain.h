@@ -5,6 +5,8 @@
 //  by jl777 on 12/29/14.
 //  MIT license
 
+// need to add deposit consensus checking
+
 // BTC?
 // 0x7fa44dede4a0 txid_rawind.142727 txid already there: (block.91842 txind.0)[1] vs B.(91812 0 0)
 // 0x7fa44dedaae0 txid_rawind.142573 txid already there: (block.91880 txind.0)[1] vs B.(91722 0 0)
@@ -36,8 +38,7 @@
 
 #define MIN_DEPOSIT_FACTOR 5
 #define PERMALLOC_SPACE_INCR (1024 * 1024 * 128)
-#define TMPALLOC_SPACE_INCR 10000000
-
+#define MAX_PENDINGSENDS_TICKS 50
 
 #include <stdio.h>
 #include <string.h>
@@ -60,18 +61,23 @@
 #endif
 #include "cJSON.h"
 
-extern long stripwhite(char *buf,long len);
-extern int32_t MGW_initdone,PERMUTE_RAWINDS;
-extern struct ramchain_info *get_ramchain_info(char *coinstr);
+// from libtom
+extern uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 extern void calc_sha256cat(unsigned char hash[256 >> 3],unsigned char *src,int32_t len,unsigned char *src2,int32_t len2);
-extern struct multisig_addr *find_msigaddr(char *msigaddr);
-extern int32_t is_trusted_issuer(char *issuer);
-extern int32_t update_MGW_jsonfile(void (*setfname)(char *fname,char *NXTaddr),void *(*extract_jsondata)(cJSON *item,void *arg,void *arg2),int32_t (*jsoncmp)(void *ref,void *item),char *NXTaddr,char *jsonstr,void *arg,void *arg2);
+
+// init and setup
+extern int32_t MGW_initdone,PERMUTE_RAWINDS;
 extern char Server_ipaddrs[256][MAX_JSON_FIELD];
+extern int32_t is_trusted_issuer(char *issuer);
+extern struct ramchain_info *get_ramchain_info(char *coinstr);
+
+// DB functions
+extern struct multisig_addr *find_msigaddr(char *msigaddr);
+extern int32_t update_MGW_jsonfile(void (*setfname)(char *fname,char *NXTaddr),void *(*extract_jsondata)(cJSON *item,void *arg,void *arg2),int32_t (*jsoncmp)(void *ref,void *item),char *NXTaddr,char *jsonstr,void *arg,void *arg2);
+extern int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender);
 
 // ramchain functions for external access
 void *process_ramchains(void *argcoinstr);
-
 char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin);
 char *ramstring(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,uint32_t rawind);
 char *ramrawind(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char *typestr,char *str);
@@ -84,6 +90,9 @@ char *ramrichlist(char *origargstr,char *sender,char *previpaddr,char *destip,ch
 char *rambalances(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin,char **coins,double *rates,char ***coinaddrs,int32_t numcoins);
 char *ramaddrlist(char *origargstr,char *sender,char *previpaddr,char *coin);
 
+int32_t portable_mutex_init(portable_mutex_t *mutex);
+void portable_mutex_lock(portable_mutex_t *mutex);
+void portable_mutex_unlock(portable_mutex_t *mutex);
 
 
 #ifdef RAM_GENMODE
@@ -158,14 +167,20 @@ struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; 
 
 #define MAX_COINTX_INPUTS 16
 #define MAX_COINTX_OUTPUTS 8
-struct cointx_input { struct rawvin tx; struct rawvout vin; char used; };
+struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t value; uint32_t sequence; char used; };
 struct cointx_info
 {
+    uint32_t crc; // MUST be first
     char coinstr[16];
     uint64_t inputsum,amount,change,redeemtxid;
-    uint32_t allocsize,batchsize,batchcrc,numinputs,numoutputs,gatewayid;
+    uint32_t allocsize,batchsize,batchcrc,gatewayid,isallocated;
+    // bitcoin tx order
+    uint32_t version,timestamp,numinputs;
+    uint32_t numoutputs;
     struct cointx_input inputs[MAX_COINTX_INPUTS];
     struct rawvout outputs[MAX_COINTX_OUTPUTS];
+    uint32_t nlocktime;
+    // end bitcoin txcalc_nxt64bits
     char signedtx[];
 };
 
@@ -190,16 +205,26 @@ struct mappedblocks
     uint32_t blocknum,count,firstblock,numblocks,processed,format,shift,contiguous;
 };
 
+struct MGWstate
+{
+    int32_t gatewayid;
+    char name[64];
+    int64_t MGWbalance;
+    uint64_t boughtNXT,circulation,sentNXT,MGWpendingredeems,orphans,MGWunspent,MGWpendingdeposits,NXT_ECblock;
+    uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,NXT_ECheight;
+};
+
 struct alloc_space { void *ptr; long used,size; };
 struct ramchain_info
 {
     struct mappedblocks blocks,Vblocks,Bblocks,blocks64,blocks4096,*mappedblocks[8];
     struct ramchain_hashtable addrhash,txidhash,scripthash;
+    struct MGWstate S,otherS[3];
     double startmilli;
     HUFF *tmphp,*tmphp2;
-    char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker;
-    uint32_t next_blocknum,next_txid_permind,next_addr_permind,next_script_permind,permind_changes;
-    uint32_t lastheighttime,RTblocknum,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind;
+    char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker,*opreturnmarker;
+    uint32_t next_blocknum,next_txid_permind,next_addr_permind,next_script_permind,permind_changes,withdrawconfirms,DEPOSIT_XFER_DURATION;
+    uint32_t lastheighttime,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind,numgateways,nummsigs;
     uint64_t totalspends,numspends,totaloutputs,numoutputs,totalbits,totalbytes,txfee,dust,NXTfee_equiv;
     struct rawblock *R,*R2,*R3;
     struct rawblock_huffs H;
@@ -207,11 +232,10 @@ struct ramchain_info
     uint64_t minval,maxval,minval2,maxval2,minval4,maxval4,minval8,maxval8;
     
     struct NXT_asset *ap;
-    uint64_t boughtNXT,circulation,*pendingxfers,MGWbits,MGWpendingredeems,orphans,*limboarray,MGWunspent,MGWpendingdeposits,sentNXT;
-    int64_t MGWbalance;
+    uint64_t MGWbits,*limboarray;
     struct cointx_input *MGWunspents;
-    uint32_t min_NXTconfirms,NXT_RTblocknum,NXTblocknum,NXTtimestamp,MGWnumunspents,MGWmaxunspents,numspecials,depositconfirms,firsttime,numpendingsends,DEPOSIT_XFER_DURATION;
-    char multisigchar,**special_NXTaddrs,*MGWredemption,gatewayid,NXT_is_realtime,is_realtime,enable_deposits,MGWsmallest[256],MGWsmallestB[256];
+    uint32_t min_NXTconfirms,NXTtimestamp,MGWnumunspents,MGWmaxunspents,numspecials,depositconfirms,firsttime,numpendingsends,pendingticks;
+    char multisigchar,**special_NXTaddrs,*MGWredemption,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024];
     struct NXT_assettxid *pendingsends[512];
     float lastgetinfo,NXTconvrate;
 };
@@ -735,6 +759,23 @@ void delete_file(char *fname,int32_t scrubflag)
     }
 }
 
+int32_t portable_mutex_init(portable_mutex_t *mutex)
+{
+    return(uv_mutex_init(mutex)); //pthread_mutex_init(mutex,NULL);
+}
+
+void portable_mutex_lock(portable_mutex_t *mutex)
+{
+    //printf("lock.%p\n",mutex);
+    uv_mutex_lock(mutex); // pthread_mutex_lock(mutex);
+}
+
+void portable_mutex_unlock(portable_mutex_t *mutex)
+{
+    // printf("unlock.%p\n",mutex);
+    uv_mutex_unlock(mutex); //pthread_mutex_unlock(mutex);
+}
+
 #define ram_millis milliseconds
 /*double ram_millis(void)
  {
@@ -838,6 +879,88 @@ void ram_init_tmpspace(struct ramchain_info *ram,long size)
     ram_clear_alloc_space(&ram->Tmp);
 }
 
+// >>>>>>>>>>>>>>  start varint functions
+int32_t hcalc_varint(uint8_t *buf,uint64_t x)
+{
+    uint16_t s; uint32_t i; int32_t len = 0;
+    if ( x < 0xfd )
+        buf[len++] = (uint8_t)(x & 0xff);
+    else
+    {
+        if ( x <= 0xffff )
+        {
+            buf[len++] = 0xfd;
+            s = (uint16_t)x;
+            memcpy(&buf[len],&s,sizeof(s));
+            len += 2;
+        }
+        else if ( x <= 0xffffffffL )
+        {
+            buf[len++] = 0xfe;
+            i = (uint32_t)x;
+            memcpy(&buf[len],&i,sizeof(i));
+            len += 4;
+        }
+        else
+        {
+            buf[len++] = 0xff;
+            memcpy(&buf[len],&x,sizeof(x));
+            len += 8;
+        }
+    }
+    return(len);
+}
+
+long hemit_varint(FILE *fp,uint64_t x)
+{
+    uint8_t buf[9];
+    int32_t len;
+    if ( fp == 0 )
+        return(-1);
+    long retval = -1;
+    if ( (len= hcalc_varint(buf,x)) > 0 )
+        retval = fwrite(buf,1,len,fp);
+    return(retval);
+}
+
+long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize)
+{
+    uint16_t s; uint32_t i; int32_t c;
+    if ( ptr == 0 )
+        return(-1);
+    *valp = 0;
+    if ( offset < 0 || offset >= mappedsize )
+        return(-1);
+    c = ptr[offset++];
+    switch ( c )
+    {
+        case 0xfd: if ( offset+sizeof(s) > mappedsize ) return(-1); memcpy(&s,&ptr[offset],sizeof(s)), *valp = s, offset += sizeof(s); break;
+        case 0xfe: if ( offset+sizeof(i) > mappedsize ) return(-1); memcpy(&i,&ptr[offset],sizeof(i)), *valp = i, offset += sizeof(i); break;
+        case 0xff: if ( offset+sizeof(*valp) > mappedsize ) return(-1); memcpy(valp,&ptr[offset],sizeof(*valp)), offset += sizeof(*valp); break;
+        default: *valp = c; break;
+    }
+    return(offset);
+}
+
+long hload_varint(uint64_t *valp,FILE *fp)
+{
+    uint16_t s; uint32_t i; int32_t c; int32_t retval = 1;
+    if ( fp == 0 )
+        return(-1);
+    *valp = 0;
+    if ( (c= fgetc(fp)) == EOF )
+        return(0);
+    c &= 0xff;
+    switch ( c )
+    {
+        case 0xfd: retval = (sizeof(s) + 1) * (fread(&s,1,sizeof(s),fp) == sizeof(s)), *valp = s; break;
+        case 0xfe: retval = (sizeof(i) + 1) * (fread(&i,1,sizeof(i),fp) == sizeof(i)), *valp = i; break;
+        case 0xff: retval = (sizeof(*valp) + 1) * (fread(valp,1,sizeof(*valp),fp) == sizeof(*valp)); break;
+        default: *valp = c; break;
+    }
+    return(retval);
+}
+
 // >>>>>>>>>>>>>>  start string functions
 char hexbyte(int32_t c)
 {
@@ -922,6 +1045,21 @@ int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len)
     hexbytes[len*2] = 0;
     //printf("len.%ld\n",len*2+1);
     return((int32_t)len*2+1);
+}
+
+long _stripwhite(char *buf,int accept)
+{
+    int32_t i,j,c;
+    if ( buf == 0 || buf[0] == 0 )
+        return(0);
+    for (i=j=0; buf[i]!=0; i++)
+    {
+        buf[j] = c = buf[i];
+        if ( c == accept || (c != ' ' && c != '\n' && c != '\r' && c != '\t') )
+            j++;
+    }
+    buf[j] = 0;
+    return(j);
 }
 
 // >>>>>>>>>>>>>>  start bitcoind_RPC interface functions
@@ -1659,7 +1797,7 @@ int32_t _map_msigaddr(char *redeemScript,struct ramchain_info *ram,char *normala
                     }
                     if ( ismine != 0 )
                     {
-                        printf("(%s) ismine.%d\n",addr,ismine);
+                        //printf("(%s) ismine.%d\n",addr,ismine);
                         strcpy(normaladdr,addr);
                         copy_cJSON(redeemScript,cJSON_GetObjectItem(json,"hex"));
                         break;
@@ -1679,21 +1817,21 @@ cJSON *_create_privkeys_json_params(struct ramchain_info *ram,struct cointx_info
     int32_t allocflag,i,ret,nonz = 0;
     cJSON *array;
     char args[1024],normaladdr[1024],redeemScript[4096];
-    printf("create privkeys %p numinputs.%d\n",privkeys,numinputs);
+    //printf("create privkeys %p numinputs.%d\n",privkeys,numinputs);
     if ( privkeys == 0 )
     {
         privkeys = calloc(numinputs,sizeof(*privkeys));
         for (i=0; i<numinputs; i++)
         {
-            if ( (ret= _map_msigaddr(redeemScript,ram,normaladdr,cointx->inputs[i].vin.coinaddr)) >= 0 )
+            if ( (ret= _map_msigaddr(redeemScript,ram,normaladdr,cointx->inputs[i].coinaddr)) >= 0 )
             {
                 sprintf(args,"[\"%s\"]",normaladdr);
-                fprintf(stderr,"(%s) -> (%s).%d ",normaladdr,normaladdr,i);
+                //fprintf(stderr,"(%s) -> (%s).%d ",normaladdr,normaladdr,i);
                 privkeys[i] = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"dumpprivkey",args);
             } else fprintf(stderr,"ret.%d for %d (%s)\n",ret,i,normaladdr);
         }
         allocflag = 1;
-        fprintf(stderr,"allocated\n");
+        //fprintf(stderr,"allocated\n");
     } else allocflag = 0;
     array = cJSON_CreateArray();
     for (i=0; i<numinputs; i++)
@@ -1701,13 +1839,13 @@ cJSON *_create_privkeys_json_params(struct ramchain_info *ram,struct cointx_info
         if ( ram != 0 && privkeys[i] != 0 )
         {
             nonz++;
-            printf("(%s %s) ",privkeys[i],cointx->inputs[i].vin.coinaddr);
+            //printf("(%s %s) ",privkeys[i],cointx->inputs[i].coinaddr);
             cJSON_AddItemToArray(array,cJSON_CreateString(privkeys[i]));
         }
     }
     if ( nonz == 0 )
         free_json(array), array = 0;
-    else printf("privkeys.%d of %d: %s\n",nonz,numinputs,cJSON_Print(array));
+   // else printf("privkeys.%d of %d: %s\n",nonz,numinputs,cJSON_Print(array));
     if ( allocflag != 0 )
     {
         for (i=0; i<numinputs; i++)
@@ -1723,22 +1861,22 @@ cJSON *_create_vins_json_params(char **localcoinaddrs,struct ramchain_info *ram,
     int32_t i,ret;
     char normaladdr[1024],redeemScript[4096];
     cJSON *json,*array;
-    struct cointx_input *ip;
+    struct cointx_input *vin;
     array = cJSON_CreateArray();
     for (i=0; i<cointx->numinputs; i++)
     {
-        ip = &cointx->inputs[i];
+        vin = &cointx->inputs[i];
         if ( localcoinaddrs != 0 )
             localcoinaddrs[i] = 0;
         json = cJSON_CreateObject();
-        cJSON_AddItemToObject(json,"txid",cJSON_CreateString(ip->tx.txidstr));
-        cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(ip->tx.vout));
-        cJSON_AddItemToObject(json,"scriptPubKey",cJSON_CreateString(ip->vin.script));
-        if ( (ret= _map_msigaddr(redeemScript,ram,normaladdr,ip->vin.coinaddr)) >= 0 )
+        cJSON_AddItemToObject(json,"txid",cJSON_CreateString(vin->tx.txidstr));
+        cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(vin->tx.vout));
+        cJSON_AddItemToObject(json,"scriptPubKey",cJSON_CreateString(vin->sigs));
+        if ( (ret= _map_msigaddr(redeemScript,ram,normaladdr,vin->coinaddr)) >= 0 )
             cJSON_AddItemToObject(json,"redeemScript",cJSON_CreateString(redeemScript));
-        else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript,normaladdr,ip->vin.coinaddr);
+        else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript,normaladdr,vin->coinaddr);
         if ( localcoinaddrs != 0 )
-            localcoinaddrs[i] = ip->vin.coinaddr;
+            localcoinaddrs[i] = vin->coinaddr;
         cJSON_AddItemToArray(array,json);
     }
     return(array);
@@ -1767,7 +1905,7 @@ char *_createsignraw_json_params(struct ramchain_info *ram,struct cointx_info *c
             else free_json(vinsobj);
         }
         else free_json(rawobj);
-        printf("vinsobj.%p keysobj.%p rawobj.%p\n",vinsobj,keysobj,rawobj);
+        //printf("vinsobj.%p keysobj.%p rawobj.%p\n",vinsobj,keysobj,rawobj);
     }
     return(paramstr);
 }
@@ -1778,10 +1916,10 @@ int32_t _sign_rawtransaction(char *deststr,unsigned long destsize,struct ramchai
     int32_t completed = -1;
     char *retstr,*signparams;
     deststr[0] = 0;
-    printf("sign_rawtransaction rawbytes.(%s) %p\n",rawbytes,privkeys);
+    //printf("sign_rawtransaction rawbytes.(%s) %p\n",rawbytes,privkeys);
     if ( (signparams= _createsignraw_json_params(ram,cointx,rawbytes,privkeys)) != 0 )
     {
-        stripwhite(signparams,strlen(signparams));
+        _stripwhite(signparams,0);
         printf("got signparams.(%s)\n",signparams);
         retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"signrawtransaction",signparams);
         if ( retstr != 0 )
@@ -1797,7 +1935,7 @@ int32_t _sign_rawtransaction(char *deststr,unsigned long destsize,struct ramchai
                 copy_cJSON(deststr,hexobj);
                 if ( strlen(deststr) > destsize )
                     printf("sign_rawtransaction: strlen(deststr) %ld > %ld destize\n",strlen(deststr),destsize);
-                //printf("got signedtransaction.(%s) ret.(%s)\n",deststr,retstr);
+                //printf("got signedtransaction.(%s) ret.(%s) completed.%d\n",deststr,retstr,completed);
                 free_json(json);
             } else printf("json parse error.(%s)\n",retstr);
             free(retstr);
@@ -1816,7 +1954,7 @@ char *_submit_withdraw(struct ramchain_info *ram,struct cointx_info *cointx,char
     len = strlen(othersignedtx);
     fprintf(stderr,"submit_withdraw len.%ld\n",len);
     signed2transaction = calloc(1,2*len);
-    if ( ram->gatewayid >= 0 && (retval= _sign_rawtransaction(signed2transaction+2,len+4000,ram,cointx,othersignedtx,0)) > 0 )
+    if ( ram->S.gatewayid >= 0 && (retval= _sign_rawtransaction(signed2transaction+2,len+4000,ram,cointx,othersignedtx,0)) > 0 )
     {
         signed2transaction[0] = '[';
         signed2transaction[1] = '"';
@@ -1869,6 +2007,7 @@ char *_sign_and_sendmoney(char *cointxid,struct ramchain_info *ram,struct cointx
             {
                 if ( (redeemtxid = redeems[i]) != 0 && amounts[i] != 0 )
                 {
+                    printf("signed and sent.%d: %llu %.8f\n",i,(long long)redeemtxid,dstr(amounts[i]));
                     _ram_update_redeembits(ram,redeemtxid,0,cointxid,0);
                     expand_nxt64bits(txidstr,redeemtxid);
                     senderbits = get_sender(&amount,txidstr);
@@ -1897,48 +2036,50 @@ struct cointx_input *_find_bestfit(struct ramchain_info *ram,uint64_t value)
 {
     uint64_t above,below,gap;
     int32_t i;
-    struct cointx_input *ip,*aboveip,*belowip;
-    aboveip = belowip = 0;
+    struct cointx_input *vin,*abovevin,*belowvin;
+    abovevin = belowvin = 0;
     for (above=below=i=0; i<ram->MGWnumunspents; i++)
     {
-        ip = &ram->MGWunspents[i];
-        if ( ip->vin.value == value )
-            return(ip);
-        else if ( ip->vin.value > value )
+        vin = &ram->MGWunspents[i];
+        if ( vin->used != 0 )
+            continue;
+        if ( vin->value == value )
+            return(vin);
+        else if ( vin->value > value )
         {
-            gap = (ip->vin.value - value);
+            gap = (vin->value - value);
             if ( above == 0 || gap < above )
             {
                 above = gap;
-                aboveip = ip;
+                abovevin = vin;
             }
         }
         else
         {
-            gap = (value - ip->vin.value);
+            gap = (value - vin->value);
             if ( below == 0 || gap < below )
             {
                 below = gap;
-                belowip = ip;
+                belowvin = vin;
             }
         }
     }
-    return((aboveip != 0) ? aboveip : belowip);
+    return((abovevin != 0) ? abovevin : belowvin);
 }
 
 int64_t _calc_cointx_inputs(struct ramchain_info *ram,struct cointx_info *cointx,int64_t amount)
 {
     int64_t sum = 0;
     int32_t i;
-    struct cointx_input *ip;
+    struct cointx_input *vin;
     cointx->inputsum = cointx->numinputs = 0;
     for (i=0; i<ram->MGWnumunspents&&i<((int)(sizeof(cointx->inputs)/sizeof(*cointx->inputs)))-1; i++)
     {
-        if ( (ip= _find_bestfit(ram,amount + ram->txfee)) != 0 )
+        if ( (vin= _find_bestfit(ram,amount + ram->txfee)) != 0 )
         {
-            sum += ip->vin.value;
-            ip->used = 1;
-            cointx->inputs[cointx->numinputs++] = *ip;
+            sum += vin->value;
+            vin->used = 1;
+            cointx->inputs[cointx->numinputs++] = *vin;
             if ( sum >= (amount + ram->txfee) )
             {
                 cointx->amount = amount;
@@ -2017,9 +2158,7 @@ void sort_rawinputs(struct cointx_info *cointx)
 
 char *_sign_localtx(struct ramchain_info *ram,struct cointx_info *cointx,char *rawbytes)
 {
-    uint32_t _crc32(uint32_t crc, const void *buf, size_t size);
     char *batchsigned;
-    fprintf(stderr,"sign_localtx\n");
     cointx->batchsize = (uint32_t)strlen(rawbytes) + 1;
     cointx->batchcrc = _crc32(0,rawbytes+12,cointx->batchsize-12); // skip past timediff
     batchsigned = malloc(cointx->batchsize + cointx->numinputs*512 + 512);
@@ -2065,15 +2204,17 @@ char *_createrawtxid_json_params(struct ramchain_info *ram,struct cointx_info *c
         }
         else free_json(vinsobj);
     } else printf("_error create_vins_json_params\n");
-    printf("_createrawtxid_json_params.%s\n",paramstr);
+    //printf("_createrawtxid_json_params.%s\n",paramstr);
     return(paramstr);
 }
 
 int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
 {
-    uint8_t hashdata[256],*ptr;
+    long _emit_uint32(uint8_t *data,long offset,uint32_t x);
+    uint8_t hashdata[256],revbuf[8];
     uint64_t redeemtxid;
     int32_t i,j,size;
+    long offset;
     scriptstr[0] = 0;
     if ( numredeems >= (sizeof(hashdata)/sizeof(uint64_t))-1 )
     {
@@ -2083,12 +2224,15 @@ int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
     hashdata[1] = OP_RETURN_OPCODE;
     hashdata[2] = 'M', hashdata[3] = 'G', hashdata[4] = 'W';
     hashdata[5] = numredeems;
-    ptr = &hashdata[6];
+    offset = 6;
     for (i=0; i<numredeems; i++)
     {
         redeemtxid = redeems[i];
-        for (j=0; j<(int32_t)sizeof(uint64_t); j++,redeemtxid>>=8)
-            *ptr++ = (redeemtxid & 0xff);
+        for (j=0; j<8; j++)
+            revbuf[j] = ((uint8_t *)&redeemtxid)[7-j];
+        memcpy(&redeemtxid,revbuf,sizeof(redeemtxid));
+        offset = _emit_uint32(hashdata,offset,(uint32_t)redeemtxid);
+        offset = _emit_uint32(hashdata,offset,(uint32_t)(redeemtxid >> 32));
     }
     hashdata[0] = size = (int32_t)(5 + sizeof(uint64_t)*numredeems);
     init_hexbytes_noT(scriptstr,hashdata+1,hashdata[0]);
@@ -2100,13 +2244,165 @@ int32_t _make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
     return(size);
 }
 
+long _emit_uint32(uint8_t *data,long offset,uint32_t x)
+{
+    uint32_t i;
+    for (i=0; i<4; i++,x>>=8)
+        data[offset + i] = (x & 0xff);
+    offset += 4;
+    return(offset);
+}
+
+long _decode_uint32(uint32_t *uintp,uint8_t *data,long offset,long len)
+{
+    uint32_t i,x = 0;
+    for (i=0; i<4; i++)
+        x <<= 8, x |= data[offset + 3 - i];
+    offset += 4;
+    *uintp = x;
+    if ( offset > len )
+        return(-1);
+    return(offset);
+}
+
+long _decode_vin(struct cointx_input *vin,uint8_t *data,long offset,long len)
+{
+    uint8_t revdata[32];
+    uint32_t i,vout;
+    uint64_t siglen;
+    memset(vin,0,sizeof(*vin));
+    for (i=0; i<32; i++)
+        revdata[i] = data[offset + 31 - i];
+    init_hexbytes_noT(vin->tx.txidstr,revdata,32), offset += 32;
+    if ( (offset= _decode_uint32(&vout,data,offset,len)) < 0 )
+        return(-1);
+    vin->tx.vout = vout;
+    if ( (offset= hdecode_varint(&siglen,data,offset,len)) < 0 || siglen > sizeof(vin->sigs) )
+        return(-1);
+    init_hexbytes_noT(vin->sigs,&data[offset],(int32_t)siglen), offset += siglen;
+    if ( (offset= _decode_uint32(&vin->sequence,data,offset,len)) < 0 )
+        return(-1);
+    //printf("txid.(%s) vout.%d siglen.%d (%s) seq.%d\n",vin->tx.txidstr,vout,(int)siglen,vin->sigs,vin->sequence);
+    return(offset);
+}
+
+long _emit_cointx_input(uint8_t *data,long offset,struct cointx_input *vin)
+{
+    uint8_t revdata[32];
+    long i,siglen;
+    decode_hex(revdata,32,vin->tx.txidstr);
+    for (i=0; i<32; i++)
+        data[offset + 31 - i] = revdata[i];
+    offset += 32;
+    
+    offset = _emit_uint32(data,offset,vin->tx.vout);
+    siglen = strlen(vin->sigs) >> 1;
+    offset += hcalc_varint(&data[offset],siglen);
+    //printf("decodesiglen.%ld\n",siglen);
+    if ( siglen != 0 )
+        decode_hex(&data[offset],(int32_t)siglen,vin->sigs), offset += siglen;
+    offset = _emit_uint32(data,offset,vin->sequence);
+    return(offset);
+}
+
+long _emit_cointx_output(uint8_t *data,long offset,struct rawvout *vout)
+{
+    long scriptlen;
+    offset = _emit_uint32(data,offset,(uint32_t)vout->value);
+    offset = _emit_uint32(data,offset,(uint32_t)(vout->value >> 32));
+    scriptlen = strlen(vout->script) >> 1;
+    offset += hcalc_varint(&data[offset],scriptlen);
+   // printf("scriptlen.%ld\n",scriptlen);
+    if ( scriptlen != 0 )
+        decode_hex(&data[offset],(int32_t)scriptlen,vout->script), offset += scriptlen;
+    return(offset);
+}
+
+long _decode_vout(struct rawvout *vout,uint8_t *data,long offset,long len)
+{
+    uint32_t low,high;
+    uint64_t scriptlen;
+    memset(vout,0,sizeof(*vout));
+    if ( (offset= _decode_uint32(&low,data,offset,len)) < 0 )
+        return(-1);
+    if ( (offset= _decode_uint32(&high,data,offset,len)) < 0 )
+        return(-1);
+    vout->value = ((uint64_t)high << 32) | low;
+    if ( (offset= hdecode_varint(&scriptlen,data,offset,len)) < 0 || scriptlen > sizeof(vout->script) )
+        return(-1);
+    init_hexbytes_noT(vout->script,&data[offset],(int32_t)scriptlen), offset += scriptlen;
+    return(offset);
+}
+
+void disp_cointx_output(struct rawvout *vout)
+{
+    printf("(%s %s %.8f) ",vout->coinaddr,vout->script,dstr(vout->value));
+}
+
+void disp_cointx_input(struct cointx_input *vin)
+{
+    printf("{ %s/v%d %s }.s%d ",vin->tx.txidstr,vin->tx.vout,vin->sigs,vin->sequence);
+}
+
+void disp_cointx(struct cointx_info *cointx)
+{
+    int32_t i;
+    printf("version.%u timestamp.%u nlocktime.%u numinputs.%u numoutputs.%u\n",cointx->version,cointx->timestamp,cointx->nlocktime,cointx->numinputs,cointx->numoutputs);
+    for (i=0; i<cointx->numinputs; i++)
+        disp_cointx_input(&cointx->inputs[i]);
+    printf("-> ");
+    for (i=0; i<cointx->numoutputs; i++)
+        disp_cointx_output(&cointx->outputs[i]);
+    printf("\n");
+}
+
+int32_t _emit_cointx(char *hexstr,long len,struct cointx_info *cointx)
+{
+    uint8_t *data;
+    long offset = 0;
+    int32_t i;
+    data = calloc(1,len);
+    offset = _emit_uint32(data,offset,cointx->version);
+    offset = _emit_uint32(data,offset,cointx->timestamp);
+    offset += hcalc_varint(&data[offset],cointx->numinputs);
+    for (i=0; i<cointx->numinputs; i++)
+        offset = _emit_cointx_input(data,offset,&cointx->inputs[i]);
+    offset += hcalc_varint(&data[offset],cointx->numoutputs);
+    for (i=0; i<cointx->numoutputs; i++)
+        offset = _emit_cointx_output(data,offset,&cointx->outputs[i]);
+    offset = _emit_uint32(data,offset,cointx->nlocktime);
+    init_hexbytes_noT(hexstr,data,(int32_t)offset);
+    free(data);
+    return((int32_t)offset);
+}
+
+int32_t _validate_decoderawtransaction(char *hexstr,struct cointx_info *cointx)
+{
+    char *checkstr;
+    long len;
+    int32_t retval;
+    len = strlen(hexstr) * 2;
+    //disp_cointx(cointx);
+    checkstr = calloc(1,len);
+    _emit_cointx(checkstr,len,cointx);
+    if ( (retval= strcmp(checkstr,hexstr)) != 0 )
+    {
+        disp_cointx(cointx);
+        printf("_validate_decoderawtransaction: error: \n(%s) != \n(%s)\n",hexstr,checkstr);
+        getchar();
+    }
+    //else printf("_validate_decoderawtransaction.(%s) validates\n",hexstr);
+    free(checkstr);
+    return(retval);
+}
+
 struct cointx_info *_decode_rawtransaction(char *hexstr)
 {
-    long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize);
     uint8_t data[8192];
-    long len,offset;
-    uint64_t numinputs;
-    uint32_t i,version;
+    long len,offset = 0;
+    uint64_t numinputs,numoutputs;
+    struct cointx_info *cointx;
+    uint32_t vin,vout;
     if ( (len= strlen(hexstr)) >= sizeof(data)*2-1 || is_hexstr(hexstr) == 0 || (len & 1) != 0 )
     {
         printf("_decode_rawtransaction: hexstr too long %ld vs %ld || is_hexstr.%d || oddlen.%ld\n",strlen(hexstr),sizeof(data)*2-1,is_hexstr(hexstr),(len & 1));
@@ -2114,163 +2410,88 @@ struct cointx_info *_decode_rawtransaction(char *hexstr)
     }
     len >>= 1;
     decode_hex(data,(int32_t)len,hexstr);
-    for (version=offset=0; offset<4; i++)
-        version <<= 8, version |= data[offset];
+    cointx = calloc(1,sizeof(*cointx));
+    offset = _decode_uint32(&cointx->version,data,offset,len);
+    offset = _decode_uint32(&cointx->timestamp,data,offset,len);
     offset = hdecode_varint(&numinputs,data,offset,len);
     if ( numinputs > MAX_COINTX_INPUTS )
     {
         printf("_decode_rawtransaction: numinputs %lld > %d MAX_COINTX_INPUTS\n",(long long)numinputs,MAX_COINTX_INPUTS);
         return(0);
     }
-    return(0);
-}
-
-/*
-function coinspark_unpack_raw_txn($raw_txn_hex)
-{
-    // see: https://en.bitcoin.it/wiki/Transactions
-    
-    $binary=pack('H*', $raw_txn_hex);
-    
-    $txn=array();
-    
-    $txn['version']=coinspark_string_shift_unpack($binary, 4, 'V'); // small-endian 32-bits
-    for ($inputs=coinspark_string_shift_unpack_varint($binary); $inputs>0; $inputs--) {
-        $input=array();
-        
-        $input['txid']=coinspark_string_shift_unpack($binary, 32, 'H*', true);
-        $input['vout']=coinspark_string_shift_unpack($binary, 4, 'V');
-        $length=coinspark_string_shift_unpack_varint($binary);
-        $input['scriptSig']=coinspark_string_shift_unpack($binary, $length, 'H*');
-        $input['sequence']=coinspark_string_shift_unpack($binary, 4, 'V');
-        
-        $txn['vin'][]=$input;
-    }
-    
-    for ($outputs=coinspark_string_shift_unpack_varint($binary); $outputs>0; $outputs--) {
-        $output=array();
-        
-        $output['value']=coinspark_string_shift_unpack_uint64($binary)/100000000;
-        $length=coinspark_string_shift_unpack_varint($binary);
-        $output['scriptPubKey']=coinspark_string_shift_unpack($binary, $length, 'H*');
-        
-        $txn['vout'][]=$output;
-    }
-    
-    $txn['locktime']=coinspark_string_shift_unpack($binary, 4, 'V');
-    
-    if (strlen($binary))
-        die('More data in transaction than expected');
-    
-    return $txn;
-}
-
-function coinspark_pack_raw_txn($txn)
-{
-    $binary='';
-    
-    $binary.=pack('V', $txn['version']);
-    
-    $binary.=coinspark_pack_varint(count($txn['vin']));
-    
-    foreach ($txn['vin'] as $input) {
-        $binary.=strrev(pack('H*', $input['txid']));
-        $binary.=pack('V', $input['vout']);
-        $binary.=coinspark_pack_varint(strlen($input['scriptSig'])/2); // divide by 2 because it is currently in hex
-        $binary.=pack('H*', $input['scriptSig']);
-        $binary.=pack('V', $input['sequence']);
-    }
-    
-    $binary.=coinspark_pack_varint(count($txn['vout']));
-    
-    foreach ($txn['vout'] as $output) {
-        $binary.=coinspark_pack_uint64(round($output['value']*100000000));
-        $binary.=coinspark_pack_varint(strlen($output['scriptPubKey'])/2); // divide by 2 because it is currently in hex
-        $binary.=pack('H*', $output['scriptPubKey']);
-    }
-    
-    $binary.=pack('V', $txn['locktime']);
-    
-    return reset(unpack('H*', $binary));
-}
-
-function coinspark_string_shift(&$string, $chars)
-{
-    $prefix=substr($string, 0, $chars);
-    $string=substr($string, $chars);
-    return $prefix;
-}
-
-function coinspark_string_shift_unpack(&$string, $chars, $format, $reverse=false)
-{
-    $data=coinspark_string_shift($string, $chars);
-    if ($reverse)
-        $data=strrev($data);
-    $unpack=unpack($format, $data);
-    return reset($unpack);
-}
-
-function coinspark_string_shift_unpack_varint(&$string)
-{
-    $value=coinspark_string_shift_unpack($string, 1, 'C');
-    
-    if ($value==0xFF)
-        $value=coinspark_string_shift_unpack_uint64($string);
-    elseif ($value==0xFE)
-    $value=coinspark_string_shift_unpack($string, 4, 'V');
-    elseif ($value==0xFD)
-    $value=coinspark_string_shift_unpack($string, 2, 'v');
-    
-    return $value;
-}
-
-function coinspark_string_shift_unpack_uint64(&$string)
-{
-    return coinspark_string_shift_unpack($string, 4, 'V')+(coinspark_string_shift_unpack($string, 4, 'V')*4294967296);
-}
-
-function coinspark_pack_varint($integer)
-{
-    if ($integer>0xFFFFFFFF)
-        $packed="\xFF".coinspark_pack_uint64($integer);
-    elseif ($integer>0xFFFF)
-    $packed="\xFE".pack('V', $integer);
-    elseif ($integer>0xFC)
-    $packed="\xFD".pack('v', $integer);
-    else
-        $packed=pack('C', $integer);
-    
-    return $packed;
-}
-
-function coinspark_pack_uint64($integer)
-{
-    $upper=floor($integer/4294967296);
-    $lower=$integer-$upper*4294967296;
-    
-    return pack('V', $lower).pack('V', $upper);
-}
-*/
-
-char *_replace_with_OP_RETURN(char *rawtx,int32_t replace_vout,char *replace_addr,uint64_t *redeems,int32_t numredeems)
-{
-    char scriptstr[1024];
-    if ( _make_OP_RETURN(scriptstr,redeems,numredeems) > 0 )
+    for (vin=0; vin<numinputs; vin++)
+        if ( (offset= _decode_vin(&cointx->inputs[vin],data,offset,len)) < 0 )
+            break;
+    if ( vin != numinputs )
     {
-        
+        printf("_decode_rawtransaction: _decode_vin.%d err\n",vin);
+        return(0);
     }
-    return(0);
+    offset = hdecode_varint(&numoutputs,data,offset,len);
+    if ( numoutputs > MAX_COINTX_OUTPUTS )
+    {
+        printf("_decode_rawtransaction: numoutputs %lld > %d MAX_COINTX_INPUTS\n",(long long)numoutputs,MAX_COINTX_OUTPUTS);
+        return(0);
+    }
+    for (vout=0; vout<numoutputs; vout++)
+        if ( (offset= _decode_vout(&cointx->outputs[vout],data,offset,len)) < 0 )
+            break;
+    if ( vout != numoutputs )
+    {
+        printf("_decode_rawtransaction: _decode_vout.%d err\n",vout);
+        return(0);
+    }
+    offset = _decode_uint32(&cointx->nlocktime,data,offset,len);
+    cointx->numinputs = (uint32_t)numinputs;
+    cointx->numoutputs = (uint32_t)numoutputs;
+    if ( offset != len )
+        printf("_decode_rawtransaction warning: offset.%ld vs len.%ld for (%s)\n",offset,len,hexstr);
+    _validate_decoderawtransaction(hexstr,cointx);
+    return(cointx);
+}
+
+char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32_t numredeems)
+{
+    char scriptstr[1024],str40[41],*retstr = 0;
+    long len,i;
+    struct rawvout *vout;
+    struct cointx_info *cointx;
+    if ( _make_OP_RETURN(scriptstr,redeems,numredeems) > 0 && (cointx= _decode_rawtransaction(rawtx)) != 0 )
+    {
+        //if ( replace_vout == cointx->numoutputs-1 )
+        //    cointx->outputs[cointx->numoutputs] = cointx->outputs[cointx->numoutputs-1];
+        //cointx->numoutputs++;
+        vout = &cointx->outputs[replace_vout];
+        ///vout->value = 1;
+        //cointx->outputs[0].value -= vout->value;
+        //vout->coinaddr[0] = 0;
+        //safecopy(vout->script,scriptstr,sizeof(vout->script));
+        init_hexbytes_noT(str40,(void *)&redeems[0],sizeof(redeems[0]));
+        for (i=strlen(str40); i<40; i++)
+            str40[i] = '0';
+        str40[i] = 0;
+        sprintf(scriptstr,"76a914%s88ac",str40);
+        strcpy(vout->script,scriptstr);
+        len = strlen(rawtx) * 2;
+        retstr = calloc(1,len);
+        disp_cointx(cointx);
+        if ( _emit_cointx(retstr,len,cointx) < 0 )
+            free(retstr), retstr = 0;
+        free(cointx);
+    }
+    return(retstr);
 }
 
 int32_t ram_is_MGW_OP_RETURN(uint64_t *redeemtxids,struct ramchain_info *ram,uint32_t script_rawind)
 {
+    static uint8_t zero12[12];
     void *ram_gethashdata(struct ramchain_info *ram,char type,uint32_t rawind);
-    int32_t i,j,len,numredeems = 0;
+    int32_t j,numredeems = 0;
     uint8_t *hashdata;
     uint64_t redeemtxid;
     if ( (hashdata= ram_gethashdata(ram,'s',script_rawind)) != 0 )
     {
-        if ( (len= hashdata[0]) < 256 && hashdata[1] == OP_RETURN_OPCODE && hashdata[2] == 'M' && hashdata[3] == 'G' && hashdata[4] == 'W' )
+        /*if ( (len= hashdata[0]) < 256 && hashdata[1] == OP_RETURN_OPCODE && hashdata[2] == 'M' && hashdata[3] == 'G' && hashdata[4] == 'W' )
         {
             numredeems = hashdata[5];
             if ( (numredeems*sizeof(uint64_t) + 5) == len )
@@ -2283,14 +2504,24 @@ int32_t ram_is_MGW_OP_RETURN(uint64_t *redeemtxids,struct ramchain_info *ram,uin
                     redeemtxids[i] = redeemtxid;
                 }
             } else printf("ram_is_MGW_OP_RETURN: numredeems.%d + 5 != %d len\n",numredeems,len);
+        }*/
+        //sprintf(scriptstr,"76a914%s88ac",str40);
+        if ( hashdata[1] == 0x76 && hashdata[2] == 0xa9 && hashdata[3] == 0x14 && memcmp(&hashdata[12],zero12,12) == 0 )
+        {
+            hashdata = &hashdata[4];
+            for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
+                redeemtxid <<= 8, redeemtxid |= (*hashdata++ & 0xff);
+            redeemtxids[0] = redeemtxid;
+            printf("FOUND HACKRETURN.(%llu)\n",(long long)redeemtxid);
+            numredeems = 1;
         }
-    }
+   }
     return(numredeems);
 }
 
 struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destaddr,uint64_t value,uint64_t redeemtxid)
 {
-    char *rawparams,*signedtx,*changeaddr,*with_op_return,*retstr = 0;
+    char *rawparams,*signedtx,*changeaddr,*with_op_return=0,*retstr = 0;
     int64_t MGWfee,sum,amount;
     int32_t allocsize;
     struct cointx_info *cointx,TX,*rettx = 0;
@@ -2298,18 +2529,19 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     memset(cointx,0,sizeof(*cointx));
     strcpy(cointx->coinstr,ram->name);
     cointx->redeemtxid = redeemtxid;
-    cointx->gatewayid = ram->gatewayid;
+    cointx->gatewayid = ram->S.gatewayid;
     MGWfee = 0*(value >> 10) + ((ram->txfee + 2*ram->NXTfee_equiv)) - ram->txfee;
     strcpy(cointx->outputs[0].coinaddr,ram->marker);
     cointx->outputs[0].value = MGWfee;
     strcpy(cointx->outputs[1].coinaddr,destaddr);
     cointx->outputs[1].value = value;
-    strcpy(cointx->outputs[2].coinaddr,ram->marker);
-    cointx->outputs[2].value = 0;
+    strcpy(cointx->outputs[2].coinaddr,ram->opreturnmarker);
+    cointx->outputs[2].value = 1;
     cointx->numoutputs = 3;
-    cointx->amount = amount = (MGWfee + value);
-    fprintf(stderr,"calc_withdraw.%s %llu amount %.8f -> balance %.8f\n",ram->name,(long long)redeemtxid,dstr(cointx->amount),dstr(ram->MGWbalance));
-    if ( (cointx->amount + ram->txfee) <= ram->MGWbalance )
+    cointx->amount = amount = (MGWfee + value + 1);
+    fprintf(stderr,"calc_withdraw.%s %llu amount %.8f -> balance %.8f\n",ram->name,(long long)redeemtxid,dstr(cointx->amount),dstr(ram->S.MGWbalance));
+   // if ( (cointx->amount + ram->txfee) <= ram->MGWbalance )
+    if ( ram->S.MGWbalance >= 0 )
     {
         if ( (sum= _calc_cointx_inputs(ram,cointx,cointx->amount)) >= (cointx->amount + ram->txfee) )
         {
@@ -2328,34 +2560,35 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
             rawparams = _createrawtxid_json_params(ram,cointx);
             if ( rawparams != 0 )
             {
-                fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
-                stripwhite(rawparams,strlen(rawparams));
+                //fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
+                _stripwhite(rawparams,0);
                 retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"createrawtransaction",rawparams);
                 if ( retstr != 0 && retstr[0] != 0 )
                 {
                     fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
-                    if ( (with_op_return= _replace_with_OP_RETURN(retstr,2,ram->marker,&redeemtxid,1)) != 0 )
+                    if ( (with_op_return= _insert_OP_RETURN(retstr,2,&redeemtxid,1)) != 0 )
                     {
-                        if ( (signedtx= _sign_localtx(ram,cointx,retstr)) != 0 )
+                        if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
                         {
                             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
+                           // printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
                             rettx = calloc(1,allocsize);
                             *rettx = *cointx;
                             rettx->allocsize = allocsize;
+                            rettx->isallocated = allocsize;
                             strcpy(rettx->signedtx,signedtx);
                             free(signedtx);
                             cointx = 0;
                         } else printf("error _sign_localtx.(%s)\n",with_op_return);
+                        free(with_op_return);
                     } else printf("error replacing with OP_RETURN\n");
                 } else fprintf(stderr,"error creating rawtransaction\n");
                 free(rawparams);
                 if ( retstr != 0 )
                     free(retstr);
-                if ( with_op_return != 0 )
-                    free(with_op_return);
             } else fprintf(stderr,"error creating rawparams\n");
         } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(sum),dstr(cointx->amount),dstr(ram->txfee));
-    } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",ram->name,dstr(ram->MGWbalance),dstr(cointx->amount),dstr(ram->txfee));
+    } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",ram->name,dstr(ram->S.MGWbalance),dstr(cointx->amount),dstr(ram->txfee));
     return(rettx);
 }
 
@@ -2378,7 +2611,7 @@ uint32_t _get_RTheight(struct ramchain_info *ram)
             }
             free(retstr);
         }
-    } else height = ram->RTblocknum;
+    } else height = ram->S.RTblocknum;
     return(height);
 }
 
@@ -2493,6 +2726,26 @@ uint32_t _get_NXTheight(uint32_t *firsttimep)
     return(height);
 }
 
+uint64_t _get_NXT_ECblock(uint32_t *ecblockp)
+{
+    cJSON *json;
+    uint64_t ecblock = 0;
+    char cmd[256],*jsonstr;
+    sprintf(cmd,"requestType=getECblock");
+    if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( ecblockp != 0 )
+                *ecblockp = (uint32_t)get_cJSON_int(json,"ecBlockHeight");
+            ecblock = get_API_nxt64bits(cJSON_GetObjectItem(json,"ecBlockId"));
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(ecblock);
+}
+
 uint64_t _calc_circulation(int32_t minconfirms,struct NXT_asset *ap,struct ramchain_info *ram)
 {
     uint64_t quantity,circulation = 0;
@@ -2503,8 +2756,8 @@ uint64_t _calc_circulation(int32_t minconfirms,struct NXT_asset *ap,struct ramch
         return(0);
     if ( minconfirms != 0 )
     {
-        ram->NXT_RTblocknum = _get_NXTheight(0);
-        height = ram->NXT_RTblocknum;// - ram->min_NXTconfirms;
+        ram->S.NXT_RTblocknum = _get_NXTheight(0);
+        height = ram->S.NXT_RTblocknum - minconfirms;
     }
     sprintf(cmd,"requestType=getAssetAccounts&asset=%llu",(long long)ap->assetbits);
     if ( height > 0 )
@@ -2595,13 +2848,26 @@ char *_unstringify(char *str)
 int32_t _is_limbo_redeem(struct ramchain_info *ram,uint64_t redeemtxidbits)
 {
     int32_t j;
-    if ( ram != 0 && ram->limboarray != 0 )
+    if ( ram->limboarray != 0 )
     {
         for (j=0; ram->limboarray[j]!=0; j++)
             if ( redeemtxidbits == ram->limboarray[j] )
+            {
+                printf("redeemtxid.%llu in slot.%d\n",(long long)redeemtxidbits,j);
                 return(1);
-    }
+            }
+    } else printf("no limboarray for %s?\n",ram->name);
     return(0);
+}
+
+void _complete_assettxid(struct ramchain_info *ram,struct NXT_assettxid *tp)
+{
+    if ( tp->completed == 0 && tp->redeemstarted != 0 )
+    {
+        printf("pending redeem %llu %.8f completed | elapsed %d seconds\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(uint32_t)(time(NULL) - tp->redeemstarted));
+        tp->redeemstarted = (uint32_t)(time(NULL) - tp->redeemstarted);
+    }
+    tp->completed = 1;
 }
 
 char *_calc_withdrawaddr(char *withdrawaddr,struct ramchain_info *ram,struct NXT_assettxid *tp,cJSON *argjson)
@@ -2680,8 +2946,8 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct ramchain_
         {
             if ( _calc_withdrawaddr(withdrawaddr,ram,tp,argjson) == 0 )
             {
-                printf("no withdraw.(%s) or autoconvert.(%s)\n",withdrawaddr,tp->comment);
-                tp->completed = 1;
+                printf("(%llu) no withdraw.(%s) or autoconvert.(%s)\n",(long long)tp->redeemtxid,withdrawaddr,tp->comment);
+                _complete_assettxid(ram,tp);
                 retstr = 0;
             }
         }
@@ -2690,20 +2956,20 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct ramchain_
             minwithdraw = ram->txfee * MIN_DEPOSIT_FACTOR;
             if ( amount <= minwithdraw )
             {
-                printf("minimum withdrawal must be more than %.8f %s\n",dstr(minwithdraw),ram->name);
-                tp->completed = 1;
+                printf("%llu: minimum withdrawal must be more than %.8f %s\n",(long long)tp->redeemtxid,dstr(minwithdraw),ram->name);
+                _complete_assettxid(ram,tp);
                 retstr = 0;
             }
             else if ( withdrawaddr[0] == 0 )
             {
-                printf("no withdraw address for %.8f | ",dstr(amount));
-                tp->completed = 1;
+                printf("%llu: no withdraw address for %.8f | ",(long long)tp->redeemtxid,dstr(amount));
+                _complete_assettxid(ram,tp);
                 retstr = 0;
             }
             else if ( ram != 0 && _validate_coinaddr(pubkey,ram,withdrawaddr) < 0 )
             {
-                printf("invalid address.(%s) for NXT.%s %.8f validate.%d\n",withdrawaddr,NXTaddr,dstr(amount),_validate_coinaddr(pubkey,ram,withdrawaddr));
-                tp->completed = 1;
+                printf("%llu: invalid address.(%s) for NXT.%s %.8f validate.%d\n",(long long)tp->redeemtxid,withdrawaddr,NXTaddr,dstr(amount),_validate_coinaddr(pubkey,ram,withdrawaddr));
+                _complete_assettxid(ram,tp);
                 retstr = 0;
             }
         }
@@ -2716,37 +2982,222 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct ramchain_
     return(retstr);
 }
 
+struct MGWstate *ram_select_MGWstate(struct ramchain_info *ram,int32_t selector)
+{
+    struct MGWstate *sp;
+    if ( selector < 0 )
+        sp = &ram->S;
+    else if ( selector < ram->numgateways )
+        sp = &ram->otherS[selector];
+    return(sp);
+}
+
+void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector)
+{
+    struct MGWstate *sp = ram_select_MGWstate(ram,selector);
+    sprintf(pingstr,"\"gatewayid\":\"%d\",\"balance\":\"%.8f\",\"sentNXT\":\"%.0f\",\"unspent\":\"%.8f\",\"circulation\":\"%.8f\",\"pendingredeems\":\"%.8f\",\"pendingdeposits\":\"%.8f\",\"internal\":\"%.8f\",\"RTNXT\":{\"height\":\"%d\",\"lag\":\"%d\",\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":\"%d\",\"lag\":\"%d\"},",sp->gatewayid,dstr(sp->MGWbalance),dstr(sp->sentNXT),dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
+    if ( ram->S.gatewayid >= 0 )
+        ram->otherS[ram->S.gatewayid] = ram->S;
+}
+
+void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector)
+{
+    struct MGWstate *sp = ram_select_MGWstate(ram,selector);
+    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f pending.(R %.8f D %.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
+}
+
+void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selector)
+{
+    ram_set_MGWpingstr(MGWpingstr,ram,selector);
+}
+
+void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
+{
+    int32_t gatewayid;
+    struct MGWstate *sp;
+    cJSON *json,*array,*nxtobj,*coinobj;
+    if ( (array= cJSON_Parse(pingstr)) != 0 && is_cJSON_Array(array) != 0 )
+    {
+        json = cJSON_GetArrayItem(array,0);
+        if ( (gatewayid= (int32_t)get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1)) >= 0 && gatewayid < ram->numgateways )
+        {
+            if ( strcmp(ram->special_NXTaddrs[gatewayid],sender) == 0 )
+            {
+                sp = &ram->otherS[gatewayid];
+                sp->MGWbalance = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"balance"));
+                sp->sentNXT = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"sentNXT"));
+                sp->MGWunspent = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"unspent"));
+                sp->circulation = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"circulation"));
+                sp->MGWpendingredeems = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"pendingredeems"));
+                sp->MGWpendingdeposits = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"pendingdeposits"));
+                sp->orphans = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"internal"));
+                if ( (nxtobj= cJSON_GetObjectItem(json,"RTNXT")) != 0 )
+                {
+                    sp->NXT_RTblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"height"),0);
+                    sp->NXTblocknum = (sp->NXT_RTblocknum - (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"lag"),0));
+                    sp->NXT_ECblock = get_API_nxt64bits(cJSON_GetObjectItem(nxtobj,"ECblock"));
+                    sp->NXT_ECheight = (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"ECheight"),0);
+                }
+                if ( (coinobj= cJSON_GetObjectItem(json,ram->name)) != 0 )
+                {
+                    sp->RTblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(coinobj,"height"),0);
+                    sp->blocknum = (sp->NXT_RTblocknum - (uint32_t)get_API_int(cJSON_GetObjectItem(coinobj,"lag"),0));
+                }
+            } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
+        }
+        free_json(array);
+    }
+}
+
+int32_t MGWstatecmp(struct MGWstate *spA,struct MGWstate *spB)
+{
+    return(memcmp((void *)((long)spA + sizeof(spA->gatewayid)),(void *)((long)spB + sizeof(spB->gatewayid)),sizeof(*spA) - sizeof(spA->gatewayid)));
+}
+
 double _enough_confirms(double redeemed,double estNXT,int32_t numconfs,int32_t minconfirms)
 {
     double metric;
     if ( numconfs < minconfirms )
         return(0);
     metric = log(estNXT + sqrt(redeemed));
-    if ( metric < 1 )
-        metric = 1.;
-    return(((double)numconfs/minconfirms) - metric);
+    return(metric - 1.);
 }
 
 int32_t ram_MGW_ready(struct ramchain_info *ram,uint32_t blocknum,uint32_t NXTheight,uint64_t nxt64bits,uint64_t amount)
 {
-    if ( ram->gatewayid >= 0 && ram->gatewayid < 3 && strcmp(ram->srvNXTADDR,ram->special_NXTaddrs[ram->gatewayid]) != 0 )
-        return(0);
-    if ( ram->gatewayid < 0 || (nxt64bits != 0 && (nxt64bits % NUM_GATEWAYS) != ram->gatewayid) || ram->MGWbalance < 0 )
-        return(0);
-    else if ( blocknum != 0 && ram->NXT_is_realtime != 0 && (blocknum + ram->depositconfirms) <= ram->RTblocknum && ram->enable_deposits != 0 )
-        return(1);
-    else if ( ram->numpendingsends < (int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)) && NXTheight != 0 && ram->is_realtime != 0 )
+    int32_t retval = 0;
+    if ( ram->S.gatewayid >= 0 && ram->S.gatewayid < 3 && strcmp(ram->srvNXTADDR,ram->special_NXTaddrs[ram->S.gatewayid]) != 0 )
     {
-        if ( _enough_confirms(0.,amount * ram->NXTconvrate,ram->NXT_RTblocknum - NXTheight,ram->min_NXTconfirms) > 0 )
-            return(1);
+        printf("mismatched gatewayid.%d\n",ram->S.gatewayid);
+        return(0);
     }
+    if ( ram->S.gatewayid < 0 || (nxt64bits != 0 && (nxt64bits % NUM_GATEWAYS) != ram->S.gatewayid) || ram->S.MGWbalance < 0 )
+        return(0);
+    else if ( blocknum != 0 && ram->S.NXT_is_realtime != 0 && (blocknum + ram->depositconfirms) <= ram->S.RTblocknum && ram->S.enable_deposits != 0 )
+        retval = 1;
+    else if ( ram->numpendingsends < (int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)) && NXTheight != 0 && ram->S.is_realtime != 0 )
+    {
+        if ( _enough_confirms(0.,amount * ram->NXTconvrate,ram->S.NXT_RTblocknum - NXTheight,ram->withdrawconfirms) > 0. )
+            retval = 1;
+    }
+    if ( retval != 0 )
+    {
+        if ( MGWstatecmp(&ram->otherS[0],&ram->otherS[1]) != 0 || MGWstatecmp(&ram->otherS[0],&ram->otherS[2]) != 0 )
+        {
+            printf("MGWstatecmp failure %d, %d\n",MGWstatecmp(&ram->otherS[0],&ram->otherS[1]),MGWstatecmp(&ram->otherS[0],&ram->otherS[2]));
+            //return(0);
+        }
+    }
+    return(retval);
+}
+
+void _clear_pendingsend(struct NXT_assettxid *tp)
+{
+    int32_t i;
+    struct cointx_info *cointx;
+    if ( tp != 0 )
+    {
+        for (i=0; i<3; i++)
+            if ( (cointx= tp->pendingsends[i]) != 0 )
+            {
+                tp->pendingsends[i] = 0;
+                if ( cointx->isallocated != 0 )
+                    free(cointx);
+            }
+    }
+}
+
+uint32_t _extract_batchcrc(struct NXT_assettxid *tp,int32_t gatewayid)
+{
+    struct cointx_info *cointx;
+    if ( (cointx= tp->pendingsends[gatewayid]) != 0 )
+        return(cointx->batchcrc);
     return(0);
 }
 
-struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info **ramp,struct cointx_info *cointx)
+struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *ram,struct NXT_assettxid *tp,struct cointx_info *cointx)
 {
-    int32_t gatewayid,i;
-    struct NXT_assettxid *tp;
+    static portable_mutex_t mutex;
+    static int didinit;
+    int32_t createdflag,i,gatewayid;
+    char redeemtxidstr[64];
+    fprintf(stderr,"ram_add_pendingsend.(%p %p %p %p) cointx gatewayid.%d\n",slotp,ram,tp,cointx,cointx->gatewayid);
+    if ( didinit == 0 )
+    {
+        portable_mutex_init(&mutex);
+        didinit = 1;
+    }
+    if ( cointx == 0 )
+    {
+        fprintf(stderr,"ram_add_pendingsend special\n");
+        if ( tp == 0 )
+        {
+            fprintf(stderr,"ram_add_pendingsend clear\n");
+            portable_mutex_lock(&mutex);
+            fprintf(stderr,"clear pendingsends.%d\n",ram->numpendingsends);
+            for (i=0; i<ram->numpendingsends; i++)
+                _clear_pendingsend(ram->pendingsends[i]);
+            ram->numpendingsends = 0;
+            fprintf(stderr,"clear pendingsends array\n");
+            memset(ram->pendingsends,0,sizeof(ram->pendingsends));
+            portable_mutex_unlock(&mutex);
+            return(0);
+        }
+        else
+        {
+            fprintf(stderr,"_RTmgw_handler: completed NXT.%llu redeem.%llu %.8f %.1f minutes | numpending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(double)tp->redeemstarted/60.,ram->numpendingsends);
+            i = *slotp;
+            portable_mutex_lock(&mutex);
+            ram->pendingsends[i] = ram->pendingsends[--ram->numpendingsends];
+            portable_mutex_unlock(&mutex);
+            return(tp);
+        }
+    }
+    gatewayid = cointx->gatewayid;
+    portable_mutex_lock(&mutex);
+    if ( ram->numpendingsends > 0 )
+    {
+        for (i=0; i<ram->numpendingsends; i++)
+            printf("[%p %llu] ",ram->pendingsends[i],(long long)ram->pendingsends[i]->redeemtxid);
+        printf("-> search for %llu\n",(long long)cointx->redeemtxid);
+        for (i=0; i<ram->numpendingsends; i++)
+        {
+            if ( tp == ram->pendingsends[i] || (ram->pendingsends[i] != 0 && cointx->redeemtxid == ram->pendingsends[i]->redeemtxid) )
+            {
+                tp = ram->pendingsends[i];
+                printf("match in slot.%d tp.%p %llu\n",i,tp,(long long)tp->redeemtxid);
+                break;
+            }
+        }
+    } else i = 0;
+    if ( i == ram->numpendingsends )
+    {
+        _expand_nxt64bits(redeemtxidstr,cointx->redeemtxid);
+        if ( tp == 0 )
+            tp = find_NXT_assettxid(&createdflag,ram->ap,redeemtxidstr);
+        if ( ram->numpendingsends < (int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)) )
+        {
+            printf("tp.%p %llu -> slot.%d\n",tp,(long long)tp->redeemtxid,ram->numpendingsends);
+            ram->pendingsends[ram->numpendingsends++] = tp;
+        }
+        else printf("pending sends full? with %d vs %d\n",ram->numpendingsends,(int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)));
+    } else printf("B found match in slot.%d tp.%p\n",i,tp);
+    portable_mutex_unlock(&mutex);
+    
+    if ( slotp != 0 )
+        *slotp = i;
+    if ( tp->pendingsends[gatewayid] != 0 )
+        fprintf(stderr,"got another redeem.%llu from gateway.%d\n",(long long)cointx->redeemtxid,gatewayid);
+    fprintf(stderr,"ADD <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu | numpending.%d\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid,ram->numpendingsends);
+    tp->pendingsends[gatewayid] = cointx;
+    return(tp);
+}
+
+struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info **ramp,struct cointx_info *cointx,char *sender,char *recvname)
+{
+    uint32_t crc;
+    int32_t gatewayid;
+    char redeemtxidstr[64];
     struct ramchain_info *ram;
     *ramp = 0;
     *sendip = -1;
@@ -2755,19 +3206,36 @@ struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info
     else
     {
         *ramp = ram;
-        gatewayid = cointx->gatewayid;
-        for (i=0; i<ram->numpendingsends; i++)
+        if ( strncmp(recvname,ram->name,strlen(ram->name)) != 0 )
         {
-            tp = ram->pendingsends[i];
-            if ( cointx->redeemtxid == tp->redeemtxid )
-            {
-                *sendip = i;
-                tp->pendingsends[gatewayid] = cointx;
-                printf("GOT <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
-                return(tp);
-            }
+            printf("_process_realtime_MGW: coin mismatch recvname.(%s) vs %s\n",recvname,ram->name);
+            return(0);
         }
-        printf("GOT UNMATCHED <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
+        crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize-sizeof(cointx->crc)));
+        if ( crc != cointx->crc )
+        {
+            printf("_process_realtime_MGW: crc mismatch %x vs %x\n",crc,cointx->crc);
+            return(0);
+        }
+        _expand_nxt64bits(redeemtxidstr,cointx->redeemtxid);
+        if ( strncmp(recvname+strlen(ram->name)+1,redeemtxidstr,strlen(redeemtxidstr)) != 0 )
+        {
+            printf("_process_realtime_MGW: redeemtxid mismatch (%s) vs (%s)\n",recvname+strlen(ram->name)+1,redeemtxidstr);
+            return(0);
+        }
+        gatewayid = cointx->gatewayid;
+        if ( gatewayid < 0 || gatewayid >= ram->numgateways )
+        {
+            printf("_process_realtime_MGW: illegal gatewayid.%d\n",gatewayid);
+            return(0);
+        }
+        if ( strcmp(ram->special_NXTaddrs[gatewayid],sender) != 0 )
+        {
+            printf("_process_realtime_MGW: gatewayid mismatch %d.(%s) vs %s\n",gatewayid,ram->special_NXTaddrs[gatewayid],sender);
+            return(0);
+        }
+        ram_add_pendingsend(0,ram,0,cointx);
+        printf("GOT <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
     }
     return(0);
 }
@@ -2782,49 +3250,57 @@ int32_t cointxcmp(struct cointx_info *txA,struct cointx_info *txB)
     return(-1);
 }
 
+char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_assettxid *tp)
+{
+    char *cointxid;
+    int32_t sendi;
+    struct cointx_info *othercointx;
+    if ( cointxcmp(tp->pendingsends[0],tp->pendingsends[1]) == 0 && cointxcmp(tp->pendingsends[0],tp->pendingsends[2]) == 0 ) // consensus
+    {
+        printf("got consensus for %llu %.8f\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
+        if ( ram_MGW_ready(ram,0,tp->height,tp->senderbits,tp->U.assetoshis) > 0 )
+        {
+            if ( ram_verify_NXTtxstillthere(ram,tp->redeemtxid) != tp->U.assetoshis )
+            {
+                printf("_RTmgw_handler: tx gone due to a fork. NXT.%llu txid.%lld %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
+                exit(1); // seems the best thing to do
+            }
+            othercointx = (struct cointx_info *)tp->pendingsends[ram->S.gatewayid ^ 1];
+            if ( (cointxid= _sign_and_sendmoney(txidstr,ram,tp->pendingsends[ram->S.gatewayid],othercointx->signedtx,&tp->redeemtxid,&tp->U.assetoshis,1)) != 0 )
+            {
+                _complete_assettxid(ram,tp);
+                ram_add_pendingsend(&sendi,ram,tp,0);
+                printf("completed redeem.%llu for %.8f\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
+                return(txidstr);
+            }
+            else printf("_RTmgw_handler: error _sign_and_sendmoney for NXT.%llu redeem.%llu %.8f (%s)\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),othercointx->signedtx);
+        }
+    } else printf("no match yet %d %d\n",cointxcmp(tp->pendingsends[0],tp->pendingsends[1]),cointxcmp(tp->pendingsends[0],tp->pendingsends[2]));
+    return(0);
+}
+
 void _RTmgw_handler(struct transfer_args *args)
 {
-    char *cointxid,txidstr[512];
     struct NXT_assettxid *tp;
     struct ramchain_info *ram;
-    struct cointx_info *othercointx;
-    int32_t i,sendi;
+    int32_t sendi;
+    char txidstr[512];
     printf("_RTmgw_handler(%s %d bytes)\n",args->name,args->totallen);
-    if ( (tp= _process_realtime_MGW(&sendi,&ram,(struct cointx_info *)args->data)) != 0 )
+    if ( (tp= _process_realtime_MGW(&sendi,&ram,(struct cointx_info *)args->data,args->sender,args->name)) != 0 )
     {
         if ( sendi >= ram->numpendingsends || sendi < 0 || ram->pendingsends[sendi] != tp )
         {
             printf("FATAL: _RTmgw_handler sendi %d >= %d ram->numpendingsends || sendi %d < 0 || %p ram->pendingsends[sendi] != %ptp\n",sendi,ram->numpendingsends,sendi,ram->pendingsends[sendi],tp);
             exit(1);
         }
-        if ( cointxcmp(tp->pendingsends[0],tp->pendingsends[1]) == 0 && cointxcmp(tp->pendingsends[0],tp->pendingsends[2]) == 0 ) // consensus
-        {
-            if ( ram_MGW_ready(ram,0,tp->height,tp->senderbits,tp->U.assetoshis) > 0 )
-            {
-                if ( ram_verify_NXTtxstillthere(ram,tp->redeemtxid) != tp->U.assetoshis )
-                {
-                    printf("_RTmgw_handler: tx gone due to a fork. NXT.%llu txid.%lld %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
-                    exit(1); // seems the best thing to do
-                }
-                othercointx = (struct cointx_info *)tp->pendingsends[ram->gatewayid ^ 1];
-                if ( (cointxid= _sign_and_sendmoney(txidstr,ram,tp->pendingsends[ram->gatewayid],othercointx->signedtx,&tp->redeemtxid,&tp->U.assetoshis,1)) != 0 )
-                {
-                    tp->completed = 1;
-                    ram->pendingsends[sendi] = ram->pendingsends[--ram->numpendingsends];
-                    printf("_RTmgw_handler: completed NXT.%llu redeem.%llu %.8f %.1f minutes | numpending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(double)tp->redeemstarted/60.,ram->numpendingsends);
-                    for (i=0; i<3; i++)
-                        free(tp->pendingsends[i]), tp->pendingsends[i] = 0;
-                }
-                else printf("_RTmgw_handler: error _sign_and_sendmoney for NXT.%llu redeem.%llu %.8f (%s)\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),othercointx->signedtx);
-            }
-        }
+        ram_check_consensus(txidstr,ram,tp);
     }
     //getchar();
 }
 
-void _set_batchname(char *batchname,char *coinstr,int32_t gatewayid)
+void _set_batchname(char *batchname,char *coinstr,int32_t gatewayid,uint64_t redeemtxid)
 {
-    sprintf(batchname,"%s.MGW%d",coinstr,gatewayid);
+    sprintf(batchname,"%s.%llu.g%d",coinstr,(long long)redeemtxid,gatewayid);
 }
 
 void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
@@ -2834,13 +3310,14 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
     char batchname[512],fname[512],*retstr;
     int32_t gatewayid;
     FILE *fp;
-    _set_batchname(batchname,cointx->coinstr,cointx->gatewayid);
+    _set_batchname(batchname,cointx->coinstr,cointx->gatewayid,cointx->redeemtxid);
     set_handler_fname(fname,"RTmgw",batchname);
+    cointx->crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize - sizeof(cointx->crc)));
+    //printf("save to (%s) crc.%x\n",fname,cointx->crc);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
         fwrite(cointx,1,sizeof(*cointx),fp);
         fclose(fp);
-        printf("created (%s)\n",fname);
     }
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
     {
@@ -2850,19 +3327,44 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
             if ( retstr != 0 )
                 free(retstr);
         }
-        fprintf(stderr,"got publish_withdraw_info.%d -> %d coin.(%s) %.8f crc %08x\n",ram->gatewayid,gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc);
+        fprintf(stderr,"got publish_withdraw_info.%d -> %d coin.(%s) %.8f crc %08x\n",ram->S.gatewayid,gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc);
     }
 }
 
 uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info *ram)
 {
-    int32_t j,disable_newsends,specialsender,specialreceiver;
-    char sender[64],receiver[64],withdrawaddr[512],*destaddr;
+    int32_t i,j,disable_newsends,specialsender,specialreceiver;
+    char sender[64],receiver[64],txidstr[512],withdrawaddr[512],*destaddr;
     struct NXT_assettxid *tp;
     struct NXT_asset *ap;
+    struct cointx_info *cointx;
     uint64_t orphans = 0;
     *pendingredeemsp = 0;
     disable_newsends = (ram->numpendingsends > 0);
+    if ( disable_newsends != 0 && ram->S.gatewayid >= 0 )
+    {
+        if ( 0 && ram->pendingticks++ > MAX_PENDINGSENDS_TICKS )
+        {
+            fprintf(stderr,"ram->pendingticks.%d > %d MAX_PENDINGSENDS_TICKS, clear and resync\n",ram->pendingticks,MAX_PENDINGSENDS_TICKS);
+            ram_add_pendingsend(0,ram,0,0);
+            ram->pendingticks = disable_newsends = 0;
+            fprintf(stderr,"resume find_pending_transfers\n");
+        }
+        else if ( (ram->pendingticks % 10) == 9 )
+        {
+            for (i=0; i<ram->numpendingsends; i++)
+                if ( (tp= ram->pendingsends[i]) != 0 )
+                {
+                    if ( ram_check_consensus(txidstr,ram,tp) == 0 )
+                    {
+                        for (j=0; j<ram->numgateways; j++)
+                            if ( ram->S.gatewayid != j && (cointx= tp->pendingsends[j]) != 0 )
+                                ram_send_cointx(ram,cointx);
+                    }
+                }
+        }
+    }
+    else ram->pendingticks = 0;
     if ( (ap= ram->ap) == 0 )
         return(0);
     for (j=0; j<ap->num; j++)
@@ -2875,15 +3377,24 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
             _expand_nxt64bits(receiver,tp->receiverbits);
             specialreceiver = _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,receiver);
             if ( (specialsender ^ specialreceiver) == 0 || tp->cointxid != 0 )
-                tp->completed = 1;
+            {
+                printf("autocomplete: %llu cointxid.%p\n",(long long)tp->redeemtxid,tp->cointxid);
+                _complete_assettxid(ram,tp);
+            }
             else
             {
                 if ( _is_limbo_redeem(ram,tp->redeemtxid) != 0 )
-                    tp->completed = 1;
+                {
+                    printf("autocomplete: limbo %llu cointxid.%p\n",(long long)tp->redeemtxid,tp->cointxid);
+                    _complete_assettxid(ram,tp);
+                }
                 if ( tp->receiverbits == ram->MGWbits ) // redeem start
                 {
-                    if ( _valid_txamount(ram,tp->U.assetoshis) > 0 && (destaddr= _parse_withdraw_instructions(withdrawaddr,sender,ram,tp,ap)) != 0 )
+                    destaddr = "coinaddr";
+                    if ( _valid_txamount(ram,tp->U.assetoshis) > 0 && (tp->convwithdrawaddr != 0 || (destaddr= _parse_withdraw_instructions(withdrawaddr,sender,ram,tp,ap)) != 0) )
                     {
+                        if ( tp->convwithdrawaddr == 0 )
+                            tp->convwithdrawaddr = clonestr(destaddr);
                         if ( tp->redeemstarted == 0 )
                         {
                             printf("find_pending_transfers: redeem.%llu started %s %.8f for NXT.%s to %s\n",(long long)tp->redeemtxid,ram->name,dstr(tp->U.assetoshis),sender,destaddr!=0?destaddr:"no withdraw address");
@@ -2898,30 +3409,35 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                             {
                                 for (i=0; i<numpayloads; i++)
                                     if ( (dstr(tp->U.assetoshis) - dstr(payloads[i].value)) == .0101 )
-                                        printf("payload.i%d >>>>>>>> %.8f <<<<<<<<< ",i,dstr(payloads[i].value)), tp->completed = 1;
+                                    {
+                                        printf("(autocomplete.%llu payload.i%d >>>>>>>> %.8f <<<<<<<<<) ",(long long)tp->redeemtxid,i,dstr(payloads[i].value));
+                                        _complete_assettxid(ram,tp);
+                                    }
                              }
                         }
                         if ( tp->completed == 0 && tp->convwithdrawaddr != 0 )
                         {
                             (*pendingredeemsp) += tp->U.assetoshis;
-                            printf("NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->is_realtime,(tp->height + ram->min_NXTconfirms) <= ram->NXT_RTblocknum,ram->MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends);
-                            if ( disable_newsends == 0 && ram_MGW_ready(ram,0,tp->height,0,tp->U.assetoshis) > 0 && tp->pendingsends[ram->gatewayid] == 0 )
+                            printf("NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->S.is_realtime,(tp->height + ram->withdrawconfirms) <= ram->S.NXT_RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends);
+                            if ( disable_newsends == 0 && ram_MGW_ready(ram,0,tp->height,0,tp->U.assetoshis) > 0 && tp->pendingsends[ram->S.gatewayid] == 0 )
                             {
-                                if ( (tp->pendingsends[ram->gatewayid]= _calc_cointx_withdraw(ram,tp->convwithdrawaddr,tp->U.assetoshis,tp->redeemtxid)) != 0 )
+                                if ( (cointx= _calc_cointx_withdraw(ram,tp->convwithdrawaddr,tp->U.assetoshis,tp->redeemtxid)) != 0 )
                                 {
-                                    ram_send_cointx(ram,tp->pendingsends[ram->gatewayid]);
-                                    ram->pendingsends[ram->numpendingsends++] = tp;
+                                    ram_send_cointx(ram,cointx);
+                                    ram_add_pendingsend(0,ram,tp,cointx);
+                                    disable_newsends = 1;
                                 }
                             }
                             //printf("(%llu %.8f).%d ",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(int32_t)(time(NULL) - tp->redeemstarted));
-                        }
-                    }
+                        } else printf("%llu %.8f: completed.%d withdraw.%p destaddr.%p\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),tp->completed,tp->convwithdrawaddr,destaddr);
+                    } else if ( tp->completed == 0 && _valid_txamount(ram,tp->U.assetoshis) > 0 )
+                        printf("incomplete but skipped.%llu: %.8f destaddr.%s\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),destaddr);
                 }
                 else if ( tp->completed == 0 && specialsender != 0 ) // deposit complete w/o cointxid (shouldnt happen normally)
                 {
                     orphans += tp->U.assetoshis;
-                    tp->completed = 1;
-                    //printf("find_pending_transfers: internal transfer.%llu limbo.%d complete %s %.8f to NXT.%s\n",(long long)tp->redeemtxid,_is_limbo_redeem(ram,tp->redeemtxid),ram->name,dstr(tp->U.assetoshis),receiver);
+                    _complete_assettxid(ram,tp);
+                    printf("find_pending_transfers: internal transfer.%llu limbo.%d complete %s %.8f to NXT.%s\n",(long long)tp->redeemtxid,_is_limbo_redeem(ram,tp->redeemtxid),ram->name,dstr(tp->U.assetoshis),receiver);
                 }
             }
         }
@@ -2947,7 +3463,7 @@ int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid 
                     {
                         printf("deposit complete %s.%s/v%d %.8f -> NXT.%llu txid.%llu\n",ram->name,tp->cointxid,tp->coinv,dstr(tp->U.assetoshis),(long long)tp->receiverbits,(long long)tp->redeemtxid);
                         addrpayload->pendingdeposit = 0;
-                        tp->completed = 1;
+                        _complete_assettxid(ram,tp);
                     }
                     else
                     {
@@ -3007,40 +3523,52 @@ void ram_addunspent(struct ramchain_info *ram,char *coinaddr,struct rampayload *
 int32_t _ram_update_redeembits(struct ramchain_info *ram,uint64_t redeembits,uint64_t AMtxidbits,char *cointxid,struct address_entry *bp)
 {
     struct NXT_asset *ap = ram->ap;
-    int32_t i,n = 0,num = 0;
+    struct NXT_assettxid *tp;
+    int32_t createdflag,num = 0;
+    char txid[64];
     if ( ram == 0 )
         return(0);
-    if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
-        printf("n.%d set AMtxidbits.%llu -> %s redeem (%llu)\n",n,(long long)AMtxidbits,ram->name,(long long)redeembits);
-    if ( ap->num > 0 )
+    _expand_nxt64bits(txid,redeembits);
+    tp = find_NXT_assettxid(&createdflag,ap,txid);
+    tp->assetbits = ap->assetbits;
+    tp->redeemtxid = redeembits;
+
+    //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
+        printf("_ram_update_redeembits.apnum.%d set AMtxidbits.%llu -> %s redeem (%llu) cointxid.%p tp.%p\n",ap->num,(long long)AMtxidbits,ram->name,(long long)redeembits,cointxid,tp);
+    //if ( ap->num > 0 )
     {
-        for (i=0; i<ap->num; i++)
-            if ( ap->txids[i]->redeemtxid == redeembits )
+        //for (i=0; i<ap->num; i++)
+        {
+            //tp = ap->txids[i];
+            if ( tp->redeemtxid == redeembits )
             {
                 if ( AMtxidbits != 0 )
-                    ap->txids[i]->AMtxidbits = AMtxidbits;
-                if ( ap->txids[i]->completed == 0 )
+                    tp->AMtxidbits = AMtxidbits;
+                _complete_assettxid(ram,tp);
+                if ( bp != 0 && bp->blocknum != 0 )
                 {
-                    printf("pending redeem %llu completed AMtxid.%llu | elapsed %d seconds\n",(long long)redeembits,(long long)AMtxidbits,(uint32_t)(time(NULL) - ap->txids[i]->redeemstarted));
-                    ap->txids[i]->redeemstarted = (uint32_t)(time(NULL) - ap->txids[i]->redeemstarted);
-                    ap->txids[i]->completed = 1;
-                    if ( bp != 0 && bp->blocknum != 0 )
+                    tp->coinblocknum = bp->blocknum;
+                    tp->cointxind = bp->txind;
+                    tp->coinv = bp->v;
+                }
+                if ( cointxid != 0 )
+                {
+                    if ( tp->cointxid != 0 )
                     {
-                        ap->txids[i]->coinblocknum = bp->blocknum;
-                        ap->txids[i]->cointxind = bp->txind;
-                        ap->txids[i]->coinv = bp->v;
+                        if ( strcmp(tp->cointxid,cointxid) != 0 )
+                        {
+                            printf("_ram_update_redeembits: unexpected cointxid.(%s) already there for redeem.%llu (%s)\n",tp->cointxid,(long long)redeembits,cointxid);
+                            free(tp->cointxid);
+                            tp->cointxid = clonestr(cointxid);
+                        }
                     }
-                    if ( cointxid != 0 )
-                    {
-                        if ( ap->txids[i]->cointxid != 0 )
-                            printf("_ram_update_redeembits: unexpected cointxid.(%s) already there for redeem.%llu (%s)\n",ap->txids[i]->cointxid,(long long)redeembits,cointxid);
-                        ap->txids[i]->cointxid = clonestr(cointxid);
-                    }
+                    else tp->cointxid = clonestr(cointxid);
                 }
                 num++;
             }
+        }
     }
-    if ( num == 0 )
+    /*if ( num == 0 )
     {
         if ( ram->limboarray != 0 )
         {
@@ -3052,7 +3580,7 @@ int32_t _ram_update_redeembits(struct ramchain_info *ram,uint64_t redeembits,uin
         } else ram->limboarray = realloc(ram->limboarray,sizeof(*ram->limboarray) * 2);
         ram->limboarray[n++] = redeembits;
         ram->limboarray[n] = 0;
-    }
+    }*/
     if ( AMtxidbits == 0 && num == 0 )
         printf("_ram_update_redeembits: unexpected no pending redeems when AMtxidbits.0\n");
     return(num);
@@ -3134,7 +3662,6 @@ cJSON *_process_MGW_message(struct ramchain_info *ram,uint32_t height,int32_t fu
 {
     struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender);
     void update_coinacct_addresses(uint64_t nxt64bits,cJSON *json,char *txid);
-    int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender);
     uint64_t nxt64bits = _calc_nxt64bits(sender);
     struct multisig_addr *msig;
     // we can ignore height as the sender is validated or it is non-money get_coindeposit_address request
@@ -3147,12 +3674,14 @@ cJSON *_process_MGW_message(struct ramchain_info *ram,uint32_t height,int32_t fu
             case GET_COINDEPOSIT_ADDRESS:
                 // start address gen
                 //fprintf(stderr,"GENADDRESS: func.(%c) %s -> %s txid.(%s) JSON.(%s)\n",ap->funcid,sender,receiver,txid,ap->U.jsonstr);
+                //fprintf(stderr,"g");
                 update_coinacct_addresses(nxt64bits,argjson,txid);
                 break;
             case BIND_DEPOSIT_ADDRESS:
+                //fprintf(stderr,"b");
                 if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0 && (msig= decode_msigjson(0,argjson,sender)) != 0 ) // strcmp(sender,receiver) == 0) &&
                 {
-                    if ( strcmp(msig->coinstr,ram->name) == 0 )
+                    if ( strcmp(msig->coinstr,ram->name) == 0 && find_msigaddr(msig->multisigaddr) == 0 )
                     {
                         //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
                         //    fprintf(stderr,"BINDFUNC: %s func.(%c) %s -> %s txid.(%s)\n",msig->coinstr,funcid,sender,receiver,txid);
@@ -3172,6 +3701,7 @@ cJSON *_process_MGW_message(struct ramchain_info *ram,uint32_t height,int32_t fu
                  }*/
                 break;
             case MONEY_SENT:
+                //fprintf(stderr,"m");
                 //printf("MONEY_SENT.(%s)\n",cJSON_Print(argjson));
                 if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0 )
                     ram_update_redeembits(ram,argjson,_calc_nxt64bits(txid));
@@ -3229,7 +3759,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     tp = find_NXT_assettxid(&createdflag,ap,redeemtxidstr);
     tp->assetbits = ap->assetbits;
     if ( (tp->height= height) != 0 )
-        tp->numconfs = (ram->NXT_RTblocknum - height);
+        tp->numconfs = (ram->S.NXT_RTblocknum - height);
     tp->redeemtxid = redeemtxid;
     if ( timestamp > tp->timestamp )
         tp->timestamp = timestamp;
@@ -3247,7 +3777,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
             if ( tp->comment != 0 )
                 free(tp->comment);
             tp->comment = clonestr(commentstr);
-            stripwhite_ns(tp->comment,strlen(tp->comment));
+            _stripwhite(tp->comment,' ');
             tp->buyNXT = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
             tp->coinblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"coinblocknum"),0);
             tp->cointxind = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"cointxind"),0);
@@ -3277,8 +3807,8 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
                 }
                 if ( tp->completed == 0 )
                 {
-                    //if ( (tp->completed= (_is_limbo_redeem(ram,tp->redeemtxid) != 0)) == 0 )
-                        tp->completed = ram_mark_depositcomplete(ram,tp);
+                    if ( ram_mark_depositcomplete(ram,tp) != 0 )
+                        _complete_assettxid(ram,tp);
                 }
                 if ( Debuglevel > 2 )
                     printf("sender.%llu receiver.%llu got.(%llu) comment.(%s) (B%d t%d) cointxidstr.(%s)/v%d buyNXT.%d completed.%d\n",(long long)senderbits,(long long)receiverbits,(long long)redeemtxid,tp->comment,tp->coinblocknum,tp->cointxind,cointxid,tp->coinv,tp->buyNXT,tp->completed);
@@ -3325,7 +3855,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
         {
             height = (uint32_t)get_cJSON_int(txobj,"height");
             if ( (numconfs= (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"confirmations"),0)) == 0 )
-                numconfs = (ram->NXT_RTblocknum - height);
+                numconfs = (ram->S.NXT_RTblocknum - height);
         } else numconfs = 0;
         copy_cJSON(txid,cJSON_GetObjectItem(txobj,"transaction"));
        // printf("TX.(%s)\n",txid);
@@ -3338,7 +3868,6 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
         /*{"senderPublicKey":"4e5bbad625df3d536fa90b1e6a28c3f5a56e1fcbe34132391c8d3fd7f671cb19","signature":"b054e6c16479aa4cb4c2f7442bfa47c7431b9ce7d3263c405a35feab26b9ae0d3ef74332aaf98f5238c3586f78894ab36bf2b03c21a80f1ea52a0fd5b780b244","feeNQT":"100000000","transactionIndex":0,"type":2,"confirmations":124460,"fullHash":"ca392a10cea4a48fb6bc44583f55ed3ba825cec111908e8fb3922f0580544612","version":1,"ecBlockId":"18129406466412017821","signatureHash":"e813e33fa11947bffc6310b48b6d452c97481696308f0835abbbcd940bf55a6e","attachment":{"version.AssetTransfer":1,"quantityQNT":"707393","version.Message":1,"messageIsText":true,"asset":"11060861818140490423","message":"{\"coinid\":8,\"vout\":1,\"timestamp\":23475570,\"coinaddr\":\"bDTQPYsdisnCmeMRgMjdbPWLtm3XAPdbwD\",\"coin\":\"BTCD\",\"cointxid\":\"2ed186ff3edb0d0c1628ffc664d1afda83748b6e81aced1b2fa645de95b56fa7\",\"NXTaddr\":\"13594666395319141452\",\"assetoshis\":\"707393\",\"value\":\"7073931026\"}"},"senderRS":"NXT-8E6V-YBWH-5VMR-26ESD","subtype":1,"amountNQT":"0","sender":"423766016895692955","recipientRS":"NXT-234E-3WCH-RN8G-DPHCT","recipient":"13594666395319141452","ecBlockHeight":216007,"block":"16705583479364159166","blockTimestamp":23476474,"deadline":20,"transaction":"10350579048545663434","timestamp":23476391,"height":216017}*/
        // .ram_addunspent.2ed186ff3edb0d0c1628ffc664d1afda83748b6e81aced1b2fa645de95b56fa7: pending deposit BTCD 70.73931026 -> bDTQPYsdisnCmeMRgMjdbPWLtm3XAPdbwD for NXT.13594666395319141452
             //deposit NOT PENDING? complete BTCD.2ed186ff3edb0d0c1628ffc664d1afda83748b6e81aced1b2fa645de95b56fa7 70.73930000 -> NXT.13594666395319141452 txid.10350579048545663434 | 1422052669 seconds
-
         if ( attachment != 0 )
         {
             message = cJSON_GetObjectItem(attachment,"message");
@@ -3374,6 +3903,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 if ( assetidstr[0] != 0 && ap->assetbits == _calc_nxt64bits(assetidstr) )
                 {
                     assetoshis = get_cJSON_int(attachment,"quantityQNT");
+                    //fprintf(stderr,"a");
                     tp = _set_assettxid(ram,height,txid,_calc_nxt64bits(sender),_calc_nxt64bits(receiver),timestamp,commentstr,assetoshis);
                     //if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0  )
                     //    _add_pendingxfer(ram,height,1,tp->redeemtxid);
@@ -3409,9 +3939,10 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                     satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
                     if ( buyNXT*SATOSHIDEN == satoshis )
                     {
-                        ram->sentNXT += buyNXT * SATOSHIDEN;
-                        printf("%s sent %d NXT, total sent %.0f\n",sender,buyNXT,dstr(ram->sentNXT));
-                    } else printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
+                        ram->S.sentNXT += buyNXT * SATOSHIDEN;
+                        printf("%s sent %d NXT, total sent %.0f\n",sender,buyNXT,dstr(ram->S.sentNXT));
+                    } else if ( buyNXT != 0 )
+                        printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
                 }
             }
         }
@@ -3421,12 +3952,25 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
     return(height);
 }
 
+char *_ram_loadfp(FILE *fp)
+{
+    long len;
+    char *jsonstr;
+    fseek(fp,0,SEEK_END);
+    len = ftell(fp);
+    jsonstr = calloc(1,len);
+    rewind(fp);
+    fread(jsonstr,1,len,fp);
+    return(jsonstr);
+}
+
 uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t mostrecent)
 {
+    FILE *fp;
     cJSON *redemptions=0,*transfers,*array,*json;
-    char cmd[1024],txid[512],*jsonstr,*txidjsonstr;
+    char fname[512],cmd[1024],txid[512],*jsonstr,*txidjsonstr;
     struct NXT_asset *ap;
-    uint32_t i,j,n,height,timestamp;
+    uint32_t i,j,n,height,iter,timestamp,oldest;
     while ( (ap= ram->ap) == 0 )
         sleep(1);
     if ( ram->MGWbits == 0 )
@@ -3434,15 +3978,18 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
         printf("no MGWbits for %s\n",ram->name);
         return(0);
     }
-    i = _get_NXTheight(firsttimep);
-    if ( i != ram->NXT_RTblocknum )
+    i = _get_NXTheight(&oldest);
+    ram->S.NXT_ECblock = _get_NXT_ECblock(&ram->S.NXT_ECheight);
+    if ( firsttimep != 0 )
+        *firsttimep = oldest;
+    if ( i != ram->S.NXT_RTblocknum )
     {
-        ram->NXT_RTblocknum = i;
+        ram->S.NXT_RTblocknum = i;
         printf("NEW NXTblocknum.%d when mostrecent.%d\n",i,mostrecent);
     }
     if ( mostrecent > 0 )
     {
-        while ( mostrecent <= ram->NXT_RTblocknum )
+        while ( mostrecent <= (ram->S.NXT_RTblocknum - ram->min_NXTconfirms) )
         {
             sprintf(cmd,"requestType=getBlock&height=%u&includeTransactions=true",mostrecent);
             if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
@@ -3455,10 +4002,10 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                     {
                         if ( ram->firsttime == 0 )
                             ram->firsttime = timestamp;
-                        if ( ram->enable_deposits == 0 && timestamp > (ram->firsttime + (ram->DEPOSIT_XFER_DURATION+1)*60) )
+                        if ( ram->S.enable_deposits == 0 && timestamp > (ram->firsttime + (ram->DEPOSIT_XFER_DURATION+1)*60) )
                         {
-                            ram->enable_deposits = 1;
-                            printf("1st.%d ram->NXTtimestamp %d -> %d: enable_deposits.%d | %d > %d\n",ram->firsttime,ram->NXTtimestamp,timestamp,ram->enable_deposits,(timestamp - ram->firsttime),(ram->DEPOSIT_XFER_DURATION+1)*60);
+                            ram->S.enable_deposits = 1;
+                            printf("1st.%d ram->NXTtimestamp %d -> %d: enable_deposits.%d | %d > %d\n",ram->firsttime,ram->NXTtimestamp,timestamp,ram->S.enable_deposits,(timestamp - ram->firsttime),(ram->DEPOSIT_XFER_DURATION+1)*60);
                         }
                         ram->NXTtimestamp = timestamp;
                     }
@@ -3473,53 +4020,97 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
             }
             mostrecent++;
         }
-        sprintf(cmd,"requestType=getUnconfirmedTransactions");
-        if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
+        if ( ram->min_NXTconfirms == 0 )
         {
-            //printf("getUnconfirmedTransactions.%d (%s)\n",mostrecent,jsonstr);
-            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            sprintf(cmd,"requestType=getUnconfirmedTransactions");
+            if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
             {
-                if ( (array= cJSON_GetObjectItem(json,"unconfirmedTransactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+                //printf("getUnconfirmedTransactions.%d (%s)\n",mostrecent,jsonstr);
+                if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 {
-                    for (i=0; i<n; i++)
-                        _process_NXTtransaction(0,ram,cJSON_GetArrayItem(array,i));
+                    if ( (array= cJSON_GetObjectItem(json,"unconfirmedTransactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+                    {
+                        for (i=0; i<n; i++)
+                            _process_NXTtransaction(0,ram,cJSON_GetArrayItem(array,i));
+                    }
+                    free_json(json);
                 }
-                free_json(json);
+                free(jsonstr);
             }
-            free(jsonstr);
         }
     }
     else
     {
         for (j=0; j<ram->numspecials; j++)
         {
-            printf("init NXT special.%d of %d (%s)\n",j,ram->numspecials,ram->special_NXTaddrs[j]);
-            sprintf(cmd,"requestType=getAccountTransactions&account=%s",ram->special_NXTaddrs[j]);
-            if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
+            fp = 0;
+            sprintf(fname,"ramchains/NXT.%s",ram->special_NXTaddrs[j]);
+            printf("init NXT special.%d of %d (%s) [%s]\n",j,ram->numspecials,ram->special_NXTaddrs[j],fname);
+            timestamp = 0;
+            for (iter=1; iter<2; iter++)
             {
-                //printf("special.%d (%s) (%s)\n",j,ram->special_NXTaddrs[j],jsonstr);
-                if ( (redemptions= cJSON_Parse(jsonstr)) != 0 )
+                if ( iter == 0 )
                 {
-                    if ( (array= cJSON_GetObjectItem(redemptions,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-                    {
-                        for (i=0; i<n; i++)
-                            if ( (height= _process_NXTtransaction(1,ram,cJSON_GetArrayItem(array,i))) != 0 && height > mostrecent )
-                                mostrecent = height;
-                    }
-                    free_json(redemptions);
+                    if ( (fp= fopen(fname,"rb")) == 0 )
+                        continue;
+                    fread(&timestamp,1,sizeof(timestamp),fp);
+                    jsonstr = _ram_loadfp(fp);
+                    fclose(fp);
                 }
-                free(jsonstr);
+                else
+                {
+                    sprintf(cmd,"requestType=getAccountTransactions&account=%s&timestamp=%u",ram->special_NXTaddrs[j],timestamp);
+                    jsonstr = _issue_NXTPOST(cmd);
+                    if ( fp == 0 && (fp= fopen(fname,"wb")) != 0 )
+                    {
+                        fwrite(&oldest,1,sizeof(oldest),fp);
+                        fwrite(jsonstr,1,strlen(jsonstr)+1,fp);
+                        fclose(fp);
+                    }
+                }
+                if ( jsonstr != 0 )
+                {
+                    //printf("special.%d (%s) (%s)\n",j,ram->special_NXTaddrs[j],jsonstr);
+                    if ( (redemptions= cJSON_Parse(jsonstr)) != 0 )
+                    {
+                        if ( (array= cJSON_GetObjectItem(redemptions,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+                        {
+                            for (i=0; i<n; i++)
+                            {
+                                //fprintf(stderr,".");
+                                if ( (height= _process_NXTtransaction(1,ram,cJSON_GetArrayItem(array,i))) != 0 && height > mostrecent )
+                                    mostrecent = height;
+                            }
+                        }
+                        free_json(redemptions);
+                    }
+                    free(jsonstr);
+                }
             }
         }
-        sprintf(cmd,"requestType=getAssetTransfers&asset=%llu",(long long)ap->assetbits);
-        if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
+        sprintf(fname,"ramchains/NXTasset.%llu",(long long)ap->assetbits);
+        fp = 0;
+        if ( 1 || (fp= fopen(fname,"rb")) == 0 )
         {
+            sprintf(cmd,"requestType=getAssetTransfers&asset=%llu",(long long)ap->assetbits);
+            jsonstr = _issue_NXTPOST(cmd);
+        } else jsonstr = _ram_loadfp(fp), fclose(fp);
+        if ( jsonstr != 0 )
+        {
+            if ( fp == 0 && (fp= fopen(fname,"wb")) != 0 )
+            {
+                fwrite(jsonstr,1,strlen(jsonstr)+1,fp);
+                fclose(fp);
+            }
             if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
             {
                 if ( (array= cJSON_GetObjectItem(transfers,"transfers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                 {
                     for (i=0; i<n; i++)
                     {
+                        //fprintf(stderr,"t");
+                        if ( (i % 10) == 9 )
+                            fprintf(stderr,"%.1f%% ",100. * (double)i / n);
                         copy_cJSON(txid,cJSON_GetObjectItem(cJSON_GetArrayItem(array,i),"assetTransfer"));
                         if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
                         {
@@ -3538,8 +4129,8 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
             free(jsonstr);
         }
     }
-    ram->circulation = _calc_circulation(0,ram->ap,ram);
-    ram->orphans = _find_pending_transfers(&ram->MGWpendingredeems,ram);
+    ram->S.circulation = _calc_circulation(ram->min_NXTconfirms,ram->ap,ram);
+    ram->S.orphans = _find_pending_transfers(&ram->S.MGWpendingredeems,ram);
     return(mostrecent);
 }
 
@@ -3812,87 +4403,6 @@ int32_t hdecode_valuebits(uint64_t *valuep,HUFF *hp)
     *valuep = (tmp[0] | ((uint64_t)tmp[1] << 32));
     // printf("[%llx] ",(long long)(*valuep));
     return(numbits);
-}
-
-int32_t hcalc_varint(uint8_t *buf,uint64_t x)
-{
-    uint16_t s; uint32_t i; int32_t len = 0;
-    if ( x < 0xfd )
-        buf[len++] = (uint8_t)(x & 0xff);
-    else
-    {
-        if ( x <= 0xffff )
-        {
-            buf[len++] = 0xfd;
-            s = (uint16_t)x;
-            memcpy(&buf[len],&s,sizeof(s));
-            len += 2;
-        }
-        else if ( x <= 0xffffffffL )
-        {
-            buf[len++] = 0xfe;
-            i = (uint32_t)x;
-            memcpy(&buf[len],&i,sizeof(i));
-            len += 4;
-        }
-        else
-        {
-            buf[len++] = 0xff;
-            memcpy(&buf[len],&x,sizeof(x));
-            len += 8;
-        }
-    }
-    return(len);
-}
-
-long hemit_varint(FILE *fp,uint64_t x)
-{
-    uint8_t buf[9];
-    int32_t len;
-    if ( fp == 0 )
-        return(-1);
-    long retval = -1;
-    if ( (len= hcalc_varint(buf,x)) > 0 )
-        retval = fwrite(buf,1,len,fp);
-    return(retval);
-}
-
-long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize)
-{
-    uint16_t s; uint32_t i; int32_t c;
-    if ( ptr == 0 )
-        return(-1);
-    *valp = 0;
-    if ( offset < 0 || offset >= mappedsize )
-        return(-1);
-    c = ptr[offset++];
-    switch ( c )
-    {
-        case 0xfd: if ( offset+sizeof(s) > mappedsize ) return(-1); memcpy(&s,&ptr[offset],sizeof(s)), *valp = s, offset += sizeof(s); break;
-        case 0xfe: if ( offset+sizeof(i) > mappedsize ) return(-1); memcpy(&i,&ptr[offset],sizeof(i)), *valp = i, offset += sizeof(i); break;
-        case 0xff: if ( offset+sizeof(*valp) > mappedsize ) return(-1); memcpy(valp,&ptr[offset],sizeof(*valp)), offset += sizeof(*valp); break;
-        default: *valp = c; break;
-    }
-    return(offset);
-}
-
-long hload_varint(uint64_t *valp,FILE *fp)
-{
-    uint16_t s; uint32_t i; int32_t c; int32_t retval = 1;
-    if ( fp == 0 )
-        return(-1);
-    *valp = 0;
-    if ( (c= fgetc(fp)) == EOF )
-        return(0);
-    c &= 0xff;
-    switch ( c )
-    {
-        case 0xfd: retval = (sizeof(s) + 1) * (fread(&s,1,sizeof(s),fp) == sizeof(s)), *valp = s; break;
-        case 0xfe: retval = (sizeof(i) + 1) * (fread(&i,1,sizeof(i),fp) == sizeof(i)), *valp = i; break;
-        case 0xff: retval = (sizeof(*valp) + 1) * (fread(valp,1,sizeof(*valp),fp) == sizeof(*valp)); break;
-        default: *valp = c; break;
-    }
-    return(retval);
 }
 
 // HUFF bitstream functions, uses model similar to fopen/fread/fwrite/fseek but for bitstream
@@ -6780,7 +7290,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
                     {
                         datalen = (1 + hp->allocsize);
                         //if ( blocks->format == 'V' )
-                        fprintf(stderr," %s CREATED.%c block.%d datalen.%d | RT.%u lag.%d\n",ram->name,blocks->format,blocknum,datalen+1,ram->RTblocknum,ram->RTblocknum-blocknum);
+                        fprintf(stderr," %s CREATED.%c block.%d datalen.%d | RT.%u lag.%d\n",ram->name,blocks->format,blocknum,datalen+1,ram->S.RTblocknum,ram->S.RTblocknum-blocknum);
                         //else fprintf(stderr,"%s.B.%d ",ram->name,blocknum);
                         if ( *hpptr != 0 )
                         {
@@ -6956,20 +7466,20 @@ void ram_init_directories(struct ramchain_info *ram)
 void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
 {
     double estimatedV,estimatedB,estsizeV,estsizeB;
-    estimatedV = estimate_completion(ram->name,startmilli,ram->Vblocks.processed,(int32_t)ram->RTblocknum-ram->Vblocks.blocknum)/60000;
-    estimatedB = estimate_completion(ram->name,startmilli,ram->Bblocks.processed,(int32_t)ram->RTblocknum-ram->Bblocks.blocknum)/60000;
+    estimatedV = estimate_completion(ram->name,startmilli,ram->Vblocks.processed,(int32_t)ram->S.RTblocknum-ram->Vblocks.blocknum)/60000;
+    estimatedB = estimate_completion(ram->name,startmilli,ram->Bblocks.processed,(int32_t)ram->S.RTblocknum-ram->Bblocks.blocknum)/60000;
     if ( ram->Vblocks.count != 0 )
-        estsizeV = (ram->Vblocks.sum / ram->Vblocks.count) * ram->RTblocknum;
+        estsizeV = (ram->Vblocks.sum / ram->Vblocks.count) * ram->S.RTblocknum;
     if ( ram->Bblocks.count != 0 )
-        estsizeB = (ram->Bblocks.sum / ram->Bblocks.count) * ram->RTblocknum;
-    sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->numoutputs,dstr(ram->totaloutputs),(long long)ram->numspends,dstr(ram->totalspends),(long long)(ram->numoutputs - ram->numspends),dstr(ram->totaloutputs - ram->totalspends),dstr(ram->totaloutputs - ram->totalspends)/(ram->numoutputs - ram->numspends));
+        estsizeB = (ram->Bblocks.sum / ram->Bblocks.count) * ram->S.RTblocknum;
+    sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->S.RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->numoutputs,dstr(ram->totaloutputs),(long long)ram->numspends,dstr(ram->totalspends),(long long)(ram->numoutputs - ram->numspends),dstr(ram->totaloutputs - ram->totalspends),dstr(ram->totaloutputs - ram->totalspends)/(ram->numoutputs - ram->numspends));
 }
 
 void ram_disp_status(struct ramchain_info *ram)
 {
     char buf[1024];
     int32_t i,n = 0;
-    for (i=0; i<ram->RTblocknum; i++)
+    for (i=0; i<ram->S.RTblocknum; i++)
     {
         if ( ram->blocks.hps[i] != 0 )
             n++;
@@ -7218,6 +7728,7 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
                     else if ( isinternal != 0 && (numredeems= ram_is_MGW_OP_RETURN(redeemtxids,ram,script_rawind)) != 0 )
                     {
                         ram_txid(txidstr,ram,txid_rawind);
+                        printf("found OP_RETURN.(%s)\n",txidstr);
                         internalvout = (i + 1);
                         for (j=0; j<numredeems; j++)
                             _ram_update_redeembits(ram,redeemtxids[j],0,txidstr,&B);
@@ -7408,19 +7919,19 @@ HUFF *ram_conv_permind(struct ramchain_info *ram,HUFF *hp,uint32_t checkblocknum
 
 void ram_update_MGWunspents(struct ramchain_info *ram,char *addr,int32_t vout,uint32_t txid_rawind,uint32_t script_rawind,uint64_t value)
 {
-    struct cointx_input *ip;
+    struct cointx_input *vin;
     if ( ram->MGWnumunspents >= ram->MGWmaxunspents )
     {
         ram->MGWmaxunspents += 512;
         ram->MGWunspents = realloc(ram->MGWunspents,sizeof(*ram->MGWunspents) * ram->MGWmaxunspents);
         memset(&ram->MGWunspents[ram->MGWnumunspents],0,(ram->MGWmaxunspents - ram->MGWnumunspents) * sizeof(*ram->MGWunspents));
     }
-    ip = &ram->MGWunspents[ram->MGWnumunspents++];
-    if ( ram_script(ip->vin.script,ram,script_rawind) != 0 && ram_txid(ip->tx.txidstr,ram,txid_rawind) != 0 )
+    vin = &ram->MGWunspents[ram->MGWnumunspents++];
+    if ( ram_script(vin->sigs,ram,script_rawind) != 0 && ram_txid(vin->tx.txidstr,ram,txid_rawind) != 0 )
     {
-        strcpy(ip->vin.coinaddr,addr);
-        ip->vin.value = value;
-        ip->tx.vout = vout;
+        strcpy(vin->coinaddr,addr);
+        vin->value = value;
+        vin->tx.vout = vout;
     } else printf("ram_update_MGWunspents: decode error for (%s) vout.%d txid.%d script.%d (%.8f)\n",addr,vout,txid_rawind,script_rawind,dstr(value));
 }
 
@@ -7443,21 +7954,59 @@ uint64_t ram_verify_txstillthere(struct ramchain_info *ram,char *txidstr,struct 
     return(value);
 }
 
-uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ramchain_hashptr **addrptrp,struct ramchain_info *ram,char *addr,int32_t MGWflag)
+uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,char *addr,struct rampayload *addrpayload)
 {
     uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt64bits,char *depositors_pubkey,struct NXT_asset *ap,uint64_t value,char *coinaddr,char *txidstr,struct address_entry *entry,uint32_t *buyNXTp,char *srvNXTADDR,char *srvNXTACCTSECRET,int32_t deadline);
-    uint64_t nxt64bits,pending,unspent = 0;
+    uint64_t nxt64bits,pending = 0;
     char txidstr[4096];
-    struct NXT_asset *ap;
-    struct multisig_addr *msig;
+    struct NXT_asset *ap = ram->ap;
     struct NXT_assettxid *tp;
-    int32_t i,j,numpending,numpayloads,n = 0;
+    int32_t j;
+    if ( ap != 0 )
+    {
+        ram_txid(txidstr,ram,addrpayload->otherind);
+        for (j=0; j<ap->num; j++)
+        {
+            tp = ap->txids[j];
+            if ( tp->cointxid != 0 && strcmp(tp->cointxid,txidstr) == 0 )
+            {
+                if ( ram_mark_depositcomplete(ram,tp) != 0 )
+                    _complete_assettxid(ram,tp);
+                break;
+            }
+        }
+        if ( j == ap->num && _valid_txamount(ram,addrpayload->value) > 0 && msig != 0 )
+        {
+            //printf("addr_unspent.(%s)\n",msig->NXTaddr);
+            if ( (nxt64bits= _calc_nxt64bits(msig->NXTaddr)) != 0 )
+            {
+                printf("deposit.(%s/%d %d,%d %s %.8f)rt%d_%d_%d_%d.g%d -> NXT.%s %d\n",txidstr,addrpayload->B.v,addrpayload->B.blocknum,addrpayload->B.txind,addr,dstr(addrpayload->value),ram->S.NXT_is_realtime,ram->S.enable_deposits,(addrpayload->B.blocknum + ram->depositconfirms) <= ram->S.RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(nxt64bits % NUM_GATEWAYS),msig->NXTaddr,ram->S.NXT_is_realtime != 0 && (addrpayload->B.blocknum + ram->depositconfirms) <= ram->S.RTblocknum && ram->S.enable_deposits != 0);
+                pending += addrpayload->value;
+                if ( ram_MGW_ready(ram,addrpayload->B.blocknum,0,nxt64bits,0) > 0 )
+                {
+                    if ( ram_verify_txstillthere(ram,txidstr,&addrpayload->B) != addrpayload->value )
+                    {
+                        printf("ram_calc_unspent: tx gone due to a fork. (%d %d %d) txid.%s %.8f\n",addrpayload->B.blocknum,addrpayload->B.txind,addrpayload->B.v,txidstr,dstr(addrpayload->value));
+                        exit(1); // seems the best thing to do
+                    }
+                    if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ram->ap,addrpayload->value,msig->multisigaddr,txidstr,&addrpayload->B,&msig->buyNXT,ram->srvNXTADDR,ram->srvNXTACCTSECRET,ram->DEPOSIT_XFER_DURATION) == addrpayload->value )
+                        addrpayload->pendingdeposit = 0;
+                }
+            }
+        }
+    }
+    return(pending);
+}
+
+uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ramchain_hashptr **addrptrp,struct ramchain_info *ram,char *addr,int32_t MGWflag)
+{
+    uint64_t pending,unspent = 0;
+    struct multisig_addr *msig;
+    int32_t i,numpayloads,n = 0;
     struct rampayload *payloads;
     if ( calc_numunspentp != 0 )
         *calc_numunspentp = 0;
-    numpending = 0;
     pending = 0;
-    ap = ram->ap;
     if ( (payloads= ram_addrpayloads(addrptrp,&numpayloads,ram,addr)) != 0 && numpayloads > 0 )
     {
         msig = find_msigaddr(addr);
@@ -7470,41 +8019,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
                     ram_update_MGWunspents(ram,addr,payloads[i].B.v,payloads[i].otherind,payloads[i].extra,payloads[i].value);
             }
             if ( payloads[i].pendingdeposit != 0 )
-            {
-                if ( ap != 0 )
-                {
-                    ram_txid(txidstr,ram,payloads[i].otherind);
-                    for (j=0; j<ap->num; j++)
-                    {
-                        tp = ap->txids[j];
-                        if ( tp->cointxid != 0 && strcmp(tp->cointxid,txidstr) == 0 )
-                        {
-                            //if ( tp->completed == 0 )
-                                tp->completed = ram_mark_depositcomplete(ram,tp);
-                            break;
-                        }
-                    }
-                    if ( j == ap->num && _valid_txamount(ram,payloads[i].value) > 0 && msig != 0 )
-                    {
-                        if ( (nxt64bits= _calc_nxt64bits(msig->NXTaddr)) != 0 )
-                        {
-                            printf("deposit.(%s/%d %d,%d %s %.8f)rt%d_%d_%d_%d.g%d -> NXT.%s\n",txidstr,payloads[i].B.v,payloads[i].B.blocknum,payloads[i].B.txind,addr,dstr(payloads[i].value),ram->NXT_is_realtime,ram->enable_deposits,(payloads[i].B.blocknum + ram->depositconfirms) <= ram->RTblocknum,ram->MGWbalance >= 0,(int32_t)(nxt64bits % NUM_GATEWAYS),msig->NXTaddr);
-                            pending += payloads[i].value, numpending++;
-                            if ( ram_MGW_ready(ram,payloads[i].B.blocknum,0,nxt64bits,0) > 0 )
-                            //if ( ram->NXT_is_realtime != 0 && (payloads[i].B.blocknum + ram->depositconfirms) <= ram->RTblocknum && ram->MGWbalance >= 0 && ram->enable_deposits != 0 && ram->gatewayid >= 0 && (nxt64bits % NUM_GATEWAYS) == ram->gatewayid )
-                            {
-                                if ( ram_verify_txstillthere(ram,txidstr,&payloads[i].B) != payloads[i].value )
-                                {
-                                    printf("ram_calc_unspent: tx gone due to a fork. (%d %d %d) txid.%s %.8f\n",payloads[i].B.blocknum,payloads[i].B.txind,payloads[i].B.v,txidstr,dstr(payloads[i].value));
-                                    exit(1); // seems the best thing to do
-                                }
-                                if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ram->ap,payloads[i].value,msig->multisigaddr,txidstr,&payloads[i].B,&msig->buyNXT,ram->srvNXTADDR,ram->srvNXTACCTSECRET,ram->DEPOSIT_XFER_DURATION) == payloads[i].value )
-                                    payloads[i].pendingdeposit = 0;
-                            }
-                        }
-                    }
-                }
-            }
+                pending += calc_addr_unspent(ram,msig,addr,&payloads[i]);
         }
     }
     if ( calc_numunspentp != 0 )
@@ -7525,6 +8040,7 @@ uint64_t ram_calc_MGWunspent(uint64_t *pendingp,struct ramchain_info *ram)
         memset(ram->MGWunspents,0,sizeof(*ram->MGWunspents) * ram->MGWmaxunspents);
     if ( (msigs= (struct multisig_addr **)copy_all_DBentries(&n,MULTISIG_DATA)) != 0 )
     {
+        ram->nummsigs = n;
         ram->MGWsmallest[0] = ram->MGWsmallestB[0] = 0;
         for (smallest=i=m=0; i<n; i++)
         {
@@ -7543,7 +8059,8 @@ uint64_t ram_calc_MGWunspent(uint64_t *pendingp,struct ramchain_info *ram)
             free(msigs[i]);
         }
         free(msigs);
-        printf("MGWnumunspents.%d smallest (%s %.8f)\n",ram->MGWnumunspents,ram->MGWsmallest,dstr(smallest));
+        if ( Debuglevel > 2 )
+            printf("MGWnumunspents.%d smallest (%s %.8f)\n",ram->MGWnumunspents,ram->MGWsmallest,dstr(smallest));
     }
     *pendingp = pending;
     return(unspent);
@@ -7572,7 +8089,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
                 }
             //else printf("hpptr.%p hp.%p newflag.%d\n",hpptr,hp,newflag);
         } //else printf("ram_process_blocks: hpptr.%p hp.%p\n",hpptr,hp);
-        if ( blocks->format == 'B' && blocks->blocknum >= ram->RTblocknum-1 )
+        if ( blocks->format == 'B' && blocks->blocknum >= ram->S.RTblocknum-1 )
         {
             //ram_emit_blockcheck(ram_gethash(ram,'a')->newfp,blocks->blocknum);
             //ram_emit_blockcheck(ram_gethash(ram,'t')->newfp,blocks->blocknum);
@@ -7580,7 +8097,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
         }
         blocks->processed += (1 << blocks->shift);
         blocks->blocknum += (1 << blocks->shift);
-        estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->RTblocknum-blocks->blocknum) / 60000.;
+        estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->S.RTblocknum-blocks->blocknum) / 60000.;
 //break;
     }
     //printf("(%d >> %d) < (%d >> %d)\n",blocks->blocknum,blocks->shift,prev->blocknum,blocks->shift);
@@ -7970,10 +8487,13 @@ char *ram_scriptind_json(struct ramchain_info *ram,char *str)
 char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char *coin)
 {
     struct ramchain_info *ram = get_ramchain_info(coin);
-    char retbuf[1024];
-    if ( ram == 0 )
+    char retbuf[1024],*str;
+    if ( ram == 0 || ram->MGWpingstr[0] == 0 )
         return(clonestr("{\"error\":\"no ramchain info\"}"));
     ram_setdispstr(retbuf,ram,ram->startmilli);
+    str = stringifyM(retbuf);
+    sprintf(retbuf,"{\"result\":\"MGWstatus\",%s\"ramchain\":\"%s\"}",ram->MGWpingstr,str);
+    free(str);
     return(clonestr(retbuf));
 }
 
@@ -8296,11 +8816,11 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
 
 uint32_t ram_update_RTblock(struct ramchain_info *ram)
 {
-    ram->RTblocknum = _get_RTheight(ram);
-    ram->blocks.blocknum = (ram->RTblocknum - ram->min_confirms);
-    if ( ram->Bblocks.blocknum >= ram->RTblocknum-1 )
-        ram->is_realtime = 1;
-    return(ram->RTblocknum);
+    ram->S.RTblocknum = _get_RTheight(ram);
+    ram->S.blocknum = ram->blocks.blocknum = (ram->S.RTblocknum - ram->min_confirms);
+    if ( ram->Bblocks.blocknum >= ram->S.RTblocknum-ram->min_confirms )
+        ram->S.is_realtime = 1;
+    return(ram->S.RTblocknum);
 }
 
 uint32_t ram_find_firstgap(struct ramchain_info *ram,int32_t format)
@@ -8309,7 +8829,7 @@ uint32_t ram_find_firstgap(struct ramchain_info *ram,int32_t format)
     uint32_t blocknum;
     FILE *fp;
     ram_setformatstr(formatstr,format);
-    for (blocknum=0; blocknum<ram->RTblocknum; blocknum++)
+    for (blocknum=0; blocknum<ram->S.RTblocknum; blocknum++)
     {
         ram_setfname(fname,ram,blocknum,formatstr);
         if ( (fp= fopen(fname,"rb")) != 0 )
@@ -8336,13 +8856,13 @@ void ram_init_ramchain(struct ramchain_info *ram)
     #else
     strcpy(ram->dirpath, "");
     #endif
-    ram->blocks.blocknum = ram->RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
-    ram->blocks.numblocks = ram->maxblock = (ram->RTblocknum + 10000);
+    ram->blocks.blocknum = ram->S.RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
+    ram->blocks.numblocks = ram->maxblock = (ram->S.RTblocknum + 10000);
     ram_init_directories(ram);
     permalloc(ram->name,&ram->Perm,PERMALLOC_SPACE_INCR,0);
     ram->blocks.M = permalloc(ram->name,&ram->Perm,sizeof(*ram->blocks.M),8);
     ram->blocks.hps = permalloc(ram->name,&ram->Perm,ram->maxblock*sizeof(*ram->blocks.hps),8);
-    printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories: next.(%d %d %d %d)\n",ram->name,ram->RTblocknum,(ram_millis() - startmilli)/1000.,ram->next_blocknum,ram->next_txid_permind,ram->next_script_permind,ram->next_addr_permind);
+    printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories: next.(%d %d %d %d)\n",ram->name,ram->S.RTblocknum,(ram_millis() - startmilli)/1000.,ram->next_blocknum,ram->next_txid_permind,ram->next_script_permind,ram->next_addr_permind);
     //#ifndef RAM_GENMODE
     ram_init_tmpspace(ram,tmpsize);
     ptr = (MAP_HUFF != 0 ) ? permalloc(ram->name,&ram->Perm,tmpsize,8) : calloc(1,tmpsize), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
@@ -8551,7 +9071,7 @@ void *process_ramchains(void *_argcoinstr)
     extern int32_t MULTITHREADS;
     void ensure_SuperNET_dirs(char *backupdir);
     char *argcoinstr = (_argcoinstr != 0) ? ((char **)_argcoinstr)[0] : 0;
-    int32_t iter,modval,numinterleaves;
+    int32_t iter,gatewayid,modval,numinterleaves;
     double startmilli;
     struct ramchain_info *ram;
     int32_t i,pass,processed = 0;
@@ -8573,22 +9093,24 @@ void *process_ramchains(void *_argcoinstr)
             {
                 if ( iter > 1 )
                 {
-                    Ramchains[i]->NXTblocknum = _update_ramMGW(0,Ramchains[i],0);
-                    if ( Ramchains[i]->NXTblocknum > 1000 )
-                        Ramchains[i]->NXTblocknum -= 1000;
-                    else Ramchains[i]->NXTblocknum = 0;
-                    printf("i.%d of %d: NXTblock.%d (%s) 1sttime %d\n",i,Numramchains,Ramchains[i]->NXTblocknum,Ramchains[i]->name,Ramchains[i]->firsttime);
+                    Ramchains[i]->S.NXTblocknum = _update_ramMGW(0,Ramchains[i],0);
+                    if ( Ramchains[i]->S.NXTblocknum > 1000 )
+                        Ramchains[i]->S.NXTblocknum -= 1000;
+                    else Ramchains[i]->S.NXTblocknum = 0;
+                    printf("i.%d of %d: NXTblock.%d (%s) 1sttime %d\n",i,Numramchains,Ramchains[i]->S.NXTblocknum,Ramchains[i]->name,Ramchains[i]->firsttime);
                 }
                 else if ( iter == 1 )
                 {
                     ram_init_ramchain(Ramchains[i]);
                     Ramchains[i]->startmilli = ram_millis();
                 }
+                else if ( i != 0 )
+                    Ramchains[i]->firsttime = Ramchains[0]->firsttime;
                 else _get_NXTheight(&Ramchains[i]->firsttime);
             }
+            printf("took %.1f seconds to init %s for %d coins\n",(ram_millis() - startmilli)/1000.,iter==0?"NXTheight":(iter==1)?"ramchains":"MGW",Numramchains);
         }
     }
-    printf("took %.1f seconds to update_ramMGW for %d coins\n",(ram_millis() - startmilli)/1000.,Numramchains);
     MGW_initdone = 1;
     while ( processed >= 0 )
     {
@@ -8606,15 +9128,15 @@ void *process_ramchains(void *_argcoinstr)
                         printf("ERROR _process_ramchain.%s\n",ram->name);
                     processed--;
                 }
-                else //if ( (ram->NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
+                else //if ( (ram->S.NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
                 {
-                    //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms-10 )
+                   // if ( ram->mappedblocks[1]->blocknum >= (_get_RTheight(ram) - 2*ram->min_confirms - 10) )
                     {
-                        ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum); // possible for tx to disappear
-                        if ( (ram->MGWpendingredeems + ram->MGWpendingdeposits) != 0 )
+                        ram->S.NXTblocknum = _update_ramMGW(0,ram,ram->S.NXTblocknum); // possible for tx to disappear
+                        if ( (ram->S.MGWpendingredeems + ram->S.MGWpendingdeposits) != 0 )
                             printf("\n");
-                    }
-                    ram->NXT_is_realtime = (ram->NXTblocknum >= _get_NXTheight(0)-10);
+                        ram->S.NXT_is_realtime = (ram->S.NXTblocknum >= (ram->S.NXT_RTblocknum - ram->min_NXTconfirms));
+                    } //else ram->NXT_is_realtime = 0;
                     ram_update_RTblock(ram);
                     for (pass=1; pass<=4; pass++)
                     {
@@ -8624,22 +9146,34 @@ void *process_ramchains(void *_argcoinstr)
                             break;
 #endif
                     }
-                    //if ( ram->mappedblocks[1]->blocknum >= _get_RTheight(ram)-2*ram->min_confirms )
-                    //    ram->NXTblocknum = _update_ramMGW(0,ram,ram->NXTblocknum - ram->min_NXTconfirms);
                     if ( ram_update_disp(ram) != 0 || 1 )
                     {
                         static char dispbuf[1000],lastdisp[1000];
-                        ram->MGWunspent = ram_calc_MGWunspent(&ram->MGWpendingdeposits,ram);
-                        ram->MGWbalance = ram->MGWunspent - ram->circulation - ram->MGWpendingredeems - ram->MGWpendingdeposits;
-                        sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] unspent %8f circulation %.8f pending.(redeems %.8f deposits %.8f) internal %.8f NXT.%d %s.%d\n",dstr(ram->MGWbalance),ram->name,dstr(ram->sentNXT),ram->MGWbalance<=0?0:dstr(ram->sentNXT)/dstr(ram->MGWbalance),dstr(ram->MGWunspent),dstr(ram->circulation),dstr(ram->MGWpendingredeems),dstr(ram->MGWpendingdeposits),dstr(ram->orphans),ram->NXT_RTblocknum,ram->name,ram->blocks.blocknum);
+                        ram->S.MGWunspent = ram_calc_MGWunspent(&ram->S.MGWpendingdeposits,ram);
+                        ram->S.MGWbalance = ram->S.MGWunspent - ram->S.circulation - ram->S.MGWpendingredeems - ram->S.MGWpendingdeposits;
+                        ram_set_MGWdispbuf(dispbuf,ram,-1);
                         if ( strcmp(dispbuf,lastdisp) != 0 )
-                            printf("%s",dispbuf), strcpy(lastdisp,dispbuf);
-                        /*if ( ram->gatewayid >= 0 && ram->pendings != 0 ) // from list of pending deposits and pending withdraws
-                         {
-                         // prune tx that dont exist anymore, eg. blockchain rewinds
-                         ram_sync_MGW(ram);
-                         ram_process_pendings(ram);
-                         }*/
+                        {
+                            strcpy(lastdisp,dispbuf);
+                            ram_set_MGWpingstr(ram->MGWpingstr,ram,-1);
+                            for (gatewayid=0; gatewayid<ram->numgateways; gatewayid++)
+                            {
+                                ram_set_MGWdispbuf(dispbuf,ram,gatewayid);
+                                printf("G%d:%s",gatewayid,dispbuf);
+                            }
+                            if ( ram->pendingticks != 0 )
+                            {
+                                int32_t j;
+                                struct NXT_assettxid *tp;
+                                for (j=0; j<ram->numpendingsends; j++)
+                                {
+                                    if ( (tp= ram->pendingsends[j]) != 0 )
+                                        printf("(%llu %x %x %x) ",(long long)tp->redeemtxid,_extract_batchcrc(tp,0),_extract_batchcrc(tp,1),_extract_batchcrc(tp,2));
+                                }
+                                printf("pendingticks.%d",ram->pendingticks);
+                            }
+                            putchar('\n');
+                        }
                     }
                 }
             }
@@ -8651,7 +9185,7 @@ void *process_ramchains(void *_argcoinstr)
                 ram_update_disp(ram);
         }
         if ( processed == 0 )
-            sleep(10);
+            sleep(20);
         MGW_initdone++;
     }
     printf("process_ramchains: finished launching\n");
