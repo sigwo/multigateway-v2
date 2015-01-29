@@ -1614,6 +1614,8 @@ char *ramstatus_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         retstr = ramstatus(origargstr,sender,previpaddr,destip,coin);
     if ( retstr == 0 )
         retstr = clonestr(_retstr);
+    if ( previpaddr != 0 )
+        send_to_ipaddr(0,1,previpaddr,retstr,NXTACCTSECRET);
     return(retstr);
 }
 
@@ -1804,6 +1806,7 @@ char *genmultisig_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     bridgeport = (uint16_t)get_API_int(objs[7],0);
     copy_cJSON(email,objs[8]);
     buyNXT = (int32_t)get_API_int(objs[9],0);
+    printf("genmultisig_func coin.(%s)\n",coin);
     if ( coin[0] != 0 && refacct[0] != 0 && sender[0] != 0 && valid > 0 )
     {
         if ( (retstr= bridge_test(0,NXTACCTSECRET,destip,bridgeport,origargstr)) != 0 )

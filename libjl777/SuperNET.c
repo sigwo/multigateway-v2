@@ -259,23 +259,34 @@ char *process_commandline_json(cJSON *json)
     {
         waitfor = "MGWaddr";
         strcpy(cmdstr,cmd);
-        array = cJSON_GetObjectItem(MGWconf,"active");
-        if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+        for (i=0; i<100; i++) // flush queue
+            GUIpoll(txidstr,senderipaddr,&port);
+        if ( coinstr[0] == 0 )
         {
-            for (i=0; i<100; i++) // flush queue
-                GUIpoll(txidstr,senderipaddr,&port);
+            array = cJSON_GetObjectItem(MGWconf,"active");
+            if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (iter=0; iter<3; iter++) // give chance for servers to consensus
+                {
+                    for (i=0; i<n; i++)
+                    {
+                        copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
+                        if ( coinstr[0] != 0 )
+                        {
+                            issue_genmultisig(coinstr,userNXTaddr,userpubkey,email,buyNXT);
+                            sleep(1);
+                        }
+                    }
+                    sleep(3);
+                }
+            }
+        }
+        else
+        {
             for (iter=0; iter<3; iter++) // give chance for servers to consensus
             {
-                for (i=0; i<n; i++)
-                {
-                    copy_cJSON(coinstr,cJSON_GetArrayItem(array,i));
-                    if ( coinstr[0] != 0 )
-                    {
-                        issue_genmultisig(coinstr,userNXTaddr,userpubkey,email,buyNXT);
-                        sleep(1);
-                    }
-                }
-                sleep(1);
+                issue_genmultisig(coinstr,userNXTaddr,userpubkey,email,buyNXT);
+                sleep(3);
             }
         }
     }
