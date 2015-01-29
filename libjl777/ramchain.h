@@ -2945,9 +2945,10 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
 {
     int32_t gatewayid;
     struct MGWstate *sp;
-    cJSON *json,*nxtobj,*coinobj;
-    if ( (json= cJSON_Parse(pingstr)) != 0 )
+    cJSON *json,*array,*nxtobj,*coinobj;
+    if ( (array= cJSON_Parse(pingstr)) != 0 && is_cJSON_Array(array) != 0 )
     {
+        json = cJSON_GetArrayItem(array,0);
         if ( (gatewayid= (int32_t)get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1)) >= 0 && gatewayid < ram->numgateways )
         {
             if ( strcmp(ram->special_NXTaddrs[gatewayid],sender) == 0 )
@@ -2974,7 +2975,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
                 }
             } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
-        free_json(json);
+        free_json(array);
     }
 }
 
