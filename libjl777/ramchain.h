@@ -3061,6 +3061,7 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
                 _clear_pendingsend(ram->pendingsends[i]);
             ram->numpendingsends = 0;
             memset(ram->pendingsends,0,sizeof(ram->pendingsends));
+            portable_mutex_unlock(&mutex);
             return(0);
         }
         else
@@ -3079,8 +3080,13 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
         for (i=0; i<ram->numpendingsends; i++)
         {
             if ( (tp= ram->pendingsends[i]) != 0 && cointx->redeemtxid == tp->redeemtxid )
+            {
+                printf("match in slot.%d tp.%p %llu\n",i,tp,(long long)tp->redeemtxid);
                 break;
+            }
         }
+        if ( i == ram->numpendingsends )
+            tp = 0;
     } else i = 0;
     if ( i == ram->numpendingsends )
     {
@@ -3091,7 +3097,8 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
         }
         if ( ram->numpendingsends < (int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)) )
             ram->pendingsends[ram->numpendingsends++] = tp;
-    }
+        else printf("pending sends full? with %d vs %d\n",ram->numpendingsends,(int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)));
+    } else printf("found match in slot.%d tp.%p\n",i,tp);
     portable_mutex_unlock(&mutex);
     if ( slotp != 0 )
         *slotp = i;
