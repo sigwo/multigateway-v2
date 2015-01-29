@@ -2435,13 +2435,14 @@ char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32
 
 int32_t ram_is_MGW_OP_RETURN(uint64_t *redeemtxids,struct ramchain_info *ram,uint32_t script_rawind)
 {
+    static uint8_t zero12[12];
     void *ram_gethashdata(struct ramchain_info *ram,char type,uint32_t rawind);
-    int32_t i,j,len,numredeems = 0;
+    int32_t j,numredeems = 0;
     uint8_t *hashdata;
     uint64_t redeemtxid;
     if ( (hashdata= ram_gethashdata(ram,'s',script_rawind)) != 0 )
     {
-        if ( (len= hashdata[0]) < 256 && hashdata[1] == OP_RETURN_OPCODE && hashdata[2] == 'M' && hashdata[3] == 'G' && hashdata[4] == 'W' )
+        /*if ( (len= hashdata[0]) < 256 && hashdata[1] == OP_RETURN_OPCODE && hashdata[2] == 'M' && hashdata[3] == 'G' && hashdata[4] == 'W' )
         {
             numredeems = hashdata[5];
             if ( (numredeems*sizeof(uint64_t) + 5) == len )
@@ -2454,8 +2455,18 @@ int32_t ram_is_MGW_OP_RETURN(uint64_t *redeemtxids,struct ramchain_info *ram,uin
                     redeemtxids[i] = redeemtxid;
                 }
             } else printf("ram_is_MGW_OP_RETURN: numredeems.%d + 5 != %d len\n",numredeems,len);
+        }*/
+        //sprintf(scriptstr,"76a914%s88ac",str40);
+        if ( hashdata[1] == 0x76 && hashdata[2] == 0xa9 && hashdata[3] == 0x14 && memcmp(&hashdata[12],zero12,12) == 0 )
+        {
+            hashdata = &hashdata[4];
+            for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
+                redeemtxid <<= 8, redeemtxid |= (*hashdata++ & 0xff);
+            redeemtxids[0] = redeemtxid;
+            printf("FOUND HACKRETURN.(%llu)\n",(long long)redeemtxid);
+            numredeems = 1;
         }
-    }
+   }
     return(numredeems);
 }
 
