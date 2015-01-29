@@ -3012,7 +3012,7 @@ int32_t ram_MGW_ready(struct ramchain_info *ram,uint32_t blocknum,uint32_t NXThe
         if ( MGWstatecmp(&ram->otherS[0],&ram->otherS[1]) != 0 || MGWstatecmp(&ram->otherS[0],&ram->otherS[2]) != 0 )
         {
             printf("MGWstatecmp failure %d, %d\n",MGWstatecmp(&ram->otherS[0],&ram->otherS[1]),MGWstatecmp(&ram->otherS[0],&ram->otherS[2]));
-            return(0);
+            //return(0);
         }
     }
     return(retval);
