@@ -12,7 +12,7 @@
 #ifdef _WIN32
 #include <fcntl.h>
 #include "mman-win.h"
-
+#endif
 
 void *portable_thread_create(void *funcp,void *argp)
 {
