@@ -605,7 +605,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                             qp->tokenized_np = tokenized_np;
                             qp->decoded = clonestr((char *)decoded);
                             //printf("queue argjson.%p\n",argjson);
-                            queue_enqueue(&udp_JSON,qp);
+                            queue_enqueue("udp_JSON",&udp_JSON,qp);
                             argjson = 0;
                         }
                         else
