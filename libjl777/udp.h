@@ -659,7 +659,7 @@ struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *d
     sprintf(hashstr,"%llx",(long long)txid);
     portable_mutex_lock(&mutex);
     args = MTadd_hashtable(&createdflag,Global_mp->pending_xfers,hashstr);
-    if ( createdflag != 0 )
+    //if ( createdflag != 0 )
     {
         safecopy(args->previpaddr,previpaddr,sizeof(args->previpaddr));
         safecopy(args->sender,sender,sizeof(args->sender));
@@ -723,6 +723,7 @@ int32_t update_transfer_args(struct transfer_args *args,uint32_t fragi,uint32_t 
             memcpy(args->snapshot,args->data,args->totallen);
             args->snapshotcrc = _crc32(0,args->snapshot,args->totallen);
             args->completed++;
+            printf(">>>>>>>>> completed send to (%s) set ack[%d] <- %u | count.%d of %d | %p\n",args->dest,fragi,datacrc,count,args->numfrags,args);
         }
         if ( Debuglevel > 2 )
             printf(">>>>>>>>> set ack[%d] <- %u | count.%d of %d | %p\n",fragi,datacrc,count,args->numfrags,args);
@@ -761,7 +762,7 @@ int32_t update_transfer_args(struct transfer_args *args,uint32_t fragi,uint32_t 
                     }
                     if ( count == args->numfrags )
                     {
-                        if ( Debuglevel > 2 )
+                        if ( Debuglevel > 1 )
                             printf("completed.%d (%s) totallen.%d to (%s) checkcrc.%u vs totalcrc.%u\n",count,args->name,args->totallen,args->dest,checkcrc,totalcrc);
                         handler_gotfile(args,args->snapshot,args->totallen,args->snapshotcrc);
                         args->completed++;
@@ -896,7 +897,7 @@ char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,ch
             send_fragi(NXTaddr,NXTACCTSECRET,args,args->slots[j]);
         }
     }
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
     {
         for (i=0; i<args->numfrags; i++)
             sprintf(&args->pstr[i],"%c",args->gotcrcs[i]==0?' ': ((args->crcs[i] != args->gotcrcs[i]) ? '?' : '='));
