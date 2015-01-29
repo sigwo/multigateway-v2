@@ -2925,7 +2925,7 @@ struct MGWstate *ram_select_MGWstate(struct ramchain_info *ram,int32_t selector)
 void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sprintf(pingstr,"\"gatewayid\":%d,\"balance\":%.8f,\"sentNXT\":%.0f,\"unspent\":%.8f,\"circulation\":%.8f,\"pendingredeems\":%.8f,\"pendingdeposits\":%.8f,\"internal\":%.8f,\"RTNXT\":{\"height\":%d,\"lag\":%d,\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":%d,\"lag\":%d},",sp->gatewayid,dstr(sp->MGWbalance),dstr(sp->sentNXT),dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
+    sprintf(pingstr,"\"gatewayid\":\"%d\",\"balance\":\"%.8f\",\"sentNXT\":\"%.0f\",\"unspent\":\"%.8f\",\"circulation\":\"%.8f\",\"pendingredeems\":\"%.8f\",\"pendingdeposits\":\"%.8f\",\"internal\":\"%.8f\",\"RTNXT\":{\"height\":\"%d\",\"lag\":\"%d\",\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":\"%d\",\"lag\":\"%d\"},",sp->gatewayid,dstr(sp->MGWbalance),dstr(sp->sentNXT),dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
     if ( ram->S.gatewayid >= 0 )
         ram->otherS[ram->S.gatewayid] = ram->S;
 }
