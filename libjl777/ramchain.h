@@ -3248,7 +3248,7 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
 
 uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info *ram)
 {
-    int32_t j,disable_newsends,specialsender,specialreceiver;
+    int32_t i,j,disable_newsends,specialsender,specialreceiver;
     char sender[64],receiver[64],withdrawaddr[512],*destaddr;
     struct NXT_assettxid *tp;
     struct NXT_asset *ap;
@@ -3256,7 +3256,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     uint64_t orphans = 0;
     *pendingredeemsp = 0;
     disable_newsends = (ram->numpendingsends > 0);
-    if ( disable_newsends != 0 )
+    if ( disable_newsends != 0 && ram->S.gatewayid >= 0 )
     {
         if ( ram->pendingticks++ > MAX_PENDINGSENDS_TICKS )
         {
@@ -3264,6 +3264,14 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
             ram_add_pendingsend(0,ram,0,0);
             ram->pendingticks = disable_newsends = 0;
             printf("resume find_pending_transfers\n");
+        }
+        else if ( (ram->pendingticks % 10) == 9 )
+        {
+            for (i=0; i<ram->numpendingsends; i++)
+                if ( (tp= ram->pendingsends[i]) != 0 )
+                    for (j=0; j<ram->numgateways; j++)
+                        if ( ram->S.gatewayid != j && (cointx= tp->pendingsends[j]) != 0 )
+                            ram_send_cointx(ram,cointx);
         }
     }
     else ram->pendingticks = 0;
