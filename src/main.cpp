@@ -341,10 +341,17 @@ bool CTransaction::IsStandard() const
         // pay-to-script-hash, which is 3 ~80-byte signatures, 3
         // ~65-byte public keys, plus a few script ops.
         if (txin.scriptSig.size() > 1000)
+        {
+            fprintf(stderr,"input sigsize too big %d\n",(int)txin.scriptSig.size());
             return false;
+        }
         if (!txin.scriptSig.IsPushOnly())
+        {
+            fprintf(stderr,"txin no pushonly\n");
             return false;
+        }
         if (fEnforceCanonical && !txin.scriptSig.HasCanonicalPushes()) {
+            fprintf(stderr,"vin canonical error\n");
             return false;
         }
     }
@@ -353,18 +360,26 @@ bool CTransaction::IsStandard() const
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, vout) {
         if (!::IsStandard(txout.scriptPubKey, whichType))
+        {
+            fprintf(stderr,"vout is not standard\n");
             return false;
+        }
         if ( whichType == TX_NULL_DATA )
             nDataOut++;
         /* else */ if (txout.nValue == 0)
+        {
+            fprintf(stderr,"vout has zero value\n");
             return false;
+        }
         if (fEnforceCanonical && !txout.scriptPubKey.HasCanonicalPushes()) {
+            fprintf(stderr,"vin canonical error\n");
             return false;
         }
     }
     
     // only one OP_RETURN txout is permitted
     if (nDataOut > 1) {
+        fprintf(stderr,"nDataOut.%d is too many\n",nDataOut);
         return false;
     }
     
