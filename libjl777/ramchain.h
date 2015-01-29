@@ -2915,7 +2915,6 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
     static int didinit;
     int32_t createdflag,i,gatewayid = cointx->gatewayid;
     char redeemtxidstr[64];
-    printf("ram_add_pendingsend tp.%p cointx.%p\n",tp,cointx);
     if ( didinit == 0 )
     {
         portable_mutex_init(&mutex);
@@ -2941,21 +2940,19 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
                 break;
         }
     } else i = 0;
-    printf("i.%d of numpendingsends.%d: tp.%p\n",i,ram->numpendingsends,tp);
     if ( i == ram->numpendingsends )
     {
         if ( tp == 0 )
         {
             _expand_nxt64bits(redeemtxidstr,cointx->redeemtxid);
             tp = find_NXT_assettxid(&createdflag,ram->ap,redeemtxidstr);
-            printf("find tp.%p\n",tp);
         }
         if ( ram->numpendingsends < (int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)) )
             ram->pendingsends[ram->numpendingsends++] = tp;
     }
     portable_mutex_unlock(&mutex);
-    printf("set slotp.%p <- gatewayid.%d cointx.%p\n",slotp,gatewayid,cointx);
-    *slotp = i;
+    if ( slotp != 0 )
+        *slotp = i;
     if ( tp->pendingsends[gatewayid] != 0 )
     {
         printf("got another redeem.%llu from gateway.%d\n",(long long)cointx->redeemtxid,gatewayid);
