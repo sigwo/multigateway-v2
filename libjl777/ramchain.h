@@ -2997,7 +2997,10 @@ int32_t ram_MGW_ready(struct ramchain_info *ram,uint32_t blocknum,uint32_t NXThe
 {
     int32_t retval = 0;
     if ( ram->S.gatewayid >= 0 && ram->S.gatewayid < 3 && strcmp(ram->srvNXTADDR,ram->special_NXTaddrs[ram->S.gatewayid]) != 0 )
+    {
+        printf("mismatched gatewayid.%d\n",ram->S.gatewayid);
         return(0);
+    }
     if ( ram->S.gatewayid < 0 || (nxt64bits != 0 && (nxt64bits % NUM_GATEWAYS) != ram->S.gatewayid) || ram->S.MGWbalance < 0 )
         return(0);
     else if ( blocknum != 0 && ram->S.NXT_is_realtime != 0 && (blocknum + ram->depositconfirms) <= ram->S.RTblocknum && ram->S.enable_deposits != 0 )
@@ -3097,7 +3100,7 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
         printf("got another redeem.%llu from gateway.%d\n",(long long)cointx->redeemtxid,gatewayid);
         free(tp->pendingsends[gatewayid]);
     }
-    printf("GOT <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
+    printf("GOT <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu | numpending.%d\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid,ram->numpendingsends);
     tp->pendingsends[gatewayid] = cointx;
     return(tp);
 }
@@ -3143,6 +3146,7 @@ struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info
             printf("_process_realtime_MGW: gatewayid mismatch %d.(%s) vs %s\n",gatewayid,ram->special_NXTaddrs[gatewayid],sender);
             return(0);
         }
+        ram_add_pendingsend(0,ram,0,cointx);
         printf("GOT UNMATCHED <<<<<<<<<<<< _process_realtime_MGW.%d coin.(%s) %.8f crc %08x redeemtxid.%llu\n",gatewayid,cointx->coinstr,dstr(cointx->amount),cointx->batchcrc,(long long)cointx->redeemtxid);
     }
     return(0);
@@ -3301,7 +3305,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                         if ( tp->completed == 0 && tp->convwithdrawaddr != 0 )
                         {
                             (*pendingredeemsp) += tp->U.assetoshis;
-                            printf("NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->S.is_realtime,(tp->height + ram->withdrawconfirms) <= ram->S.NXT_RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends);
+                            printf("NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->S.is_realtime,(tp->height + ram->withdrawconfirms) <= ram->S.NXT_RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends,blocknum != 0 && ram->S.NXT_is_realtime != 0 && (blocknum + ram->depositconfirms) <= ram->S.RTblocknum && ram->S.enable_deposits != 0);
                             if ( disable_newsends == 0 && ram_MGW_ready(ram,0,tp->height,0,tp->U.assetoshis) > 0 && tp->pendingsends[ram->S.gatewayid] == 0 )
                             {
                                 if ( (cointx= _calc_cointx_withdraw(ram,tp->convwithdrawaddr,tp->U.assetoshis,tp->redeemtxid)) != 0 )
@@ -7849,8 +7853,8 @@ uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,
             //printf("addr_unspent.(%s)\n",msig->NXTaddr);
             if ( (nxt64bits= _calc_nxt64bits(msig->NXTaddr)) != 0 )
             {
-                printf("deposit.(%s/%d %d,%d %s %.8f)rt%d_%d_%d_%d.g%d -> NXT.%s\n",txidstr,addrpayload->B.v,addrpayload->B.blocknum,addrpayload->B.txind,addr,dstr(addrpayload->value),ram->S.NXT_is_realtime,ram->S.enable_deposits,(addrpayload->B.blocknum + ram->depositconfirms) <= ram->S.RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(nxt64bits % NUM_GATEWAYS),msig->NXTaddr);
-                pending += addrpayload->value++;
+                printf("deposit.(%s/%d %d,%d %s %.8f)rt%d_%d_%d_%d.g%d -> NXT.%s %d\n",txidstr,addrpayload->B.v,addrpayload->B.blocknum,addrpayload->B.txind,addr,dstr(addrpayload->value),ram->S.NXT_is_realtime,ram->S.enable_deposits,(addrpayload->B.blocknum + ram->depositconfirms) <= ram->S.RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(nxt64bits % NUM_GATEWAYS),msig->NXTaddr,ram->S.NXT_is_realtime != 0 && (addrpayload->B.blocknum + ram->depositconfirms) <= ram->S.RTblocknum && ram->S.enable_deposits != 0);
+                pending += addrpayload->value;
                 if ( ram_MGW_ready(ram,addrpayload->B.blocknum,0,nxt64bits,0) > 0 )
                 {
                     if ( ram_verify_txstillthere(ram,txidstr,&addrpayload->B) != addrpayload->value )
@@ -9034,7 +9038,7 @@ void *process_ramchains(void *_argcoinstr)
                                     if ( (tp= ram->pendingsends[j]) != 0 )
                                         printf("(%llu %x %x %x) ",(long long)tp->redeemtxid,_extract_batchcrc(tp,0),_extract_batchcrc(tp,1),_extract_batchcrc(tp,2));
                                 }
-                                printf("pendingticks.%d",ram->pendingticks);
+                                printf("pendingticks.%d numpending.%d",ram->pendingticks,ram->numpendingsends);
                             }
                             putchar('\n');
                         }
