@@ -556,7 +556,7 @@ char *kademlia_ping(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,c
         txid = send_kademlia_cmd(0,get_pserver(0,ipaddr,prevport,0),"pong",NXTACCTSECRET,0,0);
         sprintf(retstr,"{\"result\":\"kademlia_pong to (%s/%d)\",\"txid\":\"%llu\"}",ipaddr,prevport,(long long)txid);
     }
-    if ( is_remote_access(previpaddr) != 0 && retstr[0] != 0 )
+    if ( is_remote_access(previpaddr) != 0 && retstr[0] != 0 && Debuglevel > 2 )
         fprintf(stderr,"PING.(%s)\n",retstr);
     return(clonestr(retstr));
 }
@@ -581,7 +581,7 @@ char *kademlia_pong(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,c
         sprintf(retstr,"{\"result\":\"kademlia_pong\",\"tag\":\"%s\",\"isMM\":\"%d\",\"NXT\":\"%s\",\"ipaddr\":\"%s\",\"port\":%d,\"lag\":\"%.3f\",\"numpings\":%d,\"numpongs\":%d,\"ave\":\"%.3f\"}",tag,isMM,sender,ipaddr,port,stats->pongmilli-stats->pingmilli,stats->numpings,stats->numpongs,(2*stats->pingpongsum)/(stats->numpings+stats->numpongs+1));
     }
     else sprintf(retstr,"{\"result\":\"kademlia_pong\",\"tag\":\"%s\",\"NXT\":\"%s\",\"ipaddr\":\"%s\",\"port\":%d\"}",tag,sender,ipaddr,port);
-    //if ( Debuglevel > 0 )
+    if ( Debuglevel > 2 )
         printf("PONG.(%s)\n",retstr);
     return(clonestr(retstr));
 }
