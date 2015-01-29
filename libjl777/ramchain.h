@@ -7927,7 +7927,8 @@ uint64_t ram_calc_MGWunspent(uint64_t *pendingp,struct ramchain_info *ram)
             free(msigs[i]);
         }
         free(msigs);
-        printf("MGWnumunspents.%d smallest (%s %.8f)\n",ram->MGWnumunspents,ram->MGWsmallest,dstr(smallest));
+        if ( Debuglevel > 2 )
+            printf("MGWnumunspents.%d smallest (%s %.8f)\n",ram->MGWnumunspents,ram->MGWsmallest,dstr(smallest));
     }
     *pendingp = pending;
     return(unspent);
