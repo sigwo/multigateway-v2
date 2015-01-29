@@ -659,7 +659,7 @@ struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *d
     sprintf(hashstr,"%llx",(long long)txid);
     portable_mutex_lock(&mutex);
     args = MTadd_hashtable(&createdflag,Global_mp->pending_xfers,hashstr);
-    //if ( createdflag != 0 )
+    if ( createdflag != 0 || totallen != args->totallen || args->blocksize != blocksize )
     {
         safecopy(args->previpaddr,previpaddr,sizeof(args->previpaddr));
         safecopy(args->sender,sender,sizeof(args->sender));
@@ -669,6 +669,8 @@ struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *d
         args->totallen = totallen;
         args->blocksize = blocksize;
         args->numfrags = (totallen / blocksize);
+        memset(args->crcs,0,sizeof(args->crcs));
+        memset(args->gotcrcs,0,sizeof(args->gotcrcs));
         if ( (totallen % blocksize) != 0 )
             args->numfrags++;
         if ( Debuglevel > 1 )
@@ -897,7 +899,7 @@ char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,ch
             send_fragi(NXTaddr,NXTACCTSECRET,args,args->slots[j]);
         }
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
     {
         for (i=0; i<args->numfrags; i++)
             sprintf(&args->pstr[i],"%c",args->gotcrcs[i]==0?' ': ((args->crcs[i] != args->gotcrcs[i]) ? '?' : '='));

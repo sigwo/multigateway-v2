@@ -3198,6 +3198,7 @@ void _RTmgw_handler(struct transfer_args *args)
         }
         if ( cointxcmp(tp->pendingsends[0],tp->pendingsends[1]) == 0 && cointxcmp(tp->pendingsends[0],tp->pendingsends[2]) == 0 ) // consensus
         {
+            printf("got consensus for %llu %.8f\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
             if ( ram_MGW_ready(ram,0,tp->height,tp->senderbits,tp->U.assetoshis) > 0 )
             {
                 if ( ram_verify_NXTtxstillthere(ram,tp->redeemtxid) != tp->U.assetoshis )
@@ -3213,7 +3214,7 @@ void _RTmgw_handler(struct transfer_args *args)
                 }
                 else printf("_RTmgw_handler: error _sign_and_sendmoney for NXT.%llu redeem.%llu %.8f (%s)\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),othercointx->signedtx);
             }
-        }
+        } else printf("no match yet %d %d\n",cointxcmp(tp->pendingsends[0],tp->pendingsends[1]),cointxcmp(tp->pendingsends[0],tp->pendingsends[2]));
     }
     //getchar();
 }
