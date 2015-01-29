@@ -1871,7 +1871,7 @@ int32_t _sign_rawtransaction(char *deststr,unsigned long destsize,struct ramchai
     if ( (signparams= _createsignraw_json_params(ram,cointx,rawbytes,privkeys)) != 0 )
     {
         _stripwhite(signparams,0);
-        //printf("got signparams.(%s)\n",signparams);
+        printf("got signparams.(%s)\n",signparams);
         retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"signrawtransaction",signparams);
         if ( retstr != 0 )
         {
