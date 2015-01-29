@@ -842,6 +842,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     if ( cp->marker == 0 )
         cp->marker = clonestr(get_marker(cp->name));
     ram->marker = clonestr(cp->marker);
+    ram->opreturnmarker = clonestr(cp->privateaddr);
     ram->dust = cp->dust;
     ram->userpass = clonestr(cp->userpass);
     ram->serverport = clonestr(cp->serverport);

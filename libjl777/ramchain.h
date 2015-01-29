@@ -214,7 +214,7 @@ struct ramchain_info
     struct MGWstate S,otherS[3];
     double startmilli;
     HUFF *tmphp,*tmphp2;
-    char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker;
+    char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker,*opreturnmarker;
     uint32_t next_blocknum,next_txid_permind,next_addr_permind,next_script_permind,permind_changes,withdrawconfirms,DEPOSIT_XFER_DURATION;
     uint32_t lastheighttime,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind,numgateways,nummsigs;
     uint64_t totalspends,numspends,totaloutputs,numoutputs,totalbits,totalbytes,txfee,dust,NXTfee_equiv;
@@ -2409,14 +2409,15 @@ char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32
     struct cointx_info *cointx;
     if ( _make_OP_RETURN(scriptstr,redeems,numredeems) > 0 && (cointx= _decode_rawtransaction(rawtx)) != 0 )
     {
-        if ( replace_vout == cointx->numoutputs-1 )
-            cointx->outputs[cointx->numoutputs] = cointx->outputs[cointx->numoutputs-1];
-        cointx->numoutputs++;
+        //if ( replace_vout == cointx->numoutputs-1 )
+        //    cointx->outputs[cointx->numoutputs] = cointx->outputs[cointx->numoutputs-1];
+        //cointx->numoutputs++;
         vout = &cointx->outputs[replace_vout];
-        vout->value = 1;
-        cointx->outputs[0].value -= vout->value;
-        vout->coinaddr[0] = 0;
-        safecopy(vout->script,scriptstr,sizeof(vout->script));
+        ///vout->value = 1;
+        //cointx->outputs[0].value -= vout->value;
+        //vout->coinaddr[0] = 0;
+        //safecopy(vout->script,scriptstr,sizeof(vout->script));
+        strcat(vout->script,scriptstr);
         len = strlen(rawtx) * 2;
         retstr = calloc(1,len);
         disp_cointx(cointx);
@@ -2469,10 +2470,10 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     cointx->outputs[0].value = MGWfee;
     strcpy(cointx->outputs[1].coinaddr,destaddr);
     cointx->outputs[1].value = value;
-    //strcpy(cointx->outputs[2].coinaddr,ram->marker);
-    //cointx->outputs[2].value = 0;
-    cointx->numoutputs = 2;
-    cointx->amount = amount = (MGWfee + value);
+    strcpy(cointx->outputs[2].coinaddr,ram->opreturnmarker);
+    cointx->outputs[2].value = 1;
+    cointx->numoutputs = 3;
+    cointx->amount = amount = (MGWfee + value + 1);
     fprintf(stderr,"calc_withdraw.%s %llu amount %.8f -> balance %.8f\n",ram->name,(long long)redeemtxid,dstr(cointx->amount),dstr(ram->S.MGWbalance));
    // if ( (cointx->amount + ram->txfee) <= ram->MGWbalance )
     if ( ram->S.MGWbalance >= 0 )
