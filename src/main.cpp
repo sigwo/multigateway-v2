@@ -354,9 +354,9 @@ bool CTransaction::IsStandard() const
     BOOST_FOREACH(const CTxOut& txout, vout) {
         if (!::IsStandard(txout.scriptPubKey, whichType))
             return false;
-        if (whichType == TX_NULL_DATA)
+        if ( whichType == TX_NULL_DATA )
             nDataOut++;
-        if (txout.nValue == 0)
+        /* else */ if (txout.nValue == 0)
             return false;
         if (fEnforceCanonical && !txout.scriptPubKey.HasCanonicalPushes()) {
             return false;
@@ -618,8 +618,8 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         return error("CTxMemPool::accept() : not accepting nLockTime beyond 2038 yet");
     
     // Rather not work on nonstandard transactions (unless -testnet)
-   // if (!fTestNet && !tx.IsStandard())
-   //     return error("CTxMemPool::accept() : nonstandard transaction type");
+    if (!fTestNet && !tx.IsStandard())
+        return error("CTxMemPool::accept() : nonstandard transaction type");
     
     // Do we already have it?
     uint256 hash = tx.GetHash();

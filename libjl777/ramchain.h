@@ -2413,7 +2413,8 @@ char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32
             cointx->outputs[cointx->numoutputs] = cointx->outputs[cointx->numoutputs-1];
         cointx->numoutputs++;
         vout = &cointx->outputs[replace_vout];
-        vout->value = 0;
+        vout->value = 1;
+        cointx->outputs[0].value -= vout->value;
         vout->coinaddr[0] = 0;
         safecopy(vout->script,scriptstr,sizeof(vout->script));
         len = strlen(rawtx) * 2;
