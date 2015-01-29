@@ -3995,7 +3995,7 @@ int32_t get_API_int(cJSON *obj,int32_t val)
     return(val);
 }
 
-char *stringifyM(char *str)
+/*char *stringifyM(char *str)
 {
     char *newstr;
     int32_t i,j,n;
@@ -4036,6 +4036,7 @@ char *unstringify(char *str)
     str[j] = 0;
     return(str);
 }
+*/
 
 int32_t Pending_RPC,SuperNET_retval,did_SuperNET_init;
 extern char SuperNET_url[512];
