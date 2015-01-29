@@ -2098,7 +2098,6 @@ void sort_rawinputs(struct cointx_info *cointx)
 char *_sign_localtx(struct ramchain_info *ram,struct cointx_info *cointx,char *rawbytes)
 {
     char *batchsigned;
-    fprintf(stderr,"sign_localtx\n");
     cointx->batchsize = (uint32_t)strlen(rawbytes) + 1;
     cointx->batchcrc = _crc32(0,rawbytes+12,cointx->batchsize-12); // skip past timediff
     batchsigned = malloc(cointx->batchsize + cointx->numinputs*512 + 512);
@@ -2493,7 +2492,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                         if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
                         {
                             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
-                            printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
+                           // printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
                             rettx = calloc(1,allocsize);
                             *rettx = *cointx;
                             rettx->allocsize = allocsize;
@@ -2504,15 +2503,12 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                         free(with_op_return);
                     } else printf("error replacing with OP_RETURN\n");
                 } else fprintf(stderr,"error creating rawtransaction\n");
-                printf("free rawparams\n");
                 free(rawparams);
-                       printf("free retstr\n");
                 if ( retstr != 0 )
                     free(retstr);
             } else fprintf(stderr,"error creating rawparams\n");
         } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(sum),dstr(cointx->amount),dstr(ram->txfee));
     } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",ram->name,dstr(ram->MGWbalance),dstr(cointx->amount),dstr(ram->txfee));
-    printf("return rettx.%p\n",rettx);
     return(rettx);
 }
 
@@ -2919,6 +2915,7 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
     static int didinit;
     int32_t createdflag,i,gatewayid = cointx->gatewayid;
     char redeemtxidstr[64];
+    printf("ram_add_pendingsend tp.%p cointx.%p\n",tp,cointx);
     if ( didinit == 0 )
     {
         portable_mutex_init(&mutex);
@@ -2926,13 +2923,13 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
     }
     if ( cointx == 0 )
     {
+        printf("_RTmgw_handler: completed NXT.%llu redeem.%llu %.8f %.1f minutes | numpending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(double)tp->redeemstarted/60.,ram->numpendingsends);
         i = *slotp;
         portable_mutex_lock(&mutex);
         ram->pendingsends[i] = ram->pendingsends[--ram->numpendingsends];
         for (i=0; i<3; i++)
             free(tp->pendingsends[i]), tp->pendingsends[i] = 0;
         portable_mutex_unlock(&mutex);
-        printf("_RTmgw_handler: completed NXT.%llu redeem.%llu %.8f %.1f minutes | numpending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(double)tp->redeemstarted/60.,ram->numpendingsends);
         return(tp);
     }
     portable_mutex_lock(&mutex);
@@ -2940,21 +2937,23 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
     {
         for (i=0; i<ram->numpendingsends; i++)
         {
-            tp = ram->pendingsends[i];
-            if ( cointx->redeemtxid == tp->redeemtxid )
+            if ( (tp= ram->pendingsends[i]) != 0 && cointx->redeemtxid == tp->redeemtxid )
                 break;
         }
     } else i = 0;
+    printf("i.%d of numpendingsends.%d: tp.%p\n",i,ram->numpendingsends,tp);
     if ( i == ram->numpendingsends )
     {
         if ( tp == 0 )
         {
             _expand_nxt64bits(redeemtxidstr,cointx->redeemtxid);
             tp = find_NXT_assettxid(&createdflag,ram->ap,redeemtxidstr);
+            printf("find tp.%p\n",tp);
         }
         ram->pendingsends[ram->numpendingsends++] = tp;
     }
     portable_mutex_unlock(&mutex);
+    printf("set slotp.%p <- %d gatewayid.%d cointx.%p\n",slotp,*slotp,gatewayid,cointx);
     *slotp = i;
     if ( tp->pendingsends[gatewayid] != 0 )
     {
@@ -3071,17 +3070,14 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
     char batchname[512],fname[512],*retstr;
     int32_t gatewayid;
     FILE *fp;
-    printf("ram_send_cointx.%p\n",cointx);
     _set_batchname(batchname,cointx->coinstr,cointx->gatewayid,cointx->redeemtxid);
-    printf("batchname.%s\n",batchname);
     set_handler_fname(fname,"RTmgw",batchname);
     cointx->crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize - sizeof(cointx->crc)));
-    printf("save to (%s) crc.%x\n",fname,cointx->crc);
+    //printf("save to (%s) crc.%x\n",fname,cointx->crc);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
         fwrite(cointx,1,sizeof(*cointx),fp);
         fclose(fp);
-        printf("created (%s)\n",fname);
     }
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
     {
