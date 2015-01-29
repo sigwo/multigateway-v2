@@ -3032,7 +3032,7 @@ void _clear_pendingsend(struct NXT_assettxid *tp)
             if ( (cointx= tp->pendingsends[i]) != 0 )
             {
                 tp->pendingsends[i] = 0;
-                if ( cointx->isallocated != 0 )
+                if ( 0 && cointx->isallocated != 0 )
                     free(cointx);
             }
     }
@@ -3062,11 +3062,11 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
         if ( tp == 0 )
         {
             portable_mutex_lock(&mutex);
-            printf("clear pendingsends.%d\n",ram->numpendingsends);
+            fprintf(stderr,"clear pendingsends.%d\n",ram->numpendingsends);
             for (i=0; i<ram->numpendingsends; i++)
                 _clear_pendingsend(ram->pendingsends[i]);
             ram->numpendingsends = 0;
-            printf("clear pendingsends array\n");
+            fprintf(stderr,"clear pendingsends array\n");
             memset(ram->pendingsends,0,sizeof(ram->pendingsends));
             portable_mutex_unlock(&mutex);
             return(0);
