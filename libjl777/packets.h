@@ -510,7 +510,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
         if ( Debuglevel > 2 || len > 400 )
         {
             static int32_t debugmsg;
-            if ( debugmsg++ < 100 )
+            if ( debugmsg++ < 10 )
                 printf("process_packet internalflag.%d got nonencrypted len.%d %s/%d (%s)\n",internalflag,recvlen,sender,port,decoded);
         }
         //return(0);
