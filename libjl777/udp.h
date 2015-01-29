@@ -653,7 +653,7 @@ struct transfer_args *create_transfer_args(char *previpaddr,char *sender,char *d
         portable_mutex_init(&mutex);
         didinit = 1;
     }
-    sprintf(hashstr,"%s.%s.%u.%u.%u",sender,name,totallen,totalcrc,blocksize);
+    sprintf(hashstr,"%s.%s.%s.%u.%u.%u",dest,sender,name,totallen,totalcrc,blocksize);
     txid = calc_txid((uint8_t *)hashstr,(int32_t)strlen(hashstr));
     //printf("hashstr.(%s) -> %llx | data.%p\n",hashstr,(long long)txid,data);
     sprintf(hashstr,"%llx",(long long)txid);
