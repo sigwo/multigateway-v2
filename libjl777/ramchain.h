@@ -9051,7 +9051,7 @@ void *process_ramchains(void *_argcoinstr)
                             for (gatewayid=0; gatewayid<ram->numgateways; gatewayid++)
                             {
                                 ram_set_MGWdispbuf(dispbuf,ram,gatewayid);
-                                printf("%s",dispbuf);
+                                printf("G%d:%s",gatewayid,dispbuf);
                             }
                             if ( ram->pendingticks != 0 )
                             {
