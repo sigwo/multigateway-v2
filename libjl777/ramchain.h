@@ -2422,7 +2422,7 @@ char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32
             str40[i] = '0';
         str40[i] = 0;
         sprintf(scriptstr,"76a914%s88ac",str40);
-        strcat(vout->script,scriptstr);
+        strcpy(vout->script,scriptstr);
         len = strlen(rawtx) * 2;
         retstr = calloc(1,len);
         disp_cointx(cointx);
