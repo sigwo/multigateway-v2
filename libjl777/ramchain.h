@@ -165,7 +165,7 @@ struct cointx_info
     uint32_t crc; // MUST be first
     char coinstr[16];
     uint64_t inputsum,amount,change,redeemtxid;
-    uint32_t allocsize,batchsize,batchcrc,gatewayid;
+    uint32_t allocsize,batchsize,batchcrc,gatewayid,isallocated;
     // bitcoin tx order
     uint32_t version,timestamp,numinputs;
     uint32_t numoutputs;
@@ -216,7 +216,7 @@ struct ramchain_info
     HUFF *tmphp,*tmphp2;
     char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker;
     uint32_t next_blocknum,next_txid_permind,next_addr_permind,next_script_permind,permind_changes,withdrawconfirms,DEPOSIT_XFER_DURATION;
-    uint32_t lastheighttime,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind,numgateways;
+    uint32_t lastheighttime,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind,numgateways,nummsigs;
     uint64_t totalspends,numspends,totaloutputs,numoutputs,totalbits,totalbytes,txfee,dust,NXTfee_equiv;
     struct rawblock *R,*R2,*R3;
     struct rawblock_huffs H;
@@ -2506,6 +2506,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                             rettx = calloc(1,allocsize);
                             *rettx = *cointx;
                             rettx->allocsize = allocsize;
+                            rettx->isallocated = allocsize;
                             strcpy(rettx->signedtx,signedtx);
                             free(signedtx);
                             cointx = 0;
@@ -2933,7 +2934,7 @@ void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector
 void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f pending.(R %.8f D %.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
+    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f pending.(R %.8f D %.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
 }
 
 void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selector)
@@ -3029,7 +3030,11 @@ void _clear_pendingsend(struct NXT_assettxid *tp)
     {
         for (i=0; i<3; i++)
             if ( (cointx= tp->pendingsends[i]) != 0 )
-                tp->pendingsends[i] = 0, free(cointx);
+            {
+                tp->pendingsends[i] = 0;
+                if ( cointx->isallocated != 0 )
+                    free(cointx);
+            }
     }
 }
 
@@ -3057,9 +3062,11 @@ struct NXT_assettxid *ram_add_pendingsend(int32_t *slotp,struct ramchain_info *r
         if ( tp == 0 )
         {
             portable_mutex_lock(&mutex);
+            printf("clear pendingsends.%d\n",ram->numpendingsends);
             for (i=0; i<ram->numpendingsends; i++)
                 _clear_pendingsend(ram->pendingsends[i]);
             ram->numpendingsends = 0;
+            printf("clear pendingsends array\n");
             memset(ram->pendingsends,0,sizeof(ram->pendingsends));
             portable_mutex_unlock(&mutex);
             return(0);
@@ -3256,6 +3263,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
             printf("ram->pendingticks.%d > %d MAX_PENDINGSENDS_TICKS, clear and resync\n",ram->pendingticks,MAX_PENDINGSENDS_TICKS);
             ram_add_pendingsend(0,ram,0,0);
             ram->pendingticks = disable_newsends = 0;
+            printf("resume find_pending_transfers\n");
         }
     }
     else ram->pendingticks = 0;
@@ -7920,6 +7928,7 @@ uint64_t ram_calc_MGWunspent(uint64_t *pendingp,struct ramchain_info *ram)
         memset(ram->MGWunspents,0,sizeof(*ram->MGWunspents) * ram->MGWmaxunspents);
     if ( (msigs= (struct multisig_addr **)copy_all_DBentries(&n,MULTISIG_DATA)) != 0 )
     {
+        ram->nummsigs = n;
         ram->MGWsmallest[0] = ram->MGWsmallestB[0] = 0;
         for (smallest=i=m=0; i<n; i++)
         {
