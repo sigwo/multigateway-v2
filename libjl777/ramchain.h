@@ -1992,6 +1992,8 @@ struct cointx_input *_find_bestfit(struct ramchain_info *ram,uint64_t value)
     for (above=below=i=0; i<ram->MGWnumunspents; i++)
     {
         vin = &ram->MGWunspents[i];
+        if ( vin->used != 0 )
+            continue;
         if ( vin->value == value )
             return(vin);
         else if ( vin->value > value )
