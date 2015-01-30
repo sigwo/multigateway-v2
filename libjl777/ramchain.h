@@ -2999,6 +2999,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
         }
         free_json(array);
     }
+    printf("parsed\n");
 }
 
 int32_t MGWstatecmp(struct MGWstate *spA,struct MGWstate *spB)
