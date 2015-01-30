@@ -5372,7 +5372,7 @@ int32_t ram_calc_scriptmode(uint64_t *redeemtxidp,int32_t *datalenp,uint8_t scri
         {
             script[len-4] = 0;
             script += 6;
-            if ( strcmp(script+8,"000000000000000000000000") == 0 )
+            if ( strcmp(script+16,"000000000000000000000000") == 0 )
             {
                 for (redeemtxid=i=0; i<(int32_t)sizeof(uint64_t); i++)
                 {
