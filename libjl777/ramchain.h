@@ -211,6 +211,7 @@ struct MGWstate
     int32_t gatewayid;
     char name[64];
     int64_t MGWbalance;
+    uint64_t totalspends,numspends,totaloutputs,numoutputs;
     uint64_t boughtNXT,circulation,sentNXT,MGWpendingredeems,orphans,MGWunspent,MGWpendingdeposits,NXT_ECblock;
     uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,NXT_ECheight;
 };
@@ -226,7 +227,7 @@ struct ramchain_info
     char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker,*opreturnmarker;
     uint32_t next_blocknum,next_txid_permind,next_addr_permind,next_script_permind,permind_changes,withdrawconfirms,DEPOSIT_XFER_DURATION;
     uint32_t lastheighttime,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind,numgateways,nummsigs;
-    uint64_t totalspends,numspends,totaloutputs,numoutputs,totalbits,totalbytes,txfee,dust,NXTfee_equiv;
+    uint64_t totalbits,totalbytes,txfee,dust,NXTfee_equiv;
     struct rawblock *R,*R2,*R3;
     struct rawblock_huffs H;
     struct alloc_space Tmp,Perm;
@@ -236,7 +237,7 @@ struct ramchain_info
     uint64_t MGWbits,*limboarray;
     struct cointx_input *MGWunspents;
     uint32_t min_NXTconfirms,NXTtimestamp,MGWnumunspents,MGWmaxunspents,numspecials,depositconfirms,firsttime,numpendingsends,pendingticks;
-    char multisigchar,**special_NXTaddrs,*MGWredemption,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024];
+    char multisigchar,**special_NXTaddrs,*MGWredemption,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];
     struct NXT_assettxid *pendingsends[512];
     float lastgetinfo,NXTconvrate;
 };
@@ -3004,7 +3005,7 @@ void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector
 void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f pending.(R %.8f D %.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
+    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->totaloutputs - sp->totalspends),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
 }
 
 void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selector)
@@ -3014,9 +3015,13 @@ void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selec
 
 void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
 {
+    void save_MGW_status(char *NXTaddr,char *jsonstr);
+    char name[512],*jsonstr;
     int32_t gatewayid;
     struct MGWstate *sp;
     cJSON *json,*array,*nxtobj,*coinobj;
+    if ( Debuglevel > 2 )
+        printf("parse.(%s)\n",pingstr);
     if ( (array= cJSON_Parse(pingstr)) != 0 && is_cJSON_Array(array) != 0 )
     {
         json = cJSON_GetArrayItem(array,0);
@@ -3046,8 +3051,17 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
                 }
             } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
+        jsonstr = cJSON_Print(json);
+        if ( ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
+        {
+            sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
+            save_MGW_status(name,jsonstr);
+            safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
+        }
+        free(jsonstr);
         free_json(array);
     }
+    //printf("parsed\n");
 }
 
 int32_t MGWstatecmp(struct MGWstate *spA,struct MGWstate *spB)
@@ -3493,8 +3507,8 @@ void ram_addunspent(struct ramchain_info *ram,char *coinaddr,struct rampayload *
     if ( addrpayload->value != 0 )
     {
         //printf("UNSPENT %.8f\n",dstr(addrpayload->value));
-        ram->totaloutputs += addrpayload->value;
-        ram->numoutputs++;
+        ram->S.totaloutputs += addrpayload->value;
+        ram->S.numoutputs++;
         addrptr->unspent += addrpayload->value;
         addrptr->numunspent++;
         if ( addrptr->multisig != 0 && (msig= find_msigaddr(coinaddr)) != 0 && _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,msig->NXTaddr) == 0 )
@@ -3643,8 +3657,8 @@ int32_t ram_markspent(struct ramchain_info *ram,struct rampayload *txpayload,str
         {
             if ( txpayload->value != 0 )
             {
-                ram->totalspends += txpayload->value;
-                ram->numspends++;
+                ram->S.totalspends += txpayload->value;
+                ram->S.numspends++;
                 addrpayload->spentB = *spendbp;
                 addrpayload->B.spent = 1;
                 addrptr->unspent -= addrpayload->value;
@@ -7473,7 +7487,7 @@ void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
         estsizeV = (ram->Vblocks.sum / ram->Vblocks.count) * ram->S.RTblocknum;
     if ( ram->Bblocks.count != 0 )
         estsizeB = (ram->Bblocks.sum / ram->Bblocks.count) * ram->S.RTblocknum;
-    sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->S.RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->numoutputs,dstr(ram->totaloutputs),(long long)ram->numspends,dstr(ram->totalspends),(long long)(ram->numoutputs - ram->numspends),dstr(ram->totaloutputs - ram->totalspends),dstr(ram->totaloutputs - ram->totalspends)/(ram->numoutputs - ram->numspends));
+    sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->S.RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->S.numoutputs,dstr(ram->S.totaloutputs),(long long)ram->S.numspends,dstr(ram->S.totalspends),(long long)(ram->S.numoutputs - ram->S.numspends),dstr(ram->S.totaloutputs - ram->S.totalspends),dstr(ram->S.totaloutputs - ram->S.totalspends)/(ram->S.numoutputs - ram->S.numspends));
 }
 
 void ram_disp_status(struct ramchain_info *ram)
@@ -9194,6 +9208,24 @@ void *process_ramchains(void *_argcoinstr)
         sleep(60);
 }
 
+
+int32_t set_bridge_dispbuf(char *dispbuf,char *coinstr)
+{
+    int32_t gatewayid;
+    struct ramchain_info *ram;
+    dispbuf[0] = 0;
+    if ( (ram= get_ramchain_info(coinstr)) != 0 )
+    {
+        for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
+        {
+            ram_set_MGWdispbuf(dispbuf,ram,gatewayid);
+            sprintf(dispbuf+strlen(dispbuf),"G%d:%s",gatewayid,dispbuf);
+        }
+        printf("set_bridge_dispbuf.(%s)\n",dispbuf);
+        return((int32_t)strlen(dispbuf));
+    }
+    return(0);
+}
 #endif
 #endif
 
