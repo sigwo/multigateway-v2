@@ -2964,6 +2964,8 @@ void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selec
 
 void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
 {
+    void save_MGW_status(char *NXTaddr,char *jsonstr);
+    char mgwstr[16],*jsonstr;
     int32_t gatewayid;
     struct MGWstate *sp;
     cJSON *json,*array,*nxtobj,*coinobj;
@@ -2998,6 +3000,10 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
                 }
             } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
+        sprintf(mgwstr,"MGW%d",gatewayid);
+        jsonstr = cJSON_Print(json);
+        save_MGW_status(mgwstr,jsonstr);
+        free(jsonstr);
         free_json(array);
     }
     //printf("parsed\n");
