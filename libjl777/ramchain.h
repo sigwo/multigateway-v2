@@ -202,6 +202,7 @@ struct MGWstate
     int32_t gatewayid;
     char name[64];
     int64_t MGWbalance;
+    uint64_t totalspends,numspends,totaloutputs,numoutputs;
     uint64_t boughtNXT,circulation,sentNXT,MGWpendingredeems,orphans,MGWunspent,MGWpendingdeposits,NXT_ECblock;
     uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,NXT_ECheight;
 };
@@ -217,7 +218,7 @@ struct ramchain_info
     char name[64],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker,*opreturnmarker;
     uint32_t next_blocknum,next_txid_permind,next_addr_permind,next_script_permind,permind_changes,withdrawconfirms,DEPOSIT_XFER_DURATION;
     uint32_t lastheighttime,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind,numgateways,nummsigs;
-    uint64_t totalspends,numspends,totaloutputs,numoutputs,totalbits,totalbytes,txfee,dust,NXTfee_equiv;
+    uint64_t totalbits,totalbytes,txfee,dust,NXTfee_equiv;
     struct rawblock *R,*R2,*R3;
     struct rawblock_huffs H;
     struct alloc_space Tmp,Perm;
@@ -2954,7 +2955,7 @@ void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector
 void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f pending.(R %.8f D %.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
+    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->totaloutputs - sp->totalspends),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
 }
 
 void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selector)
@@ -3452,8 +3453,8 @@ void ram_addunspent(struct ramchain_info *ram,char *coinaddr,struct rampayload *
     if ( addrpayload->value != 0 )
     {
         //printf("UNSPENT %.8f\n",dstr(addrpayload->value));
-        ram->totaloutputs += addrpayload->value;
-        ram->numoutputs++;
+        ram->S.totaloutputs += addrpayload->value;
+        ram->S.numoutputs++;
         addrptr->unspent += addrpayload->value;
         addrptr->numunspent++;
         if ( addrptr->multisig != 0 && (msig= find_msigaddr(coinaddr)) != 0 && _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,msig->NXTaddr) == 0 )
@@ -3602,8 +3603,8 @@ int32_t ram_markspent(struct ramchain_info *ram,struct rampayload *txpayload,str
         {
             if ( txpayload->value != 0 )
             {
-                ram->totalspends += txpayload->value;
-                ram->numspends++;
+                ram->S.totalspends += txpayload->value;
+                ram->S.numspends++;
                 addrpayload->spentB = *spendbp;
                 addrpayload->B.spent = 1;
                 addrptr->unspent -= addrpayload->value;
@@ -7419,7 +7420,7 @@ void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
         estsizeV = (ram->Vblocks.sum / ram->Vblocks.count) * ram->S.RTblocknum;
     if ( ram->Bblocks.count != 0 )
         estsizeB = (ram->Bblocks.sum / ram->Bblocks.count) * ram->S.RTblocknum;
-    sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->S.RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->numoutputs,dstr(ram->totaloutputs),(long long)ram->numspends,dstr(ram->totalspends),(long long)(ram->numoutputs - ram->numspends),dstr(ram->totaloutputs - ram->totalspends),dstr(ram->totaloutputs - ram->totalspends)/(ram->numoutputs - ram->numspends));
+    sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->S.RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->S.numoutputs,dstr(ram->S.totaloutputs),(long long)ram->S.numspends,dstr(ram->S.totalspends),(long long)(ram->S.numoutputs - ram->S.numspends),dstr(ram->S.totaloutputs - ram->S.totalspends),dstr(ram->S.totaloutputs - ram->S.totalspends)/(ram->S.numoutputs - ram->S.numspends));
 }
 
 void ram_disp_status(struct ramchain_info *ram)
