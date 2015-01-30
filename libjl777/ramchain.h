@@ -3002,7 +3002,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
             } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
         jsonstr = cJSON_Print(json);
-        if ( ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
+        if ( 0 && ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
         {
             sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
             save_MGW_status(name,jsonstr);
@@ -5381,7 +5381,7 @@ int32_t ram_calc_scriptmode(uint64_t *redeemtxidp,int32_t *datalenp,uint8_t scri
                 }
                 if ( redeemtxidp != 0 )
                     *redeemtxidp = redeemtxid;
-                printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,redeemtxid);
+                printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,(long long)redeemtxid);
                 getchar();
             }
         }
