@@ -5345,7 +5345,7 @@ uint64_t ram_check_redeemcointx(struct ramchain_info *ram,char *script)
 {
     uint64_t redeemtxid;
     int32_t i;
-    if ( strcmp(script+16,"000000000000000000000000") == 0 )
+    if ( strcmp(script+16,"00000000000000000000000088ac") == 0 )
     {
         for (redeemtxid=i=0; i<(int32_t)sizeof(uint64_t); i++)
         {
@@ -5353,7 +5353,7 @@ uint64_t ram_check_redeemcointx(struct ramchain_info *ram,char *script)
             redeemtxid |= (_decode_hex(&script[i*2]) & 0xff);
         }
         printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,(long long)redeemtxid);
-    } else printf("(%s).%d\n",script+16,strcmp(script+16,"000000000000000000000000"));
+    }// else printf("(%s).%d\n",script+16,strcmp(script+16,"000000000000000000000000"));
     return(redeemtxid);
 }
 
@@ -7513,6 +7513,7 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
             if ( (scriptptr->unspent= ram_check_redeemcointx(ram,scriptstr)) != 0 )  // this is MGW redeemtxid (inefficient, should be done binary)
             {
                 ram_txid(txidstr,ram,txid_rawind);
+                printf("coin redeemtxid.(%s)\n",txidstr);
                 memset(&B,0,sizeof(B));
                 B.blocknum = blocknum, B.txind = txind, B.v = vout;
                 _ram_update_redeembits(ram,scriptptr->unspent,0,txidstr,&B);
