@@ -205,7 +205,7 @@ char *process_commandline_json(cJSON *json)
 {
     char *inject_pushtx(char *coinstr,cJSON *json);
     bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
-    char *issue_MGWstatus(int32_t mask,char *coinstr,char *userNXTaddr,char *userpubkey,char *email,int32_t rescan,int32_t actionflag);
+    char *issue_ramstatus(char *coinstr);
     struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender);
     int32_t send_email(char *email,char *destNXTaddr,char *pubkeystr,char *msg);
     void issue_genmultisig(char *coinstr,char *userNXTaddr,char *userpubkey,char *email,int32_t buyNXT);
@@ -229,19 +229,7 @@ char *process_commandline_json(cJSON *json)
     copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     if ( strcmp(cmd,"status") == 0 )
-    {
-        //char dispbuf[16384];
-        //if ( set_bridge_dispbuf(dispbuf,coin) > 0 )
-        //    return(clonestr(dispbuf));
-        //else return(clonestr("{\"error\":\"no MGW status available\"}"));
-
-        waitfor = "MGWresponse";
-        strcpy(cmdstr,cmd);
-        //printf("cmdstr.(%s) waitfor.(%s)\n",cmdstr,waitfor);
-        retstr = issue_MGWstatus((1<<NUM_GATEWAYS)-1,coin,userNXTaddr,userpubkey,0,rescan,actionflag);
-        if ( retstr != 0 )
-            free(retstr), retstr = 0;
-    }
+        return(issue_ramstatus(coin));
     else
     {
         if ( strcmp(cmd,"pushtx") == 0 )
