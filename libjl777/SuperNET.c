@@ -230,17 +230,17 @@ char *process_commandline_json(cJSON *json)
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     if ( strcmp(cmd,"status") == 0 )
     {
-        char dispbuf[16384];
-        if ( set_bridge_dispbuf(dispbuf,coin) > 0 )
-            return(clonestr(dispbuf));
-        else return(clonestr("{\"error\":\"no MGW status available\"}"));
-/*
+        //char dispbuf[16384];
+        //if ( set_bridge_dispbuf(dispbuf,coin) > 0 )
+        //    return(clonestr(dispbuf));
+        //else return(clonestr("{\"error\":\"no MGW status available\"}"));
+
         waitfor = "MGWresponse";
         strcpy(cmdstr,cmd);
         //printf("cmdstr.(%s) waitfor.(%s)\n",cmdstr,waitfor);
         retstr = issue_MGWstatus((1<<NUM_GATEWAYS)-1,coin,userNXTaddr,userpubkey,0,rescan,actionflag);
         if ( retstr != 0 )
-            free(retstr), retstr = 0;*/
+            free(retstr), retstr = 0;
     }
     else
     {
