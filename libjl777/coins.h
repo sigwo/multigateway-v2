@@ -1100,7 +1100,8 @@ void init_SuperNET_settings(char *userdir)
     uint64_t nxt64bits;
     extract_cJSON_str(userdir,MAX_JSON_FIELD,MGWconf,"userdir");
     Global_mp->isMM = get_API_int(cJSON_GetObjectItem(MGWconf,"MMatrix"),0);
-    Global_mp->iambridge = get_API_int(cJSON_GetObjectItem(MGWconf,"isbridge"),0);
+    if ( (Global_mp->iambridge = get_API_int(cJSON_GetObjectItem(MGWconf,"isbridge"),0)) != 0 )
+        printf("I AM A BRIDGE\n");
     if ( extract_cJSON_str(Global_mp->myhandle,sizeof(Global_mp->myhandle),MGWconf,"myhandle") <= 0 )
         strcpy(Global_mp->myhandle,"myhandle");
     init_jdatetime(NXT_GENESISTIME,get_API_int(cJSON_GetObjectItem(MGWconf,"timezone"),0) * 3600);
