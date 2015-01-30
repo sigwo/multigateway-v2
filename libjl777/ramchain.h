@@ -5353,7 +5353,7 @@ uint64_t ram_check_redeemcointx(struct ramchain_info *ram,char *script)
             redeemtxid |= (_decode_hex(&script[i*2]) & 0xff);
         }
         printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,(long long)redeemtxid);
-    }// else printf("(%s).%d\n",script+16,strcmp(script+16,"000000000000000000000000"));
+    } else printf("(%s).%d\n",script+16,strcmp(script+16,"00000000000000000000000088ac"));
     return(redeemtxid);
 }
 
