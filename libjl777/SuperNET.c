@@ -766,6 +766,60 @@ void unscript()
     getchar();
 }*/
 
+uint64_t get_NXT_forginginfo(char *gensig,uint32_t height)
+{
+    cJSON *json;
+    uint64_t basetarget = 0;
+    char cmd[4096],*jsonstr;
+    sprintf(cmd,"%s=getBlock&height=%u",NXTSERVER,height);
+    if ( (jsonstr= issue_curl(0,cmd)) != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            basetarget = get_API_int(cJSON_GetObjectItem(json,"baseTarget"),0);
+            copy_cJSON(gensig,cJSON_GetObjectItem(json,"generationSignature"));
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(basetarget);
+}
+
+#define calc_NXThit(NXTpubkey,gensig,len) calc_sha256cat(hithash.bytes,gensig,len,NXTpubkey.bytes,sizeof(NXTpubkey))
+
+bits256 transparent_forging(char *nextgensig,uint32_t height,bits256 *NXTpubkeys,int32_t numaccounts)
+{
+    int _increasing_uint64(const void *a,const void *b);
+    char gensigstr[1024]; uint8_t gensig[512];
+    bits256 hithash; uint64_t basetarget,*sortbuf;
+    int32_t i,len,winner;
+    basetarget = get_NXT_forginginfo(gensigstr,height);
+    len = (int32_t)strlen(gensigstr) >> 1;
+    decode_hex(gensig,len,gensigstr);
+    sortbuf = calloc(numaccounts,2 * sizeof(uint64_t));
+    for (i=0; i<numaccounts; i++)
+    {
+        calc_NXThit(NXTpubkeys[i],gensig,len);
+        sortbuf[(i<<1)] = hithash.txid;
+        sortbuf[(i<<1) + 1] = i;
+    }
+    qsort(sortbuf,numaccounts,sizeof(uint64_t)*2,_increasing_uint64);
+    winner = (int32_t)sortbuf[1];
+    free(sortbuf);
+    // seconds to forge from last block: hit / ( basetarget * effective balanceNXT)
+    return(NXTpubkeys[winner]);
+}
+
+
+/*
+
+var nbst = Math.floor((((blk.baseTarget*accum2)/60)/153722867)*100);
+if(nbst < bst/2) nbst = bst/2;
+if(nbst > bst*2) nbst = bst*2;
+var rbst = Math.floor((((blk.baseTarget*lasttime)/60)/153722867)*100);
+
+*/
+
 int main(int argc,const char *argv[])
 {
     FILE *fp;
