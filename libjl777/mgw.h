@@ -97,6 +97,7 @@ void save_MGW_status(char *NXTaddr,char *jsonstr)
 {
     char fname[1024];
     set_MGW_statusfname(fname,NXTaddr);
+    printf("save_MGW_status.(%s) -> file.(%s)\n",jsonstr,fname);
     save_MGW_file(fname,jsonstr);
 }
 

@@ -3006,11 +3006,11 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
             } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
         jsonstr = cJSON_Print(json);
-        if ( 0 && ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
+        if ( 1 && ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
         {
+            safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
             sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
             save_MGW_status(name,jsonstr);
-            safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
         }
         free(jsonstr);
         free_json(array);
@@ -3415,7 +3415,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     return(orphans);
 }
 
-int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid *tp)
+int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid *tp,uint32_t blocknum)
 { // NXT
     struct ramchain_hashptr *addrptr,*txptr;
     struct rampayload *addrpayload,*txpayload;
@@ -3443,7 +3443,7 @@ int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid 
                     return(1);
                 } else printf("ram_mark_depositcomplete: mismatched rawind or value (%u vs %d) (%.8f vs %.8f)\n",txptr->rawind,addrpayload->otherind,dstr(txpayload->value),dstr(addrpayload->value));
             } else printf("ram_mark_depositcomplete: couldnt find addrpayload for %s vout.%d\n",tp->cointxid,tp->coinv);
-        } else printf("ram_mark_depositcomplete: couldnt find txpayload.%p or tp->coinv.%d >= %d numtxpayloads\n",txpayload,tp->coinv,numtxpayloads);
+        } else printf("ram_mark_depositcomplete: couldnt find txpayload.%p or tp->coinv.%d >= %d numtxpayloads blocknum.%d\n",txpayload,tp->coinv,numtxpayloads,blocknum);
     } else printf("ram_mark_depositcomplete: unexpected null cointxid\n");
     return(0);
 }
@@ -3777,7 +3777,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
                 }
                 if ( tp->completed == 0 )
                 {
-                    if ( ram_mark_depositcomplete(ram,tp) != 0 )
+                    if ( ram_mark_depositcomplete(ram,tp,tp->coinblocknum) != 0 )
                         _complete_assettxid(ram,tp);
                 }
                 if ( Debuglevel > 2 )
@@ -7442,9 +7442,9 @@ void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
     estimatedV = estimate_completion(ram->name,startmilli,ram->Vblocks.processed,(int32_t)ram->S.RTblocknum-ram->Vblocks.blocknum)/60000;
     estimatedB = estimate_completion(ram->name,startmilli,ram->Bblocks.processed,(int32_t)ram->S.RTblocknum-ram->Bblocks.blocknum)/60000;
     if ( ram->Vblocks.count != 0 )
-        estsizeV = (ram->Vblocks.sum / ram->Vblocks.count) * ram->S.RTblocknum;
+        estsizeV = (ram->Vblocks.sum / (1 + ram->Vblocks.count)) * ram->S.RTblocknum;
     if ( ram->Bblocks.count != 0 )
-        estsizeB = (ram->Bblocks.sum / ram->Bblocks.count) * ram->S.RTblocknum;
+        estsizeB = (ram->Bblocks.sum / (1 + ram->Bblocks.count)) * ram->S.RTblocknum;
     sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->S.RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->S.numoutputs,dstr(ram->S.totaloutputs),(long long)ram->S.numspends,dstr(ram->S.totalspends),(long long)(ram->S.numoutputs - ram->S.numspends),dstr(ram->S.totaloutputs - ram->S.totalspends),dstr(ram->S.totaloutputs - ram->S.totalspends)/(ram->S.numoutputs - ram->S.numspends));
 }
 
@@ -7953,7 +7953,7 @@ uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,
             tp = ap->txids[j];
             if ( tp->cointxid != 0 && strcmp(tp->cointxid,txidstr) == 0 )
             {
-                if ( ram_mark_depositcomplete(ram,tp) != 0 )
+                if ( ram_mark_depositcomplete(ram,tp,tp->coinblocknum) != 0 )
                     _complete_assettxid(ram,tp);
                 break;
             }
@@ -8072,12 +8072,6 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
                 }
             //else printf("hpptr.%p hp.%p newflag.%d\n",hpptr,hp,newflag);
         } //else printf("ram_process_blocks: hpptr.%p hp.%p\n",hpptr,hp);
-        if ( blocks->format == 'B' && blocks->blocknum >= ram->S.RTblocknum-1 )
-        {
-            //ram_emit_blockcheck(ram_gethash(ram,'a')->newfp,blocks->blocknum);
-            //ram_emit_blockcheck(ram_gethash(ram,'t')->newfp,blocks->blocknum);
-            //ram_emit_blockcheck(ram_gethash(ram,'s')->newfp,blocks->blocknum);
-        }
         blocks->processed += (1 << blocks->shift);
         blocks->blocknum += (1 << blocks->shift);
         estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->S.RTblocknum-blocks->blocknum) / 60000.;
