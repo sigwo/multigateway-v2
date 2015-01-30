@@ -2952,7 +2952,7 @@ void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector
         ram->S.supply = (ram->S.totaloutputs - ram->S.totalspends);
         ram->otherS[ram->S.gatewayid] = ram->S;
     }
-    sprintf(pingstr,"\"gatewayid\":\"%d\",\"balance\":\"%.8f\",\"sentNXT\":\"%.0f\",\"unspent\":\"%.8f\",\"supply\":\"%.8f\",\"circulation\":\"%.8f\",\"pendingredeems\":\"%.8f\",\"pendingdeposits\":\"%.8f\",\"internal\":\"%.8f\",\"RTNXT\":{\"height\":\"%d\",\"lag\":\"%d\",\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":\"%d\",\"lag\":\"%d\"},",sp->gatewayid,dstr(sp->MGWbalance),dstr(sp->sentNXT),dstr(sp->MGWunspent),dstr(sp->supply),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
+    sprintf(pingstr,"\"gatewayid\":\"%d\",\"balance\":\"%llu\",\"sentNXT\":\"%llu\",\"unspent\":\"%llu\",\"supply\":\"%llu\",\"circulation\":\"%llu\",\"pendingredeems\":\"%llu\",\"pendingdeposits\":\"%llu\",\"internal\":\"%llu\",\"RTNXT\":{\"height\":\"%d\",\"lag\":\"%d\",\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":\"%d\",\"lag\":\"%d\"},",sp->gatewayid,(long long)(sp->MGWbalance),(long long)(sp->sentNXT),(long long)(sp->MGWunspent),(long long)(sp->supply),(long long)(sp->circulation),(long long)(sp->MGWpendingredeems),(long long)(sp->MGWpendingdeposits),(long long)(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
  }
 
 void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector)
@@ -2983,14 +2983,14 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
             if ( strcmp(ram->special_NXTaddrs[gatewayid],sender) == 0 )
             {
                 sp = &ram->otherS[gatewayid];
-                sp->MGWbalance = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"balance"));
-                sp->sentNXT = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"sentNXT"));
-                sp->MGWunspent = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"unspent"));
-                sp->circulation = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"circulation"));
-                sp->MGWpendingredeems = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"pendingredeems"));
-                sp->MGWpendingdeposits = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"pendingdeposits"));
-                sp->supply = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"supply"));
-                sp->orphans = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"internal"));
+                sp->MGWbalance = get_API_nxt64bits(cJSON_GetObjectItem(json,"balance"));
+                sp->sentNXT = get_API_nxt64bits(cJSON_GetObjectItem(json,"sentNXT"));
+                sp->MGWunspent = get_API_nxt64bits(cJSON_GetObjectItem(json,"unspent"));
+                sp->circulation = get_API_nxt64bits(cJSON_GetObjectItem(json,"circulation"));
+                sp->MGWpendingredeems = get_API_nxt64bits(cJSON_GetObjectItem(json,"pendingredeems"));
+                sp->MGWpendingdeposits = get_API_nxt64bits(cJSON_GetObjectItem(json,"pendingdeposits"));
+                sp->supply = get_API_nxt64bits(cJSON_GetObjectItem(json,"supply"));
+                sp->orphans = get_API_nxt64bits(cJSON_GetObjectItem(json,"internal"));
                 if ( (nxtobj= cJSON_GetObjectItem(json,"RTNXT")) != 0 )
                 {
                     sp->NXT_RTblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"height"),0);
