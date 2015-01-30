@@ -475,21 +475,26 @@ void *GUIpoll_loop(void *arg)
 {
     cJSON *json;
     uint16_t port;
+    int32_t sleeptime = 1;
     char txidstr[1024],buf[MAX_JSON_FIELD],senderipaddr[1024],*retstr;
     while ( 1 )
     {
+        sleeptime = 1;
         if ( (retstr= GUIpoll(txidstr,senderipaddr,&port)) != 0 )
         {
             if ( (json= cJSON_Parse(retstr)) != 0 )
             {
                 copy_cJSON(buf,cJSON_GetObjectItem(json,"result"));
-                if ( strcmp(buf,"MGWstatus") == 0 )
+                if ( strcmp(buf,"nothing pending") == 0 )
+                    sleeptime = 0;
+                else if ( strcmp(buf,"MGWstatus") == 0 )
                     printf("%s\n",retstr);
                 free_json(json);
             }
             free(retstr);
         }
-        else sleep(1);
+        else if ( sleeptime != 0 )
+            sleep(sleeptime);
     }
     return(0);
 }
