@@ -1044,6 +1044,10 @@ void init_legacyMGW(char *myipaddr)
     extract_cJSON_str(Server_ipaddrs[2],sizeof(Server_ipaddrs[2]),MGWconf,"MGW2_ipaddr");
     if ( Server_ipaddrs[2][0] == 0 )
         strcpy(Server_ipaddrs[2],MGW2_IPADDR);
+    extract_cJSON_str(Server_ipaddrs[3],sizeof(Server_ipaddrs[3]),MGWconf,"BRIDGE_ipaddr");
+    if ( Server_ipaddrs[3][0] == 0 )
+        strcpy(Server_ipaddrs[3],"76.176.198.6");
+    
   // extract_cJSON_str(NXTACCTSECRET,sizeof(NXTACCTSECRET),MGWconf,"secret");
     Global_mp->gatewayid = -1;
     for (i=0; i<3; i++)
