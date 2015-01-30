@@ -5383,7 +5383,7 @@ int32_t ram_calc_scriptmode(uint64_t *redeemtxidp,int32_t *datalenp,uint8_t scri
                     *redeemtxidp = redeemtxid;
                 printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,(long long)redeemtxid);
                 getchar();
-            }
+            } else printf("(%s).%d\n",script+16,strcmp(script+16,"000000000000000000000000"));
         }
         mode = 's';
     }
