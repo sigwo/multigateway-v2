@@ -3010,6 +3010,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
         {
             safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
             sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
+            printf("name is (%s)\n",name);
             save_MGW_status(name,jsonstr);
         }
         free(jsonstr);
