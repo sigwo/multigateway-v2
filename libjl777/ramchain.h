@@ -210,7 +210,7 @@ struct MGWstate
 {
     int32_t gatewayid;
     char name[64];
-    int64_t MGWbalance;
+    int64_t MGWbalance,supply;
     uint64_t totalspends,numspends,totaloutputs,numoutputs;
     uint64_t boughtNXT,circulation,sentNXT,MGWpendingredeems,orphans,MGWunspent,MGWpendingdeposits,NXT_ECblock;
     uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,NXT_ECheight;
@@ -2997,15 +2997,18 @@ struct MGWstate *ram_select_MGWstate(struct ramchain_info *ram,int32_t selector)
 void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sprintf(pingstr,"\"gatewayid\":\"%d\",\"balance\":\"%.8f\",\"sentNXT\":\"%.0f\",\"unspent\":\"%.8f\",\"circulation\":\"%.8f\",\"pendingredeems\":\"%.8f\",\"pendingdeposits\":\"%.8f\",\"internal\":\"%.8f\",\"RTNXT\":{\"height\":\"%d\",\"lag\":\"%d\",\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":\"%d\",\"lag\":\"%d\"},",sp->gatewayid,dstr(sp->MGWbalance),dstr(sp->sentNXT),dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
     if ( ram->S.gatewayid >= 0 )
+    {
+        ram->S.supply = (ram->S.totaloutputs - ram->S.totalspends);
         ram->otherS[ram->S.gatewayid] = ram->S;
-}
+    }
+    sprintf(pingstr,"\"gatewayid\":\"%d\",\"balance\":\"%.8f\",\"sentNXT\":\"%.0f\",\"unspent\":\"%.8f\",\"supply\":\"%.8f\",\"circulation\":\"%.8f\",\"pendingredeems\":\"%.8f\",\"pendingdeposits\":\"%.8f\",\"internal\":\"%.8f\",\"RTNXT\":{\"height\":\"%d\",\"lag\":\"%d\",\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":\"%d\",\"lag\":\"%d\"},",sp->gatewayid,dstr(sp->MGWbalance),dstr(sp->sentNXT),dstr(sp->MGWunspent),dstr(sp->supply),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
+ }
 
 void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->totaloutputs - sp->totalspends),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
+    sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->supply),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
 }
 
 void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selector)
@@ -3036,6 +3039,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
                 sp->circulation = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"circulation"));
                 sp->MGWpendingredeems = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"pendingredeems"));
                 sp->MGWpendingdeposits = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"pendingdeposits"));
+                sp->supply = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"supply"));
                 sp->orphans = SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"internal"));
                 if ( (nxtobj= cJSON_GetObjectItem(json,"RTNXT")) != 0 )
                 {
@@ -3052,7 +3056,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
             } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
         jsonstr = cJSON_Print(json);
-        if ( ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
+        if ( 0 && ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
         {
             sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
             save_MGW_status(name,jsonstr);
@@ -3358,7 +3362,8 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     disable_newsends = (ram->numpendingsends > 0);
     if ( disable_newsends != 0 && ram->S.gatewayid >= 0 )
     {
-        if ( 0 && ram->pendingticks++ > MAX_PENDINGSENDS_TICKS )
+        ram->pendingticks++;
+        if ( 0 && ram->pendingticks > MAX_PENDINGSENDS_TICKS )
         {
             fprintf(stderr,"ram->pendingticks.%d > %d MAX_PENDINGSENDS_TICKS, clear and resync\n",ram->pendingticks,MAX_PENDINGSENDS_TICKS);
             ram_add_pendingsend(0,ram,0,0);
@@ -5389,6 +5394,22 @@ int32_t ram_expand_scriptdata(char *scriptstr,uint8_t *scriptdata,int32_t datale
         strcat(scriptstr,suffix);
     }
     return(mode);
+}
+
+uint64_t ram_check_redeemcointx(struct ramchain_info *ram,char *script)
+{
+    uint64_t redeemtxid = 0;
+    int32_t i;
+    if ( strcmp(script+22,"00000000000000000000000088ac") == 0 )
+    {
+        for (redeemtxid=i=0; i<(int32_t)sizeof(uint64_t); i++)
+        {
+            redeemtxid <<= 8;
+            redeemtxid |= (_decode_hex(&script[6 + 14 - i*2]) & 0xff);
+        }
+        printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,(long long)redeemtxid);
+    } //else printf("(%s).%d\n",script+22,strcmp(script+16,"00000000000000000000000088ac"));
+    return(redeemtxid);
 }
 
 int32_t ram_calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,int32_t trimflag)
@@ -7528,7 +7549,8 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     struct ramchain_hashptr *addrptr,*scriptptr;
     struct rawvout_huffs *pair;
     uint32_t scriptind,addrind;
-    char *str,coinaddr[1024];
+    struct address_entry B;
+    char *str,coinaddr[1024],txidstr[512],scriptstr[512];
     uint64_t value;
     int32_t numbits = 0;
     *addr_rawindp = 0;
@@ -7555,6 +7577,15 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     {
         if ( iter != 1 && scriptptr->permind == 0 )
         {
+            ram_script(scriptstr,ram,scriptind);
+            if ( (scriptptr->unspent= ram_check_redeemcointx(ram,scriptstr)) != 0 )  // this is MGW redeemtxid (inefficient, should be done binary)
+            {
+                ram_txid(txidstr,ram,txid_rawind);
+                printf("coin redeemtxid.(%s) with script.(%s)\n",txidstr,scriptstr);
+                memset(&B,0,sizeof(B));
+                B.blocknum = blocknum, B.txind = txind, B.v = vout;
+                _ram_update_redeembits(ram,scriptptr->unspent,0,txidstr,&B);
+            }
             scriptptr->permind = ++ram->next_script_permind;
             ram_write_permentry(table,scriptptr);
             if ( scriptptr->permind != scriptptr->rawind )
@@ -8507,7 +8538,7 @@ char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *destip,char
         return(clonestr("{\"error\":\"no ramchain info\"}"));
     ram_setdispstr(retbuf,ram,ram->startmilli);
     str = stringifyM(retbuf);
-    sprintf(retbuf,"{\"result\":\"MGWstatus\",%s\"ramchain\":\"%s\"}",ram->MGWpingstr,str);
+    sprintf(retbuf,"{\"result\":\"MGWstatus\",%s\"ramchain\":%s}",ram->MGWpingstr,str);
     free(str);
     return(clonestr(retbuf));
 }
