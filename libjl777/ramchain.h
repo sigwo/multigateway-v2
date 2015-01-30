@@ -2967,6 +2967,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
     int32_t gatewayid;
     struct MGWstate *sp;
     cJSON *json,*array,*nxtobj,*coinobj;
+    printf("parse.(%s)\n",pingstr);
     if ( (array= cJSON_Parse(pingstr)) != 0 && is_cJSON_Array(array) != 0 )
     {
         json = cJSON_GetArrayItem(array,0);
@@ -9128,7 +9129,7 @@ void *process_ramchains(void *_argcoinstr)
 }
 
 
-void set_bridge_dispbuf(char *dispbuf,char *coinstr)
+int32_t set_bridge_dispbuf(char *dispbuf,char *coinstr)
 {
     int32_t gatewayid;
     struct ramchain_info *ram;
@@ -9140,7 +9141,10 @@ void set_bridge_dispbuf(char *dispbuf,char *coinstr)
             ram_set_MGWdispbuf(dispbuf,ram,gatewayid);
             sprintf(dispbuf+strlen(dispbuf),"G%d:%s",gatewayid,dispbuf);
         }
+        printf("set_bridge_dispbuf.(%s)\n",dispbuf);
+        return((int32_t)strlen(dispbuf));
     }
+    return(0);
 }
 #endif
 #endif

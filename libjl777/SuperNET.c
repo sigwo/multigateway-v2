@@ -230,10 +230,10 @@ char *process_commandline_json(cJSON *json)
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     if ( strcmp(cmd,"status") == 0 )
     {
-        void set_bridge_dispbuf(char *dispbuf,char *coin);
         char dispbuf[16384];
-        set_bridge_dispbuf(dispbuf,coin);
-        return(clonestr(dispbuf));
+        if ( set_bridge_dispbuf(dispbuf,coin) > 0 )
+            return(clonestr(dispbuf));
+        else return(clonestr("{\"error\":\"no MGW status available\"}"));
 /*
         waitfor = "MGWresponse";
         strcpy(cmdstr,cmd);
