@@ -5341,11 +5341,14 @@ int32_t ram_expand_scriptdata(char *scriptstr,uint8_t *scriptdata,int32_t datale
     return(mode);
 }
 
-int32_t ram_calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *script,int32_t trimflag)
+int32_t ram_calc_scriptmode(uint64_t *redeemtxidp,int32_t *datalenp,uint8_t scriptdata[4096],char *script,int32_t trimflag)
 {
-    int32_t n=0,len,mode = 0;
+    uint64_t redeemtxid = 0;
+    int32_t i,n=0,len,mode = 0;
     len = (int32_t)strlen(script);
     *datalenp = 0;
+   if ( redeemtxidp != 0 )
+       *redeemtxidp = 0;
     if ( len >= 8191 )
     {
         printf("calc_scriptmode overflow len.%d\n",len);
@@ -5369,6 +5372,18 @@ int32_t ram_calc_scriptmode(int32_t *datalenp,uint8_t scriptdata[4096],char *scr
         {
             script[len-4] = 0;
             script += 6;
+            if ( strcmp(script+8,"000000000000000000000000") == 0 )
+            {
+                for (redeemtxid=i=0; i<(int32_t)sizeof(uint64_t); i++)
+                {
+                    redeemtxid <<= 8;
+                    redeemtxid |= (_decode_hex(&script[i*2]) & 0xff);
+                }
+                if ( redeemtxidp != 0 )
+                    *redeemtxidp = redeemtxid;
+                printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,redeemtxid);
+                getchar();
+            }
         }
         mode = 's';
     }
@@ -5549,18 +5564,20 @@ struct ramchain_hashtable *ram_gethash(struct ramchain_info *ram,char type)
     return(0);
 }
 
-uint8_t *ram_encode_hashstr(int32_t *datalenp,uint8_t *data,char type,char *hashstr)
+uint8_t *ram_encode_hashstr(uint64_t *redeemtxidp,int32_t *datalenp,uint8_t *data,char type,char *hashstr)
 {
     uint8_t varbuf[9];
     char buf[8192];
     int32_t varlen,datalen,scriptmode = 0;
     *datalenp = 0;
+    if ( redeemtxidp != 0 )
+        *redeemtxidp = 0;
     if ( type == 's' )
     {
         if ( hashstr[0] == 0 )
             return(0);
         strcpy(buf,hashstr);
-        if ( (scriptmode = ram_calc_scriptmode(&datalen,&data[9],buf,1)) < 0 )
+        if ( (scriptmode = ram_calc_scriptmode(redeemtxidp,&datalen,&data[9],buf,1)) < 0 )
         {
             printf("encode_hashstr: scriptmode.%d for (%s)\n",scriptmode,hashstr);
             exit(-1);
@@ -5732,8 +5749,13 @@ struct ramchain_hashptr *ram_hashsearch(char *coinstr,struct alloc_space *mem,in
     uint8_t data[4097],*hashdata;
     struct ramchain_hashptr *ptr = 0;
     int32_t datalen;
-    if ( hash != 0 && (hashdata= ram_encode_hashstr(&datalen,data,type,hashstr)) != 0 )
+    uint64_t redeemtxid;
+    if ( hash != 0 && (hashdata= ram_encode_hashstr(&redeemtxid,&datalen,data,type,hashstr)) != 0 )
+    {
         ptr = ram_hashdata_search(coinstr,mem,createflag,hash,hashdata,datalen);
+        if ( type == 's' && redeemtxid != 0 )
+            ptr->unspent = redeemtxid;
+    }
     return(ptr);
 }
 
@@ -6128,7 +6150,7 @@ struct ramchain_token *ram_set_token_hashdata(struct ramchain_info *ram,char typ
         }
         else if ( hashstr[0] == 0 )
             token = memalloc(&ram->Tmp,sizeof(*token));
-        else if ( (hashdata= ram_encode_hashstr(&datalen,data,type,hashstr)) != 0 )
+        else if ( (hashdata= ram_encode_hashstr(0,&datalen,data,type,hashstr)) != 0 )
         {
             token = memalloc(&ram->Tmp,sizeof(*token) + datalen - sizeof(token->U));
             memcpy(token->U.hashdata,hashdata,datalen);
@@ -6292,7 +6314,7 @@ void raw_emitstr(HUFF *hp,char type,char *hashstr)
 {
     uint8_t data[8192],*hashdata;
     int32_t i,numbits,datalen = 0;
-    if ( (hashdata= ram_encode_hashstr(&datalen,data,type,hashstr)) != 0 )
+    if ( (hashdata= ram_encode_hashstr(0,&datalen,data,type,hashstr)) != 0 )
     {
         numbits = (datalen << 3);
         for (i=0; i<numbits; i++)
@@ -7465,7 +7487,8 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     struct ramchain_hashptr *addrptr,*scriptptr;
     struct rawvout_huffs *pair;
     uint32_t scriptind,addrind;
-    char *str,coinaddr[1024];
+    struct address_entry B;
+    char *str,coinaddr[1024],txidstr[512];
     uint64_t value;
     int32_t numbits = 0;
     *addr_rawindp = 0;
@@ -7492,6 +7515,13 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     {
         if ( iter != 1 && scriptptr->permind == 0 )
         {
+            if ( scriptptr->unspent != 0 ) // this is MGW redeemtxid
+            {
+                ram_txid(txidstr,ram,txid_rawind);
+                memset(&B,0,sizeof(B));
+                B.blocknum = blocknum, B.txind = txind, B.v = vout;
+                _ram_update_redeembits(ram,scriptptr->unspent,0,txidstr,&B);
+            }
             scriptptr->permind = ++ram->next_script_permind;
             ram_write_permentry(table,scriptptr);
             if ( scriptptr->permind != scriptptr->rawind )
