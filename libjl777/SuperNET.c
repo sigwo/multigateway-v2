@@ -479,16 +479,16 @@ void *GUIpoll_loop(void *arg)
     char txidstr[1024],buf[MAX_JSON_FIELD],senderipaddr[1024],*retstr;
     while ( 1 )
     {
-        sleeptime = 1;
+        sleeptime = 0;
         if ( (retstr= GUIpoll(txidstr,senderipaddr,&port)) != 0 )
         {
             if ( (json= cJSON_Parse(retstr)) != 0 )
             {
                 copy_cJSON(buf,cJSON_GetObjectItem(json,"result"));
                 if ( strcmp(buf,"nothing pending") == 0 )
-                    sleeptime = 0;
+                    sleeptime = 1;
                 else if ( strcmp(buf,"MGWstatus") == 0 )
-                    printf("%s\n",retstr);
+                    printf("sleeptime.%d (%s) (%s)\n",sleeptime,buf,retstr);
                 free_json(json);
             }
             free(retstr);
