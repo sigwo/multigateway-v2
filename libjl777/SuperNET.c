@@ -230,12 +230,17 @@ char *process_commandline_json(cJSON *json)
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     if ( strcmp(cmd,"status") == 0 )
     {
+        void set_bridge_dispbuf(char *dispbuf,char *coin);
+        char dispbuf[16384];
+        set_bridge_dispbuf(dispbuf,coin);
+        return(clonestr(dispbuf));
+/*
         waitfor = "MGWresponse";
         strcpy(cmdstr,cmd);
         //printf("cmdstr.(%s) waitfor.(%s)\n",cmdstr,waitfor);
         retstr = issue_MGWstatus((1<<NUM_GATEWAYS)-1,coin,userNXTaddr,userpubkey,0,rescan,actionflag);
         if ( retstr != 0 )
-            free(retstr), retstr = 0;
+            free(retstr), retstr = 0;*/
     }
     else
     {

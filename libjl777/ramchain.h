@@ -9127,5 +9127,20 @@ void *process_ramchains(void *_argcoinstr)
         sleep(60);
 }
 
+
+void set_bridge_dispbuf(char *dispbuf,char *coinstr)
+{
+    int32_t gatewayid;
+    struct ramchain_info *ram;
+    dispbuf[0] = 0;
+    if ( (ram= get_ramchain_info(coinstr)) != 0 )
+    {
+        for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
+        {
+            ram_set_MGWdispbuf(dispbuf,ram,gatewayid);
+            sprintf(dispbuf+strlen(dispbuf),"G%d:%s",gatewayid,dispbuf);
+        }
+    }
+}
 #endif
 #endif
