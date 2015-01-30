@@ -228,7 +228,7 @@ struct ramchain_info
     uint64_t MGWbits,*limboarray;
     struct cointx_input *MGWunspents;
     uint32_t min_NXTconfirms,NXTtimestamp,MGWnumunspents,MGWmaxunspents,numspecials,depositconfirms,firsttime,numpendingsends,pendingticks;
-    char multisigchar,**special_NXTaddrs,*MGWredemption,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024];
+    char multisigchar,**special_NXTaddrs,*MGWredemption,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];
     struct NXT_assettxid *pendingsends[512];
     float lastgetinfo,NXTconvrate;
 };
@@ -2966,7 +2966,7 @@ void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selec
 void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
 {
     void save_MGW_status(char *NXTaddr,char *jsonstr);
-    char mgwstr[16],*jsonstr;
+    char name[512],*jsonstr;
     int32_t gatewayid;
     struct MGWstate *sp;
     cJSON *json,*array,*nxtobj,*coinobj;
@@ -3001,9 +3001,13 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
                 }
             } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
-        sprintf(mgwstr,"MGW%d",gatewayid);
         jsonstr = cJSON_Print(json);
-        //save_MGW_status(mgwstr,jsonstr);
+        if ( ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
+        {
+            sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
+            save_MGW_status(name,jsonstr);
+            safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
+        }
         free(jsonstr);
         free_json(array);
     }
