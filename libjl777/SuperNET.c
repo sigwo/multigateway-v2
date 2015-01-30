@@ -465,13 +465,23 @@ void bridge_handler(struct transfer_args *args)
 
 void *GUIpoll_loop(void *arg)
 {
+    cJSON *json;
     uint16_t port;
-    char txidstr[1024],senderipaddr[1024],*retstr;
+    char txidstr[1024],buf[MAX_JSON_FIELD],senderipaddr[1024],*retstr;
     while ( 1 )
     {
-        sleep(1);
         if ( (retstr= GUIpoll(txidstr,senderipaddr,&port)) != 0 )
+        {
+            if ( (json= cJSON_Parse(retstr)) != 0 )
+            {
+                copy_cJSON(buf,cJSON_GetObjectItem(json,"result"));
+                if ( strcmp(buf,"MGWstatus") == 0 )
+                    printf("%s\n",retstr);
+                free_json(json);
+            }
             free(retstr);
+        }
+        else sleep(1);
     }
     return(0);
 }
@@ -871,7 +881,11 @@ int main(int argc,const char *argv[])
         //    printf("ERROR hist process_hashtablequeues\n");
     }
     while ( 1 )
-        sleep(60);
+    {
+        //extern void do_bridge_things();
+        //do_bridge_things();
+        sleep(20);
+    }
     return(0);
 }
 
