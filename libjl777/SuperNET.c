@@ -261,7 +261,7 @@ char *process_commandline_json(cJSON *json)
         strcpy(cmdstr,cmd);
         for (i=0; i<100; i++) // flush queue
             GUIpoll(txidstr,senderipaddr,&port);
-        if ( coinstr[0] == 0 )
+        if ( coin[0] == 0 )
         {
             array = cJSON_GetObjectItem(MGWconf,"active");
             if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -285,7 +285,7 @@ char *process_commandline_json(cJSON *json)
         {
             for (iter=0; iter<3; iter++) // give chance for servers to consensus
             {
-                issue_genmultisig(coinstr,userNXTaddr,userpubkey,email,buyNXT);
+                issue_genmultisig(coin,userNXTaddr,userpubkey,email,buyNXT);
                 sleep(3);
             }
         }
