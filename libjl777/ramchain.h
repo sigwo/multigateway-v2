@@ -5345,7 +5345,7 @@ uint64_t ram_check_redeemcointx(struct ramchain_info *ram,char *script)
 {
     uint64_t redeemtxid = 0;
     int32_t i;
-    if ( strcmp(script+16,"00000000000000000000000088ac") == 0 )
+    if ( strcmp(script+22,"00000000000000000000000088ac") == 0 )
     {
         for (redeemtxid=i=0; i<(int32_t)sizeof(uint64_t); i++)
         {
@@ -5353,7 +5353,7 @@ uint64_t ram_check_redeemcointx(struct ramchain_info *ram,char *script)
             redeemtxid |= (_decode_hex(&script[i*2]) & 0xff);
         }
         printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,(long long)redeemtxid);
-    } else printf("(%s).%d\n",script+16,strcmp(script+16,"00000000000000000000000088ac"));
+    } //else printf("(%s).%d\n",script+22,strcmp(script+16,"00000000000000000000000088ac"));
     return(redeemtxid);
 }
 
