@@ -3312,7 +3312,8 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     disable_newsends = (ram->numpendingsends > 0);
     if ( disable_newsends != 0 && ram->S.gatewayid >= 0 )
     {
-        if ( 0 && ram->pendingticks++ > MAX_PENDINGSENDS_TICKS )
+        ram->pendingticks++;
+        if ( 0 && ram->pendingticks > MAX_PENDINGSENDS_TICKS )
         {
             fprintf(stderr,"ram->pendingticks.%d > %d MAX_PENDINGSENDS_TICKS, clear and resync\n",ram->pendingticks,MAX_PENDINGSENDS_TICKS);
             ram_add_pendingsend(0,ram,0,0);
