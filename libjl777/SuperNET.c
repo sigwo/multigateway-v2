@@ -213,8 +213,8 @@ char *process_commandline_json(cJSON *json)
     bits256 pubkeybits;
     unsigned char hash[256>>3],mypublic[256>>3];
     uint16_t port;
-    uint64_t nxt64bits,checkbits,deposit_pending = 0;
-    int32_t i,n,haspubkey,iter,gatewayid,actionflag = 0,rescan = 1;
+    uint64_t nxt64bits,checkbits;//,deposit_pending = 0;
+    int32_t i,n,haspubkey,iter,gatewayid;//,actionflag = 0,rescan = 1;
     uint32_t buyNXT = 0;
     cJSON *array,*argjson,*retjson,*retjsons[3];
     copy_cJSON(cmdstr,cJSON_GetObjectItem(json,"webcmd"));

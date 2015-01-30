@@ -1620,7 +1620,7 @@ char *ramstatus_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         {
             send_to_ipaddr(0,0,destip,origargstr,NXTACCTSECRET);
             for (i=0; i<10; i++)
-            {
+            {break;
                 sleep(1);
                 if ( (str= GUIpoll(txidstr,senderip,&port)) != 0 )
                 {

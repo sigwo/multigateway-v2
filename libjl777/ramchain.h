@@ -2947,16 +2947,17 @@ struct MGWstate *ram_select_MGWstate(struct ramchain_info *ram,int32_t selector)
 void ram_set_MGWpingstr(char *pingstr,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sp->supply = sp->totaloutputs - sp->totalspends;
-    sprintf(pingstr,"\"gatewayid\":\"%d\",\"balance\":\"%.8f\",\"sentNXT\":\"%.0f\",\"unspent\":\"%.8f\",\"supply\":\"%.8f\",\"circulation\":\"%.8f\",\"pendingredeems\":\"%.8f\",\"pendingdeposits\":\"%.8f\",\"internal\":\"%.8f\",\"RTNXT\":{\"height\":\"%d\",\"lag\":\"%d\",\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":\"%d\",\"lag\":\"%d\"},",sp->gatewayid,dstr(sp->MGWbalance),dstr(sp->sentNXT),dstr(sp->MGWunspent),dstr(sp->supply),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
     if ( ram->S.gatewayid >= 0 )
+    {
+        ram->S.supply = (ram->S.totaloutputs - ram->S.totalspends);
         ram->otherS[ram->S.gatewayid] = ram->S;
-}
+    }
+    sprintf(pingstr,"\"gatewayid\":\"%d\",\"balance\":\"%.8f\",\"sentNXT\":\"%.0f\",\"unspent\":\"%.8f\",\"supply\":\"%.8f\",\"circulation\":\"%.8f\",\"pendingredeems\":\"%.8f\",\"pendingdeposits\":\"%.8f\",\"internal\":\"%.8f\",\"RTNXT\":{\"height\":\"%d\",\"lag\":\"%d\",\"ECblock\":\"%llu\",\"ECheight\":\"%u\"},\"%s\":{\"height\":\"%d\",\"lag\":\"%d\"},",sp->gatewayid,dstr(sp->MGWbalance),dstr(sp->sentNXT),dstr(sp->MGWunspent),dstr(sp->supply),dstr(sp->circulation),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),dstr(sp->orphans),sp->NXT_RTblocknum,sp->NXT_RTblocknum-sp->NXTblocknum,(long long)sp->NXT_ECblock,sp->NXT_ECheight,sp->name,sp->RTblocknum,sp->RTblocknum - sp->blocknum);
+ }
 
 void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector)
 {
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
-    sp->supply = sp->totaloutputs - sp->totalspends;
     sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->supply),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
 }
 
