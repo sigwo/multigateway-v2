@@ -393,14 +393,14 @@ char *process_commandline_json(cJSON *json)
         if ( retjsons[i] != 0 )
             cJSON_AddItemToArray(json,retjsons[i]);
     }
-    if ( deposit_pending != 0 )
+    /*if ( deposit_pending != 0 )
     {
         actionflag = 1;
         rescan = 0;
         retstr = issue_MGWstatus(1<<NUM_GATEWAYS,coin,0,0,0,rescan,actionflag);
         if ( retstr != 0 )
             free(retstr), retstr = 0;
-    }
+    }*/
     retstr = cJSON_Print(json);
     free_json(json);
     if ( email[0] != 0 )
