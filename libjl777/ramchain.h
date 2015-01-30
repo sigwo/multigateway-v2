@@ -2967,7 +2967,8 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
     int32_t gatewayid;
     struct MGWstate *sp;
     cJSON *json,*array,*nxtobj,*coinobj;
-    printf("parse.(%s)\n",pingstr);
+    if ( Debuglevel > 2 )
+        printf("parse.(%s)\n",pingstr);
     if ( (array= cJSON_Parse(pingstr)) != 0 && is_cJSON_Array(array) != 0 )
     {
         json = cJSON_GetArrayItem(array,0);
@@ -2999,7 +3000,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
         }
         free_json(array);
     }
-    printf("parsed\n");
+    //printf("parsed\n");
 }
 
 int32_t MGWstatecmp(struct MGWstate *spA,struct MGWstate *spB)
