@@ -3002,7 +3002,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
         }
         sprintf(mgwstr,"MGW%d",gatewayid);
         jsonstr = cJSON_Print(json);
-        save_MGW_status(mgwstr,jsonstr);
+        //save_MGW_status(mgwstr,jsonstr);
         free(jsonstr);
         free_json(array);
     }
