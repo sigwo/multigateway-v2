@@ -332,7 +332,7 @@ void run_UVloop(void *arg)
 void run_libwebsockets(void *arg)
 {
     int32_t usessl = *(int32_t *)arg;
-    init_API_port(usessl,APIPORT+!usessl,APISLEEP);
+    init_API_port(USESSL,APIPORT+!usessl,APISLEEP);
 }
 
 void init_NXThashtables(struct NXThandler_info *mp)
