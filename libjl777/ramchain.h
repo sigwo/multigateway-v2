@@ -2638,28 +2638,16 @@ uint64_t ram_verify_NXTtxstillthere(struct ramchain_info *ram,uint64_t txidbits)
     _expand_nxt64bits(txidstr,txidbits);
     if ( (retstr= _issue_getTransaction(txidstr)) != 0 )
     {
-        printf("verify.(%s)\n",retstr);
+        //printf("verify.(%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             if ( (attach= cJSON_GetObjectItem(json,"attachment")) != 0 )
-            {
                 quantity = get_API_nxt64bits(cJSON_GetObjectItem(attach,"quantityQNT"));
-                free_json(attach);
-            }
-            /*"attachment": {
-                "version.AssetTransfer": 1,
-                "quantityQNT": "1548984",
-                "version.Message": 1,
-                "messageIsText": true,
-                "asset": "11060861818140490423",
-                "message": "{\"redeem\":\"BTCD\",\"withdrawaddr\":\"RSM4BX2DNLXwsuAgvQPXYDpWcLYuiEYDyp\",\"InstantDEX\":\"\"}"
-            },*/
-            
             free_json(json);
         }
         free(retstr);
     }
-    fprintf(stderr,"return %.8f\n",dstr(quantity * ram->ap->mult));
+    //fprintf(stderr,"return %.8f\n",dstr(quantity * ram->ap->mult));
     return(quantity * ram->ap->mult);
 }
 
