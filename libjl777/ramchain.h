@@ -2930,11 +2930,8 @@ int32_t ram_MGW_ready(struct ramchain_info *ram,uint32_t blocknum,uint32_t NXThe
         return(0);
     else if ( blocknum != 0 && ram->S.NXT_is_realtime != 0 && (blocknum + ram->depositconfirms) <= ram->S.RTblocknum && ram->S.enable_deposits != 0 )
         retval = 1;
-    else if ( ram->numpendingsends < (int)(sizeof(ram->pendingsends)/sizeof(*ram->pendingsends)) && NXTheight != 0 && ram->S.is_realtime != 0 )
-    {
-        if ( _enough_confirms(0.,amount * ram->NXTconvrate,ram->S.NXT_RTblocknum - NXTheight,ram->withdrawconfirms) > 0. )
+    else if ( NXTheight != 0 && ram->S.is_realtime != 0 && _enough_confirms(0.,amount * ram->NXTconvrate,ram->S.NXT_RTblocknum - NXTheight,ram->withdrawconfirms) > 0. )
             retval = 1;
-    }
     if ( retval != 0 )
     {
         if ( MGWstatecmp(&ram->otherS[0],&ram->otherS[1]) != 0 || MGWstatecmp(&ram->otherS[0],&ram->otherS[2]) != 0 )
@@ -3022,7 +3019,10 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
     {
         _set_RTmgwname(RTmgwname,ram->name,gatewayid,tp->redeemtxid);
         if ( (cointxs[gatewayid]= loadfile(&allocsize,RTmgwname)) == 0 )
+        {
+            printf("cant find.(%s) for %llu %.8f\n",RTmgwname,(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
             break;
+        }
         for (i=0; i<gatewayid; i++)
             if ( cointxcmp(cointxs[i],cointxs[gatewayid]) != 0 )
             {
