@@ -2633,13 +2633,18 @@ char *_issue_getTransaction(char *txidstr)
 uint64_t ram_verify_NXTtxstillthere(struct ramchain_info *ram,uint64_t txidbits)
 {
     char txidstr[64],*retstr;
-    cJSON *json;
+    cJSON *json,*attach;
     uint64_t quantity = 0;
     _expand_nxt64bits(txidstr,txidbits);
     if ( (retstr= _issue_getTransaction(txidstr)) != 0 )
     {
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
+            if ( (attach= cJSON_GetObjectItem(json,"attachment")) != 0 )
+            {
+                quantity = get_API_nxt64bits(cJSON_GetObjectItem(attach,"quantityQNT"));
+                free_json(attach);
+            }
             /*"attachment": {
                 "version.AssetTransfer": 1,
                 "quantityQNT": "1548984",
@@ -3011,6 +3016,7 @@ void _set_RTmgwname(char *RTmgwname,char *coinstr,int32_t gatewayid,uint64_t red
 char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_assettxid *tp)
 {
     void *loadfile(int32_t *allocsizep,char *fname);
+    uint64_t retval;
     char RTmgwname[1024],*cointxid;
     int32_t i,gatewayid,allocsize;
     struct cointx_info *cointxs[16],*othercointx;
@@ -3039,9 +3045,9 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
     printf("got consensus for %llu %.8f\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
     if ( ram_MGW_ready(ram,0,tp->height,tp->senderbits,tp->U.assetoshis) > 0 )
     {
-        if ( ram_verify_NXTtxstillthere(ram,tp->redeemtxid) != tp->U.assetoshis )
+        if ( (retval= ram_verify_NXTtxstillthere(ram,tp->redeemtxid)) != tp->U.assetoshis )
         {
-            printf("_RTmgw_handler: tx gone due to a fork. NXT.%llu txid.%lld %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
+            printf("_RTmgw_handler: tx gone due to a fork. NXT.%llu txid.%llu %.8f vs retval %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),dstr(retval));
             exit(1); // seems the best thing to do
         }
         othercointx = cointxs[ram->S.gatewayid ^ 1];
