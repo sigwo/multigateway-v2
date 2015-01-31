@@ -229,7 +229,9 @@ char *process_commandline_json(cJSON *json)
     copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     if ( strcmp(cmd,"status") == 0 )
-        return(issue_ramstatus(coin));
+    {
+        //return(issue_ramstatus(coin));
+    }
     else
     {
         if ( strcmp(cmd,"pushtx") == 0 )
