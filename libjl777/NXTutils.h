@@ -432,7 +432,7 @@ char *issue_getAsset(CURL *curl_handle,char *assetidstr)
     //return(issue_NXTPOST(0,cmd));
     //printf("calculated.(%s)\n",ret.str);
     sprintf(cmd,"%s=getAsset&asset=%s",NXTSERVER,assetidstr);
-    printf("cmd.(%s)\n",cmd);
+    //printf("cmd.(%s)\n",cmd);
     return(issue_curl(0,cmd));
 }
 
