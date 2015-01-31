@@ -2966,13 +2966,38 @@ void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selec
     ram_set_MGWpingstr(MGWpingstr,ram,selector);
 }
 
+void ram_parse_MGWstate(struct MGWstate *sp,cJSON *json,char *coinstr)
+{
+    cJSON *nxtobj,*coinobj;
+    sp->MGWbalance = get_API_nxt64bits(cJSON_GetObjectItem(json,"balance"));
+    sp->sentNXT = get_API_nxt64bits(cJSON_GetObjectItem(json,"sentNXT"));
+    sp->MGWunspent = get_API_nxt64bits(cJSON_GetObjectItem(json,"unspent"));
+    sp->circulation = get_API_nxt64bits(cJSON_GetObjectItem(json,"circulation"));
+    sp->MGWpendingredeems = get_API_nxt64bits(cJSON_GetObjectItem(json,"pendingredeems"));
+    sp->MGWpendingdeposits = get_API_nxt64bits(cJSON_GetObjectItem(json,"pendingdeposits"));
+    sp->supply = get_API_nxt64bits(cJSON_GetObjectItem(json,"supply"));
+    sp->orphans = get_API_nxt64bits(cJSON_GetObjectItem(json,"internal"));
+    if ( (nxtobj= cJSON_GetObjectItem(json,"RTNXT")) != 0 )
+    {
+        sp->NXT_RTblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"height"),0);
+        sp->NXTblocknum = (sp->NXT_RTblocknum - (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"lag"),0));
+        sp->NXT_ECblock = get_API_nxt64bits(cJSON_GetObjectItem(nxtobj,"ECblock"));
+        sp->NXT_ECheight = (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"ECheight"),0);
+    }
+    if ( (coinobj= cJSON_GetObjectItem(json,coinstr)) != 0 )
+    {
+        sp->RTblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(coinobj,"height"),0);
+        sp->blocknum = (sp->NXT_RTblocknum - (uint32_t)get_API_int(cJSON_GetObjectItem(coinobj,"lag"),0));
+    }
+}
+
 void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
 {
     void save_MGW_status(char *NXTaddr,char *jsonstr);
     char name[512],*jsonstr;
     int32_t gatewayid;
     struct MGWstate *sp;
-    cJSON *json,*array,*nxtobj,*coinobj;
+    cJSON *json,*array;
     if ( Debuglevel > 2 )
         printf("parse.(%s)\n",pingstr);
     if ( (array= cJSON_Parse(pingstr)) != 0 && is_cJSON_Array(array) != 0 )
@@ -2981,36 +3006,15 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
         if ( (gatewayid= (int32_t)get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1)) >= 0 && gatewayid < ram->numgateways )
         {
             if ( strcmp(ram->special_NXTaddrs[gatewayid],sender) == 0 )
-            {
-                sp = &ram->otherS[gatewayid];
-                sp->MGWbalance = get_API_nxt64bits(cJSON_GetObjectItem(json,"balance"));
-                sp->sentNXT = get_API_nxt64bits(cJSON_GetObjectItem(json,"sentNXT"));
-                sp->MGWunspent = get_API_nxt64bits(cJSON_GetObjectItem(json,"unspent"));
-                sp->circulation = get_API_nxt64bits(cJSON_GetObjectItem(json,"circulation"));
-                sp->MGWpendingredeems = get_API_nxt64bits(cJSON_GetObjectItem(json,"pendingredeems"));
-                sp->MGWpendingdeposits = get_API_nxt64bits(cJSON_GetObjectItem(json,"pendingdeposits"));
-                sp->supply = get_API_nxt64bits(cJSON_GetObjectItem(json,"supply"));
-                sp->orphans = get_API_nxt64bits(cJSON_GetObjectItem(json,"internal"));
-                if ( (nxtobj= cJSON_GetObjectItem(json,"RTNXT")) != 0 )
-                {
-                    sp->NXT_RTblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"height"),0);
-                    sp->NXTblocknum = (sp->NXT_RTblocknum - (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"lag"),0));
-                    sp->NXT_ECblock = get_API_nxt64bits(cJSON_GetObjectItem(nxtobj,"ECblock"));
-                    sp->NXT_ECheight = (uint32_t)get_API_int(cJSON_GetObjectItem(nxtobj,"ECheight"),0);
-                }
-                if ( (coinobj= cJSON_GetObjectItem(json,ram->name)) != 0 )
-                {
-                    sp->RTblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(coinobj,"height"),0);
-                    sp->blocknum = (sp->NXT_RTblocknum - (uint32_t)get_API_int(cJSON_GetObjectItem(coinobj,"lag"),0));
-                }
-            } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
+                ram_parse_MGWstate(&ram->otherS[gatewayid],json,ram->name);
+            else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
         jsonstr = cJSON_Print(json);
         if ( gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
         {
             safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
             sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
-            printf("name is (%s) + (%s) -> (%s)\n",ram->name,Server_ipaddrs[gatewayid],name);
+            //printf("name is (%s) + (%s) -> (%s)\n",ram->name,Server_ipaddrs[gatewayid],name);
             save_MGW_status(name,jsonstr);
         }
         free(jsonstr);
