@@ -8829,7 +8829,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     double startmilli;
     char fname[1024];
     startmilli = ram_millis();
-    strcpy(ram->dirpath,".");
+    strcpy(ram->dirpath,MGWROOT);
     ram->blocks.blocknum = ram->S.RTblocknum = (_get_RTheight(ram) - ram->min_confirms);
     ram->blocks.numblocks = ram->maxblock = (ram->S.RTblocknum + 10000);
     ram_init_directories(ram);
