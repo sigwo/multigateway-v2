@@ -2638,6 +2638,7 @@ uint64_t ram_verify_NXTtxstillthere(struct ramchain_info *ram,uint64_t txidbits)
     _expand_nxt64bits(txidstr,txidbits);
     if ( (retstr= _issue_getTransaction(txidstr)) != 0 )
     {
+        printf("verify.(%s)\n",txidstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             if ( (attach= cJSON_GetObjectItem(json,"attachment")) != 0 )
@@ -3017,7 +3018,7 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
 {
     void *loadfile(int32_t *allocsizep,char *fname);
     uint64_t retval;
-    char RTmgwname[1024],*cointxid;
+    char RTmgwname[1024],*cointxid,*retstr = 0;
     int32_t i,gatewayid,allocsize;
     struct cointx_info *cointxs[16],*othercointx;
     memset(cointxs,0,sizeof(cointxs));
@@ -3050,19 +3051,19 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
             printf("_RTmgw_handler: tx gone due to a fork. NXT.%llu txid.%llu %.8f vs retval %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),dstr(retval));
             exit(1); // seems the best thing to do
         }
-        othercointx = cointxs[ram->S.gatewayid ^ 1];
+        othercointx = cointxs[(ram->S.gatewayid ^ 1) % ram->numgateways];
         if ( (cointxid= _sign_and_sendmoney(txidstr,ram,cointxs[ram->S.gatewayid],othercointx->signedtx,&tp->redeemtxid,&tp->U.assetoshis,1)) != 0 )
         {
             _complete_assettxid(ram,tp);
             //ram_add_pendingsend(&sendi,ram,tp,0);
-            printf("completed redeem.%llu for %.8f\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
-            return(txidstr);
+            printf("completed redeem.%llu for %.8f cointxidstr.%s\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),txidstr);
+            retstr = txidstr;
         }
         else printf("_RTmgw_handler: error _sign_and_sendmoney for NXT.%llu redeem.%llu %.8f (%s)\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),othercointx->signedtx);
     }
     for (gatewayid=0; gatewayid<ram->numgateways; gatewayid++)
         free(cointxs[gatewayid]);
-    return(0);
+    return(retstr);
 }
 
 void _RTmgw_handler(struct transfer_args *args)
