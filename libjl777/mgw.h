@@ -2054,6 +2054,8 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     char refNXTaddr[64],hopNXTaddr[64],destNXTaddr[64],mypubkey[1024],myacctcoinaddr[1024],pubkey[1024],acctcoinaddr[1024],buf[1024],*retstr = 0;
     uint64_t refbits = 0;
     int32_t i,iter,flag,valid = 0;
+    if ( cp == 0 )
+        return(clonestr("\"error\":\"genmultisig unsupported coin\"}"));
     for (i=0; i<3; i++) // MGW bypass
     {
         contacts[i] = &_contacts[i];
