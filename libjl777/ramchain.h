@@ -2951,11 +2951,11 @@ struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info
     else
     {
         *ramp = ram;
-        if ( strncmp(recvname,ram->name,strlen(ram->name)) != 0 )
+        /*if ( strncmp(recvname,ram->name,strlen(ram->name)) != 0 ) // + archive/RTmgw/
         {
-            printf("_process_realtime_MGW: coin mismatch recvname.(%s) vs %s\n",recvname,ram->name);
+            printf("_process_realtime_MGW: coin mismatch recvname.(%s) vs (%s).%ld\n",recvname,ram->name,strlen(ram->name));
             return(0);
-        }
+        }*/
         crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize-sizeof(cointx->crc)));
         if ( crc != cointx->crc )
         {
@@ -3035,6 +3035,9 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
     printf("got consensus for %llu %.8f\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
     if ( ram_MGW_ready(ram,0,tp->height,tp->senderbits,tp->U.assetoshis) > 0 )
     {
+   // _process_realtime_MGW: coin mismatch recvname.(archive/RTmgw/BTCD.15171760342552245430.g0) vs BTCD
+        // need to wait for N coinblocks!!
+  //      getchar();
         if ( (retval= ram_verify_NXTtxstillthere(ram,tp->redeemtxid)) != tp->U.assetoshis )
         {
             fprintf(stderr,"_RTmgw_handler: tx gone due to a fork. NXT.%llu txid.%llu %.8f vs retval %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),dstr(retval));
@@ -3083,10 +3086,10 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
     FILE *fp;
     _set_RTmgwname(RTmgwname,cointx->coinstr,cointx->gatewayid,cointx->redeemtxid);
     cointx->crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize - sizeof(cointx->crc)));
-    //printf("save to (%s) crc.%x\n",fname,cointx->crc);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
-        fwrite(cointx,1,sizeof(*cointx),fp);
+        printf("save to (%s).%d crc.%x | batchcrc %x\n",fname,cointx->allocsize,cointx->crc,cointx->batchcrc);
+        fwrite(cointx,1,cointx->allocsize,fp);
         fclose(fp);
     }
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
