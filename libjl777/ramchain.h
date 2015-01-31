@@ -228,7 +228,7 @@ struct ramchain_info
     uint64_t MGWbits,*limboarray;
     struct cointx_input *MGWunspents;
     uint32_t min_NXTconfirms,NXTtimestamp,MGWnumunspents,MGWmaxunspents,numspecials,depositconfirms,firsttime,numpendingsends,pendingticks;
-    char multisigchar,**special_NXTaddrs,*MGWredemption,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];
+    char multisigchar,**special_NXTaddrs,*MGWredemption,*backups,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];
     struct NXT_assettxid *pendingsends[512];
     float lastgetinfo,NXTconvrate;
 };
@@ -801,7 +801,7 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
         printf(" | ");
         printf("permalloc new space.%ld %s | selector.%d itemsize.%ld total.%ld n.%ld ave %.1f | total %s n.%ld ave %.1f\n",mem->size,_mbstr(mem->size),selector,size,totals[selector],counts[selector],(double)totals[selector]/counts[selector],_mbstr2(totals[0]),counts[0],(double)totals[0]/counts[0]);
         memset(&M,0,sizeof(M));
-        sprintf(fname,"ramchains/%s/bitstream/space.%ld",coinstr,n);
+        sprintf(fname,"/tmp/%s.space.%ld",coinstr,n);
         fix_windows_insanity(fname);
         // delete_file(fname,0);
         if ( size > mem->size )
@@ -1920,7 +1920,7 @@ char *_submit_withdraw(struct ramchain_info *ram,struct cointx_info *cointx,char
             free(retstr);
             if ( cointxid[0] != 0 )
             {
-                sprintf(fname,"ramchains/backups/%s.%s",cointxid,ram->name);
+                sprintf(fname,"%s/%s.%s",ram->backups,cointxid,ram->name);
                 if ( (fp= fopen(fname,"w")) != 0 )
                 {
                     fprintf(fp,"%s\n",signed2transaction);
@@ -3006,7 +3006,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
             } else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
         }
         jsonstr = cJSON_Print(json);
-        if ( 1 && ram->S.gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
+        if ( gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
         {
             safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
             sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
@@ -4015,7 +4015,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
         for (j=0; j<ram->numspecials; j++)
         {
             fp = 0;
-            sprintf(fname,"ramchains/NXT.%s",ram->special_NXTaddrs[j]);
+            sprintf(fname,"%s/ramchains/NXT.%s",MGWROOT,ram->special_NXTaddrs[j]);
             printf("init NXT special.%d of %d (%s) [%s]\n",j,ram->numspecials,ram->special_NXTaddrs[j],fname);
             timestamp = 0;
             for (iter=1; iter<2; iter++)
@@ -4059,7 +4059,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                 }
             }
         }
-        sprintf(fname,"ramchains/NXTasset.%llu",(long long)ap->assetbits);
+        sprintf(fname,"%s/ramchains/NXTasset.%llu",MGWROOT,(long long)ap->assetbits);
         fp = 0;
         if ( 1 || (fp= fopen(fname,"rb")) == 0 )
         {
@@ -4869,10 +4869,10 @@ int32_t huffpair_save(FILE *fp,struct huffpair *pair)
 
 void huff_compressionvars_fname(int32_t readonly,char *fname,char *coinstr,char *typestr,int32_t subgroup)
 {
-    char *dirname = (0*readonly != 0) ? "/Users/jimbolaptop/ramchains" : "ramchains";
+    char *dirname = MGWROOT;
     if ( subgroup < 0 )
-        sprintf(fname,"%s/%s/%s.%s",dirname,coinstr,coinstr,typestr);
-    else sprintf(fname,"%s/%s/%s/%s.%d",dirname,coinstr,typestr,coinstr,subgroup);
+        sprintf(fname,"%s/ramchains/%s/%s.%s",dirname,coinstr,coinstr,typestr);
+    else sprintf(fname,"%s/ramchains/%s/%s/%s.%d",dirname,coinstr,typestr,coinstr,subgroup);
 }
 
 int32_t huffpair_gencode(struct ramchain_info *ram,struct huffpair *pair,int32_t frequi)
@@ -8883,7 +8883,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     if ( ram->marker != 0 && ram->marker[0] != 0 && (ram->marker_rawind= ram_addrind_RO(ram,ram->marker)) == 0 )
         printf("WARNING: MARKER.(%s) set but no rawind. need to have it appear in blockchain first\n",ram->marker);
     printf("%.1f seconds to init_ramchain.%s hashtables marker.(%s) %u\n",(ram_millis() - startmilli)/1000.,ram->name,ram->marker,ram->marker_rawind);
-    sprintf(fname,"ramchains/%s.blocks",ram->name);
+    sprintf(fname,"%s/ramchains/%s.blocks",MGWROOT,ram->name);
     minblocknum = numblocks = ram_map_bitstreams(0,ram,0,ram->blocks.M,&sha,ram->blocks.hps,0,fname,0);
     for (i=0; i<3; i++)
         if ( minblocknum == 0 || (blocknums[i] != 0 && blocknums[i] < minblocknum) )
@@ -8938,7 +8938,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
                         ram->blocks.hps[blocknum] = ram_conv_permind(ram,hp,blocknum);
                     else { printf("unexpected gap at %d\n",blocknum); exit(-1); }
                 }
-                sprintf(fname,"ramchains/%s.perm",ram->name);
+                sprintf(fname,"%s/ramchains/%s.perm",MGWROOT,ram->name);
                 ram_save_bitstreams(&refsha,fname,ram->blocks.hps,ram->blocks.contiguous);
                 ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,ram->blocks.contiguous,fname,&refsha);
                 printf("converted to permind, please copy over files with .perm files and restart\n");
@@ -8974,7 +8974,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
         if ( numblocks == 0 && errs == 0 && ram->blocks.contiguous > 4096 )
         {
             datalen = -1;
-            sprintf(fname,"ramchains/%s.blocks",ram->name);
+            sprintf(fname,"%s/ramchains/%s.blocks",MGWROOT,ram->name);
             printf("&refsha.%p (%s) hps.%p cont.%d\n",&refsha,fname,ram->blocks.hps,ram->blocks.contiguous);
             if ( ram_save_bitstreams(&refsha,fname,ram->blocks.hps,ram->blocks.contiguous) > 0 )
                 datalen = ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,ram->blocks.contiguous,fname,&refsha);

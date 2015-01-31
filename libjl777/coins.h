@@ -844,6 +844,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     ram->marker = clonestr(cp->marker);
     ram->opreturnmarker = clonestr(cp->privateaddr);
     ram->dust = cp->dust;
+    ram->backups = clonestr(cp->backupdir);
     ram->userpass = clonestr(cp->userpass);
     ram->serverport = clonestr(cp->serverport);
     ram->lastheighttime = (uint32_t)cp->lastheighttime;
@@ -961,7 +962,11 @@ void init_coinsarray(char *userdir,char *myipaddr)
                     if ( DATADIR[0] == 0 )
                         strcpy(DATADIR,"archive");
                     if ( MGWROOT[0] == 0 )
-                        strcpy(MGWROOT,"/var/www");
+                    {
+                        if ( Global_mp->gatewayid >= 0 || Global_mp->iambridge != 0 || Global_mp->isMM != 0 )
+                            strcpy(MGWROOT,"/var/www");
+                        else strcpy(MGWROOT,".");
+                    }
                     //addcontact(Global_mp->myhandle,cp->privateNXTADDR);
                     //addcontact("mypublic",cp->srvNXTADDR);
                 }
