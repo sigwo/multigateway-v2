@@ -267,9 +267,9 @@ char *process_commandline_json(cJSON *json)
                 free(buf);
                 fclose(fp);
             }
-            if ( jsonflag != 0 )
-                printf("]");
         }
+        if ( jsonflag != 0 )
+            printf("]");
         return(0);
        //return(issue_ramstatus(coin));
     }
