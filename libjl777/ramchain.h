@@ -3025,7 +3025,10 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
             break;
         for (i=0; i<gatewayid; i++)
             if ( cointxcmp(cointxs[i],cointxs[gatewayid]) != 0 )
+            {
+                printf("MGW%d %x != %x MGW%d for redeem.%llu %.8f\n",i,cointxs[i]->batchcrc,cointxs[gatewayid]->batchcrc,gatewayid,(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
                 break;
+            }
     }
     if ( gatewayid != ram->numgateways )
     {
