@@ -7415,7 +7415,7 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
         if ( (hash->ind + 1) > ram->maxind )
             ram->maxind = (hash->ind + 1);
         ram_sethashtype(str,hash->type);
-        sprintf(destfname,"ramchains/%s.%s",ram->name,str);
+        sprintf(destfname,"%s/ramchains/%s.%s",MGWROOT,ram->name,str);
         if ( (len= copy_file(fname,destfname)) > 0 )
             printf("copied (%s) -> (%s) %s\n",fname,destfname,_mbstr(len));
         return(0);
