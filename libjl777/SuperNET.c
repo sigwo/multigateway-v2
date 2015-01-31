@@ -230,7 +230,33 @@ char *process_commandline_json(cJSON *json)
     copy_cJSON(cmd,cJSON_GetObjectItem(json,"requestType"));
     if ( strcmp(cmd,"status") == 0 )
     {
-        //return(issue_ramstatus(coin));
+        struct MGWstate S[3],*sp;
+        char fname[1024],*buf;
+        long fpos;
+        memset(S,0,sizeof(S));
+        FILE *fp;
+        for (i=0; i<3; i++)
+        {
+            sp = &S[i];
+            sprintf(fname,"%s/MGW/status/%s.%s",MGWROOT,coin,Server_ipaddrs[i]);
+            if ( (fp= fopen(fname,"rb")) != 0 )
+            {
+                fseek(fp,0,SEEK_END);
+                fpos = ftell(fp);
+                rewind(fp);
+                buf = calloc(1,fpos+1);
+                if ( fread(buf,1,fpos,fp) == fpos && (json= cJSON_Parse(buf)) != 0 )
+                {
+                    ram_parse_MGWstate(sp,json,coin);
+                    printf("G%d:[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d\n",i,dstr(sp->MGWbalance),coin,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->supply),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,coin,sp->RTblocknum);
+                    free_json(json);
+                }
+                free(buf);
+                fclose(fp);
+            }
+        }
+        return(0);
+       //return(issue_ramstatus(coin));
     }
     else
     {

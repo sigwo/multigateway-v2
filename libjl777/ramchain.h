@@ -2996,7 +2996,6 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
     void save_MGW_status(char *NXTaddr,char *jsonstr);
     char name[512],*jsonstr;
     int32_t gatewayid;
-    struct MGWstate *sp;
     cJSON *json,*array;
     if ( Debuglevel > 2 )
         printf("parse.(%s)\n",pingstr);
