@@ -2963,11 +2963,11 @@ struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info
             return(0);
         }
         _expand_nxt64bits(redeemtxidstr,cointx->redeemtxid);
-        if ( strncmp(recvname+strlen(ram->name)+1,redeemtxidstr,strlen(redeemtxidstr)) != 0 )
+        /*if ( strncmp(recvname+strlen(ram->name)+1,redeemtxidstr,strlen(redeemtxidstr)) != 0 )
         {
             printf("_process_realtime_MGW: redeemtxid mismatch (%s) vs (%s)\n",recvname+strlen(ram->name)+1,redeemtxidstr);
             return(0);
-        }
+        }*/
         gatewayid = cointx->gatewayid;
         if ( gatewayid < 0 || gatewayid >= ram->numgateways )
         {
