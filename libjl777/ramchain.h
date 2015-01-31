@@ -2638,7 +2638,7 @@ uint64_t ram_verify_NXTtxstillthere(struct ramchain_info *ram,uint64_t txidbits)
     _expand_nxt64bits(txidstr,txidbits);
     if ( (retstr= _issue_getTransaction(txidstr)) != 0 )
     {
-        printf("verify.(%s)\n",txidstr);
+        printf("verify.(%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             if ( (attach= cJSON_GetObjectItem(json,"attachment")) != 0 )
@@ -2659,6 +2659,7 @@ uint64_t ram_verify_NXTtxstillthere(struct ramchain_info *ram,uint64_t txidbits)
         }
         free(retstr);
     }
+    fprintf(stderr,"return %.8f\n",dstr(quantity * ram->ap->mult));
     return(quantity * ram->ap->mult);
 }
 
@@ -3048,10 +3049,11 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
     {
         if ( (retval= ram_verify_NXTtxstillthere(ram,tp->redeemtxid)) != tp->U.assetoshis )
         {
-            printf("_RTmgw_handler: tx gone due to a fork. NXT.%llu txid.%llu %.8f vs retval %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),dstr(retval));
+            fprintf(stderr,"_RTmgw_handler: tx gone due to a fork. NXT.%llu txid.%llu %.8f vs retval %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),dstr(retval));
             exit(1); // seems the best thing to do
         }
         othercointx = cointxs[(ram->S.gatewayid ^ 1) % ram->numgateways];
+        printf("[%d] othercointx = %p\n",(ram->S.gatewayid ^ 1) % ram->numgateways,othercointx);
         if ( (cointxid= _sign_and_sendmoney(txidstr,ram,cointxs[ram->S.gatewayid],othercointx->signedtx,&tp->redeemtxid,&tp->U.assetoshis,1)) != 0 )
         {
             _complete_assettxid(ram,tp);
