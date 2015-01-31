@@ -9040,7 +9040,8 @@ int Numramchains; struct ramchain_info *Ramchains[100];
 void activate_ramchain(struct ramchain_info *ram,char *name)
 {
     Ramchains[Numramchains++] = ram;
-    printf("ram.%p Add ramchain.(%s) (%s) Num.%d\n",ram,ram->name,name,Numramchains);
+    if ( Debuglevel > 0 )
+        printf("ram.%p Add ramchain.(%s) (%s) Num.%d\n",ram,ram->name,name,Numramchains);
 }
 
 void *process_ramchains(void *_argcoinstr)
