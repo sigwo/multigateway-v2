@@ -2951,11 +2951,11 @@ struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info
     else
     {
         *ramp = ram;
-        /*if ( strncmp(recvname,ram->name,strlen(ram->name)) != 0 ) // + archive/RTmgw/
+        if ( strncmp(recvname,ram->name,strlen(ram->name)) != 0 ) // + archive/RTmgw/
         {
             printf("_process_realtime_MGW: coin mismatch recvname.(%s) vs (%s).%ld\n",recvname,ram->name,strlen(ram->name));
             return(0);
-        }*/
+        }
         crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize-sizeof(cointx->crc)));
         if ( crc != cointx->crc )
         {
@@ -2963,11 +2963,11 @@ struct NXT_assettxid *_process_realtime_MGW(int32_t *sendip,struct ramchain_info
             return(0);
         }
         _expand_nxt64bits(redeemtxidstr,cointx->redeemtxid);
-        /*if ( strncmp(recvname+strlen(ram->name)+1,redeemtxidstr,strlen(redeemtxidstr)) != 0 )
+        if ( strncmp(recvname+strlen(ram->name)+1,redeemtxidstr,strlen(redeemtxidstr)) != 0 )
         {
             printf("_process_realtime_MGW: redeemtxid mismatch (%s) vs (%s)\n",recvname+strlen(ram->name)+1,redeemtxidstr);
             return(0);
-        }*/
+        }
         gatewayid = cointx->gatewayid;
         if ( gatewayid < 0 || gatewayid >= ram->numgateways )
         {
@@ -2995,25 +2995,24 @@ int32_t cointxcmp(struct cointx_info *txA,struct cointx_info *txB)
     return(-1);
 }
 
-void _set_RTmgwname(char *RTmgwname,char *coinstr,int32_t gatewayid,uint64_t redeemtxid)
+void _set_RTmgwname(char *RTmgwname,char *name,char *coinstr,int32_t gatewayid,uint64_t redeemtxid)
 {
     void set_handler_fname(char *fname,char *handler,char *name);
-    char fname[512];
-    sprintf(fname,"%s.%llu.g%d",coinstr,(long long)redeemtxid,gatewayid);
-    set_handler_fname(RTmgwname,"RTmgw",fname);
+    sprintf(name,"%s.%llu.g%d",coinstr,(long long)redeemtxid,gatewayid);
+    set_handler_fname(RTmgwname,"RTmgw",name);
 }
 
 char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_assettxid *tp)
 {
     void *loadfile(int32_t *allocsizep,char *fname);
     uint64_t retval;
-    char RTmgwname[1024],*cointxid,*retstr = 0;
+    char RTmgwname[1024],name[512],*cointxid,*retstr = 0;
     int32_t i,gatewayid,allocsize;
     struct cointx_info *cointxs[16],*othercointx;
     memset(cointxs,0,sizeof(cointxs));
     for (gatewayid=0; gatewayid<ram->numgateways; gatewayid++)
     {
-        _set_RTmgwname(RTmgwname,ram->name,gatewayid,tp->redeemtxid);
+        _set_RTmgwname(RTmgwname,name,ram->name,gatewayid,tp->redeemtxid);
         if ( (cointxs[gatewayid]= loadfile(&allocsize,RTmgwname)) == 0 )
         {
             printf("cant find.(%s) for %llu %.8f\n",RTmgwname,(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
@@ -3081,10 +3080,10 @@ void _RTmgw_handler(struct transfer_args *args)
 void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
 {
     char *start_transfer(char *previpaddr,char *sender,char *verifiedNXTaddr,char *NXTACCTSECRET,char *dest,char *name,uint8_t *data,int32_t totallen,int32_t timeout,char *handler,int32_t syncmem);
-    char RTmgwname[512],*retstr;
+    char RTmgwname[512],name[512],*retstr;
     int32_t gatewayid;
     FILE *fp;
-    _set_RTmgwname(RTmgwname,cointx->coinstr,cointx->gatewayid,cointx->redeemtxid);
+    _set_RTmgwname(RTmgwname,name,cointx->coinstr,cointx->gatewayid,cointx->redeemtxid);
     cointx->crc = _crc32(0,(uint8_t *)((long)cointx+sizeof(cointx->crc)),(int32_t)(cointx->allocsize - sizeof(cointx->crc)));
     if ( (fp= fopen(RTmgwname,"wb")) != 0 )
     {
