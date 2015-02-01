@@ -7184,7 +7184,7 @@ void ram_write_permentry(struct ramchain_hashtable *table,struct ramchain_hashpt
         datalen = ((int32_t)varint + varlen);
         if ( fwrite(ptr->hh.key,1,datalen,table->permfp) != datalen )
         {
-            printf("error saving type.%d ind.%d datalen.%d\n",table->type,ptr->permind,datalen);
+            printf("ram_write_permentry: error saving type.%d ind.%d datalen.%d\n",table->type,ptr->permind,datalen);
             exit(-1);
         }
         fflush(table->permfp);
