@@ -111,6 +111,7 @@ void handler_gotfile(struct transfer_args *args,uint8_t *data,int32_t len,uint32
         set_handler_fname(buf,args->handler,args->name);
         if ( (fp= fopen(buf,"wb")) != 0 )
         {
+            printf("handler_gotfile created.(%s).%d\n",buf,args->totallen);
             fwrite(args->data,1,args->totallen,fp);
             fclose(fp);
         }
