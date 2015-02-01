@@ -3095,7 +3095,7 @@ void ram_send_cointx(struct ramchain_info *ram,struct cointx_info *cointx)
     {
         if ( gatewayid != cointx->gatewayid )
         {
-            retstr = start_transfer(0,ram->srvNXTADDR,ram->srvNXTADDR,ram->srvNXTACCTSECRET,Server_ipaddrs[gatewayid],RTmgwname,(uint8_t *)cointx,cointx->allocsize,300,"RTmgw",1);
+            retstr = start_transfer(0,ram->srvNXTADDR,ram->srvNXTADDR,ram->srvNXTACCTSECRET,Server_ipaddrs[gatewayid],name,(uint8_t *)cointx,cointx->allocsize,300,"RTmgw",1);
             if ( retstr != 0 )
                 free(retstr);
         }
@@ -8852,7 +8852,7 @@ void *process_ramchains(void *_argcoinstr)
                 ram_update_disp(ram);
         }
         if ( processed == 0 )
-            sleep(20);
+            sleep(200);
         MGW_initdone++;
     }
     printf("process_ramchains: finished launching\n");

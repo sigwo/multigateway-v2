@@ -121,6 +121,7 @@ void handler_gotfile(struct transfer_args *args,uint8_t *data,int32_t len,uint32
     }
     else if ( strcmp(args->handler,"bridge") == 0 )
         bridge_handler(args);
+    else printf("unknown handler.(%s)\n",args->handler);
     if ( args->syncmem == 0 )
     {
         memset(args->data,0,args->totallen);
