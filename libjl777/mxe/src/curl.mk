@@ -22,9 +22,11 @@ define $(PKG)_BUILD
         --without-gnutls \
         --without-ssl \
         --without-libidn \
-        --enable-sspi \
-        --enable-ipv6 \
-        --without-libssh2
+        --disable-sspi \
+        --disable-ipv6 \
+        --without-libssh2 \
+	    --disable-ldap \
+	    --disable-ldaps
     $(MAKE) -C '$(1)' -j '$(JOBS)' install $(MXE_DISABLE_DOCS)
     ln -sf '$(PREFIX)/$(TARGET)/bin/curl-config' '$(PREFIX)/bin/$(TARGET)-curl-config'
 

@@ -120,6 +120,9 @@ winpatch64: doesntexist; \
 winexe64: doesntexist; \
     sh quick_win64.sh;
 
+winbtcd64: doesntexist; \
+	sh make_btcd_win64.sh
+
 count:
 	@echo "Core:"
 	@cat $(SRCS) *.h | grep -v '^[ 	]*/\*' | grep -v '^[ 	]*$$' | wc
