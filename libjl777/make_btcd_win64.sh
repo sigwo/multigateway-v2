@@ -1,3 +1,7 @@
+cd mxe
+make qt5 MXE_TARGETS='x86_64-w64-mingw32'
+make qttools MXE_TARGETS='x86_64-w64-mingw32'
+cd ..
 export PATH=$PWD/mxe/usr/bin:$PATH
 echo ">>>>>>>>>building BitcoinDark-qt.exe"
 cp mxe/winheaders/* mxe/usr/x86_64-w64-mingw32.static/include
