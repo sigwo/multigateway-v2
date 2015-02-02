@@ -2569,7 +2569,7 @@ uint64_t _get_NXT_ECblock(uint32_t *ecblockp)
     cJSON *json;
     uint64_t ecblock = 0;
     char cmd[256],*jsonstr;
-    sprintf(cmd,"requestType=getECblock");
+    sprintf(cmd,"requestType=getECBlock");
     if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -3718,11 +3718,11 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
     }
     if ( mostrecent > 0 )
     {
-        printf("mostrecent %d <= %d (ram->S.NXT_RTblocknum %d - %d ram->min_NXTconfirms)\n", mostrecent,(ram->S.NXT_RTblocknum - ram->min_NXTconfirms),ram->S.NXT_RTblocknum,ram->min_NXTconfirms);
+        //printf("mostrecent %d <= %d (ram->S.NXT_RTblocknum %d - %d ram->min_NXTconfirms)\n", mostrecent,(ram->S.NXT_RTblocknum - ram->min_NXTconfirms),ram->S.NXT_RTblocknum,ram->min_NXTconfirms);
         while ( mostrecent <= (ram->S.NXT_RTblocknum - ram->min_NXTconfirms) )
         {
             sprintf(cmd,"requestType=getBlock&height=%u&includeTransactions=true",mostrecent);
-            printf("send cmd.(%s)\n",cmd);
+            //printf("send cmd.(%s)\n",cmd);
             if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
             {
                 printf("getBlock.%d (%s)\n",mostrecent,jsonstr);
@@ -3862,7 +3862,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
     }
     ram->S.circulation = _calc_circulation(ram->min_NXTconfirms,ram->ap,ram);
     ram->S.orphans = _find_pending_transfers(&ram->S.MGWpendingredeems,ram);
-    printf("return mostrecent.%d\n",mostrecent);
+    //printf("return mostrecent.%d\n",mostrecent);
     return(mostrecent);
 }
 
