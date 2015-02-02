@@ -3237,7 +3237,7 @@ int32_t ram_mark_depositcomplete(struct ramchain_info *ram,struct NXT_assettxid 
                     return(1);
                 } else printf("ram_mark_depositcomplete: mismatched rawind or value (%u vs %d) (%.8f vs %.8f)\n",txptr->rawind,addrpayload->otherind,dstr(txpayload->value),dstr(addrpayload->value));
             } else printf("ram_mark_depositcomplete: couldnt find addrpayload for %s vout.%d\n",tp->cointxid,tp->coinv);
-        } else printf("ram_mark_depositcomplete: couldnt find txpayload.%p or tp->coinv.%d >= %d numtxpayloads blocknum.%d\n",txpayload,tp->coinv,numtxpayloads,blocknum);
+        } else printf("ram_mark_depositcomplete: couldnt find (%s) txpayload.%p or tp->coinv.%d >= %d numtxpayloads blocknum.%d\n",tp->cointxid,txpayload,tp->coinv,numtxpayloads,blocknum);
     } else printf("ram_mark_depositcomplete: unexpected null cointxid\n");
     return(0);
 }
@@ -3708,7 +3708,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
     }
     i = _get_NXTheight(&oldest);
     ram->S.NXT_ECblock = _get_NXT_ECblock(&ram->S.NXT_ECheight);
-    //printf("NXTheight.%d ECblock.%d\n",i,ram->S.NXT_ECheight);
+    printf("NXTheight.%d ECblock.%d mostrecent.%d\n",i,ram->S.NXT_ECheight,mostrecent);
     if ( firsttimep != 0 )
         *firsttimep = oldest;
     if ( i != ram->S.NXT_RTblocknum )
@@ -3718,9 +3718,11 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
     }
     if ( mostrecent > 0 )
     {
+        printf("mostrecent %d <= %d (ram->S.NXT_RTblocknum %d - %d ram->min_NXTconfirms)\n", mostrecent,(ram->S.NXT_RTblocknum - ram->min_NXTconfirms),ram->S.NXT_RTblocknum,ram->min_NXTconfirms);
         while ( mostrecent <= (ram->S.NXT_RTblocknum - ram->min_NXTconfirms) )
         {
             sprintf(cmd,"requestType=getBlock&height=%u&includeTransactions=true",mostrecent);
+            printf("send cmd.(%s)\n",cmd);
             if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
             {
                 printf("getBlock.%d (%s)\n",mostrecent,jsonstr);
@@ -3744,9 +3746,9 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                             _process_NXTtransaction(1,ram,cJSON_GetArrayItem(array,i));
                     }
                     free_json(json);
-                }
+                } else printf("error parsing.(%s)\n",jsonstr);
                 free(jsonstr);
-            }
+            } else printf("error sending.(%s)\n",cmd);
             mostrecent++;
         }
         if ( ram->min_NXTconfirms == 0 )
@@ -3767,8 +3769,6 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                 free(jsonstr);
             }
         }
-        if ( mostrecent < i )
-            mostrecent = i;
     }
     else
     {
