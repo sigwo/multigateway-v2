@@ -3708,7 +3708,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
     }
     i = _get_NXTheight(&oldest);
     ram->S.NXT_ECblock = _get_NXT_ECblock(&ram->S.NXT_ECheight);
-    printf("NXTheight.%d ECblock.%d\n",i,ram->S.NXT_ECheight);
+    //printf("NXTheight.%d ECblock.%d\n",i,ram->S.NXT_ECheight);
     if ( firsttimep != 0 )
         *firsttimep = oldest;
     if ( i != ram->S.NXT_RTblocknum )
@@ -9072,7 +9072,7 @@ void *process_ramchains(void *_argcoinstr)
                 ram_update_disp(ram);
         }
         if ( processed == 0 )
-            sleep(200);
+            sleep(20);
         MGW_initdone++;
     }
     printf("process_ramchains: finished launching\n");
