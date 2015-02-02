@@ -6,9 +6,6 @@
 #ifndef gateway_NXTutils_h
 #define gateway_NXTutils_h
 
-#ifndef in_addr_t
-#define in_addr_t uint32_t
-#endif
 
 void *loadfile(int32_t *allocsizep,char *fname)
 {
@@ -1739,10 +1736,8 @@ char *conv_ipv6(char *ipv6addr)
         {
             bytes += 12;
             ipv4bin = (in_addr_t *)bytes;
-	    #ifndef _WIN32
-        if ( inet_ntop(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str)) == 0 )
-	    #endif
-			isok = 0;
+            if ( inet_ntop(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str)) == 0 )
+                isok = 0;
         } else isok = 0;
     }
     if ( isok != 0 )
@@ -1755,11 +1750,7 @@ int32_t parse_ipaddr(char *ipaddr,char *ip_port)
     int32_t j,port = 0;
     if ( ip_port != 0 && ip_port[0] != 0 )
     {
-	#ifndef _WIN32
         strcpy(ipaddr,conv_ipv6(ip_port));
-	#else
-	strcpy(ipaddr, ip_port);
-	#endif
         for (j=0; ipaddr[j]!=0&&j<60; j++)
             if ( ipaddr[j] == ':' )
             {

@@ -10,10 +10,6 @@
 
 #include "jl777.h"
 
-#ifdef _WIN32
-#include "pton.h"
-#endif
-
 uv_async_t Tasks_async;
 uv_work_t Tasks;
 struct task_info
@@ -422,7 +418,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
     struct coin_info *cp;
     struct NXThandler_info *mp = Global_mp;    // seems safest place to have main data structure
     if ( Debuglevel > 0 )
-       fprintf(stderr, "init_NXTservices.(%s)\n",myipaddr);
+       printf("init_NXTservices.(%s)\n",myipaddr);
     UV_loop = uv_default_loop();
     if ( 0 )
     {
@@ -460,19 +456,15 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
 //#endif
     Finished_loading = 1;
     if ( Debuglevel > 0 )
-        fprintf(stderr, "run_UVloop\n");
+        printf("run_UVloop\n");
     if ( portable_thread_create((void *)run_UVloop,Global_mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
     if ( IS_LIBTEST != 7 )
     {
-        #ifndef _WIN32
         if ( portable_thread_create((void *)run_libwebsockets,&one) == 0 )
             printf("ERROR hist run_libwebsockets SSL\n");
         while ( SSL_done == 0 )
             usleep(100000);
-        #else
-        SSL_done = 1;
-        #endif
         if ( portable_thread_create((void *)run_libwebsockets,&zero) == 0 )
             printf("ERROR hist run_libwebsockets\n");
         sleep(3);
@@ -783,7 +775,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     }
     Global_mp = init_SuperNET_globals();
     if ( Debuglevel > 0 )
-        fprintf(stderr, "call init_NXTservices (%s)\n",myipaddr);
+        printf("call init_NXTservices (%s)\n",myipaddr);
     myipaddr = init_NXTservices(JSON_or_fname,myipaddr);
     //if ( IS_LIBTEST < 7 )
     {
