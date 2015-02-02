@@ -1536,6 +1536,7 @@ char *getfile_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
         return(0);
     copy_cJSON(fname,objs[0]);
     copy_cJSON(handler,objs[1]);
+    printf("getfile.(%s).(%s) -> (%s) (%s)\n",fname,handler,sender,previpaddr);
     if ( (fname[0] != 0 || handler[0] != 0) && sender[0] != 0 && valid > 0 )
     {
         printf("getfile.(%s).(%s) -> (%s) (%s)\n",fname,handler,sender,previpaddr);

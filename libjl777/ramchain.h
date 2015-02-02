@@ -3024,7 +3024,7 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
             sprintf(cmd,"{\"requestType\":\"getfile\",\"NXT\":\"%s\",\"timestamp\":\"%ld\",\"fname\":\"%s\",\"handler\":\"RTmgw\"}",ram->srvNXTADDR,(long)time(NULL),name);
             if ( (retstr= send_tokenized_cmd(0,hopNXTaddr,0,ram->srvNXTADDR,ram->srvNXTACCTSECRET,cmd,ram->special_NXTaddrs[gatewayid])) != 0 )
                 free(retstr), retstr = 0;
-            printf("cant find.(%s) for %llu %.8f\n",RTmgwname,(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
+            printf("cant find.(%s) for %llu %.8f | sent.(%s) to %s\n",RTmgwname,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),cmd,ram->special_NXTaddrs[gatewayid]);
             break;
         }
         for (i=0; i<gatewayid; i++)
