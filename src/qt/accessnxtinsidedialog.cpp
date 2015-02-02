@@ -18,7 +18,9 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QString>
+#if QT_VERSION >= 0x050000
 #include <QUrlQuery>
+#endif
 
 AccessNxtInsideDialog::AccessNxtInsideDialog(QWidget *parent) :
     QDialog(parent),

@@ -10,6 +10,40 @@
 #define in_addr_t uint32_t
 #endif
 
+void *loadfile(int32_t *allocsizep,char *fname)
+{
+    FILE *fp;
+    long  filesize;
+    char *buf = 0;
+    *allocsizep = 0;
+    if ( (fp= fopen(fname,"rb")) != 0 )
+    {
+        fseek(fp,0,SEEK_END);
+        filesize = ftell(fp);
+        *allocsizep = (int32_t)filesize;
+        if ( filesize == 0 )
+        {
+            fclose(fp);
+            return(0);
+        }
+        buf = calloc(1,filesize + 1);
+        rewind(fp);
+        if ( buf == 0 )
+        {
+            printf("loadfile: Null buf for (%s).%ld???\n",fname,filesize);
+            return(0);
+        }
+        else
+        {
+            if ( fread(buf,1,filesize,fp) != filesize )
+                printf("error reading filesize.%ld\n",filesize);
+            buf[filesize] = 0;
+        }
+        fclose(fp);
+    }
+    return(buf);
+}
+
 char *load_file(char *fname,char **bufp,int64_t  *lenp,int64_t  *allocsizep)
 {
     FILE *fp;
@@ -435,7 +469,7 @@ char *issue_getAsset(CURL *curl_handle,char *assetidstr)
     //return(issue_NXTPOST(0,cmd));
     //printf("calculated.(%s)\n",ret.str);
     sprintf(cmd,"%s=getAsset&asset=%s",NXTSERVER,assetidstr);
-    printf("cmd.(%s)\n",cmd);
+    //printf("cmd.(%s)\n",cmd);
     return(issue_curl(0,cmd));
 }
 
@@ -476,7 +510,8 @@ struct NXT_asset *init_asset(struct NXT_asset *ap,char *assetidstr)
             }
             free_json(json);
         } else printf("init_asset: couldnt parse.(%s)\n",jsonstr);
-        printf("init_asset(%s) decimals.%d mult.%ld (%s)\n",assetidstr,ap->decimals,(long)ap->mult,jsonstr);
+        if ( Debuglevel > 2 )
+            printf("init_asset(%s) decimals.%d mult.%ld (%s)\n",assetidstr,ap->decimals,(long)ap->mult,jsonstr);
         free(jsonstr);
         if ( ap->mult != 0 )
             return(ap);
