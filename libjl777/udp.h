@@ -250,7 +250,7 @@ void _on_udprecv(int32_t queueflag,int32_t internalflag,uv_udp_t *udp,ssize_t nr
     if ( cp != 0 && nread > 0 )
     {
         
-        if ( Debuglevel > 1 )//|| (nread > 400 && nread != MAX_UDPLEN) )
+        if ( Debuglevel > 2 )//|| (nread > 400 && nread != MAX_UDPLEN) )
             fprintf(stderr,"UDP RECEIVED %ld from %s/%d crc.%x\n",nread,ipaddr,supernet_port,_crc32(0,rcvbuf->base,nread));
         ASSERT(addr->sa_family == AF_INET);
         server_xferred += nread;
@@ -899,7 +899,7 @@ char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,ch
             send_fragi(NXTaddr,NXTACCTSECRET,args,args->slots[j]);
         }
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
     {
         for (i=0; i<args->numfrags; i++)
             sprintf(&args->pstr[i],"%c",args->gotcrcs[i]==0?' ': ((args->crcs[i] != args->gotcrcs[i]) ? '?' : '='));

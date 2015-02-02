@@ -1537,7 +1537,10 @@ char *getfile_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     copy_cJSON(fname,objs[0]);
     copy_cJSON(handler,objs[1]);
     if ( (fname[0] != 0 || handler[0] != 0) && sender[0] != 0 && valid > 0 )
+    {
+        printf("getfile.(%s).(%s) -> (%s) (%s)\n",fname,handler,sender,previpaddr);
         return(start_transfer(previpaddr,sender,NXTaddr,NXTACCTSECRET,previpaddr,fname,0,0,timeout,handler,0));
+    }
     else return(clonestr("{\"error\":\"invalid getfile parameters\"}"));
 }
 
