@@ -3725,7 +3725,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
             //printf("send cmd.(%s)\n",cmd);
             if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
             {
-                printf("getBlock.%d (%s)\n",mostrecent,jsonstr);
+               // printf("getBlock.%d (%s)\n",mostrecent,jsonstr);
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 {
                     timestamp = (uint32_t)get_cJSON_int(json,"timestamp");
