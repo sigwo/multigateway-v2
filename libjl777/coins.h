@@ -1153,7 +1153,7 @@ void init_SuperNET_settings(char *userdir)
     DBSLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"DBSLEEP"),100);
     MAX_BUYNXT = get_API_int(cJSON_GetObjectItem(MGWconf,"MAX_BUYNXT"),10);
     APISLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"APISLEEP"),10);
-    NORAMCHAINS = get_API_int(cJSON_GetObjectItem(MGWconf,"NORAMCHAINS"),10);
+    NORAMCHAINS = get_API_int(cJSON_GetObjectItem(MGWconf,"NORAMCHAINS"),0);
 /*#ifndef HUFF_GENMODE
     DBSLEEP *= 10;
     APISLEEP *= 10;
