@@ -1534,7 +1534,7 @@ char *getfile_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     char fname[MAX_JSON_FIELD],handler[MAX_JSON_FIELD],name[MAX_JSON_FIELD];
     if ( is_remote_access(previpaddr) == 0 )
         return(0);
-    copy_cJSON(fname,objs[0]);
+    copy_cJSON(name,objs[0]);
     copy_cJSON(handler,objs[1]);
     if ( (fname[0] != 0 || handler[0] != 0) && sender[0] != 0 && valid > 0 )
     {
@@ -2199,7 +2199,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *sendfrag[] = { (char *)sendfrag_func, "sendfrag", "V", "pubkey", "name", "fragi", "numfrags", "ipaddr", "totalcrc", "datacrc", "data", "totallen", "blocksize", "handler", "syncmem", 0 };
     static char *gotfrag[] = { (char *)gotfrag_func, "gotfrag", "V", "pubkey", "name", "fragi", "numfrags", "ipaddr", "totalcrc", "datacrc", "totallen", "blocksize", "count", "handler", "syncmem", "snapshotcrc", 0 };
     static char *startxfer[] = { (char *)startxfer_func, "startxfer", "V", "fname", "dest", "data", "timeout", "handler", "syncmem", 0 };
-    static char *getfile[] = { (char *)getfile_func, "getfile", "V", "fname", "handler", 0 };
+    static char *getfile[] = { (char *)getfile_func, "getfile", "V", "name", "handler", 0 };
 
     // Kademlia DHT
     static char *store[] = { (char *)store_func, "store", "V", "pubkey", "key", "name", "data", 0 };
