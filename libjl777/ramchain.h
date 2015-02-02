@@ -3723,7 +3723,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
             sprintf(cmd,"requestType=getBlock&height=%u&includeTransactions=true",mostrecent);
             if ( (jsonstr= _issue_NXTPOST(cmd)) != 0 )
             {
-                //printf("getBlock.%d (%s)\n",mostrecent,jsonstr);
+                printf("getBlock.%d (%s)\n",mostrecent,jsonstr);
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 {
                     timestamp = (uint32_t)get_cJSON_int(json,"timestamp");
@@ -3767,8 +3767,8 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                 free(jsonstr);
             }
         }
-        if ( mostrecent < oldest )
-            mostrecent = oldest;
+        if ( mostrecent < i )
+            mostrecent = i;
     }
     else
     {
