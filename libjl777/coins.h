@@ -953,6 +953,7 @@ void init_coinsarray(char *userdir,char *myipaddr)
             if ( coinstr[0] != 0 && (cp= init_coin_info(item,coinstr,userdir)) != 0 )
             {
                 if ( Debuglevel > 0 )
+
                     printf("coinstr.(%s) myip.(%s)\n",coinstr,myipaddr);
                 Daemons = realloc(Daemons,sizeof(*Daemons) * (Numcoins+1));
                 MGWcoins = realloc(MGWcoins,sizeof(*MGWcoins) * (Numcoins+1));

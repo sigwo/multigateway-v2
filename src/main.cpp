@@ -89,6 +89,7 @@ int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
 
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // dispatching functions
@@ -2564,7 +2565,7 @@ FILE* AppendBlockFile(unsigned int& nFileRet)
 bool LoadBlockIndex(bool fAllowNew)
 {
     CBigNum bnTrustedModulus;
-    
+
     if (fTestNet)
     {
         pchMessageStart[0] = 0xcd;
@@ -4052,6 +4053,11 @@ char *unstringify(char *str)
     return(str);
 }
 */
+
+extern "C" const char* getDataDir()
+{
+	return GetDataDir().string().c_str();	
+}
 
 int32_t Pending_RPC,SuperNET_retval,did_SuperNET_init;
 extern char SuperNET_url[512];

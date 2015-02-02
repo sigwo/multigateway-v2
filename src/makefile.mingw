@@ -36,23 +36,16 @@ LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -static
 
 TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)
 
-ifndef USE_UPNP
-	override USE_UPNP = -
-endif
-ifneq (${USE_UPNP}, -)
- INCLUDEPATHS += -I"C:\deps"
- LIBPATHS += -L"C:\deps\miniupnpc"
- LIBS += -l miniupnpc -l iphlpapi
- DEFS += -DSTATICLIB -DUSE_UPNP=$(USE_UPNP)
-endif
 
-LIBS += -l kernel32 -l user32 -l gdi32 -l comdlg32 -l winspool -l winmm -l shell32 -l comctl32 -l ole32 -l oleaut32 -l uuid -l rpcrt4 -l advapi32 -l ws2_32 -l mswsock -l shlwapi
+
+LIBS += -l kernel32 -l user32 -l gdi32 -l comdlg32 -l winspool -l winmm -l shell32 -l comctl32 -l ole32 -l oleaut32 -l uuid -l rpcrt4 -l advapi32 -l ws2_32 -l mswsock -l shlwapi -lcurldll -lssh2 -lidn -lrtmp -lssl -lz -lws2_32 -lwldap32 -static
 
 # TODO: make the mingw builds smarter about dependencies, like the linux/osx builds are
 HEADERS = $(wildcard *.h)
 
 OBJS= \
     obj/alert.o \
+	obj/pubaddr.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -84,21 +77,11 @@ OBJS= \
     obj/pbkdf2.o \
     obj/scrypt.o \
     obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o \
-    obj/zerocoin/Accumulator.o \
-    obj/zerocoin/AccumulatorProofOfKnowledge.o \
-    obj/zerocoin/Coin.o \
-    obj/zerocoin/CoinSpend.o \
-    obj/zerocoin/Commitment.o \
-    obj/zerocoin/ParamGeneration.o \
-    obj/zerocoin/Params.o \
-    obj/zerocoin/SerialNumberSignatureOfKnowledge.o \
-    obj/zerocoin/SpendMetaData.o \
-    obj/zerocoin/ZeroTest.o
+    obj/scrypt-x86_64.o
 
 all: BitcoinDarkd.exe
 
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a glue.o
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 OBJS += obj/txdb-leveldb.o
@@ -106,12 +89,11 @@ leveldb/libleveldb.a:
 	cd leveldb; make; cd ..
 obj/txdb-leveldb.o: leveldb/libleveldb.a
 
+obj/main.o: ../libjl777/bitcoind_RPC.c ../libjl777/cJSON.c ../libjl777/cJSON.h main.cpp
+
 obj/%.o: %.cpp $(HEADERS)
 	g++ -c $(CFLAGS) -o $@ $<
-
-obj/zerocoin/%.o: zerocoin/%.cpp
-	g++ -c $(CFLAGS) -o $@ $<
-
+	
 obj/scrypt-x86.o: scrypt-x86.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 

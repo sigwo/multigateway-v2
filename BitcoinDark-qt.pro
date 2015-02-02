@@ -2,7 +2,7 @@ TEMPLATE = app
 TARGET = BitcoinDark-qt
 VERSION = 1.0.7
 INCLUDEPATH += src src/json src/qt
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE CURL_STATICLIB
 CONFIG += no_include_pwd
 CONFIG += thread
 
@@ -12,15 +12,15 @@ greaterThan(QT_MAJOR_VERSION, 4) {
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
 }
 
-BOOST_INCLUDE_PATH=/opt/local/include/boost
-BOOST_LIB_PATH=/opt/local/lib
-BDB_INCLUDE_PATH=/opt/local/include/db48
-BDB_LIB_PATH=/opt/local/lib/db48
-OPENSSL_INCLUDE_PATH=/opt/local/include/openssl
-OPENSSL_LIB_PATH=/opt/local/lib
+BOOST_INCLUDE_PATH=/home/matthew/Desktop/coins/btcd/libjl777/mxe/usr/x86_64-w64-mingw32.static/include
+BOOST_LIB_PATH=/home/matthew/Desktop/coins/btcd/libjl777/mxe/usr/x86_64-w64-mingw32.static/lib
+BDB_INCLUDE_PATH=/home/matthew/Desktop/coins/db-4.8.30.NC/build_mxe
+BDB_LIB_PATH=home/matthew/Desktop/coins/db-4.8.30.NC/build_mxe
+OPENSSL_INCLUDE_PATH=/home/matthew/Desktop/coins/btcd/libjl777/mxe/usr/x86_64-w64-mingw32.static/include
+OPENSSL_LIB_PATH=/home/matthew/Desktop/coins/btcd/libjl777/mxe/usr/x86_64-w64-mingw32.static/lib
 
-MINIUPNPC_INCLUDE_PATH=/opt/local/include/miniupnpc
-MINIUPNPC_LIB_PATH=/opt/local/lib
+MINIUPNPC_INCLUDE_PATH=home/matthew/Desktop/coins/btcd/libjl777
+MINIUPNPC_LIB_PATH=home/matthew/Desktop/coins/btcd/libjl777/miniupnpc
 
 QRENCODE_INCLUDE_PATH=/opt/local/include
 QRENCODE_LIB_PATH=/opt/local/lib
@@ -83,7 +83,7 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
-win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
+win32:QMAKE_LFLAGS *= -static
 win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 lessThan(QT_MAJOR_VERSION, 5): win32: QMAKE_LFLAGS *= -static
 
@@ -108,7 +108,7 @@ contains(USE_UPNP, -) {
     count(USE_UPNP, 0) {
         USE_UPNP=1
     }
-    DEFINES += USE_UPNP=$$USE_UPNP STATICLIB
+    DEFINES += USE_UPNP=$$USE_UPNP STATICLIB MINIUPNP_STATICLIB
     INCLUDEPATH += $$MINIUPNPC_INCLUDE_PATH
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
 }
@@ -129,7 +129,7 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 }
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
-LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a $$PWD/src/glue.o -lcurl -lz -lm
+LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a -lcurl -lpthread -lws2_32
 SOURCES += src/txdb-leveldb.cpp
 !win32 {
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
@@ -329,7 +329,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt-x86.S \
     src/scrypt-x86_64.S \
     src/scrypt.cpp \
-    src/pbkdf2.cpp
+    src/pbkdf2.cpp \
+	src/glue.c
 
 RESOURCES += \
     src/qt/bitcoin.qrc
@@ -362,7 +363,7 @@ CODECFORTR = UTF-8
 TRANSLATIONS = $$files(src/qt/locale/bitcoin_*.ts)
 
 isEmpty(QMAKE_LRELEASE) {
-    win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
+    win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
     else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
 }
 isEmpty(QM_DIR):QM_DIR = $$PWD/src/qt/locale
@@ -439,7 +440,7 @@ LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(LEVELDB_LIB
 LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
-LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_THREAD_LIB_SUFFIX
+LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread_win32$$BOOST_THREAD_LIB_SUFFIX
 windows:LIBS += -lboost_chrono$$BOOST_LIB_SUFFIX
 
 contains(RELEASE, 1) {
