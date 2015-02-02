@@ -3767,6 +3767,8 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                 free(jsonstr);
             }
         }
+        if ( mostrecent < oldest )
+            mostrecent = oldest;
     }
     else
     {
@@ -8740,7 +8742,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram->blocks.M = permalloc(ram->name,&ram->Perm,sizeof(*ram->blocks.M),8);
     ram->snapshots = permalloc(ram->name,&ram->Perm,sizeof(*ram->snapshots) * (ram->maxblock / 64),8);
     ram->blocks.hps = permalloc(ram->name,&ram->Perm,ram->maxblock*sizeof(*ram->blocks.hps),8);
-    printf("ramchain.%s RT.%d %.1f seconds to init_ramchain_directories: next.(%d %d %d %d)\n",ram->name,ram->S.RTblocknum,(ram_millis() - startmilli)/1000.,ram->next_blocknum,ram->next_txid_permind,ram->next_script_permind,ram->next_addr_permind);
+    printf("[%s] ramchain.%s RT.%d %.1f seconds to init_ramchain_directories: next.(%d %d %d %d)\n",ram->dirpath,ram->name,ram->S.RTblocknum,(ram_millis() - startmilli)/1000.,ram->next_blocknum,ram->next_txid_permind,ram->next_script_permind,ram->next_addr_permind);
     //#ifndef RAM_GENMODE
     ram_init_tmpspace(ram,tmpsize);
     ptr = (MAP_HUFF != 0 ) ? permalloc(ram->name,&ram->Perm,tmpsize,8) : calloc(1,tmpsize), ram->tmphp = hopen(ram->name,&ram->Perm,ptr,tmpsize,0);
