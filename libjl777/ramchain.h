@@ -270,6 +270,7 @@ struct ramchain_hashptr *ram_hashsearch(char *coinstr,struct alloc_space *mem,in
 #ifdef INCLUDE_CODE
 #ifndef ramchain_code_h
 #define ramchain_code_h
+int Numramchains; struct ramchain_info *Ramchains[100];
 
 #define ram_scriptind(ram,hashstr) ram_conv_hashstr(0,1,ram,hashstr,'s')
 #define ram_addrind(ram,hashstr) ram_conv_hashstr(0,1,ram,hashstr,'a')
@@ -2844,7 +2845,14 @@ void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector
 
 void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selector)
 {
-    ram_set_MGWpingstr(MGWpingstr,ram,selector);
+    MGWpingstr[0] = 0;
+    if ( Numramchains != 0 )
+    {
+        if ( ram == 0 )
+            ram = Ramchains[rand() % Numramchains];
+        if ( ram != 0 )
+            ram_set_MGWpingstr(MGWpingstr,ram,selector);
+    }
 }
 
 void ram_parse_MGWstate(struct MGWstate *sp,cJSON *json,char *coinstr)
@@ -3015,7 +3023,7 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
     struct cointx_info *cointxs[16],*othercointx;
     memset(cointxs,0,sizeof(cointxs));
     for (gatewayid=0; gatewayid<ram->numgateways; gatewayid++)
-    { 
+    {
         _set_RTmgwname(RTmgwname,name,ram->name,gatewayid,tp->redeemtxid);
         if ( (cointxs[gatewayid]= loadfile(&allocsize,RTmgwname)) == 0 )
         {
@@ -8952,7 +8960,6 @@ void *ram_process_ramchain(void *_ram)
 }
 
 void *portable_thread_create(void *funcp,void *argp);
-int Numramchains; struct ramchain_info *Ramchains[100];
 void activate_ramchain(struct ramchain_info *ram,char *name)
 {
     Ramchains[Numramchains++] = ram;
