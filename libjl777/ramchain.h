@@ -2883,28 +2883,37 @@ void ram_parse_MGWstate(struct MGWstate *sp,cJSON *json,char *coinstr)
 void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
 {
     void save_MGW_status(char *NXTaddr,char *jsonstr);
-    char name[512],*jsonstr;
+    char name[512],coinstr[512],*jsonstr;
     int32_t gatewayid;
     cJSON *json,*array;
-    if ( Debuglevel > 2 )
-        printf("parse.(%s)\n",pingstr);
     if ( (array= cJSON_Parse(pingstr)) != 0 && is_cJSON_Array(array) != 0 )
     {
         json = cJSON_GetArrayItem(array,0);
-        if ( (gatewayid= (int32_t)get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1)) >= 0 && gatewayid < ram->numgateways )
+        if ( ram == 0 )
         {
-            if ( strcmp(ram->special_NXTaddrs[gatewayid],sender) == 0 )
-                ram_parse_MGWstate(&ram->otherS[gatewayid],json,ram->name);
-            else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
+            copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
+            if ( coinstr[0] != 0 )
+                ram = get_ramchain_info(coinstr);
         }
-        jsonstr = cJSON_Print(json);
-        if ( gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
+        if ( Debuglevel > 2 )
+            printf("[%s] parse.(%s)\n",coinstr,pingstr);
+        if ( ram != 0 )
         {
-            safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
-            sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
-            //printf("name is (%s) + (%s) -> (%s)\n",ram->name,Server_ipaddrs[gatewayid],name);
-            save_MGW_status(name,jsonstr);
-        }
+            if ( (gatewayid= (int32_t)get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1)) >= 0 && gatewayid < ram->numgateways )
+            {
+                if ( strcmp(ram->special_NXTaddrs[gatewayid],sender) == 0 )
+                    ram_parse_MGWstate(&ram->otherS[gatewayid],json,ram->name);
+                else printf("ram_parse_MGWpingstr: got wrong address.(%s) for gatewayid.%d expected.(%s)\n",sender,gatewayid,ram->special_NXTaddrs[gatewayid]);
+            }
+            jsonstr = cJSON_Print(json);
+            if ( gatewayid >= 0 && gatewayid < 3 && strcmp(ram->mgwstrs[gatewayid],jsonstr) != 0 )
+            {
+                safecopy(ram->mgwstrs[gatewayid],jsonstr,sizeof(ram->mgwstrs[gatewayid]));
+                sprintf(name,"%s.%s",ram->name,Server_ipaddrs[gatewayid]);
+                //printf("name is (%s) + (%s) -> (%s)\n",ram->name,Server_ipaddrs[gatewayid],name);
+                save_MGW_status(name,jsonstr);
+            }
+        } else printf("dont have ramchain_info for (%s)\n",coinstr);
         free(jsonstr);
         free_json(array);
     }
