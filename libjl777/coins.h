@@ -840,12 +840,13 @@ uint32_t get_blockheight(struct coin_info *cp);
 void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t DEPOSIT_XFER_DURATION)
 {
     //struct NXT_asset *ap = 0;
+    struct coin_info *refcp = get_coin_info("BTCD");
     int32_t createdflag;
     strcpy(ram->name,cp->name);
     strcpy(ram->S.name,ram->name);
-    strcpy(ram->myipaddr,cp->myipaddr);
-    strcpy(ram->srvNXTACCTSECRET,cp->srvNXTACCTSECRET);
-    strcpy(ram->srvNXTADDR,cp->srvNXTADDR);
+    strcpy(ram->myipaddr,refcp->myipaddr);
+    strcpy(ram->srvNXTACCTSECRET,refcp->srvNXTACCTSECRET);
+    strcpy(ram->srvNXTADDR,refcp->srvNXTADDR);
     if ( cp->marker == 0 )
         cp->marker = clonestr(get_marker(cp->name));
     ram->marker = clonestr(cp->marker);
