@@ -1218,6 +1218,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
     }
     init_tradebots_conf();
     didinit = 1;
+    if ( Debuglevel > 1 )
     printf("gatewayid.%d MGWROOT.(%s)\n",Global_mp->gatewayid,MGWROOT);
     return(myipaddr);
 }
