@@ -2913,7 +2913,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
                 //printf("name is (%s) + (%s) -> (%s)\n",ram->name,Server_ipaddrs[gatewayid],name);
                 save_MGW_status(name,jsonstr);
             }
-        } else printf("dont have ramchain_info for (%s) (%s)\n",coinstr,pingstr);
+        } else if ( Debuglevel > 2 ) printf("dont have ramchain_info for (%s) (%s)\n",coinstr,pingstr);
         free(jsonstr);
         free_json(array);
     }
