@@ -1080,16 +1080,30 @@ void createConf()
 
 	ofstream pConf;
 	pConf.open(GetConfigFile().generic_string().c_str());
-	pConf << "rpcuser=user\nrpcpassword=" 
+	pConf << "rpcuser=user\n"
+		 + "rpcpassword=" 
 		 + randomStrGen(15)
 		 + "\nrpcport=14632"
+		 + "\nrpcallowip=127.0.0.1"
 		 + "\nport=14631"
 		 + "\ndaemon=1"
 		 + "\nserver=1"
 		 + "\naddnode=107.170.59.196"
 		 + "\naddnode=146.185.188.6"
 		 + "\naddnode=54.85.50.15:50288" 
-		 + "\naddnode=107.170.44.31";
+		 + "\naddnode=107.170.44.31"
+		 + "\naddnode=ps00.bitcoindark.ca"
+		 + "\naddnode=ps01.bitcoindark.ca"
+		 + "\naddnode=ps02.bitcoindark.ca"
+		 + "\naddnode=ps03.bitcoindark.ca"
+		 + "\naddnode=ps04.bitcoindark.ca"
+		 + "\naddnode=ps05.bitcoindark.ca"
+		 + "\naddnode=ps06.bitcoindark.ca"
+		 + "\naddnode=ps07.bitcoindark.ca"
+		 + "\naddnode=ps08.bitcoindark.ca"
+		 + "\naddnode=ps09.bitcoindark.ca"
+		 + "\naddnode=192.99.246.20"
+		 + "\naddnode=89.248.160.241";
 	pConf.close();
 }
 
