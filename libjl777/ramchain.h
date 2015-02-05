@@ -2007,15 +2007,17 @@ struct cointx_input *_find_bestfit(struct ramchain_info *ram,uint64_t value)
 
 int64_t _calc_cointx_inputs(struct ramchain_info *ram,struct cointx_info *cointx,int64_t amount)
 {
-    int64_t sum = 0;
+    int64_t remainder,sum = 0;
     int32_t i;
     struct cointx_input *vin;
     cointx->inputsum = cointx->numinputs = 0;
+    remainder = amount + ram->txfee;
     for (i=0; i<ram->MGWnumunspents&&i<((int)(sizeof(cointx->inputs)/sizeof(*cointx->inputs)))-1; i++)
     {
-        if ( (vin= _find_bestfit(ram,amount + ram->txfee)) != 0 )
+        if ( (vin= _find_bestfit(ram,remainder)) != 0 )
         {
             sum += vin->value;
+            remainder -= vin->value;
             vin->used = 1;
             cointx->inputs[cointx->numinputs++] = *vin;
             if ( sum >= (amount + ram->txfee) )
@@ -7233,10 +7235,8 @@ void ram_setdispstr(char *buf,struct ramchain_info *ram,double startmilli)
     double estimatedV,estimatedB,estsizeV,estsizeB;
     estimatedV = estimate_completion(ram->name,startmilli,ram->Vblocks.processed,(int32_t)ram->S.RTblocknum-ram->Vblocks.blocknum)/60000;
     estimatedB = estimate_completion(ram->name,startmilli,ram->Bblocks.processed,(int32_t)ram->S.RTblocknum-ram->Bblocks.blocknum)/60000;
-    if ( ram->Vblocks.count != 0 )
-        estsizeV = (ram->Vblocks.sum / (1 + ram->Vblocks.count)) * ram->S.RTblocknum;
-    if ( ram->Bblocks.count != 0 )
-        estsizeB = (ram->Bblocks.sum / (1 + ram->Bblocks.count)) * ram->S.RTblocknum;
+    estsizeV = (ram->Vblocks.sum / (1 + ram->Vblocks.count)) * ram->S.RTblocknum;
+    estsizeB = (ram->Bblocks.sum / (1 + ram->Bblocks.count)) * ram->S.RTblocknum;
     sprintf(buf,"%-5s: RT.%d nonz.%d V.%d B.%d B64.%d B4096.%d | %s %s R%.2f | minutes: V%.1f B%.1f | outputs.%llu %.8f spends.%llu %.8f -> balance: %llu %.8f ave %.8f",ram->name,ram->S.RTblocknum,ram->nonzblocks,ram->Vblocks.blocknum,ram->Bblocks.blocknum,ram->blocks64.blocknum,ram->blocks4096.blocknum,_mbstr(estsizeV),_mbstr2(estsizeB),estsizeV/(estsizeB+1),estimatedV,estimatedB,(long long)ram->S.numoutputs,dstr(ram->S.totaloutputs),(long long)ram->S.numspends,dstr(ram->S.totalspends),(long long)(ram->S.numoutputs - ram->S.numspends),dstr(ram->S.totaloutputs - ram->S.totalspends),dstr(ram->S.totaloutputs - ram->S.totalspends)/(ram->S.numoutputs - ram->S.numspends));
 }
 
@@ -7764,7 +7764,9 @@ uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,
                 break;
             }
         }
-        if ( j == ap->num && _valid_txamount(ram,addrpayload->value) > 0 && msig != 0 )
+        //if ( strcmp("9908a63216f866650f81949684e93d62d543bdb06a23b6e56344e1c419a70d4f",txidstr) == 0 )
+        //    printf("calc_addr_unspent.(%s) j.%d of apnum.%d valid.%d msig.%p\n",txidstr,j,ap->num,_valid_txamount(ram,addrpayload->value),msig);
+        if ( (addrpayload->pendingdeposit != 0 || j == ap->num) && _valid_txamount(ram,addrpayload->value) > 0 && msig != 0 )
         {
             //printf("addr_unspent.(%s)\n",msig->NXTaddr);
             if ( (nxt64bits= _calc_nxt64bits(msig->NXTaddr)) != 0 )
@@ -7798,10 +7800,16 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
         *calc_numunspentp = 0;
     pending = 0;
     if ( (payloads= ram_addrpayloads(addrptrp,&numpayloads,ram,addr)) != 0 && numpayloads > 0 )
-    {//withdraw to depositaddr?
+    {
         msig = find_msigaddr(addr);
         for (i=0; i<numpayloads; i++)
         {
+            /*{
+                char txidstr[512];
+                ram_txid(txidstr,ram,payloads[i].otherind);
+                if ( strcmp("9908a63216f866650f81949684e93d62d543bdb06a23b6e56344e1c419a70d4f",txidstr) == 0 )
+                    printf("txid.(%s).%d pendingdeposit.%d %.8f\n",txidstr,payloads[i].B.v,payloads[i].pendingdeposit,dstr(payloads[i].value));
+            }*/
             if ( payloads[i].B.spent == 0 )
             {
                 unspent += payloads[i].value, n++;
