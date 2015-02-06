@@ -2028,7 +2028,7 @@ int64_t _calc_cointx_inputs(struct ramchain_info *ram,struct cointx_info *cointx
                 fprintf(stderr,"numinputs %d sum %.8f vs amount %.8f change %.8f -> miners %.8f\n",cointx->numinputs,dstr(cointx->inputsum),dstr(amount),dstr(cointx->change),dstr(sum - cointx->change - cointx->amount));
                 return(cointx->inputsum);
             }
-        }
+        } else printf("no bestfit found\n");
     }
     fprintf(stderr,"error numinputs %d sum %.8f\n",cointx->numinputs,dstr(cointx->inputsum));
     return(0);
@@ -2401,7 +2401,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
 {
     char *rawparams,*signedtx,*changeaddr,*with_op_return=0,*retstr = 0;
     int64_t MGWfee,sum,amount;
-    int32_t allocsize;
+    int32_t allocsize,numoutputs = 0;
     struct cointx_info *cointx,TX,*rettx = 0;
     cointx = &TX;
     memset(cointx,0,sizeof(*cointx));
@@ -2409,13 +2409,18 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     cointx->redeemtxid = redeemtxid;
     cointx->gatewayid = ram->S.gatewayid;
     MGWfee = 0*(value >> 10) + ((ram->txfee + 2*ram->NXTfee_equiv)) - ram->txfee;
-    strcpy(cointx->outputs[0].coinaddr,ram->marker);
-    cointx->outputs[0].value = MGWfee;
-    strcpy(cointx->outputs[1].coinaddr,destaddr);
-    cointx->outputs[1].value = value;
-    strcpy(cointx->outputs[2].coinaddr,ram->opreturnmarker);
-    cointx->outputs[2].value = 1;
-    cointx->numoutputs = 3;
+    strcpy(cointx->outputs[numoutputs].coinaddr,ram->marker);
+    cointx->outputs[numoutputs++].value = MGWfee;
+    if ( strcmp(destaddr,ram->marker) == 0 )
+        cointx->outputs[numoutputs-1].value += value;
+    else
+    {
+        strcpy(cointx->outputs[numoutputs].coinaddr,destaddr);
+        cointx->outputs[numoutputs++].value = value;
+    }
+    strcpy(cointx->outputs[numoutputs].coinaddr,ram->opreturnmarker);
+    cointx->outputs[numoutputs++].value = 1;
+    cointx->numoutputs = numoutputs;
     cointx->amount = amount = (MGWfee + value + 1);
     fprintf(stderr,"calc_withdraw.%s %llu amount %.8f -> balance %.8f\n",ram->name,(long long)redeemtxid,dstr(cointx->amount),dstr(ram->S.MGWbalance));
    // if ( (cointx->amount + ram->txfee) <= ram->MGWbalance )
@@ -2444,7 +2449,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                 if ( retstr != 0 && retstr[0] != 0 )
                 {
                     fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
-                    if ( (with_op_return= _insert_OP_RETURN(retstr,2,&redeemtxid,1)) != 0 )
+                    if ( (with_op_return= _insert_OP_RETURN(retstr,numoutputs-1,&redeemtxid,1)) != 0 )
                     {
                         if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
                         {
@@ -2746,7 +2751,7 @@ void _complete_assettxid(struct ramchain_info *ram,struct NXT_assettxid *tp)
 char *_calc_withdrawaddr(char *withdrawaddr,struct ramchain_info *ram,struct NXT_assettxid *tp,cJSON *argjson)
 {
     cJSON *json;
-    int32_t convert = 0;
+    int32_t i,c,convert = 0;
     struct ramchain_info *newram;
     char buf[MAX_JSON_FIELD],autoconvert[MAX_JSON_FIELD],issuer[MAX_JSON_FIELD],*retstr;
     copy_cJSON(withdrawaddr,cJSON_GetObjectItem(argjson,"withdrawaddr"));
@@ -2797,6 +2802,9 @@ char *_calc_withdrawaddr(char *withdrawaddr,struct ramchain_info *ram,struct NXT
     //printf("withdrawaddr.(%s) autoconvert.(%s)\n",withdrawaddr,autoconvert);
     if ( withdrawaddr[0] == 0 || autoconvert[0] != 0 )
         return(0);
+    for (i=0; withdrawaddr[i]!=0; i++)
+        if ( (c= withdrawaddr[i]) < ' ' || c == '\\' || c == '"' )
+            return(0);
     //printf("return.(%s)\n",withdrawaddr);
     return(withdrawaddr);
 }
@@ -3246,7 +3254,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                                         ram->numpendingsends++;
                                         //ram_add_pendingsend(0,ram,tp,cointx);
                                         // disable_newsends = 1;
-                                    }
+                                    } else tp->completed = 1; // ignore malformed requests for now
                                 } else printf("not ready to withdraw yet\n");
                             }
                             else if ( ram_check_consensus(txidstr,ram,tp) != 0 )
