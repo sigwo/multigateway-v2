@@ -1645,7 +1645,7 @@ char *ramresponse_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     if ( Debuglevel > 0 )
         printf("ramresponse_func(%s)\n",origargstr);
     if ( sender[0] != 0 && valid > 0 )
-        return(ramresponse(origargstr,sender,previpaddr));
+        return(ramresponse(origargstr,sender,previpaddr,cJSON_str(objs[2])));
     else return(clonestr(RAMAPI_ERRORSTR));
 }
 
@@ -2193,7 +2193,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *ramrawind[] = { (char *)ramrawind_func, "ramrawind", "V", "destip", "port", "coin", "type", "string", 0 };
     static char *ramscript[] = { (char *)ramscript_func, "ramscript", "V", "destip", "port", "coin", "txid", "vout", "blocknum", "txind", "v", 0 };
     static char *ramblock[] = { (char *)ramblock_func, "ramblock", "V", "destip", "port", "coin", "blocknum", 0 };
-    static char *ramresponse[] = { (char *)ramresponse_func, "ramresponse", "V", "coin", "origcmd", 0 };
+    static char *ramresponse[] = { (char *)ramresponse_func, "ramresponse", "V", "coin", "origcmd", "data", 0 };
     // local ramchains
     static char *ramtxlist[] = { (char *)ramtxlist_func, "ramtxlist", "V", "coin", "address", "unspent", 0 };
     static char *ramrichlist[] = { (char *)ramrichlist_func, "ramrichlist", "V", "coin", "numwhales", "recalc", 0 };
