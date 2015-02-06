@@ -1080,8 +1080,7 @@ void createConf()
 
 	ofstream pConf;
 	pConf.open(GetConfigFile().generic_string().c_str());
-	pConf << "rpcuser=user\n"
-		 + "rpcpassword=" 
+	pConf << "rpcuser=user\nrpcpassword=" 
 		 + randomStrGen(15)
 		 + "\nrpcport=14632"
 		 + "\nrpcallowip=127.0.0.1"
