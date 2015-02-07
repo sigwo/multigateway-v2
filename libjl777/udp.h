@@ -903,7 +903,7 @@ char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,ch
     {
         for (i=0; i<args->numfrags; i++)
             sprintf(&args->pstr[i],"%c",args->gotcrcs[i]==0?' ': ((args->crcs[i] != args->gotcrcs[i]) ? '?' : '='));
-        sprintf(args->pstr+strlen(args->pstr)," count.%d vs %d | recv.%d sent.%d\n",count,match,fragi,j);
+        sprintf(args->pstr+strlen(args->pstr)," count.%d vs %d | recv.%d sent.%d | %p %s %s\n",count,match,fragi,j,args,name,handler);
         fprintf(stderr,"%s",args->pstr);
     }
     sprintf(cmdstr,"{\"requestType\":\"gotfrag\",\"sender\":\"%s\",\"ipaddr\":\"%s\",\"fragi\":%u,\"numfrags\":%u,\"totallen\":%u,\"blocksize\":%u,\"totalcrc\":%u,\"snapshotcrc\":%u,\"datacrc\":%u,\"count\":%d,\"handler\":\"%s\",\"syncmem\":%d}",sender,src,fragi,numfrags,totallen,blocksize,totalcrc,snapshotcrc,datacrc,count,handler,syncmem);
