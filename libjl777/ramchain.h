@@ -3959,7 +3959,8 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
         }
     }
     ram->S.circulation = _calc_circulation(ram->min_NXTconfirms,ram->ap,ram);
-    ram->S.orphans = _find_pending_transfers(&ram->S.MGWpendingredeems,ram);
+    if ( ram->S.is_realtime != 0 )
+        ram->S.orphans = _find_pending_transfers(&ram->S.MGWpendingredeems,ram);
     //printf("return mostrecent.%d\n",mostrecent);
     return(mostrecent);
 }
