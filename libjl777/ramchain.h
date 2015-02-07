@@ -3206,6 +3206,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     for (j=0; j<ap->num; j++)
     {
         tp = ap->txids[j];
+        printf("check %s.%llu completed.%d\n",ram->name,(long long)tp->redeemtxid,tp->completed);
         if ( tp->completed == 0 )
         {
             _expand_nxt64bits(sender,tp->senderbits);
@@ -3597,7 +3598,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     tp->U.assetoshis = (quantity * ap->mult);
     tp->receiverbits = receiverbits;
     tp->senderbits = senderbits;
-    printf("txid.(%s) (%s)\n",redeemtxidstr,commentstr!=0?commentstr:"NULL");
+    printf("%s txid.(%s) (%s)\n",ram->name,redeemtxidstr,commentstr!=0?commentstr:"NULL");
     if ( commentstr != 0 && (tp->comment == 0 || strcmp(tp->comment,commentstr) != 0) && (json= cJSON_Parse(commentstr)) != 0 )
     {
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
@@ -3641,12 +3642,12 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
                     if ( ram_mark_depositcomplete(ram,tp,tp->coinblocknum) != 0 )
                         _complete_assettxid(ram,tp);
                 }
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("sender.%llu receiver.%llu got.(%llu) comment.(%s) (B%d t%d) cointxidstr.(%s)/v%d buyNXT.%d completed.%d\n",(long long)senderbits,(long long)receiverbits,(long long)redeemtxid,tp->comment,tp->coinblocknum,tp->cointxind,cointxid,tp->coinv,tp->buyNXT,tp->completed);
             }
             else
             {
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("%s txid.(%s) got comment.(%s) gotpossibleredeem.(%d.%d.%d) %.8f/%.8f NXTequiv %.8f -> redeemtxid.%llu\n",ap->name,redeemtxidstr,tp->comment!=0?tp->comment:"",tp->coinblocknum,tp->cointxind,tp->coinv,dstr(tp->quantity * ap->mult),dstr(tp->U.assetoshis),tp->estNXT,(long long)tp->redeemtxid);
             }
         } else printf("mismatched coin.%s vs (%s) for transfer.%llu (%s)\n",coinstr,ram->name,(long long)redeemtxid,commentstr);
