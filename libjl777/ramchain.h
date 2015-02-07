@@ -5194,14 +5194,14 @@ uint64_t ram_check_redeemcointx(int32_t *unspendablep,struct ramchain_info *ram,
     *unspendablep = 0;
     if ( strcmp(script+22,"00000000000000000000000088ac") == 0 )
     {
-        if ( strcmp(script+6,"0000000000000000000000000000000000000088ac") == 0 )
+        if ( strncmp(script+8,"0000000000000000000000000000000000",strlen("0000000000000000000000000000000000")) == 0 )
             *unspendablep = 1;
         for (redeemtxid=i=0; i<(int32_t)sizeof(uint64_t); i++)
         {
             redeemtxid <<= 8;
             redeemtxid |= (_decode_hex(&script[6 + 14 - i*2]) & 0xff);
         }
-        printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,(long long)redeemtxid);
+        //printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu\n",script,(long long)redeemtxid);
     } //else printf("(%s).%d\n",script+22,strcmp(script+16,"00000000000000000000000088ac"));
     return(redeemtxid);
 }
