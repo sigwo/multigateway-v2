@@ -887,7 +887,7 @@ char *gotfrag(char *previpaddr,char *sender,char *NXTaddr,char *NXTACCTSECRET,ch
         blocksize = TRANSFER_BLOCKSIZE;
     if ( totallen == 0 )
         totallen = numfrags * blocksize;
-fprintf(stderr,"GOTFRAG.(%s)\n",cmdstr);
+//fprintf(stderr,"GOTFRAG.(%s)\n",cmdstr);
     args = create_transfer_args(previpaddr,NXTaddr,src,name,totallen,blocksize,totalcrc,handler,syncmem);
     match = update_transfer_args(sender,previpaddr,args,fragi,numfrags,totalcrc,datacrc,0,0);
     j = -1;
@@ -899,7 +899,7 @@ fprintf(stderr,"GOTFRAG.(%s)\n",cmdstr);
             send_fragi(NXTaddr,NXTACCTSECRET,args,args->slots[j]);
         }
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
     {
         for (i=0; i<args->numfrags; i++)
             sprintf(&args->pstr[i],"%c",args->gotcrcs[i]==0?' ': ((args->crcs[i] != args->gotcrcs[i]) ? '?' : '='));
