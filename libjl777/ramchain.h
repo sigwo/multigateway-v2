@@ -2809,7 +2809,7 @@ char *_calc_withdrawaddr(char *withdrawaddr,struct ramchain_info *ram,struct NXT
         }
         else withdrawaddr[0] = autoconvert[0] = 0;
     }
-    printf("withdrawaddr.(%s) autoconvert.(%s)\n",withdrawaddr,autoconvert);
+    printf("PARSED withdrawaddr.(%s) autoconvert.(%s)\n",withdrawaddr,autoconvert);
     if ( withdrawaddr[0] == 0 || autoconvert[0] != 0 )
         return(0);
     for (i=0; withdrawaddr[i]!=0; i++)
@@ -3206,7 +3206,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     for (j=0; j<ap->num; j++)
     {
         tp = ap->txids[j];
-        printf("check %s.%llu completed.%d\n",ram->name,(long long)tp->redeemtxid,tp->completed);
+        printf("%d of %d: check %s.%llu completed.%d\n",j,ap->num,ram->name,(long long)tp->redeemtxid,tp->completed);
         if ( tp->completed == 0 )
         {
             _expand_nxt64bits(sender,tp->senderbits);
@@ -3225,6 +3225,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                     printf("autocomplete: limbo %llu cointxid.%p\n",(long long)tp->redeemtxid,tp->cointxid);
                     _complete_assettxid(ram,tp);
                 }
+                printf("receiver.%llu vs MGW.%llu\n",(long long)tp->receiverbits,(long long)ram->MGWbits);
                 if ( tp->receiverbits == ram->MGWbits ) // redeem start
                 {
                     destaddr = "coinaddr";
@@ -3274,8 +3275,10 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                                 printf("completed redeem.%llu with cointxid.%s\n",(long long)tp->redeemtxid,txidstr);
                             //printf("(%llu %.8f).%d ",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(int32_t)(time(NULL) - tp->redeemstarted));
                         } else printf("%llu %.8f: completed.%d withdraw.%p destaddr.%p\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),tp->completed,tp->convwithdrawaddr,destaddr);
-                    } else if ( tp->completed == 0 && _valid_txamount(ram,tp->U.assetoshis) > 0 )
+                    }
+                    else if ( tp->completed == 0 && _valid_txamount(ram,tp->U.assetoshis) > 0 )
                         printf("incomplete but skipped.%llu: %.8f destaddr.%s\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),destaddr);
+                    else printf("%s %.8f it too small, thank you for your donation to MGW\n",ram->name,dstr(tp->U.assetoshis)), tp->completed = 1;
                 }
                 else if ( tp->completed == 0 && specialsender != 0 ) // deposit complete w/o cointxid (shouldnt happen normally)
                 {
