@@ -6726,7 +6726,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
     int32_t regenflag = 0;
     if ( format == 0 )
         format = 'V';
-    if ( 1 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )//&& strcmp(ram->name,"BTC") != 0 )
+    if ( 0 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )//&& strcmp(ram->name,"BTC") != 0 )
     {
         if ( ram_expand_bitstream(0,tmp,ram,hp) <= 0 )
         {
