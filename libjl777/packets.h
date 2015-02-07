@@ -561,6 +561,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                             update_routing_probs(tokenized_np->H.U.NXTaddr,1,udp == 0,&tokenized_np->stats,nxtip,nxtport,pubkey);
                         if ( strcmp("ping",checkstr) == 0 || strcmp("getdb",checkstr) == 0 || strcmp("genmultisig",checkstr) == 0 || strcmp("MGW",checkstr) == 0 || strcmp("MGWaddr",checkstr) == 0  || strncmp("ram",checkstr,3) == 0 )
                             strcpy(checkstr,"valid");
+                        else printf("UNENCRYPTED.(%s)\n",parmstxt);
                     }
                     else
                     {
@@ -594,7 +595,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                         if ( prevaddr != 0 )
                             extract_nameport(previpaddr,sizeof(previpaddr),(struct sockaddr_in *)prevaddr);
                         else previpaddr[0] = 0;
-                        if ( Debuglevel > 2 )
+                        if ( Debuglevel > 1 )
                             fprintf(stderr,"GOT.(%s) decoded.%p (%s)\n",parmstxt,decoded,decoded);
                         if ( noqueue == 0 && FASTMODE == 0 )//IS_LIBTEST < 2 )
                         {
