@@ -6728,10 +6728,10 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
             char fname[1024],formatstr[16];
             ram_setformatstr(formatstr,'V');
             ram_setfname(fname,ram,blocknum,formatstr);
-            delete_file(fname,0);
+            //delete_file(fname,0);
             ram_setformatstr(formatstr,'B');
             ram_setfname(fname,ram,blocknum,formatstr);
-            delete_file(fname,0);
+            //delete_file(fname,0);
             regenflag = 1;
             hp = 0;
             printf("ram_genblock fatal error generating %s blocknum.%d\n",ram->name,blocknum);
