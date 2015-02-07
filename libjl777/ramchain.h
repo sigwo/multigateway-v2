@@ -9022,7 +9022,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     //ram_process_blocks(ram,ram->mappedblocks[2],ram->mappedblocks[1],1000.*3600*24);
     ram->mappedblocks[0] = ram_init_blocks(0,ram->blocks.hps,ram,0,&ram->blocks,0,0,0);
 #ifndef RAM_GENMODE
-    if ( strcmp(ram->name,"BTC") != 0 )
+    //if ( strcmp(ram->name,"BTC") != 0 )
     {
         HUFF *hp,*permhp;
         void *buf;
