@@ -28,6 +28,7 @@
 #endif
 
 #define MIN_DEPOSIT_FACTOR 5
+#define WITHRAW_ENABLE_BLOCKS 3
 #define TMPALLOC_SPACE_INCR 10000000
 #define PERMALLOC_SPACE_INCR (1024 * 1024 * 128)
 #define MAX_PENDINGSENDS_TICKS 50
@@ -212,7 +213,7 @@ struct MGWstate
     int64_t MGWbalance,supply;
     uint64_t totalspends,numspends,totaloutputs,numoutputs;
     uint64_t boughtNXT,circulation,sentNXT,MGWpendingredeems,orphans,MGWunspent,MGWpendingdeposits,NXT_ECblock;
-    uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,NXT_ECheight;
+    uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,enable_withdraws,NXT_ECheight;
 };
 
 struct alloc_space { void *ptr; long used,size; };
@@ -235,7 +236,7 @@ struct ramchain_info
     struct NXT_asset *ap;
     uint64_t MGWbits,*limboarray;
     struct cointx_input *MGWunspents;
-    uint32_t min_NXTconfirms,NXTtimestamp,MGWnumunspents,MGWmaxunspents,numspecials,depositconfirms,firsttime,numpendingsends,pendingticks;
+    uint32_t min_NXTconfirms,NXTtimestamp,MGWnumunspents,MGWmaxunspents,numspecials,depositconfirms,firsttime,firstblock,numpendingsends,pendingticks;
     char multisigchar,**special_NXTaddrs,*MGWredemption,*backups,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];
     struct NXT_assettxid *pendingsends[512];
     float lastgetinfo,NXTconvrate;
@@ -3005,7 +3006,7 @@ int32_t ram_MGW_ready(struct ramchain_info *ram,uint32_t blocknum,uint32_t NXThe
         return(0);
     else if ( blocknum != 0 && ram->S.NXT_is_realtime != 0 && (blocknum + ram->depositconfirms) <= ram->S.RTblocknum && ram->S.enable_deposits != 0 )
         retval = 1;
-    else if ( NXTheight != 0 && ram->S.is_realtime != 0 && (NXTheight + ram->withdrawconfirms) <= ram->S.NXT_RTblocknum )//_enough_confirms(0.,amount * ram->NXTconvrate,ram->S.NXT_RTblocknum - NXTheight,ram->withdrawconfirms) > 0. )
+    else if ( NXTheight != 0 && ram->S.is_realtime != 0 && ram->S.enable_withdraws != 0 && _enough_confirms(0.,amount * ram->NXTconvrate,ram->S.NXT_RTblocknum - NXTheight,ram->withdrawconfirms) > 0. )
             retval = 1;
     if ( retval != 0 )
     {
@@ -6402,7 +6403,11 @@ int32_t ram_rawtx_huffscan(struct ramchain_info *ram,struct ramchain_token **tok
         }
         if ( (txid_rawind= ram_extractstring(txidstr,'t',ram,'T',(txind<<1),hp,format)) != 0 )
             tokens[numtokens++] = ram_createstring(ram,'T',(txind<<1),'t',txidstr,txid_rawind);
-        else return(orignumtokens);
+        else
+        {
+            printf("error ram_extractstring(%s,'t',txid.%d,%c) hp bitoffset.%d of %d\n",txidstr,txind,format,hp->bitoffset,hp->endpos);
+            return(orignumtokens);
+        }
     } else numtokens += num_rawtx_tokens(raw);
     if ( numvins > 0 )
     {
@@ -6459,7 +6464,7 @@ struct ramchain_token **ram_tokenize_bitstream(uint32_t *blocknump,int32_t *numt
         for (i=firstvin=firstvout=0; i<numtx; i++)
             if ( (numtokens= ram_rawtx_huffscan(ram,tokens,numtokens,hp,format,i,&firstvin,&firstvout)) == lastnumtokens )
             {
-                printf("block.%d parse error at token %d of %d | firstvin.%d firstvout.%d\n",blocknum,i,numtokens,firstvin,firstvout);
+                printf("block.%d parse error at token %d of %d | firstvin.%d firstvout.%d\n",blocknum,i,numtx,firstvin,firstvout);
                 return(ram_purgetokens(numtokensp,tokens,numtokens));
             }
     }
@@ -6735,7 +6740,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
             regenflag = 1;
             hp = 0;
             printf("ram_genblock fatal error generating %s blocknum.%d\n",ram->name,blocknum);
-            exit(-1);
+            //exit(-1);
         }
     }
     if ( hp == 0 )
@@ -8903,6 +8908,10 @@ struct mappedblocks *ram_init_blocks(int32_t noload,HUFF **copyhps,struct ramcha
 uint32_t ram_update_RTblock(struct ramchain_info *ram)
 {
     ram->S.RTblocknum = _get_RTheight(ram);
+    if ( ram->firstblock == 0 )
+        ram->firstblock = ram->S.RTblocknum;
+    else if ( (ram->S.RTblocknum - ram->firstblock) >= WITHRAW_ENABLE_BLOCKS )
+        ram->S.enable_withdraws = 1;
     ram->S.blocknum = ram->blocks.blocknum = (ram->S.RTblocknum - ram->min_confirms);
     if ( ram->Bblocks.blocknum >= ram->S.RTblocknum-ram->min_confirms )
         ram->S.is_realtime = 1;
