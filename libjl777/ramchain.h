@@ -3257,7 +3257,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                         if ( tp->completed == 0 && tp->convwithdrawaddr != 0 )
                         {
                             (*pendingredeemsp) += tp->U.assetoshis;
-                            printf("NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->S.is_realtime,(tp->height + ram->withdrawconfirms) <= ram->S.NXT_RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends);
+                            printf("NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->S.enable_withdraws,ram->S.is_realtime,(tp->height + ram->withdrawconfirms) <= ram->S.NXT_RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends);
                             numpending++;
                             if ( disable_newsends == 0 )
                             {
@@ -3270,7 +3270,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                                         //ram_add_pendingsend(0,ram,tp,cointx);
                                         // disable_newsends = 1;
                                     } else printf("not ready to withdraw yet\n");
-                                } else tp->completed = 1; // ignore malformed requests for now
+                                } else if ( ram->S.enable_withdraws != 0 ) tp->completed = 1; // ignore malformed requests for now
                             }
                             else if ( ram_check_consensus(txidstr,ram,tp) != 0 )
                                 printf("completed redeem.%llu with cointxid.%s\n",(long long)tp->redeemtxid,txidstr);
