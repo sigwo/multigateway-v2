@@ -3682,6 +3682,8 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 numconfs = (ram->S.NXT_RTblocknum - height);
         } else numconfs = 0;
         copy_cJSON(txid,cJSON_GetObjectItem(txobj,"transaction"));
+        if ( strcmp(txid,"998606823456096714") == 0 )
+            printf("%s\n",cJSON_Print(txobj));
        // printf("TX.(%s)\n",txid);
         type = get_cJSON_int(txobj,"type");
         subtype = get_cJSON_int(txobj,"subtype");
