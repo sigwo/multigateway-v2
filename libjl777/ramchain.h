@@ -2809,13 +2809,13 @@ char *_calc_withdrawaddr(char *withdrawaddr,struct ramchain_info *ram,struct NXT
         }
         else withdrawaddr[0] = autoconvert[0] = 0;
     }
-    //printf("withdrawaddr.(%s) autoconvert.(%s)\n",withdrawaddr,autoconvert);
+    printf("withdrawaddr.(%s) autoconvert.(%s)\n",withdrawaddr,autoconvert);
     if ( withdrawaddr[0] == 0 || autoconvert[0] != 0 )
         return(0);
-    for (i=0; withdrawaddr[i]!=0; i++)
-        if ( (c= withdrawaddr[i]) < ' ' || c == '\\' || c == '"' )
-            return(0);
-    //printf("return.(%s)\n",withdrawaddr);
+    //for (i=0; withdrawaddr[i]!=0; i++)
+    //    if ( (c= withdrawaddr[i]) < ' ' || c == '\\' || c == '"' )
+    //        return(0);
+    printf("return.(%s)\n",withdrawaddr);
     return(withdrawaddr);
 }
 
