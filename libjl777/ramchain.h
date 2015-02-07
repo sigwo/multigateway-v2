@@ -5187,12 +5187,15 @@ int32_t ram_expand_scriptdata(char *scriptstr,uint8_t *scriptdata,int32_t datale
     return(mode);
 }
 
-uint64_t ram_check_redeemcointx(struct ramchain_info *ram,char *script)
+uint64_t ram_check_redeemcointx(int32_t *unspendablep,struct ramchain_info *ram,char *script)
 {
     uint64_t redeemtxid = 0;
     int32_t i;
+    *unspendablep = 0;
     if ( strcmp(script+22,"00000000000000000000000088ac") == 0 )
     {
+        if ( strcmp(script+6,"0000000000000000000000000000000000000088ac") == 0 )
+            *unspendablep = 1;
         for (redeemtxid=i=0; i<(int32_t)sizeof(uint64_t); i++)
         {
             redeemtxid <<= 8;
@@ -7353,8 +7356,8 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     uint32_t scriptind,addrind;
     struct address_entry B;
     char *str,coinaddr[1024],txidstr[512],scriptstr[512];
-    uint64_t value;
-    int32_t numbits = 0;
+    uint64_t value,unspent;
+    int32_t unspendable,numbits = 0;
     *addr_rawindp = 0;
     numbits += hdecode_varbits(&scriptind,hp);
     numbits += hdecode_varbits(&addrind,hp);
@@ -7377,10 +7380,11 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     table = ram_gethash(ram,'s');
     if ( scriptind > 0 && scriptind <= table->ind && (scriptptr= table->ptrs[scriptind]) != 0 )
     {
+        unspent = ram_check_redeemcointx(&unspendable,ram,scriptstr);
         if ( iter != 1 && scriptptr->permind == 0 )
         {
             ram_script(scriptstr,ram,scriptind);
-            if ( (scriptptr->unspent= ram_check_redeemcointx(ram,scriptstr)) != 0 )  // this is MGW redeemtxid (inefficient, should be done binary)
+            if ( (scriptptr->unspent= unspent) != 0 )  // this is MGW redeemtxid (inefficient, should be done binary)
             {
                 ram_txid(txidstr,ram,txid_rawind);
                 printf("coin redeemtxid.(%s) with script.(%s)\n",txidstr,scriptstr);
@@ -7434,7 +7438,8 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
                     //    addrptr->multisig = 1;
                     if ( ram_addr(coinaddr,ram,addrind) != 0 && coinaddr[0] == ram->multisigchar )
                         addrptr->multisig = 1;
-                    ram_addunspent(ram,coinaddr,txpayload,addrptr,&payload,addrind,addrptr->numpayloads);
+                    if ( unspendable == 0 )
+                        ram_addunspent(ram,coinaddr,txpayload,addrptr,&payload,addrind,addrptr->numpayloads);
                     addrptr->payloads[addrptr->numpayloads++] = payload;
                 }
             }
