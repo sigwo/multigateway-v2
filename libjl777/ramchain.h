@@ -2812,9 +2812,9 @@ char *_calc_withdrawaddr(char *withdrawaddr,struct ramchain_info *ram,struct NXT
     printf("withdrawaddr.(%s) autoconvert.(%s)\n",withdrawaddr,autoconvert);
     if ( withdrawaddr[0] == 0 || autoconvert[0] != 0 )
         return(0);
-    //for (i=0; withdrawaddr[i]!=0; i++)
-    //    if ( (c= withdrawaddr[i]) < ' ' || c == '\\' || c == '"' )
-    //        return(0);
+    for (i=0; withdrawaddr[i]!=0; i++)
+        if ( (c= withdrawaddr[i]) < ' ' || c == '\\' || c == '"' )
+            return(0);
     printf("return.(%s)\n",withdrawaddr);
     return(withdrawaddr);
 }
@@ -3199,7 +3199,10 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     *pendingredeemsp = 0;
     disable_newsends = (ram->numpendingsends > 0);
     if ( (ap= ram->ap) == 0 )
+    {
+        printf("no NXT_asset for %s\n",ram->name);
         return(0);
+    }
     for (j=0; j<ap->num; j++)
     {
         tp = ap->txids[j];
@@ -3578,7 +3581,10 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     cJSON *json,*cointxidobj,*obj;
     char sender[64],cointxid[512],coinstr[512];
     if ( (ap= ram->ap) == 0 )
+    {
+        printf("no NXT_asset for %s\n",ram->name);
         return(0);
+    }
     redeemtxid = _calc_nxt64bits(redeemtxidstr);
     tp = find_NXT_assettxid(&createdflag,ap,redeemtxidstr);
     tp->assetbits = ap->assetbits;
@@ -3591,6 +3597,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     tp->U.assetoshis = (quantity * ap->mult);
     tp->receiverbits = receiverbits;
     tp->senderbits = senderbits;
+    printf("txid.(%s) (%s)\n",redeemtxidstr,commentstr!=0?commentstr:"NULL");
     if ( commentstr != 0 && (tp->comment == 0 || strcmp(tp->comment,commentstr) != 0) && (json= cJSON_Parse(commentstr)) != 0 )
     {
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
@@ -3682,8 +3689,6 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 numconfs = (ram->S.NXT_RTblocknum - height);
         } else numconfs = 0;
         copy_cJSON(txid,cJSON_GetObjectItem(txobj,"transaction"));
-        if ( strcmp(txid,"998606823456096714") == 0 )
-            printf("%s\n",cJSON_Print(txobj));
        // printf("TX.(%s)\n",txid);
         type = get_cJSON_int(txobj,"type");
         subtype = get_cJSON_int(txobj,"subtype");
@@ -3719,6 +3724,8 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 if ( comment[0] != 0 )
                     commentstr = clonestr(_unstringify(comment));
                 copy_cJSON(assetidstr,cJSON_GetObjectItem(attachment,"asset"));
+                if ( strcmp(txid,"998606823456096714") == 0 )
+                    printf("Inside comment: %s\n",comment);
                 if ( assetidstr[0] != 0 && ap->assetbits == _calc_nxt64bits(assetidstr) )
                 {
                     assetoshis = get_cJSON_int(attachment,"quantityQNT");
@@ -3746,13 +3753,16 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 }
                 else if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0 && type == 0 && subtype == 0 && commentobj != 0 )
                 {
+                    if ( strcmp(txid,"998606823456096714") == 0 )
+                        printf("Inside message: %s\n",comment);
                     buyNXT = get_API_int(cJSON_GetObjectItem(commentobj,"buyNXT"),0);
                     satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
                     if ( buyNXT*SATOSHIDEN == satoshis )
                     {
                         ram->S.sentNXT += buyNXT * SATOSHIDEN;
                         printf("%s sent %d NXT, total sent %.0f\n",sender,buyNXT,dstr(ram->S.sentNXT));
-                    } else if ( buyNXT != 0 )
+                    }
+                    else if ( buyNXT != 0 )
                         printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
                 }
             }
@@ -3859,7 +3869,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
         {
             fp = 0;
             sprintf(fname,"%s/ramchains/NXT.%s",MGWROOT,ram->special_NXTaddrs[j]);
-            printf("init NXT special.%d of %d (%s) [%s]\n",j,ram->numspecials,ram->special_NXTaddrs[j],fname);
+            printf("(%s) init NXT special.%d of %d (%s) [%s]\n",ram->name,j,ram->numspecials,ram->special_NXTaddrs[j],fname);
             timestamp = 0;
             for (iter=1; iter<2; iter++)
             {
