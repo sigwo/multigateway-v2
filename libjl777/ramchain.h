@@ -3225,7 +3225,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                     printf("autocomplete: limbo %llu cointxid.%p\n",(long long)tp->redeemtxid,tp->cointxid);
                     _complete_assettxid(ram,tp);
                 }
-                printf("receiver.%llu vs MGW.%llu\n",(long long)tp->receiverbits,(long long)ram->MGWbits);
+                //printf("receiver.%llu vs MGW.%llu\n",(long long)tp->receiverbits,(long long)ram->MGWbits);
                 if ( tp->receiverbits == ram->MGWbits ) // redeem start
                 {
                     destaddr = "coinaddr";
@@ -3285,7 +3285,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                     orphans += tp->U.assetoshis;
                     _complete_assettxid(ram,tp);
                     printf("find_pending_transfers: internal transfer.%llu limbo.%d complete %s %.8f to NXT.%s\n",(long long)tp->redeemtxid,_is_limbo_redeem(ram,tp->redeemtxid),ram->name,dstr(tp->U.assetoshis),receiver);
-                }
+                } else tp->completed = 1; // this is some independent tx
             }
         }
     }
@@ -6721,7 +6721,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
     int32_t regenflag = 0;
     if ( format == 0 )
         format = 'V';
-    if ( 0 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )//&& strcmp(ram->name,"BTC") != 0 )
+    if ( 1 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )//&& strcmp(ram->name,"BTC") != 0 )
     {
         if ( ram_expand_bitstream(0,tmp,ram,hp) <= 0 )
         {
