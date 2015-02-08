@@ -814,6 +814,7 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
     totals[0] += size;
     counts[selector]++;
     totals[selector] += size;
+    //printf("mem->used %ld size.%ld | size.%ld\n",mem->used,size,mem->size);
     if ( (mem->used + size) > mem->size )
     {
         for (i=0; i<(int)(sizeof(counts)/sizeof(*counts)); i++)
@@ -6739,7 +6740,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
     int32_t regenflag = 0;
     if ( format == 0 )
         format = 'V';
-    if ( 1 && format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )//&& strcmp(ram->name,"BTC") != 0 )
+    if ( format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 && strcmp(ram->name,"BTC") == 0 )
     {
         if ( ram_expand_bitstream(0,tmp,ram,hp) <= 0 )
         {
@@ -7163,7 +7164,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
                             ram->blocks.hps[blocknum] = hp;
 #endif
                     }
-                } else delete_file(fname,0), hclose(hp);
+                } //else delete_file(fname,0), hclose(hp);
             }
         } else printf("%s.%u couldnt get hpp\n",formatstr,blocknum);
     }
