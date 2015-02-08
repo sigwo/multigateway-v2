@@ -2450,7 +2450,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                 //fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
                 _stripwhite(rawparams,0);
                 retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"createrawtransaction",rawparams);
-                if ( retstr != 0 && retstr[0] != 0 )
+                if ( ram->S.gatewayid >= 0 && retstr != 0 && retstr[0] != 0 )
                 {
                     fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
                     if ( (with_op_return= _insert_OP_RETURN(retstr,numoutputs-1,&redeemtxid,1)) != 0 )
@@ -2906,7 +2906,7 @@ void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector
 void ram_get_MGWpingstr(struct ramchain_info *ram,char *MGWpingstr,int32_t selector)
 {
     MGWpingstr[0] = 0;
-    printf("get MGWpingstr\n");
+   // printf("get MGWpingstr\n");
     if ( Numramchains != 0 )
     {
         if ( ram == 0 )
