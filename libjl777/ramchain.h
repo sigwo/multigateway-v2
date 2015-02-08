@@ -2449,27 +2449,30 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
             {
                 //fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
                 _stripwhite(rawparams,0);
-                retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"createrawtransaction",rawparams);
-                if ( ram->S.gatewayid >= 0 && retstr != 0 && retstr[0] != 0 )
+                if (  ram->S.gatewayid >= 0 )
                 {
-                    fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
-                    if ( (with_op_return= _insert_OP_RETURN(retstr,numoutputs-1,&redeemtxid,1)) != 0 )
+                    retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"createrawtransaction",rawparams);
+                    if (retstr != 0 && retstr[0] != 0 )
                     {
-                        if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
+                        fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
+                        if ( (with_op_return= _insert_OP_RETURN(retstr,numoutputs-1,&redeemtxid,1)) != 0 )
                         {
-                            allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
-                           // printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
-                            rettx = calloc(1,allocsize);
-                            *rettx = *cointx;
-                            rettx->allocsize = allocsize;
-                            rettx->isallocated = allocsize;
-                            strcpy(rettx->signedtx,signedtx);
-                            free(signedtx);
-                            cointx = 0;
-                        } else printf("error _sign_localtx.(%s)\n",with_op_return);
-                        free(with_op_return);
-                    } else printf("error replacing with OP_RETURN\n");
-                } else fprintf(stderr,"error creating rawtransaction\n");
+                            if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
+                            {
+                                allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
+                                // printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
+                                rettx = calloc(1,allocsize);
+                                *rettx = *cointx;
+                                rettx->allocsize = allocsize;
+                                rettx->isallocated = allocsize;
+                                strcpy(rettx->signedtx,signedtx);
+                                free(signedtx);
+                                cointx = 0;
+                            } else printf("error _sign_localtx.(%s)\n",with_op_return);
+                            free(with_op_return);
+                        } else printf("error replacing with OP_RETURN\n");
+                    } else fprintf(stderr,"error creating rawtransaction\n");
+                }
                 free(rawparams);
                 if ( retstr != 0 )
                     free(retstr);
