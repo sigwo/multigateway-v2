@@ -1163,6 +1163,7 @@ void ram_sync4096(struct ramchain_info *ram,uint32_t blocknum)
     if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
         sprintf(jsonstr,"{\"requestType\":\"rampyramid\",\"coin\":\"%s\",\"NXT\":\"%s\",\"blocknum\":%u,\"type\":\"B4096\"}",ram->name,ram->srvNXTADDR,blocknum);
+        printf("RAMSYNC.(%s)\n",jsonstr);
         for (i=0; i<n; i++)
         {
             copy_cJSON(destip,cJSON_GetArrayItem(array,i));
