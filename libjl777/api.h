@@ -8,7 +8,7 @@
 
 #ifndef API_H
 #define API_H
-
+#include <Python/Python.h>
 #ifndef _WIN32
 #include "includes/libwebsockets.h"
 #else
@@ -1014,6 +1014,16 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
         return(clonestr("{\"error\":\"cant remote locally\"}"));
     return(clonestr(origargstr));
 }
+
+char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+ char * name[MAX_JSON_FIELD]
+ Py_Initialize();
+ FILE *fp = fopen(name, "r");
+ PyRun_AnyFile(fp, name);
+ Py_Finalize();
+}
+
 
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -2137,13 +2147,13 @@ char *MGWresponse_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     return(clonestr(origargstr));
 }
 
-char python_func(const char *filename)
+char python_func(const char *name)
 {
  Py_Initialize();
  FILE *fp = fopen(name, "r");
  PyRun_AnyFile(fp, name);
  Py_Finalize();
- return("Running Script")
+ return 0;
 }
 
 char *issue_ramstatus(char *coinstr)
@@ -2278,7 +2288,11 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     // Privatbet
     static char *lotto[] = { (char *)lotto_func, "lotto", "V", "refacct", "asset", "lottoseed", "prizefund", 0 };
 
-     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGW, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile };
+    // Python
+    static char *python[] = { (char *)python_func, "python", "V",  "name", 0 };
+
+
+     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGW, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
