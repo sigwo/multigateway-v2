@@ -9286,10 +9286,8 @@ void *process_ramchains(void *_argcoinstr)
                     for (pass=1; pass<=4; pass++)
                     {
                         processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],60000.);
-#ifdef RAM_GENMODE
-                        if ( (ram->mappedblocks[pass]->blocknum >> ram->mappedblocks[pass]->shift) < (ram->mappedblocks[pass-1]->blocknum >> ram->mappedblocks[pass]->shift) )
-                            break;
-#endif
+                        //if ( (ram->mappedblocks[pass]->blocknum >> ram->mappedblocks[pass]->shift) < (ram->mappedblocks[pass-1]->blocknum >> ram->mappedblocks[pass]->shift) )
+                        //    break;
                     }
                     if ( ram_update_disp(ram) != 0 || 1 )
                     {
