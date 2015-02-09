@@ -6732,7 +6732,7 @@ HUFF *ram_makehp(HUFF *tmphp,int32_t format,struct ramchain_info *ram,struct raw
         memcpy(block,tmphp->buf,datalen);
         hp = hopen(ram->name,&ram->Perm,block,datalen,0);
         hseek(hp,0,SEEK_END);
-        printf("ram_emitblock datalen.%d bitoffset.%d endpos.%d\n",datalen,hp->bitoffset,hp->endpos);
+        //printf("ram_emitblock datalen.%d bitoffset.%d endpos.%d\n",datalen,hp->bitoffset,hp->endpos);
     } else printf("error emitblock.%d\n",blocknum);
     return(hp);
 }
