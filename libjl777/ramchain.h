@@ -6762,7 +6762,6 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
     }
     if ( hp == 0 )
     {
-        printf("get raw info\n");
         if ( _get_blockinfo(tmp,ram,blocknum) > 0 )
         {
             if ( tmp->blocknum != blocknum )
@@ -6772,7 +6771,6 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
             }
         } else printf("error _get_blockinfo.(%u)\n",blocknum);
     }
-    printf("makehp\n");
     hp = ram_makehp(tmphp,format,ram,tmp,blocknum);
     return(hp);
 }
@@ -7131,7 +7129,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     }
     else if ( blocks->format == 'V' || blocks->format == 'B' )
     {
-        printf("create %s %d\n",formatstr,blocknum);
+        //printf("create %s %d\n",formatstr,blocknum);
         if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 )
         {
             if ( (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
@@ -7983,7 +7981,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
     //printf("%s shift.%d %-5s.%d %.1f min left | [%d < %d]? %f %f timebudget %f\n",formatstr,blocks->shift,ram->name,blocks->blocknum,estimated,(blocks->blocknum >> blocks->shift),(prev->blocknum >> blocks->shift),ram_millis(),(startmilli + timebudget),timebudget);
     while ( (blocks->blocknum >> blocks->shift) < (prev->blocknum >> blocks->shift) && ram_millis() < (startmilli + timebudget) )
     {
-        printf("inside (%d) block.%d\n",blocks->format,blocks->blocknum);
+        //printf("inside (%d) block.%d\n",blocks->format,blocks->blocknum);
         newflag = (ram->blocks.hps[blocks->blocknum] == 0);
         ram_create_block(1,ram,blocks,prev,blocks->blocknum), processed++;
         if ( (hpptr= ram_get_hpptr(blocks,blocks->blocknum)) != 0 && (hp= *hpptr) != 0 )
