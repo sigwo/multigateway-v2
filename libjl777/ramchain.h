@@ -7651,7 +7651,6 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
         }
         if ( (blocknum % 64) == 0 )
             ram_snapshot(&ram->snapshots[blocknum / 64],ram);
-        //printf("block.%d vs %d\n",blocknum,ram->next_blocknum);
         ram->next_blocknum++;
     }
     numbits += hdecode_smallbits(&numtx,hp);
@@ -7668,6 +7667,11 @@ int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint
                 return(-1);
     }
     datalen += hconv_bitlen(numbits);
+    if ( 0 && iter != 1 && (blocknum % (64*64)) == (64*64 - 1) )
+    {
+        void ram_sync4096(struct ramchain_info *ram,uint32_t blocknum);
+        ram_sync4096(ram,(blocknum >> 12) << 12);
+    }
     return(datalen);
 }
 
@@ -8430,84 +8434,6 @@ cJSON *ram_snapshot_json(struct ramsnapshot *snap)
 }
 
 // >>>>>>>>>>>>>>  start external and API interface functions
-char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
-{
-    char origcmd[MAX_JSON_FIELD],coin[MAX_JSON_FIELD],permstr[MAX_JSON_FIELD],shastr[MAX_JSON_FIELD],*snapstr,*retstr = 0;
-    cJSON *array,*json,*snapjson;
-    uint8_t *data;
-    struct ramsnapshot snap;
-    uint32_t blocknum,size,permind;
-    int32_t format = 0,type = 0;
-    permstr[0] = 0;
-    if ( (array= cJSON_Parse(origargstr)) != 0 )
-    {
-        if ( is_cJSON_Array(array) != 0 && cJSON_GetArraySize(array) == 2 )
-        {
-            retstr = cJSON_Print(array);
-            json = cJSON_GetArrayItem(array,0);
-            if ( datastr == 0 )
-                datastr = cJSON_str(cJSON_GetObjectItem(json,"data"));
-            copy_cJSON(origcmd,cJSON_GetObjectItem(json,"origcmd"));
-            copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
-            if ( strcmp(origcmd,"rampyramid") == 0 )
-            {
-                blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocknum"),0);
-                if ( (format= (int32_t)get_API_int(cJSON_GetObjectItem(json,"B"),0)) == 0 )
-                {
-                    size = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"size"),0);
-                    if ( size > 0 )
-                    {
-                        if ( datastr != 0 && strlen(datastr) == size*2 )
-                        {
-                            printf("PYRAMID.(%u %s).%d from NXT.(%s) ip.(%s)\n",blocknum,datastr,size,sender,senderip);
-                            data = calloc(1,size);
-                            decode_hex(data,size,datastr);
-                            // update pyramid
-                            free(data);
-                        } else if ( datastr != 0 ) printf("strlen(%s) is %ld not %d*2\n",datastr,strlen(datastr),size);
-                    }
-                }
-                else
-                {
-                    ram_parse_snapshot(&snap,json);
-                    snapjson = ram_snapshot_json(&snap);
-                    snapstr = cJSON_Print(snapjson), free_json(snapjson);
-                    copy_cJSON(shastr,cJSON_GetObjectItem(json,"sha256"));
-                    _stripwhite(snapstr,' ');
-                    // update pyramid
-                    printf("PYRAMID.B%d blocknum.%u sha.(%s) (%s)\n",format,blocknum,shastr,snapstr);
-                    free(snapstr);
-                }
-            }
-            else if ( strcmp(origcmd,"ramblock") == 0 )
-            {
-                if ( datastr != 0 )
-                    printf("PYRAMID.B%d blocknum.%u (%s).permsize %ld\n",format,blocknum,datastr,strlen(datastr)/2);
-            }
-            else
-            {
-                if ( strcmp(origcmd,"addr") == 0 )
-                    type = 'a';
-                else if ( strcmp(origcmd,"script") == 0 )
-                    type = 's';
-                else if ( strcmp(origcmd,"txid") == 0 )
-                    type = 't';
-                if ( type != 0 )
-                {
-                    copy_cJSON(permstr,cJSON_GetObjectItem(json,"permstr"));
-                    permind = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"rawind"),0);
-                    printf("PYRAMID.%s (permind.%d %s).%c\n",origcmd,permind,permstr,type);
-                    // update pyramid
-                }
-                else if ( format == 0 )
-                    printf("RAMRESPONSE unhandled: (%s) (%s) (%s) (%s)\n",coin,origcmd,permstr,origargstr);
-            }
-        }
-        free_json(array);
-    }
-    return(retstr);
-}
-
 char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *coin)
 {
     struct ramchain_info *ram = get_ramchain_info(coin);
@@ -8521,11 +8447,28 @@ char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *coin)
     return(clonestr(retbuf));
 }
 
+bits256 ram_perm_sha256(struct ramchain_info *ram,uint32_t blocknum,int32_t n)
+{
+    bits256 hash,tmp;
+    int32_t i;
+    HUFF *hp,*permhp;
+    memset(hash.bytes,0,sizeof(hash));
+    for (i=0; i<n; i++)
+    {
+        if ( (hp= ram->blocks.hps[blocknum+i]) == 0 )
+            break;
+        if ( (permhp = ram_conv_permind(ram->tmphp,ram,hp,blocknum+i)) == 0 )
+            break;
+        calc_sha256cat(tmp.bytes,hash.bytes,sizeof(hash),permhp->buf,hconv_bitlen(permhp->endpos)), hash = tmp;
+    }
+    return(hash);
+}
+
 char *rampyramid(char *myNXTaddr,char *origargstr,char *sender,char *previpaddr,char *coin,uint32_t blocknum,char *typestr)
 {
     struct ramchain_info *ram = get_ramchain_info(coin);
     char shastr[65],*hexstr,*retstr = 0;
-    bits256 hash,tmp;
+    bits256 hash;
     HUFF *permhp,*hp,*newhp,**hpptr;
     cJSON *json;
     int32_t size,i,n;
@@ -8578,15 +8521,7 @@ char *rampyramid(char *myNXTaddr,char *origargstr,char *sender,char *previpaddr,
             } else return(clonestr("{\"error\":\"error doing ram_conv_permind\"}"));
         } else return(clonestr("{\"error\":\"no ramchain info for blocknum\"}"));
     }
-    memset(hash.bytes,0,sizeof(hash));
-    for (i=0; i<n; i++)
-    {
-        if ( (hp= ram->blocks.hps[blocknum+i]) == 0 )
-            break;
-        if ( (permhp = ram_conv_permind(ram->tmphp,ram,hp,blocknum+i)) == 0 )
-            break;
-        calc_sha256cat(tmp.bytes,hash.bytes,sizeof(hash),permhp->buf,hconv_bitlen(permhp->endpos)), hash = tmp;
-    }
+    hash = ram_perm_sha256(ram,blocknum,n);
     //printf("blocknum.%d i.%d of %d\n",blocknum,i,n);
     if ( i == n )
     {
@@ -8599,6 +8534,84 @@ char *rampyramid(char *myNXTaddr,char *origargstr,char *sender,char *previpaddr,
         retstr = cJSON_Print(json);
         free_json(json);
     } else return(clonestr("{\"error\":\"some data missing\"}"));
+    return(retstr);
+}
+
+char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
+{
+    char origcmd[MAX_JSON_FIELD],coin[MAX_JSON_FIELD],permstr[MAX_JSON_FIELD],shastr[MAX_JSON_FIELD],*snapstr,*retstr = 0;
+    cJSON *array,*json,*snapjson;
+    uint8_t *data;
+    struct ramsnapshot snap;
+    uint32_t blocknum,size,permind;
+    int32_t format = 0,type = 0;
+    permstr[0] = 0;
+    if ( (array= cJSON_Parse(origargstr)) != 0 )
+    {
+        if ( is_cJSON_Array(array) != 0 && cJSON_GetArraySize(array) == 2 )
+        {
+            retstr = cJSON_Print(array);
+            json = cJSON_GetArrayItem(array,0);
+            if ( datastr == 0 )
+                datastr = cJSON_str(cJSON_GetObjectItem(json,"data"));
+            copy_cJSON(origcmd,cJSON_GetObjectItem(json,"origcmd"));
+            copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
+            if ( strcmp(origcmd,"rampyramid") == 0 )
+            {
+                blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocknum"),0);
+                if ( (format= (int32_t)get_API_int(cJSON_GetObjectItem(json,"B"),0)) == 0 )
+                {
+                    size = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"size"),0);
+                    if ( size > 0 )
+                    {
+                        if ( datastr != 0 && strlen(datastr) == size*2 )
+                        {
+                            printf("PYRAMID.(%u %s).%d from NXT.(%s) ip.(%s)\n",blocknum,datastr,size,sender,senderip);
+                            data = calloc(1,size);
+                            decode_hex(data,size,datastr);
+                            // update pyramid
+                            free(data);
+                        } else if ( datastr != 0 ) printf("strlen(%s) is %ld not %d*2\n",datastr,strlen(datastr),size);
+                    }
+                }
+                else
+                {
+                    ram_parse_snapshot(&snap,json);
+                    snapjson = ram_snapshot_json(&snap);
+                    snapstr = cJSON_Print(snapjson), free_json(snapjson);
+                    copy_cJSON(shastr,cJSON_GetObjectItem(json,"sha256"));
+                    _stripwhite(snapstr,' ');
+                    // update pyramid
+                    printf("PYRAMID.B%d blocknum.%u sha.(%s) (%s) from NXT.(%s) ip.(%s)\n",format,blocknum,shastr,snapstr,sender,senderip);
+                    free(snapstr);
+                }
+            }
+            else if ( strcmp(origcmd,"ramblock") == 0 )
+            {
+                if ( datastr != 0 )
+                    printf("PYRAMID.B%d blocknum.%u (%s).permsize %ld from NXT.(%s) ip.(%s)\n",format,blocknum,datastr,strlen(datastr)/2,sender,senderip);
+            }
+            else
+            {
+                if ( strcmp(origcmd,"addr") == 0 )
+                    type = 'a';
+                else if ( strcmp(origcmd,"script") == 0 )
+                    type = 's';
+                else if ( strcmp(origcmd,"txid") == 0 )
+                    type = 't';
+                if ( type != 0 )
+                {
+                    copy_cJSON(permstr,cJSON_GetObjectItem(json,"permstr"));
+                    permind = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"rawind"),0);
+                    printf("PYRAMID.%s (permind.%d %s).%c from NXT.(%s) ip.(%s)\n",origcmd,permind,permstr,type,sender,senderip);
+                    // update pyramid
+                }
+                else if ( format == 0 )
+                    printf("RAMRESPONSE unhandled: (%s) (%s) (%s) (%s) from NXT.(%s) ip.(%s)\n",coin,origcmd,permstr,origargstr,sender,senderip);
+            }
+        }
+        free_json(array);
+    }
     return(retstr);
 }
 
@@ -9136,6 +9149,11 @@ void ram_init_ramchain(struct ramchain_info *ram)
         }
     }
 #endif
+    for (i=0; i<ram->S.RTblocknum; i+=4096)
+    {
+        void ram_sync4096(struct ramchain_info *ram,uint32_t blocknum);
+        ram_sync4096(ram,i);
+    }
     ram_disp_status(ram);
     //getchar();
 }

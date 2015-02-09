@@ -1151,6 +1151,38 @@ char *preprocess_ram_apiargs(char *coin,char *previpaddr,cJSON **objs,int32_t va
     return(retstr);
 }
 
+void ram_sync4096(struct ramchain_info *ram,uint32_t blocknum)
+{
+    static bits256 zerokey;
+    char destip[64],hopNXTaddr[64],destNXTaddr[64],jsonstr[1024],*str;
+    struct pserver_info *pserver;
+    struct NXT_acct *destnp;
+    int32_t i,n,createdflag;
+    cJSON *array;
+    array = cJSON_GetObjectItem(MGWconf,"whitelist");
+    if ( array != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        sprintf(jsonstr,"{\"requestType\":\"rampyramid\",\"coin\":\"%s\",\"NXT\":\"%s\",\"blocknum\":%u,\"type\":\"B4096\"}",ram->name,ram->srvNXTADDR,blocknum);
+        for (i=0; i<n; i++)
+        {
+            copy_cJSON(destip,cJSON_GetArrayItem(array,i));
+            pserver = get_pserver(0,destip,0,0);
+            if ( pserver->nxt64bits != 0 )
+            {
+                expand_nxt64bits(destNXTaddr,pserver->nxt64bits);
+                destnp = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
+                if ( memcmp(destnp->stats.pubkey,&zerokey,sizeof(zerokey)) == 0 )
+                {
+                    printf("send to ipaddr.(%s)\n",destip);
+                    send_to_ipaddr(0,0,destip,jsonstr,ram->srvNXTACCTSECRET);
+                }
+                else if ( (str = send_tokenized_cmd(!prevent_queueing("ramchain"),hopNXTaddr,0,ram->srvNXTADDR,ram->srvNXTACCTSECRET,jsonstr,destNXTaddr)) != 0 )
+                    free(str);
+            }
+        }
+    }
+}
+
 void ram_sendresponse(char *origcmd,char *coinstr,char *retstr,char *NXTaddr,char *NXTACCTSECRET,char *destNXTaddr,char *previpaddr)
 {
     int32_t len,timeout = 300;
