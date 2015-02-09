@@ -7129,7 +7129,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
         printf("create %s %d\n",formatstr,blocknum);
         if ( (hpptr= ram_get_hpptr(blocks,blocknum)) != 0 )
         {
-            if ( *hpptr == 0 && (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
+            if ( (hp= ram_genblock(blocks->tmphp,blocks->R,ram,blocknum,blocks->format,prevhps)) != 0 )
             {
                 //printf("block.%d created.%c block.%d numtx.%d minted %.8f\n",blocknum,blocks->format,blocks->R->blocknum,blocks->R->numtx,dstr(blocks->R->minted));
                 if ( (fp= fopen(fname,"wb")) != 0 )
@@ -7156,13 +7156,9 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
                             *hpptr = 0;
                             printf("OVERWRITE.(%s) size.%ld bitoffset.%d allocsize.%d\n",fname,ftell(fp),hp->bitoffset,hp->allocsize);
                         }
-#ifdef RAM_GENMODE
-                        hclose(hp);
-#else
                         *hpptr = hp;
                         if ( blocks->format != 'V' && ram->blocks.hps[blocknum] == 0 )
                             ram->blocks.hps[blocknum] = hp;
-#endif
                     }
                 } //else delete_file(fname,0), hclose(hp);
             }
