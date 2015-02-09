@@ -8446,21 +8446,21 @@ char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *coin)
     return(clonestr(retbuf));
 }
 
-bits256 ram_perm_sha256(struct ramchain_info *ram,uint32_t blocknum,int32_t n)
+int32_t ram_perm_sha256(bits256 *hashp,struct ramchain_info *ram,uint32_t blocknum,int32_t n)
 {
-    bits256 hash,tmp;
+    bits256 tmp;
     int32_t i;
     HUFF *hp,*permhp;
-    memset(hash.bytes,0,sizeof(hash));
+    memset(hashp->bytes,0,sizeof(*hashp));
     for (i=0; i<n; i++)
     {
         if ( (hp= ram->blocks.hps[blocknum+i]) == 0 )
             break;
         if ( (permhp = ram_conv_permind(ram->tmphp,ram,hp,blocknum+i)) == 0 )
             break;
-        calc_sha256cat(tmp.bytes,hash.bytes,sizeof(hash),permhp->buf,hconv_bitlen(permhp->endpos)), hash = tmp;
+        calc_sha256cat(tmp.bytes,hashp->bytes,sizeof(*hashp),permhp->buf,hconv_bitlen(permhp->endpos)), *hashp = tmp;
     }
-    return(hash);
+    return(i);
 }
 
 char *rampyramid(char *myNXTaddr,char *origargstr,char *sender,char *previpaddr,char *coin,uint32_t blocknum,char *typestr)
@@ -8520,7 +8520,7 @@ char *rampyramid(char *myNXTaddr,char *origargstr,char *sender,char *previpaddr,
             } else return(clonestr("{\"error\":\"error doing ram_conv_permind\"}"));
         } else return(clonestr("{\"error\":\"no ramchain info for blocknum\"}"));
     }
-    hash = ram_perm_sha256(ram,blocknum,n);
+    i = ram_perm_sha256(&hash,ram,blocknum,n);
     //printf("blocknum.%d i.%d of %d\n",blocknum,i,n);
     if ( i == n )
     {
