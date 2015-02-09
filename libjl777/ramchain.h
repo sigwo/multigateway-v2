@@ -5155,7 +5155,10 @@ int32_t ram_get_blockoffset(struct mappedblocks *blocks,uint32_t blocknum)
     {
         offset = (blocknum - blocks->firstblock);
         if ( offset >= blocks->numblocks )
+        {
+            printf("(%d - %d) = offset.%d >= numblocks.%d for format.%d\n",blocknum,blocks->firstblock,offset,blocks->numblocks,blocks->format);
             offset = -1;
+        }
     }
     return(offset);
 }
