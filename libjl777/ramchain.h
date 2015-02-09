@@ -8432,7 +8432,7 @@ cJSON *ram_snapshot_json(struct ramsnapshot *snap)
 // >>>>>>>>>>>>>>  start external and API interface functions
 char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
 {
-    char origcmd[MAX_JSON_FIELD],coin[MAX_JSON_FIELD],permstr[MAX_JSON_FIELD],shastr[MAX_JSON_FIELD],*snapstr;
+    char origcmd[MAX_JSON_FIELD],coin[MAX_JSON_FIELD],permstr[MAX_JSON_FIELD],shastr[MAX_JSON_FIELD],*snapstr,*retstr = 0;
     cJSON *array,*json,*snapjson;
     uint8_t *data;
     struct ramsnapshot snap;
@@ -8443,6 +8443,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
     {
         if ( is_cJSON_Array(array) != 0 && cJSON_GetArraySize(array) == 2 )
         {
+            retstr = cJSON_Print(array);
             json = cJSON_GetArrayItem(array,0);
             if ( datastr == 0 )
                 datastr = cJSON_str(cJSON_GetObjectItem(json,"data"));
@@ -8504,7 +8505,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
         }
         free_json(array);
     }
-    return(0);
+    return(retstr);
 }
 
 char *ramstatus(char *origargstr,char *sender,char *previpaddr,char *coin)
