@@ -2147,15 +2147,6 @@ char *MGWresponse_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     return(clonestr(origargstr));
 }
 
-char python_func(const char *name)
-{
- Py_Initialize();
- FILE *fp = fopen(name, "r");
- PyRun_AnyFile(fp, name);
- Py_Finalize();
- return 0;
-}
-
 char *issue_ramstatus(char *coinstr)
 {
     static char *Deposit_server = Server_ipaddrs[NUM_GATEWAYS-1]; // change this
@@ -2252,10 +2243,6 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *restorefile[] = { (char *)restorefile_func, "restorefile", "V", RESTORE_ARGS, 0 };
     static char *publish[] = { (char *)publish_func, "publish", "V", "files", "L", "M", "N", "backup", "password", "pin", 0  };
     
-    // Python
-
-    static char *python[] = { (char *)python_func, "python", "V", "filename", 0 };
-
     // Telepathy
     static char *getpeers[] = { (char *)getpeers_func, "getpeers", "V",  "scan", 0 };
     static char *addcontact[] = { (char *)addcontact_func, "addcontact", "V",  "handle", "acct", 0 };
