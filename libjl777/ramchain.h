@@ -6732,7 +6732,7 @@ HUFF *ram_makehp(HUFF *tmphp,int32_t format,struct ramchain_info *ram,struct raw
         memcpy(block,tmphp->buf,datalen);
         hp = hopen(ram->name,&ram->Perm,block,datalen,0);
         hseek(hp,0,SEEK_END);
-        //printf("ram_emitblock datalen.%d bitoffset.%d endpos.%d\n",datalen,hp->bitoffset,hp->endpos);
+        printf("ram_emitblock datalen.%d bitoffset.%d endpos.%d\n",datalen,hp->bitoffset,hp->endpos);
     } else printf("error emitblock.%d\n",blocknum);
     return(hp);
 }
@@ -6743,7 +6743,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
     int32_t regenflag = 0;
     if ( format == 0 )
         format = 'V';
-    if ( format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 && strcmp(ram->name,"BTC") == 0 )
+    if ( format == 'B' && prevhpp != 0 && (hp= *prevhpp) != 0 )//&& strcmp(ram->name,"BTC") == 0 )
     {
         if ( ram_expand_bitstream(0,tmp,ram,hp) <= 0 )
         {
@@ -6755,13 +6755,14 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
             ram_setfname(fname,ram,blocknum,formatstr);
             //delete_file(fname,0);
             regenflag = 1;
-            hp = 0;
             printf("ram_genblock fatal error generating %s blocknum.%d\n",ram->name,blocknum);
             //exit(-1);
         }
+        hp = 0;
     }
     if ( hp == 0 )
     {
+        printf("get raw info\n");
         if ( _get_blockinfo(tmp,ram,blocknum) > 0 )
         {
             if ( tmp->blocknum != blocknum )
@@ -6771,6 +6772,7 @@ HUFF *ram_genblock(HUFF *tmphp,struct rawblock *tmp,struct ramchain_info *ram,in
             }
         } else printf("error _get_blockinfo.(%u)\n",blocknum);
     }
+    printf("makehp\n");
     hp = ram_makehp(tmphp,format,ram,tmp,blocknum);
     return(hp);
 }
@@ -7091,7 +7093,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     prevhps = ram_get_hpptr(prevblocks,blocknum);
     ram_setfname(fname,ram,blocknum,formatstr);
     //printf("check create.(%s)\n",fname);
-    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 )//&& verifyflag == 0 )
+    if ( blocks->format == 'V' && (fp= fopen(fname,"rb")) != 0 && verifyflag == 0 )
     {
         fclose(fp);
         return(0);
@@ -7164,7 +7166,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
                             ram->blocks.hps[blocknum] = hp;
                     }
                 } //else delete_file(fname,0), hclose(hp);
-            }
+            } else printf("genblock error %s (%c) blocknum.%u\n",ram->name,blocks->format,blocknum);
         } else printf("%s.%u couldnt get hpp\n",formatstr,blocknum);
     }
     else if ( blocks->format == 64 || blocks->format == 4096 )
