@@ -7605,9 +7605,19 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
     return(-3);
 }
 
+
 void ram_snapshot(struct ramsnapshot *snap,struct ramchain_info *ram)
 {
-    
+    memset(snap,0,sizeof(*snap));
+    snap->addrind = ram->next_addr_permind;
+    if ( ram->addrhash.permfp != 0 )
+        snap->addroffset = ftell(ram->addrhash.permfp);
+    snap->txidind = ram->next_txid_permind;
+    if ( ram->txidhash.permfp != 0 )
+        snap->txidoffset = ftell(ram->txidhash.permfp);
+    snap->scriptind = ram->next_script_permind;
+    if ( ram->scripthash.permfp != 0 )
+        snap->scriptoffset = ftell(ram->scripthash.permfp);
 }
 
 int32_t ram_rawblock_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_t checkblocknum)
