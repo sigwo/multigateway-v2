@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -pedantic -g -fPIC -I includes
+CFLAGS=-Wall -pedantic -g -fPIC -I includes -I/usr/include/python2.7 
 LIBS=-lm -lreadline 
 
 TARGET	= libjl777.a
@@ -30,7 +30,7 @@ clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
 SuperNET: $(TARGET); \
-    pkill SuperNET; rm SuperNET; gcc -o SuperNET -I/usr/include/python2.7 SuperNET.c libs/libminiupnpc.a libs/libjl777.a libs/libwebsockets.a libs/libuv.a libs/libdb.a -lssl -lpython -lcrypto -lpthread -lcurl -lm -lz
+    pkill SuperNET; rm SuperNET; gcc -o SuperNET SuperNET.c libs/libminiupnpc.a libs/libjl777.a libs/libwebsockets.a libs/libuv.a libs/libdb.a -lssl -lpython -lcrypto -lpthread -lcurl -lm -lz
 
 special: /usr/lib/libjl777.so; \
     gcc -shared -Wl,-soname,libjl777.so -o libs/libjl777.so $(OBJS) -lstdc++ -lcurl -lm -ldl; \
