@@ -857,6 +857,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
         strcpy(ram->myipaddr,refcp->myipaddr);
     strcpy(ram->srvNXTACCTSECRET,refcp->srvNXTACCTSECRET);
     strcpy(ram->srvNXTADDR,refcp->srvNXTADDR);
+    ram->S.nxt64bits = calc_nxt64bits(refcp->srvNXTADDR);
     if ( cp->marker == 0 )
         cp->marker = clonestr(get_marker(cp->name));
     if ( cp->marker != 0 )
@@ -876,6 +877,7 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     ram->depositconfirms = get_API_int(cJSON_GetObjectItem(cp->json,"depositconfirms"),ram->min_confirms);
     ram->min_NXTconfirms = MIN_NXTCONFIRMS;
     ram->withdrawconfirms = get_API_int(cJSON_GetObjectItem(cp->json,"withdrawconfirms"),ram->min_NXTconfirms);
+    ram->remotemode = get_API_int(cJSON_GetObjectItem(cp->json,"remote"),0);
     ram->multisigchar = cp->multisigchar;
     ram->estblocktime = cp->estblocktime;
     ram->firstiter = 1;
