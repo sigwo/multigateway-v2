@@ -73,11 +73,18 @@ void *_launch_SuperNET(void *_myip)
 {
     char *myip = _myip;
     FILE *fp;
-    char cmd[128];
-    int32_t retval,port,usessl;
+    char cmd[128],*msgfname = "horrible.hack";
+    int32_t retval,delflag,usessl,port = 0;
     void *processptr = 0;
-    #ifdef _WIN32
-    system("del horrible.hack");
+    if ( (fp= fopen(msgfname,"rb")) != 0 )
+        delflag = 1, fclose(fp);
+    else delflag = 0;
+#ifdef _WIN32
+    if ( delflag != 0 )
+    {
+        sprintf(cmd,"del %s",msgfname);
+        system(cmd);
+    }
     sprintf(cmd, "SuperNET.exe");
     sprintf(SuperNET_url, "http://127.0.0.1:7778");
     did_SuperNET_init = 1;
@@ -85,8 +92,12 @@ void *_launch_SuperNET(void *_myip)
     processptr = portable_thread_create(poll_for_broadcasts,0);
     if (portable_spawn("_WIN32", cmd, myip) != 0)
         fprintf(stderr, "Error Starting SuperNET.exe");
-    #else
-    system("rm horrible.hack");
+#else
+    if ( delflag != 0 )
+    {
+        sprintf(cmd,"rm %s",msgfname);
+        system(cmd);
+    }
     sprintf(cmd,"./SuperNET");
     if ( portable_spawn("__linux__", cmd, myip) != 0 )
         printf("error launching (%s)\n",cmd);
@@ -121,7 +132,7 @@ void *_launch_SuperNET(void *_myip)
         did_SuperNET_init = 1;
     }
     SuperNET_retval = retval;
-	#endif
+#endif
     return(processptr);
 }
 
