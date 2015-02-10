@@ -1,4 +1,3 @@
-
 //
 //  api.h
 //
@@ -1017,11 +1016,14 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
 char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
- char * name[MAX_JSON_FIELD]
+ char name[MAX_JSON_FIELD];
+ copy_cJSON(name,objs[0]);
  Py_Initialize();
  FILE *fp = fopen(name, "r");
- PyRun_AnyFile(fp, name);
+ PyRun_SimpleFile(fp, name);
  Py_Finalize();
+ fclose(fp);
+ return(clonestr("return string"));
 }
 
 
