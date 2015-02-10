@@ -48,7 +48,7 @@ install: doesntexist; \
 
 patch: doesntexist; \
     sudo apt-get install python3-dev; \
-    cp /usr/local/lib/libpython3.4m.a ../libs; \
+    cp /usr/local/lib/libpython3.4m.a libs; \
 
 patch3: doesntexist; \
     cd miniupnpc; \
