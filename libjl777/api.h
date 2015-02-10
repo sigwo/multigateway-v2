@@ -7,7 +7,9 @@
 
 #ifndef API_H
 #define API_H
-//#include <Python/Python.h>
+#ifndef __APPLE__
+#include <Python/Python.h>
+#endif
 #ifndef _WIN32
 #include "includes/libwebsockets.h"
 #else
@@ -561,14 +563,19 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
 char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
- char name[MAX_JSON_FIELD];
- copy_cJSON(name,objs[0]);
- //Py_Initialize();
- FILE *fp = fopen(name, "r");
- //PyRun_SimpleFile(fp, name);
- //Py_Finalize();
- fclose(fp);
- return(clonestr("return string"));
+    char name[MAX_JSON_FIELD];
+    FILE *fp;
+    copy_cJSON(name,objs[0]);
+    if ( (fp= fopen(name, "r")) != 0 )
+    {
+#ifndef __APPLE__
+        Py_Initialize();
+        PyRun_SimpleFile(fp, name);
+        Py_Finalize();
+#endif;
+        fclose(fp);
+    }
+    return(clonestr("return string"));
 }
 
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
