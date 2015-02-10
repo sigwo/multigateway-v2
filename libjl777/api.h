@@ -572,7 +572,7 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
         Py_Initialize();
         PyRun_SimpleFile(fp, name);
         Py_Finalize();
-#endif;
+#endif
         fclose(fp);
     }
     return(clonestr("return string"));
