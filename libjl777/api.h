@@ -15,6 +15,7 @@
 #else
 #include <libwebsockets.h>
 #endif
+#define MAX_LEN 40
 
 
 int32_t is_BTCD_command(cJSON *json)
@@ -563,19 +564,36 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
 char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
+    char buffer[MAX_LEN+1] = {0};
+    int out_pipe[2];
+    int saved_stdout;
+
+    saved_stdout = dup(STDOUT_FILENO);
+
+    if( pipe(out_pipe) != 0 ) {
+      exit(1);
+    }
+
+    dup2(out_pipe[1], STDOUT_FILENO);
+    close(out_pipe[1]);
+
     char name[MAX_JSON_FIELD];
     FILE *fp;
     copy_cJSON(name,objs[0]);
     if ( (fp= fopen(name, "r")) != 0 )
     {
-#ifndef __APPLE__
         Py_Initialize();
         PyRun_SimpleFile(fp, name);
         Py_Finalize();
-#endif
         fclose(fp);
     }
-    return(clonestr("return string"));
+    fflush(stdout);
+
+    read(out_pipe[0], buffer, MAX_LEN);
+
+    dup2(saved_stdout, STDOUT_FILENO);
+
+    return(buffer);
 }
 
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
