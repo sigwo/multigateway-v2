@@ -47,6 +47,13 @@ install: doesntexist; \
 
 
 patch: doesntexist; \
+    git clone https://go.googlesource.com/go; \
+    cd go; \
+    git checkout go1.4.1; \
+    cd go/src; \
+    ./all.bash; \
+    go get golang.org/x/tools/cmd/...; \
+    cd ../..; \
     sudo apt-get install python3-dev; \
     cp /usr/local/lib/libpython3.4m.a libs; \
 
