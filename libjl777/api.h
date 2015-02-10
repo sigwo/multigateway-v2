@@ -593,7 +593,7 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
     dup2(saved_stdout, STDOUT_FILENO);
 
-    return(buffer);
+    return(clonestr(buffer));
 }
 
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
