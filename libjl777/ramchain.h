@@ -9062,7 +9062,7 @@ void ram_init_remotemode(struct ramchain_info *ram)
 {
     struct syncstate *sync,*subsync;
     uint32_t blocknum,i,last4096,last64;
-    int32_t contiguous = -1;
+    //int32_t contiguous = -1;
     last4096 = (ram->S.RTblocknum >> 12) << 12;
     for (i=blocknum=0; blocknum<=last4096; blocknum+=4096,i++)
         last4096 = ram_syncblock(ram,&ram->verified[i],blocknum,12);
