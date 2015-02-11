@@ -9045,9 +9045,10 @@ int32_t ram_syncblock(struct ramchain_info *ram,struct syncstate *sync,uint32_t 
     void ram_syncblocks(struct ramchain_info *ram,uint32_t blocknum,int32_t numblocks,uint64_t *sources,int32_t n,int32_t addshaflag);
     int32_t numblocks,n;
     numblocks = (1 << log2bits);
-    while ( (n= ram_getsources(sync->requested,ram,blocknum,4096)) == 0 )
+    printf("sync.%d\n",blocknum);
+    while ( (n= ram_getsources(sync->requested,ram,blocknum,numblocks)) == 0 )
     {
-        fprintf(stderr,"waiting for peers for block4096.%u of %u\n",blocknum,ram->S.RTblocknum);
+        fprintf(stderr,"waiting for peers for block%d.%u of %u\n",numblocks,blocknum,ram->S.RTblocknum);
         sleep(3);
     }
     ram_syncblocks(ram,blocknum,numblocks,sync->requested,n,numblocks == 64);
