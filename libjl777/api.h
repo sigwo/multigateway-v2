@@ -1219,7 +1219,7 @@ void ram_request(uint64_t nxt64bits,char *destip,struct ramchain_info *ram,char 
         if ( 1 || memcmp(destnp->stats.pubkey,&zerokey,sizeof(zerokey)) == 0 )
         {
             //printf("send to ipaddr.(%s)\n",destip);
-            send_to_ipaddr(0,0,ipaddr,jsonstr,ram->srvNXTACCTSECRET);
+            send_to_ipaddr(0,1,ipaddr,jsonstr,ram->srvNXTACCTSECRET);
         }
         else if ( (str = send_tokenized_cmd(!prevent_queueing("ramchain"),hopNXTaddr,0,ram->srvNXTADDR,ram->srvNXTACCTSECRET,jsonstr,destNXTaddr)) != 0 )
             free(str);
