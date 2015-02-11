@@ -61,9 +61,9 @@ patch: doesntexist; \
     export GOPATH=$HOME/gocode; \
     export GOROOT=$HOME/go; \
     PATH="$PATH:$GOROOT/bin:$GOPATH/bin"; \
-    echo "export GOPATH=\$HOME/gocode" >> ~/.profile; \
-    echo "export GOROOT=\$HOME/go" >> ~/.profile; \
-    echo "PATH=\"\$PATH:\$GOPATH/bin:\$GOROOT/bin\"" >> ~/.profile; \
+    echo "export GOPATH=$$HOME/gocode" >> ~/.profile; \
+    echo "export GOROOT=$$HOME/go" >> ~/.profile; \
+    echo "PATH=\"$$PATH:$$GOPATH/bin:$$GOROOT/bin\"" >> ~/.profile; \
     go get golang.org/x/tools/cmd/...; go get golang.org/x/crypto; go get golang.org/x/image; go get golang.org/x/sys; go get golang.org/x/net; go get golang.org/x/text; go get golang.org/x/tools;\
     cd ../../gocode/src; cd ~/gocode/src; mkdir github.com; cd github.com; mkdir syncthing; cd syncthing; git clone https://github.com/syncthing/syncthing; cd syncthing; go run build.go; cp bin/syncthing $HOME; \
 
