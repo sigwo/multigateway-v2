@@ -2966,6 +2966,7 @@ void ram_update_remotesrc(struct ramchain_info *ram,struct MGWstate *sp)
     int32_t i,oldi = -1,oldest = -1;
     if ( sp->nxt64bits == 0 )
         return;
+    printf("update remote\n");
     for (i=0; i<(int32_t)(sizeof(ram->remotesrcs)/sizeof(*ram->remotesrcs)); i++)
     {
         if ( ram->remotesrcs[i].nxt64bits == 0 || sp->nxt64bits == ram->remotesrcs[i].nxt64bits )
@@ -2998,7 +2999,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
             if ( coinstr[0] != 0 )
                 ram = get_ramchain_info(coinstr);
         }
-        if ( Debuglevel > 2 || ram->remotemode != 0 )
+        if ( Debuglevel > 2 || (ram != 0 && ram->remotemode != 0) )
             printf("[%s] parse.(%s)\n",coinstr,pingstr);
         if ( ram != 0 )
         {
@@ -3010,6 +3011,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
             }
             else
             {
+                printf("call parse.(%s)\n",cJSON_Print(json));
                 ram_parse_MGWstate(&S,json,ram->name,sender);
                 if ( S.permblocks > ram->S.permblocks )
                     ram_update_remotesrc(ram,&S);
