@@ -487,7 +487,7 @@ void kademlia_update_info(char *destNXTaddr,char *ipaddr,int32_t port,char *pubk
             expand_ipbits(oldip,stats->ipbits);
             expand_ipbits(newip,ipbits);
             expand_nxt64bits(nxtaddr,nxt64bits);
-            printf("kademlia_update_info: (%s) stats ipbits %u -> %u\n",nxtaddr,stats->ipbits,ipbits);
+            printf("kademlia_update_info: (%s) stats ipbits %u %s -> %s %u\n",nxtaddr,stats->ipbits,oldip,newip,ipbits);
             stats->ipbits = ipbits;
             changed++;
         }
