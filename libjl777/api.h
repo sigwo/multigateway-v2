@@ -1215,7 +1215,7 @@ void ram_request(uint64_t nxt64bits,char *destip,struct ramchain_info *ram,char 
     {
         expand_nxt64bits(destNXTaddr,nxt64bits);
         destnp = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
-        if ( memcmp(destnp->stats.pubkey,&zerokey,sizeof(zerokey)) == 0 )
+        if ( 1 || memcmp(destnp->stats.pubkey,&zerokey,sizeof(zerokey)) == 0 )
         {
             //printf("send to ipaddr.(%s)\n",destip);
             send_to_ipaddr(0,0,destip,jsonstr,ram->srvNXTACCTSECRET);
