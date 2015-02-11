@@ -214,7 +214,7 @@ struct syncstate
 {
     bits256 majority,minority;
     uint64_t requested[16];
-    void *substate;
+    struct syncstate *substate;
     uint32_t blocknum,allocsize;
     uint16_t format,pending,majoritybits,minoritybits;
 };
