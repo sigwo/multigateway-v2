@@ -2972,7 +2972,7 @@ void ram_update_remotesrc(struct ramchain_info *ram,struct MGWstate *sp)
         if ( ram->remotesrcs[i].nxt64bits == 0 || sp->nxt64bits == ram->remotesrcs[i].nxt64bits )
         {
             ram->remotesrcs[i] = *sp;
-            printf("set slot.%d <- permblocks.%u\m",i,sp->permblocks);
+            printf("set slot.%d <- permblocks.%u\n",i,sp->permblocks);
             return;
         }
         if ( oldest < 0 || (ram->remotesrcs[i].permblocks != 0 && ram->remotesrcs[i].permblocks < oldest) )
@@ -2980,7 +2980,7 @@ void ram_update_remotesrc(struct ramchain_info *ram,struct MGWstate *sp)
     }
     if ( oldi >= 0 && (sp->permblocks != 0 && sp->permblocks > oldest) )
     {
-        printf("overwrite slot.%d <- permblocks.%u\m",oldi,sp->permblocks);
+        printf("overwrite slot.%d <- permblocks.%u\n",oldi,sp->permblocks);
         ram->remotesrcs[oldi] = *sp;
     }
 }
