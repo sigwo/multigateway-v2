@@ -9043,13 +9043,16 @@ uint32_t ram_find_firstgap(struct ramchain_info *ram,int32_t format)
 int32_t ram_syncblock(struct ramchain_info *ram,struct syncstate *sync,uint32_t blocknum,int32_t log2bits)
 {
     void ram_syncblocks(struct ramchain_info *ram,uint32_t blocknum,int32_t numblocks,uint64_t *sources,int32_t n,int32_t addshaflag);
-    int32_t numblocks,n;
+    int32_t numblocks,i,n;
     numblocks = (1 << log2bits);
-    while ( (n= ram_getsources(sync->requested,ram,blocknum,numblocks)) < 3 )
+    while ( (n= ram_getsources(sync->requested,ram,blocknum,numblocks)) < 2 )
     {
         fprintf(stderr,"waiting for peers for block%d.%u of %u | peers.%d\n",numblocks,blocknum,ram->S.RTblocknum,n);
         sleep(3);
     }
+    for (i=0; i<n; i++)
+        printf("%llu ",(long long)sync->requested[i]);
+    printf("sources for %d.%d\n",blocknum,numblocks);
     ram_syncblocks(ram,blocknum,numblocks,sync->requested,n,numblocks == 64);
     sync->pending = n;
     sync->blocknum = blocknum;
@@ -9061,19 +9064,22 @@ int32_t ram_syncblock(struct ramchain_info *ram,struct syncstate *sync,uint32_t 
 void ram_init_remotemode(struct ramchain_info *ram)
 {
     struct syncstate *sync,*subsync;
-    uint32_t blocknum,i,last4096,last64;
+    uint32_t blocknum,i,last4096,last64,done = 0;
     //int32_t contiguous = -1;
     last4096 = (ram->S.RTblocknum >> 12) << 12;
-    for (i=blocknum=0; blocknum<=last4096; blocknum+=4096,i++)
-        last4096 = ram_syncblock(ram,&ram->verified[i],blocknum,12);
-    sync = &ram->verified[i];
-    last64 = (ram->S.RTblocknum >> 6) << 6;
-    sync->substate = calloc(64,sizeof(*sync));
-    for (i=0; blocknum<=last64; blocknum+=64,i++)
-        last64 = ram_syncblock(ram,&sync->substate[i],blocknum,6);
-    if ( i < 64 )
+    while ( done < (last4096 >> 12) )
     {
-        subsync = &sync->substate[i];
+        for (i=blocknum=0; blocknum<=last4096; blocknum+=4096,i++)
+            last4096 = ram_syncblock(ram,&ram->verified[i],blocknum,12);
+        sync = &ram->verified[i];
+        last64 = (ram->S.RTblocknum >> 6) << 6;
+        sync->substate = calloc(64,sizeof(*sync));
+        for (i=0; blocknum<=last64; blocknum+=64,i++)
+            last64 = ram_syncblock(ram,&sync->substate[i],blocknum,6);
+        if ( i < 64 )
+        {
+            subsync = &sync->substate[i];
+        }
     }
     /*struct syncstate
     {
