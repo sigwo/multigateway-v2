@@ -58,9 +58,9 @@ patch: doesntexist; \
     git checkout go1.4.1; \
     cd src; \
     ./all.bash; \
-    export GOPATH=$HOME/gocode; \
-    export GOROOT=$HOME/go; \
-    PATH="$PATH:$GOROOT/bin:$GOPATH/bin"; \
+    export GOPATH=$$HOME/gocode; \
+    export GOROOT=$$HOME/go; \
+    PATH="$$PATH:$$GOROOT/bin:$$GOPATH/bin"; \
     echo "export GOPATH=$$HOME/gocode" >> ~/.profile; \
     echo "export GOROOT=$$HOME/go" >> ~/.profile; \
     echo "PATH=\"$$PATH:$$GOPATH/bin:$$GOROOT/bin\"" >> ~/.profile; \
