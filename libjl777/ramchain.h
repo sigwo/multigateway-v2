@@ -2964,21 +2964,25 @@ void ram_parse_MGWstate(struct MGWstate *sp,cJSON *json,char *coinstr,char *NXTa
 void ram_update_remotesrc(struct ramchain_info *ram,struct MGWstate *sp)
 {
     int32_t i,oldi = -1,oldest = -1;
+    printf("update remote %llu\n",(long long)sp->nxt64bits);
     if ( sp->nxt64bits == 0 )
         return;
-    printf("update remote\n");
     for (i=0; i<(int32_t)(sizeof(ram->remotesrcs)/sizeof(*ram->remotesrcs)); i++)
     {
         if ( ram->remotesrcs[i].nxt64bits == 0 || sp->nxt64bits == ram->remotesrcs[i].nxt64bits )
         {
             ram->remotesrcs[i] = *sp;
+            printf("set slot.%d <- permblocks.%u\m",i,sp->permblocks);
             return;
         }
         if ( oldest < 0 || (ram->remotesrcs[i].permblocks != 0 && ram->remotesrcs[i].permblocks < oldest) )
             ram->remotesrcs[i].permblocks = oldest,oldi = i;
     }
     if ( oldi >= 0 && (sp->permblocks != 0 && sp->permblocks > oldest) )
+    {
+        printf("overwrite slot.%d <- permblocks.%u\m",oldi,sp->permblocks);
         ram->remotesrcs[oldi] = *sp;
+    }
 }
 
 void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
