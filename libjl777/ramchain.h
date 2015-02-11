@@ -7199,7 +7199,7 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
                         //if ( blocks->format == 'V' )
                         fprintf(stderr," %s CREATED.%c block.%d datalen.%d | RT.%u lag.%d\n",ram->name,blocks->format,blocknum,datalen+1,ram->S.RTblocknum,ram->S.RTblocknum-blocknum);
                         //else fprintf(stderr,"%s.B.%d ",ram->name,blocknum);
-                        if ( *hpptr != 0 )
+                        if ( 0 && *hpptr != 0 )
                         {
                             hclose(*hpptr);
                             *hpptr = 0;
