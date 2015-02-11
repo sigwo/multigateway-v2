@@ -1225,7 +1225,7 @@ void ram_request(uint64_t nxt64bits,char *destip,struct ramchain_info *ram,char 
     }
 }
 
-void ram_syncblocks(struct ramchain_info *ram,uint32_t blocknum,int32_t n,uint64_t *sources,int32_t numblocks,int32_t addshaflag)
+void ram_syncblocks(struct ramchain_info *ram,uint32_t blocknum,int32_t numblocks,uint64_t *sources,int32_t n,int32_t addshaflag)
 {
     int32_t ram_perm_sha256(bits256 *hashp,struct ramchain_info *ram,uint32_t blocknum,int32_t n);
     char destip[64],jsonstr[1024],shastr[128],hashstr[65];
