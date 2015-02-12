@@ -8650,6 +8650,7 @@ void ram_setsnapshot(struct ramchain_info *ram,struct syncstate *sync,uint32_t b
 {
     int32_t i,num = (int32_t)(sizeof(sync->requested)/sizeof(*sync->requested));
     bits256 majority,zerokey;
+    fprintf(stderr,"ram_setsnapshot.%d\n",blocknum);
     for (i=0; i<num&&sync->requested[i]!=0; i++)
     {
         if ( senderbits == sync->requested[i] )
@@ -8687,6 +8688,7 @@ void ram_setsnapshot(struct ramchain_info *ram,struct syncstate *sync,uint32_t b
                 printf("WARNING: third different hash for blocknum.%d\n",blocknum);
         }
     }
+    fprintf(stderr,"done ram_setsnapshot.%d\n",blocknum);
 }
 
 char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
@@ -8700,6 +8702,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
     uint32_t blocknum,size,permind,i;
     int32_t format = 0,type = 0;
     permstr[0] = 0;
+    fprintf(stderr,"ramresponse\n");
     if ( (array= cJSON_Parse(origargstr)) != 0 )
     {
         if ( is_cJSON_Array(array) != 0 && cJSON_GetArraySize(array) == 2 )
@@ -8711,6 +8714,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
             copy_cJSON(origcmd,cJSON_GetObjectItem(json,"origcmd"));
             copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
             ram = get_ramchain_info(coin);
+            printf("orig.(%s) ram.%p %s\n",origcmd,ram,coin);
             if ( strcmp(origcmd,"rampyramid") == 0 )
             {
                 blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocknum"),0);
@@ -8751,6 +8755,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
             {
                 if ( datastr != 0 )
                     printf("PYRAMID.B%d blocknum.%u (%s).permsize %ld from NXT.(%s) ip.(%s)\n",format,blocknum,datastr,strlen(datastr)/2,sender,senderip);
+                else printf("PYRAMID.B%d blocknum.%u from NXT.(%s) ip.(%s)\n",format,blocknum,sender,senderip);
             }
             else
             {
@@ -8773,6 +8778,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
         }
         free_json(array);
     }
+    fprintf(stderr,"done ramresponse\n");
     return(retstr);
 }
 
