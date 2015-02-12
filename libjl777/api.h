@@ -562,86 +562,59 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     return(clonestr(origargstr));
 }
 
-char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+void call_python(FILE *fp,char *cmd,char *fname)
 {
-    char buffer[MAX_LEN+1] = {0};
-    int out_pipe[2];
-    int saved_stdout;
+    Py_Initialize();
+    PyRun_SimpleFile(fp,fname);
+    Py_Finalize();
+}
 
-    saved_stdout = dup(STDOUT_FILENO);
+void call_system(FILE *fp,char *cmd,char *fname)
+{
+    char cmdstr[1024];
+    sprintf(cmdstr,"%s %s",cmd,fname);
+    system(cmdstr);
+}
 
-    if( pipe(out_pipe) != 0 ) {
-      exit(1);
-    }
-
-    dup2(out_pipe[1], STDOUT_FILENO);
-    close(out_pipe[1]);
-
-    char name[MAX_JSON_FIELD];
+char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,char *fname))
+{
+    char *buffer = 0;
+    long filesize;
+    int32_t out_pipe[2],saved_stdout;
     FILE *fp;
-    copy_cJSON(name,objs[0]);
-    if ( (fp= fopen(name, "r")) != 0 )
+    saved_stdout = dup(STDOUT_FILENO);
+    if ( pipe(out_pipe) != 0 )
+        return(clonestr("{\"error\":\"pipe creation error\"}"));
+    dup2(out_pipe[1],STDOUT_FILENO);
+    close(out_pipe[1]);
+    if ( (fp= fopen(fname,"r")) != 0 )
     {
-        Py_Initialize();
-        PyRun_SimpleFile(fp, name);
-        Py_Finalize();
+        (*language)(fp,cmd,fname);
         fclose(fp);
     }
     fflush(stdout);
-
-    read(out_pipe[0], buffer, MAX_LEN);
-
-    dup2(saved_stdout, STDOUT_FILENO);
-
-    return(clonestr(buffer));
+    if ( (filesize= lseek(out_pipe[0],0,SEEK_END)) > 0 )
+    {
+        buffer = malloc(filesize);
+        read(out_pipe[0],buffer,filesize);
+    }
+    dup2(saved_stdout,STDOUT_FILENO);
+    return(buffer);
 }
 
-char *bash_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char buffer[MAX_LEN+1] = {0};
-    int out_pipe[2];
-    int saved_stdout;
-    saved_stdout = dup(STDOUT_FILENO);
-    if( pipe(out_pipe) != 0 ) {
-      exit(1);
-    }
-    dup2(out_pipe[1], STDOUT_FILENO);
-    close(out_pipe[1]);
-    char name[MAX_JSON_FIELD];
-    copy_cJSON(name,objs[0]);
-    char result[100];
-    const char * sh = "sh ";
-    strcpy(result, sh);
-    strcat(result,name);
-    system(result);
-    fflush(stdout);
-    read(out_pipe[0], buffer, MAX_LEN);
-    dup2(saved_stdout, STDOUT_FILENO);
-    return(clonestr(buffer));
+    char fname[MAX_JSON_FIELD];
+    copy_cJSON(fname,objs[0]);
+    return(language_func("python",fname,call_python));
 }
 
-char *php_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char buffer[MAX_LEN+1] = {0};
-    int out_pipe[2];
-    int saved_stdout;
-    saved_stdout = dup(STDOUT_FILENO);
-    if( pipe(out_pipe) != 0 ) {
-      exit(1);
-    }
-    dup2(out_pipe[1], STDOUT_FILENO);
-    close(out_pipe[1]);
-    char name[MAX_JSON_FIELD];
-    copy_cJSON(name,objs[0]);
-    char result[100];
-    const char * php = "php ";
-    strcpy(result, php);
-    strcat(result,name);
-    system(result);
-    fflush(stdout);
-    read(out_pipe[0], buffer, MAX_LEN);
-    dup2(saved_stdout, STDOUT_FILENO);
-    return(clonestr(buffer));
+    char fname[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD];
+    copy_cJSON(fname,objs[0]);
+    copy_cJSON(syscall,objs[1]);
+    return(language_func(syscall,fname,call_system));
 }
 
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -1959,10 +1932,9 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
 
     // Embedded Langs
     static char *python[] = { (char *)python_func, "python", "V",  "name", 0 };
-    static char *bash[] = { (char *)bash_func, "bash", "V",  "name", 0 };
-    static char *php[] = { (char *)php_func, "php", "V",  "name", 0 };
+    static char *syscall[] = { (char *)syscall_func, "syscall", "V",  "name", "cmd", 0 };
 
-     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, php, bash, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGW, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile };
+     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, syscall, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGW, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
