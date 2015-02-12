@@ -56,6 +56,7 @@ extern int32_t MGW_initdone,PERMUTE_RAWINDS;
 extern char Server_ipaddrs[256][MAX_JSON_FIELD];
 extern int32_t is_trusted_issuer(char *issuer);
 extern struct ramchain_info *get_ramchain_info(char *coinstr);
+int32_t bitweight(uint64_t x);
 
 // DB functions
 extern struct multisig_addr *find_msigaddr(char *msigaddr);
@@ -214,6 +215,7 @@ struct syncstate
 {
     bits256 majority,minority;
     uint64_t requested[16];
+    struct ramsnapshot snaps[16];
     struct syncstate *substate;
     uint32_t blocknum,allocsize;
     uint16_t format,pending,majoritybits,minoritybits;
@@ -8644,13 +8646,57 @@ char *rampyramid(char *myNXTaddr,char *origargstr,char *sender,char *previpaddr,
     return(retstr);
 }
 
+void ram_setsnapshot(struct ramchain_info *ram,struct syncstate *sync,uint32_t blocknum,struct ramsnapshot *snap,uint64_t senderbits)
+{
+    int32_t i,num = (int32_t)(sizeof(sync->requested)/sizeof(*sync->requested));
+    bits256 majority,zerokey;
+    for (i=0; i<num&&sync->requested[i]!=0; i++)
+    {
+        if ( senderbits == sync->requested[i] )
+        {
+            if ( (blocknum % 4096) != 0 )
+                sync->snaps[i] = *snap;
+            break;
+        }
+    }
+    if ( sync->requested[i] == 0 )
+    {
+        sync->requested[i] = senderbits;
+        if ( i == 0 )
+        {
+            if ( (blocknum % 4096) == 0 )
+                ram->permhash4096[blocknum >> 6] = snap->hash;
+            sync->majority = snap->hash;
+        }
+    }
+    majority = sync->majority;
+    memset(&zerokey,0,sizeof(zerokey));
+    memset(&sync->minority,0,sizeof(sync->minority));
+    sync->majoritybits = sync->minoritybits = 0;
+    for (i=0; i<num&&sync->requested[i]!=0; i++)
+    {
+        if ( memcmp(sync->snaps[i].hash.bytes,majority.bytes,sizeof(majority)) == 0 )
+            sync->majoritybits |= (1 << i);
+        else
+        {
+            sync->minoritybits |= (1 << i);
+            if ( memcmp(sync->snaps[i].hash.bytes,zerokey.bytes,sizeof(zerokey)) == 0 )
+                sync->minority = sync->snaps[i].hash;
+            else if ( memcmp(sync->snaps[i].hash.bytes,sync->minority.bytes,sizeof(sync->minority)) != 0 )
+                printf("WARNING: third different hash for blocknum.%d\n",blocknum);
+        }
+    }
+}
+
 char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
 {
     char origcmd[MAX_JSON_FIELD],coin[MAX_JSON_FIELD],permstr[MAX_JSON_FIELD],shastr[MAX_JSON_FIELD],*snapstr,*retstr = 0;
     cJSON *array,*json,*snapjson;
     uint8_t *data;
+    bits256 hash;
+    struct ramchain_info *ram;
     struct ramsnapshot snap;
-    uint32_t blocknum,size,permind;
+    uint32_t blocknum,size,permind,i;
     int32_t format = 0,type = 0;
     permstr[0] = 0;
     if ( (array= cJSON_Parse(origargstr)) != 0 )
@@ -8663,6 +8709,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
                 datastr = cJSON_str(cJSON_GetObjectItem(json,"data"));
             copy_cJSON(origcmd,cJSON_GetObjectItem(json,"origcmd"));
             copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
+            ram = get_ramchain_info(coin);
             if ( strcmp(origcmd,"rampyramid") == 0 )
             {
                 blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocknum"),0);
@@ -8687,9 +8734,15 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
                     snapjson = ram_snapshot_json(&snap);
                     snapstr = cJSON_Print(snapjson), free_json(snapjson);
                     copy_cJSON(shastr,cJSON_GetObjectItem(json,"sha256"));
+                    decode_hex(hash.bytes,sizeof(hash),shastr);
                     _stripwhite(snapstr,' ');
                     // update pyramid
-                    printf("PYRAMID.B%d blocknum.%u sha.(%s) (%s) from NXT.(%s) ip.(%s)\n",format,blocknum,shastr,snapstr,sender,senderip);
+                    if ( ram != 0 )
+                    {
+                        i = (blocknum >> 6);
+                        ram_setsnapshot(ram,&ram->verified[i],blocknum,&snap,_calc_nxt64bits(sender));
+                    }
+                    printf("PYRAMID.B%d blocknum.%u [%d] sha.(%s) (%s) from NXT.(%s) ip.(%s)\n",format,blocknum,i,shastr,snapstr,sender,senderip);
                     free(snapstr);
                 }
             }
@@ -9085,16 +9138,16 @@ uint32_t ram_find_firstgap(struct ramchain_info *ram,int32_t format)
 int32_t ram_syncblock(struct ramchain_info *ram,struct syncstate *sync,uint32_t blocknum,int32_t log2bits)
 {
     void ram_syncblocks(struct ramchain_info *ram,uint32_t blocknum,int32_t numblocks,uint64_t *sources,int32_t n,int32_t addshaflag);
-    int32_t numblocks,i,n;
+    int32_t numblocks,n;
     numblocks = (1 << log2bits);
-    while ( (n= ram_getsources(sync->requested,ram,blocknum,numblocks)) < 2 )
+    while ( (n= ram_getsources(sync->requested,ram,blocknum,numblocks)) == 0 )
     {
         fprintf(stderr,"waiting for peers for block%d.%u of %u | peers.%d\n",numblocks,blocknum,ram->S.RTblocknum,n);
         sleep(3);
     }
-    for (i=0; i<n; i++)
-        printf("%llu ",(long long)sync->requested[i]);
-    printf("sources for %d.%d\n",blocknum,numblocks);
+    //for (i=0; i<n; i++)
+    ///    printf("%llu ",(long long)sync->requested[i]);
+    //printf("sources for %d.%d\n",blocknum,numblocks);
     ram_syncblocks(ram,blocknum,numblocks,sync->requested,n,numblocks == 64);
     sync->pending = n;
     sync->blocknum = blocknum;
@@ -9103,24 +9156,58 @@ int32_t ram_syncblock(struct ramchain_info *ram,struct syncstate *sync,uint32_t 
     return((ram->S.RTblocknum >> log2bits) << log2bits);
 }
 
+void ram_selfheal(struct ramchain_info *ram,uint32_t blocknum,int32_t numblocks)
+{
+    int32_t i;
+    for (i=0; i<numblocks; i++)
+        printf("magically heal block.%d\n",blocknum + i);
+}
+
+uint32_t ram_syncblock64(struct ramchain_info *ram,struct syncstate *sync,uint32_t blocknum)
+{
+    uint32_t i,last64,done = 0;
+    struct syncstate *subsync;
+    last64 = (ram->S.RTblocknum >> 6) << 6;
+    if ( sync->substate == 0 )
+        sync->substate = calloc(64,sizeof(*sync));
+    for (i=0; blocknum<=last64; blocknum+=64,i++)
+    {
+        subsync = &sync->substate[i];
+        if ( subsync->minoritybits != 0 )
+            ram_selfheal(ram,blocknum,64);
+        else if ( subsync->majoritybits == 0 || bitweight(subsync->majoritybits) < 3 )
+            last64 = ram_syncblock(ram,subsync,blocknum,6);
+        else done++;
+    }
+    printf("syncblock64 from %d: %d done of %d\n",blocknum,done,i);
+    return(last64);
+}
+
 void ram_init_remotemode(struct ramchain_info *ram)
 {
     struct syncstate *sync,*subsync;
-    uint32_t blocknum,i,last4096,last64,done = 0;
-    //int32_t contiguous = -1;
+    uint32_t blocknum,i,last4096,done = 0;
     last4096 = (ram->S.RTblocknum >> 12) << 12;
     while ( done < (last4096 >> 12) )
     {
         for (i=blocknum=0; blocknum<=last4096; blocknum+=4096,i++)
-            last4096 = ram_syncblock(ram,&ram->verified[i],blocknum,12);
+        {
+            sync = &ram->verified[i];
+            if ( sync->minoritybits != 0 )
+                ram_syncblock64(ram,sync,blocknum);
+            else if ( sync->majoritybits == 0 || bitweight(sync->majoritybits) < 3 )
+                last4096 = ram_syncblock(ram,sync,blocknum,12);
+            else done++;
+        }
+        printf("done.%d of %d\n",done,i);
         sync = &ram->verified[i];
-        last64 = (ram->S.RTblocknum >> 6) << 6;
-        sync->substate = calloc(64,sizeof(*sync));
-        for (i=0; blocknum<=last64; blocknum+=64,i++)
-            last64 = ram_syncblock(ram,&sync->substate[i],blocknum,6);
         if ( i < 64 )
         {
             subsync = &sync->substate[i];
+            if ( subsync->substate == 0 )
+                subsync->substate = calloc(64,sizeof(*subsync));
+            for (; blocknum<ram->S.RTblocknum; blocknum++)
+                ram_syncblock(ram,&subsync->substate[i],blocknum,0);
         }
     }
     /*struct syncstate
