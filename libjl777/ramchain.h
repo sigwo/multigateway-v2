@@ -4043,7 +4043,7 @@ void hclear(HUFF *hp)
 {
     hp->bitoffset = 0;
     hupdate_internals(hp);
-    memset(hp->buf,0,hp->allocsize);
+    //memset(hp->buf,0,hp->allocsize);
     hp->endpos = 0;
 }
 
