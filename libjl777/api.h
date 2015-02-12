@@ -7,9 +7,7 @@
 
 #ifndef API_H
 #define API_H
-#ifndef __APPLE__
 #include "Python.h"
-#endif
 #ifndef _WIN32
 #include "includes/libwebsockets.h"
 #else
