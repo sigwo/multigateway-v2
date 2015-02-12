@@ -598,6 +598,15 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
 char *bash_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
+    char buffer[MAX_LEN+1] = {0};
+    int out_pipe[2];
+    int saved_stdout;
+    saved_stdout = dup(STDOUT_FILENO);
+    if( pipe(out_pipe) != 0 ) {
+      exit(1);
+    }
+    dup2(out_pipe[1], STDOUT_FILENO);
+    close(out_pipe[1]);
     char name[MAX_JSON_FIELD];
     copy_cJSON(name,objs[0]);
     char result[100];
@@ -605,11 +614,23 @@ char *bash_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,
     strcpy(result, sh);
     strcat(result,name);
     system(result);
-    return(clonestr("Done"));
+    fflush(stdout);
+    read(out_pipe[0], buffer, MAX_LEN);
+    dup2(saved_stdout, STDOUT_FILENO);
+    return(clonestr(buffer));
 }
 
 char *php_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
+    char buffer[MAX_LEN+1] = {0};
+    int out_pipe[2];
+    int saved_stdout;
+    saved_stdout = dup(STDOUT_FILENO);
+    if( pipe(out_pipe) != 0 ) {
+      exit(1);
+    }
+    dup2(out_pipe[1], STDOUT_FILENO);
+    close(out_pipe[1]);
     char name[MAX_JSON_FIELD];
     copy_cJSON(name,objs[0]);
     char result[100];
@@ -617,7 +638,10 @@ char *php_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,i
     strcpy(result, php);
     strcat(result,name);
     system(result);
-    return(clonestr("Done"));
+    fflush(stdout);
+    read(out_pipe[0], buffer, MAX_LEN);
+    dup2(saved_stdout, STDOUT_FILENO);
+    return(clonestr(buffer));
 }
 
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
