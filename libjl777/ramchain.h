@@ -8714,7 +8714,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
             copy_cJSON(origcmd,cJSON_GetObjectItem(json,"origcmd"));
             copy_cJSON(coin,cJSON_GetObjectItem(json,"coin"));
             ram = get_ramchain_info(coin);
-            printf("orig.(%s) ram.%p %s\n",origcmd,ram,coin);
+            //printf("orig.(%s) ram.%p %s\n",origcmd,ram,coin);
             if ( strcmp(origcmd,"rampyramid") == 0 )
             {
                 blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocknum"),0);
@@ -9175,9 +9175,10 @@ uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,s
     uint32_t i,last64,done = 0;
     struct syncstate *subsync;
     last64 = (ram->S.RTblocknum >> 6) << 6;
+    fprintf(stderr,"syncblock64 from %d: last64 %d\n",blocknum,last64);
     if ( sync->substate == 0 )
         sync->substate = calloc(64,sizeof(*sync));
-    for (i=0; blocknum<=last64; blocknum+=64,i++)
+    for (i=0; blocknum<=last64&&i<64; blocknum+=64,i++)
     {
         subsync = &sync->substate[i];
         if ( subsync->minoritybits != 0 )
@@ -9186,9 +9187,9 @@ uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,s
             last64 = ram_syncblock(ram,subsync,blocknum,6);
         else done++;
     }
-    if ( subsyncp )
+    if ( subsyncp != 0 )
         (*subsyncp) = &sync->substate[i];
-    printf("syncblock64 from %d: %d done of %d\n",blocknum,done,i);
+    fprintf(stderr,"syncblock64 from %d: %d done of %d\n",blocknum,done,i);
     return(last64);
 }
 
