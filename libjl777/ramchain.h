@@ -9163,7 +9163,7 @@ void ram_selfheal(struct ramchain_info *ram,uint32_t blocknum,int32_t numblocks)
         printf("magically heal block.%d\n",blocknum + i);
 }
 
-uint32_t ram_syncblock64(struct ramchain_info *ram,struct syncstate *sync,uint32_t blocknum)
+uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,struct syncstate *sync,uint32_t blocknum)
 {
     uint32_t i,last64,done = 0;
     struct syncstate *subsync;
@@ -9179,6 +9179,8 @@ uint32_t ram_syncblock64(struct ramchain_info *ram,struct syncstate *sync,uint32
             last64 = ram_syncblock(ram,subsync,blocknum,6);
         else done++;
     }
+    if ( subsyncp )
+        (*subsyncp) = &sync->substate[i];
     printf("syncblock64 from %d: %d done of %d\n",blocknum,done,i);
     return(last64);
 }
@@ -9194,21 +9196,17 @@ void ram_init_remotemode(struct ramchain_info *ram)
         {
             sync = &ram->verified[i];
             if ( sync->minoritybits != 0 )
-                ram_syncblock64(ram,sync,blocknum);
+                ram_syncblock64(0,ram,sync,blocknum);
             else if ( sync->majoritybits == 0 || bitweight(sync->majoritybits) < 3 )
                 last4096 = ram_syncblock(ram,sync,blocknum,12);
             else done++;
         }
         printf("done.%d of %d\n",done,i);
-        sync = &ram->verified[i];
-        if ( i < 64 )
-        {
-            subsync = &sync->substate[i];
-            if ( subsync->substate == 0 )
-                subsync->substate = calloc(64,sizeof(*subsync));
-            for (; blocknum<ram->S.RTblocknum; blocknum++)
-                ram_syncblock(ram,&subsync->substate[i],blocknum,0);
-        }
+        blocknum = ram_syncblock64(&subsync,ram,&ram->verified[i],blocknum);
+        if ( subsync->substate == 0 )
+            subsync->substate = calloc(64,sizeof(*sync->substate));
+        for (; blocknum<ram->S.RTblocknum; blocknum++)
+            ram_syncblock(ram,&subsync->substate[i],blocknum,0);
     }
     /*struct syncstate
     {
