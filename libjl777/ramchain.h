@@ -9210,11 +9210,11 @@ void ram_init_remotemode(struct ramchain_info *ram)
             else done++;
         }
         printf("block.%u last4096.%d done.%d of %d\n",blocknum,last4096,done,i);
-        blocknum = ram_syncblock64(&subsync,ram,&ram->verified[i],blocknum);
+        /*blocknum = ram_syncblock64(&subsync,ram,&ram->verified[i],blocknum);
         if ( subsync->substate == 0 )
             subsync->substate = calloc(64,sizeof(*sync->substate));
         for (; blocknum<ram->S.RTblocknum; blocknum++)
-            ram_syncblock(ram,&subsync->substate[i],blocknum,0);
+            ram_syncblock(ram,&subsync->substate[i],blocknum,0);*/
     }
     /*struct syncstate
     {
