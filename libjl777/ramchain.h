@@ -8665,7 +8665,7 @@ void ram_setsnapshot(struct ramchain_info *ram,struct syncstate *sync,uint32_t b
         if ( i == 0 )
         {
             if ( (blocknum % 4096) == 0 )
-                ram->permhash4096[blocknum >> 6] = snap->hash;
+                ram->permhash4096[blocknum >> 12] = snap->hash;
             sync->majority = snap->hash;
         }
     }
@@ -8675,6 +8675,7 @@ void ram_setsnapshot(struct ramchain_info *ram,struct syncstate *sync,uint32_t b
     sync->majoritybits = sync->minoritybits = 0;
     for (i=0; i<num&&sync->requested[i]!=0; i++)
     {
+        printf("check i.%d of %d: %d %d\n",i,num,sync->majoritybits,sync->minoritybits);
         if ( memcmp(sync->snaps[i].hash.bytes,majority.bytes,sizeof(majority)) == 0 )
             sync->majoritybits |= (1 << i);
         else
