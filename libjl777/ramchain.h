@@ -3018,7 +3018,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
             }
             else
             {
-                printf("call parse.(%s)\n",cJSON_Print(json));
+                //printf("call parse.(%s)\n",cJSON_Print(json));
                 ram_parse_MGWstate(&S,json,ram->name,sender);
                 ram_update_remotesrc(ram,&S);
             }
@@ -9192,7 +9192,7 @@ void ram_init_remotemode(struct ramchain_info *ram)
     last4096 = (ram->S.RTblocknum >> 12) << 12;
     while ( done < (last4096 >> 12) )
     {
-        for (i=blocknum=0; blocknum<=last4096; blocknum+=4096,i++)
+        for (i=blocknum=0; blocknum<last4096; blocknum+=4096,i++)
         {
             sync = &ram->verified[i];
             if ( sync->minoritybits != 0 )
