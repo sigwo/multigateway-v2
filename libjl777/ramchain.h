@@ -3664,6 +3664,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     tp->U.assetoshis = (quantity * ap->mult);
     tp->receiverbits = receiverbits;
     tp->senderbits = senderbits;
+    printf("_set_assettxid(%s)\n",commentstr);
     if ( commentstr != 0 && (tp->comment == 0 || strcmp(tp->comment,commentstr) != 0) && (json= cJSON_Parse(commentstr)) != 0 )
     {
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
