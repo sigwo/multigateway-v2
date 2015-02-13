@@ -3328,7 +3328,9 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                                         //ram_add_pendingsend(0,ram,tp,cointx);
                                         // disable_newsends = 1;
                                     } else printf("not ready to withdraw yet\n");
-                                } else if ( ram->S.enable_withdraws != 0 ) tp->completed = 1; // ignore malformed requests for now
+                                }
+                                else if ( ram->S.enable_withdraws != 0 && ram->S.is_realtime != 0 && ram->S.NXT_is_realtime != 0 )
+                                    tp->completed = 1; // ignore malformed requests for now
                             }
                             else if ( ram_check_consensus(txidstr,ram,tp) != 0 )
                                 printf("completed redeem.%llu with cointxid.%s\n",(long long)tp->redeemtxid,txidstr);
@@ -9202,8 +9204,9 @@ uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,s
 void ram_init_remotemode(struct ramchain_info *ram)
 {
     struct syncstate *sync,*subsync,*blocksync;
+    uint64_t requested[16];
     int32_t contiguous,activeblock;
-    uint32_t blocknum,i,j,last64,last4096,done2,done = 0;
+    uint32_t blocknum,i,j,n,last64,last4096,done2,done = 0;
     last4096 = (ram->S.RTblocknum >> 12) << 12;
     activeblock = contiguous = -1;
     while ( done < (last4096 >> 12) )
@@ -9221,7 +9224,12 @@ void ram_init_remotemode(struct ramchain_info *ram)
                 if ( activeblock < 0 )
                 {
                     activeblock = blocknum;
-                    
+                    if ( (n= ram_getsources(requested,ram,blocknum+j,1)) == 0 )
+                    {
+                        fprintf(stderr,"unexpected nopeers block.%u of %u | peers.%d\n",blocknum+j,ram->S.RTblocknum,n);
+                        activeblock = -1;
+                        break;
+                    }
                 }
             }
         }
