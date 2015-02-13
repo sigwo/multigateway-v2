@@ -230,9 +230,9 @@ struct ramchain_info
     double startmilli;
     HUFF *tmphp,*tmphp2,*tmphp3;
     FILE *permfp;
-    char name[64],permfname[512],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker,*opreturnmarker;
+    char name[64],permfname[512],dirpath[512],myipaddr[64],srvNXTACCTSECRET[2048],srvNXTADDR[64],*userpass,*serverport,*marker,*marker2,*opreturnmarker;
     uint32_t next_txid_permind,next_addr_permind,next_script_permind,permind_changes,withdrawconfirms,DEPOSIT_XFER_DURATION;
-    uint32_t lastheighttime,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,lastdisp,maxind,numgateways,nummsigs;
+    uint32_t lastheighttime,min_confirms,estblocktime,firstiter,maxblock,nonzblocks,marker_rawind,marker2_rawind,lastdisp,maxind,numgateways,nummsigs;
     uint64_t totalbits,totalbytes,txfee,dust,NXTfee_equiv;
     struct rawblock *R,*R2,*R3;
     struct syncstate *verified;
@@ -2428,8 +2428,8 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     cointx->redeemtxid = redeemtxid;
     cointx->gatewayid = ram->S.gatewayid;
     MGWfee = 0*(value >> 10) + (2 * (ram->txfee + ram->NXTfee_equiv)) - 1 - ram->txfee;
-    strcpy(cointx->outputs[numoutputs].coinaddr,ram->marker);
-    if ( strcmp(destaddr,ram->marker) == 0 )
+    strcpy(cointx->outputs[numoutputs].coinaddr,ram->marker2);
+    if ( strcmp(destaddr,ram->marker2) == 0 )
         cointx->outputs[numoutputs++].value = value - 1;
     else
     {
@@ -3664,7 +3664,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     tp->U.assetoshis = (quantity * ap->mult);
     tp->receiverbits = receiverbits;
     tp->senderbits = senderbits;
-    printf("_set_assettxid(%s)\n",commentstr);
+    //printf("_set_assettxid(%s)\n",commentstr);
     if ( commentstr != 0 && (json= cJSON_Parse(commentstr)) != 0 ) //(tp->comment == 0 || strcmp(tp->comment,commentstr) != 0) &&
     {
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
@@ -3794,7 +3794,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                     commentstr = clonestr(_unstringify(comment));
                 copy_cJSON(assetidstr,cJSON_GetObjectItem(attachment,"asset"));
                 //if ( strcmp(txid,"998606823456096714") == 0 )
-                printf("Inside comment.(%s): %s cmp.%d\n",assetidstr,comment,ap->assetbits == _calc_nxt64bits(assetidstr));
+                //printf("Inside comment.(%s): %s cmp.%d\n",assetidstr,comment,ap->assetbits == _calc_nxt64bits(assetidstr));
                 if ( assetidstr[0] != 0 && ap->assetbits == _calc_nxt64bits(assetidstr) )
                 {
                     assetoshis = get_cJSON_int(attachment,"quantityQNT");
@@ -7678,9 +7678,9 @@ int32_t ram_rawtx_update(int32_t iter,struct ramchain_info *ram,HUFF *hp,uint32_
                 B.blocknum = blocknum, B.txind = txind;
                 for (i=isinternal=0; i<numvouts; i++,numbits+=retval,B.v++)
                 {
-                    if ( (retval= ram_rawvout_update(iter,&script_rawind,&addr_rawind,iter==0?0:&txptr->payloads[i],ram,hp,blocknum,txind,i,numvouts,txid_rawind,isinternal*(i == internalvout))) < 0 )
+                    if ( (retval= ram_rawvout_update(iter,&script_rawind,&addr_rawind,iter==0?0:&txptr->payloads[i],ram,hp,blocknum,txind,i,numvouts,txid_rawind,isinternal*(i == 0 || i == internalvout))) < 0 )
                         return(-2);
-                    if ( i == 0 && addr_rawind == ram->marker_rawind )
+                    if ( i == 0 && (addr_rawind == ram->marker_rawind || addr_rawind == ram->marker2_rawind) )
                         isinternal = 1;
                     /*else if ( isinternal != 0 && (numredeems= ram_is_MGW_OP_RETURN(redeemtxids,ram,script_rawind)) != 0 )
                     {
@@ -9476,13 +9476,15 @@ void ram_init_ramchain(struct ramchain_info *ram)
     ram_update_RTblock(ram);
     if ( ram->marker != 0 && ram->marker[0] != 0 && (ram->marker_rawind= ram_addrind_RO(&permind,ram,ram->marker)) == 0 )
         printf("WARNING: MARKER.(%s) set but no rawind. need to have it appear in blockchain first\n",ram->marker);
-    printf("%.1f seconds to init_ramchain.%s hashtables marker.(%s) %u\n",(ram_millis() - startmilli)/1000.,ram->name,ram->marker,ram->marker_rawind);
+    if ( ram->marker2 != 0 && ram->marker2[0] != 0 && (ram->marker2_rawind= ram_addrind_RO(&permind,ram,ram->marker2)) == 0 )
+        printf("WARNING: MARKER2.(%s) set but no rawind. need to have it appear in blockchain first\n",ram->marker2);
+    printf("%.1f seconds to init_ramchain.%s hashtables marker.(%s || %s) %u %u\n",(ram_millis() - startmilli)/1000.,ram->name,ram->marker,ram->marker2,ram->marker_rawind,ram->marker2_rawind);
     if ( ram->remotemode != 0 )
         ram_init_remotemode(ram);
     else
     {
         ram_init_directories(ram);
-        if ( nofile == 3 )//|| strcmp(ram->name,"BTC") == 0 )
+        if ( nofile == 3 )
             ram_regen(ram);
     }
     sprintf(fname,"%s/ramchains/%s.blocks",MGWROOT,ram->name);
