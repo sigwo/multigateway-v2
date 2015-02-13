@@ -2433,12 +2433,12 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     MGWfee = 0*(value >> 10) + (2 * (ram->txfee + ram->NXTfee_equiv)) - 1 - ram->txfee;
     strcpy(cointx->outputs[numoutputs].coinaddr,ram->marker2);
     if ( strcmp(destaddr,ram->marker2) == 0 )
-        cointx->outputs[numoutputs++].value = value - 1;
+        cointx->outputs[numoutputs++].value = value - 1 - ram->txfee;
     else
     {
         cointx->outputs[numoutputs++].value = MGWfee;
         strcpy(cointx->outputs[numoutputs].coinaddr,destaddr);
-        cointx->outputs[numoutputs++].value = value - MGWfee - 1;
+        cointx->outputs[numoutputs++].value = value - MGWfee - 1 - ram->txfee;
     }
     strcpy(cointx->outputs[numoutputs].coinaddr,ram->opreturnmarker);
     cointx->outputs[numoutputs++].value = 1;
