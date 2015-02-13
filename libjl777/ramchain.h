@@ -8650,7 +8650,7 @@ void ram_setsnapshot(struct ramchain_info *ram,struct syncstate *sync,uint32_t b
 {
     int32_t i,num = (int32_t)(sizeof(sync->requested)/sizeof(*sync->requested));
     bits256 majority,zerokey;
-    fprintf(stderr,"ram_setsnapshot.%d\n",blocknum);
+    //fprintf(stderr,"ram_setsnapshot.%d\n",blocknum);
     for (i=0; i<num&&sync->requested[i]!=0; i++)
     {
         if ( senderbits == sync->requested[i] )
@@ -8688,7 +8688,7 @@ void ram_setsnapshot(struct ramchain_info *ram,struct syncstate *sync,uint32_t b
                 printf("WARNING: third different hash for blocknum.%d\n",blocknum);
         }
     }
-    fprintf(stderr,"done ram_setsnapshot.%d\n",blocknum);
+    //fprintf(stderr,"done ram_setsnapshot.%d\n",blocknum);
 }
 
 char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
@@ -8702,7 +8702,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
     uint32_t blocknum,size,permind,i;
     int32_t format = 0,type = 0;
     permstr[0] = 0;
-    fprintf(stderr,"ramresponse\n");
+    //fprintf(stderr,"ramresponse\n");
     if ( (array= cJSON_Parse(origargstr)) != 0 )
     {
         if ( is_cJSON_Array(array) != 0 && cJSON_GetArraySize(array) == 2 )
@@ -8778,7 +8778,7 @@ char *ramresponse(char *origargstr,char *sender,char *senderip,char *datastr)
         }
         free_json(array);
     }
-    fprintf(stderr,"done ramresponse\n");
+   // fprintf(stderr,"done ramresponse\n");
     return(retstr);
 }
 
@@ -9175,7 +9175,7 @@ uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,s
     uint32_t i,last64,done = 0;
     struct syncstate *subsync;
     last64 = (ram->S.RTblocknum >> 6) << 6;
-    fprintf(stderr,"syncblock64 from %d: last64 %d\n",blocknum,last64);
+    //fprintf(stderr,"syncblock64 from %d: last64 %d\n",blocknum,last64);
     if ( sync->substate == 0 )
         sync->substate = calloc(64,sizeof(*sync));
     for (i=0; blocknum<=last64&&i<64; blocknum+=64,i++)
@@ -9189,7 +9189,7 @@ uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,s
     }
     if ( subsyncp != 0 )
         (*subsyncp) = &sync->substate[i];
-    fprintf(stderr,"syncblock64 from %d: %d done of %d\n",blocknum,done,i);
+    //fprintf(stderr,"syncblock64 from %d: %d done of %d\n",blocknum,done,i);
     return(last64);
 }
 
@@ -9197,9 +9197,9 @@ void ram_init_remotemode(struct ramchain_info *ram)
 {
     struct syncstate *sync,*subsync;
     uint32_t blocknum,i,last64,last4096,done = 0;
-    last4096 = (ram->S.RTblocknum >> 12) << 12;
     while ( done < (last4096 >> 12) )
     {
+        last4096 = (ram->S.RTblocknum >> 12) << 12;
         for (i=blocknum=0; blocknum<last4096; blocknum+=4096,i++)
         {
             sync = &ram->verified[i];
@@ -9210,16 +9210,22 @@ void ram_init_remotemode(struct ramchain_info *ram)
             else done++;
         }
         printf("block.%u last4096.%d done.%d of %d\n",blocknum,last4096,done,i);
-        last64 = (ram->S.RTblocknum >> 6) << 6;
+        
+        last64 = ((ram->S.RTblocknum >> 6) << 6);
         sync = &ram->verified[i];
         if ( sync->substate == 0 )
             sync->substate = calloc(64,sizeof(*sync->substate));
+        done = 0;
         for (i=0; blocknum<last64&&i<64; blocknum+=64,i++)
-            ram_syncblock64(&subsync,ram,&sync->substate[i],blocknum);
-        /*if ( subsync->substate == 0 )
-            subsync->substate = calloc(64,sizeof(*sync->substate));
-        for (; blocknum<ram->S.RTblocknum; blocknum++)
-            ram_syncblock(ram,&subsync->substate[i],blocknum,0);*/
+        {
+            subsync = &sync->substate[i];
+            if ( subsync->minoritybits != 0 )
+                ram_selfheal(ram,blocknum,64);
+            else if ( subsync->majoritybits == 0 || bitweight(subsync->majoritybits) < 3 )
+                last64 = ram_syncblock(ram,subsync,blocknum,6);
+            else done++;
+        }
+        printf("block.%u last64.%d done.%d of %d\n",blocknum,last64,done,i);
     }
     /*struct syncstate
     {
