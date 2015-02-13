@@ -3330,7 +3330,9 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                                     } else printf("not ready to withdraw yet\n");
                                 }
                                 else if ( ram->S.enable_withdraws != 0 && ram->S.is_realtime != 0 && ram->S.NXT_is_realtime != 0 )
-                                    tp->completed = 1; // ignore malformed requests for now
+                                {
+                                    //tp->completed = 1; // ignore malformed requests for now
+                                }
                             }
                             else if ( ram_check_consensus(txidstr,ram,tp) != 0 )
                                 printf("completed redeem.%llu with cointxid.%s\n",(long long)tp->redeemtxid,txidstr);
