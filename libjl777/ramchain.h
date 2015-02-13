@@ -9245,21 +9245,6 @@ void ram_init_remotemode(struct ramchain_info *ram)
                 ram_syncblock(ram,blocksync,blocknum,0);
         }
     }
-    /*struct syncstate
-    {
-        bits256 majority,minority;
-        uint64_t requested[16];
-        void *substate;
-        uint32_t blocknum,allocsize;
-        uint16_t format,pending,majoritybits,minoritybits;
-    };
-    for (i=blocknum=0; (blocknum + 4096)<=ram->S.RTblocknum; blocknum+=4096,i++)
-    {
-        sync = &ram->verified[i];
-        if ( sync->pending == 0 )
-            //if ( ram_verifypeers(ram,sync) < 0 && contiguous < 0 )
-                contiguous = blocknum;
-    }*/
 }
 
 void ram_regen(struct ramchain_info *ram)
