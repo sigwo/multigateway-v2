@@ -1310,7 +1310,7 @@ char *ramresponse_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
 {
     if ( is_remote_access(previpaddr) == 0 )
         return(0);
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         fprintf(stderr,"ramresponse_func(%s)\n",origargstr);
     if ( sender[0] != 0 && valid > 0 )
         return(ramresponse(origargstr,sender,previpaddr,cJSON_str(objs[2])));

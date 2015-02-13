@@ -9197,16 +9197,16 @@ void ram_init_remotemode(struct ramchain_info *ram)
 {
     struct syncstate *sync,*subsync;
     uint32_t blocknum,i,last64,last4096,done = 0;
+    last4096 = (ram->S.RTblocknum >> 12) << 12;
     while ( done < (last4096 >> 12) )
     {
-        last4096 = (ram->S.RTblocknum >> 12) << 12;
         for (i=blocknum=0; blocknum<last4096; blocknum+=4096,i++)
         {
             sync = &ram->verified[i];
             if ( sync->minoritybits != 0 )
                 ram_syncblock64(0,ram,sync,blocknum);
             else if ( sync->majoritybits == 0 || bitweight(sync->majoritybits) < 3 )
-                ram_syncblock(ram,sync,blocknum,12);
+                last4096 = ram_syncblock(ram,sync,blocknum,12);
             else done++;
         }
         printf("block.%u last4096.%d done.%d of %d\n",blocknum,last4096,done,i);
