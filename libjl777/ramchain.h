@@ -3794,7 +3794,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                     commentstr = clonestr(_unstringify(comment));
                 copy_cJSON(assetidstr,cJSON_GetObjectItem(attachment,"asset"));
                 //if ( strcmp(txid,"998606823456096714") == 0 )
-                printf("Inside comment.(%s): %s\n",assetidstr,comment);
+                printf("Inside comment.(%s): %s cmp.%d\n",assetidstr,comment,ap->assetbits == _calc_nxt64bits(assetidstr));
                 if ( assetidstr[0] != 0 && ap->assetbits == _calc_nxt64bits(assetidstr) )
                 {
                     assetoshis = get_cJSON_int(attachment,"quantityQNT");
