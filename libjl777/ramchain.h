@@ -5284,17 +5284,21 @@ uint64_t ram_check_redeemcointx(int32_t *unspendablep,struct ramchain_info *ram,
     uint64_t redeemtxid = 0;
     int32_t i;
     *unspendablep = 0;
+    if ( strcmp(script,"76a914000000000000000000000000000000000000000088ac") == 0 )
+        *unspendablep = 1;
     if ( strcmp(script+22,"00000000000000000000000088ac") == 0 )
     {
-        if ( strncmp(script+8,"00000000000000000000000000000000",strlen("00000000000000000000000000000000")) == 0 )
-            *unspendablep = 1;
         for (redeemtxid=i=0; i<(int32_t)sizeof(uint64_t); i++)
         {
             redeemtxid <<= 8;
             redeemtxid |= (_decode_hex(&script[6 + 14 - i*2]) & 0xff);
         }
-        printf(">>>>>>>>>>>>>>> found MGW redeem %s -> %llu | spendable.%d\n",script,(long long)redeemtxid,*unspendablep);
-    } //else printf("(%s).%d\n",script+22,strcmp(script+16,"00000000000000000000000088ac"));
+        printf("%s >>>>>>>>>>>>>>> found MGW redeem %s -> %llu | spendable.%d\n",ram->name,script,(long long)redeemtxid,*unspendablep);
+    }
+    else if ( *unspendablep != 0 )
+        printf("%s >>>>>>>>>>>>>>> found unspendable %s\n",ram->name,script);
+
+    //else printf("(%s).%d\n",script+22,strcmp(script+16,"00000000000000000000000088ac"));
     return(redeemtxid);
 }
 
@@ -7450,7 +7454,7 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     uint32_t scriptind,addrind;
     struct address_entry B;
     char *str,coinaddr[1024],txidstr[512],scriptstr[512];
-    uint64_t value,unspent;
+    uint64_t value;
     int32_t unspendable,numbits = 0;
     *addr_rawindp = 0;
     numbits += hdecode_varbits(&scriptind,hp);
@@ -7474,11 +7478,11 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     table = ram_gethash(ram,'s');
     if ( scriptind > 0 && scriptind <= table->ind && (scriptptr= table->ptrs[scriptind]) != 0 )
     {
-        unspent = ram_check_redeemcointx(&unspendable,ram,scriptstr);
+        ram_script(scriptstr,ram,scriptind);
+        scriptptr->unspent = ram_check_redeemcointx(&unspendable,ram,scriptstr);
         if ( iter != 1 )
         {
-            ram_script(scriptstr,ram,scriptind);
-            if ( scriptptr->unspent == 0 && (scriptptr->unspent= unspent) != 0 )  // this is MGW redeemtxid
+            if ( scriptptr->unspent != 0 )  // this is MGW redeemtxid
             {
                 ram_txid(txidstr,ram,txid_rawind);
                 printf("coin redeemtxid.(%s) with script.(%s)\n",txidstr,scriptstr);
