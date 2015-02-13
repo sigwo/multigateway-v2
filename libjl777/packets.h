@@ -390,7 +390,8 @@ char *send_tokenized_cmd(int32_t queueflag,char *hopNXTaddr,int32_t L,char *veri
             cJSON_ReplaceItemInObject(json,"data",cJSON_CreateNumber(datalen));
             cmd = cJSON_Print(json);
             stripwhite_ns(cmd,strlen(cmd));
-            printf("cmdstr.(%s) -> (%s).%08x\n",cmdstr,cmd,*(uint32_t *)data);
+            if ( Debuglevel > 2 )
+                printf("cmdstr.(%s) -> (%s).%08x\n",cmdstr,cmd,*(uint32_t *)data);
         }
         free_json(json);
     }
@@ -412,6 +413,7 @@ char *send_tokenized_cmd(int32_t queueflag,char *hopNXTaddr,int32_t L,char *veri
             free_json(json);
         }
     }
+    //return(sendmessage(queueflag,hopNXTaddr,L,verifiedNXTaddr,_tokbuf,(int32_t)n+1,destNXTaddr,data,datalen)); might cause crc err if fixed
     return(sendmessage(queueflag,hopNXTaddr,L,verifiedNXTaddr,_tokbuf,(int32_t)n,destNXTaddr,data,datalen));
 }
 
