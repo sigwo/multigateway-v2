@@ -3322,7 +3322,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                         if ( tp->completed == 0 && tp->convwithdrawaddr != 0 )
                         {
                             (*pendingredeemsp) += tp->U.assetoshis;
-                            printf("NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->S.enable_withdraws,ram->S.is_realtime,(tp->height + ram->withdrawconfirms) <= ram->S.NXT_RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends);
+                            printf("%s NXT.%llu withdraw.(%llu %.8f).rt%d_%d_%d_%d.g%d -> %s elapsed %.1f minutes | pending.%d\n",ram->name,(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),ram->S.enable_withdraws,ram->S.is_realtime,(tp->height + ram->withdrawconfirms) <= ram->S.NXT_RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(tp->senderbits % NUM_GATEWAYS),tp->convwithdrawaddr,(double)(time(NULL) - tp->redeemstarted)/60,ram->numpendingsends);
                             numpending++;
                             if ( disable_newsends == 0 )
                             {
