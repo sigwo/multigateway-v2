@@ -3664,12 +3664,12 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     tp->U.assetoshis = (quantity * ap->mult);
     tp->receiverbits = receiverbits;
     tp->senderbits = senderbits;
-    //printf("%s txid.(%s) (%s)\n",ram->name,redeemtxidstr,commentstr!=0?commentstr:"NULL");
     if ( commentstr != 0 && (tp->comment == 0 || strcmp(tp->comment,commentstr) != 0) && (json= cJSON_Parse(commentstr)) != 0 )
     {
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
         if ( coinstr[0] == 0 )
             strcpy(coinstr,ram->name);
+        printf("%s txid.(%s) (%s)\n",ram->name,redeemtxidstr,commentstr!=0?commentstr:"NULL");
         if ( strcmp(coinstr,ram->name) == 0 )
         {
             if ( tp->comment != 0 )
@@ -3793,7 +3793,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                     commentstr = clonestr(_unstringify(comment));
                 copy_cJSON(assetidstr,cJSON_GetObjectItem(attachment,"asset"));
                 //if ( strcmp(txid,"998606823456096714") == 0 )
-                printf("Inside comment: %s\n",comment);
+                printf("Inside comment.(%s): %s\n",assetidstr,comment);
                 if ( assetidstr[0] != 0 && ap->assetbits == _calc_nxt64bits(assetidstr) )
                 {
                     assetoshis = get_cJSON_int(attachment,"quantityQNT");
