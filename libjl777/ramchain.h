@@ -5293,7 +5293,7 @@ uint64_t ram_check_redeemcointx(int32_t *unspendablep,struct ramchain_info *ram,
             redeemtxid <<= 8;
             redeemtxid |= (_decode_hex(&script[6 + 14 - i*2]) & 0xff);
         }
-        printf("%s >>>>>>>>>>>>>>> found MGW redeem %s -> %llu | spendable.%d\n",ram->name,script,(long long)redeemtxid,*unspendablep);
+        printf("%s >>>>>>>>>>>>>>> found MGW redeem %s -> %llu | unspendable.%d\n",ram->name,script,(long long)redeemtxid,*unspendablep);
     }
     else if ( *unspendablep != 0 )
         printf("%s >>>>>>>>>>>>>>> found unspendable %s\n",ram->name,script);
@@ -7539,7 +7539,7 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
                     //    addrptr->multisig = 1;
                     if ( ram_addr(coinaddr,ram,addrind) != 0 && coinaddr[0] == ram->multisigchar )
                         addrptr->multisig = 1;
-                    //if ( unspendable == 0 )
+                    if ( unspendable == 0 )
                         ram_addunspent(ram,coinaddr,txpayload,addrptr,&payload,addrind,addrptr->numpayloads);
                     addrptr->payloads[addrptr->numpayloads++] = payload;
                 }
