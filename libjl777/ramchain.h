@@ -2821,7 +2821,7 @@ char *_calc_withdrawaddr(char *withdrawaddr,struct ramchain_info *ram,struct NXT
         }
         else withdrawaddr[0] = autoconvert[0] = 0;
     }
-    //printf("PARSED withdrawaddr.(%s) autoconvert.(%s)\n",withdrawaddr,autoconvert);
+    printf("PARSED.%s withdrawaddr.(%s) autoconvert.(%s)\n",ram->name,withdrawaddr,autoconvert);
     if ( withdrawaddr[0] == 0 || autoconvert[0] != 0 )
         return(0);
     for (i=0; withdrawaddr[i]!=0; i++)
@@ -3756,7 +3756,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 numconfs = (ram->S.NXT_RTblocknum - height);
         } else numconfs = 0;
         copy_cJSON(txid,cJSON_GetObjectItem(txobj,"transaction"));
-       // printf("TX.(%s)\n",txid);
+       printf("TX.(%s)\n",txid);
         type = get_cJSON_int(txobj,"type");
         subtype = get_cJSON_int(txobj,"subtype");
         timestamp = (int32_t)get_cJSON_int(txobj,"blockTimestamp");
