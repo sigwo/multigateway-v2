@@ -8524,6 +8524,7 @@ char *ram_scriptind_json(struct ramchain_info *ram,char *str,int32_t truncatefla
 void ram_parse_snapshot(struct ramsnapshot *snap,cJSON *json)
 {
     memset(snap,0,sizeof(*snap));
+    snap->permoffset = (long)get_API_int(cJSON_GetObjectItem(json,"permoffset"),0);
     snap->addrind = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"addrind"),0);
     snap->addroffset = (long)get_API_int(cJSON_GetObjectItem(json,"addroffset"),0);
     snap->scriptind = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"scriptind"),0);
@@ -8676,7 +8677,7 @@ void ram_setsnapshot(struct ramchain_info *ram,struct syncstate *sync,uint32_t b
     sync->majoritybits = sync->minoritybits = 0;
     for (i=0; i<num&&sync->requested[i]!=0; i++)
     {
-        printf("check i.%d of %d: %d %d\n",i,num,sync->majoritybits,sync->minoritybits);
+        //printf("check i.%d of %d: %d %d\n",i,num,sync->majoritybits,sync->minoritybits);
         if ( memcmp(sync->snaps[i].hash.bytes,majority.bytes,sizeof(majority)) == 0 )
             sync->majoritybits |= (1 << i);
         else
@@ -9195,8 +9196,8 @@ uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,s
 
 void ram_init_remotemode(struct ramchain_info *ram)
 {
-    struct syncstate *sync,*subsync;
-    uint32_t blocknum,i,last64,last4096,done2,done = 0;
+    struct syncstate *sync,*subsync,*blocksync;
+    uint32_t blocknum,i,j,last64,last4096,done2,done = 0;
     last4096 = (ram->S.RTblocknum >> 12) << 12;
     while ( done < (last4096 >> 12) )
     {
@@ -9220,12 +9221,29 @@ void ram_init_remotemode(struct ramchain_info *ram)
         {
             subsync = &sync->substate[i];
             if ( subsync->minoritybits != 0 )
-                ram_selfheal(ram,blocknum,64);
+            {
+                if ( subsync->substate == 0 )
+                    subsync->substate = calloc(64,sizeof(*subsync->substate));
+                for (j=0; j<64; j++)
+                {
+                    blocksync = &sync->substate[j];
+                    ram_syncblock(ram,blocksync,blocknum+j,0);
+                }
+            }
             else if ( subsync->majoritybits == 0 || bitweight(subsync->majoritybits) < 3 )
                 last64 = ram_syncblock(ram,subsync,blocknum,6);
             else done2++;
         }
         printf("block.%u last64.%d done.%d of %d\n",blocknum,last64,done2,i);
+        subsync = &sync->substate[i];
+        if ( subsync->substate == 0 )
+            subsync->substate = calloc(64,sizeof(*subsync->substate));
+        for (i=0; blocknum<ram->S.RTblocknum&&i<64; blocknum++,i++)
+        {
+            blocksync = &sync->substate[i];
+            if ( blocksync->majoritybits == 0 || bitweight(blocksync->majoritybits) < 3 )
+                ram_syncblock(ram,blocksync,blocknum,0);
+        }
     }
     /*struct syncstate
     {
