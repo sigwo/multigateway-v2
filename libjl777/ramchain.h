@@ -319,10 +319,13 @@ void *ram_gethashdata(struct ramchain_info *ram,char type,uint32_t rawind);
 struct rampayload *ram_payloads(struct ramchain_hashptr **ptrp,int32_t *numpayloadsp,struct ramchain_info *ram,char *hashstr,char type);
 struct rampayload *ram_getpayloadi(struct ramchain_hashptr **ptrp,struct ramchain_info *ram,char type,uint32_t rawind,uint32_t i);
 
-int32_t _valid_txamount(struct ramchain_info *ram,uint64_t value)
+int32_t _valid_txamount(struct ramchain_info *ram,uint64_t value,char *coinaddr)
 {
     if ( value >= MIN_DEPOSIT_FACTOR * (ram->txfee + ram->NXTfee_equiv) )
-        return(1);
+    {
+        if ( coinaddr == 0 || (strcmp(coinaddr,ram->marker) != 0 && strcmp(coinaddr,ram->marker2) != 0) )
+            return(1);
+    }
     return(0);
 }
 
@@ -3288,7 +3291,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                 if ( tp->receiverbits == ram->MGWbits ) // redeem start
                 {
                     destaddr = "coinaddr";
-                    if ( _valid_txamount(ram,tp->U.assetoshis) > 0 && (tp->convwithdrawaddr != 0 || (destaddr= _parse_withdraw_instructions(withdrawaddr,sender,ram,tp,ap)) != 0) )
+                    if ( _valid_txamount(ram,tp->U.assetoshis,0) > 0 && (tp->convwithdrawaddr != 0 || (destaddr= _parse_withdraw_instructions(withdrawaddr,sender,ram,tp,ap)) != 0) )
                     {
                         if ( tp->convwithdrawaddr == 0 )
                             tp->convwithdrawaddr = clonestr(destaddr);
@@ -3339,7 +3342,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                             //printf("(%llu %.8f).%d ",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(int32_t)(time(NULL) - tp->redeemstarted));
                         } else printf("%llu %.8f: completed.%d withdraw.%p destaddr.%p\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),tp->completed,tp->convwithdrawaddr,destaddr);
                     }
-                    else if ( tp->completed == 0 && _valid_txamount(ram,tp->U.assetoshis) > 0 )
+                    else if ( tp->completed == 0 && _valid_txamount(ram,tp->U.assetoshis,0) > 0 )
                         printf("incomplete but skipped.%llu: %.8f destaddr.%s\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),destaddr);
                     else printf("%s %.8f it too small, thank you for your donation to MGW\n",ram->name,dstr(tp->U.assetoshis)), tp->completed = 1;
                 }
@@ -3420,7 +3423,7 @@ void ram_addunspent(struct ramchain_info *ram,char *coinaddr,struct rampayload *
                     ram_txid(txidstr,ram,addrpayload->otherind);
                     printf("ram_addunspent.%s: pending deposit %s %.8f -> %s rawind %d.i%d for NXT.%s\n",txidstr,ram->name,dstr(addrpayload->value),coinaddr,addr_rawind,ind,msig->NXTaddr);
                 }
-                addrpayload->pendingdeposit = _valid_txamount(ram,addrpayload->value);
+                addrpayload->pendingdeposit = _valid_txamount(ram,addrpayload->value,coinaddr);
             } else if ( 0 && addrptr->multisig != 0 )
                 printf("find_msigaddr: couldnt find.(%s)\n",coinaddr);
             /*else if ( (tp= _is_pending_withdraw(ram,coinaddr)) != 0 )
@@ -7967,7 +7970,7 @@ uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,
         }
         //if ( strcmp("9908a63216f866650f81949684e93d62d543bdb06a23b6e56344e1c419a70d4f",txidstr) == 0 )
         //    printf("calc_addr_unspent.(%s) j.%d of apnum.%d valid.%d msig.%p\n",txidstr,j,ap->num,_valid_txamount(ram,addrpayload->value),msig);
-        if ( (addrpayload->pendingdeposit != 0 || j == ap->num) && _valid_txamount(ram,addrpayload->value) > 0 && msig != 0 )
+        if ( (addrpayload->pendingdeposit != 0 || j == ap->num) && _valid_txamount(ram,addrpayload->value,msig->multisigaddr) > 0 && msig != 0 )
         {
             //printf("addr_unspent.(%s)\n",msig->NXTaddr);
             if ( (nxt64bits= _calc_nxt64bits(msig->NXTaddr)) != 0 )
