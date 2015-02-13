@@ -9231,7 +9231,7 @@ void ram_init_remotemode(struct ramchain_info *ram)
     last4096 = (ram->S.RTblocknum >> 12) << 12;
     activeblock = 0;
     contiguous = -1;
-    while ( activeblock < last4096 )
+    while ( done < (last4096 >>12) )//activeblock < last4096 )
     {
         done = 0;
         for (i=blocknum=0; blocknum<last4096; blocknum+=4096,i++)
