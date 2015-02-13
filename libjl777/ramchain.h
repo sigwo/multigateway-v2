@@ -2917,7 +2917,7 @@ void ram_set_MGWdispbuf(char *dispbuf,struct ramchain_info *ram,int32_t selector
     struct MGWstate *sp = ram_select_MGWstate(ram,selector);
     if ( sp != 0 )
     {
-        sprintf(dispbuf,"[+%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f/%.8f pend.(W%.8f D%.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->supply),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
+        sprintf(dispbuf,"[%.8f %s - %.0f NXT rate %.2f] msigs.%d unspent %.8f circ %.8f/%.8f pend.(W%.8f D%.8f) NXT.%d %s.%d\n",dstr(sp->MGWbalance),ram->name,dstr(sp->sentNXT),sp->MGWbalance<=0?0:dstr(sp->sentNXT)/dstr(sp->MGWbalance),ram->nummsigs,dstr(sp->MGWunspent),dstr(sp->circulation),dstr(sp->supply),dstr(sp->MGWpendingredeems),dstr(sp->MGWpendingdeposits),sp->NXT_RTblocknum,ram->name,sp->RTblocknum);
     }
 }
 
@@ -9155,7 +9155,7 @@ int32_t ram_syncblock(struct ramchain_info *ram,struct syncstate *sync,uint32_t 
     //for (i=0; i<n; i++)
     ///    printf("%llu ",(long long)sync->requested[i]);
     //printf("sources for %d.%d\n",blocknum,numblocks);
-    ram_syncblocks(ram,blocknum,numblocks,sync->requested,n,numblocks == 64);
+    ram_syncblocks(ram,blocknum,numblocks,sync->requested,n,0);
     sync->pending = n;
     sync->blocknum = blocknum;
     sync->format = numblocks;
@@ -9196,7 +9196,7 @@ uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,s
 void ram_init_remotemode(struct ramchain_info *ram)
 {
     struct syncstate *sync,*subsync;
-    uint32_t blocknum,i,last4096,done = 0;
+    uint32_t blocknum,i,last64,last4096,done = 0;
     last4096 = (ram->S.RTblocknum >> 12) << 12;
     while ( done < (last4096 >> 12) )
     {
@@ -9210,8 +9210,13 @@ void ram_init_remotemode(struct ramchain_info *ram)
             else done++;
         }
         printf("block.%u last4096.%d done.%d of %d\n",blocknum,last4096,done,i);
-        /*blocknum = ram_syncblock64(&subsync,ram,&ram->verified[i],blocknum);
-        if ( subsync->substate == 0 )
+        last64 = (ram->S.RTblocknum >> 6) << 6;
+        sync = &ram->verified[i];
+        if ( sync->substate == 0 )
+            sync->substate = calloc(64,sizeof(*sync->substate));
+        for (i=0; blocknum<last64&&i<64; blocknum+=64,i++)
+            ram_syncblock64(&subsync,ram,&sync->substate[i],blocknum);
+        /*if ( subsync->substate == 0 )
             subsync->substate = calloc(64,sizeof(*sync->substate));
         for (; blocknum<ram->S.RTblocknum; blocknum++)
             ram_syncblock(ram,&subsync->substate[i],blocknum,0);*/
