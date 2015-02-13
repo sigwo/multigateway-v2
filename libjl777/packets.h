@@ -412,7 +412,7 @@ char *send_tokenized_cmd(int32_t queueflag,char *hopNXTaddr,int32_t L,char *veri
             free_json(json);
         }
     }
-    return(sendmessage(queueflag,hopNXTaddr,L,verifiedNXTaddr,_tokbuf,(int32_t)n+1,destNXTaddr,data,datalen));
+    return(sendmessage(queueflag,hopNXTaddr,L,verifiedNXTaddr,_tokbuf,(int32_t)n,destNXTaddr,data,datalen));
 }
 
 int32_t sendandfree_jsoncmd(int32_t queueflag,int32_t L,char *sender,char *NXTACCTSECRET,cJSON *json,char *destNXTaddr)
