@@ -2880,7 +2880,7 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct ramchain_
             }
         }
     }
-    printf("withdraw addr.(%s) for (%s)\n",withdrawaddr,NXTaddr);
+    //printf("withdraw addr.(%s) for (%s)\n",withdrawaddr,NXTaddr);
     if ( retstr != 0 )
         strcpy(retstr,withdrawaddr);
     if ( argjson != 0 )
@@ -2970,7 +2970,7 @@ void ram_parse_MGWstate(struct MGWstate *sp,cJSON *json,char *coinstr,char *NXTa
 void ram_update_remotesrc(struct ramchain_info *ram,struct MGWstate *sp)
 {
     int32_t i,oldi = -1,oldest = -1;
-    printf("update remote %llu\n",(long long)sp->nxt64bits);
+    //printf("update remote %llu\n",(long long)sp->nxt64bits);
     if ( sp->nxt64bits == 0 )
         return;
     for (i=0; i<(int32_t)(sizeof(ram->remotesrcs)/sizeof(*ram->remotesrcs)); i++)
@@ -2978,7 +2978,7 @@ void ram_update_remotesrc(struct ramchain_info *ram,struct MGWstate *sp)
         if ( ram->remotesrcs[i].nxt64bits == 0 || sp->nxt64bits == ram->remotesrcs[i].nxt64bits )
         {
             ram->remotesrcs[i] = *sp;
-            printf("set slot.%d <- permblocks.%u\n",i,sp->permblocks);
+            //printf("set slot.%d <- permblocks.%u\n",i,sp->permblocks);
             return;
         }
         if ( oldest < 0 || (ram->remotesrcs[i].permblocks != 0 && ram->remotesrcs[i].permblocks < oldest) )
@@ -2986,7 +2986,7 @@ void ram_update_remotesrc(struct ramchain_info *ram,struct MGWstate *sp)
     }
     if ( oldi >= 0 && (sp->permblocks != 0 && sp->permblocks > oldest) )
     {
-        printf("overwrite slot.%d <- permblocks.%u\n",oldi,sp->permblocks);
+        //printf("overwrite slot.%d <- permblocks.%u\n",oldi,sp->permblocks);
         ram->remotesrcs[oldi] = *sp;
     }
 }
@@ -3181,16 +3181,13 @@ char *ram_check_consensus(char *txidstr,struct ramchain_info *ram,struct NXT_ass
     printf("got consensus for %llu %.8f\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis));
     if ( ram_MGW_ready(ram,0,tp->height,tp->senderbits,tp->U.assetoshis) > 0 )
     {
-   // _process_realtime_MGW: coin mismatch recvname.(archive/RTmgw/BTCD.15171760342552245430.g0) vs BTCD
-        // need to wait for N coinblocks!!
-  //      getchar();
         if ( (retval= ram_verify_NXTtxstillthere(ram,tp->redeemtxid)) != tp->U.assetoshis )
         {
             fprintf(stderr,"ram_check_consensus tx gone due to a fork. NXT.%llu txid.%llu %.8f vs retval %.8f\n",(long long)tp->senderbits,(long long)tp->redeemtxid,dstr(tp->U.assetoshis),dstr(retval));
             exit(1); // seems the best thing to do
         }
         othercointx = cointxs[(ram->S.gatewayid ^ 1) % ram->numgateways];
-        printf("[%d] othercointx = %p\n",(ram->S.gatewayid ^ 1) % ram->numgateways,othercointx);
+        //printf("[%d] othercointx = %p\n",(ram->S.gatewayid ^ 1) % ram->numgateways,othercointx);
         if ( (cointxid= _sign_and_sendmoney(txidstr,ram,cointxs[ram->S.gatewayid],othercointx->signedtx,&tp->redeemtxid,&tp->U.assetoshis,1)) != 0 )
         {
             _complete_assettxid(ram,tp);
@@ -3268,8 +3265,8 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     for (j=0; j<ap->num; j++)
     {
         tp = ap->txids[j];
-        if ( strcmp(ram->name,"BITS") == 0 )
-        printf("%d of %d: check %s.%llu completed.%d\n",j,ap->num,ram->name,(long long)tp->redeemtxid,tp->completed);
+        //if ( strcmp(ram->name,"BITS") == 0 )
+        //printf("%d of %d: check %s.%llu completed.%d\n",j,ap->num,ram->name,(long long)tp->redeemtxid,tp->completed);
         if ( tp->completed == 0 )
         {
             _expand_nxt64bits(sender,tp->senderbits);
@@ -3345,7 +3342,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                     }
                     else if ( tp->completed == 0 && _valid_txamount(ram,tp->U.assetoshis,0) > 0 )
                         printf("incomplete but skipped.%llu: %.8f destaddr.%s\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),destaddr);
-                    else printf("%s %.8f it too small, thank you for your donation to MGW\n",ram->name,dstr(tp->U.assetoshis)), tp->completed = 1;
+                    else printf("%s.%llu %.8f it too small, thank you for your donation to MGW\n",ram->name,(long long)tp->redeemtxid,dstr(tp->U.assetoshis)), tp->completed = 1;
                 }
                 else if ( tp->completed == 0 && specialsender != 0 ) // deposit complete w/o cointxid (shouldnt happen normally)
                 {
@@ -3674,7 +3671,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
         if ( coinstr[0] == 0 )
             strcpy(coinstr,ram->name);
-        printf("%s txid.(%s) (%s)\n",ram->name,redeemtxidstr,commentstr!=0?commentstr:"NULL");
+        //printf("%s txid.(%s) (%s)\n",ram->name,redeemtxidstr,commentstr!=0?commentstr:"NULL");
         if ( strcmp(coinstr,ram->name) == 0 )
         {
             if ( tp->comment != 0 )
@@ -3761,8 +3758,8 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 numconfs = (ram->S.NXT_RTblocknum - height);
         } else numconfs = 0;
         copy_cJSON(txid,cJSON_GetObjectItem(txobj,"transaction"));
-        if ( strcmp(txid,"1110183143900371107") == 0 )
-            printf("TX.(%s) %s\n",txid,cJSON_Print(txobj));
+        //if ( strcmp(txid,"1110183143900371107") == 0 )
+        //    printf("TX.(%s) %s\n",txid,cJSON_Print(txobj));
         type = get_cJSON_int(txobj,"type");
         subtype = get_cJSON_int(txobj,"subtype");
         timestamp = (int32_t)get_cJSON_int(txobj,"blockTimestamp");
