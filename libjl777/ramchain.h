@@ -4165,7 +4165,7 @@ int32_t hemit_smallbits(HUFF *hp,uint16_t val)
         }
     } else numbits += hemit_bits(hp,val,3);
     count++, sum += numbits;
-    if ( (count % 100000) == 0 )
+    if ( (count % 10000000) == 0 )
         printf("ave smallbits %.1f after %ld samples\n",(double)sum/count,count);
     return(numbits);
 }
@@ -4229,7 +4229,7 @@ int32_t hemit_varbits(HUFF *hp,uint32_t val)
         }
     } else numbits += hemit_bits(hp,val,4);
     count++, sum += numbits;
-    if ( (count % 100000) == 0 )
+    if ( (count % 10000000) == 0 )
         printf("hemit_varbits.(%u) numbits.%d ave varbits %.1f after %ld samples\n",val,numbits,(double)sum/count,count);
     return(numbits);
 }
@@ -4263,7 +4263,7 @@ int32_t hemit_valuebits(HUFF *hp,uint64_t value)
     for (i=0; i<2; i++,value>>=32)
         numbits += hemit_varbits(hp,value & 0xffffffff);
     count++, sum += numbits;
-    if ( (count % 100000) == 0 )
+    if ( (count % 10000000) == 0 )
         printf("ave valuebits %.1f after %ld samples\n",(double)sum/count,count);
     return(numbits);
 }
@@ -7474,22 +7474,25 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     table = ram_gethash(ram,'s');
     if ( scriptind > 0 && scriptind <= table->ind && (scriptptr= table->ptrs[scriptind]) != 0 )
     {
-        unspent = ram_check_redeemcointx(&unspendable,ram,scriptstr);
-        ram_script(scriptstr,ram,scriptind);
-        if ( scriptptr->unspent == 0 && (scriptptr->unspent= unspent) != 0 )  // this is MGW redeemtxid
+        if ( iter != 1 )
         {
-            ram_txid(txidstr,ram,txid_rawind);
-            printf("coin redeemtxid.(%s) with script.(%s)\n",txidstr,scriptstr);
-            memset(&B,0,sizeof(B));
-            B.blocknum = blocknum, B.txind = txind, B.v = vout;
-            _ram_update_redeembits(ram,scriptptr->unspent,0,txidstr,&B);
-        }
-        if ( iter != 1 && scriptptr->permind == 0 )
-        {
-            scriptptr->permind = ++ram->next_script_permind;
-            ram_write_permentry(table,scriptptr);
-            if ( scriptptr->permind != scriptptr->rawind )
-                ram->permind_changes++;
+            unspent = ram_check_redeemcointx(&unspendable,ram,scriptstr);
+            ram_script(scriptstr,ram,scriptind);
+            if ( scriptptr->unspent == 0 && (scriptptr->unspent= unspent) != 0 )  // this is MGW redeemtxid
+            {
+                ram_txid(txidstr,ram,txid_rawind);
+                printf("coin redeemtxid.(%s) with script.(%s)\n",txidstr,scriptstr);
+                memset(&B,0,sizeof(B));
+                B.blocknum = blocknum, B.txind = txind, B.v = vout;
+                _ram_update_redeembits(ram,scriptptr->unspent,0,txidstr,&B);
+            }
+            if ( scriptptr->permind == 0 )
+            {
+                scriptptr->permind = ++ram->next_script_permind;
+                ram_write_permentry(table,scriptptr);
+                if ( scriptptr->permind != scriptptr->rawind )
+                    ram->permind_changes++;
+            }
         }
         table = ram_gethash(ram,'a');
         if ( addrind > 0 && addrind <= table->ind && (addrptr= table->ptrs[addrind]) != 0 )
@@ -7532,7 +7535,7 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
                     //    addrptr->multisig = 1;
                     if ( ram_addr(coinaddr,ram,addrind) != 0 && coinaddr[0] == ram->multisigchar )
                         addrptr->multisig = 1;
-                    if ( unspendable == 0 )
+                    //if ( unspendable == 0 )
                         ram_addunspent(ram,coinaddr,txpayload,addrptr,&payload,addrind,addrptr->numpayloads);
                     addrptr->payloads[addrptr->numpayloads++] = payload;
                 }
