@@ -2421,6 +2421,7 @@ int32_t ram_is_MGW_OP_RETURN(uint64_t *redeemtxids,struct ramchain_info *ram,uin
 
 struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destaddr,uint64_t value,uint64_t redeemtxid)
 {
+    //int64 nPayFee = nTransactionFee * (1 + (int64)nBytes / 1000);
     char *rawparams,*signedtx,*changeaddr,*with_op_return=0,*retstr = 0;
     int64_t MGWfee,sum,amount;
     int32_t allocsize,numoutputs = 0;
@@ -2431,6 +2432,11 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     cointx->redeemtxid = redeemtxid;
     cointx->gatewayid = ram->S.gatewayid;
     MGWfee = 0*(value >> 10) + (2 * (ram->txfee + ram->NXTfee_equiv)) - 1 - ram->txfee;
+    if ( value <= MGWfee + 1 + ram->txfee )
+    {
+        printf("%s redeem.%llu withdraw %.8f < MGWfee %.8f + 1 + txfee %.8f\n",ram->name,(long long)redeemtxid,dstr(value),dstr(MGWfee),dstr(ram->txfee));
+        return(0);
+    }
     strcpy(cointx->outputs[numoutputs].coinaddr,ram->marker2);
     if ( strcmp(destaddr,ram->marker2) == 0 )
         cointx->outputs[numoutputs++].value = value - 1 - ram->txfee;
