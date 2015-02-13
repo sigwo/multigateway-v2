@@ -3756,7 +3756,8 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                 numconfs = (ram->S.NXT_RTblocknum - height);
         } else numconfs = 0;
         copy_cJSON(txid,cJSON_GetObjectItem(txobj,"transaction"));
-       printf("TX.(%s)\n",txid);
+        if ( strcmp(txid,"1110183143900371107") == 0 )
+            printf("TX.(%s) %s\n",txid,cJSON_Print(txobj));
         type = get_cJSON_int(txobj,"type");
         subtype = get_cJSON_int(txobj,"subtype");
         timestamp = (int32_t)get_cJSON_int(txobj,"blockTimestamp");
@@ -3792,7 +3793,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                     commentstr = clonestr(_unstringify(comment));
                 copy_cJSON(assetidstr,cJSON_GetObjectItem(attachment,"asset"));
                 //if ( strcmp(txid,"998606823456096714") == 0 )
-                //    printf("Inside comment: %s\n",comment);
+                printf("Inside comment: %s\n",comment);
                 if ( assetidstr[0] != 0 && ap->assetbits == _calc_nxt64bits(assetidstr) )
                 {
                     assetoshis = get_cJSON_int(attachment,"quantityQNT");
