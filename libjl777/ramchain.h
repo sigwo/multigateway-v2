@@ -7475,17 +7475,17 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
     if ( scriptind > 0 && scriptind <= table->ind && (scriptptr= table->ptrs[scriptind]) != 0 )
     {
         unspent = ram_check_redeemcointx(&unspendable,ram,scriptstr);
+        ram_script(scriptstr,ram,scriptind);
+        if ( scriptptr->unspent == 0 && (scriptptr->unspent= unspent) != 0 )  // this is MGW redeemtxid
+        {
+            ram_txid(txidstr,ram,txid_rawind);
+            printf("coin redeemtxid.(%s) with script.(%s)\n",txidstr,scriptstr);
+            memset(&B,0,sizeof(B));
+            B.blocknum = blocknum, B.txind = txind, B.v = vout;
+            _ram_update_redeembits(ram,scriptptr->unspent,0,txidstr,&B);
+        }
         if ( iter != 1 && scriptptr->permind == 0 )
         {
-            ram_script(scriptstr,ram,scriptind);
-            if ( (scriptptr->unspent= unspent) != 0 )  // this is MGW redeemtxid (inefficient, should be done binary)
-            {
-                ram_txid(txidstr,ram,txid_rawind);
-                printf("coin redeemtxid.(%s) with script.(%s)\n",txidstr,scriptstr);
-                memset(&B,0,sizeof(B));
-                B.blocknum = blocknum, B.txind = txind, B.v = vout;
-                _ram_update_redeembits(ram,scriptptr->unspent,0,txidstr,&B);
-            }
             scriptptr->permind = ++ram->next_script_permind;
             ram_write_permentry(table,scriptptr);
             if ( scriptptr->permind != scriptptr->rawind )
@@ -9178,7 +9178,7 @@ void ram_selfheal(struct ramchain_info *ram,uint32_t blocknum,int32_t numblocks)
 uint32_t ram_syncblock64(struct syncstate **subsyncp,struct ramchain_info *ram,struct syncstate *sync,uint32_t blocknum)
 {
     uint32_t i,j,last64,done = 0;
-    struct syncstate *subsync,*blocksync;
+    struct syncstate *subsync;
     last64 = (ram->S.RTblocknum >> 6) << 6;
     //fprintf(stderr,"syncblock64 from %d: last64 %d\n",blocknum,last64);
     if ( sync->substate == 0 )
