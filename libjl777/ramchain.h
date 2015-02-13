@@ -9243,7 +9243,7 @@ void ram_init_remotemode(struct ramchain_info *ram)
             else
             {
                 done++;
-                if ( activeblock == blocknum )
+                if ( 0 && activeblock == blocknum )
                 {
                     for (j=0; j<4096; j++)
                     {
@@ -9294,6 +9294,19 @@ void ram_init_remotemode(struct ramchain_info *ram)
             if ( blocksync->majoritybits == 0 || bitweight(blocksync->majoritybits) < 3 )
                 ram_syncblock(ram,blocksync,blocknum,0);
         }
+    }
+    for (i=0; i<4096; i++)
+    {
+        for (blocknum=i; blocknum<ram->S.RTblocknum; blocknum+=64)
+        {
+            if ( (n= ram_getsources(requested,ram,blocknum,1)) == 0 )
+            {
+                fprintf(stderr,"unexpected nopeers block.%u of %u | peers.%d\n",blocknum+j,ram->S.RTblocknum,n);
+                continue;
+            }
+            ram_syncblocks(ram,blocknum,1,&requested[rand() % n],1,0);
+        }
+        usleep(10000);
     }
 }
 
