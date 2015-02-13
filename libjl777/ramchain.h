@@ -2880,7 +2880,7 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct ramchain_
             }
         }
     }
-    //printf("withdraw addr.(%s) for (%s)\n",withdrawaddr,NXTaddr);
+    printf("withdraw addr.(%s) for (%s)\n",withdrawaddr,NXTaddr);
     if ( retstr != 0 )
         strcpy(retstr,withdrawaddr);
     if ( argjson != 0 )
@@ -3268,7 +3268,8 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     for (j=0; j<ap->num; j++)
     {
         tp = ap->txids[j];
-        //printf("%d of %d: check %s.%llu completed.%d\n",j,ap->num,ram->name,(long long)tp->redeemtxid,tp->completed);
+        if ( strcmp(ram->name,"BITS") == 0 )
+        printf("%d of %d: check %s.%llu completed.%d\n",j,ap->num,ram->name,(long long)tp->redeemtxid,tp->completed);
         if ( tp->completed == 0 )
         {
             _expand_nxt64bits(sender,tp->senderbits);
