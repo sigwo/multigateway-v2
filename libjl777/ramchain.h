@@ -9253,6 +9253,7 @@ void ram_init_remotemode(struct ramchain_info *ram)
             if ( blocksync->majoritybits == 0 || bitweight(blocksync->majoritybits) < 3 )
                 ram_syncblock(ram,blocksync,blocknum,0);
         }
+        sleep(10);
     }
     for (i=0; i<4096; i++)
     {break;
