@@ -9516,12 +9516,13 @@ void ram_init_ramchain(struct ramchain_info *ram)
     errs = ram_scanblocks(ram);
     if ( numblocks == 0 && errs == 0 && ram->blocks.contiguous > 4096 )
     {
+        printf("saving new %s.blocks\n",ram->name);
         datalen = -1;
         if ( ram_save_bitstreams(&refsha,fname,ram->blocks.hps,ram->blocks.contiguous) > 0 )
             datalen = ram_map_bitstreams(1,ram,0,ram->blocks.M,&sha,ram->blocks.hps,ram->blocks.contiguous,fname,&refsha);
         printf("Created.(%s) datalen.%d | please restart\n",fname,datalen);
         exit(1);
-    }
+    } else printf("no need to save numblocks.%d errs.%d contiguous.%d\n",numblocks,errs,ram->blocks.contiguous);
     ram_disp_status(ram);
 }
 
