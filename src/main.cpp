@@ -4225,7 +4225,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
-    if ( 1 || SuperNET_retval < 0 )
+    if ( SuperNET_retval < 0 )
         return(-1);
     broadcastPubAddr(msg,duration);
 	return(0);
@@ -4237,7 +4237,7 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     CPubAddr *pubaddr = new CPubAddr;
     std::string supernetmsg = "";
     CNode *peer;
-    if ( 1 || SuperNET_retval < 0 )
+    if ( SuperNET_retval < 0 )
         return(-1);
     peer = FindNode((CService)destip);
     if ( peer == NULL )
