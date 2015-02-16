@@ -878,6 +878,7 @@ char *gotpacket_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port);
     char msg[MAX_JSON_FIELD],ip_port[MAX_JSON_FIELD];
     int32_t duration;
+    printf("gotpacket from (%s) remote.%d\n",previpaddr,is_remote_access(previpaddr));
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
     copy_cJSON(msg,objs[0]);
