@@ -3956,6 +3956,7 @@ void broadcastPubAddr(char *msg,int32_t duration)
 {
     CPubAddr *pubaddr = new CPubAddr;
     set_pubaddr(*pubaddr,std::string(msg),duration);
+    printf("BTCD BROADCAST.(%s)\n",msg);
     // Relay pubaddr to all peers
     {
         LOCK(cs_vNodes);
@@ -4190,7 +4191,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	int32_t len;
     char *retstr,params[MAX_JSON_FIELD*2],*str;
     //printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
-    if ( 1 || SuperNET_retval < 0 )
+    if ( SuperNET_retval < 0 )
         return(0);
 	if ( msg == 0 || msg[0] == 0 )
 	{
