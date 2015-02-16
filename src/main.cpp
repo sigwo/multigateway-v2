@@ -4226,6 +4226,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
+    printf("inside SuperNET_broadcast.(%s) retval.%d\n",msg,SuperNET_retval);
     if ( SuperNET_retval < 0 )
         return(-1);
     broadcastPubAddr(msg,duration);
