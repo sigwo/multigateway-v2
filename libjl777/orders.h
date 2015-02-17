@@ -89,10 +89,6 @@ void purge_oldest_order(struct rambook_info *rb,struct orderbook_tx *tx) // allo
 void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
 {
     int32_t i;
-    if ( rb->maxquotes == 0 )
-    {
-        rb->maxquotes = 1024;
-    }
     if ( rb->numquotes > 0 )
     {
         for (i=0; i<rb->numquotes; i++)
