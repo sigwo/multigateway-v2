@@ -57,8 +57,9 @@ int32_t get_top_MMaker(struct pserver_info **pserverp)
         stats = get_nodestats(bestMMbits);
         expand_ipbits(ipaddr,stats->ipbits);
         (*pserverp) = get_pserver(0,ipaddr,0,0);
+        return(0);
     }
-    return(0);
+    return(-1);
 }
 
 //struct InstantDEX_quote { uint64_t nxt64bits,baseamount,relamount; uint32_t timestamp,type; };
@@ -481,7 +482,7 @@ void submit_quote(char *quotestr)
     {
         printf("submit_quote.(%s)\n",quotestr);
         len = construct_tokenized_req(_tokbuf,quotestr,cp->srvNXTACCTSECRET);
-        if ( get_top_MMaker(&pserver) >= 0 )
+        if ( get_top_MMaker(&pserver) == 0 )
             call_SuperNET_broadcast(pserver,_tokbuf,len,300);
         call_SuperNET_broadcast(0,_tokbuf,len,300);
     }
@@ -523,6 +524,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
                 expand_nxt64bits(txidstr,txid);
                 sprintf(buf,"{\"result\":\"success\",\"txid\":\"%s\"}",txidstr);
                 retstr = clonestr(buf);
+                printf("placequote.(%s)\n",buf);
             }
         }
         if ( retstr == 0 )
