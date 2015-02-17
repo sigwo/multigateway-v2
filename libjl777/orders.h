@@ -205,7 +205,7 @@ cJSON *gen_InstantDEX_json(struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64
 {
     cJSON *json = cJSON_CreateObject();
     char numstr[64];
-    cJSON_AddItemToObject(json,"time",cJSON_CreateNumber(iQ->timestamp));
+    cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
     cJSON_AddItemToObject(json,"type",cJSON_CreateNumber(_iQ_type(iQ)));
     sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(numstr));
@@ -249,7 +249,7 @@ double parse_InstantDEX_json(uint64_t *baseidp,uint64_t *relidp,struct InstantDE
                 copy_cJSON(nxtstr,cJSON_GetObjectItem(json,"NXT")), nxt64bits = calc_nxt64bits(nxtstr);
                 printf("conv_InstantDEX_json: obookid.%llu base %.8f -> rel %.8f price %f vol %f\n",(long long)(*baseidp ^ *relidp),dstr(baseamount),dstr(relamount),price,volume);
                 create_orderbook_tx(polarity,&T,type,nxt64bits,*baseidp,*relidp,price,volume);
-                T.iQ.timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"time"),0);
+                T.iQ.timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"timestamp"),0);
                 *iQ = T.iQ;
             }
         }
@@ -502,6 +502,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     relid = get_API_nxt64bits(objs[1]);
     volume = get_API_float(objs[2]);
     price = get_API_float(objs[3]);
+    printf("placequote sender.(%s) valid.%d price %.8f vol %.8f\n",sender,valid,price,volume);
     if ( sender[0] != 0 && valid > 0 )//find_raw_orders(obookid) != 0 && )
     {
         if ( price != 0. && volume != 0. && dir != 0 )

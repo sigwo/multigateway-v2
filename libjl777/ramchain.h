@@ -3351,7 +3351,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                     }
                     else if ( tp->completed == 0 && _valid_txamount(ram,tp->U.assetoshis,0) > 0 )
                         printf("incomplete but skipped.%llu: %.8f destaddr.%s\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),destaddr);
-                    else printf("%s.%llu %.8f it too small, thank you for your donation to MGW\n",ram->name,(long long)tp->redeemtxid,dstr(tp->U.assetoshis)), tp->completed = 1;
+                    else printf("%s.%llu %.8f is too small, thank you for your donation to MGW\n",ram->name,(long long)tp->redeemtxid,dstr(tp->U.assetoshis)), tp->completed = 1;
                 }
                 else if ( tp->completed == 0 && specialsender != 0 ) // deposit complete w/o cointxid (shouldnt happen normally)
                 {
