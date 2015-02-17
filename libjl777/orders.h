@@ -145,11 +145,13 @@ void flip_iQ(struct InstantDEX_quote *iQ)
     iQ->relamount = amount;
 }
 
-int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t type,uint64_t nxt64bits,uint64_t baseid,uint64_t relid,double price,double volume)
+int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t type,uint64_t nxt64bits,uint64_t baseid,uint64_t relid,double price,double volume,uint64_t baseamount,uint64_t relamount)
 {
-    uint64_t baseamount,relamount;
-    baseamount = volume * SATOSHIDEN;
-    relamount = (price * baseamount);
+    if ( baseamount == 0 && relamount == 0 )
+    {
+        baseamount = volume * SATOSHIDEN;
+        relamount = (price * baseamount);
+    }
     memset(tx,0,sizeof(*tx));
     tx->iQ.timestamp = (uint32_t)time(NULL);
     tx->iQ.type = type;
@@ -248,7 +250,7 @@ double parse_InstantDEX_json(uint64_t *baseidp,uint64_t *relidp,struct InstantDE
                 volume = ((double)baseamount / SATOSHIDEN);
                 copy_cJSON(nxtstr,cJSON_GetObjectItem(json,"NXT")), nxt64bits = calc_nxt64bits(nxtstr);
                 printf("conv_InstantDEX_json: obookid.%llu base %.8f -> rel %.8f price %f vol %f\n",(long long)(*baseidp ^ *relidp),dstr(baseamount),dstr(relamount),price,volume);
-                create_orderbook_tx(polarity,&T,type,nxt64bits,*baseidp,*relidp,price,volume);
+                create_orderbook_tx(polarity,&T,type,nxt64bits,*baseidp,*relidp,price,volume,0,0);
                 T.iQ.timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"timestamp"),0);
                 *iQ = T.iQ;
             }
@@ -491,7 +493,7 @@ void submit_quote(char *quotestr)
 char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     cJSON *json;
-    uint64_t nxt64bits,baseid,relid,txid = 0;
+    uint64_t baseamount,relamount,nxt64bits,baseid,relid,txid = 0;
     double price,volume;
     int32_t remoteflag;
     struct orderbook_tx tx,*txp;
@@ -502,12 +504,14 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     relid = get_API_nxt64bits(objs[1]);
     volume = get_API_float(objs[2]);
     price = get_API_float(objs[3]);
+    baseamount = get_API_nxt64bits(objs[4]);
+    relamount = get_API_nxt64bits(objs[5]);
     printf("placequote sender.(%s) valid.%d price %.8f vol %.8f\n",sender,valid,price,volume);
     if ( sender[0] != 0 && valid > 0 )//find_raw_orders(obookid) != 0 && )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
         {
-            create_orderbook_tx(dir,&tx,0,nxt64bits,baseid,relid,price,volume);
+            create_orderbook_tx(dir,&tx,0,nxt64bits,baseid,relid,0,0,baseamount,relamount);
             save_orderbooktx(nxt64bits,baseid,relid,&tx);
             if ( remoteflag == 0 && (json= gen_InstantDEX_json(&tx.iQ,baseid,relid)) != 0 )
             {

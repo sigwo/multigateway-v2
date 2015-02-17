@@ -15,7 +15,7 @@ struct price_data **Price_datas;
 
 #define _issue_curl(curl_handle,label,url) bitcoind_RPC(curl_handle,label,url,0,0,0)
 
-int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t type,uint64_t nxt64bits,uint64_t baseid,uint64_t relid,double price,double volume);
+int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t type,uint64_t nxt64bits,uint64_t baseid,uint64_t relid,double price,double volume,uint64_t baseamount,uint64_t relamount);
 struct orderbook *create_orderbook(uint32_t oldest,uint64_t baseid,uint64_t relid,struct orderbook_tx **feedorders,int32_t numfeeds);
 void free_orderbook(struct orderbook *op);
 //int32_t bid_orderbook_tx(struct orderbook_tx *tx,int32_t type,uint64_t nxt64bits,uint64_t baseid,uint64_t relid,double price,double volume);
@@ -255,7 +255,7 @@ struct orderbook_tx **conv_quotes(int32_t *nump,int32_t type,uint64_t nxt64bits,
         {
             if ( tx == 0 )
                 tx = (struct orderbook_tx *)calloc(1,sizeof(*tx));
-            create_orderbook_tx(iter,tx,type,nxt64bits,baseid,relid,quotes[i*2],quotes[i*2+1]);
+            create_orderbook_tx(iter,tx,type,nxt64bits,baseid,relid,quotes[i*2],quotes[i*2+1],0,0);
             orders[n++] = tx;
             tx = 0;
         }
