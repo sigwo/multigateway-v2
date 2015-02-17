@@ -1079,7 +1079,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
     int32_t port;
     if ( 0 && SUPERNET_PORT != _SUPERNET_PORT )
         return(0);
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("call_SuperNET_broadcast.%p %p len.%d\n",pserver,msg,len);
     txid = calc_txid((uint8_t *)msg,(int32_t)strlen(msg));
     if ( pserver != 0 )
@@ -1114,7 +1114,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
             if ( cmdstr != 0 )
                 free(cmdstr);
             free_json(array);
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
             {
                 char debugstr[4096];
                 init_hexbytes_noT(debugstr,(uint8_t *)msg,len);
@@ -1144,7 +1144,7 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
     int32_t len,createdflag,valid;
     unsigned char packet[2*MAX_JSON_FIELD];
     char ipaddr[64],txidstr[64],retjsonstr[2*MAX_JSON_FIELD],verifiedNXTaddr[64],*cmdstr,*retstr;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("gotpacket.(%s) duration.%d from (%s) | (%d vs %d)\n",msg,duration,ip_port,SUPERNET_PORT,_SUPERNET_PORT);
     if ( 0 && SUPERNET_PORT != _SUPERNET_PORT )
         return(clonestr("{\"error\":private SuperNET}"));

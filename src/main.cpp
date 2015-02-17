@@ -4190,7 +4190,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	static char *retbuf;
 	int32_t len;
     char *retstr,params[MAX_JSON_FIELD*2],*str;
-   fprintf(stderr,"in process_jl777_msg(%s) dur.%d | retval.%d\n",msg,duration,SuperNET_retval);
+    //fprintf(stderr,"in process_jl777_msg(%s) dur.%d | retval.%d\n",msg,duration,SuperNET_retval);
     if ( SuperNET_retval < 0 )
         return(0);
 	if ( msg == 0 || msg[0] == 0 )
@@ -4294,7 +4294,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"));
                     len = ((int32_t)strlen(buf) >> 1);
                     decode_hex(data,len,buf);
-                    fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: narrowcast %d bytes to %s\n",len,destip);
+                    //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: narrowcast %d bytes to %s\n",len,destip);
                     SuperNET_narrowcast(destip,data,len); //Send a PubAddr message to a specific peer
                 }
                 else if ( duration >= 0 )
@@ -4304,7 +4304,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                     {
                         sleeptime = 1;
                         unstringify(buf);
-                        fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
+                        //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
                         SuperNET_broadcast(buf,duration);
                     }
                 }
@@ -4317,7 +4317,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                         unstringify(buf);
                         copy_cJSON(txidstr,cJSON_GetObjectItem(json,"txid"));
                         sleeptime = 1;
-                        if ( txidstr[0] != 0 )
+                        if ( 0 && txidstr[0] != 0 )
                             fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: (%s) for [%s]\n",buf,txidstr);
                     }
                     //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: unrecognised case duration.%d destip.(%s)\n",duration,destip);
