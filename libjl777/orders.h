@@ -148,13 +148,16 @@ uint64_t find_best_market_maker()
                 {
                     txobj = cJSON_GetArrayItem(array,i);
                     copy_cJSON(receiverstr,cJSON_GetObjectItem(txobj,"recipient"));
+                    printf("receiver.(%s)\n",receiverstr);
                     if ( strcmp(receiverstr,INSTANTDEX_ACCT) == 0 )
                     {
                         if ( (senderbits = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"sender"))) != 0 )
                         {
                             expand_nxt64bits(NXTaddr,senderbits);
+                            printf("sender.(%s)\n",NXTaddr);
                             np = get_NXTacct(0,Global_mp,NXTaddr);
                             amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                            printf("amount %.8f\n",dstr(amount));
                             if ( np->timestamp != now )
                             {
                                 np->quantity = 0;
