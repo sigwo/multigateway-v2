@@ -3367,7 +3367,7 @@ int32_t process_redeem(int32_t *alreadysentp,cJSON **arrayp,char *destaddrs[MAX_
     char numstr[128],rsacct[64];
     int32_t createdflag;
     cJSON *item;
-    double pending;
+    //double pending;
     if ( is_limbo_redeem(cp,tp->redeemtxid) == 0 )
     {
         np = get_NXTacct(&createdflag,Global_mp,sender);
@@ -3383,7 +3383,7 @@ int32_t process_redeem(int32_t *alreadysentp,cJSON **arrayp,char *destaddrs[MAX_
         sprintf(numstr,"%.8f",dstr(tp->quantity * ap->mult)), cJSON_AddItemToObject(item,"amount",cJSON_CreateString(numstr));
         cJSON_AddItemToObject(item,"confirms",cJSON_CreateNumber(tp->numconfs));
         cJSON_AddItemToArray(*arrayp,item);
-        if ( (pending= enough_confirms(np->redeemed,tp->estNXT,tp->numconfs,1)) > 0 )
+        /*if ( (pending= enough_confirms(np->redeemed,tp->estNXT,tp->numconfs,1)) > 0 )
         {
             numredeems = add_redeem(destaddrs,destamounts,redeems,pending_withdrawp,cp,ap,destaddr,tp,numredeems);
             np->redeemed += tp->estNXT;
@@ -3394,7 +3394,7 @@ int32_t process_redeem(int32_t *alreadysentp,cJSON **arrayp,char *destaddrs[MAX_
             sprintf(numstr,"%.2f",dstr(np->redeemed)), cJSON_AddItemToObject(item,"already",cJSON_CreateString(numstr));
             sprintf(numstr,"%.2f",dstr(tp->estNXT)), cJSON_AddItemToObject(item,"estNXT",cJSON_CreateString(numstr));
             sprintf(numstr,"%.3f",pending), cJSON_AddItemToObject(item,"wait",cJSON_CreateString(numstr));
-        }
+        }*/
     }
     return(numredeems);
 }

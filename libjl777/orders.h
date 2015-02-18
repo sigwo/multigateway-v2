@@ -36,7 +36,27 @@ struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
 
 uint64_t find_best_market_maker()
 {
-    return(0); // sort by fees paid to InstantDEX
+    char cmdstr[1024],*jsonstr;
+    cJSON *json,*array;
+    int32_t i,n;
+    uint32_t now = (uint32_t)time(NULL);
+    sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,38785003);
+    if ( (jsonstr= bitcoind_RPC(0,"curl",NXTAPIURL,0,0,cmdstr)) != 0 )
+    {
+        //printf("special.%d (%s) (%s)\n",j,ram->special_NXTaddrs[j],jsonstr);
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( (array= cJSON_GetObjectItem(json,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                }
+            }
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(0);
 }
 
 int32_t calc_users_maxopentrades(uint64_t nxt64bits)
@@ -98,6 +118,7 @@ void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
                 break;
         }
     } else i = 0;
+    printf("add_user_order i.%d numquotes.%d\n",i,rb->numquotes);
     if ( i == rb->numquotes )
     {
         if ( i >= rb->maxquotes )
@@ -115,6 +136,7 @@ struct InstantDEX_quote *get_matching_quotes(int32_t *numquotesp,uint64_t baseid
     struct rambook_info *rb;
     rb = get_rambook(baseid,relid);
     *numquotesp = rb->numquotes;
+    printf("get_matching_quotes returns numquotes.%d\n",rb->numquotes);
     return(rb->quotes);
 }
 
@@ -533,6 +555,8 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     nxt64bits = calc_nxt64bits(sender);
     baseid = get_API_nxt64bits(objs[0]);
     relid = get_API_nxt64bits(objs[1]);
+    if ( baseid == 0 || relid == 0 )
+        return(clonestr("{\"error\":\"illegal asset id\"}"));
     baseamount = get_API_nxt64bits(objs[4]);
     relamount = get_API_nxt64bits(objs[5]);
     if ( baseamount != 0 && relamount != 0 )
