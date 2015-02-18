@@ -7286,9 +7286,11 @@ uint32_t ram_create_block(int32_t verifyflag,struct ramchain_info *ram,struct ma
     return(datalen);
 }
 
-FILE *ram_permopen(char *fname)
+FILE *ram_permopen(char *fname,char *coinstr)
 {
     FILE *fp;
+    if ( strcmp(coinstr,"BTC") == 0 )
+        return(0);
     if ( (fp= fopen(fname,"rb+")) == 0 )
         fp= fopen(fname,"wb+");
     if ( fp == 0 )
@@ -7318,7 +7320,7 @@ int32_t ram_init_hashtable(int32_t deletefile,uint32_t *blocknump,struct ramchai
     {
         ram_sethashname(fname,hash,0);
         strcat(fname,".perm");
-        hash->permfp = ram_permopen(fname);
+        hash->permfp = ram_permopen(fname,ram->name);
     }
     ram_sethashname(fname,hash,0);
     printf("inithashtable.(%s.%d) -> [%s]\n",ram->name,type,fname);
@@ -9288,7 +9290,7 @@ void ram_regen(struct ramchain_info *ram)
         {
             if ( ram->permfp != 0 )
                 fclose(ram->permfp);
-            ram->permfp = ram_permopen(ram->permfname);
+            ram->permfp = ram_permopen(ram->permfname,ram->name);
             ram_init_hashtable(1,&blocknums[0],ram,'a');
             ram_init_hashtable(1,&blocknums[1],ram,'s');
             ram_init_hashtable(1,&blocknums[2],ram,'t');
@@ -9457,7 +9459,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     printf("[%s] ramchain.%s RT.%d %.1f seconds to init_ramchain_directories: next.(%d %d %d %d)\n",ram->dirpath,ram->name,ram->S.RTblocknum,(ram_millis() - startmilli)/1000.,ram->S.permblocks,ram->next_txid_permind,ram->next_script_permind,ram->next_addr_permind);
     memset(blocknums,0,sizeof(blocknums));
     sprintf(ram->permfname,"%s/ramchains/%s.perm",MGWROOT,ram->name);
-    nofile = (ram->permfp = ram_permopen(ram->permfname)) == 0;
+    nofile = (ram->permfp = ram_permopen(ram->permfname,ram->name)) == 0;
     nofile += ram_init_hashtable(0,&blocknums[0],ram,'a');
     nofile += ram_init_hashtable(0,&blocknums[1],ram,'s');
     nofile += ram_init_hashtable(0,&blocknums[2],ram,'t');
@@ -9472,7 +9474,7 @@ void ram_init_ramchain(struct ramchain_info *ram)
     else
     {
         ram_init_directories(ram);
-        if ( nofile == 3 )
+        if ( nofile >= 3 )
             ram_regen(ram);
     }
     sprintf(fname,"%s/ramchains/%s.blocks",MGWROOT,ram->name);
