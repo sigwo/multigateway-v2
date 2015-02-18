@@ -502,10 +502,18 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     nxt64bits = calc_nxt64bits(sender);
     baseid = get_API_nxt64bits(objs[0]);
     relid = get_API_nxt64bits(objs[1]);
-    volume = get_API_float(objs[2]);
-    price = get_API_float(objs[3]);
     baseamount = get_API_nxt64bits(objs[4]);
     relamount = get_API_nxt64bits(objs[5]);
+    if ( baseamount != 0 && relamount != 0 )
+    {
+        volume = ((double)baseamount / SATOSHIDEN);
+        price = ((double)relamount / baseamount);
+    }
+    else
+    {
+        volume = get_API_float(objs[2]);
+        price = get_API_float(objs[3]);
+    }
     printf("placequote sender.(%s) valid.%d price %.8f vol %.8f\n",sender,valid,price,volume);
     if ( sender[0] != 0 && valid > 0 )//find_raw_orders(obookid) != 0 && )
     {
