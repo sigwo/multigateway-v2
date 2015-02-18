@@ -37,7 +37,7 @@ struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
 uint64_t find_best_market_maker()
 {
     char cmdstr[1024],*jsonstr;
-    cJSON *json,*array;
+    cJSON *json,*array,*txobj;
     int32_t i,n;
     uint32_t now = (uint32_t)time(NULL);
     sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,38785003);
