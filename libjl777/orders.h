@@ -145,13 +145,44 @@ void flip_iQ(struct InstantDEX_quote *iQ)
     iQ->relamount = amount;
 }
 
+double calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
+{
+    *volumep = ((double)baseamount / SATOSHIDEN);
+    return((double)relamount / baseamount);
+}
+
+void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,double volume)
+{
+    double checkprice,checkvol,distA,distB,metric,bestmetric = (1. / SMALLVAL);
+    uint64_t baseamount,relamount,bestbaseamount = 0,bestrelamount = 0;
+    int32_t i,j;
+    baseamount = volume * SATOSHIDEN;
+    relamount = (price * baseamount);
+    for (i=-1; i<=1; i++)
+        for (j=-1; j<=1; j++)
+        {
+            checkprice = calc_price_volume(&checkvol,baseamount+i,relamount+j);
+            distA = (checkprice - price);
+            distA *= distA;
+            distB = (checkvol - volume);
+            distB *= distB;
+            metric = sqrt(distA + distB);
+            if ( metric < bestmetric )
+            {
+                bestmetric = metric;
+                bestbaseamount = baseamount + i;
+                bestrelamount = relamount + j;
+                printf("i.%d j.%d metric. %f\n",i,j,metric);
+            }
+        }
+    *baseamountp = bestbaseamount;
+    *relamountp = bestrelamount;
+}
+
 int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t type,uint64_t nxt64bits,uint64_t baseid,uint64_t relid,double price,double volume,uint64_t baseamount,uint64_t relamount)
 {
     if ( baseamount == 0 && relamount == 0 )
-    {
-        baseamount = volume * SATOSHIDEN;
-        relamount = (price * baseamount);
-    }
+        set_best_amounts(&baseamount,&relamount,price,volume);
     memset(tx,0,sizeof(*tx));
     tx->iQ.timestamp = (uint32_t)time(NULL);
     tx->iQ.type = type;
@@ -505,10 +536,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     baseamount = get_API_nxt64bits(objs[4]);
     relamount = get_API_nxt64bits(objs[5]);
     if ( baseamount != 0 && relamount != 0 )
-    {
-        volume = ((double)baseamount / SATOSHIDEN);
-        price = ((double)relamount / baseamount);
-    }
+        price = calc_price_volume(&volume,baseamount,relamount);
     else
     {
         volume = get_API_float(objs[2]);
