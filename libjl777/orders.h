@@ -542,7 +542,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
         volume = get_API_float(objs[2]);
         price = get_API_float(objs[3]);
     }
-    printf("placequote sender.(%s) valid.%d price %.8f vol %.8f\n",sender,valid,price,volume);
+    printf("placequote sender.(%s) valid.%d price %.11f vol %.8f\n",sender,valid,price,volume);
     if ( sender[0] != 0 && valid > 0 )//find_raw_orders(obookid) != 0 && )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
