@@ -136,6 +136,7 @@ uint64_t find_best_market_maker()
     struct NXT_acct *np,*maxnp = 0;
     uint64_t amount,senderbits;
     uint32_t now = (uint32_t)time(NULL);
+    return(0);
     sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,38785003);
     if ( (jsonstr= bitcoind_RPC(0,"curl",NXTAPIURL,0,0,cmdstr)) != 0 )
     {
