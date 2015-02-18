@@ -511,7 +511,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     {
         if ( price != 0. && volume != 0. && dir != 0 )
         {
-            create_orderbook_tx(dir,&tx,0,nxt64bits,baseid,relid,0,0,baseamount,relamount);
+            create_orderbook_tx(dir,&tx,0,nxt64bits,baseid,relid,price,volume,baseamount,relamount);
             save_orderbooktx(nxt64bits,baseid,relid,&tx);
             if ( remoteflag == 0 && (json= gen_InstantDEX_json(&tx.iQ,baseid,relid)) != 0 )
             {
