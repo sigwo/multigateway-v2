@@ -136,10 +136,10 @@ uint64_t find_best_market_maker()
     struct NXT_acct *np,*maxnp = 0;
     uint64_t amount,senderbits;
     uint32_t now = (uint32_t)time(NULL);
-    return(0);
     sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,38785003);
     if ( (jsonstr= bitcoind_RPC(0,"curl",NXTAPIURL,0,0,cmdstr)) != 0 )
     {
+        printf("mm string.(%s)\n",jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (array= cJSON_GetObjectItem(json,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -171,8 +171,12 @@ uint64_t find_best_market_maker()
         }
         free(jsonstr);
     }
-    printf("Best MM %llu total %.8f\n",(long long)maxnp->H.nxt64bits,dstr(maxnp->quantity));
-    return(maxnp->H.nxt64bits);
+    if ( maxnp != 0 )
+    {
+        printf("Best MM %llu total %.8f\n",(long long)maxnp->H.nxt64bits,dstr(maxnp->quantity));
+        return(maxnp->H.nxt64bits);
+    }
+    return(0);
 }
 
 int32_t calc_users_maxopentrades(uint64_t nxt64bits)
