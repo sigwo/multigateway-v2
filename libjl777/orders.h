@@ -17,7 +17,61 @@
 #define _iQ_price(iQ) ((double)(iQ)->relamount / (iQ)->baseamount)
 #define _iQ_volume(iQ) ((double)(iQ)->baseamount / SATOSHIDEN)
 
-struct rambook_info { UT_hash_handle hh; struct InstantDEX_quote *quotes; uint64_t obookid; int32_t numquotes,maxquotes; } *Rambooks;
+char *assetmap[][2] =
+{
+    { "5527630", "NXT" },
+    { "17554243582654188572", "BTC" },
+    { "4551058913252105307", "BTC" },
+    { "12659653638116877017", "BTC" },
+    { "11060861818140490423", "BTCD" },
+    { "6918149200730574743", "BTCD" },
+    { "13120372057981370228", "BITS" },
+    { "2303962892272487643", "DOGE" },
+    { "16344939950195952527", "DOGE" },
+    { "6775076774325697454", "OPAL" },
+    { "7734432159113182240", "VPN" },
+    { "9037144112883608562", "VRC" },
+    { "1369181773544917037", "BBR" },
+    { "17353118525598940144", "DRK" },
+    { "2881764795164526882", "LTC" },
+};
+
+struct rambook_info
+{
+    UT_hash_handle hh;
+    struct InstantDEX_quote *quotes;
+    uint64_t baseid,relid,obookid;
+    int32_t numquotes,maxquotes;
+} *Rambooks;
+
+void set_assetname(char *name,uint64_t assetbits)
+{
+    char assetstr[64];
+    int32_t i;
+    expand_nxt64bits(assetstr,assetbits);
+    for (i=0; i<(int32_t)(sizeof(assetmap)/sizeof(*assetmap)); i++)
+    {
+        if ( strcmp(assetmap[i][0],assetstr) == 0 )
+        {
+            strcpy(name,assetmap[i][1]);
+            return;
+        }
+    }
+}
+
+cJSON *rambook_json(struct rambook_info *rb)
+{
+    cJSON *json = cJSON_CreateObject();
+    char numstr[64],base[512],rel[512];
+    set_assetname(base,rb->baseid);
+    cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
+    sprintf(numstr,"%llu",(long long)rb->baseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
+    set_assetname(rel,rb->relid);
+    cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
+    sprintf(numstr,"%llu",(long long)rb->relid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
+    cJSON_AddItemToObject(json,"numquotes",cJSON_CreateNumber(rb->numquotes));
+    return(json);
+}
 
 struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
 {
@@ -29,34 +83,95 @@ struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
     {
         rb = calloc(1,sizeof(*rb));
         rb->obookid = obookid;
+        if ( baseid < relid )
+        {
+            rb->baseid = baseid;
+            rb->relid = relid;
+        }
+        else
+        {
+            rb->baseid = relid;
+            rb->relid = baseid;
+        }
         HASH_ADD(hh,Rambooks,obookid,sizeof(obookid),rb);
     }
     return(rb);
 }
 
+struct rambook_info **get_allrambooks(int32_t *numbooksp)
+{
+    int32_t i = 0;
+    struct rambook_info *rb,*tmp,**obooks;
+    *numbooksp = HASH_COUNT(Rambooks);
+    obooks = calloc(*numbooksp,sizeof(*rb));
+    HASH_ITER(hh,Rambooks,rb,tmp)
+        obooks[i++] = rb;
+    if ( i != *numbooksp )
+        printf("get_allrambooks HASH_COUNT.%d vs i.%d\n",*numbooksp,i);
+    return(obooks);
+}
+
+cJSON *all_orderbooks()
+{
+    cJSON *array,*json = 0;
+    struct rambook_info **obooks;
+    int32_t i,numbooks;
+    if ( (obooks= get_allrambooks(&numbooks)) != 0 )
+    {
+        array = cJSON_CreateArray();
+        for (i=0; i<numbooks; i++)
+            cJSON_AddItemToArray(array,rambook_json(obooks[i]));
+        free(obooks);
+        json = cJSON_CreateObject();
+        cJSON_AddItemToObject(json,"orderbooks",array);
+    }
+    return(json);
+}
+
 uint64_t find_best_market_maker()
 {
-    char cmdstr[1024],*jsonstr;
+    char cmdstr[1024],NXTaddr[64],receiverstr[MAX_JSON_FIELD],*jsonstr;
     cJSON *json,*array,*txobj;
     int32_t i,n;
+    struct NXT_acct *np,*maxnp = 0;
+    uint64_t amount,senderbits;
     uint32_t now = (uint32_t)time(NULL);
     sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,38785003);
     if ( (jsonstr= bitcoind_RPC(0,"curl",NXTAPIURL,0,0,cmdstr)) != 0 )
     {
-        //printf("special.%d (%s) (%s)\n",j,ram->special_NXTaddrs[j],jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (array= cJSON_GetObjectItem(json,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=0; i<n; i++)
                 {
+                    txobj = cJSON_GetArrayItem(array,i);
+                    copy_cJSON(receiverstr,cJSON_GetObjectItem(txobj,"recipientRS"));
+                    if ( strcmp(receiverstr,INSTANTDEX_ACCT) == 0 )
+                    {
+                        if ( (senderbits = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"sender"))) != 0 )
+                        {
+                            expand_nxt64bits(NXTaddr,senderbits);
+                            np = get_NXTacct(0,Global_mp,NXTaddr);
+                            amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                            if ( np->timestamp != now )
+                            {
+                                np->quantity = 0;
+                                np->timestamp = now;
+                            }
+                            np->quantity += amount;
+                            if ( maxnp == 0 || np->quantity > maxnp->quantity )
+                                maxnp = np;
+                        }
+                    }
                 }
             }
             free_json(json);
         }
         free(jsonstr);
     }
-    return(0);
+    printf("Best MM %llu total %.8f\n",(long long)maxnp->H.nxt64bits,dstr(maxnp->quantity));
+    return(maxnp->H.nxt64bits);
 }
 
 int32_t calc_users_maxopentrades(uint64_t nxt64bits)
@@ -484,9 +599,9 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     sprintf(buf,"{\"baseid\":\"%llu\",\"relid\":\"%llu\",\"oldest\":%u}",(long long)baseid,(long long)relid,oldest);
     init_hexbytes_noT(datastr,(uint8_t *)buf,strlen(buf));
     printf("ORDERBOOK.(%s)\n",buf);
-    if ( baseid != 0 && relid != 0 )
-        if ( (retstr= kademlia_find("findvalue",previpaddr,NXTaddr,NXTACCTSECRET,sender,obook,datastr,0)) != 0 )
-            free(retstr);
+    //if ( baseid != 0 && relid != 0 )
+   //     if ( (retstr= kademlia_find("findvalue",previpaddr,NXTaddr,NXTACCTSECRET,sender,obook,datastr,0)) != 0 )
+     //       free(retstr);
     retstr = 0;
     if ( baseid != 0 && relid != 0 && (op= create_orderbook(oldest,baseid,relid,0,0)) != 0 )
     {
@@ -509,11 +624,12 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             }
             expand_nxt64bits(assetA,op->baseid);
             expand_nxt64bits(assetB,op->relid);
-            cJSON_AddItemToObject(json,"key",cJSON_CreateString(obook));
+            cJSON_AddItemToObject(json,"obookid",cJSON_CreateString(obook));
             cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(assetA));
             cJSON_AddItemToObject(json,"relid",cJSON_CreateString(assetB));
             cJSON_AddItemToObject(json,"bids",bids);
             cJSON_AddItemToObject(json,"asks",asks);
+            cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
             retstr = cJSON_Print(json);
         }
         free_orderbook(op);
@@ -624,6 +740,19 @@ char *bid_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,i
 char *ask_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     return(placequote_func(previpaddr,-1,sender,valid,objs,numobjs,origargstr));
+}
+
+char *allorderbooks_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    cJSON *json;
+    char *jsonstr;
+    if ( (json= all_orderbooks()) != 0 )
+    {
+        jsonstr = cJSON_Print(json);
+        free_json(json);
+        return(jsonstr);
+    }
+    return(clonestr("{\"error\":\"no orderbooks\"}"));
 }
 
 int32_t filtered_orderbook(char *datastr,char *jsonstr)
