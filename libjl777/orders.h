@@ -172,7 +172,7 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
                 bestmetric = metric;
                 bestbaseamount = baseamount + i;
                 bestrelamount = relamount + j;
-                printf("i.%d j.%d metric. %f\n",i,j,metric);
+                //printf("i.%d j.%d metric. %f\n",i,j,metric);
             }
         }
     *baseamountp = bestbaseamount;
