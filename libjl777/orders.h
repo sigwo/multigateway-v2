@@ -49,7 +49,8 @@ struct rambook_info
 void set_assetname(char *name,uint64_t assetbits)
 {
     char assetstr[64];
-    int32_t i;
+    int32_t i,creatededflag;
+    struct NXT_asset *ap;
     expand_nxt64bits(assetstr,assetbits);
     for (i=0; i<(int32_t)(sizeof(assetmap)/sizeof(*assetmap)); i++)
     {
@@ -59,6 +60,8 @@ void set_assetname(char *name,uint64_t assetbits)
             return;
         }
     }
+    ap = get_NXTasset(&creatededflag,Global_mp,assetstr);
+    strcpy(name,ap->name);
 }
 
 cJSON *rambook_json(struct rambook_info *rb)
@@ -381,12 +384,20 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag)
 cJSON *gen_InstantDEX_json(struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
 {
     cJSON *json = cJSON_CreateObject();
-    char numstr[64];
+    char numstr[64],base[64],rel[64];
+    double price,volume;
+    price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
+    cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
+    cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
     cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
+    cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
     cJSON_AddItemToObject(json,"type",cJSON_CreateNumber(_iQ_type(iQ)));
     sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
+    set_assetname(base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
     sprintf(numstr,"%llu",(long long)refbaseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)iQ->baseamount), cJSON_AddItemToObject(json,"baseamount",cJSON_CreateString(numstr));
+    
+    set_assetname(rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
     sprintf(numstr,"%llu",(long long)refrelid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)iQ->relamount), cJSON_AddItemToObject(json,"relamount",cJSON_CreateString(numstr));
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((_iQ_dir(iQ) > 0) ? "bid" : "ask"));
@@ -421,8 +432,7 @@ double parse_InstantDEX_json(uint64_t *baseidp,uint64_t *relidp,struct InstantDE
         {
             if ( relamount != 0 && baseamount != 0 )
             {
-                price = ((double)relamount / baseamount);
-                volume = ((double)baseamount / SATOSHIDEN);
+                price = calc_price_volume(&volume,baseamount,relamount);
                 copy_cJSON(nxtstr,cJSON_GetObjectItem(json,"NXT")), nxt64bits = calc_nxt64bits(nxtstr);
                 printf("conv_InstantDEX_json: obookid.%llu base %.8f -> rel %.8f price %f vol %f\n",(long long)(*baseidp ^ *relidp),dstr(baseamount),dstr(relamount),price,volume);
                 create_orderbook_tx(polarity,&T,type,nxt64bits,*baseidp,*relidp,price,volume,0,0);
@@ -597,7 +607,7 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     uint64_t baseid,relid;
     cJSON *json,*bids,*asks,*item;
     struct orderbook *op;
-    char obook[64],buf[MAX_JSON_FIELD],datastr[MAX_JSON_FIELD],assetA[64],assetB[64],*retstr = 0;
+    char obook[64],buf[MAX_JSON_FIELD],base[64],rel[64],baserel[128],datastr[MAX_JSON_FIELD],assetA[64],assetB[64],*retstr = 0;
     baseid = get_API_nxt64bits(objs[0]);
     relid = get_API_nxt64bits(objs[1]);
     allflag = get_API_int(objs[2],0);
@@ -631,6 +641,10 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             }
             expand_nxt64bits(assetA,op->baseid);
             expand_nxt64bits(assetB,op->relid);
+            set_assetname(base,op->baseid);
+            set_assetname(rel,op->relid);
+            sprintf(baserel,"%s/%s",base,rel);
+            cJSON_AddItemToObject(json,"pair",cJSON_CreateString(baserel));
             cJSON_AddItemToObject(json,"obookid",cJSON_CreateString(obook));
             cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(assetA));
             cJSON_AddItemToObject(json,"relid",cJSON_CreateString(assetB));
