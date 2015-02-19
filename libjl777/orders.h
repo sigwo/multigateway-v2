@@ -333,8 +333,6 @@ int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t typ
     tx->iQ.timestamp = (uint32_t)time(NULL);
     tx->iQ.type = type;
     tx->iQ.nxt64bits = nxt64bits;
-    if ( polarity < 0 )
-        tx->iQ.type |= _ASKMASK;
     if ( baseid > relid )
     {
         tx->iQ.type |= _FLIPMASK;
@@ -342,6 +340,7 @@ int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t typ
         tx->relid = baseid;
         tx->iQ.baseamount = relamount;
         tx->iQ.relamount = baseamount;
+        polarity *= -1;
     }
     else
     {
@@ -350,6 +349,8 @@ int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t typ
         tx->iQ.baseamount = baseamount;
         tx->iQ.relamount = relamount;
     }
+    if ( polarity < 0 )
+        tx->iQ.type |= _ASKMASK;
     return(0);
 }
 
