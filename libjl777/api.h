@@ -571,6 +571,7 @@ void call_system(FILE *fp,char *cmd,char *fname,char *params)
 {
     char cmdstr[1024];
     sprintf(cmdstr,"%s %s %s",cmd,fname,params);
+    fprintf(stderr,"SYSCALL.(%s)\n",cmdstr);
     system(cmdstr);
 }
 
