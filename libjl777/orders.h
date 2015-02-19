@@ -12,8 +12,8 @@
 #define _FLIPMASK (1L << 1)
 #define _TYPEMASK (~_ASKMASK)
 #define _obookid(baseid,relid) ((baseid) ^ (relid))
-#define _iQ_dir(iQ) ((((iQ)->type) & _ASKMASK) ? -1 : 1)
-#define _iQ_flipped(iQ) ((iQ)->type & _FLIPMASK)
+#define _iQ_flipped(iQ) (((iQ)->type & _FLIPMASK) ? 1 : 0)
+#define _iQ_dir(iQ) ((((iQ)->type) & _ASKMASK) ? -_iQ_flipped(iQ) : _iQ_flipped(iQ))
 #define _iQ_type(iQ) ((iQ)->type & _TYPEMASK)
 #define _iQ_price(iQ) ((double)(iQ)->relamount / (iQ)->baseamount)
 #define _iQ_volume(iQ) ((double)(iQ)->baseamount / SATOSHIDEN)
@@ -730,8 +730,8 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
         volume = get_API_float(objs[2]);
         price = get_API_float(objs[3]);
     }
-    printf("placequote sender.(%s) valid.%d price %.11f vol %.8f\n",sender,valid,price,volume);
-    if ( sender[0] != 0 && valid > 0 )//find_raw_orders(obookid) != 0 && )
+    printf("placequote dir.%d sender.(%s) valid.%d price %.11f vol %.8f\n",dir,sender,valid,price,volume);
+    if ( sender[0] != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
         {
