@@ -285,7 +285,7 @@ void save_orderbooktx(uint64_t nxt64bits,uint64_t baseid,uint64_t relid,struct o
 void flip_iQ(struct InstantDEX_quote *iQ)
 {
     uint64_t amount;
-    iQ->type ^= (0*_ASKMASK | _FLIPMASK);
+    iQ->type ^= (_ASKMASK | _FLIPMASK);
     amount = iQ->baseamount;
     iQ->baseamount = iQ->relamount;
     iQ->relamount = amount;
