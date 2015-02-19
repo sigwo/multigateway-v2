@@ -366,9 +366,11 @@ void free_orderbook(struct orderbook *op)
     }
 }
 
-void set_baserel_flipped(uint64_t *baseidp,uint64_t *baseamountp,uint64_t *relidp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
+void set_baserel_flipped(int32_t polarity,uint64_t *baseidp,uint64_t *baseamountp,uint64_t *relidp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
 {
-    if ( _iQ_flipped(iQ) == 0 )
+    if ( _iQ_flipped(iQ) != 0 )
+        polarity *= -1;
+    if ( polarity > 0 )
     {
         *baseidp = refbaseid, *baseamountp = iQ->baseamount;
         *relidp = refrelid, *relamountp = iQ->relamount;
@@ -380,7 +382,7 @@ void set_baserel_flipped(uint64_t *baseidp,uint64_t *baseamountp,uint64_t *relid
     }
 }
 
-cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t refbaseid,uint64_t refrelid)
+cJSON *gen_orderbook_item(int32_t polarity,struct InstantDEX_quote *iQ,int32_t allflag,uint64_t refbaseid,uint64_t refrelid)
 {
     char NXTaddr[64],numstr[64];
     cJSON *array = 0;
@@ -388,7 +390,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t r
     uint64_t baseid,relid,baseamount,relamount;
     if ( iQ != 0 )
     {
-        set_baserel_flipped(&baseid,&baseamount,&relid,&relamount,iQ,refbaseid,refrelid);
+        set_baserel_flipped(polarity,&baseid,&baseamount,&relid,&relamount,iQ,refbaseid,refrelid);
         if ( baseamount != 0 && relamount != 0 )
         {
             price = calc_price_volume(&volume,baseamount,relamount);
@@ -406,13 +408,13 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t r
     return(array);
 }
 
-cJSON *gen_InstantDEX_json(struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
+cJSON *gen_InstantDEX_json(int32_t polarity,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
 {
     cJSON *json = cJSON_CreateObject();
     char numstr[64],base[64],rel[64];
     double price,volume;
     uint64_t baseid,baseamount,relid,relamount;
-    set_baserel_flipped(&baseid,&baseamount,&relid,&relamount,iQ,refbaseid,refrelid);
+    set_baserel_flipped(polarity,&baseid,&baseamount,&relid,&relamount,iQ,refbaseid,refrelid);
     price = calc_price_volume(&volume,baseamount,relamount);
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((_iQ_dir(iQ) > 0) ? "bid" : "ask"));
     set_assetname(base,baseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
@@ -630,7 +632,7 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
 char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     uint32_t oldest;
-    int32_t i,allflag;
+    int32_t i,allflag,polarity;
     uint64_t baseid,relid;
     cJSON *json,*bids,*asks,*item;
     struct orderbook *op;
@@ -642,10 +644,7 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     expand_nxt64bits(obook,baseid ^ relid);
     sprintf(buf,"{\"baseid\":\"%llu\",\"relid\":\"%llu\",\"oldest\":%u}",(long long)baseid,(long long)relid,oldest);
     init_hexbytes_noT(datastr,(uint8_t *)buf,strlen(buf));
-    printf("ORDERBOOK.(%s)\n",buf);
-    //if ( baseid != 0 && relid != 0 )
-   //     if ( (retstr= kademlia_find("findvalue",previpaddr,NXTaddr,NXTACCTSECRET,sender,obook,datastr,0)) != 0 )
-     //       free(retstr);
+    //printf("ORDERBOOK.(%s)\n",buf);
     retstr = 0;
     if ( baseid != 0 && relid != 0 && (op= create_orderbook(oldest,baseid,relid,0,0)) != 0 )
     {
@@ -657,13 +656,19 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             bids = cJSON_CreateArray();
             for (i=0; i<op->numbids; i++)
             {
-                if ( (item= gen_orderbook_item(&op->bids[i],allflag,op->baseid,op->relid)) != 0 )
+                if ( op->baseid < op->relid )
+                    polarity = 1;
+                else polarity = -1;
+                if ( (item= gen_orderbook_item(polarity,&op->bids[i],allflag,op->baseid,op->relid)) != 0 )
                     cJSON_AddItemToArray(bids,item);
             }
             asks = cJSON_CreateArray();
             for (i=0; i<op->numasks; i++)
             {
-                if ( (item= gen_orderbook_item(&op->asks[i],allflag,op->baseid,op->relid)) != 0 )
+                if ( op->baseid < op->relid )
+                    polarity = 1;
+                else polarity = -1;
+                if ( (item= gen_orderbook_item(polarity,&op->asks[i],allflag,op->baseid,op->relid)) != 0 )
                     cJSON_AddItemToArray(asks,item);
             }
             expand_nxt64bits(assetA,op->baseid);
@@ -692,7 +697,6 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
 
 void submit_quote(char *quotestr)
 {
-    //uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t len,int32_t duration);
     int32_t len;
     char _tokbuf[4096];
     struct pserver_info *pserver;
@@ -740,7 +744,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
                 dir = -dir;
             create_orderbook_tx(dir,&tx,0,nxt64bits,baseid,relid,price,volume,baseamount,relamount);
             save_orderbooktx(nxt64bits,baseid,relid,&tx);
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(&tx.iQ,baseid,relid)) != 0 )
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(1,&tx.iQ,baseid,relid)) != 0 )
             {
                 jsonstr = cJSON_Print(json);
                 stripwhite_ns(jsonstr,strlen(jsonstr));
@@ -826,7 +830,7 @@ char *openorders_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
                 iQ = &rb->quotes[j];
                 expand_nxt64bits(nxtaddr,iQ->nxt64bits);
                 if ( strcmp(NXTaddr,nxtaddr) == 0 )
-                    cJSON_AddItemToArray(array,gen_InstantDEX_json(iQ,rb->baseid,rb->relid)), n++;
+                    cJSON_AddItemToArray(array,gen_InstantDEX_json(1,iQ,rb->baseid,rb->relid)), n++;
             }
         }
         free(obooks);
