@@ -653,7 +653,7 @@ void copy_cJSON(char *dest,cJSON *obj)
 {
     char *str;
     int i;
-    long offset,len;
+    long offset;
     dest[0] = 0;
     if ( obj != 0 )
     {
@@ -662,8 +662,7 @@ void copy_cJSON(char *dest,cJSON *obj)
         {
             offset = stripquotes(str);
             //strcpy(dest,str+offset);
-            len = strlen(str);
-            for (i=0; i<len-1; i++)//MAX_JSON_FIELD-1; i++)
+            for (i=0; i<MAX_JSON_FIELD-1; i++)
                 if ( (dest[i]= str[offset+i]) == 0 )
                     break;
             dest[i] = 0;
