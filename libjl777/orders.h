@@ -10,7 +10,7 @@
 
 #define _ASKMASK (1L << 0)
 #define _FLIPMASK (1L << 1)
-#define _TYPEMASK (~_ASKMASK)
+#define _TYPEMASK (~(_ASKMASK|_FLIPMASK))
 #define _obookid(baseid,relid) ((baseid) ^ (relid))
 #define _iQ_flipped(iQ) (((iQ)->type & _FLIPMASK) ? 1 : 0)
 #define _iQ_dir(iQ) ((((iQ)->type) & _ASKMASK) ? -1 : 1)
