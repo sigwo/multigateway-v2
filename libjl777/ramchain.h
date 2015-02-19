@@ -3830,19 +3830,22 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                             free_json(commentobj);
                     }
                 }
-                else if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0 && type == 0 && subtype == 0 && commentobj != 0 )
+                else if ( type == 0 && subtype == 0 && commentobj != 0 )
                 {
                     //if ( strcmp(txid,"998606823456096714") == 0 )
                     //    printf("Inside message: %s\n",comment);
-                    buyNXT = get_API_int(cJSON_GetObjectItem(commentobj,"buyNXT"),0);
-                    satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
-                    if ( buyNXT*SATOSHIDEN == satoshis )
+                    if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0 )
                     {
-                        ram->S.sentNXT += buyNXT * SATOSHIDEN;
-                        printf("%s sent %d NXT, total sent %.0f\n",sender,buyNXT,dstr(ram->S.sentNXT));
+                        buyNXT = get_API_int(cJSON_GetObjectItem(commentobj,"buyNXT"),0);
+                        satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                        if ( buyNXT*SATOSHIDEN == satoshis )
+                        {
+                            ram->S.sentNXT += buyNXT * SATOSHIDEN;
+                            printf("%s sent %d NXT, total sent %.0f\n",sender,buyNXT,dstr(ram->S.sentNXT));
+                        }
+                        else if ( buyNXT != 0 )
+                            printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
                     }
-                    else if ( buyNXT != 0 )
-                        printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
                 }
             }
         }

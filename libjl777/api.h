@@ -560,21 +560,21 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     return(clonestr(origargstr));
 }
 
-void call_python(FILE *fp,char *cmd,char *fname)
+void call_python(FILE *fp,char *cmd,char *fname,char *params)
 {
     //Py_Initialize();
     //PyRun_SimpleFile(fp,fname);
     //Py_Finalize();
 }
 
-void call_system(FILE *fp,char *cmd,char *fname)
+void call_system(FILE *fp,char *cmd,char *fname,char *params)
 {
     char cmdstr[1024];
-    sprintf(cmdstr,"%s %s",cmd,fname);
+    sprintf(cmdstr,"%s %s %s",cmd,fname,params);
     system(cmdstr);
 }
 
-char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,char *fname))
+char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,char *fname,char *params),char *params)
 {
     char *buffer = 0;
     long filesize;
@@ -587,7 +587,7 @@ char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,ch
     close(out_pipe[1]);
     if ( (fp= fopen(fname,"r")) != 0 )
     {
-        (*language)(fp,cmd,fname);
+        (*language)(fp,cmd,fname,params);
         fclose(fp);
     }
     fflush(stdout);
@@ -606,18 +606,20 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     if ( is_remote_access(previpaddr) == 0 )
     {
         copy_cJSON(fname,objs[0]);
-        return(language_func("python",fname,call_python));
+        return(language_func("python",fname,call_python,0));
     } else return(0);
 }
 
 char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char fname[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD];
+    char fname[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD],params[MAX_JSON_FIELD];
     if ( is_remote_access(previpaddr) == 0 )
     {
         copy_cJSON(fname,objs[0]);
         copy_cJSON(syscall,objs[1]);
-        return(language_func(syscall,fname,call_system));
+        copy_cJSON(params,objs[2]);
+        unstringify(params);
+        return(language_func(syscall,fname,call_system,params));
     } else return(0);
 }
 
@@ -1879,7 +1881,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *MGWaddr[] = { (char *)MGWaddr_func, "MGWaddr", "V", 0 };
     static char *MGWresponse[] = { (char *)MGWresponse_func, "MGWresponse", "V", 0 };
     static char *setmsigpubkey[] = { (char *)setmsigpubkey_func, "setmsigpubkey", "V", "coin", "refNXTaddr", "addr", "userpubkey", 0 };
-    static char *MGW[] = { (char *)MGW_func, "MGW", "", "NXT0", "NXT1", "NXT2", "ip0", "ip1", "ip2", "coin", "asset", "rescan", "actionflag", "specialNXT", "exclude0", "exclude1", "exclude2", "destip", "destport", "userpubkey", "email", "destNXT", 0 };
+    //static char *MGW[] = { (char *)MGW_func, "MGW", "", "NXT0", "NXT1", "NXT2", "ip0", "ip1", "ip2", "coin", "asset", "rescan", "actionflag", "specialNXT", "exclude0", "exclude1", "exclude2", "destip", "destport", "userpubkey", "email", "destNXT", 0 };
     static char *cosign[] = { (char *)cosign_func, "cosign", "V", "otheracct", "seed", "text", 0 };
     static char *cosigned[] = { (char *)cosigned_func, "cosigned", "V", "seed", "result", "privacct", "pubacct", 0 };
     
@@ -1922,9 +1924,9 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     
     // InstantDEX
     static char *allorderbooks[] = { (char *)allorderbooks_func, "allorderbooks", "V", 0 };
-    static char *orderbook[] = { (char *)orderbook_func, "orderbook", "V", "baseid", "relid", "allfields", "oldest", 0 };
+    static char *orderbook[] = { (char *)orderbook_func, "orderbook", "V", "baseid", "relid", "allfields", "oldest", "subscribe", 0 };
     static char *placebid[] = { (char *)placebid_func, "placebid", "V", "baseid", "relid", "volume", "price", 0 };
-    static char *placeask[] = { (char *)placeask_func, "placeask", "V", "baseid", "relid", "volume", "price",0 };
+    static char *placeask[] = { (char *)placeask_func, "placeask", "V", "baseid", "relid", "volume", "price", 0 };
     static char *bid[] = { (char *)bid_func, "bid", "V", "baseid", "relid", "volume", "price", "baseamount", "relamount", 0 };
     static char *ask[] = { (char *)ask_func, "ask", "V", "baseid", "relid", "volume", "price", "baseamount", "relamount", 0 };
     static char *makeoffer[] = { (char *)makeoffer_func, "makeoffer", "V", "baseid", "relid", "baseamount", "relamount", "other", "type", 0 };
@@ -1940,10 +1942,10 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *lotto[] = { (char *)lotto_func, "lotto", "V", "refacct", "asset", "lottoseed", "prizefund", 0 };
 
     // Embedded Langs
-    static char *python[] = { (char *)python_func, "python", "V",  "name", 0 };
-    static char *syscall[] = { (char *)syscall_func, "syscall", "V",  "name", "cmd", 0 };
+    static char *python[] = { (char *)python_func, "python", "V", "name", 0 };
+    static char *syscall[] = { (char *)syscall_func, "syscall", "V", "name", "cmd", "params", 0 };
 
-     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, syscall, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, allorderbooks, placebid, bid, placeask, ask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGW, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile };
+     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, syscall, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, allorderbooks, placebid, bid, placeask, ask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
