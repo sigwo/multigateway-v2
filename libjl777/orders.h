@@ -431,7 +431,7 @@ cJSON *gen_InstantDEX_json(struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64
     return(json);
 }
 
-double parse_InstantDEX_json(uint64_t *baseidp,uint64_t *relidp,struct InstantDEX_quote *iQ,cJSON *json)
+/*double parse_InstantDEX_json(uint64_t *baseidp,uint64_t *relidp,struct InstantDEX_quote *iQ,cJSON *json)
 {
     char basestr[MAX_JSON_FIELD],relstr[MAX_JSON_FIELD],nxtstr[MAX_JSON_FIELD],cmd[MAX_JSON_FIELD];
     struct orderbook_tx T;
@@ -469,7 +469,7 @@ double parse_InstantDEX_json(uint64_t *baseidp,uint64_t *relidp,struct InstantDE
         }
     }
     return(_iQ_price(iQ));
-}
+}*/
 
 int _decreasing_quotes(const void *a,const void *b)
 {
@@ -712,7 +712,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     cJSON *json;
     uint64_t baseamount,relamount,nxt64bits,baseid,relid,txid = 0;
     double price,volume;
-    int32_t remoteflag;
+    int32_t remoteflag,type;
     struct orderbook_tx tx,*txp;
     char buf[MAX_JSON_FIELD],txidstr[64],*jsonstr,*retstr = 0;
     remoteflag = (is_remote_access(previpaddr) != 0);
@@ -730,13 +730,16 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
         volume = get_API_float(objs[2]);
         price = get_API_float(objs[3]);
     }
-    printf("placequote dir.%d sender.(%s) valid.%d price %.11f vol %.8f\n",dir,sender,valid,price,volume);
+    type = (int32_t)get_API_int(objs[6],0);
+    printf("placequote type.%d dir.%d sender.(%s) valid.%d price %.11f vol %.8f\n",type,dir,sender,valid,price,volume);
     if ( sender[0] != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
         {
             create_orderbook_tx(dir,&tx,0,nxt64bits,baseid,relid,price,volume,baseamount,relamount);
             save_orderbooktx(nxt64bits,baseid,relid,&tx);
+            if ( _iQ_flipped(&tx.iQ) != 0 )
+                dir = -dir;
             if ( remoteflag == 0 && (json= gen_InstantDEX_json(&tx.iQ,baseid,relid)) != 0 )
             {
                 jsonstr = cJSON_Print(json);
@@ -891,7 +894,7 @@ int32_t filtered_orderbook(char *datastr,char *jsonstr)
     return((int32_t)strlen(datastr));
 }
 
-void check_for_InstantDEX(char *decoded,char *keystr)
+/*void check_for_InstantDEX(char *decoded,char *keystr)
 {
     cJSON *json;
     double price;
@@ -930,7 +933,7 @@ void check_for_InstantDEX(char *decoded,char *keystr)
         }
         free_json(json);
     }
-}
+}*/
 
 #undef _ASKMASK
 #undef _TYPEMASK
