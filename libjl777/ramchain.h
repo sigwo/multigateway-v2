@@ -2050,7 +2050,7 @@ int64_t _calc_cointx_inputs(struct ramchain_info *ram,struct cointx_info *cointx
                 fprintf(stderr,"numinputs %d sum %.8f vs amount %.8f change %.8f -> miners %.8f\n",cointx->numinputs,dstr(cointx->inputsum),dstr(amount),dstr(cointx->change),dstr(sum - cointx->change - cointx->amount));
                 return(cointx->inputsum);
             }
-        } else printf("no bestfit found\n");
+        } else printf("no bestfit found i.%d of %d\n",i,ram->MGWnumunspents);
     }
     fprintf(stderr,"error numinputs %d sum %.8f\n",cointx->numinputs,dstr(cointx->inputsum));
     return(0);
