@@ -3744,6 +3744,11 @@ void _set_NXT_sender(char *sender,cJSON *txobj)
     copy_cJSON(sender,senderobj);
 }
 
+void ram_gotpayment(struct ramchain_info *ram,char *comment,cJSON *commentobj)
+{
+    printf("ram_gotpayment.(%s) from %s\n",comment,ram->name);
+}
+
 uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJSON *txobj)
 {
     char AMstr[4096],sender[128],receiver[128],assetidstr[128],txid[4096],comment[4096],*commentstr = 0;
@@ -3846,6 +3851,8 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJS
                         else if ( buyNXT != 0 )
                             printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
                     }
+                    if ( strcmp(sender,ram->srvNXTADDR) == 0 )
+                        ram_gotpayment(ram,comment,commentobj);
                 }
             }
         }

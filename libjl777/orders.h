@@ -762,6 +762,42 @@ char *allorderbooks_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char
     return(clonestr("{\"error\":\"no orderbooks\"}"));
 }
 
+char *openorders_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    cJSON *array,*json = 0;
+    struct rambook_info **obooks,*rb;
+    struct InstantDEX_quote *iQ;
+    int32_t i,j,numbooks,n = 0;
+    char nxtaddr[64],*jsonstr;
+    if ( (obooks= get_allrambooks(&numbooks)) != 0 )
+    {
+        array = cJSON_CreateArray();
+        for (i=0; i<numbooks; i++)
+        {
+            rb = obooks[i];
+            if ( rb->numquotes == 0 )
+                continue;
+            for (j=0; j<rb->numquotes; j++)
+            {
+                iQ = &rb->quotes[j];
+                expand_nxt64bits(nxtaddr,iQ->nxt64bits);
+                if ( strcmp(NXTaddr,nxtaddr) == 0 )
+                    cJSON_AddItemToArray(array,gen_InstantDEX_json(iQ,rb->baseid,rb->relid)), n++;
+            }
+        }
+        free(obooks);
+        if ( n > 0 )
+        {
+            json = cJSON_CreateObject();
+            cJSON_AddItemToObject(json,"openorders",array);
+            jsonstr = cJSON_Print(json);
+            free_json(json);
+            return(jsonstr);
+        }
+    }
+    return(clonestr("{\"result\":\"no openorders\"}"));
+}
+
 int32_t filtered_orderbook(char *datastr,char *jsonstr)
 {
     cJSON *json;
