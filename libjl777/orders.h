@@ -13,7 +13,7 @@
 #define _TYPEMASK (~_ASKMASK)
 #define _obookid(baseid,relid) ((baseid) ^ (relid))
 #define _iQ_flipped(iQ) (((iQ)->type & _FLIPMASK) ? 1 : 0)
-#define _iQ_dir(iQ) ((((iQ)->type) & _ASKMASK) ? -_iQ_flipped(iQ) : _iQ_flipped(iQ))
+#define _iQ_dir(iQ) ((((iQ)->type) & _ASKMASK) ? -1 : 1)
 #define _iQ_type(iQ) ((iQ)->type & _TYPEMASK)
 #define _iQ_price(iQ) ((double)(iQ)->relamount / (iQ)->baseamount)
 #define _iQ_volume(iQ) ((double)(iQ)->baseamount / SATOSHIDEN)
@@ -285,7 +285,7 @@ void save_orderbooktx(uint64_t nxt64bits,uint64_t baseid,uint64_t relid,struct o
 void flip_iQ(struct InstantDEX_quote *iQ)
 {
     uint64_t amount;
-    iQ->type ^= (_ASKMASK | _FLIPMASK);
+    iQ->type ^= (0*_ASKMASK | _FLIPMASK);
     amount = iQ->baseamount;
     iQ->baseamount = iQ->relamount;
     iQ->relamount = amount;
@@ -526,10 +526,10 @@ void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_
     int32_t flipped;
     if ( order->baseid < order->relid ) flipped = 0;
     else flipped = _FLIPMASK;
-    if ( flipped != refflipped )
+    if ( (flipped != refflipped && (order->iQ.type & _FLIPMASK) == refflipped) || (flipped == refflipped && (order->iQ.type & _FLIPMASK) != refflipped) )
         flip_iQ(&order->iQ);
-    if ( (order->iQ.type & _FLIPMASK) != refflipped )
-        flip_iQ(&order->iQ);
+    //if ( (order->iQ.type & _FLIPMASK) != refflipped )
+    //    flip_iQ(&order->iQ);
     if ( order->iQ.timestamp >= oldest )
         update_orderbook(iter,op,numbidsp,numasksp,&order->iQ);
 }
