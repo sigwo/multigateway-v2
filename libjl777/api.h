@@ -570,7 +570,7 @@ void call_python(FILE *fp,char *cmd,char *fname,char *params)
 void call_system(FILE *fp,char *cmd,char *fname,char *params)
 {
     char cmdstr[1024];
-    sprintf(cmdstr,"%s %s %s",cmd,fname,params);
+    sprintf(cmdstr,"%s %s %s > /tmp/syscall",cmd,fname,params);
     fprintf(stderr,"SYSCALL.(%s)\n",cmdstr);
     system(cmdstr);
 }
@@ -579,25 +579,34 @@ char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,ch
 {
     char *buffer = 0;
     long filesize;
-    int32_t out_pipe[2],saved_stdout;
+    //int32_t out_pipe[2],saved_stdout;
     FILE *fp;
-    saved_stdout = dup(STDOUT_FILENO);
-    if ( pipe(out_pipe) != 0 )
-        return(clonestr("{\"error\":\"pipe creation error\"}"));
-    dup2(out_pipe[1],STDOUT_FILENO);
-    close(out_pipe[1]);
+    //saved_stdout = dup(STDOUT_FILENO);
+    //if ( pipe(out_pipe) != 0 )
+    //    return(clonestr("{\"error\":\"pipe creation error\"}"));
+    //dup2(out_pipe[1],STDOUT_FILENO);
+    //close(out_pipe[1]);
     if ( (fp= fopen(fname,"r")) != 0 )
     {
         (*language)(fp,cmd,fname,params);
         fclose(fp);
     }
-    fflush(stdout);
-    if ( (filesize= lseek(out_pipe[0],0,SEEK_END)) > 0 )
+    //fflush(stdout);
+    //if ( (filesize= lseek(out_pipe[0],0,SEEK_END)) > 0 )
+   // {
+   //     buffer = malloc(filesize);
+   //     read(out_pipe[0],buffer,filesize);
+   // }
+   // dup2(saved_stdout,STDOUT_FILENO);
+    if ( (fp= fopen("/tmp/syscall","rb")) != 0 )
     {
-        buffer = malloc(filesize);
-        read(out_pipe[0],buffer,filesize);
+        fseek(fp,0,SEEK_END);
+        filesize = ftell(fp);
+        rewind(fp);
+        buffer = calloc(1,filesize);
+        fread(buffer,1,filesize,fp);
+        fclose(fp);
     }
-    dup2(saved_stdout,STDOUT_FILENO);
     return(buffer);
 }
 
