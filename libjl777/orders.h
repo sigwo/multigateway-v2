@@ -657,8 +657,8 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             for (i=0; i<op->numbids; i++)
             {
                 if ( op->baseid < op->relid )
-                    polarity = 1;
-                else polarity = -1;
+                    polarity = -1;
+                else polarity = 1;
                 if ( (item= gen_orderbook_item(polarity,&op->bids[i],allflag,op->baseid,op->relid)) != 0 )
                     cJSON_AddItemToArray(bids,item);
             }
@@ -666,8 +666,8 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             for (i=0; i<op->numasks; i++)
             {
                 if ( op->baseid < op->relid )
-                    polarity = 1;
-                else polarity = -1;
+                    polarity = -1;
+                else polarity = 1;
                 if ( (item= gen_orderbook_item(polarity,&op->asks[i],allflag,op->baseid,op->relid)) != 0 )
                     cJSON_AddItemToArray(asks,item);
             }
