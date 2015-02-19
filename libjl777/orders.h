@@ -242,7 +242,7 @@ void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
                 break;
         }
     } else i = 0;
-    printf("add_user_order i.%d numquotes.%d\n",i,rb->numquotes);
+    //printf("add_user_order i.%d numquotes.%d\n",i,rb->numquotes);
     if ( i == rb->numquotes )
     {
         if ( i >= rb->maxquotes )
@@ -421,7 +421,7 @@ cJSON *gen_InstantDEX_json(struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64
     cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
     cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
     cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
-    cJSON_AddItemToObject(json,"type",cJSON_CreateNumber(_iQ_type(iQ)));
+    cJSON_AddItemToObject(json,"type",cJSON_CreateNumber(iQ->type));
     sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
     
     sprintf(numstr,"%llu",(long long)baseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
