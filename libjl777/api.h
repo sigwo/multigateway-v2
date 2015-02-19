@@ -68,7 +68,8 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
     retbuf[0] = 0;
     if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
     {
-        printf("Got BroadcastQ\n");
+        if ( Debuglevel > 2 )
+            printf("Got BroadcastQ\n");
         memcpy(&len,ptr,sizeof(len));
         str = &ptr[sizeof(len) + sizeof(duration)];
         if ( len == (strlen(str) + 1) )
