@@ -13,6 +13,7 @@
 #define _TYPEMASK (~_ASKMASK)
 #define _obookid(baseid,relid) ((baseid) ^ (relid))
 #define _iQ_dir(iQ) ((((iQ)->type) & _ASKMASK) ? -1 : 1)
+#define _iQ_flipped(iQ) ((iQ)->type & _FLIPMASK)
 #define _iQ_type(iQ) ((iQ)->type & _TYPEMASK)
 #define _iQ_price(iQ) ((double)(iQ)->relamount / (iQ)->baseamount)
 #define _iQ_volume(iQ) ((double)(iQ)->baseamount / SATOSHIDEN)
@@ -207,8 +208,6 @@ int32_t get_top_MMaker(struct pserver_info **pserverp)
     return(-1);
 }
 
-//struct InstantDEX_quote { uint64_t nxt64bits,baseamount,relamount; uint32_t timestamp,type; };
-
 void purge_oldest_order(struct rambook_info *rb,struct orderbook_tx *tx) // allow one pair per orderbook
 {
     int32_t oldi;
@@ -386,6 +385,7 @@ cJSON *gen_InstantDEX_json(struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64
     cJSON *json = cJSON_CreateObject();
     char numstr[64],base[64],rel[64];
     double price,volume;
+    uint64_t baseid,baseamount,relid,relamount;
     price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
     cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
     cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
@@ -393,13 +393,24 @@ cJSON *gen_InstantDEX_json(struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64
     cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
     cJSON_AddItemToObject(json,"type",cJSON_CreateNumber(_iQ_type(iQ)));
     sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
-    set_assetname(base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
-    sprintf(numstr,"%llu",(long long)refbaseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
-    sprintf(numstr,"%llu",(long long)iQ->baseamount), cJSON_AddItemToObject(json,"baseamount",cJSON_CreateString(numstr));
     
-    set_assetname(rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
-    sprintf(numstr,"%llu",(long long)refrelid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
-    sprintf(numstr,"%llu",(long long)iQ->relamount), cJSON_AddItemToObject(json,"relamount",cJSON_CreateString(numstr));
+    if ( _iQ_flipped(iQ) == 0 )
+    {
+        baseid = refbaseid, baseamount = iQ->baseamount;
+        relid = refrelid, relamount = iQ->relamount;
+    }
+    else
+    {
+        baseid = refrelid, baseamount = iQ->relamount;
+        relid = refbaseid, relamount = iQ->baseamount;
+    }
+    set_assetname(base,baseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
+    sprintf(numstr,"%llu",(long long)baseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
+    sprintf(numstr,"%llu",(long long)baseamount), cJSON_AddItemToObject(json,"baseamount",cJSON_CreateString(numstr));
+    
+    set_assetname(rel,relid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
+    sprintf(numstr,"%llu",(long long)relid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
+    sprintf(numstr,"%llu",(long long)relamount), cJSON_AddItemToObject(json,"relamount",cJSON_CreateString(numstr));
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((_iQ_dir(iQ) > 0) ? "bid" : "ask"));
     return(json);
 }
