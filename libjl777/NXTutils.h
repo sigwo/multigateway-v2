@@ -1991,7 +1991,7 @@ cJSON *parse_json_AM(struct json_AM *ap)
 
 int32_t get_API_int(cJSON *obj,int32_t val)
 {
-    char buf[1024];
+    char buf[MAX_JSON_FIELD+2];
     if ( obj != 0 )
     {
         copy_cJSON(buf,obj);
@@ -2002,7 +2002,7 @@ int32_t get_API_int(cJSON *obj,int32_t val)
 
 uint32_t get_API_uint(cJSON *obj,uint32_t val)
 {
-    char buf[1024];
+    char buf[MAX_JSON_FIELD+2];
     if ( obj != 0 )
     {
         copy_cJSON(buf,obj);
@@ -2014,7 +2014,7 @@ uint32_t get_API_uint(cJSON *obj,uint32_t val)
 uint64_t get_API_nxt64bits(cJSON *obj)
 {
     uint64_t nxt64bits = 0;
-    char buf[1024];
+    char buf[MAX_JSON_FIELD+2];
     if ( obj != 0 )
     {
         copy_cJSON(buf,obj);
@@ -2026,7 +2026,7 @@ uint64_t get_API_nxt64bits(cJSON *obj)
 double get_API_float(cJSON *obj)
 {
     double val = 0.;
-    char buf[1024];
+    char buf[MAX_JSON_FIELD+2];
     if ( obj != 0 )
     {
         copy_cJSON(buf,obj);
