@@ -197,7 +197,7 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
 char *sendbinary_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     static int counter;
-    char nexthopNXTaddr[64],destNXTaddr[64],cmdstr[MAX_JSON_FIELD],datastr[MAX_JSON_FIELD],*retstr = 0;
+    char nexthopNXTaddr[64],destNXTaddr[MAX_JSON_FIELD],cmdstr[MAX_JSON_FIELD],datastr[MAX_JSON_FIELD],*retstr = 0;
     int32_t L;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
@@ -1256,7 +1256,7 @@ void ram_request(uint64_t nxt64bits,char *destip,struct ramchain_info *ram,char 
 void ram_syncblocks(struct ramchain_info *ram,uint32_t blocknum,int32_t numblocks,uint64_t *sources,int32_t n,int32_t addshaflag)
 {
     int32_t ram_perm_sha256(bits256 *hashp,struct ramchain_info *ram,uint32_t blocknum,int32_t n);
-    char destip[64],jsonstr[1024],shastr[128],hashstr[65];
+    char destip[64],jsonstr[MAX_JSON_FIELD],shastr[128],hashstr[65];
     int32_t i;
     cJSON *array;
     bits256 hash;
@@ -1292,7 +1292,7 @@ void ram_sendresponse(char *origcmd,char *coinstr,char *retstr,char *NXTaddr,cha
 {
     int32_t len,timeout = 300;
     cJSON *json;
-    char fname[512],hopNXTaddr[64],*jsonstr,*str = 0;
+    char fname[MAX_JSON_FIELD],hopNXTaddr[64],*jsonstr,*str = 0;
     if ( is_remote_access(previpaddr) != 0 )
     {
         if ( (json= cJSON_Parse(retstr)) != 0 )

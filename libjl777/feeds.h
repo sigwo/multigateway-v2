@@ -440,7 +440,7 @@ int32_t parse_poloniex(struct exchange_state *ep,int32_t maxdepth)
 int32_t parse_bter(struct exchange_state *ep,int32_t maxdepth)
 {
     cJSON *json,*obj;
-    char resultstr[512],*jsonstr;
+    char resultstr[MAX_JSON_FIELD],*jsonstr;
     prep_exchange_state(ep);
     if ( ep->url[0] == 0 )
         sprintf(ep->url,"http://data.bter.com/api/1/depth/%s_%s",ep->lbase,ep->lrel);
@@ -787,7 +787,7 @@ struct exchange_state *add_activefile(int32_t writeflag,char *exchange,char *bas
     static int didinit;
     int32_t i;
     uint64_t feedid;
-    char lbase[512],lrel[512],lexchange[512];
+    char lbase[MAX_JSON_FIELD],lrel[MAX_JSON_FIELD],lexchange[MAX_JSON_FIELD];
     struct exchange_state *ep;
     if ( didinit == 0 )
     {
@@ -831,7 +831,7 @@ int32_t init_exchanges(cJSON *confobj,int32_t writeflag)
 {
     int32_t i,j,n;
     cJSON *array,*item;
-    char base[64],rel[64];
+    char base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD];
     Numactivefiles = 0;
     for (i=0; i<NUM_EXCHANGES; i++)
     {
@@ -863,7 +863,7 @@ int32_t init_exchanges(cJSON *confobj,int32_t writeflag)
 int32_t poll_pricedbs()
 {
     int32_t maxdepth = 20;
-    char dbname[1024];
+    char dbname[MAX_JSON_FIELD];
     int32_t i,num,nonz = 0;
     struct SuperNET_db *sdb;
     struct exchange_pair *pair;
@@ -912,7 +912,7 @@ int32_t poll_pricedbs()
 char *getquotes(char *exchange,char *base,char *rel,uint32_t oldest)
 {
     struct exchange_quote *quotes;
-    char dbname[1024],*jsonstr = 0;
+    char dbname[MAX_JSON_FIELD],*jsonstr = 0;
     int32_t i,num;
     cJSON *array,*item,*json;
     set_dbname(dbname,exchange,base,rel);

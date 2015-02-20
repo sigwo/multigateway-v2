@@ -3003,7 +3003,7 @@ void ram_update_remotesrc(struct ramchain_info *ram,struct MGWstate *sp)
 void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
 {
     void save_MGW_status(char *NXTaddr,char *jsonstr);
-    char name[512],coinstr[512],*jsonstr = 0;
+    char name[512],coinstr[MAX_JSON_FIELD],*jsonstr = 0;
     struct MGWstate S;
     int32_t gatewayid;
     cJSON *json,*array;
@@ -3496,7 +3496,7 @@ int32_t ram_update_redeembits(struct ramchain_info *ram,cJSON *argjson,uint64_t 
     uint64_t redeembits;
     int32_t i,n,num = 0;
     struct address_entry B;
-    char coinstr[1024],redeemtxid[1024],cointxid[MAX_JSON_FIELD];
+    char coinstr[MAX_JSON_FIELD],redeemtxid[MAX_JSON_FIELD],cointxid[MAX_JSON_FIELD];
     if ( extract_cJSON_str(coinstr,sizeof(coinstr),argjson,"coin") <= 0 )
         return(0);
     if ( ram != 0 && strcmp(ram->name,coinstr) != 0 )
@@ -3656,7 +3656,7 @@ struct NXT_assettxid *_set_assettxid(struct ramchain_info *ram,uint32_t height,c
     int32_t createdflag;
     struct NXT_asset *ap;
     cJSON *json,*cointxidobj,*obj;
-    char sender[64],cointxid[512],coinstr[512];
+    char sender[MAX_JSON_FIELD],cointxid[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
     if ( (ap= ram->ap) == 0 )
     {
         printf("no NXT_asset for %s\n",ram->name);
@@ -3751,7 +3751,7 @@ void ram_gotpayment(struct ramchain_info *ram,char *comment,cJSON *commentobj)
 
 uint32_t _process_NXTtransaction(int32_t confirmed,struct ramchain_info *ram,cJSON *txobj)
 {
-    char AMstr[4096],sender[128],receiver[128],assetidstr[128],txid[4096],comment[4096],*commentstr = 0;
+    char AMstr[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],receiver[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],txid[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],*commentstr = 0;
     cJSON *attachment,*message,*assetjson,*commentobj;
     unsigned char buf[4096];
     struct NXT_AMhdr *hdr;
