@@ -2424,7 +2424,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
     //int64 nPayFee = nTransactionFee * (1 + (int64)nBytes / 1000);
     char *rawparams,*signedtx,*changeaddr,*with_op_return=0,*retstr = 0;
     int64_t MGWfee,sum,amount;
-    int32_t allocsize,numoutputs = 0;
+    int32_t allocsize,opreturn_output,numoutputs = 0;
     struct cointx_info *cointx,TX,*rettx = 0;
     cointx = &TX;
     memset(cointx,0,sizeof(*cointx));
@@ -2446,12 +2446,12 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
         strcpy(cointx->outputs[numoutputs].coinaddr,destaddr);
         cointx->outputs[numoutputs++].value = value - MGWfee - 1 - ram->txfee;
     }
+    opreturn_output = numoutputs;
     strcpy(cointx->outputs[numoutputs].coinaddr,ram->opreturnmarker);
     cointx->outputs[numoutputs++].value = 1;
     cointx->numoutputs = numoutputs;
     cointx->amount = amount = (MGWfee + value + 1 + ram->txfee);
     fprintf(stderr,"calc_withdraw.%s %llu amount %.8f -> balance %.8f\n",ram->name,(long long)redeemtxid,dstr(cointx->amount),dstr(ram->S.MGWbalance));
-   // if ( (cointx->amount + ram->txfee) <= ram->MGWbalance )
     if ( ram->S.MGWbalance >= 0 )
     {
         if ( (sum= _calc_cointx_inputs(ram,cointx,cointx->amount)) >= (cointx->amount + ram->txfee) )
@@ -2482,7 +2482,7 @@ struct cointx_info *_calc_cointx_withdraw(struct ramchain_info *ram,char *destad
                     if (retstr != 0 && retstr[0] != 0 )
                     {
                         fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(retstr),retstr);
-                        if ( (with_op_return= _insert_OP_RETURN(retstr,numoutputs-1,&redeemtxid,1)) != 0 )
+                        if ( (with_op_return= _insert_OP_RETURN(retstr,opreturn_output,&redeemtxid,1)) != 0 )
                         {
                             if ( (signedtx= _sign_localtx(ram,cointx,with_op_return)) != 0 )
                             {
@@ -3344,7 +3344,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
                                     //tp->completed = 1; // ignore malformed requests for now
                                 }
                             }
-                            else if ( ram_check_consensus(txidstr,ram,tp) != 0 )
+                            if ( ram_check_consensus(txidstr,ram,tp) != 0 )
                                 printf("completed redeem.%llu with cointxid.%s\n",(long long)tp->redeemtxid,txidstr);
                             //printf("(%llu %.8f).%d ",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(int32_t)(time(NULL) - tp->redeemstarted));
                         } else printf("%llu %.8f: completed.%d withdraw.%p destaddr.%p\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),tp->completed,tp->convwithdrawaddr,destaddr);
@@ -9629,7 +9629,7 @@ void *process_ramchains(void *_argcoinstr)
                     ram_update_RTblock(ram);
                     for (pass=1; pass<=4; pass++)
                     {
-                        processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],60000.);
+                        processed += ram_process_blocks(ram,ram->mappedblocks[pass],ram->mappedblocks[pass-1],60000.*pass*pass);
                         //if ( (ram->mappedblocks[pass]->blocknum >> ram->mappedblocks[pass]->shift) < (ram->mappedblocks[pass-1]->blocknum >> ram->mappedblocks[pass]->shift) )
                         //    break;
                     }
