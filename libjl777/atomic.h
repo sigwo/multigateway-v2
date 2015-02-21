@@ -288,6 +288,7 @@ char *respondtx(char *sender,char *signedtx)
     struct NXT_acct *np,*othernp;
     struct NXT_tx *pendingtx,*recvtx;
     sprintf(buf,"{\"error\":\"some error with respondtx got (%s) from NXT.%s\"}",signedtx,sender);
+    printf("RESPONDTX.(%s) from (%s)\n",signedtx,sender);
     recvtx = conv_txbytes(signedtx);
     if ( recvtx != 0 )
     {
@@ -338,7 +339,8 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
     int32_t createdflag;
     double vol,price,amountB;
     uint64_t qtyB,assetB;
-    char *jsonstr,*parsed,hopNXTaddr[64],buf[1024],calchash[MAX_JSON_FIELD],NXTaddr[64],responseutx[1024],signedtx[1024],otherNXTaddr[64];
+    char *jsonstr,*parsed,hopNXTaddr[64],buf[MAX_JSON_FIELD],calchash[MAX_JSON_FIELD],NXTaddr[64],responseutx[MAX_JSON_FIELD],signedtx[MAX_JSON_FIELD],otherNXTaddr[64];
+    printf("PROCESSUTX.(%s) sig.%s full.%s from (%s)\n",utx,sig,full,sender);
     jsonstr = issue_calculateFullHash(0,utx,sig);
     if ( jsonstr != 0 )
     {
@@ -351,6 +353,7 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
             {
                 if ( (parsed = issue_parseTransaction(0,utx)) != 0 )
                 {
+                    stripwhite_ns(parsed,strlen(parsed));
                     printf("PARSED OFFER.(%s) full.(%s) (%s) offer sender.%s\n",parsed,full,calchash,sender);
                     if ( (offerjson= cJSON_Parse(parsed)) != 0 )
                     {
