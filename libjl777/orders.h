@@ -257,7 +257,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag)
             price = calc_price_volume(&volume,iQ->relamount,iQ->baseamount);
         else price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
         array = cJSON_CreateArray();
-        sprintf(numstr,"%.11f",price), cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
+        sprintf(numstr,"%.8f",price), cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
         sprintf(numstr,"%.8f",volume),cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
         if ( allflag != 0 )
         {
@@ -647,7 +647,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     type = (int32_t)get_API_int(objs[7],0);
     if ( (timestamp= (uint32_t)get_API_int(objs[4],0)) == 0 )
         timestamp = (uint32_t)time(NULL);
-    printf("t.%u placequote type.%d dir.%d sender.(%s) valid.%d price %.11f vol %.8f\n",timestamp,type,dir,sender,valid,price,volume);
+    printf("t.%u placequote type.%d dir.%d sender.(%s) valid.%d price %.8f vol %.8f\n",timestamp,type,dir,sender,valid,price,volume);
     if ( sender[0] != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
