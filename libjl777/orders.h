@@ -297,9 +297,9 @@ int _decreasing_quotes(const void *a,const void *b)
 {
 #define iQ_a ((struct InstantDEX_quote *)a)
 #define iQ_b ((struct InstantDEX_quote *)b)
-    double vala,valb;
-    vala = _iQ_price(iQ_a);
-    valb = _iQ_price(iQ_b);
+    double vala,valb,volume;
+    vala = calc_price_volume(&volume,iQ_a->baseamount,iQ_a->relamount);
+    valb = calc_price_volume(&volume,iQ_b->baseamount,iQ_b->relamount);
 	if ( valb > vala )
 		return(1);
 	else if ( valb < vala )
@@ -313,9 +313,9 @@ int _increasing_quotes(const void *a,const void *b)
 {
 #define iQ_a ((struct InstantDEX_quote *)a)
 #define iQ_b ((struct InstantDEX_quote *)b)
-    double vala,valb;
-    vala = _iQ_price(iQ_a);
-    valb = _iQ_price(iQ_b);
+    double vala,valb,volume;
+    vala = calc_price_volume(&volume,iQ_a->baseamount,iQ_a->relamount);
+    valb = calc_price_volume(&volume,iQ_b->baseamount,iQ_b->relamount);
 	if ( valb > vala )
 		return(-1);
 	else if ( valb < vala )
