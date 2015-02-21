@@ -36,8 +36,9 @@ char *assetmap[][2] =
 struct rambook_info
 {
     UT_hash_handle hh;
+    uint8_t obookiddata[9];
     struct InstantDEX_quote *quotes;
-    uint64_t baseid,relid,obookid;
+    uint64_t baseid,relid;
     int32_t numquotes,maxquotes;
 } *Rambooks;
 
@@ -84,10 +85,9 @@ struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
     if ( rb == 0 )
     {
         rb = calloc(1,sizeof(*rb));
-        rb->obookid = obookid;
         rb->baseid = baseid;
         rb->relid = relid;
-        HASH_ADD(hh,Rambooks,obookid,sizeof(obookid),rb);
+        HASH_ADD(hh,Rambooks,obookiddata,sizeof(obookiddata),rb);
     }
     return(rb);
 }
