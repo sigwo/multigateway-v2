@@ -612,6 +612,8 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr,char *userdir)
                                 cp->srvpubnxtbits = calc_nxt64bits(cp->srvNXTADDR);
                             }
                         }
+                        if ( strcmp("BTCD",cp->name) == 0 )
+                            safecopy(Global_mp->srvNXTACCTSECRET,cp->srvNXTACCTSECRET,sizeof(Global_mp->srvNXTACCTSECRET));
                         cp->srvpubnxtbits = issue_getAccountId(0,cp->srvNXTACCTSECRET);
                         expand_nxt64bits(cp->srvNXTADDR,cp->srvpubnxtbits);
                         if ( Debuglevel > 2 )

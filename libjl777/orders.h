@@ -245,28 +245,25 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
     return(0);
 }
 
-cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag)
+cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t baseid,uint64_t relid)
 {
-    char NXTaddr[64],numstr[64];
-    cJSON *array = 0;
+    char offerstr[MAX_JSON_FIELD];
     double price,volume;
+    uint64_t baseamount,relamount;
     if ( iQ->baseamount != 0 && iQ->relamount != 0 )
     {
         if ( iQ->isask != 0 )
-            price = calc_price_volume(&volume,iQ->relamount,iQ->baseamount);
-        else price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
-        array = cJSON_CreateArray();
-        sprintf(numstr,"%.11f",price), cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
-        sprintf(numstr,"%.8f",volume),cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
+            baseamount = iQ->relamount, relamount = iQ->baseamount;
+        else baseamount = iQ->baseamount, relamount = iQ->relamount;
+        price = calc_price_volume(&volume,baseamount,relamount);
         if ( allflag != 0 )
         {
-            expand_nxt64bits(NXTaddr,iQ->nxt64bits);
-            cJSON_AddItemToArray(array,cJSON_CreateString(NXTaddr));
-            cJSON_AddItemToArray(array,cJSON_CreateNumber(iQ->type));
-            cJSON_AddItemToArray(array,cJSON_CreateNumber(iQ->timestamp));
+            // "baseid", "relid", "baseamount", "relamount", "other", "type", 0 };
+            sprintf(offerstr,"{\"price\":\"%.11f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"realid\":\"%llu\",\"relamount\":\"%llu\",\"other\":\"%llu\",\"type\":%d}",price,volume,(long long)baseid,(long long)baseamount,(long long)relid,(long long)relamount,(long long)iQ->nxt64bits,iQ->type);
         }
+        else sprintf(offerstr,"{\"price\":\"%.11f\",\"volume\":\"%.8f\"}",price,volume);
     }
-    return(array);
+    return(cJSON_Parse(offerstr));
 }
 
 cJSON *gen_InstantDEX_json(int32_t isask,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
@@ -575,13 +572,13 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             bids = cJSON_CreateArray();
             for (i=0; i<op->numbids; i++)
             {
-                if ( (item= gen_orderbook_item(&op->bids[i],allflag)) != 0 )
+                if ( (item= gen_orderbook_item(&op->bids[i],allflag,baseid,relid)) != 0 )
                     cJSON_AddItemToArray(bids,item);
             }
             asks = cJSON_CreateArray();
             for (i=0; i<op->numasks; i++)
             {
-                if ( (item= gen_orderbook_item(&op->asks[i],allflag)) != 0 )
+                if ( (item= gen_orderbook_item(&op->asks[i],allflag,baseid,relid)) != 0 )
                     cJSON_AddItemToArray(asks,item);
             }
             expand_nxt64bits(assetA,op->baseid);
