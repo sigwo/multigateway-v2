@@ -232,29 +232,30 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
     *relamountp = bestrelamount;
 }
 
-int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t type,uint64_t nxt64bits,double price,double volume,uint64_t baseamount,uint64_t relamount)
+int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,int32_t type,uint64_t nxt64bits,double price,double volume,uint64_t baseamount,uint64_t relamount)
 {
     memset(iQ,0,sizeof(*iQ));
     if ( baseamount == 0 && relamount == 0 )
         set_best_amounts(&baseamount,&relamount,price,volume);
     iQ->timestamp = timestamp;
     iQ->type = type;
+    iQ->isask = isask;
     iQ->nxt64bits = nxt64bits;
     iQ->baseamount = baseamount;
     iQ->relamount = relamount;
     return(0);
 }
 
-cJSON *gen_orderbook_item(int32_t polarity,struct InstantDEX_quote *iQ,int32_t allflag)
+cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag)
 {
     char NXTaddr[64],numstr[64];
     cJSON *array = 0;
     double price,volume;
     if ( iQ->baseamount != 0 && iQ->relamount != 0 )
     {
-        if ( polarity > 0 )
-            price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
-        else price = calc_price_volume(&volume,iQ->relamount,iQ->baseamount);
+        if ( iQ->isask != 0 )
+            price = calc_price_volume(&volume,iQ->relamount,iQ->baseamount);
+        else price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
         array = cJSON_CreateArray();
         sprintf(numstr,"%.11f",price), cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
         sprintf(numstr,"%.8f",volume),cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
@@ -269,14 +270,13 @@ cJSON *gen_orderbook_item(int32_t polarity,struct InstantDEX_quote *iQ,int32_t a
     return(array);
 }
 
-cJSON *gen_InstantDEX_json(int32_t polarity,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
+cJSON *gen_InstantDEX_json(int32_t isask,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
 {
     cJSON *json = cJSON_CreateObject();
     char numstr[64],base[64],rel[64];
     double price,volume;
     price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
-    if ( polarity != 0 )
-        cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((polarity > 0) ? "bid" : "ask"));
+    cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((isask != 0) ? "ask" : "bid"));
     set_assetname(base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
     set_assetname(rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
     cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
@@ -359,7 +359,7 @@ char *openorders_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
                 iQ = &rb->quotes[j];
                 expand_nxt64bits(nxtaddr,iQ->nxt64bits);
                 if ( strcmp(NXTaddr,nxtaddr) == 0 )
-                    cJSON_AddItemToArray(array,gen_InstantDEX_json(0,iQ,rb->baseid,rb->relid)), n++;
+                    cJSON_AddItemToArray(array,gen_InstantDEX_json(iQ->isask,iQ,rb->baseid,rb->relid)), n++;
             }
         }
         free(obooks);
@@ -570,13 +570,13 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             bids = cJSON_CreateArray();
             for (i=0; i<op->numbids; i++)
             {
-                if ( (item= gen_orderbook_item(1,&op->bids[i],allflag)) != 0 )
+                if ( (item= gen_orderbook_item(&op->bids[i],allflag)) != 0 )
                     cJSON_AddItemToArray(bids,item);
             }
             asks = cJSON_CreateArray();
             for (i=0; i<op->numasks; i++)
             {
-                if ( (item= gen_orderbook_item(1,&op->asks[i],allflag)) != 0 )
+                if ( (item= gen_orderbook_item(&op->asks[i],allflag)) != 0 )
                     cJSON_AddItemToArray(asks,item);
             }
             expand_nxt64bits(assetA,op->baseid);
@@ -655,15 +655,15 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
             if ( dir > 0 )
             {
                 rb = get_rambook(baseid,relid);
-                create_InstantDEX_quote(&iQ,timestamp,type,nxt64bits,price,volume,baseamount,relamount);
+                create_InstantDEX_quote(&iQ,timestamp,0,type,nxt64bits,price,volume,baseamount,relamount);
             }
             else
             {
                 rb = get_rambook(relid,baseid);
-                create_InstantDEX_quote(&iQ,timestamp,type,nxt64bits,price,volume,baseamount,relamount);
+                create_InstantDEX_quote(&iQ,timestamp,1,type,nxt64bits,price,volume,baseamount,relamount);
             }
             save_InstantDEX_quote(rb,&iQ);
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(dir,&iQ,rb->baseid,rb->relid)) != 0 )
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(dir<0,&iQ,rb->baseid,rb->relid)) != 0 )
             {
                 jsonstr = cJSON_Print(json);
                 stripwhite_ns(jsonstr,strlen(jsonstr));
