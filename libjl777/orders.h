@@ -327,23 +327,13 @@ int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t typ
     tx->iQ.type = (type & _TYPEMASK);
     if ( polarity < 0 )
         tx->iQ.type |= _ASKMASK;
-    tx->iQ.nxt64bits = nxt64bits;
     if ( baseid > relid )
-    {
         tx->iQ.type |= _FLIPMASK;
-        tx->iQ.type ^= _ASKMASK;
-        tx->baseid = relid;
-        tx->relid = baseid;
-        tx->iQ.baseamount = relamount;
-        tx->iQ.relamount = baseamount;
-    }
-    else
-    {
-        tx->baseid = baseid;
-        tx->relid = relid;
-        tx->iQ.baseamount = baseamount;
-        tx->iQ.relamount = relamount;
-    }
+    tx->iQ.nxt64bits = nxt64bits;
+    tx->baseid = baseid;
+    tx->relid = relid;
+    tx->iQ.baseamount = baseamount;
+    tx->iQ.relamount = relamount;
     return(0);
 }
 
