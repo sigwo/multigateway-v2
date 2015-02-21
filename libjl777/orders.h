@@ -660,10 +660,10 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
             else
             {
                 rb = get_rambook(relid,baseid);
-                create_InstantDEX_quote(&iQ,timestamp,1,type,nxt64bits,price,volume,relamount,baseamount);
+                create_InstantDEX_quote(&iQ,timestamp,0,type,nxt64bits,price,volume,relamount,baseamount);
             }
             save_InstantDEX_quote(rb,&iQ);
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(dir<0,&iQ,rb->baseid,rb->relid)) != 0 )
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(dir<0,&iQ,baseid,relid)) != 0 )
             {
                 jsonstr = cJSON_Print(json);
                 stripwhite_ns(jsonstr,strlen(jsonstr));
