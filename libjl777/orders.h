@@ -257,7 +257,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag)
             price = calc_price_volume(&volume,iQ->relamount,iQ->baseamount);
         else price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
         array = cJSON_CreateArray();
-        sprintf(numstr,"%.8f",price), cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
+        sprintf(numstr,"%.11f",price), cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
         sprintf(numstr,"%.8f",volume),cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
         if ( allflag != 0 )
         {
@@ -279,8 +279,8 @@ cJSON *gen_InstantDEX_json(int32_t isask,struct InstantDEX_quote *iQ,uint64_t re
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((isask != 0) ? "ask" : "bid"));
     set_assetname(base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
     set_assetname(rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
-    sprintf(numstr,"%llu",(long long)(price * SATOSHIDEN)), cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
-    sprintf(numstr,"%llu",(long long)(volume * SATOSHIDEN)), cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
+    cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
+    cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
     
     cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
     cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
@@ -641,13 +641,13 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
         price = calc_price_volume(&volume,baseamount,relamount);
     else
     {
-        volume = (double)get_API_nxt64bits(objs[2]) / SATOSHIDEN;
-        price = (double)get_API_nxt64bits(objs[3]) / SATOSHIDEN;
+        volume = get_API_float(objs[2]);
+        price = get_API_float(objs[3]);
     }
     type = (int32_t)get_API_int(objs[7],0);
     if ( (timestamp= (uint32_t)get_API_int(objs[4],0)) == 0 )
         timestamp = (uint32_t)time(NULL);
-    printf("t.%u placequote type.%d dir.%d sender.(%s) valid.%d price %.8f vol %.8f\n",timestamp,type,dir,sender,valid,price,volume);
+    printf("t.%u placequote type.%d dir.%d sender.(%s) valid.%d price %.11f vol %.8f\n",timestamp,type,dir,sender,valid,price,volume);
     if ( sender[0] != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
