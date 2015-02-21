@@ -872,6 +872,7 @@ uint64_t calc_assetoshis(uint64_t assetidbits,uint64_t amount)
     int32_t createdflag;
     uint64_t assetoshis = 0;
     char assetidstr[64];
+    printf("calc_assetoshos %.8f %llu\n",dstr(amount),(long long)assetidbits);
     if ( assetidbits == 0 || assetidbits == NXT_ASSETID )
         return(amount);
     expand_nxt64bits(assetidstr,assetidbits);
