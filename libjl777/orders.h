@@ -576,7 +576,7 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             asks = cJSON_CreateArray();
             for (i=0; i<op->numasks; i++)
             {
-                if ( (item= gen_orderbook_item(-1,&op->asks[i],allflag)) != 0 )
+                if ( (item= gen_orderbook_item(1,&op->asks[i],allflag)) != 0 )
                     cJSON_AddItemToArray(asks,item);
             }
             expand_nxt64bits(assetA,op->baseid);
