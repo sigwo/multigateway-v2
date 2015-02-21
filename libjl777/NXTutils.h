@@ -866,14 +866,14 @@ uint64_t get_asset_mult(uint64_t assetidbits)
     return(mult);
 }
 
-uint64_t calc_assetoshis(uint64_t assetidbits,double amount)
+uint64_t calc_assetoshis(uint64_t assetidbits,uint64_t amount)
 {
     cJSON *json;
     int32_t i,decimals,errcode;
     uint64_t mult,assetoshis = 0;
     char assetidstr[64],*jsonstr;
     if ( assetidbits == 0 || assetidbits == NXT_ASSETID )
-        return(amount * SATOSHIDEN);
+        return(amount);
     expand_nxt64bits(assetidstr,assetidbits);
     jsonstr = issue_getAsset(0,assetidstr);
     if ( jsonstr != 0 )
@@ -888,7 +888,7 @@ uint64_t calc_assetoshis(uint64_t assetidbits,double amount)
                 mult = 1;
                 for (i=7-decimals; i>=0; i--)
                     mult *= 10;
-                assetoshis = (amount * SATOSHIDEN) / mult;
+                assetoshis = (amount / mult);
             }
             free_json(json);
         }

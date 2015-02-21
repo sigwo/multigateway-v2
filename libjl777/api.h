@@ -270,19 +270,18 @@ char *checkmsg_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 
 char *makeoffer_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    uint64_t assetA,assetB;
-    double qtyA,qtyB;
+    uint64_t assetA,assetB,qtyA,qtyB;
     int32_t type;
     char otherNXTaddr[MAX_JSON_FIELD],*retstr = 0;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
-    copy_cJSON(otherNXTaddr,objs[0]);
-    assetA = get_API_nxt64bits(objs[1]);
-    qtyA = get_API_float(objs[2]);
-    assetB = get_API_nxt64bits(objs[3]);
-    qtyB = get_API_float(objs[4]);
+    copy_cJSON(otherNXTaddr,objs[4]);
+    assetA = get_API_nxt64bits(objs[0]);
+    qtyA = get_API_nxt64bits(objs[2]);
+    assetB = get_API_nxt64bits(objs[1]);
+    qtyB = get_API_nxt64bits(objs[3]);
     type = get_API_int(objs[5],0);
-    
+
     if ( sender[0] != 0 && valid > 0 && otherNXTaddr[0] != 0 )//&& assetA != 0 && qtyA != 0. && assetB != 0. && qtyB != 0. )
         retstr = makeoffer(sender,NXTACCTSECRET,otherNXTaddr,assetA,qtyA,assetB,qtyB,type);
     else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
@@ -297,7 +296,7 @@ char *processutx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
     copy_cJSON(full,objs[2]);
     if ( sender[0] != 0 && valid > 0 )
         retstr = processutx(sender,utx,sig,full);
-    else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
+    else retstr = clonestr("{\"result\":\"invalid processutx_func request\"}");
     return(retstr);
 }
 
@@ -309,7 +308,7 @@ char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     copy_cJSON(signedtx,objs[0]);
     if ( sender[0] != 0 && valid > 0 && signedtx[0] != 0 )
         retstr = respondtx(sender,signedtx);
-    else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
+    else retstr = clonestr("{\"result\":\"invalid respondtx_func request\"}");
     return(retstr);
 }
 
