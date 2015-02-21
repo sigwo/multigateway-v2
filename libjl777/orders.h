@@ -37,7 +37,7 @@ struct rambook_info
     UT_hash_handle hh;
     uint8_t obookiddata[9];
     struct InstantDEX_quote *quotes;
-    uint64_t baseid,relid;
+    uint64_t assetids[2];
     int32_t numquotes,maxquotes;
 } *Rambooks;
 
@@ -63,30 +63,28 @@ cJSON *rambook_json(struct rambook_info *rb)
 {
     cJSON *json = cJSON_CreateObject();
     char numstr[64],base[512],rel[512];
-    set_assetname(base,rb->baseid);
+    set_assetname(base,rb->assetids[0]);
     cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
-    sprintf(numstr,"%llu",(long long)rb->baseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
-    set_assetname(rel,rb->relid);
+    sprintf(numstr,"%llu",(long long)rb->assetids[0]), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
+    set_assetname(rel,rb->assetids[1]);
     cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
-    sprintf(numstr,"%llu",(long long)rb->relid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
+    sprintf(numstr,"%llu",(long long)rb->assetids[1]), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
     cJSON_AddItemToObject(json,"numquotes",cJSON_CreateNumber(rb->numquotes));
     return(json);
 }
 
 struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
 {
-    uint64_t obookid;
-    uint8_t obookiddata[9];
+    uint64_t assetids[2];
     struct rambook_info *rb;
-    obookid = _obookid(baseid,relid);
-    obookiddata[8] = (baseid > relid);
-    HASH_FIND(hh,Rambooks,obookiddata,sizeof(obookiddata),rb);
+    assetids[0] = baseid, assetids[1] = relid;
+    HASH_FIND(hh,Rambooks,assetids,sizeof(assetids),rb);
     if ( rb == 0 )
     {
         rb = calloc(1,sizeof(*rb));
-        rb->baseid = baseid;
-        rb->relid = relid;
-        HASH_ADD(hh,Rambooks,obookiddata,sizeof(obookiddata),rb);
+        rb->assetids[0] = baseid, rb->assetids[1] = relid;
+        printf("CREATE RAMBOOK.(%llu -> %llu)\n",(long long)baseid,(long long)relid);
+        HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
     return(rb);
 }
@@ -355,7 +353,7 @@ char *openorders_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
                 iQ = &rb->quotes[j];
                 expand_nxt64bits(nxtaddr,iQ->nxt64bits);
                 if ( strcmp(NXTaddr,nxtaddr) == 0 )
-                    cJSON_AddItemToArray(array,gen_InstantDEX_json(iQ->isask,iQ,rb->baseid,rb->relid)), n++;
+                    cJSON_AddItemToArray(array,gen_InstantDEX_json(iQ->isask,iQ,rb->assetids[0],rb->assetids[1])), n++;
             }
         }
         free(obooks);
@@ -474,7 +472,7 @@ void save_InstantDEX_quote(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     uint64_t obookid;
     struct NXT_acct *np;
     int32_t createdflag,maxallowed;
-    obookid = _obookid(rb->baseid,rb->relid);
+    obookid = _obookid(rb->assetids[0],rb->assetids[1]);
     maxallowed = calc_users_maxopentrades(iQ->nxt64bits);
     expand_nxt64bits(NXTaddr,iQ->nxt64bits);
     np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
@@ -513,9 +511,9 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
                 rb = obooks[i];
                 if ( rb->numquotes == 0 )
                     continue;
-                if ( rb->baseid == refbaseid && rb->relid == refrelid )
+                if ( rb->assetids[0] == refbaseid && rb->assetids[1] == refrelid )
                     polarity = 1;
-                else if ( rb->relid == refbaseid && rb->baseid == refrelid )
+                else if ( rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid )
                     polarity = -1;
                 else continue;
                 for (j=0; j<rb->numquotes; j++)
@@ -666,7 +664,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
                 create_InstantDEX_quote(&iQ,timestamp,0,type,nxt64bits,0,0,relamount,baseamount);
             }
             save_InstantDEX_quote(rb,&iQ);
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(0,&iQ,rb->baseid,rb->relid)) != 0 )
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(0,&iQ,rb->assetids[0],rb->assetids[1])) != 0 )
             {
                 jsonstr = cJSON_Print(json);
                 stripwhite_ns(jsonstr,strlen(jsonstr));
