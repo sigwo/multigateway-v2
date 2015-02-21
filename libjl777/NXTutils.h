@@ -866,28 +866,6 @@ uint64_t get_asset_mult(uint64_t assetidbits)
     return(mult);
 }
 
-uint64_t calc_assetoshis(uint64_t assetidbits,uint64_t amount)
-{
-    struct NXT_asset *ap;
-    int32_t createdflag;
-    uint64_t assetoshis = 0;
-    char assetidstr[64];
-    printf("calc_assetoshos %.8f %llu\n",dstr(amount),(long long)assetidbits);
-    if ( assetidbits == 0 || assetidbits == NXT_ASSETID )
-        return(amount);
-    expand_nxt64bits(assetidstr,assetidbits);
-    ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
-    if ( ap->mult != 0 )
-        assetoshis = amount / ap->mult;
-    else
-    {
-        printf("FATAL asset.%s has no mult\n",assetidstr);
-        exit(-1);
-    }
-    printf("amount %llu -> assetoshis.%llu\n",(long long)amount,(long long)assetoshis);
-    return(assetoshis);
-}
-
 double conv_assetoshis(uint64_t assetidbits,uint64_t assetoshis)
 {
     cJSON *json;

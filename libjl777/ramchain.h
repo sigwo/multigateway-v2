@@ -2283,7 +2283,7 @@ int32_t _validate_decoderawtransaction(char *hexstr,struct cointx_info *cointx)
     int32_t retval;
     len = strlen(hexstr) * 2;
     //disp_cointx(cointx);
-    checkstr = calloc(1,len);
+    checkstr = calloc(1,len + 1);
     _emit_cointx(checkstr,len,cointx);
     if ( (retval= strcmp(checkstr,hexstr)) != 0 )
     {
@@ -2373,7 +2373,7 @@ char *_insert_OP_RETURN(char *rawtx,int32_t replace_vout,uint64_t *redeems,int32
         sprintf(scriptstr,"76a914%s88ac",str40);
         strcpy(vout->script,scriptstr);
         len = strlen(rawtx) * 2;
-        retstr = calloc(1,len);
+        retstr = calloc(1,len + 1);
         disp_cointx(cointx);
         if ( _emit_cointx(retstr,len,cointx) < 0 )
             free(retstr), retstr = 0;

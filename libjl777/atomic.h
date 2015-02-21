@@ -411,6 +411,28 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
     return(clonestr(buf));
 }
 
+uint64_t calc_assetoshis(uint64_t assetidbits,uint64_t amount)
+{
+    struct NXT_asset *ap;
+    int32_t createdflag;
+    uint64_t assetoshis = 0;
+    char assetidstr[64];
+    printf("calc_assetoshis %.8f %llu\n",dstr(amount),(long long)assetidbits);
+    if ( assetidbits == 0 || assetidbits == NXT_ASSETID )
+        return(amount);
+    expand_nxt64bits(assetidstr,assetidbits);
+    ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
+    if ( ap->mult != 0 )
+        assetoshis = amount / ap->mult;
+    else
+    {
+        printf("FATAL asset.%s has no mult\n",assetidstr);
+        exit(-1);
+    }
+    printf("amount %llu -> assetoshis.%llu\n",(long long)amount,(long long)assetoshis);
+    return(assetoshis);
+}
+
 char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uint64_t assetA,uint64_t qtyA,uint64_t assetB,uint64_t qtyB,int32_t type)
 {
     char hopNXTaddr[64],buf[1024],signedtx[1024],utxbytes[1024],sighash[65],fullhash[65],_tokbuf[4096];
@@ -436,7 +458,7 @@ char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uin
     //np = get_NXTacct(&createdflag,Global_mp,verifiedNXTaddr);
     //if ( np->NXTACCTSECRET[0] == 0 )
     //    strcpy(np->NXTACCTSECRET,NXTACCTSECRET);
-    //printf("assetoshis A %llu B %llu\n",(long long)assetoshisA,(long long)assetoshisB);
+    printf("assetoshis A %llu B %llu\n",(long long)assetoshisA,(long long)assetoshisB);
     if ( assetoshisA == 0 || assetoshisB == 0 || assetA == assetB )
     {
         sprintf(buf,"{\"error\":\"%s\",\"descr\":\"NXT.%llu makeoffer to NXT.%s %.8f asset.%llu for %.8f asset.%llu, type.%d\"","illegal parameter",(long long)nxt64bits,otherNXTaddr,dstr(assetoshisA),(long long)assetA,dstr(assetoshisB),(long long)assetB,type);
