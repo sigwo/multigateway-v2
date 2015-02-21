@@ -1125,7 +1125,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
                 debugstr[32] = 0;
                 printf("BROADCAST parms.(%s) valid.%d duration.%d txid.%llu len.%d\n",debugstr,valid,duration,(long long)txid,len);
             }
-            ptr = calloc(1,sizeof(len) + sizeof(duration) + len);
+            ptr = calloc(1,sizeof(len) + sizeof(duration) + len + 1);
             memcpy(ptr,&len,sizeof(len));
             memcpy(&ptr[sizeof(len)],&duration,sizeof(duration));
             memcpy(&ptr[sizeof(len) + sizeof(duration)],msg,len);
