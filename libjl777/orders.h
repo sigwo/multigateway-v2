@@ -279,8 +279,8 @@ cJSON *gen_InstantDEX_json(int32_t isask,struct InstantDEX_quote *iQ,uint64_t re
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((isask != 0) ? "ask" : "bid"));
     set_assetname(base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
     set_assetname(rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
-    cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
-    cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
+    sprintf(numstr,"%llu",(long long)(price * SATOSHIDEN)), cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
+    sprintf(numstr,"%llu",(long long)(volume * SATOSHIDEN)), cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
     
     cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
     cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
