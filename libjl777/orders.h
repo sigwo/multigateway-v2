@@ -264,17 +264,15 @@ struct InstantDEX_quote *get_matching_quotes(int32_t *numquotesp,uint64_t baseid
     return(rb->quotes);
 }
 
-void save_orderbooktx(uint64_t nxt64bits,uint64_t baseid,uint64_t relid,struct orderbook_tx *tx)
+void save_orderbooktx(struct rambook_info *rb,uint64_t nxt64bits,struct orderbook_tx *tx)
 {
     char NXTaddr[64];
     uint64_t obookid;
     struct NXT_acct *np;
-    struct rambook_info *rb;
     int32_t createdflag,maxallowed;
-    obookid = _obookid(baseid,relid);
+    obookid = _obookid(rb->baseid,rb->relid);
     maxallowed = calc_users_maxopentrades(nxt64bits);
     expand_nxt64bits(NXTaddr,nxt64bits);
-    rb = get_rambook(baseid,relid);
     np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
     if ( np->openorders >= maxallowed )
         purge_oldest_order(rb,tx); // allow one pair per orderbook
@@ -398,12 +396,13 @@ cJSON *gen_InstantDEX_json(int32_t polarity,struct InstantDEX_quote *iQ,uint64_t
     double price,volume;
     uint64_t baseid,baseamount,relid,relamount;
     set_baserel_flipped(polarity,&baseid,&baseamount,&relid,&relamount,iQ,refbaseid,refrelid);
-    price = calc_price_volume(&volume,baseamount,relamount);
+    price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((_iQ_dir(iQ) > 0) ? "bid" : "ask"));
     set_assetname(base,baseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
     set_assetname(rel,relid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
     cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
     cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
+    
     cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
     cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
     cJSON_AddItemToObject(json,"type",cJSON_CreateNumber(iQ->type));
@@ -710,6 +709,7 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     uint64_t baseamount,relamount,nxt64bits,baseid,relid,txid = 0;
     double price,volume;
     int32_t remoteflag,type;
+    struct rambook_info *rb;
     struct orderbook_tx tx,*txp;
     char buf[MAX_JSON_FIELD],txidstr[64],*jsonstr,*retstr = 0;
     remoteflag = (is_remote_access(previpaddr) != 0);
@@ -733,9 +733,10 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     {
         if ( price != 0. && volume != 0. && dir != 0 )
         {
+            rb = get_rambook(baseid,relid);
             create_orderbook_tx(dir,&tx,0,nxt64bits,baseid,relid,price,volume,baseamount,relamount);
-            save_orderbooktx(nxt64bits,baseid,relid,&tx);
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(1,&tx.iQ,baseid,relid)) != 0 )
+            save_orderbooktx(rb,nxt64bits,&tx);
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(1,&tx.iQ,rb->baseid,rb->relid)) != 0 )
             {
                 jsonstr = cJSON_Print(json);
                 stripwhite_ns(jsonstr,strlen(jsonstr));
