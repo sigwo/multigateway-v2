@@ -351,7 +351,7 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
             {
                 if ( (parsed = issue_parseTransaction(0,utx)) != 0 )
                 {
-                    printf("PARSED OFFER.(%s) full.(%s) (%s)\n",parsed,full,calchash);
+                    printf("PARSED OFFER.(%s) full.(%s) (%s) offer sender.%llu\n",parsed,full,calchash,(long long)offertx->senderbits);
                     if ( (offerjson= cJSON_Parse(parsed)) != 0 )
                     {
                         offertx = set_NXT_tx(offerjson);
@@ -369,7 +369,8 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                                 // jl777 need to make sure we want to do this trade
                                 free_json(commentobj);
                                 set_NXTtx(offertx->recipientbits,&T,assetB,qtyB,offertx->senderbits);
-                                sprintf(T.comment,"{\"assetA\":\"%llu\",\"qtyA\":\"%llu\"}",(long long)offertx->assetidbits,(long long)offertx->U.quantityQNT);
+                                sprintf(T.comment,"{\"assetA\":\"%llu\",\"qtyA\":\"%llu\",\"price\":\"%.8f\",\"volume\":\"%.8f\"}",(long long)offertx->assetidbits,(long long)offertx->U.quantityQNT,dstr(price),dstr(vol));
+                                printf("processutx.(%s) -> (%llu)\n",T.comment,(long long)offertx->recipientbits);
                                 expand_nxt64bits(NXTaddr,offertx->recipientbits);
                                 np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
                                 if ( Global_mp->srvNXTACCTSECRET[0] != 0 )
@@ -378,8 +379,10 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                                     if ( tx != 0 )
                                     {
                                         sprintf(buf,"{\"requestType\":\"respondtx\",\"NXT\":\"%s\",\"signedtx\":\"%s\",\"timestamp\":%ld}",NXTaddr,signedtx,time(NULL));
+                                        hopNXTaddr[0] = 0;
                                         send_tokenized_cmd(!prevent_queueing("respondtx"),hopNXTaddr,0,NXTaddr,Global_mp->srvNXTACCTSECRET,buf,otherNXTaddr);
                                         free(tx);
+                                        printf("send (%s) to %s\n",buf,otherNXTaddr);
                                         sprintf(buf,"{\"results\":\"utx from NXT.%llu accepted with fullhash.(%s) %.8f of %llu for %.8f of %llu -> price %.11f\"}",(long long)offertx->senderbits,full,vol,(long long)offertx->assetidbits,amountB,(long long)assetB,price);
                                     }
                                     else sprintf(buf,"{\"error\":\"from %s error signing responsutx.(%s)\"}",otherNXTaddr,NXTaddr);
@@ -409,7 +412,7 @@ char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uin
 {
     char hopNXTaddr[64],buf[1024],signedtx[1024],utxbytes[1024],sighash[65],fullhash[65],_tokbuf[4096];
     struct NXT_tx T,*tx;
-    struct NXT_acct *np,*othernp;
+    struct NXT_acct *othernp;
     long i,n;
     int32_t createdflag;
     uint64_t nxt64bits,other64bits,assetoshisA,assetoshisB;
@@ -427,7 +430,7 @@ char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uin
             free(othernp->signedtx);
         othernp->signedtx = 0;
     }
-    np = get_NXTacct(&createdflag,Global_mp,verifiedNXTaddr);
+    //np = get_NXTacct(&createdflag,Global_mp,verifiedNXTaddr);
     //if ( np->NXTACCTSECRET[0] == 0 )
     //    strcpy(np->NXTACCTSECRET,NXTACCTSECRET);
     //printf("assetoshis A %llu B %llu\n",(long long)assetoshisA,(long long)assetoshisB);
@@ -458,7 +461,7 @@ char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uin
         n = construct_tokenized_req(_tokbuf,buf,NXTACCTSECRET);
         othernp->signedtx = clonestr(signedtx);
         hopNXTaddr[0] = 0;
-        printf("send.(%s)\n",_tokbuf);
+        printf("send.(%s) to NXT.%s\n",_tokbuf,otherNXTaddr);
         return(sendmessage(!prevent_queueing("processutx"),hopNXTaddr,0,NXTACCTSECRET,_tokbuf,(int32_t)n,otherNXTaddr,0,0));
     }
     else sprintf(buf,"{\"error\":\"%s\",\"descr\":\"%s\",\"comment\":\"NXT.%llu makeoffer to NXT.%s %.8f asset.%llu for %.8f asset.%llu, type.%d\"",utxbytes,signedtx,(long long)nxt64bits,otherNXTaddr,dstr(assetoshisA),(long long)assetA,dstr(assetoshisB),(long long)assetB,type);
