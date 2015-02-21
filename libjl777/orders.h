@@ -282,15 +282,6 @@ void save_orderbooktx(uint64_t nxt64bits,uint64_t baseid,uint64_t relid,struct o
     np->openorders++;
 }
 
-void flip_iQ(struct InstantDEX_quote *iQ)
-{
-    uint64_t amount;
-    iQ->type ^= (_ASKMASK | _FLIPMASK);
-    amount = iQ->baseamount;
-    iQ->baseamount = iQ->relamount;
-    iQ->relamount = amount;
-}
-
 double calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
 {
     *volumep = ((double)baseamount / SATOSHIDEN);
@@ -333,16 +324,18 @@ int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t typ
         set_best_amounts(&baseamount,&relamount,price,volume);
     memset(tx,0,sizeof(*tx));
     tx->iQ.timestamp = (uint32_t)time(NULL);
-    tx->iQ.type = type;
+    tx->iQ.type = (type & _TYPEMASK);
+    if ( polarity < 0 )
+        tx->iQ.type |= _ASKMASK;
     tx->iQ.nxt64bits = nxt64bits;
     if ( baseid > relid )
     {
         tx->iQ.type |= _FLIPMASK;
+        tx->iQ.type ^= _ASKMASK;
         tx->baseid = relid;
         tx->relid = baseid;
         tx->iQ.baseamount = relamount;
         tx->iQ.relamount = baseamount;
-        //polarity *= -1;
     }
     else
     {
@@ -351,8 +344,6 @@ int32_t create_orderbook_tx(int32_t polarity,struct orderbook_tx *tx,int32_t typ
         tx->iQ.baseamount = baseamount;
         tx->iQ.relamount = relamount;
     }
-    if ( polarity < 0 )
-        tx->iQ.type |= _ASKMASK;
     return(0);
 }
 
@@ -525,17 +516,24 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
 
 // combine all orderbooks with flags, maybe even arbitrage, so need cloud quotes
 
-void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_t *numasksp,struct orderbook_tx *order,int32_t refflipped,int32_t oldest)
+void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_t *numasksp,struct orderbook_tx *order,int32_t oldest)
 {
-    int32_t flipped;
-    if ( order->baseid < order->relid ) flipped = 0;
-    else flipped = _FLIPMASK;
-    if ( (flipped != refflipped && (order->iQ.type & _FLIPMASK) == refflipped) || (flipped == refflipped && (order->iQ.type & _FLIPMASK) != refflipped) )
-        flip_iQ(&order->iQ);
-    //if ( (order->iQ.type & _FLIPMASK) != refflipped )
-    //    flip_iQ(&order->iQ);
+    uint32_t purgetime = ((uint32_t)time(NULL) - NODESTATS_EXPIRATION);
     if ( order->iQ.timestamp >= oldest )
         update_orderbook(iter,op,numbidsp,numasksp,&order->iQ);
+    else if ( order->iQ.timestamp < purgetime )
+    {
+        // purge it
+    }
+}
+
+void flip_iQ(struct InstantDEX_quote *iQ)
+{
+    uint64_t amount;
+    iQ->type ^= (_ASKMASK | _FLIPMASK);
+    amount = iQ->baseamount;
+    iQ->baseamount = iQ->relamount;
+    iQ->relamount = amount;
 }
 
 struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t refrelid,struct orderbook_tx **feedorders,int32_t numfeeds)
@@ -553,8 +551,7 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
     op = (struct orderbook *)calloc(1,sizeof(*op));
     op->baseid = refbaseid;
     op->relid = refrelid;
-    if ( refbaseid < refrelid ) refflipped = 0;
-    else refflipped = _FLIPMASK;
+    refflipped = (refbaseid > refrelid) * _FLIPMASK;
     origdata = 0;//(DBT *)find_storage(INSTANTDEX_DATA,obookstr,65536);
     for (iter=0; iter<2; iter++)
     {
@@ -562,17 +559,24 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
         if ( numfeeds > 0 && feedorders != 0 )
         {
             for (i=0; i<numfeeds; i++)
-                add_to_orderbook(op,iter,&numbids,&numasks,feedorders[i],refflipped,oldest);
+                add_to_orderbook(op,iter,&numbids,&numasks,feedorders[i],oldest);
         }
         if ( quotes != 0 || (quotes= get_matching_quotes(&numquotes,refbaseid,refrelid)) != 0 )
         {
             for (i=0; i<numquotes; i++)
             {
                 memset(&T,0,sizeof(T));
+                //T.baseid = refbaseid;
+                //T.relid = refrelid;
+                //T.iQ = quotes[i];
+                //add_to_orderbook(op,iter,&numbids,&numasks,&T,oldest);
+                
+                T.iQ = quotes[i];
+                if ( (T.iQ.type & _FLIPMASK) != refflipped )
+                    flip_iQ(&T.iQ);
                 T.baseid = refbaseid;
                 T.relid = refrelid;
-                T.iQ = quotes[i];
-                add_to_orderbook(op,iter,&numbids,&numasks,&T,refflipped,oldest);
+                add_to_orderbook(op,iter,&numbids,&numasks,&T,oldest);
             }
         }
         if ( (data= origdata) != 0 )
@@ -634,7 +638,7 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
 char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     uint32_t oldest;
-    int32_t i,allflag,polarity;
+    int32_t i,allflag;
     uint64_t baseid,relid;
     cJSON *json,*bids,*asks,*item;
     struct orderbook *op;
