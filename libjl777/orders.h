@@ -490,15 +490,17 @@ int _increasing_quotes(const void *a,const void *b)
 
 void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_t *numasksp,struct InstantDEX_quote *iQ)
 {
+    int32_t polarity;
+    polarity = ((_iQ_dir(iQ) > 0) ? 1 : -1) * ((_iQ_flipped(iQ) != 0) ? -1 : 1);
     if ( iter == 0 )
     {
-        if ( _iQ_dir(iQ) > 0 )
+        if ( polarity > 0 )
             op->numbids++;
         else op->numasks++;
     }
     else
     {
-        if ( _iQ_dir(iQ) > 0 )
+        if ( polarity > 0 )
             op->bids[(*numbidsp)++] = *iQ;
         else op->asks[(*numasksp)++] = *iQ;
     }
@@ -556,11 +558,6 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
             for (i=0; i<numquotes; i++)
             {
                 memset(&T,0,sizeof(T));
-                //T.baseid = refbaseid;
-                //T.relid = refrelid;
-                //T.iQ = quotes[i];
-                //add_to_orderbook(op,iter,&numbids,&numasks,&T,oldest);
-                
                 T.iQ = quotes[i];
                 if ( (T.iQ.type & _FLIPMASK) != refflipped )
                     flip_iQ(&T.iQ);
