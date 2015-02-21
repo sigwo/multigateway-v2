@@ -275,15 +275,15 @@ char *makeoffer_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     char otherNXTaddr[MAX_JSON_FIELD],*retstr = 0;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
-    copy_cJSON(otherNXTaddr,objs[4]);
     assetA = get_API_nxt64bits(objs[0]);
-    qtyA = get_API_nxt64bits(objs[2]);
     assetB = get_API_nxt64bits(objs[1]);
+    qtyA = get_API_nxt64bits(objs[2]);
     qtyB = get_API_nxt64bits(objs[3]);
+    copy_cJSON(otherNXTaddr,objs[4]);
     type = get_API_int(objs[5],0);
-
+    printf("assetA.%llu %.8f -> assetB.%llu %.8f to NXT.%s\n",(long long)assetA,dstr(qtyA),(long long)assetB,dstr(qtyB),otherNXTaddr);
     if ( sender[0] != 0 && valid > 0 && otherNXTaddr[0] != 0 )//&& assetA != 0 && qtyA != 0. && assetB != 0. && qtyB != 0. )
-        retstr = makeoffer(sender,NXTACCTSECRET,otherNXTaddr,assetA,qtyA,assetB,qtyB,type);
+        retstr = makeoffer(NXTaddr,NXTACCTSECRET,otherNXTaddr,assetA,qtyA,assetB,qtyB,type);
     else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
     return(retstr);
 }
