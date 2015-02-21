@@ -868,33 +868,22 @@ uint64_t get_asset_mult(uint64_t assetidbits)
 
 uint64_t calc_assetoshis(uint64_t assetidbits,uint64_t amount)
 {
-    cJSON *json;
-    int32_t i,decimals,errcode;
-    uint64_t mult,assetoshis = 0;
-    char assetidstr[64],*jsonstr;
+    struct NXT_asset *ap;
+    int32_t createdflag;
+    uint64_t assetoshis = 0;
+    char assetidstr[64];
     if ( assetidbits == 0 || assetidbits == NXT_ASSETID )
         return(amount);
     expand_nxt64bits(assetidstr,assetidbits);
-    jsonstr = issue_getAsset(0,assetidstr);
-    if ( jsonstr != 0 )
+    ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
+    if ( ap->mult != 0 )
+        assetoshis = amount / ap->mult;
+    else
     {
-        //printf("Assetjson.(%s) for asset.(%s)\n",jsonstr,assetidstr);
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
-        {
-            errcode = (int32_t)get_cJSON_int(json,"errorCode");
-            if ( errcode == 0 )
-            {
-                decimals = (int32_t)get_cJSON_int(json,"decimals");
-                mult = 1;
-                for (i=7-decimals; i>=0; i--)
-                    mult *= 10;
-                assetoshis = (amount / mult);
-            }
-            free_json(json);
-        }
-        free(jsonstr);
+        printf("FATAL asset.%s has no mult\n",assetidstr);
+        exit(-1);
     }
-    //printf("assetoshis.%llu\n",(long long)assetoshis);
+    printf("amount %llu -> assetoshis.%llu\n",(long long)amount,(long long)assetoshis);
     return(assetoshis);
 }
 
