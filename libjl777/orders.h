@@ -641,8 +641,8 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
         price = calc_price_volume(&volume,baseamount,relamount);
     else
     {
-        volume = get_API_float(objs[2]);
-        price = get_API_float(objs[3]);
+        volume = (double)get_API_nxt64bits(objs[2]) / SATOSHIDEN;
+        price = (double)get_API_nxt64bits(objs[3]) / SATOSHIDEN;
     }
     type = (int32_t)get_API_int(objs[7],0);
     if ( (timestamp= (uint32_t)get_API_int(objs[4],0)) == 0 )
