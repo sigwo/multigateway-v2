@@ -351,7 +351,7 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
             {
                 if ( (parsed = issue_parseTransaction(0,utx)) != 0 )
                 {
-                    printf("PARSED OFFER.(%s) full.(%s) (%s) offer sender.%llu\n",parsed,full,calchash,(long long)offertx->senderbits);
+                    printf("PARSED OFFER.(%s) full.(%s) (%s) offer sender.%s\n",parsed,full,calchash,sender);
                     if ( (offerjson= cJSON_Parse(parsed)) != 0 )
                     {
                         offertx = set_NXT_tx(offerjson);
