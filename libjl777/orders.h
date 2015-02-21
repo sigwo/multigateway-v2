@@ -8,9 +8,8 @@
 #ifndef xcode_orders_h
 #define xcode_orders_h
 
+#define ORDERBOOK_EXPIRATION 300
 #define _obookid(baseid,relid) ((baseid) ^ (relid))
-#define _iQ_price(iQ) ((double)(iQ)->relamount / (iQ)->baseamount)
-#define _iQ_volume(iQ) ((double)(iQ)->baseamount / SATOSHIDEN)
 
 char *assetmap[][2] =
 {
@@ -438,21 +437,27 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
 {
     char NXTaddr[64];
     struct NXT_acct *np;
-    int32_t oldi,createdflag;
+    int32_t age,oldi,createdflag;
     uint64_t nxt64bits = 0;
-    uint32_t i,oldest = 0;
+    uint32_t now,i,j,oldest = 0;
     if ( rb->numquotes == 0 )
         return(0);
     oldi = -1;
-    for (i=0; i<rb->numquotes; i++)
+    now = (uint32_t)time(NULL);
+    for (i=j=0; i<rb->numquotes; i++)
     {
+        age = (now - rb->quotes[i].timestamp);
+        if ( age > ORDERBOOK_EXPIRATION )
+            continue;
         if ( rb->quotes[i].nxt64bits == iQ->nxt64bits && (oldest == 0 || rb->quotes[i].timestamp < oldest) )
         {
             oldest = rb->quotes[i].timestamp;
             nxt64bits = rb->quotes[i].nxt64bits;
-            oldi = i;
+            oldi = j;
         }
+        rb->quotes[j++] = rb->quotes[i];
     }
+    rb->numquotes = j;
     if ( oldi >= 0 )
     {
         printf("purge_oldest_order from NXT.%llu oldi.%d timestamp %u\n",(long long)iQ->nxt64bits,oldi,oldest);
@@ -484,7 +489,7 @@ void save_InstantDEX_quote(struct rambook_info *rb,struct InstantDEX_quote *iQ)
 
 void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_t *numasksp,struct rambook_info *rb,struct InstantDEX_quote *iQ,int32_t polarity,int32_t oldest)
 {
-    uint32_t purgetime = ((uint32_t)time(NULL) - NODESTATS_EXPIRATION);
+    uint32_t purgetime = ((uint32_t)time(NULL) - ORDERBOOK_EXPIRATION);
     if ( iQ->timestamp >= oldest )
         update_orderbook(iter,op,numbidsp,numasksp,iQ,polarity);
     else if ( iQ->timestamp > purgetime )
@@ -614,8 +619,8 @@ void submit_quote(char *quotestr)
         printf("submit_quote.(%s)\n",quotestr);
         len = construct_tokenized_req(_tokbuf,quotestr,cp->srvNXTACCTSECRET);
         if ( get_top_MMaker(&pserver) == 0 )
-            call_SuperNET_broadcast(pserver,_tokbuf,len,300);
-        call_SuperNET_broadcast(0,_tokbuf,len,300);
+            call_SuperNET_broadcast(pserver,_tokbuf,len,ORDERBOOK_EXPIRATION);
+        call_SuperNET_broadcast(0,_tokbuf,len,ORDERBOOK_EXPIRATION);
     }
 }
 
@@ -715,12 +720,8 @@ char *ask_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,i
     return(placequote_func(previpaddr,-1,sender,valid,objs,numobjs,origargstr));
 }
 
-#undef _ASKMASK
-#undef _TYPEMASK
+
 #undef _obookid
-#undef _iQ_dir
-#undef _iQ_type
-#undef _iQ_price
-#undef _iQ_volume
+
 
 #endif
