@@ -2243,9 +2243,6 @@ void ensure_directory(char *dirname) // jl777: does this work in windows?
     else fclose(fp);
 }
 
-
-#ifdef oldway
-
 int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr)
 {
     char cmd[2*MAX_JSON_FIELD],assetid[MAX_JSON_FIELD];
@@ -2285,6 +2282,9 @@ int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr)
     }
     return(quantity);
 }
+
+#ifdef oldway
+
 
 void **addto_listptr(int32_t *nump,void **list,void *ptr)
 {

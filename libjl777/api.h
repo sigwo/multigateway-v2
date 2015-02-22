@@ -302,12 +302,15 @@ char *processutx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
 
 char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char signedtx[MAX_JSON_FIELD],*retstr = 0;
+    char signedtx[MAX_JSON_FIELD],feetxid[MAX_JSON_FIELD],*retstr = 0;
+    uint64_t feeB;
     if ( is_remote_access(previpaddr) == 0 )
         return(0);
     copy_cJSON(signedtx,objs[0]);
+    feeB = get_API_nxt64bits(objs[1]);
+    copy_cJSON(feetxid,objs[2]);
     if ( sender[0] != 0 && valid > 0 && signedtx[0] != 0 )
-        retstr = respondtx(sender,signedtx);
+        retstr = respondtx(sender,signedtx,feeB,feetxid);
     else retstr = clonestr("{\"result\":\"invalid respondtx_func request\"}");
     return(retstr);
 }
@@ -1941,7 +1944,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *bid[] = { (char *)bid_func, "bid", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "type", 0 };
     static char *ask[] = { (char *)ask_func, "ask", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "type", 0 };
     static char *makeoffer[] = { (char *)makeoffer_func, "makeoffer", "V", "baseid", "relid", "baseamount", "relamount", "other", "type", 0 };
-    static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "signedtx", 0 };
+    static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "signedtx", "feeB", "feetxid", 0 };
     static char *processutx[] = { (char *)processutx_func, "processutx", "V", "utx", "sig", "full", 0 };
 
     // Tradebot

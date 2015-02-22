@@ -369,6 +369,89 @@ char *openorders_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
     return(clonestr("{\"result\":\"no openorders\"}"));
 }
 
+uint64_t is_feetx_unconfirmed(uint64_t feetxid,uint64_t fee,char *fullhash)
+{
+    uint64_t amount,senderbits = 0;
+    char cmd[1024],sender[MAX_JSON_FIELD],txidstr[MAX_JSON_FIELD],reftx[MAX_JSON_FIELD],*jsonstr;
+    cJSON *json,*array,*txobj;
+    int32_t i,n,type,subtype;
+    sprintf(cmd,"requestType=getUnconfirmedTransactions&account=%s",INSTANTDEX_ACCT);
+    if ( (jsonstr= issue_NXTPOST(0,cmd)) != 0 )
+    {
+        //printf("getUnconfirmedTransactions.%d (%s)\n",mostrecent,jsonstr);
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( (array= cJSON_GetObjectItem(json,"unconfirmedTransactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    txobj = cJSON_GetArrayItem(array,i);
+                    copy_cJSON(txidstr,cJSON_GetObjectItem(txobj,"transaction"));
+                    if ( calc_nxt64bits(txidstr) == feetxid )
+                    {
+                        copy_cJSON(reftx,cJSON_GetObjectItem(txobj,"referencedTransactionFullHash"));
+                        copy_cJSON(sender,cJSON_GetObjectItem(txobj,"sender"));
+                        type = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"type"),-1);
+                        subtype = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"subtype"),-1);
+                        amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                        printf("found unconfirmed feetxid from %s for %.8f\n",sender,dstr(amount));
+                        if ( type == 0 && subtype == 0 && amount >= fee && (fullhash == 0 || strcmp(fullhash,reftx) == 0) )
+                            senderbits = calc_nxt64bits(sender);
+                        break;
+                    }
+                }
+            }
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(senderbits);
+}
+
+struct InstantDEX_quote *order_match(uint64_t nxt64bits,uint64_t baseid,uint64_t baseqty,uint64_t othernxtbits,uint64_t relid,uint64_t relqty,uint64_t relfee,uint64_t relfeetxid,char *fullhash)
+{
+    struct NXT_asset *ap;
+    char assetidstr[64],otherNXTaddr[64];
+    struct InstantDEX_quote *iQ;
+    struct rambook_info **obooks,*rb;
+    int32_t i,j,numbooks,createdflag;
+    uint64_t baseamount,relamount,otherbalance;
+    int64_t unconfirmed;
+    expand_nxt64bits(otherNXTaddr,othernxtbits);
+    expand_nxt64bits(assetidstr,baseid);
+    ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
+    baseamount = (baseqty * ap->mult);
+    expand_nxt64bits(assetidstr,relid);
+    ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
+    relamount = ((relqty + 0*relfee) * ap->mult);
+    if ( (obooks= get_allrambooks(&numbooks)) != 0 )
+    {
+        for (i=0; i<numbooks; i++)
+        {
+            rb = obooks[i];
+            if ( rb->numquotes == 0 || rb->assetids[0] != baseid || rb->assetids[1] != relid )
+                continue;
+            for (j=0; j<rb->numquotes; j++)
+            {
+                iQ = &rb->quotes[j];
+                if ( iQ->matched == 0 && iQ->nxt64bits == nxt64bits && baseamount >= iQ->baseamount && relamount <= iQ->relamount )
+                {
+                    otherbalance = get_asset_quantity(&unconfirmed,otherNXTaddr,assetidstr);
+                    printf("MATCHED! %llu >= %llu and %llu <= %llu relfee.%llu otherbalance %.8f unconfirmed %.8f\n",(long long)baseamount,(long long)iQ->baseamount,(long long)relamount,(long long)iQ->relamount,(long long)relfee,dstr(otherbalance),dstr(unconfirmed));
+                    if ( is_feetx_unconfirmed(relfeetxid,relfee,fullhash) == othernxtbits && otherbalance >= (relqty - 0*relfee) )
+                    {
+                        iQ->matched = 1;
+                        free(obooks);
+                        return(iQ);
+                    }
+                }
+            }
+        }
+        free(obooks);
+    }
+    return(0);
+}
+
 void free_orderbook(struct orderbook *op)
 {
     if ( op != 0 )
