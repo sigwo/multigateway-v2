@@ -467,7 +467,7 @@ char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uin
         return(clonestr(buf));
     }
     set_NXTtx(nxt64bits,&T,assetA,assetoshisA,other64bits);
-    sprintf(T.comment,"{\"assetA\":\"%llu\",\"qtyA\":\"%llu\",\"assetB\":\"%llu\",\"qtyB\":\"%llu\"}",(long long)assetA,(long long)assetoshisA,(long long)assetB,(long long)assetoshisB);
+    sprintf(T.comment,"{\"assetB\":\"%llu\",\"qtyB\":\"%llu\"}",(long long)assetB,(long long)assetoshisB);
     tx = sign_NXT_tx(utxbytes,signedtx,NXTACCTSECRET,nxt64bits,&T,0,1.);
     if ( tx != 0 )
     {
