@@ -296,7 +296,7 @@ char *respondtx(char *sender,char *signedtx)
         othernp = get_NXTacct(&createdflag,Global_mp,otherNXTaddr);
         expand_nxt64bits(NXTaddr,recvtx->recipientbits);
         np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
-        if ( (pendingtxbytes= othernp->signedtx) != 0 && Global_mp->srvNXTACCTSECRET[0] != 0 )
+        if ( (pendingtxbytes= othernp->signedtx) != 0 && strcmp(NXTaddr,Global_mp->myNXTADDR) == 0 )
         {
             pendingtx = conv_txbytes(pendingtxbytes);
             if ( pendingtx != 0 && pendingtx->senderbits == recvtx->recipientbits && pendingtx->recipientbits == recvtx->senderbits )
@@ -316,17 +316,16 @@ char *respondtx(char *sender,char *signedtx)
                                 printf("TRADECOMPLETE.(%s)\n",buf);
                                 free(othernp->signedtx);
                                 othernp->signedtx = 0;
-                            }
+                            } else printf("TRADE ERROR.%d mytxid.%llu\n",errcode,(long long)mytxid);
                         } else printf("TRADE ERROR.%d othertxid.%llu\n",errcode,(long long)othertxid);
-                    }
-                    else sprintf(buf,"{\"error\":\"pendingtx for NXT.%s (%s) doesnt match received tx (%s)\"}",otherNXTaddr,pendingtxbytes,signedtx);
-                }
-                else sprintf(buf,"{\"error\":\"refhash != fullhash from NXT.%s or unsigned.%d\"}",otherNXTaddr,recvtx->verify);
+                    } else sprintf(buf,"{\"error\":\"pendingtx for NXT.%s (%s) doesnt match received tx (%s)\"}",otherNXTaddr,pendingtxbytes,signedtx);
+                } else sprintf(buf,"{\"error\":\"refhash != fullhash from NXT.%s or unsigned.%d\"}",otherNXTaddr,recvtx->verify);
                 free(pendingtx);
             } else sprintf(buf,"{\"error\":\"mismatched sender/recipient NXT.%s <-> NXT.%s\"}",otherNXTaddr,NXTaddr);
         } else sprintf(buf,"{\"error\":\"no pending tx with (%s) or cant access account NXT.%s\"}",otherNXTaddr,NXTaddr);
         free(recvtx);
     }
+    printf("RETVAL.(%s)\n",buf);
     return(clonestr(buf));
 }
 
