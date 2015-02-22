@@ -336,8 +336,6 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
     struct NXT_tx T,*tx;
     cJSON *json,*obj,*offerjson,*commentobj;
     struct NXT_tx *offertx;
-    struct NXT_acct *np;
-    int32_t createdflag;
     double vol,price,amountB;
     uint64_t qtyB,assetB;
     char *jsonstr,*parsed,hopNXTaddr[64],buf[MAX_JSON_FIELD],calchash[MAX_JSON_FIELD],NXTaddr[64],responseutx[MAX_JSON_FIELD],signedtx[MAX_JSON_FIELD],otherNXTaddr[64];
@@ -373,11 +371,11 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                                 // jl777 need to make sure we want to do this trade
                                 free_json(commentobj);
                                 set_NXTtx(offertx->recipientbits,&T,assetB,qtyB,offertx->senderbits);
-                                sprintf(T.comment,"{\"assetA\":\"%llu\",\"qtyA\":\"%llu\",\"price\":\"%.8f\",\"volume\":\"%.8f\"}",(long long)offertx->assetidbits,(long long)offertx->U.quantityQNT,dstr(price),dstr(vol));
-                                printf("processutx.(%s) -> (%llu)\n",T.comment,(long long)offertx->recipientbits);
+                                sprintf(T.comment,"{\"assetA\":\"%llu\",\"qtyA\":\"%llu\"}",(long long)offertx->assetidbits,(long long)offertx->U.quantityQNT);
+                                printf("processutx.(%s) -> (%llu) price %.8f vol %.8f\n",T.comment,(long long)offertx->recipientbits,price,vol);
                                 expand_nxt64bits(NXTaddr,offertx->recipientbits);
-                                np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
-                                if ( Global_mp->srvNXTACCTSECRET[0] != 0 )
+                                //np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
+                                if ( strcmp(Global_mp->myNXTADDR,NXTaddr) == 0 )//Global_mp->srvNXTACCTSECRET[0] != 0 )
                                 {
                                     tx = sign_NXT_tx(responseutx,signedtx,Global_mp->srvNXTACCTSECRET,offertx->recipientbits,&T,full,1.);
                                     if ( tx != 0 )
@@ -391,7 +389,7 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                                     }
                                     else sprintf(buf,"{\"error\":\"from %s error signing responsutx.(%s)\"}",otherNXTaddr,NXTaddr);
                                 }
-                                else sprintf(buf,"{\"error\":\"cant send response to %s, no access to acct %s\"}",otherNXTaddr,np->H.U.NXTaddr);
+                                else sprintf(buf,"{\"error\":\"cant send response to %s, no access to acct %s\"}",otherNXTaddr,NXTaddr);
                             }
                             else sprintf(buf,"{\"error\":\"%s error parsing comment comment.(%s)\"}",otherNXTaddr,offertx->comment);
                         }

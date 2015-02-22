@@ -303,7 +303,7 @@ char *processutx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
 char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char signedtx[MAX_JSON_FIELD],*retstr = 0;
-    if ( is_remote_access(previpaddr) != 0 )
+    if ( is_remote_access(previpaddr) == 0 )
         return(0);
     copy_cJSON(signedtx,objs[0]);
     if ( sender[0] != 0 && valid > 0 && signedtx[0] != 0 )
