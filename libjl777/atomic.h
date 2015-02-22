@@ -350,6 +350,7 @@ uint64_t send_feetx(uint64_t assetbits,uint64_t fee,char *fullhash)
     uint64_t feetxid = 0;
     int32_t errcode;
     set_NXTtx(calc_nxt64bits(Global_mp->myNXTADDR),&feeT,assetbits,fee,calc_nxt64bits(INSTANTDEX_ACCT),-1);
+    printf("feetx for %llu %.8f fullhash.(%s)\n",(long long)assetbits,dstr(fee),fullhash);
     if ( (feetx= sign_NXT_tx(feeutx,signedfeetx,Global_mp->srvNXTACCTSECRET,calc_nxt64bits(Global_mp->myNXTADDR),&feeT,fullhash,1.)) != 0 )
     {
         feetxid = issue_broadcastTransaction(&errcode,0,signedfeetx,Global_mp->srvNXTACCTSECRET);
