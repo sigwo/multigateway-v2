@@ -58,7 +58,7 @@ cJSON *gen_NXT_tx_json(struct NXT_tx *utx,char *reftxid,double myshare,char *NXT
             expand_nxt64bits(assetidstr,utx->assetidbits);
             sprintf(cmd,"%s=transferAsset&asset=%s&quantityQNT=%lld",_NXTSERVER,assetidstr,(long long)(utx->U.quantityQNT*myshare));
             if ( utx->comment[0] != 0 )
-                strcat(cmd,"&comment="),strcat(cmd,utx->comment);
+                strcat(cmd,"&message="),strcat(cmd,utx->comment);
         }
         else printf("unsupported type.%d subtype.%d\n",utx->type,utx->subtype);
         if ( reftxid != 0 && reftxid[0] != 0 && cmd[0] != 0 )
@@ -96,7 +96,7 @@ void set_NXTtx(uint64_t nxt64bits,struct NXT_tx *tx,uint64_t assetidbits,int64_t
         U.U.quantityQNT = amount;
     } else U.U.amountNQT = amount;
     U.feeNQT = MIN_NQTFEE;
-    U.deadline = DEFAULT_NXT_DEADLINE;
+    U.deadline = 10;//DEFAULT_NXT_DEADLINE;
     *tx = U;
 }
 
@@ -313,10 +313,11 @@ char *respondtx(char *sender,char *signedtx)
                             if ( mytxid != 0 && errcode == 0 )
                             {
                                 sprintf(buf,"{\"result\":\"tradecompleted\",\"txid\":\"%llu\",\"signedtx\":\"%s\",\"othertxid\":\"%llu\"}",(long long)mytxid,pendingtxbytes,(long long)othertxid);
+                                printf("TRADECOMPLETE.(%s)\n",buf);
                                 free(othernp->signedtx);
                                 othernp->signedtx = 0;
                             }
-                        }
+                        } else printf("TRADE ERROR.%d othertxid.%llu\n",errcode,(long long)othertxid);
                     }
                     else sprintf(buf,"{\"error\":\"pendingtx for NXT.%s (%s) doesnt match received tx (%s)\"}",otherNXTaddr,pendingtxbytes,signedtx);
                 }
@@ -465,7 +466,7 @@ char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uin
         return(clonestr(buf));
     }
     set_NXTtx(nxt64bits,&T,assetA,assetoshisA,other64bits);
-    sprintf(T.comment,"{\"assetB\":\"%llu\",\"qtyB\":\"%llu\"}",(long long)assetB,(long long)assetoshisB);
+    sprintf(T.comment,"{\"assetA\":\"%llu\",\"qtyA\":\"%llu\",\"assetB\":\"%llu\",\"qtyB\":\"%llu\"}",(long long)assetA,(long long)assetoshisA,(long long)assetB,(long long)assetoshisB);
     tx = sign_NXT_tx(utxbytes,signedtx,NXTACCTSECRET,nxt64bits,&T,0,1.);
     if ( tx != 0 )
     {
