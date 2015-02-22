@@ -254,12 +254,16 @@ int32_t equiv_NXT_tx(struct NXT_tx *tx,char *comment)
             asset = assetB;
             qty = qtyB;
         } else return(-2);
+        printf("tx->assetbits %llu vs asset.%llu\n",(long long)tx->assetidbits,(long long)asset);
         if ( tx->assetidbits != asset )
             return(-3);
         if ( tx->U.quantityQNT != qty ) // tx->quantityQNT is union as long as same assetid, then these can be compared directly
             return(-4);
+        printf("tx->U.quantityQNT %llu vs qty.%llu\n",(long long)tx->U.quantityQNT,(long long)qty);
         return(0);
-    } else return(-1);
+    }
+    printf("error parsing.(%s)\n",comment);
+    return(-1);
 }
 
 struct NXT_tx *conv_txbytes(char *txbytes)
