@@ -167,7 +167,7 @@ struct NXT_tx *set_NXT_tx(cJSON *json)
         {
             if ( extract_cJSON_str(assetidstr,sizeof(assetidstr),attachmentobj,"asset") > 0 )
                 assetidbits = calc_nxt64bits(assetidstr);
-            if ( extract_cJSON_str(comment,sizeof(comment),attachmentobj,"comment") > 0 )
+            if ( extract_cJSON_str(comment,sizeof(comment),attachmentobj,"message") > 0 )
                 size += strlen(comment);
             if ( extract_cJSON_str(quantityQNT,sizeof(quantityQNT),attachmentobj,"quantityQNT") > 0 )
                 quantity = calc_nxt64bits(quantityQNT);
