@@ -1081,6 +1081,8 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
     char ip_port[64],*ptr;
     uint64_t txid = 0;
     int32_t port;
+    if ( pserver->ipaddr == 0 )
+        return(0);
     if ( 0 && SUPERNET_PORT != _SUPERNET_PORT )
         return(0);
     if ( Debuglevel > 2 )

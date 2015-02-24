@@ -126,7 +126,7 @@ struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
         printf("CREATE RAMBOOK.(%llu -> %llu)\n",(long long)baseid,(long long)relid);
         HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
-    purge_oldest_order(rb,0);
+    //purge_oldest_order(rb,0);
     return(rb);
 }
 
@@ -593,12 +593,13 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
         numbids = numasks = 0;
         if ( (obooks= get_allrambooks(&numbooks)) != 0 )
         {
+            printf("got %d rambooks\n",numbooks);
             for (i=0; i<numbooks; i++)
             {
                 rb = obooks[i];
                 if ( rb->numquotes == 0 )
                     continue;
-                purge_oldest_order(rb,0);
+                //purge_oldest_order(rb,0);
                 if ( rb->assetids[0] == refbaseid && rb->assetids[1] == refrelid )
                     polarity = 1;
                 else if ( rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid )
@@ -607,6 +608,7 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
                 for (j=0; j<rb->numquotes; j++)
                     add_to_orderbook(op,iter,&numbids,&numasks,rb,&rb->quotes[j],polarity,oldest);
             }
+            free(obooks);
         }
         if ( iter == 0 )
         {
