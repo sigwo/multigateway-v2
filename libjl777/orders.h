@@ -8,7 +8,7 @@
 #ifndef xcode_orders_h
 #define xcode_orders_h
 
-#define ORDERBOOK_EXPIRATION 300
+#define ORDERBOOK_EXPIRATION 10
 #define _obookid(baseid,relid) ((baseid) ^ (relid))
 
 char *assetmap[][2] =
@@ -87,13 +87,13 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     for (i=j=0; i<rb->numquotes; i++)
     {
         age = (now - rb->quotes[i].timestamp);
-        printf("%d ",age);
+        fprintf(stderr,"%d ",age);
         if ( age < ORDERBOOK_EXPIRATION )
             continue;
         if ( (iQ == 0 || rb->quotes[i].nxt64bits == iQ->nxt64bits) && (oldest == 0 || rb->quotes[i].timestamp < oldest) )
         {
             oldest = rb->quotes[i].timestamp;
-            printf("(oldi.%d %u) ",j,oldest);
+            fprintf(stderr,"(oldi.%d %u) ",j,oldest);
             nxt64bits = rb->quotes[i].nxt64bits;
             oldi = j;
         }
@@ -102,14 +102,14 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     rb->numquotes = j;
     if ( oldi >= 0 )
     {
-        printf("purge_oldest_order from NXT.%llu oldi.%d timestamp %u\n",(long long)iQ->nxt64bits,oldi,oldest);
+        fprintf(stderr,"purge_oldest_order from NXT.%llu oldi.%d timestamp %u\n",(iQ != 0) ? (long long)iQ->nxt64bits : 0,oldi,oldest);
         rb->quotes[oldi] = rb->quotes[--rb->numquotes];
         memset(&rb->quotes[rb->numquotes],0,sizeof(rb->quotes[rb->numquotes]));
         expand_nxt64bits(NXTaddr,nxt64bits);
         np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
         if ( np->openorders > 0 )
             np->openorders--;
-    } else printf("no purges\n");
+    } else fprintf(stderr,"no purges\n");
     return(nxt64bits);
 }
 
