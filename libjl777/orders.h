@@ -79,12 +79,12 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     struct NXT_acct *np;
     int32_t age,oldi,createdflag;
     uint64_t nxt64bits = 0;
-    uint32_t now,i,j,oldest = 0;
+    uint32_t now,i,oldest = 0;
     if ( rb->numquotes == 0 )
         return(0);
     oldi = -1;
     now = (uint32_t)time(NULL);
-    for (i=j=0; i<rb->numquotes; i++)
+    for (i=0; i<rb->numquotes; i++)
     {
         age = (now - rb->quotes[i].timestamp);
         if ( age >= ORDERBOOK_EXPIRATION )
@@ -94,12 +94,10 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
                 oldest = rb->quotes[i].timestamp;
                 //fprintf(stderr,"(oldi.%d %u) ",j,oldest);
                 nxt64bits = rb->quotes[i].nxt64bits;
-                oldi = j;
+                oldi = i;
             }
         }
-        rb->quotes[j++] = rb->quotes[i];
     }
-    rb->numquotes = j;
     if ( oldi >= 0 )
     {
         rb->quotes[oldi] = rb->quotes[--rb->numquotes];
