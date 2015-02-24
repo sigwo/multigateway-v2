@@ -1097,7 +1097,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
             char debugstr[4096];
             init_hexbytes_noT(debugstr,(uint8_t *)msg,len);
             debugstr[32] = 0;
-            fprintf(stderr,"%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,debugstr,(long long)txid,ip_port);
+            fprintf(stderr,"%s NARROWCAST.(%s) txid.%llu (%s) %llu\n",pserver->ipaddr,debugstr,(long long)txid,ip_port,(long long)pserver->nxt64bits);
         }
         ptr = calloc(1,64 + sizeof(len) + len + 1);
         memcpy(ptr,&len,sizeof(len));

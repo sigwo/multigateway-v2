@@ -542,7 +542,6 @@ void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
                 break;
         }
     } else i = 0;
-    //printf("add_user_order i.%d numquotes.%d\n",i,rb->numquotes);
     if ( i == rb->numquotes )
     {
         if ( i >= rb->maxquotes )
@@ -553,6 +552,7 @@ void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         }
         rb->quotes[rb->numquotes++] = *iQ;
     }
+    printf("add_user_order i.%d numquotes.%d\n",i,rb->numquotes);
 }
 
 void save_InstantDEX_quote(struct rambook_info *rb,struct InstantDEX_quote *iQ)
