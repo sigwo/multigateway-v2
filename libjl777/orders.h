@@ -599,7 +599,7 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
                 rb = obooks[i];
                 if ( rb->numquotes == 0 )
                     continue;
-                //purge_oldest_order(rb,0);
+                purge_oldest_order(rb,0);
                 if ( rb->assetids[0] == refbaseid && rb->assetids[1] == refrelid )
                     polarity = 1;
                 else if ( rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid )
