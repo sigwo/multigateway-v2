@@ -8,7 +8,7 @@
 #ifndef xcode_orders_h
 #define xcode_orders_h
 
-#define ORDERBOOK_EXPIRATION 10
+#define ORDERBOOK_EXPIRATION 300
 #define _obookid(baseid,relid) ((baseid) ^ (relid))
 
 char *assetmap[][2] =
