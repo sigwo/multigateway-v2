@@ -247,7 +247,7 @@ struct NXT_protocol_parms
 
 struct NXThandler_info
 {
-    double fractured_prob;  // probability NXT network is fractured, eg. major fork or attack in progress
+    double fractured_prob,endpuzzles;  // probability NXT network is fractured, eg. major fork or attack in progress
     int32_t upollseconds,pollseconds,firsttimestamp,timestamp,RTflag,NXTheight,hashprocessing;
     int64_t acctbalance;
     uint64_t blocks[1000 * 365 * 10]; // fix in 10 years
@@ -261,10 +261,11 @@ struct NXThandler_info
     unsigned char loopback_pubkey[crypto_box_PUBLICKEYBYTES],loopback_privkey[crypto_box_SECRETKEYBYTES];
     char pubkeystr[crypto_box_PUBLICKEYBYTES*2+1],myhandle[64],myNXTADDR[64],srvNXTACCTSECRET[256];
     bits256 mypubkey,myprivkey;
-    uint64_t nxt64bits;//,coins[4];
+    uint64_t nxt64bits,puzzlethreshold,*neighbors;//,coins[4];
     int32_t initassets,Lfactor,gatewayid,gensocks[256];
     int32_t height,extraconfirms,maxpopdepth,maxpopheight,lastchanged,GLEFU,numblocks,timestamps[1000 * 365 * 10];
-    int32_t isudpserver,istcpserver,numPrivacyServers,isMM,iambridge;
+    int32_t isudpserver,istcpserver,numPrivacyServers,isMM,iambridge,insmallworld;
+    uint32_t puzzletime;
     char ipaddr[64],dispname[128],groupname[128];
 };
 struct NXT_acct *get_NXTacct(int32_t *createdp,struct NXThandler_info *mp,char *NXTaddr);

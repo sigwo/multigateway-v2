@@ -281,7 +281,7 @@ void on_bridgerecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const stru
     _on_udprecv(0,1,udp,nread,rcvbuf,addr,flags);
 }
 
-uv_udp_t *open_udp(uint16_t port,void (*handler)(uv_udp_t *,ssize_t,const uv_buf_t *,const struct sockaddr *,unsigned int))
+uv_udp_t *open_udp(uint16_t port,void (*handler)(uv_udp_t *,ssize_t,const uv_buf_t *,const struct sockaddr *,uint32_t))
 {
     static uv_udp_t *fixed_udp;
     int32_t r;
@@ -410,7 +410,7 @@ int32_t portable_udpwrite(int32_t queueflag,const struct sockaddr *addr,int32_t 
     return(r);
 }
 
-void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void (*handler)(uv_udp_t *,ssize_t,const uv_buf_t *,const struct sockaddr *,unsigned int))
+void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void (*handler)(uv_udp_t *,ssize_t,const uv_buf_t *,const struct sockaddr *,uint32_t))
 {
     void *srv = 0;
     const struct sockaddr *ptr;
@@ -993,19 +993,6 @@ int32_t update_nodestats(char *NXTaddr,uint32_t now,struct nodestats *stats,int3
     return(modified);
 }
 
-int32_t update_routing_probs(char *NXTaddr,int32_t encryptedflag,int32_t p2pflag,struct nodestats *stats,char *ipaddr,int32_t port,unsigned char pubkey[crypto_box_PUBLICKEYBYTES])
-{
-    uint32_t now,modified = 0;
-    struct pserver_info *pserver;
-    now = (uint32_t)time(NULL);
-    if ( p2pflag != 0 )
-        pserver = get_pserver(0,ipaddr,0,port);
-    else pserver = get_pserver(0,ipaddr,port,0);
-    if ( stats != 0 )
-        modified = (update_nodestats(NXTaddr,now,stats,encryptedflag,p2pflag,pubkey,ipaddr,port) << 1);
-    return(modified);
-}
-
 int32_t on_SuperNET_whitelist(char *ipaddr)
 {
     uint32_t i,ipbits;
@@ -1050,6 +1037,466 @@ void add_SuperNET_peer(char *ip_port)
     }
 }
 
+//////////////////////////////
+// 32 byte token
+
+#define TRIT signed char
+
+#define TRIT_FALSE -1
+#define TRIT_UNKNOWN 0
+#define TRIT_TRUE 1
+
+#define SAM_HASH_SIZE 243
+#define SAM_STATE_SIZE (SAM_HASH_SIZE * 3)
+#define SAM_MAGIC_NUMBER 13
+#define HIT_LIMIT 7625597484987 // 3 ** 27
+#define MAX_INPUT_SIZE 4096
+
+struct identity_info { uint64_t nxt64bits; uint32_t activewt,passivewt; } Identities[1000];
+#define MAX_IDENTITIES ((int32_t)(sizeof(Identities)/sizeof(*Identities)))
+#define MIN_INDENTITIES 2
+#define MIN_SMALLWORLDPEERS 5
+#define PUZZLE_DURATION 15
+#define PUZZLE_THRESHOLD (HIT_LIMIT / 1337)
+
+int32_t Num_identities = 0;
+int SAM_INDICES[SAM_STATE_SIZE];
+struct SAM_STATE { TRIT trits[SAM_STATE_SIZE]; };
+
+TRIT SaM_Any(const TRIT a,const TRIT b) { return a == b ? a : (a + b); }
+TRIT SaM_Sum(const TRIT a,const TRIT b) { return a == b ? -a : (a + b); }
+
+int32_t ConvertToTrits(const uint8_t *input,const uint32_t inputSize,TRIT * output)
+{
+    int32_t i;
+	for (i=0; i<(inputSize << 3); i++)
+		*output++ = (input[i >> 3] & (1 << (i & 7))) != 0;
+    return(i);
+}
+
+int32_t ConvertToBytes(const TRIT *input,const uint32_t inputSize,uint8_t *output)
+{
+    int32_t i;
+	for (i=0; i<(inputSize >> 2); i++)
+		*output++ = (input[i << 2] + 1) | (((input[(i << 2) + 1] + 1)) << 2) | (((input[(i << 2) + 2] + 1)) << 4) | (((input[(i << 2) + 3] + 1)) << 6);
+	switch ( (inputSize & 3) )
+    {
+        case 0: i--;
+            break;
+        case 1:
+            *output++ = (input[(inputSize >> 2) << 2] + 1);
+            break;
+        case 2:
+            *output++ = (input[(inputSize >> 2) << 2] + 1) | (((input[((inputSize >> 2) << 2) + 1] + 1)) << 2);
+            break;
+        case 3:
+            *output++ = (input[(inputSize >> 2) << 2] + 1) | (((input[((inputSize >> 2) << 2) + 1] + 1)) << 2) | (((input[((inputSize >> 2) << 2) + 2] + 1)) << 4);
+            break;
+	}
+    return(i + 1);
+}
+
+void SaM_PrepareIndices()
+{
+	int32_t i,nextIndex,currentIndex = 0;
+	for (i=0; i<SAM_STATE_SIZE; i++)
+    {
+		nextIndex = ((currentIndex + 1) * SAM_MAGIC_NUMBER) % SAM_STATE_SIZE;
+		SAM_INDICES[currentIndex] = nextIndex;
+		currentIndex = nextIndex;
+	}
+}
+
+void SaM_SplitAndMerge(struct SAM_STATE *state)
+{
+	struct SAM_STATE leftPart,rightPart;
+	int32_t i,round,nextIndex,currentIndex = 0;
+	for (round=1; round<=SAM_MAGIC_NUMBER; round++)
+    {
+		for (i=0; i<SAM_STATE_SIZE; i++)
+        {
+			nextIndex = SAM_INDICES[currentIndex];
+			leftPart.trits[i] = SaM_Any(state->trits[currentIndex],-state->trits[nextIndex]);
+			rightPart.trits[i] = SaM_Any(-state->trits[currentIndex],state->trits[nextIndex]);
+			currentIndex = nextIndex;
+		}
+		for (i=0; i<SAM_STATE_SIZE; i++)
+        {
+			nextIndex = SAM_INDICES[currentIndex];
+			state->trits[(i + round) % SAM_STATE_SIZE] = SaM_Sum(leftPart.trits[currentIndex],rightPart.trits[nextIndex]);
+			currentIndex = SAM_INDICES[nextIndex];
+		}
+	}
+}
+
+void SaM_Initialize(struct SAM_STATE *state)
+{
+    int32_t i;
+	for (i=SAM_HASH_SIZE; i<SAM_STATE_SIZE; i++)
+		state->trits[i] = ((i & 1) != 0) ? TRIT_FALSE : TRIT_TRUE;
+}
+
+void SaM_Absorb(struct SAM_STATE *state,const TRIT *input,uint32_t inputSize)
+{
+    int32_t i,n,offset = 0;
+    if ( inputSize > MAX_INPUT_SIZE )
+        inputSize = MAX_INPUT_SIZE;
+    n = (inputSize / SAM_HASH_SIZE);
+	for (i=0; i<n; i++,offset+=SAM_HASH_SIZE)
+    {
+		memcpy(state->trits,&input[offset],SAM_HASH_SIZE * sizeof(TRIT));
+		SaM_SplitAndMerge(state);
+	}
+	if ( (i= (inputSize % SAM_HASH_SIZE)) != 0 )
+    {
+		memcpy(state->trits,&input[n * SAM_HASH_SIZE],i * sizeof(TRIT));
+		for (; i<SAM_HASH_SIZE; i++)
+			state->trits[i] = ((i & 1) != 0) ? TRIT_FALSE : TRIT_TRUE;
+		SaM_SplitAndMerge(state);
+	}
+}
+
+void SaM_Squeeze(struct SAM_STATE *state,TRIT *output)
+{
+	SaM_SplitAndMerge(state);
+	memcpy(output,state->trits,SAM_HASH_SIZE * sizeof(TRIT));
+	SaM_SplitAndMerge(state);
+}
+
+uint64_t Hit(const uint8_t *input,int32_t inputSize)
+{
+    TRIT inputTrits[MAX_INPUT_SIZE << 3];
+  	TRIT hash[SAM_HASH_SIZE];
+    struct SAM_STATE state;
+    uint64_t hit = 0;
+    int32_t i,numtrits;
+    if ( inputSize > MAX_INPUT_SIZE )
+        inputSize = MAX_INPUT_SIZE;
+    //memset(inputTrits,0,sizeof(inputTrits));
+    //memset(hash,0,sizeof(hash));
+	numtrits = ConvertToTrits(input,inputSize,inputTrits);
+    if ( 0 )
+    {
+        uint8_t checkbuf[SAM_HASH_SIZE];
+        int32_t n;
+        n = ConvertToBytes(inputTrits,numtrits,checkbuf);
+        if ( n != inputSize )
+            printf("ConvertToBytes error to bytes.%d vs input.%d\n",n,inputSize);
+        else if ( memcmp(input,checkbuf,n) != 0 )
+            printf("memcmp error after converts\n");
+    }
+	SaM_Initialize(&state);
+	SaM_Absorb(&state,inputTrits,inputSize << 3);
+	SaM_Squeeze(&state,hash);
+	for (i=0; i<27; i++)
+    {
+        /*if ( (trit= hash[i]) < -1 )
+        {
+            printf("hash[%d] underflow %d\n",i,hash[i]);
+            //trit = -1;
+        }
+        else if ( trit > 1 )
+        {
+            printf("hash[%d] overflow %d\n",i,hash[i]);
+            //trit = 1;
+        }*/
+ 		hit = (hit * 3 + hash[i] + 1);
+    }
+	return(hit);
+}
+
+//////////////////////////////
+
+struct identity_info *find_identity(const uint64_t nxt64bits)
+{
+    int32_t i;
+	for (i=0; i<Num_identities; i++)
+		if ( Identities[i].nxt64bits == nxt64bits )
+			return(&Identities[i]);
+    return(0);
+}
+
+void Add(const uint64_t nxt64bits)
+{
+    struct identity_info *ident;
+    int32_t ind;
+    if ( Global_mp->insmallworld == 0 && (ident= find_identity(nxt64bits)) == 0 )
+    {
+        if ( (ind= Num_identities) < MAX_IDENTITIES )
+            Num_identities++;
+        else ind = ((rand() >> 8) % MAX_IDENTITIES);
+        ident = &Identities[ind];
+        memset(ident,0,sizeof(*ident));
+        ident->nxt64bits = nxt64bits;
+    }
+}
+
+void Remove(const uint64_t nxt64bits)
+{
+    struct identity_info *ident;
+    if ( (ident= find_identity(nxt64bits)) != 0 )
+        *ident = Identities[--Num_identities];
+}
+
+uint32_t ActiveWeight(const uint64_t nxt64bits)
+{
+    struct identity_info *ident;
+    if ( (ident= find_identity(nxt64bits)) != 0 )
+        return(ident->activewt);
+	return(0);
+}
+
+uint32_t PassiveWeight(const uint64_t nxt64bits)
+{
+    struct identity_info *ident;
+    if ( (ident= find_identity(nxt64bits)) != 0 )
+        return(ident->passivewt);
+	return(0);
+}
+
+uint32_t TotalActiveWeight(uint32_t *nonzp)
+{
+	uint32_t i,nonz,wt,totalActiveWeight = 0;
+	for (i=nonz=0; i<Num_identities; i++)
+        if ( (wt= Identities[i].activewt) != 0 )
+            totalActiveWeight += wt, nonz++;
+    if ( nonzp != 0 )
+        *nonzp = nonz;
+	return(totalActiveWeight);
+}
+
+uint32_t TotalPassiveWeight(uint32_t *nonzp)
+{
+	uint32_t i,nonz,wt,totalPassiveWeight = 0;
+	for (i=nonz=0; i<Num_identities; i++)
+        if ( (wt= Identities[i].passivewt) != 0 )
+            totalPassiveWeight += wt, nonz++;
+    if ( nonzp != 0 )
+        *nonzp = nonz;
+	return(totalPassiveWeight);
+}
+
+int32_t GetNeighbors(uint64_t *neighbors,int32_t maxNeighbors)
+{
+	uint32_t weights[MAX_IDENTITIES],i,hit,n,nonz,totalWeight,counter = 0;
+    for (i=0; i<Num_identities; i++)
+        weights[i] = Identities[i].activewt;
+    if ( (totalWeight= TotalActiveWeight(&nonz)) == 0 )
+		for (i=0; i<Num_identities; i++)
+			weights[i] = 1, totalWeight++;
+    n = Num_identities;
+	while ( counter < maxNeighbors && totalWeight > 0 )
+    {
+        hit = ((rand() >> 8) % totalWeight);
+		for (i=0; i<n; i++)
+        {
+			if ( weights[i] > hit )
+            {
+				totalWeight -= weights[i];
+				neighbors[counter++] = Identities[i].nxt64bits;
+				weights[i] = 0;
+				break;
+			}
+			hit -= weights[i];
+		}
+	}
+    return(counter);
+}
+
+long set_sambuf(uint8_t *data,uint32_t puzzletime,uint64_t challenger,uint64_t destbits)
+{
+    long offset = 0;
+    memcpy(&data[offset],&puzzletime,sizeof(puzzletime)), offset += sizeof(puzzletime);
+    memcpy(&data[offset],&challenger,sizeof(challenger)), offset += sizeof(challenger);
+    memcpy(&data[offset],&destbits,sizeof(destbits)), offset += sizeof(destbits);
+    return(offset);
+}
+
+char *challenge_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    uint32_t n,len,num,duration,reftime,now = (uint32_t)time(NULL);
+    char buf[MAX_JSON_FIELD],hopNXTaddr[64],numstr[64],*jsonstr;
+    uint64_t threshold,senderbits,nonce,hit;
+    uint8_t data[64];
+    long offset;
+    cJSON *json,*array;
+    struct pserver_info *pserver;
+    double endmilli;
+    if ( is_remote_access(previpaddr) == 0 )
+        return(clonestr("{\"error\":\"puzzles have to be from remote\"}"));
+    senderbits = calc_nxt64bits(sender);
+    pserver = get_pserver(0,previpaddr,0,0);
+    if ( pserver->nxt64bits != senderbits )
+        return(clonestr("{\"error\":\"puzzletime from mismatched IP\"}"));
+    reftime = (uint32_t)get_API_int(objs[0],0);
+    duration = (uint32_t)get_API_int(objs[1],0);
+    threshold = get_API_nxt64bits(objs[2]);
+    endmilli = (milliseconds() + duration*1000);
+    if ( 0 && abs(reftime - now) > 3 )
+    {
+        printf("sender.%s via previp.(%s) reftime.%u vs now.%u too different\n",sender,previpaddr,reftime,now);
+        return(clonestr("{\"error\":\"puzzletime variance\"}"));
+    }
+    offset = set_sambuf(data,reftime,senderbits,calc_nxt64bits(NXTaddr));
+    num = n = 0;
+    array = 0;
+    while ( milliseconds() < endmilli )
+    {
+        //for (i=0; i<8; i++)
+        //    data[offset+i] = (rand() >> 8) & 0xff;
+        //memcpy(&nonce,&data[offset],sizeof(nonce));
+        randombytes((uint8_t *)&nonce,sizeof(nonce));
+        memcpy(&data[offset],&nonce,sizeof(nonce));
+        hit = Hit(data,(uint32_t)(offset + sizeof(nonce)));
+        //if ( (rand() % 1000) == 0 )
+            //printf("%llu vs %llu\n",(long long)hit,(long long)threshold);
+        if ( hit < threshold )
+        {
+            if ( array == 0 )
+                array = cJSON_CreateArray();
+            sprintf(numstr,"%llu",(long long)nonce);
+            cJSON_AddItemToArray(array,cJSON_CreateString(numstr));
+            printf("found.%d nonce.%llu hit.%llu for %llu remaining %.2f seconds\n",cJSON_GetArraySize(array),(long long)nonce,(long long)hit,(long long)sender,(endmilli - milliseconds())/1000.);
+            if ( cJSON_GetArraySize(array) > 32 ) // stay within 1kb can switch to binary to get more capacity
+                break;
+        }
+        n++;
+    }
+    printf("hashes.%d for duration.%d = %.1f per second\n",n,duration,(double)n/duration);
+    if ( array != 0 )
+    {
+        json = cJSON_CreateObject();
+        cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("nonces"));
+        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
+        cJSON_AddItemToObject(json,"reftime",cJSON_CreateNumber(reftime));
+        sprintf(numstr,"%llu",(long long)threshold), cJSON_AddItemToObject(json,"threshold",cJSON_CreateString(numstr));
+        cJSON_AddItemToObject(json,"nonces",array);
+        jsonstr = cJSON_Print(json);
+        free_json(json);
+        stripwhite_ns(jsonstr,strlen(jsonstr));
+        if ( (len= (int32_t)strlen(jsonstr)) < 1024 )
+        {
+            strcpy(buf,jsonstr);
+            free(jsonstr);
+            hopNXTaddr[0] = 0;
+            return(send_tokenized_cmd(!prevent_queueing("nonces"),hopNXTaddr,0,NXTaddr,NXTACCTSECRET,buf,sender));
+        } else printf("challeng_func: len.%d too big\n",len);
+        free(jsonstr);
+        return(clonestr("{\"result\":\"too many nonces\"}"));
+    }
+    return(clonestr("{\"result\":\"i cant get no noncifaction\"}"));
+}
+
+char *response_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    struct identity_info *ident;
+    uint32_t i,n,reftime;
+    uint8_t data[64];
+    char buf[1024];
+    long offset = 0;
+    uint64_t nonce,mybits,otherbits,threshold,hit;
+    cJSON *array;
+    printf("nonces: %u %llu\n",Global_mp->puzzletime,(long long)Global_mp->puzzlethreshold);
+    if ( is_remote_access(previpaddr) == 0 )
+        return(clonestr("{\"error\":\"nonces have to be from remote\"}"));
+    if ( Global_mp->insmallworld != 0 )
+        return(clonestr("{\"error\":\"already in small world\"}"));
+    reftime = (uint32_t)get_API_int(objs[0],0);
+    threshold = get_API_nxt64bits(objs[1]);
+    //if ( Global_mp->puzzletime == reftime && Global_mp->puzzlethreshold == threshold )
+    {
+        array = objs[2];
+        mybits = calc_nxt64bits(NXTaddr);
+        otherbits = calc_nxt64bits(sender);
+        if ( (ident= find_identity(otherbits)) != 0 )
+        {
+            ident->activewt = 0;
+            offset = set_sambuf(data,reftime,mybits,otherbits);
+            if ( is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    nonce = get_API_nxt64bits(cJSON_GetArrayItem(array,i));
+                    memcpy(&data[offset],&nonce,sizeof(nonce));
+                    hit = Hit(data,(uint32_t)(offset + sizeof(nonce)));
+                    printf("got.%d nonce.%llu hit.%llu for %llu\n",i,(long long)nonce,(long long)hit,(long long)sender);
+                    if ( hit < threshold )
+                        ident->activewt++;
+                    else
+                    {
+                        sprintf(buf,"{\"error\":\"hit.%llu >= threshold.%llu from %s\"}",(long long)hit,(long long)threshold,sender);
+                        ident->activewt = 0;
+                        return(clonestr(buf));
+                    }
+                }
+                return(clonestr("{\"result\":\"processed nonces\"}"));
+            } else return(clonestr("{\"error\":\"no nonces\"}"));
+        }
+        else return(clonestr("{\"error\":\"unexpected nonces from stranger\"}"));
+    }
+    //else return(clonestr("{\"error\":\"unexpected nonce when not puzzling or mismatched threshold\"}"));
+}
+
+void enter_smallworld(int32_t duration,uint64_t threshold)
+{
+    char hopNXTaddr[64],destNXTaddr[64],jsonstr[1024],*str;
+    uint32_t i,n = Num_identities;
+    Global_mp->puzzletime = (uint32_t)time(NULL);
+    Global_mp->puzzlethreshold = threshold;
+    sprintf(jsonstr,"{\"requestType\":\"puzzles\",\"NXT\":\"%s\",\"reftime\":\"%lu\",\"duration\":\"%d\",\"threshold\":\"%llu\"}",Global_mp->myNXTADDR,time(NULL),duration,(long long)threshold);
+    for (i=0; i<n; i++)
+    {
+        hopNXTaddr[0] = 0;
+        expand_nxt64bits(destNXTaddr,Identities[i].nxt64bits);
+        if ( (str= send_tokenized_cmd(!prevent_queueing("puzzles"),hopNXTaddr,0,Global_mp->myNXTADDR,Global_mp->srvNXTACCTSECRET,jsonstr,destNXTaddr)) != 0 )
+            free(str);
+        usleep(25000); // prevent saturating UDP output
+    }
+    Global_mp->endpuzzles = milliseconds() + (duration + 3) * 1000;
+    printf("sent puzzles to %d nodes\n",i);
+}
+
+int32_t poll_smallworld(int32_t minpeers)
+{
+    uint32_t i,nonz = 0,wt = 0;
+    if ( milliseconds() < Global_mp->endpuzzles )
+    {
+        wt = TotalActiveWeight(&nonz);
+        printf("Total Active Weight: %d from %d\n",wt,nonz);
+        return(-1);
+    }
+    Global_mp->puzzletime = 0;
+    Global_mp->puzzlethreshold = 0;
+    Global_mp->insmallworld = 0;
+    if ( nonz >= minpeers )
+    {
+        if ( Global_mp->neighbors != 0 )
+            free(Global_mp->neighbors);
+        Global_mp->neighbors = calloc(minpeers,sizeof(*Global_mp->neighbors));
+        Global_mp->insmallworld = GetNeighbors(Global_mp->neighbors,minpeers);
+        for (i=0; i<Global_mp->insmallworld; i++)
+            printf("%llu ",(long long)Global_mp->neighbors[i]);
+        printf("small world peers.%d\n",Global_mp->insmallworld);
+    }
+    return(Global_mp->insmallworld);
+}
+
+int32_t update_routing_probs(char *NXTaddr,int32_t encryptedflag,int32_t p2pflag,struct nodestats *stats,char *ipaddr,int32_t port,unsigned char pubkey[crypto_box_PUBLICKEYBYTES])
+{
+    uint32_t now,modified = 0;
+    struct pserver_info *pserver;
+    now = (uint32_t)time(NULL);
+    if ( p2pflag != 0 )
+        pserver = get_pserver(0,ipaddr,0,port);
+    else pserver = get_pserver(0,ipaddr,port,0);
+    if ( stats != 0 )
+    {
+        Add(calc_nxt64bits(NXTaddr));
+        modified = (update_nodestats(NXTaddr,now,stats,encryptedflag,p2pflag,pubkey,ipaddr,port) << 1);
+    }
+    return(modified);
+}
+
 void every_second(int32_t counter)
 {
     uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char *kadcmd,char *NXTACCTSECRET,char *key,char *datastr);
@@ -1071,6 +1518,10 @@ void every_second(int32_t counter)
     }
     if ( (counter % 10) == 0 && Global_mp->gatewayid >= 0 )
     {
+        if ( 0 && Global_mp->insmallworld == 0 && Num_identities >= MIN_INDENTITIES )
+            enter_smallworld(PUZZLE_DURATION,PUZZLE_THRESHOLD);
+        else if ( Global_mp->puzzletime != 0 )
+            poll_smallworld(MIN_SMALLWORLDPEERS);
         if ( Global_mp->gatewayid < 0 )
         {
             for (i=0; i<Num_in_whitelist; i++)

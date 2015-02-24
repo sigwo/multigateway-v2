@@ -575,7 +575,8 @@ void call_system(FILE *fp,char *cmd,char *fname,char *params)
     char cmdstr[1024];
     sprintf(cmdstr,"%s %s %s > /tmp/syscall",cmd,fname,params);
     fprintf(stderr,"SYSCALL.(%s)\n",cmdstr);
-    system(cmdstr);
+    if ( system(cmdstr) != 0 )
+        printf("error with system call\n");
 }
 
 char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,char *fname,char *params),char *params)
@@ -607,7 +608,8 @@ char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,ch
         filesize = ftell(fp);
         rewind(fp);
         buffer = calloc(1,filesize);
-        fread(buffer,1,filesize,fp);
+        if ( fread(buffer,1,filesize,fp) != filesize )
+            printf("fread error in language_function\n");
         fclose(fp);
     }
     return(buffer);
@@ -1907,6 +1909,8 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *getfile[] = { (char *)getfile_func, "getfile", "V", "name", "handler", 0 };
 
     // Kademlia DHT
+    static char *puzzles[] = { (char *)challenge_func, "puzzles", "V", "reftime", "duration", "threshold", 0 };
+    static char *nonces[] = { (char *)response_func, "nonces", "V", "reftime", "threshold", "nonces", 0 };
     static char *store[] = { (char *)store_func, "store", "V", "pubkey", "key", "name", "data", 0 };
     static char *findvalue[] = { (char *)findvalue_func, "findvalue", "V", "pubkey", "key", "name", "data", 0 };
     static char *findnode[] = { (char *)findnode_func, "findnode", "V", "pubkey", "key", "name", "data", 0 };
@@ -1959,7 +1963,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *python[] = { (char *)python_func, "python", "V", "name", 0 };
     static char *syscall[] = { (char *)syscall_func, "syscall", "V", "name", "cmd", "params", 0 };
 
-     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, syscall, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, openorders, allorderbooks, placebid, bid, placeask, ask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile };
+     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, puzzles, nonces, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, syscall, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, openorders, allorderbooks, placebid, bid, placeask, ask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];

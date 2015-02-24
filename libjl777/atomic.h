@@ -299,7 +299,7 @@ char *respondtx(char *sender,char *signedtx,uint64_t feeB,char *feetxidstr)
     char otherNXTaddr[64],NXTaddr[64],buf[1024],*pendingtxbytes;
     uint64_t othertxid,mytxid;
     int32_t createdflag,errcode;
-    struct NXT_acct *np,*othernp;
+    struct NXT_acct *othernp;
     struct NXT_tx *pendingtx,*recvtx;
     sprintf(buf,"{\"error\":\"some error with respondtx got (%s) from NXT.%s\"}",signedtx,sender);
     printf("RESPONDTX.(%s) from (%s)\n",signedtx,sender);
@@ -309,7 +309,7 @@ char *respondtx(char *sender,char *signedtx,uint64_t feeB,char *feetxidstr)
         expand_nxt64bits(otherNXTaddr,recvtx->senderbits);
         othernp = get_NXTacct(&createdflag,Global_mp,otherNXTaddr);
         expand_nxt64bits(NXTaddr,recvtx->recipientbits);
-        np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
+        //np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
         if ( (pendingtxbytes= othernp->signedtx) != 0 && strcmp(NXTaddr,Global_mp->myNXTADDR) == 0 )
         {
             pendingtx = conv_txbytes(pendingtxbytes);
@@ -402,12 +402,13 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                                 free_json(commentobj);
                                 amountB = conv_assetoshis(assetB,qtyB);
                                 price = (amountB / vol);
-                                if ( 1 )//(iQ= order_match(offertx->recipientbits,assetB,qtyB,offertx->senderbits,offertx->assetidbits,offertx->U.quantityQNT,feeA,feeAtxid,full)) != 0 )
+                                if ( (iQ= order_match(offertx->recipientbits,assetB,qtyB,offertx->senderbits,offertx->assetidbits,offertx->U.quantityQNT,feeA,feeAtxid,full)) != 0 )
                                 {
                                     fee = set_NXTtx(offertx->recipientbits,&T,assetB,qtyB,offertx->senderbits,-1);//FEEBITS);
+                                    fee = INSTANTDEX_FEE;
                                     //feetxid = send_feetx(assetB,fee,full);
-                                    feetxid = send_feetx(NXT_ASSETID,INSTANTDEX_FEE,full);
-                                    sprintf(T.comment,"{\"obookid\":\"%llu\",\"assetA\":\"%llu\",\"qtyA\":\"%llu\",\"feeB\":\"%llu\",\"feetxid\":\"%llu\"}",(long long)(offertx->assetidbits ^ assetB),(long long)offertx->assetidbits,(long long)offertx->U.quantityQNT,(long long)INSTANTDEX_FEE,(long long)feetxid);
+                                    feetxid = send_feetx(NXT_ASSETID,fee,full);
+                                    sprintf(T.comment,"{\"obookid\":\"%llu\",\"assetA\":\"%llu\",\"qtyA\":\"%llu\",\"feeB\":\"%llu\",\"feetxid\":\"%llu\"}",(long long)(offertx->assetidbits ^ assetB),(long long)offertx->assetidbits,(long long)offertx->U.quantityQNT,(long long)fee,(long long)feetxid);
                                     printf("processutx.(%s) -> (%llu) price %.8f vol %.8f\n",T.comment,(long long)offertx->recipientbits,price,vol);
                                     expand_nxt64bits(NXTaddr,offertx->recipientbits);
                                     if ( strcmp(Global_mp->myNXTADDR,NXTaddr) == 0 )
@@ -419,7 +420,7 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                                             hopNXTaddr[0] = 0;
                                             send_tokenized_cmd(!prevent_queueing("respondtx"),hopNXTaddr,0,NXTaddr,Global_mp->srvNXTACCTSECRET,buf,otherNXTaddr);
                                             free(tx);
-                                            //iQ->sent = 1;
+                                            iQ->sent = 1;
                                             printf("send (%s) to %s\n",buf,otherNXTaddr);
                                             sprintf(buf,"{\"results\":\"utx from NXT.%llu accepted with fullhash.(%s) %.8f of %llu for %.8f of %llu -> price %.8f\"}",(long long)offertx->senderbits,full,vol,(long long)offertx->assetidbits,amountB,(long long)assetB,price);
                                         }
