@@ -87,15 +87,15 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     for (i=j=0; i<rb->numquotes; i++)
     {
         age = (now - rb->quotes[i].timestamp);
-        fprintf(stderr,"%d ",age);
-        if ( age < ORDERBOOK_EXPIRATION )
-            continue;
-        if ( (iQ == 0 || rb->quotes[i].nxt64bits == iQ->nxt64bits) && (oldest == 0 || rb->quotes[i].timestamp < oldest) )
+        if ( age >= ORDERBOOK_EXPIRATION )
         {
-            oldest = rb->quotes[i].timestamp;
-            fprintf(stderr,"(oldi.%d %u) ",j,oldest);
-            nxt64bits = rb->quotes[i].nxt64bits;
-            oldi = j;
+            if ( (iQ == 0 || rb->quotes[i].nxt64bits == iQ->nxt64bits) && (oldest == 0 || rb->quotes[i].timestamp < oldest) )
+            {
+                oldest = rb->quotes[i].timestamp;
+                //fprintf(stderr,"(oldi.%d %u) ",j,oldest);
+                nxt64bits = rb->quotes[i].nxt64bits;
+                oldi = j;
+            }
         }
         rb->quotes[j++] = rb->quotes[i];
     }
@@ -126,7 +126,7 @@ struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
         printf("CREATE RAMBOOK.(%llu -> %llu)\n",(long long)baseid,(long long)relid);
         HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
-    //purge_oldest_order(rb,0);
+    purge_oldest_order(rb,0);
     return(rb);
 }
 
@@ -599,6 +599,8 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
                 rb = obooks[i];
                 if ( rb->numquotes == 0 )
                     continue;
+                if ( iter == 1 )
+                    purge_oldest_order(rb,0);
                 if ( rb->assetids[0] == refbaseid && rb->assetids[1] == refrelid )
                     polarity = 1;
                 else if ( rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid )
@@ -606,8 +608,6 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
                 else continue;
                 for (j=0; j<rb->numquotes; j++)
                     add_to_orderbook(op,iter,&numbids,&numasks,rb,&rb->quotes[j],polarity,oldest);
-                if ( iter == 1 )
-                    purge_oldest_order(rb,0);
             }
             free(obooks);
         }
