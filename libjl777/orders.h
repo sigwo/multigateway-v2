@@ -37,7 +37,7 @@ struct rambook_info
     UT_hash_handle hh;
     uint8_t obookiddata[9];
     struct InstantDEX_quote *quotes;
-    uint64_t assetids[2];
+    uint64_t assetids[2]; uint64_t type;
     int32_t numquotes,maxquotes;
 } *Rambooks;
 
@@ -70,6 +70,7 @@ cJSON *rambook_json(struct rambook_info *rb)
     cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
     sprintf(numstr,"%llu",(long long)rb->assetids[1]), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
     cJSON_AddItemToObject(json,"numquotes",cJSON_CreateNumber(rb->numquotes));
+    sprintf(numstr,"%llu",(long long)rb->type), cJSON_AddItemToObject(json,"type",cJSON_CreateString(numstr));
     return(json);
 }
 
@@ -111,16 +112,16 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     return(nxt64bits);
 }
 
-struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid)
+struct rambook_info *get_rambook(uint64_t baseid,uint64_t relid,uint64_t type)
 {
-    uint64_t assetids[2];
+    uint64_t assetids[3];
     struct rambook_info *rb;
-    assetids[0] = baseid, assetids[1] = relid;
+    assetids[0] = baseid, assetids[1] = relid, assetids[2] = type;
     HASH_FIND(hh,Rambooks,assetids,sizeof(assetids),rb);
     if ( rb == 0 )
     {
         rb = calloc(1,sizeof(*rb));
-        rb->assetids[0] = baseid, rb->assetids[1] = relid;
+        rb->assetids[0] = baseid, rb->assetids[1] = relid, rb->type = type;
         printf("CREATE RAMBOOK.(%llu -> %llu)\n",(long long)baseid,(long long)relid);
         HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
@@ -135,7 +136,10 @@ struct rambook_info **get_allrambooks(int32_t *numbooksp)
     *numbooksp = HASH_COUNT(Rambooks);
     obooks = calloc(*numbooksp,sizeof(*rb));
     HASH_ITER(hh,Rambooks,rb,tmp)
+    {
+        purge_oldest_order(rb,0);
         obooks[i++] = rb;
+    }
     if ( i != *numbooksp )
         printf("get_allrambooks HASH_COUNT.%d vs i.%d\n",*numbooksp,i);
     return(obooks);
@@ -268,7 +272,7 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
     *relamountp = bestrelamount;
 }
 
-int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,int32_t type,uint64_t nxt64bits,double price,double volume,uint64_t baseamount,uint64_t relamount)
+int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,uint64_t type,uint64_t nxt64bits,double price,double volume,uint64_t baseamount,uint64_t relamount)
 {
     memset(iQ,0,sizeof(*iQ));
     if ( baseamount == 0 && relamount == 0 )
@@ -296,7 +300,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
         if ( allflag != 0 )
         {
             // "baseid", "relid", "baseamount", "relamount", "other", "type", 0 };
-            sprintf(offerstr,"{\"price\":\"%.11f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"realid\":\"%llu\",\"relamount\":\"%llu\",\"other\":\"%llu\",\"type\":%d}",price,volume,(long long)baseid,(long long)baseamount,(long long)relid,(long long)relamount,(long long)iQ->nxt64bits,iQ->type);
+            sprintf(offerstr,"{\"price\":\"%.11f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"realid\":\"%llu\",\"relamount\":\"%llu\",\"other\":\"%llu\",\"type\":\"%llu\"}",price,volume,(long long)baseid,(long long)baseamount,(long long)relid,(long long)relamount,(long long)iQ->nxt64bits,(long long)iQ->type);
         }
         else sprintf(offerstr,"{\"price\":\"%.11f\",\"volume\":\"%.8f\"}",price,volume);
     }
@@ -317,7 +321,7 @@ cJSON *gen_InstantDEX_json(int32_t isask,struct InstantDEX_quote *iQ,uint64_t re
     
     cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
     cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
-    cJSON_AddItemToObject(json,"type",cJSON_CreateNumber(iQ->type));
+    sprintf(numstr,"%llu",(long long)iQ->type), cJSON_AddItemToObject(json,"type",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
     
     sprintf(numstr,"%llu",(long long)refbaseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
@@ -597,8 +601,6 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
                 rb = obooks[i];
                 if ( rb->numquotes == 0 )
                     continue;
-                if ( iter == 1 )
-                    purge_oldest_order(rb,0);
                 if ( rb->assetids[0] == refbaseid && rb->assetids[1] == refrelid )
                     polarity = 1;
                 else if ( rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid )
@@ -711,10 +713,10 @@ void submit_quote(char *quotestr)
 char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     cJSON *json;
-    uint64_t baseamount,relamount,nxt64bits,baseid,relid,txid = 0;
+    uint64_t type,baseamount,relamount,nxt64bits,baseid,relid,txid = 0;
     double price,volume;
     uint32_t timestamp;
-    int32_t remoteflag,type;
+    int32_t remoteflag;
     struct rambook_info *rb;
     struct InstantDEX_quote iQ;
     char buf[MAX_JSON_FIELD],txidstr[64],*jsonstr,*retstr = 0;
@@ -733,22 +735,22 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
         volume = get_API_float(objs[2]);
         price = get_API_float(objs[3]);
     }
-    type = (int32_t)get_API_int(objs[7],0);
+    type = get_API_nxt64bits(objs[7]);
     if ( (timestamp= (uint32_t)get_API_int(objs[4],0)) == 0 )
         timestamp = (uint32_t)time(NULL);
-    printf("t.%u placequote type.%d dir.%d sender.(%s) valid.%d price %.11f vol %.8f\n",timestamp,type,dir,sender,valid,price,volume);
+    printf("t.%u placequote type.%llu dir.%d sender.(%s) valid.%d price %.11f vol %.8f\n",timestamp,(long long)type,dir,sender,valid,price,volume);
     if ( sender[0] != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
         {
             if ( dir > 0 )
             {
-                rb = get_rambook(baseid,relid);
+                rb = get_rambook(baseid,relid,type);
                 create_InstantDEX_quote(&iQ,timestamp,0,type,nxt64bits,price,volume,baseamount,relamount);
             }
             else
             {
-                rb = get_rambook(relid,baseid);
+                rb = get_rambook(relid,baseid,type);
                 set_best_amounts(&baseamount,&relamount,price,volume);
                 create_InstantDEX_quote(&iQ,timestamp,0,type,nxt64bits,0,0,relamount,baseamount);
             }
