@@ -102,14 +102,14 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     rb->numquotes = j;
     if ( oldi >= 0 )
     {
-        fprintf(stderr,"purge_oldest_order from NXT.%llu oldi.%d timestamp %u\n",(iQ != 0) ? (long long)iQ->nxt64bits : 0,oldi,oldest);
         rb->quotes[oldi] = rb->quotes[--rb->numquotes];
         memset(&rb->quotes[rb->numquotes],0,sizeof(rb->quotes[rb->numquotes]));
         expand_nxt64bits(NXTaddr,nxt64bits);
         np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
         if ( np->openorders > 0 )
             np->openorders--;
-    } else fprintf(stderr,"no purges\n");
+        fprintf(stderr,"purge_oldest_order from NXT.%llu (openorders.%d) oldi.%d timestamp %u\n",(long long)nxt64bits,np->openorders,oldi,oldest);
+    } else fprintf(stderr,"no purges: numquotes.%d\n",rb->numquotes);
     return(nxt64bits);
 }
 
