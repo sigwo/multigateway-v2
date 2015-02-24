@@ -561,13 +561,13 @@ void save_InstantDEX_quote(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     uint64_t obookid;
     struct NXT_acct *np;
     int32_t createdflag,maxallowed;
+    maxallowed = calc_users_maxopentrades(iQ->nxt64bits);
+    expand_nxt64bits(NXTaddr,iQ->nxt64bits);
+    np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
     if ( np->openorders >= maxallowed )
         purge_oldest_order(rb,iQ); // allow one pair per orderbook
     purge_oldest_order(rb,0);
     obookid = _obookid(rb->assetids[0],rb->assetids[1]);
-    maxallowed = calc_users_maxopentrades(iQ->nxt64bits);
-    expand_nxt64bits(NXTaddr,iQ->nxt64bits);
-    np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
     add_user_order(rb,iQ);
     np->openorders++;
 }
