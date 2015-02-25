@@ -992,7 +992,6 @@ void free_orderbook(struct orderbook *op)
 void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_t *numasksp,struct InstantDEX_quote *iQ,int32_t polarity)
 {
     struct InstantDEX_quote *ask;
-    printf("update_orderbook iter.%d polarity.%d\n",iter,polarity);
     if ( iter == 0 )
     {
         if ( polarity > 0 )
@@ -1079,8 +1078,8 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
     {
         if ( 0 && haveexchanges == 0 )
             init_rambooks(op->base,op->rel,refbaseid,refrelid);
-        free(op);
-        op = 0;
+        if ( (op->numbids + op->numasks) == 0 )
+            free_orderbook(op), op = 0;
     }
     return(op);
 }
