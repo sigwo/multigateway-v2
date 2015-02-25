@@ -52,6 +52,7 @@ uint64_t _calc_decimals_mult(int32_t decimals)
     uint64_t mult = 1;
     for (i=7-decimals; i>=0; i--)
         mult *= 10;
+    //printf("_calc_decimals_mult(%d) -> %llu\n",decimals,(long long)mult);
     return(mult);
 }
 
@@ -65,7 +66,8 @@ int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr)
         if ( get_cJSON_int(json,"errorCode") == 0 )
         {
             decimals = (int32_t)get_cJSON_int(json,"decimals");
-            *multp = _calc_decimals_mult(decimals);
+            if ( decimals >= 0 && decimals <= 8 )
+                *multp = _calc_decimals_mult(decimals);
             if ( extract_cJSON_str(buf,sizeof(buf),json,"name") <= 0 )
                 decimals = -1;
         }
@@ -85,7 +87,7 @@ uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits)
         if ( strcmp(assetmap[i][0],assetstr) == 0 )
         {
             strcpy(name,assetmap[i][1]);
-            *multp = atoi(assetmap[i][2]);
+            *multp = _calc_decimals_mult(atoi(assetmap[i][2]));
             return(INSTANTDEX_NATIVE); // native crypto type
         }
     }
@@ -882,36 +884,44 @@ uint64_t is_feetx_unconfirmed(uint64_t feetxid,uint64_t fee,char *fullhash)
     uint64_t amount,senderbits = 0;
     char cmd[1024],sender[MAX_JSON_FIELD],txidstr[MAX_JSON_FIELD],reftx[MAX_JSON_FIELD],*jsonstr;
     cJSON *json,*array,*txobj;
-    int32_t i,n,type,subtype;
-    sprintf(cmd,"requestType=getUnconfirmedTransactions&account=%s",INSTANTDEX_ACCT);
-    if ( (jsonstr= issue_NXTPOST(0,cmd)) != 0 )
+    int32_t i,n,type,subtype,iter;
+    //getUnconfirmedTransactions ({"unconfirmedTransactions":[{"fullHash":"be0b5973872cd77117e21de0c52096ad0619d84ef66816429ac0a48eb2db387a","referencedTransactionFullHash":"e4981cbf0756bb94019039a93f102d439482b6323e047bb87e2f87a80869b37e","signatureHash":"ace6dc5e2fbcb406c2cca55277291b785dd157b9de8ad16bdc17fb5172ecd476","transaction":"8203074206546070462","amountNQT":"250000000","ecBlockHeight":366610,"recipientRS":"NXT-74VC-NKPE-RYCA-5LMPT","type":0,"feeNQT":"100000000","recipient":"4383817337783094122","version":1,"sender":"12240549928875772593","timestamp":39545749,"ecBlockId":"6211277282542147167","height":2147483647,"subtype":0,"senderPublicKey":"ec7f665fccae39025531b1cb3c48e584916dba00a7034edc60f9e4111f86145d","deadline":10,"senderRS":"NXT-7LPK-BUH3-6SCV-CDTRM","signature":"02ade454abf8ea6157bb23fba59cb06479864fa9f1ceffc0a7957e9a44ada2035d94371d8b0db029d75e32a69c33a8a064885858fe3d4ed4d697ac9f30f261fd"}],"requestProcessingTime":1})
+    for (iter=0; iter<5; iter++)
     {
-        printf("getUnconfirmedTransactions (%s)\n",jsonstr);
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        sprintf(cmd,"requestType=getUnconfirmedTransactions&account=%s",INSTANTDEX_ACCT);
+        if ( (jsonstr= issue_NXTPOST(0,cmd)) != 0 )
         {
-            if ( (array= cJSON_GetObjectItem(json,"unconfirmedTransactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            printf("getUnconfirmedTransactions (%s)\n",jsonstr);
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
-                for (i=0; i<n; i++)
+                if ( (array= cJSON_GetObjectItem(json,"unconfirmedTransactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                 {
-                    txobj = cJSON_GetArrayItem(array,i);
-                    copy_cJSON(txidstr,cJSON_GetObjectItem(txobj,"transaction"));
-                    if ( calc_nxt64bits(txidstr) == feetxid )
+                    for (i=0; i<n; i++)
                     {
-                        copy_cJSON(reftx,cJSON_GetObjectItem(txobj,"referencedTransactionFullHash"));
-                        copy_cJSON(sender,cJSON_GetObjectItem(txobj,"sender"));
-                        type = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"type"),-1);
-                        subtype = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"subtype"),-1);
-                        amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
-                        printf("found unconfirmed feetxid from %s for %.8f\n",sender,dstr(amount));
-                        if ( type == 0 && subtype == 0 && amount >= fee && (fullhash == 0 || strcmp(fullhash,reftx) == 0) )
-                            senderbits = calc_nxt64bits(sender);
-                        break;
+                        txobj = cJSON_GetArrayItem(array,i);
+                        copy_cJSON(txidstr,cJSON_GetObjectItem(txobj,"transaction"));
+                        printf("compare.(%s) vs %llu | full.(%s) vs %s\n",txidstr,(long long)feetxid,fullhash,reftx);
+                        if ( calc_nxt64bits(txidstr) == feetxid )
+                        {
+                            copy_cJSON(reftx,cJSON_GetObjectItem(txobj,"referencedTransactionFullHash"));
+                            copy_cJSON(sender,cJSON_GetObjectItem(txobj,"sender"));
+                            type = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"type"),-1);
+                            subtype = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"subtype"),-1);
+                            amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                            printf("found unconfirmed feetxid from %s for %.8f vs fee %.8f\n",sender,dstr(amount),dstr(fee));
+                            if ( type == 0 && subtype == 0 && amount >= fee && (fullhash == 0 || strcmp(fullhash,reftx) == 0) )
+                                senderbits = calc_nxt64bits(sender);
+                            break;
+                        }
                     }
                 }
+                free_json(json);
             }
-            free_json(json);
+            free(jsonstr);
         }
-        free(jsonstr);
+        if ( senderbits != 0 )
+            break;
+        sleep(2);
     }
     return(senderbits);
 }
@@ -940,7 +950,7 @@ struct InstantDEX_quote *order_match(uint64_t nxt64bits,uint64_t relid,uint64_t 
             for (j=0; j<rb->numquotes; j++)
             {
                 iQ = &rb->quotes[j];
-                printf(" %llu >= %llu and %llu <= %llu relfee.%llu\n",(long long)baseamount,(long long)iQ->baseamount,(long long)relamount,(long long)iQ->relamount,(long long)relfee);
+                printf("matched.%d (%llu vs %llu) %llu >= %llu and %llu <= %llu relfee.%llu\n",iQ->matched,(long long)iQ->nxt64bits,(long long)nxt64bits,(long long)baseamount,(long long)iQ->baseamount,(long long)relamount,(long long)iQ->relamount,(long long)relfee);
                 if ( iQ->matched == 0 && iQ->nxt64bits == nxt64bits && baseamount >= iQ->baseamount && relamount <= iQ->relamount )
                 {
                     otherbalance = get_asset_quantity(&unconfirmed,otherNXTaddr,assetidstr);
