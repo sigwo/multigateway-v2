@@ -227,7 +227,7 @@ struct rambook_info **get_allrambooks(int32_t *numbooksp)
     {
         purge_oldest_order(rb,0);
         obooks[i++] = rb;
-        printf("rambook.(%s) %s %llu.%d / %s %llu.%d\n",rb->exchange,rb->base,(long long)rb->assetids[0],(int)(rb->assetids[3]>>32),rb->rel,(long long)rb->assetids[1],(uint32_t)rb->assetids[3]);
+        printf("rambook.(%s) %s %llu.%d / %s %llu.%d [%llu %llu]\n",rb->exchange,rb->base,(long long)rb->assetids[0],(int)(rb->assetids[3]>>32),rb->rel,(long long)rb->assetids[1],(uint32_t)rb->assetids[3],(long long)rb->basemult,(long long)rb->relmult);
     }
     if ( i != *numbooksp )
         printf("get_allrambooks HASH_COUNT.%d vs i.%d\n",*numbooksp,i);
@@ -1076,7 +1076,7 @@ struct orderbook *create_orderbook(uint32_t oldest,uint64_t refbaseid,uint64_t r
     //printf("(%f %f %llu %u)\n",quotes->price,quotes->vol,(long long)quotes->nxt64bits,quotes->timestamp);
     if ( op != 0 )
     {
-        if ( haveexchanges == 0 )
+        if ( 0 && haveexchanges == 0 )
             init_rambooks(op->base,op->rel,refbaseid,refrelid);
         free(op);
         op = 0;
