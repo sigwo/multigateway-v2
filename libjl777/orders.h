@@ -992,6 +992,7 @@ void free_orderbook(struct orderbook *op)
 void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_t *numasksp,struct InstantDEX_quote *iQ,int32_t polarity)
 {
     struct InstantDEX_quote *ask;
+    printf("update_orderbook iter.%d polarity.%d\n",iter,polarity);
     if ( iter == 0 )
     {
         if ( polarity > 0 )
