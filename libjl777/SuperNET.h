@@ -169,7 +169,8 @@ struct NXT_asset
     uint64_t issued,mult,assetbits,issuer;
     char *description,*name;
     struct NXT_assettxid **txids;   // all transactions for this asset
-    int32_t max,num,decimals,exdiv_height;
+    int32_t max,num,decimals;
+    uint16_t type,subtype;
 };
 
 #define INCLUDE_DEFINES

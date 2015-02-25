@@ -55,14 +55,21 @@ cJSON *gen_NXT_tx_json(struct NXT_tx *utx,char *reftxid,double myshare,char *NXT
         cmd[0] = 0;
         if ( utx->type == 0 && utx->subtype == 0 )
             sprintf(cmd,"%s=sendMoney&amountNQT=%lld",_NXTSERVER,(long long)(utx->U.amountNQT*myshare));
-        else if ( utx->type == 2 && utx->subtype == 1 )
+        else
         {
             expand_nxt64bits(assetidstr,utx->assetidbits);
-            sprintf(cmd,"%s=transferAsset&asset=%s&quantityQNT=%lld",_NXTSERVER,assetidstr,(long long)(utx->U.quantityQNT*myshare));
+            if ( utx->type == 2 && utx->subtype == 1 )
+                sprintf(cmd,"%s=transferAsset&asset=%s&quantityQNT=%lld",_NXTSERVER,assetidstr,(long long)(utx->U.quantityQNT*myshare));
+            else if ( utx->type == 5 && utx->subtype == 3 )
+                sprintf(cmd,"%s=transferCurrency&currency=%s&units=%lld",_NXTSERVER,assetidstr,(long long)(utx->U.quantityQNT*myshare));
+            else
+            {
+                printf("unsupported type.%d subtype.%d\n",utx->type,utx->subtype);
+                return(0);
+            }
             if ( utx->comment[0] != 0 )
                 strcat(cmd,"&message="),strcat(cmd,utx->comment);
         }
-        else printf("unsupported type.%d subtype.%d\n",utx->type,utx->subtype);
         if ( reftxid != 0 && reftxid[0] != 0 && cmd[0] != 0 )
             strcat(cmd,"&referencedTransactionFullHash="),strcat(cmd,reftxid);
         if ( cmd[0] != 0 )
@@ -86,8 +93,11 @@ cJSON *gen_NXT_tx_json(struct NXT_tx *utx,char *reftxid,double myshare,char *NXT
 
 uint64_t set_NXTtx(uint64_t nxt64bits,struct NXT_tx *tx,uint64_t assetidbits,int64_t amount,uint64_t other64bits,int32_t feebits)
 {
+    char assetidstr[64];
     uint64_t fee = 0;
+    int32_t createdflag;
     struct NXT_tx U;
+    struct NXT_asset *ap;
     memset(&U,0,sizeof(U));
     U.senderbits = nxt64bits;
     U.recipientbits = other64bits;
@@ -100,8 +110,10 @@ uint64_t set_NXTtx(uint64_t nxt64bits,struct NXT_tx *tx,uint64_t assetidbits,int
     }
     if ( assetidbits != NXT_ASSETID )
     {
-        U.type = 2;
-        U.subtype = 1;
+        expand_nxt64bits(assetidstr,assetidbits);
+        ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
+        U.type = ap->type;
+        U.subtype = ap->subtype;
         U.U.quantityQNT = amount - fee;
     } else U.U.amountNQT = amount - fee;
     U.feeNQT = MIN_NQTFEE;
@@ -110,7 +122,7 @@ uint64_t set_NXTtx(uint64_t nxt64bits,struct NXT_tx *tx,uint64_t assetidbits,int
     return(fee);
 }
 
-void truncate_utxbytes(char *utxbytes)
+/*void truncate_utxbytes(char *utxbytes)
 {
     long i,n;
     n = strlen(utxbytes);
@@ -122,7 +134,7 @@ void truncate_utxbytes(char *utxbytes)
         utxbytes[n-128] = 0;
         //printf("truncate n.%ld to %ld\n",n,n-128);
     } else printf("utxlen.%ld\n",n);
-}
+}*/
 
 int32_t calc_raw_NXTtx(char *utxbytes,char *sighash,uint64_t assetidbits,int64_t amount,uint64_t other64bits,char *NXTACCTSECRET,uint64_t nxt64bits)
 {
@@ -136,7 +148,6 @@ int32_t calc_raw_NXTtx(char *utxbytes,char *sighash,uint64_t assetidbits,int64_t
     {
         if ( extract_cJSON_str(utxbytes,1024,json,"transactionBytes") > 0 && extract_cJSON_str(sighash,1024,json,"signatureHash") > 0 )
         {
-            //truncate_utxbytes(utxbytes);
             retval = 0;
             printf("generated utx.(%s) sighash.(%s)\n",utxbytes,sighash);
         } else printf("missing tx or sighash.(%s)\n",cJSON_Print(json));
@@ -170,16 +181,20 @@ struct NXT_tx *set_NXT_tx(cJSON *json)
     assetidbits = NXT_ASSETID;
     quantity = 0;
     size = sizeof(*utx);
-    if ( strcmp(type,"2") == 0 && strcmp(subtype,"1") == 0 )
+    if ( (strcmp(type,"2") == 0 && strcmp(subtype,"1") == 0) || (strcmp(type,"5") == 0 && strcmp(subtype,"3") == 0) )
     {
         attachmentobj = cJSON_GetObjectItem(json,"attachment");
         if ( attachmentobj != 0 )
         {
             if ( extract_cJSON_str(assetidstr,sizeof(assetidstr),attachmentobj,"asset") > 0 )
                 assetidbits = calc_nxt64bits(assetidstr);
+            else if ( extract_cJSON_str(assetidstr,sizeof(assetidstr),attachmentobj,"currency") > 0 )
+                assetidbits = calc_nxt64bits(assetidstr);
             if ( extract_cJSON_str(comment,sizeof(comment),attachmentobj,"message") > 0 )
                 size += strlen(comment);
             if ( extract_cJSON_str(quantityQNT,sizeof(quantityQNT),attachmentobj,"quantityQNT") > 0 )
+                quantity = calc_nxt64bits(quantityQNT);
+            else if ( extract_cJSON_str(quantityQNT,sizeof(quantityQNT),attachmentobj,"units") > 0 )
                 quantity = calc_nxt64bits(quantityQNT);
         }
     }
@@ -222,12 +237,11 @@ struct NXT_tx *sign_NXT_tx(char utxbytes[1024],char signedtx[1024],char *NXTACCT
             str = cJSON_Print(txjson);
             strcpy(signedtx,str);
             strcpy(utxbytes,errstr);
+            free(str);
         }
-        else if ( extract_cJSON_str(utxbytes,1024,txjson,"unsignedTransactionBytes") > 0 &&
-                 extract_cJSON_str(signedtx,1024,txjson,"transactionBytes") > 0 )
+        else if ( extract_cJSON_str(utxbytes,1024,txjson,"unsignedTransactionBytes") > 0 && extract_cJSON_str(signedtx,1024,txjson,"transactionBytes") > 0 )
         {
-            //truncate_utxbytes(utxbytes);
-            if ( (parsed = issue_parseTransaction(0,signedtx)) != 0 )
+            if ( (parsed= issue_parseTransaction(0,signedtx)) != 0 )
             {
                 refjson = cJSON_Parse(parsed);
                 if ( refjson != 0 )
@@ -353,13 +367,14 @@ uint64_t send_feetx(uint64_t assetbits,uint64_t fee,char *fullhash)
     printf("feetx for %llu %.8f fullhash.(%s)\n",(long long)assetbits,dstr(fee),fullhash);
     if ( (feetx= sign_NXT_tx(feeutx,signedfeetx,Global_mp->srvNXTACCTSECRET,calc_nxt64bits(Global_mp->myNXTADDR),&feeT,fullhash,1.)) != 0 )
     {
+        printf("broadcast fee for %llu\n",(long long)assetbits);
         feetxid = issue_broadcastTransaction(&errcode,0,signedfeetx,Global_mp->srvNXTACCTSECRET);
         free(feetx);
     }
     return(feetxid);
 }
 
-char *processutx(char *sender,char *utx,char *sig,char *full)
+char *processutx(char *sender,char *utx,char *sig,char *full,uint64_t feeAtxid)
 {
     struct InstantDEX_quote *order_match(uint64_t nxt64bits,uint64_t baseid,uint64_t baseqty,uint64_t othernxtbits,uint64_t relid,uint64_t relqty,uint64_t relfee,uint64_t relfeetxid,char *fullhash);
    //PARSED OFFER.({"sender":"8989816935121514892","timestamp":20810867,"height":2147483647,"amountNQT":"0","verify":false,"subtype":1,"attachment":{"asset":"7631394205089352260","quantityQNT":"1000","comment":"{\"assetB\":\"1639299849328439538\",\"qtyB\":\"1000000\"}"},"recipientRS":"NXT-CWEE-VXCV-697E-9YKJT","feeNQT":"100000000","senderPublicKey":"25c5fed2690701cf06f267e7c227b1a3c0dfa9c6fc3cdb593b3af6f16d65302f","type":2,"deadline":720,"senderRS":"NXT-CWEE-VXCV-697E-9YKJT","recipient":"8989816935121514892"})
@@ -368,7 +383,7 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
     cJSON *json,*obj,*offerjson,*commentobj;
     struct NXT_tx *offertx;
     double vol,price,amountB;
-    uint64_t qtyB,assetB,fee,feeA,feetxid,feeAtxid;
+    uint64_t qtyB,assetB,fee,feeA,feetxid;
     char *jsonstr,*parsed,hopNXTaddr[64],buf[MAX_JSON_FIELD],calchash[MAX_JSON_FIELD],NXTaddr[64],responseutx[MAX_JSON_FIELD],signedtx[MAX_JSON_FIELD],otherNXTaddr[64];
     printf("PROCESSUTX.(%s) sig.%s full.%s from (%s)\n",utx,sig,full,sender);
     jsonstr = issue_calculateFullHash(0,utx,sig);
@@ -384,12 +399,13 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                 if ( (parsed = issue_parseTransaction(0,utx)) != 0 )
                 {
                     stripwhite_ns(parsed,strlen(parsed));
-                    //printf("PARSED OFFER.(%s) full.(%s) (%s) offer sender.%s\n",parsed,full,calchash,sender);
+                    printf("PARSED OFFER.(%s) full.(%s) (%s) offer sender.%s\n",parsed,full,calchash,sender);
                     if ( (offerjson= cJSON_Parse(parsed)) != 0 )
                     {
                         offertx = set_NXT_tx(offerjson);
                         expand_nxt64bits(otherNXTaddr,offertx->senderbits);
                         vol = conv_assetoshis(offertx->assetidbits,offertx->U.quantityQNT);
+                        //printf("other.(%s) vol %f\n",otherNXTaddr,vol);
                         if ( vol != 0. && offertx->comment[0] != 0 )
                         {
                             commentobj = cJSON_Parse(offertx->comment);
@@ -398,10 +414,11 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                                 assetB = get_satoshi_obj(commentobj,"assetB");
                                 qtyB = get_satoshi_obj(commentobj,"qtyB");
                                 feeA = get_satoshi_obj(commentobj,"feeA");
-                                feeAtxid = get_satoshi_obj(commentobj,"feeAtxid");
-                                free_json(commentobj);
+                                //feeAtxid = get_satoshi_obj(commentobj,"feeAtxid");
                                 amountB = conv_assetoshis(assetB,qtyB);
                                 price = (amountB / vol);
+                                printf("assetB.%llu qtyB.%llu feeA.%llu feeAtxid.%llu | %.8f amountB %.8f qty %llu\n",(long long)assetB,(long long)qtyB,(long long)feeA,(long long)feeAtxid,price,amountB,(long long)offertx->U.quantityQNT);
+                                free_json(commentobj);
                                 if ( (iQ= order_match(offertx->recipientbits,assetB,qtyB,offertx->senderbits,offertx->assetidbits,offertx->U.quantityQNT,feeA,feeAtxid,full)) != 0 )
                                 {
                                     fee = set_NXTtx(offertx->recipientbits,&T,assetB,qtyB,offertx->senderbits,-1);//FEEBITS);
@@ -425,9 +442,8 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
                                             sprintf(buf,"{\"results\":\"utx from NXT.%llu accepted with fullhash.(%s) %.8f of %llu for %.8f of %llu -> price %.8f\"}",(long long)offertx->senderbits,full,vol,(long long)offertx->assetidbits,amountB,(long long)assetB,price);
                                         }
                                         else sprintf(buf,"{\"error\":\"from %s error signing responsutx.(%s)\"}",otherNXTaddr,NXTaddr);
-                                    }
-                                    else sprintf(buf,"{\"error\":\"cant send response to %s, no access to acct %s\"}",otherNXTaddr,NXTaddr);
-                                } else sprintf(buf,"{\"error\":\"nothing matches %s from %s\"}",parsed,otherNXTaddr);
+                                    } else sprintf(buf,"{\"error\":\"cant send response to %s, no access to acct %s\"}",otherNXTaddr,NXTaddr);
+                                } else sprintf(buf,"{\"error\":\"nothing matches offer from %s\"}",otherNXTaddr);
                             }
                             else sprintf(buf,"{\"error\":\"%s error parsing comment comment.(%s)\"}",otherNXTaddr,offertx->comment);
                         }
@@ -445,6 +461,7 @@ char *processutx(char *sender,char *utx,char *sig,char *full)
         free(jsonstr);
     }
     else sprintf(buf,"{\"error\":\"processutx cant issue calcfullhash\"}");
+    printf("PROCESS RETURNS.(%s)\n",buf);
     return(clonestr(buf));
 }
 
@@ -499,6 +516,7 @@ char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uin
         return(clonestr(buf));
     }
     fee = set_NXTtx(nxt64bits,&T,assetA,assetoshisA,other64bits,-1);//FEEBITS);
+    fee = INSTANTDEX_FEE;
     sprintf(T.comment,"{\"obookid\":\"%llu\",\"assetB\":\"%llu\",\"qtyB\":\"%llu\",\"feeA\":\"%llu\"}",(long long)(assetA ^ assetB),(long long)assetB,(long long)assetoshisB,(long long)fee);
     tx = sign_NXT_tx(utxbytes,signedtx,NXTACCTSECRET,nxt64bits,&T,0,1.);
     if ( tx != 0 )
