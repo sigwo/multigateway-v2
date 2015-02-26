@@ -758,7 +758,7 @@ void *poll_exchange(void *_exchangeidp)
                 bids = pair->bids, asks = pair->asks;
                 if ( pair->lastmilli == 0. || milliseconds() > (pair->lastmilli + 1000.*QUOTE_SLEEP) )
                 {
-                     printf("%.3f lastmilli %.3f: %s: %s %s\n",milliseconds(),pair->lastmilli,exchange->name,bids->base,bids->rel);
+                    //printf("%.3f lastmilli %.3f: %s: %s %s\n",milliseconds(),pair->lastmilli,exchange->name,bids->base,bids->rel);
                     (*pair->ramparse)(bids,asks,maxdepth);
                     pair->lastmilli = exchange->lastmilli = milliseconds();
                     if ( (bids->updated + asks->updated) != 0 )
