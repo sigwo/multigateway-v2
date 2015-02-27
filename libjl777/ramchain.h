@@ -3264,7 +3264,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct ramchain_info 
     struct cointx_info *cointx;
     uint64_t orphans = 0;
     *pendingredeemsp = 0;
-    disable_newsends = (ram->numpendingsends > 0);
+    disable_newsends = ((ram->numpendingsends > 0) || (ram->S.gatewayid < 0));
     if ( (ap= ram->ap) == 0 )
     {
         printf("no NXT_asset for %s\n",ram->name);
