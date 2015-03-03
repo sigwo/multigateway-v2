@@ -36,7 +36,7 @@ struct NXT_tx
     union _NXT_tx_num U;
     int32_t deadline,type,subtype,verify,number;
     uint32_t timestamp;
-    char comment[128];
+    char comment[2048];
 };
 
 int32_t NXTutxcmp(struct NXT_tx *ref,struct NXT_tx *tx,double myshare)
@@ -101,7 +101,7 @@ cJSON *gen_NXT_tx_json(struct NXT_tx *utx,char *reftxid,double myshare,char *NXT
                 free(retstr);
             }
         }
-    } else printf("cant gen_NXT_txjson when sender is not me\n");
+    } else printf("cant gen_NXT_txjson when sender.%llu is not me.%llu\n",(long long)utx->senderbits,(long long)nxt64bits);
     return(json);
 }
 
@@ -132,6 +132,7 @@ uint64_t set_NXTtx(uint64_t nxt64bits,struct NXT_tx *tx,uint64_t assetidbits,int
     } else U.U.amountNQT = amount - fee;
     U.feeNQT = MIN_NQTFEE;
     U.deadline = 10;//DEFAULT_NXT_DEADLINE;
+    printf("set_NXTtx(%llu -> %llu) %.8f of %llu\n",(long long)U.senderbits,(long long)U.recipientbits,dstr(amount),(long long)assetidbits);
     *tx = U;
     return(fee);
 }
@@ -245,7 +246,7 @@ struct NXT_tx *sign_NXT_tx(char utxbytes[1024],char signedtx[1024],char *NXTACCT
     cJSON *refjson,*txjson;
     char *parsed,*str,errstr[32];
     struct NXT_tx *refutx = 0;
-    printf("sign_NXT_tx reftxid.(%s)\n",reftxid);
+    printf("sign_NXT_tx.%llu  reftxid.(%s)\n",(long long)nxt64bits,reftxid);
     txjson = gen_NXT_tx_json(utx,reftxid,myshare,NXTACCTSECRET,nxt64bits);
     utxbytes[0] = signedtx[0] = 0;
     if ( txjson != 0 )
@@ -259,6 +260,7 @@ struct NXT_tx *sign_NXT_tx(char utxbytes[1024],char signedtx[1024],char *NXTACCT
         }
         else if ( extract_cJSON_str(utxbytes,1024,txjson,"unsignedTransactionBytes") > 0 && extract_cJSON_str(signedtx,1024,txjson,"transactionBytes") > 0 )
         {
+            printf("signedbytes.(%s)\n",signedtx);
             if ( (parsed= issue_parseTransaction(0,signedtx)) != 0 )
             {
                 refjson = cJSON_Parse(parsed);
@@ -584,7 +586,7 @@ struct jumptrades
     uint64_t fee,otherfee,feetxid,otherfeetxid,baseid,relid,basenxtamount,relnxtamount,nxt64bits,other64bits,jump64bits,qtyA,qtyB,jumpqty;
     char comment[MAX_JSON_FIELD],feeutxbytes[2048],feesignedtx[2048],triggerhash[65],feesighash[65],numlegs;
     uint32_t otherexpiration;
-    struct tradeleg legs[6];
+    struct tradeleg legs[8];
     struct NXT_tx *feetx;
 };
 
@@ -596,6 +598,7 @@ void get_txhashes(char *sighash,char *fullhash,struct NXT_tx *tx)
 
 void purge_jumptrades(struct jumptrades *jtrades)
 {
+    printf("purge_jumptrades\n");
     if ( jtrades->feetx != 0 )
         free(jtrades->feetx);
     free(jtrades);
@@ -604,6 +607,7 @@ void purge_jumptrades(struct jumptrades *jtrades)
 uint64_t calc_nxtmedianprice(uint64_t assetid)
 {
     uint64_t highbid,lowask;
+    printf("calc_nxtmedianprice\n");
     highbid = get_nxthighbid(assetid);
     lowask = get_nxtlowask(assetid);
     if ( highbid != 0 && lowask != 0 )
@@ -614,6 +618,7 @@ uint64_t calc_nxtmedianprice(uint64_t assetid)
 uint64_t calc_nxtprice(struct jumptrades *jtrades,uint64_t assetid,uint64_t amount)
 {
     uint64_t *ptr = 0,nxtprice,nxtamount = 0;
+    printf("calc_nxtprice\n");
     if ( jtrades->baseid == assetid )
     {
         if ( (nxtamount= jtrades->basenxtamount) != 0 )
@@ -626,14 +631,21 @@ uint64_t calc_nxtprice(struct jumptrades *jtrades,uint64_t assetid,uint64_t amou
             return(nxtamount);
         ptr = &jtrades->relnxtamount;
     }
+    else
+    {
+        printf("calc_nxtprice: illegal assetid.%llu\n",(long long)assetid);
+        return(0);
+    }
     nxtprice = calc_nxtmedianprice(assetid);
     nxtamount = (nxtprice * amount); // already adjusted for decimals
+    printf("nxtprice %.8f nxtamount %.8f -> (*%p)\n",dstr(nxtprice),dstr(nxtamount),ptr);
     *ptr = nxtamount;
     return(nxtprice);
 }
 
 uint64_t calc_NXTprice(struct _tradeleg *src,uint64_t srcqty,struct _tradeleg *dest,uint64_t destqty)
 {
+    printf("calc_NXTprice dest.%.8f src.%8f\n",dstr(destqty),dstr(srcqty));
     if ( src->assetid == NXT_ASSETID )
         return(src->amount / destqty);
     else if ( dest->assetid == NXT_ASSETID )
@@ -646,6 +658,7 @@ struct tradeleg *set_tradeleg(struct tradeleg *leg,struct _tradeleg *src,struct 
 int32_t set_tradepair(int32_t numlegs,struct jumptrades *jtrades,struct _tradeleg *src,uint64_t srcqty,struct _tradeleg *dest,uint64_t destqty)
 {
     struct tradeleg *leg;
+    printf("set_tradeleg\n");
     leg = set_tradeleg(&jtrades->legs[numlegs++],src,dest), leg->nxt64bits = src->nxt64bits, leg->qty = srcqty, leg->NXTprice = calc_NXTprice(src,srcqty,dest,destqty);
     leg = set_tradeleg(&jtrades->legs[numlegs++],dest,src), leg->nxt64bits = dest->nxt64bits, leg->qty = destqty, leg->NXTprice = calc_NXTprice(src,srcqty,dest,destqty);
     return(numlegs);
@@ -658,8 +671,10 @@ int32_t set_tradequad(int32_t numlegs,struct jumptrades *jtrades,struct _tradele
     uint64_t destNXTprice,srcNXTprice;
     srcae.nxt64bits = 0, srcae.assetid = NXT_ASSETID, srcae.amount = 0;
     destae = srcae;
+    printf("set_tradequad\n");
     srcNXTprice = calc_nxtprice(jtrades,src->assetid,src->amount);
     destNXTprice = calc_nxtprice(jtrades,dest->assetid,dest->amount);
+    printf("set_tradequad src %.8f dest %.8f\n",dstr(srcNXTprice),dstr(destNXTprice));
     leg = set_tradeleg(&jtrades->legs[numlegs++],src,&srcae), leg->qty = srcqty, leg->NXTprice = srcNXTprice, leg->nxt64bits = src->nxt64bits;
     leg = set_tradeleg(&jtrades->legs[numlegs++],&srcae,dest), leg->qty = srcqty, leg->NXTprice = srcNXTprice, leg->nxt64bits = dest->nxt64bits;
     leg = set_tradeleg(&jtrades->legs[numlegs++],dest,&destae), leg->qty = destqty, leg->NXTprice = destNXTprice, leg->nxt64bits = dest->nxt64bits;
@@ -669,6 +684,7 @@ int32_t set_tradequad(int32_t numlegs,struct jumptrades *jtrades,struct _tradele
 
 int32_t set_jtrade(int32_t numlegs,struct jumptrades *jtrades,struct _tradeleg *src,uint64_t srcqty,struct _tradeleg *dest,uint64_t destqty)
 {
+    printf("set_jtrade\n");
     if ( src->assetid == NXT_ASSETID || dest->assetid == NXT_ASSETID )
         return(set_tradepair(numlegs,jtrades,src,srcqty,dest,destqty));
     else return(set_tradequad(numlegs,jtrades,src,srcqty,dest,destqty));
@@ -692,6 +708,7 @@ uint64_t submit_triggered_bidask(char *bidask,uint64_t nxt64bits,char *NXTACCTSE
 
 void set_jtrade_tx(struct jumptrades *jtrade,struct tradeleg *leg,char *NXTACCTSECRET,uint64_t nxt64bits,char *triggerhash)
 {
+    printf("set_jtrade_tx\n");
     if ( leg->src.assetid == NXT_ASSETID || leg->dest.assetid == NXT_ASSETID )
     {
         if ( leg->src.nxt64bits == nxt64bits )
@@ -735,6 +752,7 @@ struct jumptrades *init_jtrades(uint64_t feeAtxid,char *triggerhash,uint64_t myn
     memset(jtrades,0,sizeof(*jtrades));
     printf("init_jtrades\n");
     jtrades->qtyA = amountA, jtrades->qtyB = amountB, jtrades->jumpqty = jumpamount;
+    jtrades->baseid = assetA, jtrades->relid = assetB;
     if ( assetA != NXT_ASSETID )
     {
         expand_nxt64bits(assetidstr,assetA);
@@ -794,15 +812,21 @@ struct jumptrades *init_jtrades(uint64_t feeAtxid,char *triggerhash,uint64_t myn
         jumpstr[0] = 0;
     }
     sprintf(comment,"{\"requestType\":\"processjumptrade\",\"NXT\":\"%llu\",\"assetA\":\"%llu\",\"amountA\":\"%llu\",%s\"other\":\"%llu\",\"assetB\":\"%llu\",\"amountB\":\"%llu\",\"feeA\":\"%llu\"}",(long long)nxt64bits,(long long)assetA,(long long)amountA,jumpstr,(long long)other64bits,(long long)assetB,(long long)amountB,(long long)jtrades->fee);
+    printf("comment.(%s)\n",comment);
     if ( triggerhash == 0 || triggerhash[0] == 0 )
     {
-        set_NXTtx(nxt64bits,&T,NXT_ASSETID,jtrades->fee,calc_nxt64bits(INSTANTDEX_ACCT),-1);
-        strcpy(T.comment,comment);
-        jtrades->feetx = sign_NXT_tx(jtrades->feeutxbytes,jtrades->feesignedtx,NXTACCTSECRET,nxt64bits,&T,0,1.);
-        printf("signed tx %llu trigger.(%s)\n",(long long)jtrades->feetx,triggerhash);
-        get_txhashes(jtrades->feesighash,jtrades->triggerhash,jtrades->feetx);
-        triggerhash = jtrades->triggerhash;
-        jtrades->feetxid = jtrades->feetx->txid;
+        if ( mynxt64bits == nxt64bits )
+        {
+            printf("create fee tx %llu vs %llu\n",(long long)calc_nxt64bits(Global_mp->myNXTADDR),(long long)nxt64bits);
+            set_NXTtx(nxt64bits,&T,NXT_ASSETID,jtrades->fee,calc_nxt64bits(INSTANTDEX_ACCT),-1);
+            strcpy(T.comment,comment);
+            printf("sign it\n");
+            jtrades->feetx = sign_NXT_tx(jtrades->feeutxbytes,jtrades->feesignedtx,NXTACCTSECRET,nxt64bits,&T,0,1.);
+            printf("signed tx %llu trigger.(%s)\n",(long long)jtrades->feetx,triggerhash);
+            get_txhashes(jtrades->feesighash,jtrades->triggerhash,jtrades->feetx);
+            triggerhash = jtrades->triggerhash;
+            jtrades->feetxid = jtrades->feetx->txid;
+        } else printf("%llu is not me %llu\n",(long long)mynxt64bits,(long long)nxt64bits);
     }
     else
     {
