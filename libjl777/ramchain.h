@@ -7547,7 +7547,7 @@ int32_t ram_rawvout_update(int32_t iter,uint32_t *script_rawindp,uint32_t *addr_
                 if ( addrptr->numpayloads >= addrptr->maxpayloads )
                 {
                     //printf("realloc max.%d for (%d %d %d) with num.%d\n",ptr->maxpayloads,blocknum,txind,vout,ptr->numpayloads);
-                    addrptr->maxpayloads = (addrptr->numpayloads + 1);
+                    addrptr->maxpayloads = (addrptr->numpayloads + 16);
                     addrptr->payloads = realloc(addrptr->payloads,addrptr->maxpayloads * sizeof(struct rampayload));
                 }
                 if ( iter <= 2 )
@@ -9618,7 +9618,7 @@ void *process_ramchains(void *_argcoinstr)
                 }
                 else //if ( (ram->S.NXTblocknum+ram->min_NXTconfirms) < _get_NXTheight() || (ram->mappedblocks[1]->blocknum+ram->min_confirms) < _get_RTheight(ram) )
                 {
-                    if ( strcmp(ram->name,"BTC") != 0 )//ram->S.is_realtime != 0 )
+                    //if ( strcmp(ram->name,"BTC") != 0 )//ram->S.is_realtime != 0 )
                     {
                         ram->S.NXTblocknum = _update_ramMGW(0,ram,ram->S.NXTblocknum);
                         if ( (ram->S.MGWpendingredeems + ram->S.MGWpendingdeposits) != 0 )
