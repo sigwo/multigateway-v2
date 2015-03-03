@@ -708,7 +708,7 @@ uint64_t submit_triggered_bidask(char *bidask,uint64_t nxt64bits,char *NXTACCTSE
 
 void set_jtrade_tx(struct jumptrades *jtrade,struct tradeleg *leg,char *NXTACCTSECRET,uint64_t nxt64bits,char *triggerhash)
 {
-    printf("set_jtrade_tx\n");
+    printf("set_jtrade_tx.%llu (%s) (%llu %llu %.8f) (%llu %llu %.8f)\n",(long long)nxt64bits,triggerhash,(long long)leg->src.nxt64bits,(long long)leg->src.assetid,dstr(leg->src.amount),(long long)leg->dest.nxt64bits,(long long)leg->dest.assetid,dstr(leg->dest.amount));
     if ( leg->src.assetid == NXT_ASSETID || leg->dest.assetid == NXT_ASSETID )
     {
         if ( leg->src.nxt64bits == nxt64bits )
@@ -716,6 +716,7 @@ void set_jtrade_tx(struct jumptrades *jtrade,struct tradeleg *leg,char *NXTACCTS
             if ( leg->src.assetid == NXT_ASSETID )
                 leg->txid = submit_triggered_bidask("placeBidOrder",nxt64bits,NXTACCTSECRET,leg->dest.assetid,leg->qty,leg->NXTprice,triggerhash,jtrade->comment);
             else leg->txid = submit_triggered_bidask("placeAskOrder",nxt64bits,NXTACCTSECRET,leg->src.assetid,leg->qty,leg->NXTprice,triggerhash,jtrade->comment);
+            printf("txid normal %llu\n",(long long)leg->txid);
         }
         else if ( leg->src.nxt64bits == 0 )
         {
@@ -723,7 +724,8 @@ void set_jtrade_tx(struct jumptrades *jtrade,struct tradeleg *leg,char *NXTACCTS
                 leg->txid = submit_triggered_bidask("placeBidOrder",nxt64bits,NXTACCTSECRET,leg->dest.assetid,leg->qty,leg->NXTprice,triggerhash,jtrade->comment);
             else if ( leg->src.nxt64bits == nxt64bits )
                 leg->txid = submit_triggered_bidask("placeAskOrder",nxt64bits,NXTACCTSECRET,leg->src.assetid,leg->qty,leg->NXTprice,triggerhash,jtrade->comment);
-        } else printf("set_jtrade_tx: illegal src or dest jtrade_tx\n");
+            printf("txid nxtae %llu\n",(long long)leg->txid);
+        } else printf("set_jtrade_tx: illegal src.%llu or dest.%llu jtrade_tx by %llu\n",(long long)leg->src.nxt64bits,(long long)leg->dest.nxt64bits,(long long)nxt64bits);
     } else printf("set_jtrade_tx: unsupported jtrade_tx\n");
 }
 
@@ -733,7 +735,7 @@ int32_t reject_trade(uint64_t mynxt64bits,struct _tradeleg *src,struct _tradeleg
     {
         printf("verify asset.%llu amount.%llu -> NXT.%llu asset.%llu amount %llu is in orderbook\n",(long long)src->assetid,(long long)src->amount,(long long)dest->nxt64bits,(long long)dest->assetid,(long long)dest->amount);
     }
-    printf("mismatched nxtid %llu != %llu\n",(long long)mynxt64bits,(long long)src->nxt64bits);
+    else printf("mismatched nxtid %llu != %llu\n",(long long)mynxt64bits,(long long)src->nxt64bits);
     return(-1);
 }
 
@@ -789,7 +791,7 @@ struct jumptrades *init_jtrades(uint64_t feeAtxid,char *triggerhash,uint64_t myn
             purge_jumptrades(jtrades);
             return(0);
         }
-        if ( mynxt64bits == other64bits && reject_trade(mynxt64bits,&dest,&myjump) != 0 )
+        else if ( mynxt64bits == other64bits && reject_trade(mynxt64bits,&dest,&myjump) != 0 )
         {
             printf("other64bits rejects jumptrade\n");
             purge_jumptrades(jtrades);
@@ -807,7 +809,7 @@ struct jumptrades *init_jtrades(uint64_t feeAtxid,char *triggerhash,uint64_t myn
             purge_jumptrades(jtrades);
             return(0);
         }
-        printf("call set_jtrade\n");
+        printf("call set_jtrade: src.%llu %.8f -> dest.%llu %.8f\n",(long long)src.assetid,dstr(jtrades->qtyA),(long long)dest.assetid,dstr(jtrades->qtyB));
         numlegs = set_jtrade(numlegs,jtrades,&src,jtrades->qtyA,&dest,jtrades->qtyB);
         jumpstr[0] = 0;
     }
