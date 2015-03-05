@@ -600,6 +600,7 @@ struct InstantDEX_quote *clone_quotes(int32_t *nump,struct rambook_info *rb)
     {
         quotes = calloc(rb->numquotes,sizeof(*rb->quotes));
         memcpy(quotes,rb->quotes,rb->numquotes * sizeof(*rb->quotes));
+        memset(rb->quotes,0,rb->numquotes * sizeof(*rb->quotes));
     }
     rb->numquotes = 0;
     return(quotes);
@@ -641,7 +642,7 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
         if ( j == numold )
             emit_iQ(rb,iQ), numchanges++;
     }
-    printf("%s %s_%s NEW.%d\n\n",rb->exchange,rb->base,rb->rel,numold);
+    printf("%s %s_%s NEW.%d\n\n",rb->exchange,rb->base,rb->rel,rb->numquotes);
     if ( oldquotes != 0 )
         free(oldquotes);
     return(numchanges);
