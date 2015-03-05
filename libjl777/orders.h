@@ -109,9 +109,11 @@ int32_t is_exchange_nxt64bits(uint64_t nxt64bits)
         exchange = &Exchanges[exchangeid];
         if ( exchange->name[0] == 0 )
             return(0);
+        printf("(%llu vs %llu) ",(long long)exchange->nxt64bits,(long long)nxt64bits);
         if ( exchange->nxt64bits == nxt64bits )
             return(1);
     }
+    printf("no exchangebits match\n");
     return(0);
 }
 
@@ -691,7 +693,6 @@ void ramparse_cryptsy(struct rambook_info *bids,struct rambook_info *asks,int32_
         }
         sprintf(bids->url,"http://pubapi.cryptsy.com/api.php?method=singleorderdata&marketid=%s",market);
     }
-    bids->numquotes = asks->numquotes = 0;
     jsonstr = _issue_curl(0,"cryptsy",bids->url);
     if ( jsonstr != 0 )
     {
