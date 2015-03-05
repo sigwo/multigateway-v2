@@ -10,6 +10,7 @@
 #ifndef xcode_atomic_h
 #define xcode_atomic_h
 
+#define INSTANTDEX_TRIGGERDEADLINE 10
 #define JUMPTRADE_SECONDS 10
 #define INSTANTDEX_ACCT "4383817337783094122"
 #define INSTANTDEX_FEE (2.5 * SATOSHIDEN)
@@ -132,7 +133,7 @@ uint64_t set_NXTtx(uint64_t nxt64bits,struct NXT_tx *tx,uint64_t assetidbits,int
         U.U.quantityQNT = amount - fee;
     } else U.U.amountNQT = amount - fee;
     U.feeNQT = MIN_NQTFEE;
-    U.deadline = 10;//DEFAULT_NXT_DEADLINE;
+    U.deadline = INSTANTDEX_TRIGGERDEADLINE;
     printf("set_NXTtx(%llu -> %llu) %.8f of %llu\n",(long long)U.senderbits,(long long)U.recipientbits,dstr(amount),(long long)assetidbits);
     *tx = U;
     return(fee);
@@ -782,7 +783,7 @@ int32_t set_jtrade(int32_t numlegs,struct jumptrades *jtrades,struct _tradeleg *
 
 uint64_t submit_triggered_bidask(char *bidask,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t assetid,uint64_t qty,uint64_t NXTprice,char *triggerhash,char *comment)
 {
-    int32_t deadline = 10 + time_to_nextblock()/60;
+    int32_t deadline = INSTANTDEX_TRIGGERDEADLINE + time_to_nextblock()/60;
     uint64_t txid = 0;
     char cmd[4096],*jsonstr;
     cJSON *json;

@@ -54,6 +54,12 @@ char *assetmap[][3] =
     { "275548135983837356", "VIA", "4" },
 };
 
+double calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
+{
+    *volumep = ((double)baseamount / SATOSHIDEN);
+    return((double)relamount / baseamount);
+}
+
 uint64_t stringbits(char *str)
 {
     uint64_t bits = 0;
@@ -123,6 +129,7 @@ void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
 {
     char fname[1024];
     long offset = 0;
+    double price,vol;
     uint8_t data[sizeof(uint64_t) * 2 + sizeof(uint32_t)];
     if ( rb->fp == 0 )
     {
@@ -140,7 +147,8 @@ void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         memcpy(&data[offset],&iQ->timestamp,sizeof(iQ->timestamp)), offset += sizeof(iQ->timestamp);
         fwrite(data,1,offset,rb->fp);
         fflush(rb->fp);
-        printf("emit.(%s) %s_%s %llu %llu\n",rb->exchange,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
+        price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
+        printf("emit.(%s) %12.8f %12.8f %s_%s %16llu %16llu\n",rb->exchange,price,vol,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
 }
 
@@ -414,12 +422,6 @@ int32_t get_top_MMaker(struct pserver_info **pserverp)
         return(0);
     }
     return(-1);
-}
-
-double calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
-{
-    *volumep = ((double)baseamount / SATOSHIDEN);
-    return((double)relamount / baseamount);
 }
 
 void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,double volume)
