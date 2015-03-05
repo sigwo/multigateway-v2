@@ -136,7 +136,7 @@ void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         memcpy(&data[offset],&iQ->timestamp,sizeof(iQ->timestamp)), offset += sizeof(iQ->timestamp);
         fwrite(data,1,offset,rb->fp);
         fflush(rb->fp);
-        printf("emit.(%s) %s_%s %llu %llu\n",rb->exchange,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
+        //printf("emit.(%s) %s_%s %llu %llu\n",rb->exchange,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
 }
 
