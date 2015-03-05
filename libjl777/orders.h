@@ -624,7 +624,7 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
     struct InstantDEX_quote *iQ;
     if ( rb->numquotes == 0 || numold == 0 )
         return(0);
-    if ( numold != 0 )
+    if ( 0 && numold != 0 )
     {
         for (j=0; j<numold; j++)
             printf("%llu ",(long long)oldquotes[j].baseamount);
@@ -633,7 +633,7 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
     for (i=0; i<rb->numquotes; i++)
     {
         iQ = &rb->quotes[i];
-        printf("%llu ",(long long)iQ->baseamount);
+        //printf("%llu ",(long long)iQ->baseamount);
         if ( numold > 0 )
         {
             for (j=0; j<numold; j++)
@@ -646,7 +646,7 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
         if ( j == numold )
             emit_iQ(rb,iQ), numchanges++;
     }
-    printf("%s %s_%s NEW.%d\n\n",rb->exchange,rb->base,rb->rel,rb->numquotes);
+    //printf("%s %s_%s NEW.%d\n\n",rb->exchange,rb->base,rb->rel,rb->numquotes);
     if ( oldquotes != 0 )
         free(oldquotes);
     return(numchanges);
@@ -910,7 +910,7 @@ void *poll_exchange(void *_exchangeidp)
                 {
                     //printf("%.3f lastmilli %.3f: %s: %s %s\n",milliseconds(),pair->lastmilli,exchange->name,bids->base,bids->rel);
                     (*pair->ramparse)(bids,asks,maxdepth);
-                    fprintf(stderr,"%s:%s_%s.(%d %d)\n",exchange->name,bids->base,bids->rel,bids->numquotes,asks->numquotes);
+                    //fprintf(stderr,"%s:%s_%s.(%d %d)\n",exchange->name,bids->base,bids->rel,bids->numquotes,asks->numquotes);
                     pair->lastmilli = exchange->lastmilli = milliseconds();
                     if ( (bids->updated + asks->updated) != 0 )
                     {
