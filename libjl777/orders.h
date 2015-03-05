@@ -18,11 +18,12 @@
 
 #define MAX_EXCHANGES 16
 struct orderpair { struct rambook_info *bids,*asks; void (*ramparse)(struct rambook_info *bids,struct rambook_info *asks,int32_t maxdepth); float lastmilli; };
-struct exchange_info { FILE *fp; uint64_t nxt64bits; char name[16]; struct orderpair orderpairs[4096]; uint32_t num,exchangeid,lastblock; float lastmilli; } Exchanges[MAX_EXCHANGES];
+struct exchange_info { uint64_t nxt64bits; char name[16]; struct orderpair orderpairs[4096]; uint32_t num,exchangeid,lastblock; float lastmilli; } Exchanges[MAX_EXCHANGES];
 
 struct rambook_info
 {
     UT_hash_handle hh;
+    FILE *fp;
     char url[128],base[16],rel[16],lbase[16],lrel[16],exchange[16];
     struct InstantDEX_quote *quotes;
     uint64_t assetids[4];
@@ -112,31 +113,27 @@ int32_t is_exchange_nxt64bits(uint64_t nxt64bits)
 
 void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
 {
-    struct exchange_info *exchange;
     char fname[1024];
     long offset = 0;
     uint8_t data[sizeof(uint64_t) * 2 + sizeof(uint32_t)];
-    if ( (exchange= find_exchange(rb->exchange,0)) != 0 )
+    if ( rb->fp == 0 )
     {
-        if ( exchange->fp == 0 )
-        {
-            set_exchange_fname(fname,rb->exchange,rb->base,rb->rel);
-            if ( (exchange->fp= fopen(fname,"rb+")) != 0 )
-                fseek(exchange->fp,0,SEEK_SET);
-            else exchange->fp = fopen(fname,"wb+");
-            printf("opened.(%s) fpos.%ld\n",fname,ftell(exchange->fp));
-        }
-        if ( exchange->fp != 0 )
-        {
-            offset = 0;
-            memcpy(&data[offset],&iQ->baseamount,sizeof(iQ->baseamount)), offset += sizeof(iQ->baseamount);
-            memcpy(&data[offset],&iQ->relamount,sizeof(iQ->relamount)), offset += sizeof(iQ->relamount);
-            memcpy(&data[offset],&iQ->timestamp,sizeof(iQ->timestamp)), offset += sizeof(iQ->timestamp);
-            fwrite(data,1,offset,exchange->fp);
-            fflush(exchange->fp);
-            printf("emit.(%s) %s_%s %llu %llu\n",rb->exchange,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
-        }
-    } else printf("cant find exchange.(%s)?\n",rb->exchange);
+        set_exchange_fname(fname,rb->exchange,rb->base,rb->rel);
+        if ( (rb->fp= fopen(fname,"rb+")) != 0 )
+            fseek(rb->fp,0,SEEK_SET);
+        else rb->fp = fopen(fname,"wb+");
+        printf("opened.(%s) fpos.%ld\n",fname,ftell(rb->fp));
+    }
+    if ( rb->fp != 0 )
+    {
+        offset = 0;
+        memcpy(&data[offset],&iQ->baseamount,sizeof(iQ->baseamount)), offset += sizeof(iQ->baseamount);
+        memcpy(&data[offset],&iQ->relamount,sizeof(iQ->relamount)), offset += sizeof(iQ->relamount);
+        memcpy(&data[offset],&iQ->timestamp,sizeof(iQ->timestamp)), offset += sizeof(iQ->timestamp);
+        fwrite(data,1,offset,rb->fp);
+        fflush(rb->fp);
+        printf("emit.(%s) %s_%s %llu %llu\n",rb->exchange,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
+    }
 }
 
 uint64_t _calc_decimals_mult(int32_t decimals)
@@ -622,8 +619,11 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
         if ( numold > 0 )
         {
             for (j=0; j<numold; j++)
+            {
+                printf("%s %s_%s %d of %d: %llu/%llu vs %llu/%llu\n",rb->exchange,rb->base,rb->rel,j,numold,(long long)iQ->baseamount,(long long)iQ->relamount,(long long)oldquotes[j].baseamount,(long long)oldquotes[j].relamount);
                 if ( iQcmp(iQ,&oldquotes[j]) == 0 )
                     break;
+            }
         } else j = 0;
         if ( j == numold )
             emit_iQ(rb,iQ), numchanges++;
