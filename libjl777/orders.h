@@ -133,6 +133,7 @@ void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
             memcpy(&data[offset],&iQ->timestamp,sizeof(iQ->timestamp)), offset += sizeof(iQ->timestamp);
             fwrite(data,1,offset,exchange->fp);
             fflush(exchange->fp);
+            printf("emit.(%s) %s_%s %llu %llu\n",rb->exchange,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
         }
     } else printf("cant find exchange.(%s)?\n",rb->exchange);
 }
@@ -617,9 +618,12 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
     for (i=0; i<rb->numquotes; i++)
     {
         iQ = &rb->quotes[i];
-        for (j=0; j<numold; j++)
-            if ( iQcmp(iQ,&oldquotes[j]) == 0 )
-                break;
+        if ( numold > 0 )
+        {
+            for (j=0; j<numold; j++)
+                if ( iQcmp(iQ,&oldquotes[j]) == 0 )
+                    break;
+        } else j = 0;
         if ( j == numold )
             emit_iQ(rb,iQ);
     }
@@ -641,7 +645,7 @@ void ramparse_cryptsy(struct rambook_info *bids,struct rambook_info *asks,int32_
     {
         if ( strcmp(bids->rel,"BTC") != 0 )
         {
-            printf("parse_cryptsy.(%s/%s): only BTC markets supported\n",bids->base,bids->rel);
+            //printf("parse_cryptsy.(%s/%s): only BTC markets supported\n",bids->base,bids->rel);
             return;
         }
         marketjson = cJSON_Parse(marketstr);

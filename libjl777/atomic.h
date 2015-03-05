@@ -1141,3 +1141,4 @@ char *jumptrades_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
 }
 
 #endif
+
