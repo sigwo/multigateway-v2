@@ -140,7 +140,7 @@ void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         memcpy(&data[offset],&iQ->timestamp,sizeof(iQ->timestamp)), offset += sizeof(iQ->timestamp);
         fwrite(data,1,offset,rb->fp);
         fflush(rb->fp);
-        //printf("emit.(%s) %s_%s %llu %llu\n",rb->exchange,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
+        printf("emit.(%s) %s_%s %llu %llu\n",rb->exchange,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
 }
 
@@ -622,7 +622,7 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
 {
     int32_t i,j,numchanges = 0;
     struct InstantDEX_quote *iQ;
-    if ( rb->numquotes == 0 )
+    if ( rb->numquotes == 0 || numold == 0 )
         return(0);
     if ( numold != 0 )
     {
@@ -994,6 +994,11 @@ int32_t init_rambooks(char *base,char *rel,uint64_t baseid,uint64_t relid)
     char assetidstr[64],_base[64],_rel[64];
     uint64_t basemult,relmult;
     printf("init_rambooks.(%s %s)\n",base,rel);
+    if ( strcmp(base,"BTC") == 0 )
+    {
+        strcpy(base,rel);
+        strcpy(rel,"BTC");
+    }
     if ( base != 0 && rel != 0 && base[0] != 0 && rel[0] != 0 )
     {
         baseid = stringbits(base);
