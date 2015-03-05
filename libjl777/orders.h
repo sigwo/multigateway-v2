@@ -68,10 +68,14 @@ uint64_t stringbits(char *str)
 
 void set_exchange_fname(char *fname,char *exchangestr,char *base,char *rel)
 {
+    char exchange[16];
+    if ( strcmp(exchange,"iDEX") == 0 )
+        strcpy(exchange,"InstantDEX");
+    else strcpy(exchange,exchangestr);
     ensure_dir(PRICEDIR);
-    sprintf(fname,"%s/%s",PRICEDIR,exchangestr);
+    sprintf(fname,"%s/%s",PRICEDIR,exchange);
     ensure_dir(fname);
-    sprintf(fname,"%s/%s/%s_%s",PRICEDIR,exchangestr,base,rel);
+    sprintf(fname,"%s/%s/%s_%s",PRICEDIR,exchange,base,rel);
 }
 
 struct exchange_info *find_exchange(char *exchangestr,int32_t createflag)
@@ -613,14 +617,23 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
 {
     int32_t i,j,numchanges = 0;
     struct InstantDEX_quote *iQ;
+    if ( rb->numquotes == 0 )
+        return(0);
+    if ( numold != 0 )
+    {
+        for (j=0; j<numold; j++)
+            printf("%llu ",(long long)oldquotes[j].baseamount);
+        printf("%s %s_%s OLD.%d\n",rb->exchange,rb->base,rb->rel,numold);
+    }
     for (i=0; i<rb->numquotes; i++)
     {
         iQ = &rb->quotes[i];
+        printf("%llu ",(long long)iQ->baseamount);
         if ( numold > 0 )
         {
             for (j=0; j<numold; j++)
             {
-                printf("%s %s_%s %d of %d: %llu/%llu vs %llu/%llu\n",rb->exchange,rb->base,rb->rel,j,numold,(long long)iQ->baseamount,(long long)iQ->relamount,(long long)oldquotes[j].baseamount,(long long)oldquotes[j].relamount);
+                //printf("%s %s_%s %d of %d: %llu/%llu vs %llu/%llu\n",rb->exchange,rb->base,rb->rel,j,numold,(long long)iQ->baseamount,(long long)iQ->relamount,(long long)oldquotes[j].baseamount,(long long)oldquotes[j].relamount);
                 if ( iQcmp(iQ,&oldquotes[j]) == 0 )
                     break;
             }
@@ -628,6 +641,7 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
         if ( j == numold )
             emit_iQ(rb,iQ), numchanges++;
     }
+    printf("%s %s_%s NEW.%d\n\n",rb->exchange,rb->base,rb->rel,numold);
     if ( oldquotes != 0 )
         free(oldquotes);
     return(numchanges);
