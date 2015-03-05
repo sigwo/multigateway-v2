@@ -121,9 +121,10 @@ void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         if ( exchange->fp == 0 )
         {
             set_exchange_fname(fname,rb->exchange,rb->base,rb->rel);
-            if ( (exchange->fp = fopen(fname,"rb+")) != 0 )
+            if ( (exchange->fp= fopen(fname,"rb+")) != 0 )
                 fseek(exchange->fp,0,SEEK_SET);
             else exchange->fp = fopen(fname,"wb+");
+            printf("opened.(%s) fpos.%ld\n",fname,ftell(exchange->fp));
         }
         if ( exchange->fp != 0 )
         {
@@ -483,7 +484,6 @@ void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         rb->quotes[rb->numquotes++] = *iQ;
     }
     rb->updated = 1;
-    emit_iQ(rb,iQ);
     //printf("add_user_order i.%d numquotes.%d\n",i,rb->numquotes);
 }
 
@@ -536,6 +536,7 @@ struct rambook_info *add_rambook_quote(char *exchange,struct InstantDEX_quote *i
         create_InstantDEX_quote(iQ,timestamp,0,rb->assetids[3],nxt64bits,0,0,relamount,baseamount,rb->exchange);
     }
     save_InstantDEX_quote(rb,iQ);
+    emit_iQ(rb,iQ);
     return(rb);
 }
 
@@ -625,7 +626,7 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
                     break;
         } else j = 0;
         if ( j == numold )
-            emit_iQ(rb,iQ);
+            emit_iQ(rb,iQ), numchanges++;
     }
     if ( oldquotes != 0 )
         free(oldquotes);
