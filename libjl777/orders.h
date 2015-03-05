@@ -9,6 +9,7 @@
 #define xcode_orders_h
 
 #define INSTANTDEX_NAME "iDEX"
+#define INSTANTDEX_MINVOLPERC 0.75
 #define INSTANTDEX_NATIVE 0
 #define INSTANTDEX_ASSET 1
 #define INSTANTDEX_MSCOIN 2
@@ -92,6 +93,7 @@ struct exchange_info *find_exchange(char *exchangestr,int32_t createflag)
             strcpy(exchange->name,exchangestr);
             exchange->exchangeid = exchangeid;
             exchange->nxt64bits = stringbits(exchangestr);
+            printf("CREATE EXCHANGE.(%s) id.%d %llu\n",exchangestr,exchangeid,(long long)exchange->nxt64bits);
             break;
         }
         if ( strcmp(exchangestr,exchange->name) == 0 )
@@ -107,9 +109,9 @@ int32_t is_exchange_nxt64bits(uint64_t nxt64bits)
     for (exchangeid=0; exchangeid<MAX_EXCHANGES; exchangeid++)
     {
         exchange = &Exchanges[exchangeid];
+        printf("(%s).(%llu vs %llu) ",exchange->name,(long long)exchange->nxt64bits,(long long)nxt64bits);
         if ( exchange->name[0] == 0 )
             return(0);
-        printf("(%llu vs %llu) ",(long long)exchange->nxt64bits,(long long)nxt64bits);
         if ( exchange->nxt64bits == nxt64bits )
             return(1);
     }
@@ -908,6 +910,7 @@ void *poll_exchange(void *_exchangeidp)
                 {
                     //printf("%.3f lastmilli %.3f: %s: %s %s\n",milliseconds(),pair->lastmilli,exchange->name,bids->base,bids->rel);
                     (*pair->ramparse)(bids,asks,maxdepth);
+                    fprintf(stderr,"%s:%s_%s.(%d %d)\n",exchange->name,bids->base,bids->rel,bids->numquotes,asks->numquotes);
                     pair->lastmilli = exchange->lastmilli = milliseconds();
                     if ( (bids->updated + asks->updated) != 0 )
                     {
@@ -950,7 +953,6 @@ void add_exchange_pair(char *base,uint64_t baseid,char *rel,uint64_t relid,char 
     struct exchange_info *exchange = 0;
     bids = get_rambook(base,baseid,rel,relid,exchangestr);
     asks = get_rambook(rel,relid,base,baseid,exchangestr);
- 
     if ( (exchange= find_exchange(exchangestr,1)) == 0 )
         printf("cant add anymore exchanges.(%s)\n",exchangestr);
     else
@@ -1268,6 +1270,32 @@ struct InstantDEX_quote *order_match(uint64_t nxt64bits,uint64_t relid,uint64_t 
             }
         }
         free(obooks);
+    }
+    return(0);
+}
+
+struct InstantDEX_quote *search_pendingtrades(uint64_t my64bits,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount)
+{
+    struct InstantDEX_quote *iQ;
+    struct rambook_info **obooks,*rb;
+    int32_t i,j,numbooks;
+    double refprice,refvol,price,vol;
+    refprice = calc_price_volume(&refvol,baseamount,relamount);
+    if ( (obooks= get_allrambooks(&numbooks)) != 0 )
+    {
+        for (i=0; i<numbooks; i++)
+        {
+            rb = obooks[i];
+            if ( rb->numquotes == 0 || rb->assetids[0] != baseid || rb->assetids[1] != relid )
+                continue;
+            for (j=0; j<rb->numquotes; j++)
+            {
+                iQ = &rb->quotes[j];
+                price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
+                if ( iQ->matched == 0 && iQ->nxt64bits == my64bits && price <= refprice+SMALLVAL && vol >= refvol*INSTANTDEX_MINVOLPERC )
+                    return(iQ);
+            }
+        }
     }
     return(0);
 }
