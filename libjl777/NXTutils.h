@@ -481,8 +481,8 @@ uint64_t _get_bestassetprice(char *assetcmd,char *arrayfield,uint64_t assetid)
     return(price);
 }
 
-uint64_t get_nxtlowask(uint64_t assetid) { return(_get_bestassetprice("getAskOrders","bidOrders",assetid)); }
-uint64_t get_nxthighbid(uint64_t assetid) { return(_get_bestassetprice("getBidOrders","askOrders",assetid)); }
+uint64_t get_nxtlowask(uint64_t assetid) { return(_get_bestassetprice("getAskOrders","askOrders",assetid)); }
+uint64_t get_nxthighbid(uint64_t assetid) { return(_get_bestassetprice("getBidOrders","bidOrders",assetid)); }
 uint64_t get_nxtlastprice(uint64_t assetid) { return(_get_bestassetprice("getTrades","trades",assetid)); }
 
 char *issue_getAsset(int32_t isMScoin,char *assetidstr)
