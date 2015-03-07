@@ -601,6 +601,11 @@ void call_system(FILE *fp,char *cmd,char *fname)
     system(cmdstr);
 }
 
+int file_exist (char *filename)
+{
+  struct stat   buffer;   
+  return (stat (filename, &buffer) == 0);
+}
 char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,char *fname))
 {
     FILE *fp;
@@ -628,7 +633,14 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 {
     char fname[MAX_JSON_FIELD];
     copy_cJSON(fname,objs[0]);
-    return(language_func("python",fname,call_python));
+    if (file_exist (fname))
+    {
+        return(language_func("python",fname,call_python));
+    }
+    else
+    {
+        return(clonestr("{\"error\":\"file doesn't exist\"}"));
+    }
 }
 
 char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
