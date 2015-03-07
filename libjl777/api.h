@@ -603,14 +603,15 @@ void call_system(FILE *fp,char *cmd,char *fname)
 
 char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,char *fname))
 {
-    char *buffer = 0;
-    long filesize;
-    int32_t out_pipe[2],saved_stdout;
     FILE *fp;
+    char buffer[MAX_LEN+1] = {0};
+    int out_pipe[2];
+    int saved_stdout;
     saved_stdout = dup(STDOUT_FILENO);
-    if ( pipe(out_pipe) != 0 )
+    if( pipe(out_pipe) != 0 ) {
         return(clonestr("{\"error\":\"pipe creation error\"}"));
-    dup2(out_pipe[1],STDOUT_FILENO);
+    }
+    dup2(out_pipe[1], STDOUT_FILENO);
     close(out_pipe[1]);
     if ( (fp= fopen(fname,"r")) != 0 )
     {
@@ -618,13 +619,9 @@ char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,ch
         fclose(fp);
     }
     fflush(stdout);
-    if ( (filesize= lseek(out_pipe[0],0,SEEK_END)) > 0 )
-    {
-        buffer = malloc(filesize);
-        read(out_pipe[0],buffer,filesize);
-    }
-    dup2(saved_stdout,STDOUT_FILENO);
-    return(buffer);
+    read(out_pipe[0], buffer, MAX_LEN);
+    dup2(saved_stdout, STDOUT_FILENO);
+    return(clonestr(buffer));
 }
 
 char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
