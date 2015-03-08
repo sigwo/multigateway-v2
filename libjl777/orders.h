@@ -1113,6 +1113,7 @@ cJSON *gen_InstantDEX_json(struct rambook_info *rb,int32_t isask,struct InstantD
     sprintf(numstr,"%llu",(long long)iQ->baseamount), cJSON_AddItemToObject(json,"baseamount",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)refrelid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)iQ->relamount), cJSON_AddItemToObject(json,"relamount",cJSON_CreateString(numstr));
+    sprintf(numstr,"%llu",(long long)calc_quoteid(iQ)), cJSON_AddItemToObject(json,"quoteid",cJSON_CreateString(numstr));
     return(json);
 }
 
@@ -1215,7 +1216,11 @@ int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
                 iQ = &rb->quotes[j];
                 expand_nxt64bits(nxtaddr,iQ->nxt64bits);
                 if ( strcmp(NXTaddr,nxtaddr) == 0 && iQ->closed == 0 && calc_quoteid(iQ) == quoteid )
-                    cancel_InstantDEX_quote(iQ), n++;
+                {
+                    cancel_InstantDEX_quote(iQ);
+                    n++;
+                    break;
+                }
             }
         }
         free(obooks);
@@ -1879,9 +1884,11 @@ char *ask_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,i
 char *cancelquote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     uint64_t quoteid;
+    printf("inside cancelquote\n");
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
     quoteid = get_API_nxt64bits(objs[0]);
+    printf("cancelquote %llu\n",(long long)quoteid);
     if ( cancelquote(NXTaddr,quoteid) > 0 )
         return(clonestr("{\"result\":\"quote cancelled\"}"));
     else return(clonestr("{\"result\":\"not quote to cancel\"}"));
