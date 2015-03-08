@@ -11,6 +11,7 @@
 
 #define INSTANTDEX_NAME "iDEX"
 #define INSTANTDEX_MINVOLPERC 0.75
+#define INSTANTDEX_PRICESLIPPAGE 0.001
 #define INSTANTDEX_NATIVE 0
 #define INSTANTDEX_ASSET 1
 #define INSTANTDEX_MSCOIN 2
@@ -1301,7 +1302,7 @@ struct InstantDEX_quote *search_pendingtrades(uint64_t my64bits,uint64_t baseid,
                 iQ = &rb->quotes[j];
                 price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
                 printf("matched.%d (%llu vs %llu) %.8f vol %.8f vs ref %.8f %.8f\n",iQ->matched,(long long)iQ->nxt64bits,(long long)my64bits,price,vol,refprice,refvol);
-                if ( iQ->matched == 0 && iQ->nxt64bits == my64bits && price <= refprice+SMALLVAL && vol >= refvol*INSTANTDEX_MINVOLPERC )
+                if ( iQ->matched == 0 && iQ->nxt64bits == my64bits && price <= (INSTANTDEX_PRICESLIPPAGE*refprice + SMALLVAL) && vol >= refvol*INSTANTDEX_MINVOLPERC )
                     return(iQ);
             }
         }
@@ -1644,6 +1645,77 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         retstr = clonestr(buf);
     }
     return(retstr);
+}
+
+struct InstantDEX_quote *auto_makeoffer2(int32_t dir,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount)
+{
+    uint64_t assetA,amountA,assetB,amountB;
+    int32_t i,besti,n = 0;
+    uint32_t oldest = 0;
+    struct orderbook *op;
+    char cmd[1024],jumpstr[1024];
+    double refprice,refvol,price,vol,metric,bestmetric = (1. / SMALLVAL);
+    struct InstantDEX_quote *iQ,*quotes = 0;
+    char *base = 0,*rel = 0;
+    //struct InstantDEX_quote { uint64_t nxt64bits,baseamount,relamount,type; uint32_t timestamp; char exchange[9]; uint8_t closed:1,sent:1,matched:1,isask:1; };
+    besti = -1;
+    if ( (op= create_orderbook(base,baseid,rel,relid,oldest)) != 0 )
+    {
+        if ( dir > 1 && (n= op->numasks) != 0 )
+            quotes = op->asks;
+        else if ( dir < -1 && (n= op->numbids) != 0 )
+            quotes = op->bids;
+        if ( n > 0 )
+        {
+            refprice = calc_price_volume(&refvol,baseamount,relamount);
+            for (i=0; i<n; i++)
+            {
+                iQ = &quotes[i];
+                if ( iQ->matched == 0 && strcmp(INSTANTDEX_NAME,iQ->exchange) == 0 )
+                {
+                    price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
+                    if ( vol > (refvol * INSTANTDEX_MINVOLPERC) )
+                    {
+                        if ( dir > 0 && price < (refprice * INSTANTDEX_PRICESLIPPAGE + SMALLVAL) )
+                        {
+                            
+                        }
+                        else if ( dir < 0 && price > (refprice / INSTANTDEX_PRICESLIPPAGE - SMALLVAL) )
+                        {
+                            
+                        } else metric = 0.;
+                        if ( metric != 0. && metric < bestmetric )
+                        {
+                            bestmetric = metric;
+                            besti = i;
+                        }
+                    }
+                }
+            }
+        }
+        if ( besti >= 0 )
+        {
+            iQ = &quotes[besti];
+            jumpstr[0] = 0;
+            if ( dir > 0 )
+            {
+                assetA = relid;
+                amountA = iQ->relamount;
+                assetB = baseid;
+                amountB = iQ->baseamount;
+            }
+            else
+            {
+                assetB = relid;
+                amountB = iQ->relamount;
+                assetA = baseid;
+                amountA = iQ->baseamount;
+            }
+            sprintf(cmd,"{\"requestType\":\"makeoffer2\",\"NXT\":\"%llu\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",%s\"other\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\"}",(long long)mynxt64bits,(long long)assetA,(long long)amountA,jumpstr,(long long)iQ->nxt64bits,(long long)assetB,(long long)amountB);
+            return(iQ);
+        }
+    }
+    return(0);
 }
 
 void submit_quote(char *quotestr)
