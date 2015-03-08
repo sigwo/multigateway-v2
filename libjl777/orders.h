@@ -150,7 +150,7 @@ void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         fwrite(data,1,offset,rb->fp);
         fflush(rb->fp);
         price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-        printf("emit.(%s) %12.8f %12.8f %s_%s %16llu %16llu\n",rb->exchange,price,vol,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
+        //printf("emit.(%s) %12.8f %12.8f %s_%s %16llu %16llu\n",rb->exchange,price,vol,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
 }
 
@@ -202,7 +202,7 @@ uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits)
     }
     if ( (jsonstr= issue_getAsset(0,assetstr)) != 0 )
     {
-        printf("set assetname for (%s)\n",jsonstr);
+      //  printf("set assetname for (%s)\n",jsonstr);
         if ( _set_assetname(multp,buf,jsonstr) < 0 )
         {
             if ( (jsonstr2= issue_getAsset(1,assetstr)) != 0 )
