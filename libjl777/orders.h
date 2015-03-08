@@ -361,25 +361,16 @@ cJSON *all_orderbooks()
     return(json);
 }
 
-cJSON *tabulate_trade_history(cJSON *array)
+uint64_t find_best_market_maker(int32_t *totalticketsp,int32_t *numticketsp,char *refNXTaddr,uint32_t timestamp)
 {
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"history",array);
-    return(json);
-}
-
-uint64_t find_best_market_maker(cJSON **tradehistp,int32_t *totalticketsp,int32_t *numticketsp,char *refNXTaddr,uint32_t timestamp)
-{
-    char cmdstr[1024],NXTaddr[64],receiverstr[MAX_JSON_FIELD],message[MAX_JSON_FIELD],*jsonstr;
-    cJSON *json,*array,*txobj,*msgobj,*attachment,*histarray = 0;
+    char cmdstr[1024],NXTaddr[64],receiverstr[MAX_JSON_FIELD],*jsonstr;
+    cJSON *json,*array,*txobj;
     int32_t i,n,createdflag,totaltickets = 0;
     struct NXT_acct *np,*maxnp = 0;
     uint64_t amount,senderbits;
     uint32_t now = (uint32_t)time(NULL);
     if ( timestamp == 0 )
         timestamp = 38785003;
-    if ( tradehistp != 0 )
-        *tradehistp = 0;
     sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,timestamp);
     //printf("cmd.(%s)\n",cmdstr);
     if ( (jsonstr= bitcoind_RPC(0,"curl",NXTAPIURL,0,0,cmdstr)) != 0 )
@@ -413,7 +404,80 @@ uint64_t find_best_market_maker(cJSON **tradehistp,int32_t *totalticketsp,int32_
                             np->quantity += amount;
                             if ( maxnp == 0 || np->quantity > maxnp->quantity )
                                 maxnp = np;
-                            if ( refNXTaddr != 0 && strcmp(NXTaddr,refNXTaddr) == 0 && (attachment= cJSON_GetObjectItem(txobj,"attachment")) != 0 && (msgobj= cJSON_GetObjectItem(txobj,"message")) != 0 )
+                        }
+                    }
+                }
+            }
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    if ( refNXTaddr != 0 )
+    {
+        np = get_NXTacct(&createdflag,Global_mp,refNXTaddr);
+        if ( numticketsp != 0 )
+            *numticketsp = (int32_t)(np->quantity / INSTANTDEX_FEE);
+    }
+    if ( totalticketsp != 0 )
+        *totalticketsp = totaltickets;
+    if ( maxnp != 0 )
+    {
+        printf("Best MM %llu total %.8f\n",(long long)maxnp->H.nxt64bits,dstr(maxnp->quantity));
+        return(maxnp->H.nxt64bits);
+    }
+    return(0);
+}
+
+cJSON *tabulate_trade_history(cJSON *array)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"history",array);
+    return(json);
+}
+
+cJSON *get_tradehistory(char *refNXTaddr,uint32_t timestamp)
+{
+    char cmdstr[1024],NXTaddr[64],receiverstr[MAX_JSON_FIELD],message[MAX_JSON_FIELD],*jsonstr;
+    cJSON *json,*array,*txobj,*msgobj,*attachment,*retjson = 0,*histarray = 0;
+    int32_t i,n,createdflag,totaltickets = 0;
+    struct NXT_acct *np,*maxnp = 0;
+    uint64_t amount,senderbits;
+    uint32_t now = (uint32_t)time(NULL);
+    if ( timestamp == 0 )
+        timestamp = 38785003;
+    sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0&withMessage=true",INSTANTDEX_ACCT,timestamp);
+    if ( (jsonstr= bitcoind_RPC(0,"curl",NXTAPIURL,0,0,cmdstr)) != 0 )
+    {
+        printf("jsonstr.(%s)\n",jsonstr);
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( (array= cJSON_GetObjectItem(json,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    txobj = cJSON_GetArrayItem(array,i);
+                    copy_cJSON(receiverstr,cJSON_GetObjectItem(txobj,"recipient"));
+                    if ( (senderbits = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"sender"))) != 0 )
+                    {
+                        expand_nxt64bits(NXTaddr,senderbits);
+                        np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
+                        amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                        if ( np->timestamp != now )
+                        {
+                            np->quantity = 0;
+                            np->timestamp = now;
+                        }
+                        if ( amount == INSTANTDEX_FEE )
+                            totaltickets++;
+                        else if ( amount >= 2*INSTANTDEX_FEE )
+                            totaltickets += 2;
+                        np->quantity += amount;
+                        if ( maxnp == 0 || np->quantity > maxnp->quantity )
+                            maxnp = np;
+                        if ( refNXTaddr != 0 && strcmp(NXTaddr,refNXTaddr) == 0 )
+                        {
+                            printf("(%s)\n",cJSON_Print(txobj));
+                            if ( (attachment= cJSON_GetObjectItem(txobj,"attachment")) != 0 && (msgobj= cJSON_GetObjectItem(attachment,"message")) != 0 )
                             {
                                 copy_cJSON(message,msgobj);
                                 unstringify(message);
@@ -432,26 +496,12 @@ uint64_t find_best_market_maker(cJSON **tradehistp,int32_t *totalticketsp,int32_
         }
         free(jsonstr);
     }
-    if ( refNXTaddr != 0 )
+    if ( histarray != 0 )
     {
-        np = get_NXTacct(&createdflag,Global_mp,refNXTaddr);
-        if ( numticketsp != 0 )
-            *numticketsp = (int32_t)(np->quantity / INSTANTDEX_FEE);
-        if ( histarray != 0 )
-        {
-            histarray = tabulate_trade_history(histarray);
-            if ( tradehistp != 0 )
-                *tradehistp = histarray;
-        }
+        retjson = tabulate_trade_history(histarray);
+        free_json(histarray);
     }
-    if ( totalticketsp != 0 )
-        *totalticketsp = totaltickets;
-    if ( maxnp != 0 )
-    {
-        printf("Best MM %llu total %.8f\n",(long long)maxnp->H.nxt64bits,dstr(maxnp->quantity));
-        return(maxnp->H.nxt64bits);
-    }
-    return(0);
+    return(retjson);
 }
 
 int32_t calc_users_maxopentrades(uint64_t nxt64bits)
@@ -468,7 +518,7 @@ int32_t get_top_MMaker(struct pserver_info **pserverp)
     char ipaddr[64];
     *pserverp = 0;
     if ( bestMMbits == 0 )
-        bestMMbits = find_best_market_maker(0,0,0,0,38785003);
+        bestMMbits = find_best_market_maker(0,0,0,38785003);
     if ( bestMMbits != 0 )
     {
         stats = get_nodestats(bestMMbits);
@@ -1938,20 +1988,30 @@ char *cancelquote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
 
 char *lottostats_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char buf[MAX_JSON_FIELD],*retstr;
-    cJSON *history,*json;
+    char buf[MAX_JSON_FIELD];
     uint64_t bestMMbits;
     int32_t totaltickets,numtickets;
     uint32_t firsttimestamp;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
     firsttimestamp = (uint32_t)get_API_int(objs[0],0);
-    printf("firsttimestamp.%u\n",firsttimestamp);
-    bestMMbits = find_best_market_maker(&history,&totaltickets,&numtickets,NXTaddr,firsttimestamp);
+    bestMMbits = find_best_market_maker(&totaltickets,&numtickets,NXTaddr,firsttimestamp);
     sprintf(buf,"{\"result\":\"lottostats\",\"totaltickets\":\"%d\",\"NXT\":\"%s\",\"numtickets\":\"%d\",\"odds\":\"%.2f\",\"topMM\":\"%llu\"}",totaltickets,NXTaddr,numtickets,numtickets == 0 ? 0 : (double)totaltickets / numtickets,(long long)bestMMbits);
-    json = cJSON_Parse(buf);
+    return(clonestr(buf));
+}
+
+char *tradehistory_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char *retstr;
+    cJSON *history,*json;
+    uint32_t firsttimestamp;
+    if ( is_remote_access(previpaddr) != 0 )
+        return(0);
+    firsttimestamp = (uint32_t)get_API_int(objs[0],0);
+    history = get_tradehistory(NXTaddr,firsttimestamp);
+    json = cJSON_CreateObject();
     if ( history != 0 )
-        cJSON_AddItemToObject(json,"trade",history);
+        cJSON_AddItemToObject(json,"tradehistory",history);
     retstr = cJSON_Print(json);
     free_json(json);
     return(retstr);
