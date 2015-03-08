@@ -1647,14 +1647,14 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     return(retstr);
 }
 
-struct InstantDEX_quote *auto_makeoffer2(int32_t dir,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount)
+char *auto_makeoffer2(char *NXTaddr,char *NXTACCTSECRET,int32_t dir,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount)
 {
     uint64_t assetA,amountA,assetB,amountB;
     int32_t i,besti,n = 0;
     uint32_t oldest = 0;
     struct orderbook *op;
-    char cmd[1024],jumpstr[1024];
-    double refprice,refvol,price,vol,metric,bestmetric = (1. / SMALLVAL);
+    char cmd[1024],jumpstr[1024],otherNXTaddr[64];
+    double refprice,refvol,price,vol,metric,bestmetric = 0.;
     struct InstantDEX_quote *iQ,*quotes = 0;
     char *base = 0,*rel = 0;
     //struct InstantDEX_quote { uint64_t nxt64bits,baseamount,relamount,type; uint32_t timestamp; char exchange[9]; uint8_t closed:1,sent:1,matched:1,isask:1; };
@@ -1667,23 +1667,24 @@ struct InstantDEX_quote *auto_makeoffer2(int32_t dir,uint64_t baseid,uint64_t ba
             quotes = op->bids;
         if ( n > 0 )
         {
-            refprice = calc_price_volume(&refvol,baseamount,relamount);
+            if ( (refprice= calc_price_volume(&refvol,baseamount,relamount)) <= SMALLVAL )
+                return(0);
             for (i=0; i<n; i++)
             {
                 iQ = &quotes[i];
                 if ( iQ->matched == 0 && strcmp(INSTANTDEX_NAME,iQ->exchange) == 0 )
                 {
                     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-                    if ( vol > (refvol * INSTANTDEX_MINVOLPERC) )
+                    if ( vol > (refvol * INSTANTDEX_MINVOLPERC) && refvol > (vol * INSTANTDEX_MINVOLPERC) )
                     {
+                        if ( vol < refvol )
+                            metric = (vol / refvol);
+                        else metric = 1.;
                         if ( dir > 0 && price < (refprice * INSTANTDEX_PRICESLIPPAGE + SMALLVAL) )
-                        {
-                            
-                        }
+                            metric *= (1. + (refprice - price)/refprice);
                         else if ( dir < 0 && price > (refprice / INSTANTDEX_PRICESLIPPAGE - SMALLVAL) )
-                        {
-                            
-                        } else metric = 0.;
+                            metric *= (1. + (price - refprice)/refprice);
+                        else metric = 0.;
                         if ( metric != 0. && metric < bestmetric )
                         {
                             bestmetric = metric;
@@ -1712,7 +1713,8 @@ struct InstantDEX_quote *auto_makeoffer2(int32_t dir,uint64_t baseid,uint64_t ba
                 amountA = iQ->baseamount;
             }
             sprintf(cmd,"{\"requestType\":\"makeoffer2\",\"NXT\":\"%llu\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",%s\"other\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\"}",(long long)mynxt64bits,(long long)assetA,(long long)amountA,jumpstr,(long long)iQ->nxt64bits,(long long)assetB,(long long)amountB);
-            return(iQ);
+            expand_nxt64bits(otherNXTaddr,iQ->nxt64bits);
+            return(submit_atomic_txfrag("makeoffer2",cmd,NXTaddr,NXTACCTSECRET,otherNXTaddr));
         }
     }
     return(0);
@@ -1734,7 +1736,7 @@ void submit_quote(char *quotestr)
     }
 }
 
-char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     cJSON *json;
     uint64_t type,baseamount,relamount,nxt64bits,baseid,relid,txid = 0;
@@ -1763,6 +1765,8 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
     type = get_API_nxt64bits(objs[7]);
     timestamp = (uint32_t)get_API_int(objs[4],0);
     printf("t.%u placequote type.%llu dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",timestamp,(long long)type,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
+    if ( remoteflag == 0 && (retstr= auto_makeoffer2(NXTaddr,NXTACCTSECRET,dir,baseid,baseamount,relid,relamount)) != 0 )
+        return(retstr);
     if ( sender[0] != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
@@ -1801,22 +1805,22 @@ char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJ
 
 char *placebid_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    return(placequote_func(previpaddr,1,sender,valid,objs,numobjs,origargstr));
+    return(placequote_func(NXTaddr,NXTACCTSECRET,previpaddr,1,sender,valid,objs,numobjs,origargstr));
 }
 
 char *placeask_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    return(placequote_func(previpaddr,-1,sender,valid,objs,numobjs,origargstr));
+    return(placequote_func(NXTaddr,NXTACCTSECRET,previpaddr,-1,sender,valid,objs,numobjs,origargstr));
 }
 
 char *bid_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    return(placequote_func(previpaddr,1,sender,valid,objs,numobjs,origargstr));
+    return(placequote_func(NXTaddr,NXTACCTSECRET,previpaddr,1,sender,valid,objs,numobjs,origargstr));
 }
 
 char *ask_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    return(placequote_func(previpaddr,-1,sender,valid,objs,numobjs,origargstr));
+    return(placequote_func(NXTaddr,NXTACCTSECRET,previpaddr,-1,sender,valid,objs,numobjs,origargstr));
 }
 
 char *allsignals_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
