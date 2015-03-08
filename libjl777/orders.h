@@ -1654,7 +1654,7 @@ char *auto_makeoffer2(char *NXTaddr,char *NXTACCTSECRET,int32_t dir,uint64_t bas
     int32_t i,besti,n = 0;
     uint32_t oldest = 0;
     struct orderbook *op;
-    char cmd[1024],jumpstr[1024],otherNXTaddr[64];
+    char jumpstr[1024],otherNXTaddr[64];
     double refprice,refvol,price,vol,metric,bestmetric = 0.;
     struct InstantDEX_quote *iQ,*quotes = 0;
     char *base = 0,*rel = 0;
@@ -1674,8 +1674,9 @@ char *auto_makeoffer2(char *NXTaddr,char *NXTACCTSECRET,int32_t dir,uint64_t bas
             for (i=0; i<n; i++)
             {
                 iQ = &quotes[i];
-                printf("matchedflag.%d exchange.(%s) %llu/%llu\n",iQ->matched,iQ->exchange,(long long)iQ->baseamount,(long long)iQ->relamount);
-                if ( iQ->matched == 0 && strcmp(INSTANTDEX_NAME,iQ->exchange) == 0 )
+                expand_nxt64bits(otherNXTaddr,iQ->nxt64bits);
+                printf("matchedflag.%d exchange.(%s) %llu/%llu from (%s)\n",iQ->matched,iQ->exchange,(long long)iQ->baseamount,(long long)iQ->relamount,otherNXTaddr);
+                if ( strcmp(otherNXTaddr,NXTaddr) != 0 && iQ->matched == 0 && strcmp(INSTANTDEX_NAME,iQ->exchange) == 0 )
                 {
                     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
                     printf("price %.8f vol %.8f | %.8f > %.8f? %.8f > %.8f?\n",price,vol,vol,(refvol * INSTANTDEX_MINVOLPERC),refvol,(vol * INSTANTDEX_MINVOLPERC));
@@ -1718,9 +1719,11 @@ char *auto_makeoffer2(char *NXTaddr,char *NXTACCTSECRET,int32_t dir,uint64_t bas
                 assetA = baseid;
                 amountA = iQ->baseamount;
             }
-            sprintf(cmd,"{\"requestType\":\"makeoffer2\",\"NXT\":\"%llu\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",%s\"other\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\"}",(long long)mynxt64bits,(long long)assetA,(long long)amountA,jumpstr,(long long)iQ->nxt64bits,(long long)assetB,(long long)amountB);
             expand_nxt64bits(otherNXTaddr,iQ->nxt64bits);
-            return(submit_atomic_txfrag("makeoffer2",cmd,NXTaddr,NXTACCTSECRET,otherNXTaddr));
+            //char *makeoffer2(char *NXTaddr,char *NXTACCTSECRET,uint64_t assetA,uint64_t amountA,char *jumpNXTaddr,uint64_t jumpasset,uint64_t jumpamount,char *otherNXTaddr,uint64_t assetB,uint64_t amountB);
+            return(makeoffer2(NXTaddr,NXTACCTSECRET,assetA,amountA,0,0,0,otherNXTaddr,assetB,amountB));
+            //sprintf(cmd,"{\"requestType\":\"makeoffer2\",\"NXT\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",%s\"other\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\"}",NXTaddr,(long long)assetA,(long long)amountA,jumpstr,(long long)iQ->nxt64bits,(long long)assetB,(long long)amountB);
+            //return(submit_atomic_txfrag("makeoffer2",cmd,NXTaddr,NXTACCTSECRET,otherNXTaddr));
         } else printf("besti.%d\n",besti);
     } else printf("cant make orderbook\n");
     return(0);
