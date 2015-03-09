@@ -2301,7 +2301,7 @@ void disp_quote(void *ptr,int32_t arg,struct InstantDEX_quote *iQ)
 {
     double price,vol;
     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-    printf("%u: arg.%d %12.8f %12.8f %llu/%llu\n",iQ->timestamp,arg,price,vol,(long long)iQ->baseamount,iQ->relamount);
+    printf("%u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",iQ->timestamp,arg,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
 }
 
 char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
