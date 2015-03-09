@@ -2344,10 +2344,11 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
     int32_t ind;
     ind = (int32_t)((long)iQ->timestamp - bars->start) / bars->resolution;
     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
+    if ( dir < 0 )
+        fprintf(stderr,"%d.(%f %f).%d ",dir,price,vol,ind);
     if ( ind >= 0 && ind < bars->width )
     {
         _update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
-        fprintf(stderr,"%d.(%f %f) ",dir,price,vol);
         //printf("ind.%d %u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",ind,iQ->timestamp,dir,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
     //sleep(1);
