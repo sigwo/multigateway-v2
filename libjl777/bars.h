@@ -107,6 +107,7 @@ float check_price(float price)
 
 void update_bar(float bar[NUM_BARPRICES],float bid,float ask)
 {
+    printf("update.(%f %f)\n",bid,ask);
     if ( (bid= check_price(bid)) != 0.f )
     {
         bar[BARI_LASTBID] = bid;
