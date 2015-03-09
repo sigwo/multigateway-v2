@@ -2399,7 +2399,7 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
 {
     char sigstr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],exchange[MAX_JSON_FIELD],*retstr;
     uint32_t width,resolution,now = (uint32_t)time(NULL);
-    int32_t i,start,numbids,numasks;
+    int32_t i,start,numbids,numasks = 0;
     uint64_t baseid,relid;
     struct displaybars *bars;
     cJSON *json,*array;
@@ -2423,7 +2423,9 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     if ( bars->end > time(NULL)+100*resolution )
         return(clonestr("{\"error\":\"too far in future\"}"));
     strcpy(bars->base,base), strcpy(bars->rel,rel), strcpy(bars->exchange,exchange);
-    if ( (numbids= scan_exchange_prices(update_displaybars,bars,1,exchange,base,rel,baseid,relid)) == 0 && (numasks= scan_exchange_prices(update_displaybars,bars,-1,exchange,rel,base,relid,baseid)) == 0)
+    numbids = scan_exchange_prices(update_displaybars,bars,1,exchange,base,rel,baseid,relid);
+    numasks = scan_exchange_prices(update_displaybars,bars,-1,exchange,rel,base,relid,baseid);
+    if ( numbids == 0 && numasks == 0)
         return(clonestr("{\"error\":\"no data\"}"));
     if ( 1 )//finalize_displaybars(bars) > 0 )
     {
