@@ -2304,11 +2304,11 @@ void disp_quote(void *ptr,int32_t arg,struct InstantDEX_quote *iQ)
     printf("%u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",iQ->timestamp,arg,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
 }
 
-void _update_bar(float bar[NUM_BARPRICES],float bid,float ask)
+void _update_bar(float bar[NUM_BARPRICES],double bid,double ask)
 {
-    //printf("update.(%f %f)\n",bid,ask);
+    fprintf(stderr,"_(%f %f) ",bid,ask);
     //if ( (bid= check_price(bid)) != 0.f )
-    if ( bid != 0.f )
+    if ( bid != 0. )
     {
         bar[BARI_LASTBID] = bid;
         if ( bar[BARI_FIRSTBID] == 0.f )
@@ -2321,7 +2321,7 @@ void _update_bar(float bar[NUM_BARPRICES],float bid,float ask)
                 bar[BARI_LOWBID] = bid;
         }
     }
-    if ( ask != 0.f ) //(ask= check_price(ask)) != 0.f )
+    if ( ask != 0. ) //(ask= check_price(ask)) != 0.f )
     {
         bar[BARI_LASTASK] = ask;
         if ( bar[BARI_FIRSTASK] == 0.f )
@@ -2347,6 +2347,7 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
     if ( ind >= 0 && ind < bars->width )
     {
         _update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
+        fprintf(stderr,"(%f %f) ",price,vol);
         //printf("ind.%d %u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",ind,iQ->timestamp,dir,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
     //sleep(1);
