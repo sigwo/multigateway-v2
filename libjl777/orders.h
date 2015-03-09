@@ -2353,7 +2353,7 @@ int32_t finalize_displaybars(struct displaybars *bars)
         if ( (aveprice= calc_barprice_aves(bar)) != 0.f )
         {
             fprintf(stderr,"%f ",aveprice);
-            ohlc_json(bar);
+            //ohlc_json(bar);
             nonz++;
         }
     }
