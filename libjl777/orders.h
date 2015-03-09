@@ -2309,13 +2309,15 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
     struct displaybars *bars = ptr;
     double price,vol;
     int32_t ind;
-    ind = (iQ->timestamp - bars->start) / bars->resolution;
+    ind = (int32_t)((long)iQ->timestamp - bars->start) / bars->resolution;
     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
+    fprintf(stderr,"%d ",ind);
     if ( ind >= 0 && ind < bars->width )
     {
         update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
         //printf("ind.%d %u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",ind,iQ->timestamp,dir,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
+    fprintf(stderr,"width.%d\n",bars->width);
     //sleep(1);
 }
 
