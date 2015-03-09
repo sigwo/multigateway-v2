@@ -2316,6 +2316,7 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
         update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
     }
     printf("ind.%d %u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",ind,iQ->timestamp,dir,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
+    sleep(1);
 }
 
 cJSON *ohlc_json(float bar[NUM_BARPRICES])
