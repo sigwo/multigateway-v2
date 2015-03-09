@@ -271,6 +271,7 @@ int32_t scan_exchange_prices(void (*process_quote)(void *ptr,int32_t arg,struct 
         while ( fread(data,1,sizeof(data),fp) == sizeof(data) )
         {
             memset(&iQ,0,sizeof(iQ));
+            offset = 0;
             memcpy(&iQ.baseamount,&data[offset],sizeof(iQ.baseamount)), offset += sizeof(iQ.baseamount);
             memcpy(&iQ.relamount,&data[offset],sizeof(iQ.relamount)), offset += sizeof(iQ.relamount);
             memcpy(&iQ.timestamp,&data[offset],sizeof(iQ.timestamp)), offset += sizeof(iQ.timestamp);
@@ -2300,19 +2301,21 @@ void disp_quote(void *ptr,int32_t arg,struct InstantDEX_quote *iQ)
 {
     double price,vol;
     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-    printf("%u: %12.8f %12.8f\n",iQ->timestamp,price,vol);
+    printf("%u: arg.%d %12.8f %12.8f %llu/%llu\n",iQ->timestamp,arg,price,vol,(long long)iQ->baseamount,iQ->relamount);
 }
 
 char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char sigstr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],exchange[MAX_JSON_FIELD];
-    uint32_t start,end,resolution;
-    int32_t numbids,numasks;
+    uint32_t width,resolution,now = (uint32_t)time(NULL);
+    int32_t start,numbids,numasks;
     uint64_t baseid,relid;
     cJSON *json;
     copy_cJSON(sigstr,objs[0]);
-    start = (uint32_t)get_API_int(objs[1],0);
-    end = (uint32_t)get_API_int(objs[2],(uint32_t)time(NULL));
+    start = (int32_t)get_API_int(objs[1],0);
+    if ( start < 0 )
+        start += now;
+    width = (uint32_t)get_API_int(objs[2],now);
     resolution = (uint32_t)get_API_int(objs[3],60);
     baseid = get_API_nxt64bits(objs[4]);
     relid = get_API_nxt64bits(objs[5]);
