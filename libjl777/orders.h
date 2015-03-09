@@ -2380,6 +2380,7 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     copy_cJSON(base,objs[6]), base[15] = 0;
     copy_cJSON(rel,objs[7]), rel[15] = 0;
     copy_cJSON(exchange,objs[8]), exchange[15] = 0;
+    width = 5;
     bars = calloc(1,sizeof(*bars));
     bars->baseid = baseid, bars->relid = relid, bars->resolution = resolution, bars->width = width, bars->start = start;
     bars->end = start + width*resolution;
