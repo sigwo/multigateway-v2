@@ -2308,14 +2308,12 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
 {
     struct displaybars *bars = ptr;
     double price,vol;
-    float *bar;
     int32_t ind;
-    if ( iQ->timestamp >= bars->start && iQ->timestamp < bars->end )
+    ind = (iQ->timestamp - bars->start) / bars->resolution;
+    if ( ind >= 0 && ind < bars->width )
     {
-        ind = (iQ->timestamp - bars->start) / bars->resolution;
-        bar = &bars->bars[ind * NUM_BARPRICES];
         price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-        update_bar(bar,dir > 0 ? price : 0,dir < 0 ? price : 0);
+        update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
         //printf("%u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",iQ->timestamp,arg,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
 }
@@ -2349,7 +2347,7 @@ int32_t finalize_displaybars(struct displaybars *bars)
     printf("finalize.%d\n",bars->width);
     for (ind=0; ind<bars->width; ind++)
     {
-        bar = &bars->bars[ind * NUM_BARPRICES];
+        bar = bars->bars[ind];
         if ( (aveprice= calc_barprice_aves(bar)) != 0.f )
         {
             fprintf(stderr,"%f ",aveprice);
@@ -2382,7 +2380,7 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     copy_cJSON(base,objs[6]), base[15] = 0;
     copy_cJSON(rel,objs[7]), rel[15] = 0;
     copy_cJSON(exchange,objs[8]), exchange[15] = 0;
-    bars = calloc(1,sizeof(*bars) + width*NUM_BARPRICES);
+    bars = calloc(1,sizeof(*bars));
     bars->baseid = baseid, bars->relid = relid, bars->resolution = resolution, bars->width = width, bars->start = start;
     bars->end = start + width*resolution;
     if ( bars->end > time(NULL)+100*resolution )
