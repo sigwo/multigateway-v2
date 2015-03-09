@@ -2391,7 +2391,7 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     strcpy(bars->base,base), strcpy(bars->rel,rel), strcpy(bars->exchange,exchange);
     if ( (numbids= scan_exchange_prices(update_displaybars,bars,1,exchange,base,rel,baseid,relid)) == 0 && (numasks= scan_exchange_prices(update_displaybars,bars,-1,exchange,rel,base,relid,baseid)) == 0)
         return(clonestr("{\"error\":\"no data\"}"));
-    if ( 0 && finalize_displaybars(bars) > 0 )
+    if ( finalize_displaybars(bars) > 0 )
     {
         json = cJSON_CreateObject();
         array = cJSON_CreateArray();
