@@ -2314,9 +2314,9 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
     if ( ind >= 0 && ind < bars->width )
     {
         update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
+        //printf("ind.%d %u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",ind,iQ->timestamp,dir,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
-    printf("ind.%d %u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",ind,iQ->timestamp,dir,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
-    sleep(1);
+    //sleep(1);
 }
 
 cJSON *ohlc_json(float bar[NUM_BARPRICES])
@@ -2335,7 +2335,7 @@ cJSON *ohlc_json(float bar[NUM_BARPRICES])
     }
     if ( bar[BARI_LASTBID] != 0.f && bar[BARI_LASTASK] != 0.f )
         prices[3] = (bar[BARI_LASTBID] + bar[BARI_LASTASK]) / 2.f;
-    printf("ohlc_json %f %f %f %f\n",prices[0],prices[1],prices[2],prices[3]);
+    //printf("ohlc_json %f %f %f %f\n",prices[0],prices[1],prices[2],prices[3]);
     for (i=0; i<4; i++)
         cJSON_AddItemToArray(array,cJSON_CreateNumber(prices[i]));
     return(array);
