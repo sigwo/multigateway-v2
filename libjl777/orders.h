@@ -2323,7 +2323,7 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
 cJSON *ohlc_json(float bar[NUM_BARPRICES])
 {
     cJSON *array = cJSON_CreateArray();
-    float prices[4];
+    double prices[4];
     int32_t i;
     memset(prices,0,sizeof(prices));
     if ( bar[BARI_FIRSTBID] != 0.f && bar[BARI_FIRSTASK] != 0.f )
@@ -2345,9 +2345,18 @@ cJSON *ohlc_json(float bar[NUM_BARPRICES])
 int32_t finalize_displaybars(struct displaybars *bars)
 {
     int32_t ind,nonz = 0;
+    float *bar,aveprice;
     printf("finalize.%d\n",bars->width);
     for (ind=0; ind<bars->width; ind++)
-        nonz += (calc_barprice_aves(&bars->bars[ind * NUM_BARPRICES]) != 0 );
+    {
+        bar = &bars->bars[ind * NUM_BARPRICES];
+        if ( (aveprice= calc_barprice_aves(bar)) != 0.f )
+        {
+            fprintf(stderr,"%f ",aveprice);
+            ohlc_json(bar);
+            nonz++;
+        }
+    }
     printf("finalize nonz.%d\n",nonz);
     return(nonz);
 }
