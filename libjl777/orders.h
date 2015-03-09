@@ -2383,12 +2383,13 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     bars = calloc(1,sizeof(*bars));
     bars->baseid = baseid, bars->relid = relid, bars->resolution = resolution, bars->width = width, bars->start = start;
     bars->end = start + width*resolution;
+    printf("now %ld start.%u end.%u res.%d width.%d\n",time(NULL),start,bars->end,resolution,width);
     if ( bars->end > time(NULL)+100*resolution )
         return(clonestr("{\"error\":\"too far in future\"}"));
     strcpy(bars->base,base), strcpy(bars->rel,rel), strcpy(bars->exchange,exchange);
     if ( (numbids= scan_exchange_prices(update_displaybars,bars,1,exchange,base,rel,baseid,relid)) == 0 && (numasks= scan_exchange_prices(update_displaybars,bars,-1,exchange,rel,base,relid,baseid)) == 0)
         return(clonestr("{\"error\":\"no data\"}"));
-    if ( 1 || finalize_displaybars(bars) > 0 )
+    if ( 0 && finalize_displaybars(bars) > 0 )
     {
         json = cJSON_CreateObject();
         array = cJSON_CreateArray();
