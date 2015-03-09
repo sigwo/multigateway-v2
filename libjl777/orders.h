@@ -2306,7 +2306,7 @@ void disp_quote(void *ptr,int32_t arg,struct InstantDEX_quote *iQ)
 
 void _update_bar(float bar[NUM_BARPRICES],double bid,double ask)
 {
-    fprintf(stderr,"_(%f %f) ",bid,ask);
+    //fprintf(stderr,"_(%f %f) ",bid,ask);
     //if ( (bid= check_price(bid)) != 0.f )
     if ( bid != 0. )
     {
@@ -2347,7 +2347,7 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
     if ( ind >= 0 && ind < bars->width )
     {
         _update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
-        fprintf(stderr,"(%f %f) ",price,vol);
+        fprintf(stderr,"%d.(%f %f) ",dir,price,vol);
         //printf("ind.%d %u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",ind,iQ->timestamp,dir,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
     //sleep(1);
@@ -2426,10 +2426,12 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         return(clonestr("{\"error\":\"no data\"}"));
     if ( 1 )//finalize_displaybars(bars) > 0 )
     {
+        printf("now %ld start.%u end.%u res.%d width.%d | numbids.%d numasks.%d\n",time(NULL),bars->start,bars->end,bars->resolution,bars->width,numbids,numasks);
         json = cJSON_CreateObject();
         array = cJSON_CreateArray();
         for (i=0; i<bars->width; i++)
-            cJSON_AddItemToArray(array,ohlc_json(bars->bars[i]));
+            if ( bars->bars[i][BARI_FIRSTBID] != 0.f )
+                cJSON_AddItemToArray(array,ohlc_json(bars->bars[i]));
         cJSON_AddItemToObject(json,"bars",array);
         retstr = cJSON_Print(json);
         free_json(json);
