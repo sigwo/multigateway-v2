@@ -2344,8 +2344,8 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
     int32_t ind;
     ind = (int32_t)((long)iQ->timestamp - bars->start) / bars->resolution;
     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-    if ( dir < 0 )
-        fprintf(stderr,"%d.(%f %f).%d ",dir,price,vol,ind);
+   // if ( dir < 0 )
+   //     fprintf(stderr,"%d.(%f %f).%d ",dir,price,vol,ind);
     if ( ind >= 0 && ind < bars->width )
     {
         _update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
@@ -2435,7 +2435,7 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         for (i=0; i<bars->width; i++)
             if ( bars->bars[i][BARI_FIRSTBID] != 0.f )
                 cJSON_AddItemToArray(array,ohlc_json(bars->bars[i]));
-        cJSON_AddItemToObject(json,"bars",array);
+        cJSON_AddItemToObject(json,"ohlc",array);
         retstr = cJSON_Print(json);
         free_json(json);
         free(bars);
