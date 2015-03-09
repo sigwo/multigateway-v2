@@ -2311,13 +2311,11 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
     int32_t ind;
     ind = (int32_t)((long)iQ->timestamp - bars->start) / bars->resolution;
     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-    fprintf(stderr,"%d ",ind);
     if ( ind >= 0 && ind < bars->width )
     {
         update_bar(bars->bars[ind],dir > 0 ? price : 0,dir < 0 ? price : 0);
         //printf("ind.%d %u: arg.%d %-6ld %12.8f %12.8f %llu/%llu\n",ind,iQ->timestamp,dir,iQ->timestamp-time(NULL),price,vol,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
-    fprintf(stderr,"width.%d\n",bars->width);
     //sleep(1);
 }
 
@@ -2392,7 +2390,7 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     strcpy(bars->base,base), strcpy(bars->rel,rel), strcpy(bars->exchange,exchange);
     if ( (numbids= scan_exchange_prices(update_displaybars,bars,1,exchange,base,rel,baseid,relid)) == 0 && (numasks= scan_exchange_prices(update_displaybars,bars,-1,exchange,rel,base,relid,baseid)) == 0)
         return(clonestr("{\"error\":\"no data\"}"));
-    if ( finalize_displaybars(bars) > 0 )
+    if ( 1 )//finalize_displaybars(bars) > 0 )
     {
         json = cJSON_CreateObject();
         array = cJSON_CreateArray();
