@@ -2320,23 +2320,12 @@ void update_displaybars(void *ptr,int32_t dir,struct InstantDEX_quote *iQ)
     }
 }
 
-int32_t finalize_displaybars(struct displaybars *bars)
-{
-    int32_t ind,nonz = 0;
-    printf("finalize\n");
-    for (ind=0; ind<bars->width; ind++)
-        nonz += (calc_barprice_aves(&bars->bars[ind * NUM_BARPRICES]) != 0 );
-    printf("finalize nonz.%d\n",nonz);
-    return(nonz);
-}
-
 cJSON *ohlc_json(float bar[NUM_BARPRICES])
 {
     cJSON *array = cJSON_CreateArray();
     float prices[4];
     int32_t i;
     memset(prices,0,sizeof(prices));
-    printf("ohlc_json %p\n",bar);
     if ( bar[BARI_FIRSTBID] != 0.f && bar[BARI_FIRSTASK] != 0.f )
         prices[0] = (bar[BARI_FIRSTBID] + bar[BARI_FIRSTASK]) / 2.f;
     if ( bar[BARI_HIGHBID] != 0.f && bar[BARI_LOWASK] != 0.f )
@@ -2351,6 +2340,16 @@ cJSON *ohlc_json(float bar[NUM_BARPRICES])
     for (i=0; i<4; i++)
         cJSON_AddItemToArray(array,cJSON_CreateNumber(prices[i]));
     return(array);
+}
+
+int32_t finalize_displaybars(struct displaybars *bars)
+{
+    int32_t ind,nonz = 0;
+    printf("finalize.%d\n",bars->width);
+    for (ind=0; ind<bars->width; ind++)
+        nonz += (calc_barprice_aves(&bars->bars[ind * NUM_BARPRICES]) != 0 );
+    printf("finalize nonz.%d\n",nonz);
+    return(nonz);
 }
 
 char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -2386,8 +2385,8 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     {
         json = cJSON_CreateObject();
         array = cJSON_CreateArray();
-        for (i=0; i<bars->width; i++)
-            cJSON_AddItemToArray(array,ohlc_json(&bars->bars[i*NUM_BARPRICES]));
+        //for (i=0; i<bars->width; i++)
+        //    cJSON_AddItemToArray(array,ohlc_json(&bars->bars[i*NUM_BARPRICES]));
         cJSON_AddItemToObject(json,"bars",array);
         retstr = cJSON_Print(json);
         free_json(json);
