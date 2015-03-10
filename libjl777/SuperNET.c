@@ -854,6 +854,45 @@ var rbst = Math.floor((((blk.baseTarget*lasttime)/60)/153722867)*100);
 
 */
 
+/*A * B is calculated as A0*B0 + A1*B1
+
+come-from-beyond [11:30 PM]
+|A|*|B| is calculated as sqrt(A0*A0+A1*A1)*sqrt(B0*B0+B1*B1)
+
+come-from-beyond [11:30 PM]
+so, cosine = A*B / (|A|*|B|)*/
+
+double cos64bits(uint64_t x,uint64_t y)
+{
+    static double sqrts[65];
+    int32_t i,wta,wtb,dot;
+    if ( sqrts[1] == 0. )
+    {
+        for (i=1; i<=64; i++)
+            sqrts[i] = sqrt(i);
+    }
+    for (i=wta=wtb=dot=0; i<64; i++,x>>=1,y>>=1)
+    {
+        if ( (x & 1) != 0 )
+        {
+            wta++;
+            if ( (y & 1) != 0 )
+                dot++;
+        }
+        else if ( (y & 1) != 0 )
+            wtb++;
+    }
+    if ( wta != 0 && wtb != 0 )
+        return((double)dot / (sqrts[wta] * sqrts[wtb]));
+    return(0.);
+}
+
+void sim()
+{
+    int32_t i,j;
+    
+}
+
 int main(int argc,const char *argv[])
 {
     FILE *fp;
@@ -861,15 +900,7 @@ int main(int argc,const char *argv[])
     int32_t retval = -666;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
 #ifdef __APPLE__
-   /* unscript();
- int32_t _convert_to_bitcoinhex(char *scriptasm);
-    char buf[512];
-    strcpy(buf,"OP_RETURN 00");
-    //_convert_to_bitcoinhex(buf);
-    printf("(%s) -> (%s)\n","OP_RETURN 00",buf);
-    luatest("hello world","..");
-    regexptest();
-    getchar();*/
+    sim();
 #else
     if ( 1 && argc > 1 && strcmp(argv[1],"genfiles") == 0 )
 #endif
