@@ -2294,7 +2294,26 @@ char *tradehistory_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char 
 
 char *allsignals_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    return(clonestr("{\"signals\":[{\"name\":\"ohlc\",\"scale\":\"price\"},{\"name\":\"SMA\",\"scale\":\"price\"},{\"name\":\"slope\",\"scale\":\"auto\"}]}"));
+    cJSON *array,*item,*json = cJSON_CreateObject();
+    char *retstr;
+    int32_t i;
+    array = cJSON_CreateArray();
+    for (i=0; i<NUM_BARPRICES; i++)
+    {
+        item = cJSON_CreateObject();
+        cJSON_AddItemToObject(item,"signal",cJSON_CreateString(barinames[i]));
+        cJSON_AddItemToObject(item,"scale",cJSON_CreateString("price"));
+        cJSON_AddItemToArray(array,item);
+    }
+    item = cJSON_CreateObject();
+    cJSON_AddItemToObject(item,"signal",cJSON_CreateString("ohlc"));
+    cJSON_AddItemToObject(item,"scale",cJSON_CreateString("price"));
+    cJSON_AddItemToObject(item,"n",cJSON_CreateNumber(4));
+    cJSON_AddItemToArray(array,item);
+    cJSON_AddItemToObject(json,"signals",array);
+    retstr = cJSON_Print(json);
+    free_json(json);
+    return(retstr);
 }
 
 void disp_quote(void *ptr,int32_t arg,struct InstantDEX_quote *iQ)
