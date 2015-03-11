@@ -248,7 +248,7 @@ void _on_udprecv(int32_t queueflag,int32_t internalflag,uv_udp_t *udp,ssize_t nr
         if ( notlocalip(ipaddr) == 0 )
             strcpy(ipaddr,cp->myipaddr);
         pserver = get_pserver(&createdflag,ipaddr,supernet_port,0);
-    } else printf("_on_udprecv without addr? nread.%ld internal.%d queue.%d\n",nread,internalflag,queueflag);
+    } else if ( nread > 0 ) printf("_on_udprecv without addr? nread.%ld internal.%d queue.%d\n",nread,internalflag,queueflag);
     if ( cp != 0 && nread > 0 )
     {
         
