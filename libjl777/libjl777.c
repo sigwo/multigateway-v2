@@ -595,6 +595,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
     switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
+            if ( SOFTWALL != 0 || Debuglevel < 2 )
+                return(-1);
             if ( len < 1 )
             {
                 //libwebsockets_return_http_status(context, wsi,HTTP_STATUS_BAD_REQUEST, NULL);
@@ -609,8 +611,6 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             convert_percent22(str);
             if ( Debuglevel > 1 )
                 printf("RPC GOT.(%s) from user.(%s)\n",str,user);
-            if ( SOFTWALL != 0 )
-                return(0);
             if ( str[0] == 0 || (str[0] != '[' && str[0] != '{') )
             {
                 URL64 = 0;
