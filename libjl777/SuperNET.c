@@ -900,8 +900,15 @@ double cos64bits(uint64_t x,uint64_t y)
 }
 
 #define NUM_BLOOMPRIMES 8
+#define MAXHOPS 7
+#define MAXTESTPEERS 32
+#define NETWORKSIZE 10000
+long numxmit,foundcount;
+uint64_t currentsearch;
+
 int32_t bloomprimes[NUM_BLOOMPRIMES] = {    79559,   79631,   79691,   79697,   79811,   79841,   79901,   79997  };
-struct bloombits { uint8_t hashbits[NUM_BLOOMPRIMES][79997/8 + 1]; };
+struct bloombits { uint8_t hashbits[NUM_BLOOMPRIMES][79997/8 + 1],pad[sizeof(uint64_t)]; };
+struct smallworldnode { struct smallworldnode *peers[MAXTESTPEERS]; uint64_t nxt64bits; struct bloombits bloom; };
 
 void set_bloombits(struct bloombits *bloom,uint64_t nxt64bits)
 {
@@ -919,10 +926,16 @@ int32_t in_bloombits(struct bloombits *bloom,uint64_t nxt64bits)
     return(1);
 }
 
-#define MAXTESTPEERS 32
-#define NETWORKSIZE 10000
-long numxmit,foundcount;
-uint64_t currentsearch;
+void merge_bloombits(struct bloombits *_dest,struct bloombits *_src)
+{
+    int32_t i,n = (int32_t)(sizeof(*_dest) / sizeof(uint64_t));
+    uint64_t *dest,*src;
+    dest = (uint64_t *)&_dest->hashbits[0][0];
+    src = (uint64_t *)&_src->hashbits[0][0];
+    for (i=0; i<n; i++)
+        dest[i] |= src[i];
+}
+
 int32_t updateroutingstats(int32_t hops,uint64_t vectors[NETWORKSIZE][MAXTESTPEERS],uint64_t *peers,int32_t numpeers,uint64_t dest);
 
 int32_t _updateroutingstats(int32_t hops,uint64_t vectors[NETWORKSIZE][MAXTESTPEERS],uint64_t *peers,int32_t numpeers,uint64_t dest)
@@ -1001,29 +1014,37 @@ int32_t updateroutingstats(int32_t hops,uint64_t vectors[NETWORKSIZE][MAXTESTPEE
 
 void sim()
 {
-    static uint64_t vectors[NETWORKSIZE][MAXTESTPEERS];
     void randombytes(uint8_t *x,uint64_t xlen);
-    int32_t hist[100],i,j,n,hops,maxhops,sumhops,numpeers = (MAXTESTPEERS - 1);
-    uint64_t x,y;
+    int32_t hist[100],i,j,n,iter,ind,hops,maxhops,sumhops,numpeers = (MAXTESTPEERS - 1);
+    struct smallworldnode *network,*tmpnetwork;
+    uint64_t x;
     memset(hist,0,sizeof(hist));
-    double cosval,sum,total,minval = 0,maxval = 0.;
-    n = (int)(sizeof(vectors)/sizeof(vectors[0]));
+    n = NETWORKSIZE;
+    network = calloc(n,sizeof(*network));
+    tmpnetwork = calloc(n,sizeof(*network));
     for (i=0; i<n; i++)
-    {
-        randombytes((uint8_t *)&vectors[i][numpeers],sizeof(vectors[i][numpeers]));
-        //cos64bits(vectors[i][numpeers],vectors[i][numpeers] ^ (1L<<(rand()%64)));
-    }
+        randombytes((uint8_t *)&network[i].nxt64bits,sizeof(network[i].nxt64bits));
     for (i=0; i<n; i++)
     {
         for (j=0; j<numpeers; j++)
-            while ( (vectors[i][j]= (rand() % n)) == i )
+        {
+            while ( (ind= (rand() % n)) == i )
                 ;
+            network[i].peers[j] = &network[ind];
+            set_bloombits(&network[i].bloom,network[ind].nxt64bits);
+        }
+    }
+    for (iter=0; iter<MAXHOPS; iter++)
+    {
+        memcpy(tmpnetwork,network,sizeof(*network) * n);
+        for (i=0; i<n; i++)
+            for (j=0; j<numpeers; j++)
+                merge_bloombits(&network[i].bloom,&network[i].peers[j]->bloom);
     }
     for (i=sumhops=maxhops=0; i<1000; i++)
     {
-        //randombytes((uint8_t *)&x,sizeof(x));
-        x = vectors[rand() % n][numpeers];
-        if ( (hops= updateroutingstats(0,vectors,vectors[rand() % n],numpeers,x)) >= 0 )
+        x = network[rand() % n].nxt64bits;
+        if ( 0)//(hops= simroute(network,n,&network[rand() % n],x)) >= 0 )
         {
             sumhops += hops;
             if ( hops > maxhops )
@@ -1032,7 +1053,8 @@ void sim()
     }
     printf("avehops %.1f maxhops.%d | numxmit.%ld ave %.1f | foundcount.%ld %.2f%%\n",(double)sumhops/foundcount,maxhops,numxmit,(double)numxmit/i,foundcount,100.*(double)foundcount/i);
     getchar();
-    for (total=i=0; i<n; i++)
+    /*    double cosval,sum,total,minval = 0,maxval = 0.;
+     for (total=i=0; i<n; i++)
     {
         x = vectors[i][numpeers];
         for (sum=j=0; j<n; j++)
@@ -1064,7 +1086,7 @@ void sim()
         if ( (i % 10) == 9 )
             printf("i.%d\n",i);
     }
-    printf("histogram\n");
+    printf("histogram\n");*/
 }
 
 int main(int argc,const char *argv[])

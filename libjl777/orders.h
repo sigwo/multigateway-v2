@@ -2395,7 +2395,7 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     uint32_t width,resolution,now = (uint32_t)time(NULL);
     int32_t i,start,sigid,numbids,numasks = 0;
     uint64_t baseid,relid;
-    struct displaybars *bars;
+    struct displaybars *bars = 0;
     cJSON *json=0,*array=0;
     copy_cJSON(sigstr,objs[0]);
     start = (int32_t)get_API_int(objs[1],0);
@@ -2448,7 +2448,8 @@ char *getsignal_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         cJSON_AddItemToObject(json,sigstr,array);
         retstr = cJSON_Print(json);
         free_json(json);
-        free(bars);
+        if ( bars != 0 )
+            free(bars);
         return(retstr);
     }
     return(clonestr("{\"error\":\"no data\"}"));
