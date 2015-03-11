@@ -1047,13 +1047,15 @@ void sim()
             while ( 1 )
             {
                 ind = (rand() % n);
+                if ( ind == i )
+                    continue;
                 if ( j > 0 )
                 {
                     for (k=0; k<j; k++)
-                        if ( network[i].peers[k]->nodei == ind )//|| cos64bits(network[i].peers[k]->nxt64bits,network[ind].nxt64bits) > 0.6 )
+                        if ( network[i].peers[k]->nodei == ind )
                             break;
                 } else k = 0;
-                if ( k == j && ind != i )
+                if ( k == j )
                     break;
             }
             network[i].peers[j] = &network[ind];
@@ -1233,7 +1235,7 @@ int main(int argc,const char *argv[])
             if ( (json= cJSON_Parse(argv[1])) != 0 )
             {
                 Debuglevel = IS_LIBTEST = -1;
-                init_MGWconf("SuperNET.conf",0);
+                init_MGWconf(argv[2] != 0 ? (char *)argv[2] : "SuperNET.conf",0);
                 if ( (retstr= process_commandline_json(json)) != 0 )
                 {
                     printf("%s\n",retstr);
