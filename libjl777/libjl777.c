@@ -589,7 +589,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
     cJSON *json,*array,*map;
     struct coin_info *cp;
     uint64_t URL64;
-    if ( len != 0 )
+    if ( 0 && len != 0 )
         printf("LWS_CALLBACK_FILTER_NETWORK_CONNECTION.%d reason.%d len.%ld\n",LWS_CALLBACK_FILTER_NETWORK_CONNECTION,reason,len);
     strcpy(mediatype,"text/html");
     switch ( reason )
@@ -720,6 +720,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             fprintf(stderr, "Received network connect from %s (%s)\n",client_name, client_ip);
 //#endif
             // if we returned non-zero from here, we kill the connection
+            if ( strcmp("127.0.0.1",client_ip) != 0 )
+                return(-1);
             break;
         case LWS_CALLBACK_GET_THREAD_ID:
             /*
