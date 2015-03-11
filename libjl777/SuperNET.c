@@ -900,15 +900,15 @@ double cos64bits(uint64_t x,uint64_t y)
 }
 
 #define NUM_BLOOMPRIMES 8
-#define MAXHOPS 7
-#define MAXTESTPEERS 32
+#define MAXHOPS 6
+#define MAXTESTPEERS 5
 #define NETWORKSIZE 10000
 long numxmit,foundcount;
 uint64_t currentsearch;
 
-int32_t bloomprimes[NUM_BLOOMPRIMES] = {    79559,   79631,   79691,   79697,   79811,   79841,   79901,   79997  };
+uint64_t bloomprimes[NUM_BLOOMPRIMES] = { 79559, 79631, 79691, 79697, 79811, 79841, 79901, 79997 };
 struct bloombits { uint8_t hashbits[NUM_BLOOMPRIMES][79997/8 + 1],pad[sizeof(uint64_t)]; };
-struct smallworldnode { struct smallworldnode *peers[MAXTESTPEERS]; uint64_t nxt64bits; struct bloombits bloom; };
+struct smallworldnode { struct smallworldnode *peers[MAXTESTPEERS]; uint64_t nxt64bits,nodei; struct bloombits bloom; };
 
 void set_bloombits(struct bloombits *bloom,uint64_t nxt64bits)
 {
@@ -921,8 +921,14 @@ int32_t in_bloombits(struct bloombits *bloom,uint64_t nxt64bits)
 {
     int32_t i;
     for (i=0; i<NUM_BLOOMPRIMES; i++)
+    {
         if ( GETBIT(bloom->hashbits[i],(nxt64bits % bloomprimes[i])) == 0 )
+        {
+            //printf("%llu not in bloombits.%llu\n",(long long)nxt64bits,(long long)ref64bits);
             return(0);
+        }
+    }
+    //printf("%llu in bloombits.%llu\n",(long long)nxt64bits,(long long)ref64bits);
     return(1);
 }
 
@@ -936,132 +942,184 @@ void merge_bloombits(struct bloombits *_dest,struct bloombits *_src)
         dest[i] |= src[i];
 }
 
-int32_t updateroutingstats(int32_t hops,uint64_t vectors[NETWORKSIZE][MAXTESTPEERS],uint64_t *peers,int32_t numpeers,uint64_t dest);
-
-int32_t _updateroutingstats(int32_t hops,uint64_t vectors[NETWORKSIZE][MAXTESTPEERS],uint64_t *peers,int32_t numpeers,uint64_t dest)
+int32_t simroute(int32_t numhops,struct smallworldnode *depthblooms[],int32_t maxhops,int32_t n,struct smallworldnode *node,uint64_t dest)
 {
-    int32_t i,hishops,besthops = -1;
-    for (i=0; i<numpeers; i++)
-    {
-        hishops = updateroutingstats(hops,vectors,vectors[peers[i]],numpeers,dest);
-        if ( besthops < 0 || hishops < besthops )
-            besthops = hishops;
-    }
-    return(besthops);
-}
-
-int32_t updateroutingstats(int32_t hops,uint64_t vectors[NETWORKSIZE][MAXTESTPEERS],uint64_t *peers,int32_t numpeers,uint64_t dest)
-{
-    int32_t i,hishops,besthops,maxi = -1;
-    double myval,cosval,maxval = 0.;
-    uint64_t x;
-    hops++;
+    int32_t i,j,hops;
+    struct smallworldnode *peer,*bestpeer;
+    double cosval,maxmetric;
     numxmit++;
-    besthops = -1;
-    if ( hops == 1 )
+    //printf("numhops.%d maxhops.%d simroute.%llu from %llu\n",numhops,maxhops,(long long)dest,(long long)node->nxt64bits);
+    peer = &depthblooms[maxhops-1][node->nodei];
+    if ( 0 && in_bloombits(&peer->bloom,dest) == 0 )
     {
-        currentsearch = dest;
-        for (i=0; i<numpeers; i++)
-        {break;
-            hishops = _updateroutingstats(hops,vectors,vectors[peers[i]],numpeers,dest);
-            if ( besthops < 0 || hishops < besthops )
-                besthops = hishops;
-        }
-    }
-    else if ( (hops % 10) == 0 )
+        printf("simroute.%llu called without any bloombits.%llu\n",(long long)dest,(long long)node->nxt64bits);
         return(-1);
-    if ( peers[numpeers] == dest )
+    }
+    numhops++;
+    if ( maxhops == 0 )
+    {
+        for (i=0; i<MAXTESTPEERS; i++)
+        {
+            //printf("%llu ",(long long)node->peers[i]->nxt64bits);
+            if ( node->peers[i]->nxt64bits == dest )
+            {
+                if ( currentsearch == dest )
+                {
+                    currentsearch = 0;
+                    foundcount++;
+                }
+                //fprintf(stderr,"%d ",numhops);
+                //printf("FOUND %llu\n",(long long)dest);
+                return(numhops);
+            }
+        }
+        printf("no match against %llu\n",(long long)dest);
+        return(-1);
+    }
+    if ( node->nxt64bits == dest )
     {
         if ( currentsearch == dest )
         {
             currentsearch = 0;
             foundcount++;
         }
-        printf("%d ",hops);
-        return(hops);
+        fprintf(stderr,"%d ",numhops);
+        return(numhops);
     }
-    //myval = (64 - bitweight(peers[numpeers] ^ dest));
-    myval = cos64bits(peers[numpeers],dest);
-    for (i=0; i<numpeers; i++)
+    bestpeer = 0;
+    for (j=0; j<maxhops; j++)
     {
-        x = vectors[peers[i]][numpeers];
-        cosval = cos64bits(x,dest);
-        //cosval = (64 - bitweight(x ^ dest));
-        //printf("%.5f ",cosval);
-        if ( cosval > maxval )
+        bestpeer = 0;
+        maxmetric = 0.;
+        for (i=0; i<MAXTESTPEERS; i++)
         {
-            maxval = cosval;
-            maxi = i;
+            peer = &depthblooms[j][node->peers[i]->nodei];
+            if ( peer != 0 )
+            {
+                if ( in_bloombits(&peer->bloom,dest) != 0 )
+                {
+                    cosval = cos64bits(peer->nxt64bits,dest);
+                    if ( cosval > maxmetric )
+                    {
+                        maxmetric = cosval;
+                        bestpeer = &depthblooms[MAXHOPS-1][node->peers[i]->nodei];
+                    }
+                }
+            }
         }
-        if ( 1 && hops <= 1 )//0 && cosval > myval && cosval > .7 )//.65 )
+        if ( bestpeer != 0 )
         {
-            hishops = updateroutingstats(hops,vectors,vectors[peers[i]],numpeers,dest);
-            if ( besthops < 0 || hishops < besthops )
-                besthops = hishops;
-            if ( hishops >= 0 )
-                break;
+            maxhops = j+1;
+            break;
         }
     }
-    // printf("maxi.%-2d %.3f | hops.%d %llu vs %llu\n",maxi,maxval,hops,maxi>=0?(long long)vectors[peers[maxi]][numpeers]:0,(long long)dest);
-    if ( 1 && besthops < 0 && maxi >= 0 && maxval > 0.05 )
+    if ( bestpeer != 0 )
     {
-        hishops = updateroutingstats(hops,vectors,vectors[peers[maxi]],numpeers,dest);
-        if ( besthops < 0 || hishops < besthops )
-            besthops = hishops;
+        hops = simroute(numhops,depthblooms,maxhops-1,n,bestpeer,dest);
+        if ( hops > 0 )
+            return(hops);
+        else printf("got illegal numhops.%d maxhops.%d\n",numhops,maxhops);
     }
-    return(besthops);
+    return(-1);
 }
 
 void sim()
 {
     void randombytes(uint8_t *x,uint64_t xlen);
-    int32_t hist[100],i,j,n,iter,ind,hops,maxhops,sumhops,numpeers = (MAXTESTPEERS - 1);
-    struct smallworldnode *network,*tmpnetwork;
-    uint64_t x;
+    int32_t hist[100],i,j,k,n,skip,routefails,searches,nonz,iter,ind,hops,maxhops,sumhops,numpeers = MAXTESTPEERS;
+    struct smallworldnode *network,*tmpnetworks[MAXHOPS],*node;
+    struct bloombits allbits;
     memset(hist,0,sizeof(hist));
     n = NETWORKSIZE;
     network = calloc(n,sizeof(*network));
-    tmpnetwork = calloc(n,sizeof(*network));
+    for (i=0; i<MAXHOPS-1; i++)
+        tmpnetworks[i] = calloc(n,sizeof(*network));
+    printf("network allocated\n");
     for (i=0; i<n; i++)
         randombytes((uint8_t *)&network[i].nxt64bits,sizeof(network[i].nxt64bits));
+    printf("nodes set\n");
+    memset(&allbits,0,sizeof(allbits));
     for (i=0; i<n; i++)
     {
+        network[i].nodei = i;
         for (j=0; j<numpeers; j++)
         {
-            while ( (ind= (rand() % n)) == i )
-                ;
+            while ( 1 )
+            {
+                ind = (rand() % n);
+                if ( j > 0 )
+                {
+                    for (k=0; k<j; k++)
+                        if ( network[i].peers[k]->nodei == ind )//|| cos64bits(network[i].peers[k]->nxt64bits,network[ind].nxt64bits) > 0.6 )
+                            break;
+                } else k = 0;
+                if ( k == j && ind != i )
+                    break;
+            }
             network[i].peers[j] = &network[ind];
+            //printf("nodei.%d set bloom.%llu <- %llu nodej.%d\n",i,(long long)network[i].nxt64bits,(long long)network[ind].nxt64bits,ind);
             set_bloombits(&network[i].bloom,network[ind].nxt64bits);
+            set_bloombits(&allbits,network[ind].nxt64bits);
         }
-    }
-    for (iter=0; iter<MAXHOPS; iter++)
-    {
-        memcpy(tmpnetwork,network,sizeof(*network) * n);
-        for (i=0; i<n; i++)
-            for (j=0; j<numpeers; j++)
-                merge_bloombits(&network[i].bloom,&network[i].peers[j]->bloom);
-    }
-    for (i=sumhops=maxhops=0; i<1000; i++)
-    {
-        x = network[rand() % n].nxt64bits;
-        if ( 0)//(hops= simroute(network,n,&network[rand() % n],x)) >= 0 )
+        if ( 0 && i == 0 )
         {
-            sumhops += hops;
-            if ( hops > maxhops )
-                maxhops = hops;
+            for (j=nonz=0; j<n; j++)
+                if ( in_bloombits(&network[i].bloom,network[j].nxt64bits) != 0 )
+                    printf("%llu ",network[j].nxt64bits), nonz++;
+            printf("in bloom for node.%d %llu nonz.%d\n",i,(long long)network[i].nxt64bits,nonz);
         }
     }
-    printf("avehops %.1f maxhops.%d | numxmit.%ld ave %.1f | foundcount.%ld %.2f%%\n",(double)sumhops/foundcount,maxhops,numxmit,(double)numxmit/i,foundcount,100.*(double)foundcount/i);
-    getchar();
-    /*    double cosval,sum,total,minval = 0,maxval = 0.;
-     for (total=i=0; i<n; i++)
+    printf("bloombits set\n");
+    for (iter=1; iter<MAXHOPS; iter++)
     {
-        x = vectors[i][numpeers];
+        memcpy(tmpnetworks[iter-1],network,sizeof(*network) * n);
+        for (i=0; i<n; i++)
+        {
+            node = &network[i];
+            for (j=0; j<numpeers; j++)
+                merge_bloombits(&node->bloom,&tmpnetworks[iter-1][node->peers[j]->nodei].bloom);
+            if ( 0 && i == 0 )
+            {
+                for (j=nonz=0; j<n; j++)
+                    if ( in_bloombits(&network[i].bloom,network[j].nxt64bits) != 0 )
+                        printf("%llu ",network[j].nxt64bits), nonz++;
+                printf("iter.%d in bloom for node.%d %llu nonz.%d\n",iter,i,(long long)network[i].nxt64bits,nonz);
+            }
+            if ( (i % 100) == 0 )
+                fprintf(stderr,".");
+        }
+    }
+    tmpnetworks[MAXHOPS-1] = network;
+    printf("bloombits merged\n");
+    for (i=sumhops=maxhops=skip=searches=0; i<n; i++)
+    {
+        currentsearch = network[rand() % n].nxt64bits;
+        node = &network[(rand() % n)];
+        if ( in_bloombits(&node->bloom,currentsearch) != 0 )
+        {
+            //printf("search for %llu from %llu\n",(long long)currentsearch,(long long)node->nxt64bits);
+            searches++;
+            if ( (hops= simroute(0,tmpnetworks,MAXHOPS,n,node,currentsearch)) >= 0 )
+            {
+                sumhops += hops;
+                if ( hops > maxhops )
+                    maxhops = hops;
+            } else routefails++;
+            //break;
+        } else skip++;
+    }
+    printf("avehops %.1f maxhops.%d | numxmit.%ld ave %.1f | skip.%d fails.%d foundcount.%ld %.2f%%\n",(double)sumhops/foundcount,maxhops,numxmit,(double)numxmit/searches,skip,routefails,foundcount,100.*(double)foundcount/searches);
+    getchar();
+    uint64_t x,y;
+    double cosval,sum,total,minval = 0,maxval = 0.;
+    for (total=i=0; i<n; i++)
+    {
+        x = network[i].nxt64bits;
         for (sum=j=0; j<n; j++)
         {
             if ( i == j )
                 continue;
-            y = vectors[j][numpeers];
+            y = network[j].nxt64bits;
             cosval = cos64bits(x,y);
             sum += cosval;
             total += cosval;
@@ -1086,7 +1144,7 @@ void sim()
         if ( (i % 10) == 9 )
             printf("i.%d\n",i);
     }
-    printf("histogram\n");*/
+    printf("histogram\n");
 }
 
 int main(int argc,const char *argv[])

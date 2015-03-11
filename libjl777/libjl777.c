@@ -713,9 +713,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
              * connection continue.
              */
         case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-//#if 0
             libwebsockets_get_peer_addresses(context, wsi, (int)(long)in, client_name,sizeof(client_name), client_ip, sizeof(client_ip));
-//#endif
             // if we returned non-zero from here, we kill the connection
             if ( strcmp("127.0.0.1",client_ip) != 0 )
             {
