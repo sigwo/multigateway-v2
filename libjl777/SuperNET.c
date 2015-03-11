@@ -901,7 +901,7 @@ double cos64bits(uint64_t x,uint64_t y)
 
 #define NUM_BLOOMPRIMES 8
 int32_t bloomprimes[NUM_BLOOMPRIMES] = {    79559,   79631,   79691,   79697,   79811,   79841,   79901,   79997  };
-struct bloombits { uint8_t hashbits[NUM_BLOOMPRIMES][997/8 + 1]; };
+struct bloombits { uint8_t hashbits[NUM_BLOOMPRIMES][79997/8 + 1]; };
 
 void set_bloombits(struct bloombits *bloom,uint64_t nxt64bits)
 {
@@ -914,9 +914,9 @@ int32_t in_bloombits(struct bloombits *bloom,uint64_t nxt64bits)
 {
     int32_t i;
     for (i=0; i<NUM_BLOOMPRIMES; i++)
-        if ( GETBIT(bloom->hashbits[i],(nxt64bits % bloomprimes[i])) != 0 )
-            return(1);
-    return(0);
+        if ( GETBIT(bloom->hashbits[i],(nxt64bits % bloomprimes[i])) == 0 )
+            return(0);
+    return(1);
 }
 
 #define MAXTESTPEERS 32
