@@ -1959,7 +1959,13 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             //if ( (op= create_jumpbooks(&toJLH,&fromJLH,"JLH",base,rel,oldest,gui)) != 0 )
             //    books[n++] = op;
             op = merge_books(base,rel,books,n);
-        } else toNXT = fromNXT = toBTC = fromBTC = toBTCD = fromBTCD = toJLH = fromJLH = 0;
+        }
+        else
+        {
+            toBTC = fromBTC = toBTCD = fromBTCD = toJLH = fromJLH = 0;
+            if ( (op= create_jumpbooks(&toNXT,&fromNXT,"NXT",base,rel,oldest,gui)) != 0 )
+                books[n++] = op;
+        }
         if ( n > 0 )
         {
             json = cJSON_CreateObject();
