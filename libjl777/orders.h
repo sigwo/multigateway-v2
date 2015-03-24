@@ -1697,15 +1697,21 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
         else op->numasks++;
     }
     else
-    {
+    {double p,v;
         if ( polarity > 0 )
+        {
             op->bids[(*numbidsp)++] = *iQ;
+            p = calc_price_volume(&v,iQ->baseamount,iQ->relamount);
+            printf("B.(%f %f) ",p,v);
+        }
         else
         {
             ask = &op->asks[(*numasksp)++];
             *ask = *iQ;
-            ask->baseamount = iQ->relamount;
-            ask->relamount = iQ->baseamount;
+            //ask->baseamount = iQ->relamount;
+            //ask->relamount = iQ->baseamount;
+            p = calc_price_volume(&v,ask->baseamount,ask->relamount);
+            printf("A.(%f %f) ",p,v);
         }
     }
 }
@@ -1767,7 +1773,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else if ( (rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid) || (strcmp(op->base,rb->rel) == 0 && strcmp(op->rel,rb->base) == 0)  )
                     polarity = -1;
                 else continue;
-                printf("numquotes.%d: %llu %llu\n",rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1]);
+                printf("numquotes.%d: %llu %llu polarity.%d\n",rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1],polarity);
                 for (j=0; j<rb->numquotes; j++)
                     add_to_orderbook(op,iter,&numbids,&numasks,rb,&rb->quotes[j],polarity,oldest,gui);
             }
@@ -1815,31 +1821,47 @@ int32_t nonz_and_lesser(int32_t a,int32_t b)
     return(0);
 }
 
-void make_jumpbid(struct InstantDEX_quote *iQ,struct InstantDEX_quote *toiQ,struct InstantDEX_quote *fromiQ,char *gui)
+void make_jumpask(struct InstantDEX_quote *iQ,struct InstantDEX_quote *toiQ,struct InstantDEX_quote *fromiQ,char *gui)
 {
     uint64_t jumpamount,baseamount,relamount;
     uint32_t timestamp;
-    if ( (jumpamount= toiQ->relamount) > fromiQ->baseamount )
+    /*if ( (jumpamount= toiQ->relamount) < fromiQ->baseamount )
     {
         jumpamount = fromiQ->baseamount;
         baseamount = ((double)jumpamount / toiQ->relamount);
         relamount = fromiQ->relamount;
+        printf("jump.%llu base.%llu rel.%llu\n",(long long)jumpamount,(long long)baseamount,(long long)relamount);
     }
     else
     {
         baseamount = toiQ->baseamount;
-        relamount = (fromiQ->relamount * ((double)jumpamount / fromiQ->baseamount));
+        relamount = (fromiQ->relamount * (double)jumpamount) / fromiQ->baseamount;
+        printf("JUMP.%llu base.%llu rel.%llu\n",(long long)jumpamount,(long long)baseamount,(long long)relamount);
+    }*/
+    {
+        double p0,v0,p1,v1,p,v;
+        p0 = calc_price_volume(&v0,toiQ->baseamount,toiQ->relamount);
+        p1 = calc_price_volume(&v1,fromiQ->baseamount,fromiQ->relamount);
+        //p = calc_price_volume(&v,baseamount,relamount);
+        p = (p0 / p1);
+        v = (p0 * v0);
+        if ( p1 * v1 < v )
+            v = p1 * v1;
+        v /= p0;
+        set_best_amounts(&baseamount,&relamount,p,v);
+
+        printf("(%f %f).v0 (%f %f).v1 -> ask (%f %f) jump.%llu\n",p0,v0,p1,v1,p,v,(long long)jumpamount);
     }
     if ( (timestamp= toiQ->timestamp) > fromiQ->timestamp )
         timestamp = fromiQ->timestamp;
     create_InstantDEX_quote(iQ,timestamp,0,toiQ->type,toiQ->nxt64bits,0.,0.,baseamount,relamount,toiQ->exchange,gui);
 }
 
-void make_jumpask(struct InstantDEX_quote *iQ,struct InstantDEX_quote *toiQ,struct InstantDEX_quote *fromiQ,char *gui)
+void make_jumpbid(struct InstantDEX_quote *iQ,struct InstantDEX_quote *toiQ,struct InstantDEX_quote *fromiQ,char *gui)
 {
     uint64_t jumpamount,baseamount,relamount;
     uint32_t timestamp;
-    if ( (jumpamount= toiQ->relamount) > fromiQ->baseamount )
+    if ( (jumpamount= toiQ->relamount) < fromiQ->baseamount )
     {
         jumpamount = fromiQ->baseamount;
         baseamount = ((double)jumpamount / toiQ->relamount);
@@ -1848,36 +1870,52 @@ void make_jumpask(struct InstantDEX_quote *iQ,struct InstantDEX_quote *toiQ,stru
     else
     {
         baseamount = toiQ->baseamount;
-        relamount = (fromiQ->relamount * ((double)jumpamount / fromiQ->baseamount));
+        relamount = ((fromiQ->relamount * (double)jumpamount) / fromiQ->baseamount);
+    }
+    {
+        double p0,v0,p1,v1,p,v;
+        p0 = calc_price_volume(&v0,toiQ->baseamount,toiQ->relamount);
+        p1 = calc_price_volume(&v1,fromiQ->baseamount,fromiQ->relamount);
+        //p = calc_price_volume(&v,baseamount,relamount);
+        p = (p1 / p0);
+        v = (p0 * v0);
+        if ( p1 * v1 < v )
+            v = p1 * v1;
+        v /= p1;
+        set_best_amounts(&baseamount,&relamount,p,v);
+        
+        printf("(%f %f).v0 (%f %f).v1 -> BID (%f %f) jump.%llu\n",p0,v0,p1,v1,p,v,(long long)jumpamount);
     }
     if ( (timestamp= toiQ->timestamp) > fromiQ->timestamp )
         timestamp = fromiQ->timestamp;
-    create_InstantDEX_quote(iQ,timestamp,0,toiQ->type,toiQ->nxt64bits,0.,0.,relamount,baseamount,toiQ->exchange,gui);
+    create_InstantDEX_quote(iQ,timestamp,1,toiQ->type,toiQ->nxt64bits,0.,0.,relamount,baseamount,toiQ->exchange,gui);
 }
 
 struct orderbook *make_jumpbook(char *base,char *jumper,char *rel,struct orderbook *to,struct orderbook *from,char *gui)
 {
     struct orderbook *op = 0;
-    int32_t i,numbids,numasks;
+    int32_t i,j,n,numbids,numasks;
     numbids = nonz_and_lesser(to->numasks,from->numbids);
-    numasks = nonz_and_lesser(to->numasks,from->numbids);
+    numasks = nonz_and_lesser(to->numbids,from->numasks);
     if ( numbids > 0 || numasks > 0 )
     {
         op = (struct orderbook *)calloc(1,sizeof(*op));
         strcpy(op->base,base), strcpy(op->rel,rel), strcpy(op->jumper,jumper);
         op->baseid = stringbits(base);
         op->relid = stringbits(rel);
-        if ( (op->numbids= numbids) > 0 )
+        if ( (op->numbids= (from->numasks*to->numbids)) > 0 )
         {
             op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
-            for (i=0; i<numbids; i++)
-                make_jumpbid(&op->bids[i],&from->bids[i],&to->asks[i],gui);
+            for (i=n=0; i<from->numasks; i++)
+                for (j=0; j<to->numbids; j++)
+                    make_jumpbid(&op->bids[n++],&from->asks[i],&to->bids[j],gui);
         }
-        if ( (op->numasks= numasks) > 0 )
+        if ( (op->numasks= (to->numasks*from->numbids)) > 0 )
         {
             op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
-            for (i=0; i<numasks; i++)
-                make_jumpask(&op->asks[i],&to->asks[i],&from->bids[i],gui);
+            for (i=n=0; i<to->numasks; i++)
+                for (j=0; j<from->numbids; j++)
+                    make_jumpask(&op->asks[n++],&to->asks[i],&from->bids[j],gui);
         }
     }
     return(op);
@@ -1893,7 +1931,7 @@ struct orderbook *create_jumpbooks(struct orderbook **top,struct orderbook **fro
     if ( base != 0 && base[0] != 0 && rel != 0 && rel[0] != 0 && strcmp(base,jumper) != 0 && strcmp(rel,jumper) != 0 )
     {
         *top = create_orderbook(0,calc_nxt64bits(base),0,jumperbits,oldest,gui);  // base/jump
-        *fromp = create_orderbook(0,jumperbits,0,calc_nxt64bits(rel),oldest,gui); // jump/rel
+        *fromp = create_orderbook(0,calc_nxt64bits(rel),0,jumperbits,oldest,gui); // rel/jump
         if ( *top != 0 && *fromp != 0 )
             jumpbook = make_jumpbook(base,jumper,rel,*top,*fromp,gui);
     } else *fromp = *top = 0;
