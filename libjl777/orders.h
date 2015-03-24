@@ -365,7 +365,8 @@ struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t
         touppercase(rb->rel), strcpy(rb->lrel,rb->rel), tolowercase(rb->lrel);
         for (i=0; i<4; i++)
             rb->assetids[i] = assetids[i];
-        printf("CREATE RAMBOOK.(%llu.%d -> %llu.%d) %s (%s) (%s)\n",(long long)baseid,basetype,(long long)relid,reltype,exchange,rb->base,rb->rel);
+        if ( Debuglevel > 2 )
+            printf("CREATE RAMBOOK.(%llu.%d -> %llu.%d) %s (%s) (%s)\n",(long long)baseid,basetype,(long long)relid,reltype,exchange,rb->base,rb->rel);
         HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
     purge_oldest_order(rb,0);
@@ -1226,7 +1227,8 @@ void add_exchange_pair(char *base,uint64_t baseid,char *rel,uint64_t relid,char 
         exchangeid = exchange->exchangeid;
         if ( (n= exchange->num) == 0 )
         {
-            printf("Start monitoring (%s).%d\n",exchange->name,exchangeid);
+            if ( Debuglevel > 2 )
+                printf("Start monitoring (%s).%d\n",exchange->name,exchangeid);
             exchange->exchangeid = exchangeid;
             if ( 0 && portable_thread_create((void *)poll_exchange,&exchange->exchangeid) == 0 )
                 printf("ERROR poll_exchange\n");
@@ -1779,7 +1781,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else if ( (rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid) || (strcmp(op->base,rb->rel) == 0 && strcmp(op->rel,rb->base) == 0)  )
                     polarity = -1;
                 else continue;
-                printf("numquotes.%d: %llu %llu polarity.%d\n",rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1],polarity);
+                //printf("numquotes.%d: %llu %llu polarity.%d\n",rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1],polarity);
                 for (j=0; j<rb->numquotes; j++)
                     add_to_orderbook(op,iter,&numbids,&numasks,rb,&rb->quotes[j],polarity,oldest,gui,(basetype<<16) | reltype);
             }
@@ -2279,7 +2281,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     uint64_t type,baseamount,relamount,nxt64bits,baseid,relid,quoteid = 0;
     double price,volume;
     uint32_t timestamp;
-    int32_t remoteflag;
+    int32_t remoteflag,automatch;
     struct rambook_info *rb;
     struct InstantDEX_quote iQ;
     char buf[MAX_JSON_FIELD],txidstr[64],gui[MAX_JSON_FIELD],*jsonstr,*retstr = 0;
@@ -2300,11 +2302,12 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
         price = get_API_float(objs[3]);
         set_best_amounts(&baseamount,&relamount,price,volume);
     }
+    timestamp = (uint32_t)get_API_int(objs[4],0);
     type = get_API_nxt64bits(objs[7]);
     copy_cJSON(gui,objs[8]), gui[4] = 0;
-    timestamp = (uint32_t)get_API_int(objs[4],0);
+    automatch = (int32_t)get_API_int(objs[9],0);
     printf("NXT.%s t.%u placequote type.%llu dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,(long long)type,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
-    if ( remoteflag == 0 && (retstr= auto_makeoffer2(NXTaddr,NXTACCTSECRET,dir,baseid,baseamount,relid,relamount,gui)) != 0 )
+    if ( automatch != 0 && remoteflag == 0 && (retstr= auto_makeoffer2(NXTaddr,NXTACCTSECRET,dir,baseid,baseamount,relid,relamount,gui)) != 0 )
     {
         fprintf(stderr,"got (%s) from auto_makeoffer2\n",retstr);
         return(retstr);
