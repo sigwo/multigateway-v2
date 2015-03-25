@@ -1298,7 +1298,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
     uint64_t baseamount,relamount;
     if ( iQ->baseamount != 0 && iQ->relamount != 0 )
     {
-        if ( iQ->isask != 0 )
+        if ( 1 )//iQ->isask != 0 )
             baseamount = iQ->relamount, relamount = iQ->baseamount;
         else baseamount = iQ->baseamount, relamount = iQ->relamount;
         price = calc_price_volume(&volume,baseamount,relamount);
