@@ -1258,7 +1258,9 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     myipaddr = init_NXTservices(JSON_or_fname,myipaddr);
     //if ( IS_LIBTEST < 7 )
     {
-        uint64_t pendingtxid; ready_to_xferassets(&pendingtxid);
+        uint64_t pendingtxid;
+        if ( Global_mp->gatewayid >= 0 )
+            ready_to_xferassets(&pendingtxid);
         //if ( Debuglevel > 0 )
         //    printf("back from init_NXTservices (%s) NXTheight.%d\n",myipaddr,get_NXTheight());
         p2p_publishpacket(0,0);

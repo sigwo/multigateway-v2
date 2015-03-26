@@ -9,7 +9,7 @@
 #ifndef xcode_orders_h
 #define xcode_orders_h
 
-#define INSTANTDEX_NAME "iDEX"
+#define INSTANTDEX_NAME "InstantDEX"
 #define INSTANTDEX_MINVOLPERC 0.75
 #define INSTANTDEX_PRICESLIPPAGE 0.001
 #define INSTANTDEX_NATIVE 0
@@ -688,6 +688,7 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
         iQ->U.normal.type = type;
         iQ->U.normal.nxt64bits = nxt64bits;
         strncpy(iQ->U.normal.exchange,exchange,sizeof(iQ->U.normal.exchange)-1);
+        printf("(%s) %f %f\n",exchange,dstr(baseamount),dstr(relamount));
     }
     strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
     return(0);
@@ -1306,7 +1307,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
         {
             if ( iQ->combined != 0 )
             {
-                sprintf(offerstr,"{\"exchange\":\"%s\",\"price\":\"%.8f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer3\",\"flip\":%d,\"baseid\":\"%llu\",\"relid\":\"%llu\",\"frombase\":\"%llu\",\"fromrel\":\"%llu\",\"tobase\":\"%llu\",\"torel\":\"%llu\",\"quoteid\":\"%llu\",\"matched\":%d,\"closed\":%d,\"gui\":\"%s\"}","NXT AE combination",price,volume,iQ->isask == 0,(long long)baseid,(long long)relid,(long long)iQ->U.combo.frombase,(long long)iQ->U.combo.fromrel,(long long)iQ->U.combo.tobase,(long long)iQ->U.combo.torel,calc_quoteid(iQ),iQ->matched,iQ->closed,iQ->gui);
+                sprintf(offerstr,"{\"exchange\":\"%s\",\"price\":\"%.8f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer3\",\"flip\":%d,\"baseid\":\"%llu\",\"relid\":\"%llu\",\"frombase\":\"%llu\",\"fromrel\":\"%llu\",\"tobase\":\"%llu\",\"torel\":\"%llu\",\"quoteid\":\"%llu\",\"matched\":%d,\"closed\":%d,\"gui\":\"%s\"}","nxtae_nxtae",price,volume,iQ->isask == 0,(long long)baseid,(long long)relid,(long long)iQ->U.combo.frombase,(long long)iQ->U.combo.fromrel,(long long)iQ->U.combo.tobase,(long long)iQ->U.combo.torel,calc_quoteid(iQ),iQ->matched,iQ->closed,iQ->gui);
             }
             else
             {
@@ -1740,7 +1741,7 @@ void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_
 
 void sort_orderbook(struct orderbook *op)
 {
-    if ( op->numbids > 0 || op->numasks > 0 )
+    if ( op != 0 && (op->numbids > 0 || op->numasks > 0) )
     {
         if ( op->numbids > 0 )
             qsort(op->bids,op->numbids,sizeof(*op->bids),_decreasing_quotes);
@@ -1787,7 +1788,7 @@ struct orderbook *create_orderbook(struct NXT_tx *txptrs[],int32_t numptrs,char 
     struct rambook_info **obooks,*rb;
     struct orderbook *op = 0;
     uint64_t basemult,relmult;
-    //printf("create_orderbook %llu/%llu\n",(long long)refbaseid,(long long)refrelid);
+    printf("create_orderbook %llu/%llu\n",(long long)refbaseid,(long long)refrelid);
     if ( (refbaseid != 0 && refbaseid == refrelid) || (base != 0 && rel != 0 && base[0] != 0 && strcmp(base,rel) == 0) )
         return(0);
     expand_nxt64bits(obookstr,_obookid(refbaseid,refrelid));
@@ -1806,7 +1807,7 @@ struct orderbook *create_orderbook(struct NXT_tx *txptrs[],int32_t numptrs,char 
         op->baseid = refbaseid;
         op->relid = refrelid;
     }
-   // printf("create_orderbook %s/%s\n",op->base,op->rel);
+    printf("create_orderbook %s/%s\n",op->base,op->rel);
     basetype &= 0xffff, reltype &= 0xffff;
     for (iter=0; iter<2; iter++)
     {
@@ -1821,7 +1822,7 @@ struct orderbook *create_orderbook(struct NXT_tx *txptrs[],int32_t numptrs,char 
                 if ( strcmp(rb->exchange,INSTANTDEX_NAME) != 0 )
                     haveexchanges++;
                 if ( Debuglevel > 2 )
-                    printf("numquotes.%d: %llu %llu\n",rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1]);
+                    printf("[%d] numquotes.%d: (%s).%llu (%s).%llu | (%s).%llu (%s).%llu\n",i,rb->numquotes,rb->base,(long long)rb->assetids[0],rb->rel,(long long)rb->assetids[1],op->base,(long long)op->baseid,op->rel,(long long)op->relid);
                 if ( rb->numquotes == 0 )
                     continue;
                 if ( (rb->assetids[0] == refbaseid && rb->assetids[1] == refrelid) || (strcmp(op->base,rb->base) == 0 && strcmp(op->rel,rb->rel) == 0) )
@@ -1829,6 +1830,7 @@ struct orderbook *create_orderbook(struct NXT_tx *txptrs[],int32_t numptrs,char 
                 else if ( (rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid) || (strcmp(op->base,rb->rel) == 0 && strcmp(op->rel,rb->base) == 0)  )
                     polarity = -1;
                 else continue;
+                printf("[%d] numquotes.%d: %llu %llu | oldest.%u\n",i,rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1],oldest);
                 for (j=0; j<rb->numquotes; j++)
                     add_to_orderbook(op,iter,&numbids,&numasks,rb,&rb->quotes[j],polarity,oldest,gui,(basetype<<16) | reltype);
             }
@@ -1890,7 +1892,7 @@ void make_jumpbid(struct InstantDEX_quote *iQ,struct InstantDEX_quote *fromiQ,st
     make_jumpiQ(0,iQ,fromiQ,toiQ,gui);
 }
 
-struct orderbook *make_jumpbook(char *base,char *jumper,char *rel,struct orderbook *to,struct orderbook *from,char *gui)
+struct orderbook *make_jumpbook(char *base,char *jumper,char *rel,struct orderbook *to,struct orderbook *from,char *gui,struct orderbook *rawop)
 {
     struct orderbook *op = 0;
     int32_t i,j,n,numbids,numasks;
@@ -1898,31 +1900,61 @@ struct orderbook *make_jumpbook(char *base,char *jumper,char *rel,struct orderbo
     {
         numbids = nonz_and_lesser(to->numasks,from->numbids);
         numasks = nonz_and_lesser(to->numbids,from->numasks);
-        if ( numbids > 0 || numasks > 0 )
+        if ( (numbids + numasks + rawop->numbids + rawop->numasks) > 0 )
         {
             op = (struct orderbook *)calloc(1,sizeof(*op));
             strcpy(op->base,base), strcpy(op->rel,rel), strcpy(op->jumper,jumper);
             op->baseid = stringbits(base);
             op->relid = stringbits(rel);
-            if ( (op->numasks= (from->numasks*to->numbids)) > 0 )
+            if ( (op->numasks= (from->numasks*to->numbids)+rawop->numasks) > 0 )
             {
-                printf("(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
+                printf("(%llu %llu, %llu %llu).%d: ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid,rawop->numasks);
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
-                for (i=n=0; i<from->numasks; i++)
-                    for (j=0; j<to->numbids; j++)
-                        make_jumpbid(&op->asks[n++],&from->asks[i],&to->bids[j],gui);
+                n = 0;
+                if ( from->numasks > 0 && to->numbids > 0 )
+                {
+                    for (i=0; i<from->numasks; i++)
+                        for (j=0; j<to->numbids; j++)
+                            make_jumpbid(&op->asks[n++],&from->asks[i],&to->bids[j],gui);
+                }
+                if ( rawop->numasks > 0 )
+                    for (i=0; i<rawop->numasks; i++)
+                        op->asks[n++] = rawop->asks[i];
             }
-            if ( (op->numbids= (to->numasks*from->numbids)) > 0 )
+            if ( (op->numbids= (to->numasks*from->numbids)+rawop->numbids) > 0 )
             {
-                printf("(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
+                printf("(%llu %llu, %llu %llu).%d: ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid,rawop->numbids);
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
-                for (i=n=0; i<to->numasks; i++)
-                    for (j=0; j<from->numbids; j++)
-                        make_jumpask(&op->bids[n++],&from->bids[j],&to->asks[i],gui);
+                n = 0;
+                if ( to->numasks > 0 && from->numbids > 0 )
+                {
+                    for (i=0; i<to->numasks; i++)
+                        for (j=0; j<from->numbids; j++)
+                            make_jumpask(&op->bids[n++],&from->bids[j],&to->asks[i],gui);
+                }
+                if ( rawop->numbids > 0 )
+                    for (i=0; i<rawop->numbids; i++)
+                        op->bids[n++] = rawop->bids[i];
             }
         }
     }
+    sort_orderbook(op);
     return(op);
+}
+
+void ensure_rambook(uint64_t baseid,uint64_t relid)
+{
+    if ( baseid != NXT_ASSETID && relid != NXT_ASSETID )
+    {
+        init_rambooks(0,0,baseid,relid);
+        init_rambooks(0,0,baseid,NXT_ASSETID);
+        init_rambooks(0,0,relid,NXT_ASSETID);
+    }
+    else if ( baseid != NXT_ASSETID )
+        init_rambooks(0,0,baseid,NXT_ASSETID);
+    else if ( relid != NXT_ASSETID )
+        init_rambooks(0,0,relid,NXT_ASSETID);
+    else printf("ILLEGAL CASE for ORDERBOOK %llu/%llu\n",(long long)baseid,(long long)relid);
 }
 
 char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -1931,11 +1963,11 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     int32_t i,allflag,maxdepth,numptrs = 0;
     uint32_t oldest;
     struct InstantDEX_quote *iQ = 0;
-    uint64_t baseid,relid;
+    uint64_t baseid,relid,nxt64bits = calc_nxt64bits(NXTaddr);
     struct exchange_info *exchange;
     struct orderpair *pair;
     cJSON *json,*bids,*asks,*item;
-    struct orderbook *op=0,*toNXT=0,*fromNXT=0;
+    struct orderbook *op=0,*toNXT=0,*fromNXT=0,*rawop=0;
     char obook[64],buf[MAX_JSON_FIELD],baserel[1024],gui[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],assetA[64],assetB[64],*retstr = 0;
     baseid = get_API_nxt64bits(objs[0]), relid = get_API_nxt64bits(objs[1]), allflag = get_API_int(objs[2],0), oldest = get_API_int(objs[3],0);
     maxdepth = get_API_int(objs[4],3), copy_cJSON(base,objs[5]), copy_cJSON(rel,objs[6]), copy_cJSON(gui,objs[7]), gui[sizeof(iQ->gui)-1] = 0;
@@ -1949,18 +1981,8 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         expand_nxt64bits(assetA,baseid);
         expand_nxt64bits(assetB,relid);
         toNXT = fromNXT = 0;
+        ensure_rambook(baseid,relid);
         numptrs = update_iQ_flags(txptrs,sizeof(txptrs)/sizeof(*txptrs),baseid,relid);
-        if ( baseid != NXT_ASSETID && relid != NXT_ASSETID )
-        {
-            init_rambooks(0,0,baseid,relid);
-            init_rambooks(0,0,baseid,NXT_ASSETID);
-            init_rambooks(0,0,relid,NXT_ASSETID);
-        }
-        else if ( baseid != NXT_ASSETID )
-            init_rambooks(0,0,baseid,NXT_ASSETID);
-        else if ( relid != NXT_ASSETID )
-            init_rambooks(0,0,relid,NXT_ASSETID);
-        else printf("ILLEGAL CASE for ORDERBOOK %llu/%llu\n",(long long)baseid,(long long)relid);
         if ( (exchange= find_exchange("nxtae",0)) != 0 )
         {
             for (i=0; i<exchange->num; i++)
@@ -1976,9 +1998,11 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         }
         if ( baseid != NXT_ASSETID && relid != NXT_ASSETID )
         {
+            rawop = create_orderbook(txptrs,numptrs,0,baseid,0,relid,oldest,gui);  // base/rel
             fromNXT = create_orderbook(txptrs,numptrs,0,baseid,0,NXT_ASSETID,oldest,gui);  // base/jump
             toNXT = create_orderbook(txptrs,numptrs,0,relid,0,NXT_ASSETID,oldest,gui); // rel/jump
-            op = make_jumpbook(base,"NXT",rel,toNXT,fromNXT,gui);
+            //fromNXT->numbids = fromNXT->numasks = toNXT->numbids = toNXT->numasks = 0;
+            op = make_jumpbook(base,"NXT",rel,toNXT,fromNXT,gui,rawop);
         }
         else
         {
@@ -1997,14 +2021,14 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             asks = cJSON_CreateArray();
             if ( op->numbids != 0 || op->numasks != 0 )
             {
-                for (i=0; i<op->numbids&&i<maxdepth; i++)
+                for (i=0; i<op->numbids; i++)
                 {
-                    if ( (item= gen_orderbook_item(&op->bids[i],allflag,baseid,relid)) != 0 )
+                    if ( (i < maxdepth || op->bids[i].U.normal.nxt64bits == nxt64bits) && (item= gen_orderbook_item(&op->bids[i],allflag,baseid,relid)) != 0 )
                         cJSON_AddItemToArray(bids,item);
                 }
-                for (i=0; i<op->numasks&&i<maxdepth; i++)
+                for (i=0; i<op->numasks; i++)
                 {
-                    if ( (item= gen_orderbook_item(&op->asks[i],allflag,baseid,relid)) != 0 )
+                    if ( (i < maxdepth || op->asks[i].U.normal.nxt64bits == nxt64bits) && (item= gen_orderbook_item(&op->asks[i],allflag,baseid,relid)) != 0 )
                         cJSON_AddItemToArray(asks,item);
                 }
             }
@@ -2016,7 +2040,6 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             cJSON_AddItemToObject(json,"asks",asks);
             cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
             retstr = cJSON_Print(json);
-            free_orderbook(op), free_orderbook(toNXT), free_orderbook(fromNXT);
         } else printf("null op\n");
     }
     else
@@ -2024,6 +2047,7 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         sprintf(buf,"{\"error\":\"no orders for (%s)/(%s) (%llu ^ %llu)\"}",base,rel,(long long)baseid,(long long)relid);
         retstr = clonestr(buf);
     }
+    free_orderbook(op), free_orderbook(toNXT), free_orderbook(fromNXT), free_orderbook(rawop);
     free_txptrs(txptrs,numptrs);
     return(retstr);
 }
@@ -2182,14 +2206,15 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     double price,volume;
     uint32_t timestamp;
     struct InstantDEX_quote iQ;
-    int32_t i,remoteflag,automatch,numptrs = 0;
+    int32_t remoteflag,automatch,numptrs = 0;
     struct rambook_info *rb;
     char buf[MAX_JSON_FIELD],txidstr[64],gui[MAX_JSON_FIELD],*jsonstr,*retstr = 0;
+    find_exchange(INSTANTDEX_NAME,1);
     remoteflag = (is_remote_access(previpaddr) != 0);
     nxt64bits = calc_nxt64bits(sender);
     baseid = get_API_nxt64bits(objs[0]);
     relid = get_API_nxt64bits(objs[1]);
-    if ( baseid == 0 || relid == 0 )
+    if ( baseid == 0 || relid == 0 || baseid == relid )
         return(clonestr("{\"error\":\"illegal asset id\"}"));
     baseamount = get_API_nxt64bits(objs[5]);
     relamount = get_API_nxt64bits(objs[6]);
@@ -2205,19 +2230,16 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     type = get_API_nxt64bits(objs[7]);
     copy_cJSON(gui,objs[8]), gui[sizeof(iQ.gui)-1] = 0;
     automatch = (int32_t)get_API_int(objs[9],0);
+    ensure_rambook(baseid,relid);
     numptrs = update_iQ_flags(txptrs,sizeof(txptrs)/sizeof(*txptrs),0,0);
     printf("NXT.%s t.%u placequote type.%llu dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,(long long)type,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
     if ( automatch != 0 && remoteflag == 0 && (retstr= auto_makeoffer2(txptrs,numptrs,NXTaddr,NXTACCTSECRET,dir,baseid,baseamount,relid,relamount,gui)) != 0 )
     {
         fprintf(stderr,"got (%s) from auto_makeoffer2\n",retstr);
-        for (i=0; i<numptrs; i++)
-            if ( txptrs[i] != 0 )
-                free(txptrs[i]);
+        free_txptrs(txptrs,numptrs);
         return(retstr);
     }
-    for (i=0; i<numptrs; i++)
-        if ( txptrs[i] != 0 )
-            free(txptrs[i]);
+    free_txptrs(txptrs,numptrs);
     if ( sender[0] != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )

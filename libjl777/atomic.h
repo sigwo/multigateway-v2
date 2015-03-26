@@ -144,7 +144,8 @@ double make_jumpquote(uint64_t *baseamountp,uint64_t *relamountp,uint64_t *fromb
         *baseamountp *= ratio, *relamountp *= ratio;
         //printf("price %f (p1 %f / p0 %f), vol %f = (v0 %f * p0 %f) / p1 %f ratio %f\n",price,p1,p0,vol,v0,p0,p1,ratio);
         checkprice = calc_price_volume(&checkvol,*baseamountp,*relamountp);
-        printf("from.(%llu/%llu) to.(%llu %llu) -> (%llu/%llu) ratio %f price %f vol %f (%f %f)\n",(long long)*frombasep,(long long)*fromrelp,(long long)*tobasep,(long long)*torelp,(long long)*baseamountp,(long long)*relamountp,ratio,price,vol,checkprice,checkvol);
+        if ( Debuglevel > 2 )
+            printf("from.(%llu/%llu) to.(%llu %llu) -> (%llu/%llu) ratio %f price %f vol %f (%f %f)\n",(long long)*frombasep,(long long)*fromrelp,(long long)*tobasep,(long long)*torelp,(long long)*baseamountp,(long long)*relamountp,ratio,price,vol,checkprice,checkvol);
         //*baseamountp = vol * SATOSHIDEN;
         // *relamountp = ((price * vol) * SATOSHIDEN);
         //printf("make_jumpquote: v0 %f * %f p0 = %f, %f = v1 %f * p1 %f -> %f %f %llu/%llu = %f\n",v0,p0,v0*p0,v1*p1,v1,p1,p,v,(long long)*baseamountp,(long long)*relamountp,1./p);
