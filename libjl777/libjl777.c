@@ -1289,6 +1289,10 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
             }
         }
     }
+    find_exchange(INSTANTDEX_NAME,1);
+    find_exchange(INSTANTDEX_NXTAENAME,1);
+    if ( find_exchange(INSTANTDEX_NXTAENAME,0)->exchangeid != INSTANTDEX_NXTAEID || find_exchange(INSTANTDEX_NAME,0)->exchangeid != INSTANTDEX_EXCHANGEID )
+        printf("invalid exchangeid %d, %d\n",find_exchange(INSTANTDEX_NXTAENAME,0)->exchangeid,find_exchange(INSTANTDEX_NAME,0)->exchangeid);
     return((SUPERNET_PORT << 1) | (USESSL&1));
 }
 
