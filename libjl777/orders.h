@@ -1900,15 +1900,15 @@ struct orderbook *make_jumpbook(char *base,char *jumper,char *rel,struct orderbo
     {
         numbids = nonz_and_lesser(to->numasks,from->numbids);
         numasks = nonz_and_lesser(to->numbids,from->numasks);
-        if ( (numbids + numasks + rawop->numbids + rawop->numasks) > 0 )
+        if ( (numbids + numasks) > 0 || (rawop != 0 && (rawop->numbids + rawop->numasks) > 0) )
         {
             op = (struct orderbook *)calloc(1,sizeof(*op));
             strcpy(op->base,base), strcpy(op->rel,rel), strcpy(op->jumper,jumper);
             op->baseid = stringbits(base);
             op->relid = stringbits(rel);
-            if ( (op->numasks= (from->numasks*to->numbids)+rawop->numasks) > 0 )
+            if ( (op->numasks= (from->numasks*to->numbids)+(rawop==0?0:rawop->numasks)) > 0 )
             {
-                printf("(%llu %llu, %llu %llu).%d: ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid,rawop->numasks);
+                printf("(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
                 n = 0;
                 if ( from->numasks > 0 && to->numbids > 0 )
@@ -1917,13 +1917,13 @@ struct orderbook *make_jumpbook(char *base,char *jumper,char *rel,struct orderbo
                         for (j=0; j<to->numbids; j++)
                             make_jumpbid(&op->asks[n++],&from->asks[i],&to->bids[j],gui);
                 }
-                if ( rawop->numasks > 0 )
+                if ( rawop != 0 && rawop->numasks > 0 )
                     for (i=0; i<rawop->numasks; i++)
                         op->asks[n++] = rawop->asks[i];
             }
-            if ( (op->numbids= (to->numasks*from->numbids)+rawop->numbids) > 0 )
+            if ( (op->numbids= (to->numasks*from->numbids)+(rawop==0?0:rawop->numbids)) > 0 )
             {
-                printf("(%llu %llu, %llu %llu).%d: ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid,rawop->numbids);
+                printf("(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
                 n = 0;
                 if ( to->numasks > 0 && from->numbids > 0 )
@@ -1932,7 +1932,7 @@ struct orderbook *make_jumpbook(char *base,char *jumper,char *rel,struct orderbo
                         for (j=0; j<from->numbids; j++)
                             make_jumpask(&op->bids[n++],&from->bids[j],&to->asks[i],gui);
                 }
-                if ( rawop->numbids > 0 )
+                if ( rawop != 0 && rawop->numbids > 0 )
                     for (i=0; i<rawop->numbids; i++)
                         op->bids[n++] = rawop->bids[i];
             }
