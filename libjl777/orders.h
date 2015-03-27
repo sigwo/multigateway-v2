@@ -784,7 +784,7 @@ int32_t parseram_json_quotes(int32_t dir,struct rambook_info *rb,cJSON *array,in
     cJSON *item;
     int32_t i,n,numitems;
     uint32_t reftimestamp,timestamp;
-    uint64_t quoteid = 0;
+    uint64_t nxt64bits,quoteid = 0;
     double price,volume;
     reftimestamp = (uint32_t)time(NULL);
     n = cJSON_GetArraySize(array);
@@ -792,7 +792,7 @@ int32_t parseram_json_quotes(int32_t dir,struct rambook_info *rb,cJSON *array,in
         n = maxdepth;
     for (i=0; i<n; i++)
     {
-        quoteid = timestamp = 0;
+        nxt64bits = quoteid = timestamp = 0;
         item = cJSON_GetArrayItem(array,i);
         if ( pricefield != 0 && volfield != 0 )
         {
@@ -805,6 +805,7 @@ int32_t parseram_json_quotes(int32_t dir,struct rambook_info *rb,cJSON *array,in
             volume = get_API_float(cJSON_GetArrayItem(item,1));
             timestamp = (uint32_t)get_API_int(cJSON_GetArrayItem(item,2),0);
             quoteid = get_API_nxt64bits(cJSON_GetArrayItem(item,3));
+            nxt64bits = get_API_nxt64bits(cJSON_GetArrayItem(item,4));
         }
         else
         {
@@ -815,7 +816,7 @@ int32_t parseram_json_quotes(int32_t dir,struct rambook_info *rb,cJSON *array,in
             timestamp = reftimestamp;
         if ( Debuglevel > 1 )
             printf("%-8s %s %5s/%-5s %13.8f vol %13.8f | invert %13.8f vol %13.8f | timestmp.%u quoteid.%llu\n",rb->exchange,dir>0?"bid":"ask",rb->base,rb->rel,price,volume,1./price,volume*price,timestamp,(long long)quoteid);
-        if ( _add_rambook_quote(rb,stringbits(rb->exchange),timestamp,dir,price,volume,0,0,gui,quoteid) != rb )
+        if ( _add_rambook_quote(rb,nxt64bits,timestamp,dir,price,volume,0,0,gui,quoteid) != rb )
             printf("ERROR: rambook mismatch for %s/%s dir.%d price %.8f vol %.8f\n",rb->base,rb->rel,dir,price,volume);
     }
     return(n);
@@ -1037,6 +1038,7 @@ cJSON *convram_NXT_quotejson(int32_t flip,cJSON *json,char *fieldname,uint64_t a
     //"quantityQNT": "20000000",
     char numstr[64];
     int32_t i,n;
+    uint64_t nxt64bits;
     double price,vol;
     long long quoteid;
     uint32_t timestamp;
@@ -1072,7 +1074,9 @@ cJSON *convram_NXT_quotejson(int32_t flip,cJSON *json,char *fieldname,uint64_t a
                 cJSON_AddItemToArray(inner,cJSON_CreateNumber(timestamp));
                 quoteid = get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"order"));
                 sprintf(numstr,"%llu",(long long)quoteid), cJSON_AddItemToArray(inner,cJSON_CreateString(numstr));
-                //printf("(%s) timestamp.%u txid.%llu\n",cJSON_Print(inner),timestamp,(long long)quoteid);
+                nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"account"));
+                sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToArray(inner,cJSON_CreateString(numstr));
+                printf("(%s) NXT.%llu timestamp.%u txid.%llu\n",cJSON_Print(srcitem),(long long)nxt64bits,timestamp,(long long)quoteid);
                 cJSON_AddItemToArray(array,inner);
             }
         }
@@ -1318,44 +1322,14 @@ int32_t iQ_exchangestr(char *exchange,struct InstantDEX_quote *iQ)
     return(0);
 }
 
-cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t baseid,uint64_t relid)
-{
-    char offerstr[MAX_JSON_FIELD],exchange[64];
-    double price,volume;
-    struct InstantDEX_quote *baseiQ,*reliQ;
-    uint64_t baseamount,relamount,frombase,fromrel,tobase,torel;
-    if ( iQ->baseamount != 0 && iQ->relamount != 0 )
-    {
-        iQ_exchangestr(exchange,iQ);
-        baseamount = iQ->baseamount, relamount = iQ->relamount;
-        price = calc_price_volume(&volume,baseamount,relamount);
-        if ( allflag != 0 )
-        {
-            if ( (baseiQ= iQ->baseiQ) != 0 && (reliQ= iQ->reliQ) != 0 )
-            {
-                printf("quoteid.%llu (%llu ^ %llu)\n",(long long)calc_quoteid(iQ),(long long)calc_quoteid(baseiQ),(long long)calc_quoteid(reliQ));
-                frombase = baseiQ->baseamount, fromrel = baseiQ->relamount, tobase = reliQ->baseamount, torel = reliQ->relamount;
-                make_jumpquote(&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel);
-                sprintf(offerstr,"{\"exchange\":\"%s\",\"price\":\"%.8f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer3\",\"flip\":%d,\"baseid\":\"%llu\",\"relid\":\"%llu\",\"frombase\":\"%llu\",\"fromrel\":\"%llu\",\"tobase\":\"%llu\",\"torel\":\"%llu\",\"quoteid\":\"%llu\",\"matched\":%d,\"closed\":%d,\"gui\":\"%s\"}",exchange,price,volume,iQ->isask == 0,(long long)baseid,(long long)relid,(long long)frombase,(long long)fromrel,(long long)tobase,(long long)torel,(long long)calc_quoteid(iQ),iQ->matched,iQ->closed,iQ->gui);
-            }
-            else
-            {
-                sprintf(offerstr,"{\"exchange\":\"%s\",\"price\":\"%.8f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"other\":\"%llu\",\"type\":\"%llx\",\"matched\":%d,\"closed\":%d,\"gui\":\"%s\"}",exchange,price,volume,(long long)baseid,(long long)baseamount,(long long)relid,(long long)relamount,(long long)iQ->nxt64bits,(long long)calc_quoteid(iQ),iQ->matched,iQ->closed,iQ->gui);
-            }
-        }
-        else sprintf(offerstr,"{\"price\":\"%.8f\",\"volume\":\"%.8f\"}",price,volume);
-    }
-    return(cJSON_Parse(offerstr));
-}
-
-cJSON *gen_InstantDEX_json(struct rambook_info *rb,int32_t isask,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
+cJSON *gen_InstantDEX_json(int32_t flip,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid)
 {
     cJSON *json = cJSON_CreateObject();
     char numstr[64],base[64],rel[64],exchange[64];
     double price,volume;
     uint64_t mult;
     price = calc_price_volume(&volume,iQ->baseamount,iQ->relamount);
-    cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((isask != 0) ? "ask" : "bid"));
+    cJSON_AddItemToObject(json,"requestType",cJSON_CreateString((flip != 0) ? "ask" : "bid"));
     set_assetname(&mult,base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
     set_assetname(&mult,rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
     cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
@@ -1370,7 +1344,8 @@ cJSON *gen_InstantDEX_json(struct rambook_info *rb,int32_t isask,struct InstantD
     if ( iQ->closed != 0 )
         cJSON_AddItemToObject(json,"closed",cJSON_CreateNumber(1));
     iQ_exchangestr(exchange,iQ), cJSON_AddItemToObject(json,"exchange",cJSON_CreateString(exchange));
-    sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
+    if ( iQ->nxt64bits != 0 )
+        sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)refbaseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)iQ->baseamount), cJSON_AddItemToObject(json,"baseamount",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)refrelid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
@@ -1380,6 +1355,76 @@ cJSON *gen_InstantDEX_json(struct rambook_info *rb,int32_t isask,struct InstantD
     if ( iQ->gui[0] != 0 )
         cJSON_AddItemToObject(json,"gui",cJSON_CreateString(iQ->gui));
     return(json);
+}
+
+cJSON *makeoffer_legjson(struct InstantDEX_quote *iQ,char *fieldname,uint64_t field,char *fieldname2,uint64_t field2)
+{
+    char numstr[64];
+    cJSON *obj = cJSON_CreateObject();
+    cJSON_AddItemToObject(obj,"base",cJSON_CreateString(Exchanges[iQ->exchangeid].name));
+    if ( iQ->nxt64bits != 0 )
+        sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(obj,"NXT",cJSON_CreateString(numstr));
+    sprintf(numstr,"%llu",(long long)field), cJSON_AddItemToObject(obj,fieldname,cJSON_CreateString(numstr));
+    sprintf(numstr,"%llu",(long long)field2), cJSON_AddItemToObject(obj,fieldname2,cJSON_CreateString(numstr));
+    return(obj);
+}
+
+cJSON *add_makeoffer_json(cJSON *json,uint64_t baseamount,uint64_t relamount,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ)
+{
+    cJSON *array;
+    uint64_t frombase,fromrel,tobase,torel;
+    if ( baseiQ != 0 && reliQ != 0 )
+    {
+        frombase = baseiQ->baseamount, fromrel = baseiQ->relamount, tobase = reliQ->baseamount, torel = reliQ->relamount;
+        make_jumpquote(&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel);
+        cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString("makeoffer3"));
+        array = cJSON_CreateArray();
+        cJSON_AddItemToArray(array,makeoffer_legjson(baseiQ,"frombase",frombase,"fromrel",fromrel));
+        cJSON_AddItemToArray(array,makeoffer_legjson(reliQ,"tobase",tobase,"torel",torel));
+        cJSON_AddItemToObject(json,"combined",array);
+    }
+    return(json);
+}
+
+cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t baseid,uint64_t relid)
+{
+    char offerstr[MAX_JSON_FIELD];
+    uint64_t baseamount,relamount;
+    double price,volume;
+    cJSON *json = 0;
+    baseamount = iQ->baseamount, relamount = iQ->relamount;
+    if ( (json= gen_InstantDEX_json(iQ->isask,iQ,baseid,relid)) != 0 )
+        json = add_makeoffer_json(json,baseamount,relamount,iQ->baseiQ,iQ->reliQ);
+    if ( allflag == 0 )
+    {
+        price = calc_price_volume(&volume,baseamount,relamount);
+        sprintf(offerstr,"{\"price\":\"%.8f\",\"volume\":\"%.8f\"}",price,volume);
+        free_json(json);
+        return(cJSON_Parse(offerstr));
+    }  else return(json);
+   /* if ( (json= gen_InstantDEX_json(iQ->isask,iQ,baseid,relid)) != 0 )
+    {
+        cJSON_AddItemToObject(json,"makeoffer",);
+        if ( allflag != 0 )
+        {
+            if ( (baseiQ= iQ->baseiQ) != 0 && (reliQ= iQ->reliQ) != 0 )
+            {
+                printf("quoteid.%llu (%llu ^ %llu)\n",(long long)calc_quoteid(iQ),(long long)calc_quoteid(baseiQ),(long long)calc_quoteid(reliQ));
+                 cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString("makeoffer3"));
+                cJSON_AddItemToObject(json,"makeoffer",makeoffer_json(&baseamount,&relamount,baseiQ,reliQ));
+                
+                //sprintf(offerstr,"{\"exchange\":\"%s\",\"price\":\"%.8f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer3\",\"flip\":%d,\"baseid\":\"%llu\",\"relid\":\"%llu\",\"frombase\":\"%llu\",\"fromrel\":\"%llu\",\"tobase\":\"%llu\",\"torel\":\"%llu\",\"quoteid\":\"%llu\",\"matched\":%d,\"closed\":%d,\"gui\":\"%s\"}",exchange,price,volume,iQ->isask == 0,(long long)baseid,(long long)relid,(long long)frombase,(long long)fromrel,(long long)tobase,(long long)torel,(long long)calc_quoteid(iQ),iQ->matched,iQ->closed,iQ->gui);
+            }
+            else
+            {
+                //sprintf(offerstr,"{\"exchange\":\"%s\",\"price\":\"%.8f\",\"volume\":\"%.8f\",\"requestType\":\"makeoffer\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"other\":\"%llu\",\"quoteid\":\"%llx\",\"matched\":%d,\"closed\":%d,\"gui\":\"%s\"}",exchange,price,volume,(long long)baseid,(long long)baseamount,(long long)relid,(long long)relamount,(long long)iQ->nxt64bits,(long long)calc_quoteid(iQ),iQ->matched,iQ->closed,iQ->gui);
+            }
+        }
+        else
+        {
+        }
+    }
+    return(json);*/
 }
 
 int _decreasing_quotes(const void *a,const void *b)
@@ -1526,7 +1571,7 @@ cJSON *openorders_json(char *NXTaddr)
                 iQ = &rb->quotes[j];
                 expand_nxt64bits(nxtaddr,iQ->nxt64bits);
                 if ( strcmp(NXTaddr,nxtaddr) == 0 && iQ->closed == 0 )
-                    cJSON_AddItemToArray(array,gen_InstantDEX_json(rb,iQ->isask,iQ,rb->assetids[0],rb->assetids[1])), n++;
+                    cJSON_AddItemToArray(array,gen_InstantDEX_json(iQ->isask,iQ,rb->assetids[0],rb->assetids[1])), n++;
             }
         }
         free(obooks);
@@ -2253,7 +2298,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
         if ( price != 0. && volume != 0. && dir != 0 )
         {
             rb = add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,timestamp,dir,baseid,relid,price,volume,baseamount,relamount,gui);
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(rb,0,&iQ,rb->assetids[0],rb->assetids[1])) != 0 )
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(0,&iQ,rb->assetids[0],rb->assetids[1])) != 0 )
             {
                 jsonstr = cJSON_Print(json);
                 stripwhite_ns(jsonstr,strlen(jsonstr));

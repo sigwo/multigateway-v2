@@ -1272,17 +1272,20 @@ int32_t tweak_orders(struct NXT_tx *txptrs[],int32_t numtx,uint64_t sellid,uint6
     return(retval);
 }
 
-char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,int32_t flip,uint64_t srcqty,uint64_t baseid,uint64_t relid,uint64_t frombase,uint64_t fromrel,uint64_t tobase,uint64_t torel,uint64_t quoteid)
+char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,int32_t flip,uint64_t srcqty,uint64_t baseid,uint64_t relid,cJSON *baseobj,cJSON *relobj,uint64_t quoteid)
 {
     int32_t update_iQ_flags(struct NXT_tx *txptrs[],int32_t maxtx,uint64_t baseid,uint64_t relid);
     char comment[MAX_JSON_FIELD],assetidstr[64],feeutxbytes[2048],feesignedtx[2048],triggerhash[65],feesighash[65],buf[MAX_JSON_FIELD],*jsonstr = 0;
     uint64_t nxt64bits,qtyA,qtyB,priceNQTA,priceNQTB,feetxid,availA,availB,asktxid,bidtxid,tmp,srcarg,srcamount=0,fee = INSTANTDEX_FEE;
+    uint64_t frombase,fromrel,tobase,torel;
     struct NXT_tx T,*txptrs[1000],*feetx;
     int32_t i,errcode,numtx,matched,createdflag;
     struct NXT_asset *ap;
     double endmilli,priceA,priceB,volA,volB,ratio = 1.;
     memset(txptrs,0,sizeof(txptrs));
     nxt64bits = calc_nxt64bits(NXTaddr);
+    frombase = get_API_nxt64bits(cJSON_GetObjectItem(baseobj,"frombase")), fromrel = get_API_nxt64bits(cJSON_GetObjectItem(baseobj,"fromrel"));
+    tobase = get_API_nxt64bits(cJSON_GetObjectItem(relobj,"tobase")), torel = get_API_nxt64bits(cJSON_GetObjectItem(relobj,"torel"));
     if ( flip == 0 )
         srcarg = frombase, expand_nxt64bits(assetidstr,baseid);
     else srcarg = tobase, expand_nxt64bits(assetidstr,relid);
