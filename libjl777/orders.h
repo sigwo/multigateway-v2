@@ -1076,7 +1076,7 @@ cJSON *convram_NXT_quotejson(int32_t flip,cJSON *json,char *fieldname,uint64_t a
                 sprintf(numstr,"%llu",(long long)quoteid), cJSON_AddItemToArray(inner,cJSON_CreateString(numstr));
                 nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"account"));
                 sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToArray(inner,cJSON_CreateString(numstr));
-                printf("(%s) NXT.%llu timestamp.%u txid.%llu\n",cJSON_Print(srcitem),(long long)nxt64bits,timestamp,(long long)quoteid);
+               // printf("(%s) NXT.%llu timestamp.%u txid.%llu\n",cJSON_Print(srcitem),(long long)nxt64bits,timestamp,(long long)quoteid);
                 cJSON_AddItemToArray(array,inner);
             }
         }
