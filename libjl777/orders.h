@@ -1357,11 +1357,11 @@ cJSON *gen_InstantDEX_json(int32_t flip,struct InstantDEX_quote *iQ,uint64_t ref
     return(json);
 }
 
-cJSON *makeoffer_legjson(struct InstantDEX_quote *iQ,char *fieldname,uint64_t field,char *fieldname2,uint64_t field2)
+cJSON *makeoffer_legjson(char *baserelstr,struct InstantDEX_quote *iQ,char *fieldname,uint64_t field,char *fieldname2,uint64_t field2)
 {
     char numstr[64];
     cJSON *obj = cJSON_CreateObject();
-    cJSON_AddItemToObject(obj,"base",cJSON_CreateString(Exchanges[iQ->exchangeid].name));
+    cJSON_AddItemToObject(obj,baserelstr,cJSON_CreateString(Exchanges[iQ->exchangeid].name));
     if ( iQ->nxt64bits != 0 )
         sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(obj,"NXT",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)field), cJSON_AddItemToObject(obj,fieldname,cJSON_CreateString(numstr));
@@ -1379,8 +1379,8 @@ cJSON *add_makeoffer_json(cJSON *json,uint64_t baseamount,uint64_t relamount,str
         make_jumpquote(&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel);
         cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString("makeoffer3"));
         array = cJSON_CreateArray();
-        cJSON_AddItemToArray(array,makeoffer_legjson(baseiQ,"frombase",frombase,"fromrel",fromrel));
-        cJSON_AddItemToArray(array,makeoffer_legjson(reliQ,"tobase",tobase,"torel",torel));
+        cJSON_AddItemToArray(array,makeoffer_legjson("base",baseiQ,"frombase",frombase,"fromrel",fromrel));
+        cJSON_AddItemToArray(array,makeoffer_legjson("rel",reliQ,"tobase",tobase,"torel",torel));
         cJSON_AddItemToObject(json,"combined",array);
     }
     return(json);
