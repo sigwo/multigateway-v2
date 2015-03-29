@@ -1887,7 +1887,8 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
             bid->isask = 0;
             //if ( quoteid != 0 )
             //    bid->quoteid = quoteid;
-            p = calc_price_volume(&v,iQ->baseamount,iQ->relamount), printf("B.(%f %f) ",p,v);
+            if ( Debuglevel > 2 )
+                p = calc_price_volume(&v,iQ->baseamount,iQ->relamount), printf("B.(%f %f) ",p,v);
         }
         else
         {
@@ -1898,7 +1899,8 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
             //    ask->quoteid = quoteid;
             //ask->baseamount = iQ->relamount;
             //ask->relamount = iQ->baseamount;
-            p = calc_price_volume(&v,ask->baseamount,ask->relamount), printf("A.(%f %f) ",1./p,p*v);
+            if ( Debuglevel > 2 )
+                p = calc_price_volume(&v,ask->baseamount,ask->relamount), printf("A.(%f %f) ",1./p,p*v);
         }
     }
 }
@@ -2124,11 +2126,14 @@ void ensure_rambook(uint64_t baseid,uint64_t relid)
 void debug_json(cJSON *item)
 {
     char *str,*str2;
-    str = cJSON_Print(item);
-    stripwhite_ns(str,strlen(str));
-    str2 = stringifyM(str);
-    printf("%s\n",str2);
-    free(str), free(str2);
+    if ( Debuglevel > 1 )
+    {
+        str = cJSON_Print(item);
+        stripwhite_ns(str,strlen(str));
+        str2 = stringifyM(str);
+        printf("%s\n",str2);
+        free(str), free(str2);
+    }
 }
 
 char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
