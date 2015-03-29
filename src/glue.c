@@ -69,38 +69,10 @@ void *portable_thread_create(void *funcp,void *argp)
     } else return(ptr);
 }
 
-void *_launch_SuperNET(void *_myip)
+int32_t set_SuperNET_url(char *url)
 {
-    char *myip = _myip;
     FILE *fp;
-    char cmd[128],*msgfname = "horrible.hack";
-    int32_t retval,delflag,usessl,port = 0;
-    void *processptr = 0;
-    if ( (fp= fopen(msgfname,"rb")) != 0 )
-        delflag = 1, fclose(fp);
-    else delflag = 0;
-#ifdef _WIN32
-    if ( delflag != 0 )
-    {
-        sprintf(cmd,"del %s",msgfname);
-        system(cmd);
-    }
-    sprintf(cmd, "SuperNET.exe");
-    sprintf(SuperNET_url, "http://127.0.0.1:7778");
-    did_SuperNET_init = 1;
-    SuperNET_retval = 0;
-    processptr = portable_thread_create(poll_for_broadcasts,0);
-    if (portable_spawn("_WIN32", cmd, myip) != 0)
-        fprintf(stderr, "Error Starting SuperNET.exe");
-#else
-    if ( delflag != 0 )
-    {
-        sprintf(cmd,"rm %s",msgfname);
-        system(cmd);
-    }
-    sprintf(cmd,"./SuperNET");
-    if ( portable_spawn("__linux__", cmd, myip) != 0 )
-        printf("error launching (%s)\n",cmd);
+    int32_t retval,usessl=0,port;
     while ( (fp= fopen("horrible.hack","rb")) == 0 )
         sleep(1);
     if ( fread(&retval,1,sizeof(retval),fp) != sizeof(retval) )
@@ -113,7 +85,7 @@ void *_launch_SuperNET(void *_myip)
         printf("retval.%x port.%d usessl.%d\n",retval,port,usessl);
         if ( port < (1 << 16) )
         {
-            sprintf(SuperNET_url,"http%s://127.0.0.1:%d",usessl==0?"":"s",port + !usessl);
+            sprintf(SuperNET_url,"http%s://127.0.0.1:%d",usessl==0?"":"s",port);// + !usessl);
             retval = 0;
         }
         else retval = -3;
@@ -125,14 +97,43 @@ void *_launch_SuperNET(void *_myip)
         case -2: printf("handshake file error\n"); break;
         case -3: printf("illegal supernet port.%d usessl.%d\n",port,usessl); break;
     }
-    
-    if ( retval == 0 )
-    {
-        processptr = portable_thread_create(poll_for_broadcasts,0);
-        did_SuperNET_init = 1;
-    }
-    SuperNET_retval = retval;
+    return(retval);
+}
+
+void *_launch_SuperNET(void *_myip)
+{
+    char *myip = _myip;
+    FILE *fp;
+    char cmd[128],*osstr,*rmstr,*cmdstr,*msgfname = "horrible.hack";
+    int32_t retval;
+    void *processptr = 0;
+#ifdef _WIN32
+    cmdstr = "./SuperNET.exe";
+    osstr = "_WIN32";
+    rmstr = "del"
+#else
+    cmdstr = "./SuperNET";
+    osstr = "__linux__";
+    rmstr = "rm";
 #endif
+   if ( (fp= fopen(msgfname,"rb")) != 0 )
+    {
+        fclose(fp);
+        sprintf(cmd,"%s %s",rmstr,msgfname);
+        system(cmd);
+    }
+    if ( portable_spawn(osstr,cmdstr,myip) != 0 )
+        printf("error launching (%s)\n",cmd);
+    else
+    {
+        retval = set_SuperNET_url(SuperNET_url);
+        if ( retval == 0 )
+        {
+            processptr = portable_thread_create(poll_for_broadcasts,0);
+            did_SuperNET_init = 1;
+        }
+        SuperNET_retval = retval;
+    }
     return(processptr);
 }
 
