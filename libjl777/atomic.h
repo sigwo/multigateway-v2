@@ -1056,7 +1056,7 @@ uint64_t calc_asset_qty(uint64_t *availp,uint64_t *priceNQTp,char *NXTaddr,int32
             priceNQT = (price * ap->mult);
             quantityQNT = (vol * SATOSHIDEN) / ap->mult;
             balance = get_asset_quantity(&unconfirmed,NXTaddr,assetidstr);
-            printf("%s balance %.8f unconfirmed %.8f vs price %llu qty %llu for asset.%s | (%f * %f) * (%ld / %llu)\n",NXTaddr,dstr(balance),dstr(unconfirmed),(long long)priceNQT,(long long)quantityQNT,assetidstr,vol,price,SATOSHIDEN,ap->mult);
+            printf("%s balance %.8f unconfirmed %.8f vs price %llu qty %llu for asset.%s | (%f * %f) * (%ld / %llu)\n",NXTaddr,dstr(balance),dstr(unconfirmed),(long long)priceNQT,(long long)quantityQNT,assetidstr,vol,price,SATOSHIDEN,(long long)ap->mult);
             if ( checkflag != 0 && (balance < quantityQNT || unconfirmed < quantityQNT) )
                 return(0);
             *priceNQTp = priceNQT;
@@ -1623,7 +1623,7 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,int32_t flip,uint64_t srcqty,
     struct NXT_tx T,*txptrs[1000],*feetx;
     int32_t i,errcode,numtx,matched,createdflag;
     struct NXT_asset *ap;
-    double endmilli,priceA,priceB,volA,volB,ratio = 1.;
+    double endmilli,priceA,priceB,volA=0.,volB=0.,ratio = 1.;
     memset(txptrs,0,sizeof(txptrs));
     nxt64bits = calc_nxt64bits(NXTaddr);
     frombase = get_API_nxt64bits(cJSON_GetObjectItem(baseobj,"baseamount")), fromrel = get_API_nxt64bits(cJSON_GetObjectItem(baseobj,"relamount"));
