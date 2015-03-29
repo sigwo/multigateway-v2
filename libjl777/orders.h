@@ -221,7 +221,7 @@ int32_t is_exchange_nxt64bits(uint64_t nxt64bits)
     for (exchangeid=0; exchangeid<MAX_EXCHANGES; exchangeid++)
     {
         exchange = &Exchanges[exchangeid];
-        printf("(%s).(%llu vs %llu) ",exchange->name,(long long)exchange->nxt64bits,(long long)nxt64bits);
+       // printf("(%s).(%llu vs %llu) ",exchange->name,(long long)exchange->nxt64bits,(long long)nxt64bits);
         if ( exchange->name[0] == 0 )
             return(0);
         if ( exchange->nxt64bits == nxt64bits )
@@ -254,7 +254,7 @@ void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         fwrite(data,1,offset,rb->fp);
         fflush(rb->fp);
         price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-        printf("emit.(%s) %12.8f %12.8f %s_%s %16llu %16llu\n",rb->exchange,price,vol,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
+       // printf("emit.(%s) %12.8f %12.8f %s_%s %16llu %16llu\n",rb->exchange,price,vol,rb->base,rb->rel,(long long)iQ->baseamount,(long long)iQ->relamount);
     }
 }
 
@@ -1482,11 +1482,14 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
     cJSON *relobj=0,*baseobj=0;
     struct InstantDEX_quote *baseiQ,*reliQ;
     uint64_t mult;
-    baseamount = iQ->baseamount, relamount = iQ->relamount, baseiQ = iQ->baseiQ, reliQ = iQ->reliQ;
+    if ( iQ->isask == 0 )
+        baseamount = iQ->baseamount, relamount = iQ->relamount;
+    else relamount = iQ->baseamount, baseamount = iQ->relamount;
+    baseiQ = iQ->baseiQ, reliQ = iQ->reliQ;
+    if ( depth == 0 )
+        *baseamountp = baseamount, *relamountp = relamount;
     if ( baseiQ != 0 && reliQ != 0 )
     {
-        if ( depth == 0 )
-            *baseamountp = baseamount, *relamountp = relamount;
         if ( baseiQ->isask == 0 )
             frombase = baseiQ->baseamount, fromrel = baseiQ->relamount;
         else fromrel = baseiQ->baseamount, frombase = baseiQ->relamount;
@@ -1837,7 +1840,7 @@ struct InstantDEX_quote *search_pendingtrades(uint64_t my64bits,uint64_t baseid,
         for (i=0; i<numbooks; i++)
         {
             rb = obooks[i];
-            printf("(%llu -> %llu).%d vs %llu/%llu\n",(long long)rb->assetids[0],(long long)rb->assetids[1],rb->numquotes,(long long)baseid,(long long)relid);
+            //printf("(%llu -> %llu).%d vs %llu/%llu\n",(long long)rb->assetids[0],(long long)rb->assetids[1],rb->numquotes,(long long)baseid,(long long)relid);
             if ( rb->numquotes == 0 || rb->assetids[0] != baseid || rb->assetids[1] != relid )
                 continue;
             printf(">>>>>>>>>>>> (%llu -> %llu).%d vs %llu/%llu\n",(long long)rb->assetids[0],(long long)rb->assetids[1],rb->numquotes,(long long)baseid,(long long)relid);
@@ -1871,16 +1874,17 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
     struct InstantDEX_quote *ask,*bid;
     if ( iter == 0 )
     {
-        if ( polarity > 0 )
+        if ( polarity > 0 )//&& iQ->isask == 0) || (polarity < 0 && iQ->isask != 0) )
             op->numbids++;
         else op->numasks++;
     }
     else
     {   double p,v;
-        if ( polarity > 0 )
+        if ( polarity > 0 )//&& iQ->isask == 0) || (polarity < 0 && iQ->isask != 0) )
         {
             bid = &op->bids[(*numbidsp)++];
             *bid = *iQ;
+            bid->isask = 0;
             //if ( quoteid != 0 )
             //    bid->quoteid = quoteid;
             p = calc_price_volume(&v,iQ->baseamount,iQ->relamount), printf("B.(%f %f) ",p,v);
@@ -1889,6 +1893,7 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
         {
             ask = &op->asks[(*numasksp)++];
             *ask = *iQ;
+            ask->isask = 1;
             //if ( quoteid != 0 )
             //    ask->quoteid = quoteid;
             //ask->baseamount = iQ->relamount;
@@ -2174,7 +2179,7 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
             if ( baseid != NXT_ASSETID )
                 op = create_orderbook(0,baseid,0,NXT_ASSETID,oldest,gui);  // base/jump
             else if ( relid != NXT_ASSETID )
-                op = create_orderbook(0,relid,0,NXT_ASSETID,oldest,gui); // rel/jump
+                op = create_orderbook(0,NXT_ASSETID,0,relid,oldest,gui); // rel/jump
         }
         if ( op != 0 )
         {
