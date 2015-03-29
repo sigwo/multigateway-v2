@@ -1658,7 +1658,7 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,int32_t flip,uint64_t srcqty,
         qtyA = calc_asset_qty(&availA,&priceNQTA,NXTaddr,askoffer==0,baseid,priceA,volA);
         qtyB = calc_asset_qty(&availB,&priceNQTB,NXTaddr,askoffer!=0,relid,priceB,volB);
         printf("ratio %f, srcamount %.8f srcarg %.8f srcqty %.8f -> (%f %f) (%f %f)\n",ratio,dstr(srcamount),dstr(srcarg),dstr(srcqty),priceA,volA,priceB,volB);
-    } else priceB = priceA = qtyA = qtyB = priceNQTA = priceNQTB = availA = availB = 0;
+    } else priceB = priceA = qtyA = qtyB = priceNQTA = priceNQTB = availA = availB = volA = volB = 0;
     printf("qtyA %llu priceA %f volA %f, qtyB %lld priceB %f volB %f\n",(long long)qtyA,priceA,volA,(long long)qtyB,priceB,volB);
     if ( srcamount == 0 || qtyA == 0 || qtyB == 0 || priceNQTA == 0 || priceNQTB == 0 )
     {
