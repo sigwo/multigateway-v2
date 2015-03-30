@@ -1800,7 +1800,7 @@ int32_t process_Pending_tradesQ(struct pending_trade **ptp,void **ptrs)
 
 void update_openorder(struct InstantDEX_quote *iQ,struct NXT_tx *tx)
 {
-    printf("update_openorder iQ.%llu with tx.%llu\n",(long long)iQ->quoteid,(long long)tx->txid);
+    //printf("update_openorder iQ.%llu with tx.%llu\n",(long long)iQ->quoteid,(long long)tx->txid);
 }
 
 void poll_jumptrades(char *NXTaddr,char *NXTACCTSECRET)
@@ -1826,7 +1826,7 @@ void poll_jumptrades(char *NXTaddr,char *NXTACCTSECRET)
                         baseid = get_API_nxt64bits(cJSON_GetObjectItem(item,"baseid"));
                         relid = get_API_nxt64bits(cJSON_GetObjectItem(item,"relid"));
                         iQ = (struct InstantDEX_quote *)get_API_nxt64bits(cJSON_GetObjectItem(item,"iQ"));
-                        printf("iQ.%p quoteid.%llu vs %llu\n",iQ,(long long)calc_quoteid(iQ),(long long)quoteid);
+                        //printf("iQ.%p quoteid.%llu vs %llu\n",iQ,(long long)calc_quoteid(iQ),(long long)quoteid);
                         // need to update with new NXT blocks and InstantDEX orderbooks
                         for (j=0; j<numtx; j++)
                             if ( txptrs[j]->quoteid == quoteid ||  txptrs[j]->assetidbits == baseid ||  txptrs[j]->assetidbits == relid )

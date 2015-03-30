@@ -350,7 +350,7 @@ struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t
         touppercase(rb->rel), strcpy(rb->lrel,rb->rel), tolowercase(rb->lrel);
         for (i=0; i<4; i++)
             rb->assetids[i] = assetids[i];
-        if ( Debuglevel > 2 )
+        if ( Debuglevel > 1 )
             printf("CREATE RAMBOOK.(%llu.%d -> %llu.%d) %s (%s) (%s)\n",(long long)baseid,basetype,(long long)relid,reltype,exchange,rb->base,rb->rel);
         HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
