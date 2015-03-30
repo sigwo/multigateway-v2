@@ -119,6 +119,7 @@ uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits)
     uint32_t i,retval = INSTANTDEX_UNKNOWN;
     *multp = 1;
     expand_nxt64bits(assetstr,assetbits);
+    strcpy(name,"unknown");
     for (i=0; i<(int32_t)(sizeof(assetmap)/sizeof(*assetmap)); i++)
     {
         if ( strcmp(assetmap[i][0],assetstr) == 0 )
