@@ -1680,7 +1680,7 @@ char *pending_trade_error(struct pending_trade *pt)
 
 int32_t scale_qty(struct pending_trade *pt,char *NXTaddr,struct pendinghalf *base,struct pendinghalf *rel)
 {
-    char assetidstr[64]; struct NXT_asset *ap; int32_t createdflag; double ratio; uint64_t tmp,mult,assetid;
+    char assetidstr[64]; struct NXT_asset *ap; int32_t createdflag; double ratio = 1; uint64_t tmp,mult,assetid;
     if ( pt->askoffer == 0 )
         pt->srcarg = base->baseamount, assetid = base->assetid;
     else pt->srcarg = rel->baseamount, assetid = rel->assetid;
@@ -1766,7 +1766,7 @@ int32_t need_to_requesthalf(struct pendinghalf *half,int32_t dir,struct pending_
 
 int32_t process_Pending_tradesQ(struct pending_trade **ptp,void **ptrs)
 {
-    char *NXTACCTSECRET; struct NXT_tx **txptrs; int32_t i,matched; uint64_t txid,feetxid; struct pending_trade *pt = *ptp;
+    char *NXTACCTSECRET; struct NXT_tx **txptrs; int32_t i,matched; uint64_t txid; struct pending_trade *pt = *ptp;
     NXTACCTSECRET = ptrs[0], txptrs = ptrs[1];
     //printf("process feetxid %llu\n",(long long)pt->feetx->txid);
     if ( milliseconds() > pt->expiration )
@@ -1786,12 +1786,12 @@ int32_t process_Pending_tradesQ(struct pending_trade **ptp,void **ptrs)
     {
         if ( (pt->actual_feetxid= issue_broadcastTransaction(&pt->errcode,0,pt->feesignedtx,NXTACCTSECRET)) != pt->feetx->txid )
         {
-            printf("Jump trades triggered! feetxid.%llu but unexpected should have been %llu\n",(long long)feetxid,(long long)pt->feetx->txid);
+            printf("Jump trades triggered! feetxid.%llu but unexpected should have been %llu\n",(long long)pt->actual_feetxid,(long long)pt->feetx->txid);
             return(-1);
         }
         else
         {
-            printf("Jump trades triggered! feetxid.%llu\n",(long long)feetxid);
+            printf("Jump trades triggered! feetxid.%llu\n",(long long)pt->actual_feetxid);
             return(1);
         }
     } else printf("matched.%d vs numrequired.%d\n",matched,pt->numrequired);
