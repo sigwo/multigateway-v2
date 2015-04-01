@@ -72,7 +72,7 @@ void *portable_thread_create(void *funcp,void *argp)
 int32_t set_SuperNET_url(char *url)
 {
     FILE *fp;
-    int32_t retval,usessl=0,port;
+    int32_t retval=0,usessl=0,port=0;
     while ( (fp= fopen("horrible.hack","rb")) == 0 )
         sleep(1);
     if ( fread(&retval,1,sizeof(retval),fp) != sizeof(retval) )
@@ -81,12 +81,12 @@ int32_t set_SuperNET_url(char *url)
     if ( retval > 0 )
     {
         usessl = (retval & 1);
-        port = (retval >> 1);
+        port = (retval >> 1) & 0xffff;
         printf("retval.%x port.%d usessl.%d\n",retval,port,usessl);
         if ( port < (1 << 16) )
         {
             sprintf(SuperNET_url,"http%s://127.0.0.1:%d",usessl==0?"":"s",port);// + !usessl);
-            retval = 0;
+            retval >>= 17;
         }
         else retval = -3;
     }

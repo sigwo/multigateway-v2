@@ -4191,7 +4191,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	int32_t len;
     char *retstr,params[MAX_JSON_FIELD*2],*str;
     //fprintf(stderr,"in process_jl777_msg(%s) dur.%d | retval.%d\n",msg,duration,SuperNET_retval);
-    if ( SuperNET_retval < 0 )
+    if ( SuperNET_retval <= 0 )
         return(0);
 	if ( msg == 0 || msg[0] == 0 )
 	{
@@ -4227,7 +4227,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
     printf("inside SuperNET_broadcast.(%s) retval.%d\n",msg,SuperNET_retval);
-    if ( SuperNET_retval < 0 )
+    if ( SuperNET_retval <= 0 )
         return(-1);
     broadcastPubAddr(msg,duration);
 	return(0);
@@ -4239,7 +4239,7 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     CPubAddr *pubaddr = new CPubAddr;
     std::string supernetmsg = "";
     CNode *peer;
-    if ( SuperNET_retval < 0 )
+    if ( SuperNET_retval <= 0 )
         return(-1);
     peer = FindNode((CService)destip);
     if ( peer == NULL )
