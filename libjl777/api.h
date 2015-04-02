@@ -2042,7 +2042,8 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     if ( argjson != 0 )
     {
         obj = cJSON_GetObjectItem(argjson,"requestType");
-        nxtobj = cJSON_GetObjectItem(argjson,"NXT");
+        if ( (nxtobj= cJSON_GetObjectItem(argjson,"NXT")) == 0 )
+            nxtobj = cJSON_GetObjectItem(argjson,"offerNXT");
         secretobj = cJSON_GetObjectItem(argjson,"secret");
         copy_cJSON(NXTaddr,nxtobj);
         copy_cJSON(command,obj);
