@@ -47,7 +47,9 @@ struct NXT_tx *search_txptrs(struct NXT_tx *txptrs[],uint64_t txid,uint64_t quot
     {
         if ( (tx= txptrs[i]) == 0 )
             return(0);
-        if ( tx->txid == txid || tx->quoteid == quoteid || tx->assetidbits == baseid || tx->assetidbits == relid )
+        if ( quoteid != 0 )
+            printf("Q.%llu ",(long long)tx->quoteid);
+        if ( (txid != 0 && tx->txid == txid) || (quoteid != 0 && tx->quoteid == quoteid) || (baseid != 0 && tx->assetidbits == baseid) || (relid != 0 && tx->assetidbits == relid) )
             return(tx);
     }
     return(0);

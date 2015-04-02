@@ -150,7 +150,7 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
                     return(iQ);
             }
         }
-    }
+    } else printf("couldnt find quoteid.%llu\n",(long long)quoteid);
     return(0);
 }
 
@@ -236,6 +236,7 @@ int32_t pendinghalf_is_complete(struct pending_offer *pt,struct pendinghalf *hal
         return(0);
     if ( half->T.assetid == 0 || (half->T.unconf != 0 && half->T.txid != 0) || half->T.closed != 0 )
         return(1);
+    printf("halftxid.%llu ",(long long)half->T.txid);
     if ( half->T.txid != 0 && (tx= search_txptrs(txptrs,half->T.txid,0,0,0)) != 0 )
     {
         half->T.unconf = 1;
@@ -248,6 +249,7 @@ int32_t pendinghalf_is_complete(struct pending_offer *pt,struct pendinghalf *hal
         if ( half->feetxid == 0 )
         {
             decode_hex(refhash.bytes,sizeof(refhash),pt->triggerhash);
+            printf("check triggerhash.(%s)\n",pt->triggerhash);
             for (i=0; i<MAX_TXPTRS; i++)
             {
                 if ( (tx= txptrs[i]) == 0 )
@@ -255,11 +257,12 @@ int32_t pendinghalf_is_complete(struct pending_offer *pt,struct pendinghalf *hal
                 if ( tx->senderbits == otherNXT(pt,half) && is_feetx(tx) != 0 && memcmp(refhash.bytes,tx->refhash.bytes,sizeof(refhash)) == 0 )
                 {
                     half->feetxid = tx->txid;
-                    printf("got free from offerNXT.%llu\n",(long long)otherNXT(pt,half));
+                    printf("got fee from offerNXT.%llu\n",(long long)otherNXT(pt,half));
                     break;
                 }
             }
         }
+        printf("search for quoteid.%llu: ",(long long)half->T.quoteid);
         if ( half->T.txid == 0 && half->T.quoteid != 0 && (tx= search_txptrs(txptrs,0,half->T.quoteid,0,0)) != 0 )
         {
             if ( matches_halfquote(pt,half,tx) != 0 )
