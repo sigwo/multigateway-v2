@@ -362,8 +362,8 @@ char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     char cmdstr[MAX_JSON_FIELD],triggerhash[MAX_JSON_FIELD],utx[MAX_JSON_FIELD],sig[MAX_JSON_FIELD],*retstr = 0;
     uint64_t quoteid,assetid,qty,priceNQT;
     int32_t minperc;
-    if ( is_remote_access(previpaddr) == 0 )
-        return(0);
+    //if ( is_remote_access(previpaddr) == 0 )
+    //    return(0);
     copy_cJSON(cmdstr,objs[0]);
     assetid = get_API_nxt64bits(objs[1]);
     qty = get_API_nxt64bits(objs[2]);
@@ -373,6 +373,8 @@ char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     copy_cJSON(sig,objs[6]);
     copy_cJSON(utx,objs[7]);
     minperc = (int32_t)get_API_int(objs[8],INSTANTDEX_MINVOL);
+    if ( is_remote_access(previpaddr) == 0 )
+        copy_cJSON(sender,objs[9]);
     if ( sender[0] != 0 && valid > 0 && triggerhash[0] != 0 )
         retstr = respondtx(NXTaddr,NXTACCTSECRET,sender,cmdstr,assetid,qty,priceNQT,triggerhash,quoteid,sig,utx,minperc);
     else retstr = clonestr("{\"result\":\"invalid respondtx_func request\"}");
@@ -2007,7 +2009,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *bid[] = { (char *)bid_func, "bid", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", 0 };
     static char *ask[] = { (char *)ask_func, "ask", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", 0 };
     static char *makeoffer3[] = { (char *)makeoffer3_func, "makeoffer3", "V", "baseid", "relid", "quoteid", "srcqty", "flip", "baseiQ", "reliQ", "askoffer", "price", "volume", "exchange", "baseamount", "relamount", "offerNXT", "minperc", "jumpasset", 0 };
-    static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "cmd", "assetid", "quantityQNT", "priceNQT", "triggerhash", "quoteid", "sig", "utx", "minperc", 0 };
+    static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "cmd", "assetid", "quantityQNT", "priceNQT", "triggerhash", "quoteid", "sig", "utx", "minperc", "offerNXT", 0 };
     //static char *processjumptrade[] = { (char *)processjumptrade_func, "processjumptrade", "V", "assetA", "amountA", "other", "assetB", "amountB", "feeA", "feeAtxid", "triggerhash", "jumper", "jumpasset", "jumpamount", "balancing", "balancetxid", "gui", "quoteid", 0 };
     //static char *processutx[] = { (char *)processutx_func, "processutx", "V", "utx", "sig", "full", "feeAtxid", "quoteid", 0 };
     //static char *makeoffer[] = { (char *)makeoffer_func, "makeoffer", "V", "baseid", "relid", "baseamount", "relamount", "other", "type", "quoteid", 0 };
@@ -2083,7 +2085,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
             //printf("needvalid.(%c) sender.(%s) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],sender,valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
             if ( strcmp(cmdinfo[1],command) == 0 )
             {
-               // printf("%d %d\n",cmdinfo[2][0],valid);
+               printf("%d %d\n",cmdinfo[2][0],valid);
                 if ( cmdinfo[2][0] != 0 && valid <= 0 )
                     return(0);
                 for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)

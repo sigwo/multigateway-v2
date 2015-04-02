@@ -373,6 +373,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
     int32_t i,n,numtx,NXTblock; uint64_t quoteid,baseid,relid;
     ptrs[0] = NXTACCTSECRET, ptrs[1] = txptrs;
     NXTblock = get_NXTblock(0);
+    memset(txptrs,0,sizeof(txptrs));
     if ( (numtx= update_iQ_flags(txptrs,(sizeof(txptrs)/sizeof(*txptrs))-1,0)) > 0 )
     {
         if ( (json= openorders_json(NXTaddr)) != 0 )
@@ -413,10 +414,10 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
     half->T.sent = 1;
     if ( half->T.needsubmit != 0 )
     {
-        if ( half->T.exchangeid == INSTANTDEX_NXTAEID || half->T.exchangeid == INSTANTDEX_UNCONFID )
+        if ( myasset(half) == NXT_ASSETID )
         {
             printf("%p SUBMIT sell.%d dir.%d closed.%d\n",half,half->T.sell,dir,half->T.closed);
-            if ( (half->T.txid= submit_to_exchange(half->T.exchangeid,&jsonstr,half->T.assetid,half->T.qty,half->T.priceNQT,dir,pt->nxt64bits,NXTACCTSECRET,pt->triggerhash,pt->comment)) == 0 )
+            if ( (half->T.txid= submit_to_exchange(INSTANTDEX_NXTAEID,&jsonstr,half->T.assetid,half->T.qty,half->T.priceNQT,dir,pt->nxt64bits,NXTACCTSECRET,pt->triggerhash,pt->comment)) == 0 )
             {
                 if ( jsonstr != 0 )
                     sprintf(pt->comment+strlen(pt->comment)-1,",\"error\":[%s]}",jsonstr!=0?jsonstr:"submit_trade failed");
@@ -424,13 +425,13 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
                 half->T.error = 1;
             }
         }
-        else if ( half->T.exchangeid == INSTANTDEX_EXCHANGEID )
+        else
         {
             printf("%p send sell.%d dir.%d closed.%d\n",half,half->T.sell,dir,half->T.closed);
             stats = get_nodestats(otherNXT(pt,half));
             if ( stats != 0 && stats->ipbits != 0 )
             {
-                sprintf(cmdstr,"{\"requestType\":\"respondtx\",\"cmd\":\"%s\",\"assetid\":\"%llu\",\"quantityQNT\":\"%llu\",\"priceNQT\":\"%llu\",\"triggerhash\":\"%s\",\"quoteid\":\"%llu\",\"sig\":\"%s\",\"utx\":\"%s\"}",(dir < 0) ? "buy" : "sell",(long long)half->T.assetid,(long long)half->T.qty,(long long)half->T.priceNQT,pt->triggerhash,(long long)pt->quoteid,pt->feesighash,pt->feeutxbytes);
+                sprintf(cmdstr,"{\"requestType\":\"respondtx\",\"NXT\":\"%llu\",\"cmd\":\"%s\",\"assetid\":\"%llu\",\"quantityQNT\":\"%llu\",\"priceNQT\":\"%llu\",\"triggerhash\":\"%s\",\"quoteid\":\"%llu\",\"sig\":\"%s\",\"utx\":\"%s\"}",(long long)pt->nxt64bits,(dir > 0) ? "buy" : "sell",(long long)half->T.assetid,(long long)half->T.qty,(long long)half->T.priceNQT,pt->triggerhash,(long long)pt->quoteid,pt->feesighash,pt->feeutxbytes);
                 printf("submit_trade.(%s) to offerNXT.%llu %x\n",cmdstr,(long long)otherNXT(pt,half),stats->ipbits);
                 len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
                 expand_ipbits(ipaddr,stats->ipbits);
@@ -438,7 +439,7 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
                 call_SuperNET_broadcast(pserver,_tokbuf,len,ORDERBOOK_EXPIRATION);
                 send_packet(0,stats->ipbits,0,(uint8_t *)_tokbuf,len);
             }
-        } else printf("submit_trade unsupported exchange.%d\n",half->T.exchangeid);
+        }
     }
     return(0);
 }

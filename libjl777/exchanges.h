@@ -281,6 +281,7 @@ int32_t update_iQ_flags(struct NXT_tx *txptrs[],int32_t maxtx,uint64_t refasseti
     cJSON *json,*array,*txobj,*attachment,*msgobj,*commentobj;
     int32_t i,n,numbooks,type,subtype,m = 0;
     struct rambook_info **obooks;
+    txptrs[0] = 0;
     if ( (obooks= get_allrambooks(&numbooks)) == 0 )
         return(0);
     sprintf(cmd,"requestType=getUnconfirmedTransactions");
@@ -339,6 +340,7 @@ int32_t update_iQ_flags(struct NXT_tx *txptrs[],int32_t maxtx,uint64_t refasseti
             } free_json(json);
         } free(jsonstr);
     } free(obooks);
+    txptrs[m] = 0;
     return(m);
 }
 
