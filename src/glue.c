@@ -82,11 +82,11 @@ int32_t set_SuperNET_url(char *url)
     {
         usessl = (retval & 1);
         port = (retval >> 1) & 0xffff;
-        printf("retval.%x port.%d usessl.%d\n",retval,port,usessl);
         if ( port < (1 << 16) )
         {
             sprintf(SuperNET_url,"http%s://127.0.0.1:%d",usessl==0?"":"s",port);// + !usessl);
             retval >>= 17;
+            printf("retval.%d port.%d usessl.%d\n",retval,port,usessl);
         }
         else retval = -3;
     }
@@ -127,12 +127,13 @@ void *_launch_SuperNET(void *_myip)
     else
     {
         retval = set_SuperNET_url(SuperNET_url);
-        if ( retval == 0 )
+        if ( retval >= 0 )
         {
             processptr = portable_thread_create(poll_for_broadcasts,0);
             did_SuperNET_init = 1;
         }
         SuperNET_retval = retval;
+        printf("SuperNET_retval = %d\n",SuperNET_retval);
     }
     return(processptr);
 }
