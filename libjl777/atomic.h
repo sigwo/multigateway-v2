@@ -219,6 +219,7 @@ int32_t matches_halfquote(struct pending_offer *pt,struct pendinghalf *half,stru
 
 int32_t is_feetx(struct NXT_tx *tx)
 {
+    printf("recipoent.%llu amount %.8f\n",(long long)tx->recipientbits,dstr(tx->U.amountNQT));
     if ( tx->recipientbits == calc_nxt64bits(INSTANTDEX_ACCT) && tx->type == 0 && tx->subtype == 0 && tx->U.amountNQT >= INSTANTDEX_FEE )
         return(1);
     else return(0);
@@ -431,7 +432,7 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
             stats = get_nodestats(otherNXT(pt,half));
             if ( stats != 0 && stats->ipbits != 0 )
             {
-                sprintf(cmdstr,"{\"requestType\":\"respondtx\",\"NXT\":\"%llu\",\"cmd\":\"%s\",\"assetid\":\"%llu\",\"quantityQNT\":\"%llu\",\"priceNQT\":\"%llu\",\"triggerhash\":\"%s\",\"quoteid\":\"%llu\",\"sig\":\"%s\",\"utx\":\"%s\"}",(long long)pt->nxt64bits,(dir > 0) ? "buy" : "sell",(long long)half->T.assetid,(long long)half->T.qty,(long long)half->T.priceNQT,pt->triggerhash,(long long)pt->quoteid,pt->feesighash,pt->feeutxbytes);
+                sprintf(cmdstr,"{\"requestType\":\"respondtx\",\"offerNXT\":\"%llu\",\"NXT\":\"%llu\",\"cmd\":\"%s\",\"assetid\":\"%llu\",\"quantityQNT\":\"%llu\",\"priceNQT\":\"%llu\",\"triggerhash\":\"%s\",\"quoteid\":\"%llu\",\"sig\":\"%s\",\"utx\":\"%s\"}",(long long)pt->nxt64bits,(long long)pt->nxt64bits,(dir > 0) ? "buy" : "sell",(long long)half->T.assetid,(long long)half->T.qty,(long long)half->T.priceNQT,pt->triggerhash,(long long)pt->quoteid,pt->feesighash,pt->feeutxbytes);
                 printf("submit_trade.(%s) to offerNXT.%llu %x\n",cmdstr,(long long)otherNXT(pt,half),stats->ipbits);
                 len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
                 expand_ipbits(ipaddr,stats->ipbits);
@@ -447,7 +448,7 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
 struct NXT_tx *is_valid_trigger(uint64_t *quoteidp,cJSON *triggerjson,char *sender)
 {
     char otherNXT[64]; cJSON *commentobj; struct NXT_tx *triggertx;
-    if ( (triggertx = set_NXT_tx(triggerjson)) != 0 )
+    if ( (triggertx= set_NXT_tx(triggerjson)) != 0 )
     {
         expand_nxt64bits(otherNXT,triggertx->senderbits);
         if ( strcmp(otherNXT,sender) == 0 && is_feetx(triggertx) != 0 && triggertx->comment[0] != 0 )
@@ -457,10 +458,10 @@ struct NXT_tx *is_valid_trigger(uint64_t *quoteidp,cJSON *triggerjson,char *send
                 *quoteidp = get_satoshi_obj(commentobj,"quoteid");
                 free_json(commentobj);
                 return(triggertx);
-            }
-        }
-    }
-    free(triggertx);
+            } else printf("couldnt parse triggertx->comment.(%s)\n",triggertx->comment);
+        } else printf("otherNXT.%s vs sender.%s is_fee.%d comment[0].%d\n",otherNXT,sender,is_feetx(triggertx),triggertx->comment[0]);
+        free(triggertx);
+    } else printf("couldnt set_NXT_tx\n");
     return(0);
 }
 
@@ -502,7 +503,8 @@ char *respondtx(char *NXTaddr,char *NXTACCTSECRET,char *sender,char *cmdstr,uint
                                 else sprintf(retbuf,"{\"result\":\"%s\",:\"submit_txid\":\"%llu\",:\"quoteid\":\"%llu\"}",cmdstr,(long long)txid,(long long)quoteid);
                             } else printf("invalid offer or quoteid mismatch %llu vs %llu\n",(long long)checkquoteid,(long long)quoteid);
                             free(triggertx);
-                        } free_json(triggerjson);
+                        } else printf("invalid trigger\n");
+                        free_json(triggerjson);
                     } free(parsed);
                 } else printf("couldnt parse.(%s)\n",utx);
             } else printf("triggerhash mismatch (%s) != (%s)\n",calchash,triggerhash);

@@ -2085,7 +2085,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
             //printf("needvalid.(%c) sender.(%s) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],sender,valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
             if ( strcmp(cmdinfo[1],command) == 0 )
             {
-               printf("%d %d\n",cmdinfo[2][0],valid);
+                //printf("%d %d\n",cmdinfo[2][0],valid);
                 if ( cmdinfo[2][0] != 0 && valid <= 0 )
                     return(0);
                 for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
