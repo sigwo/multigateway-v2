@@ -425,7 +425,7 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
     else
     {
         printf("%p send sell.%d dir.%d closed.%d\n",half,half->T.sell,dir,half->T.closed);
-        stats = get_nodestats(offerNXT);
+        stats = get_nodestats(otherNXT(pt,half));
         if ( stats != 0 && stats->ipbits != 0 )
         {
             sprintf(cmdstr,"{\"requestType\":\"respondtx\",\"cmd\":\"%s\",\"assetid\":\"%llu\",\"quantityQNT\":\"%llu\",\"priceNQT\":\"%llu\",\"triggerhash\":\"%s\",\"quoteid\":\"%llu\",\"sig\":\"%s\",\"utx\":\"%s\"}",(dir < 0) ? "buy" : "sell",(long long)half->T.assetid,(long long)half->T.qty,(long long)half->T.priceNQT,pt->triggerhash,(long long)pt->quoteid,pt->feesighash,pt->feeutxbytes);
@@ -487,10 +487,10 @@ char *respondtx(char *NXTaddr,char *NXTACCTSECRET,char *sender,char *cmdstr,uint
                     {
                         if ( (triggertx= is_valid_trigger(&checkquoteid,triggerjson,sender)) != 0 )
                         {
-                            if ( checkquoteid == quoteid && (iQ= is_valid_offer(quoteid,dir,assetid,qty,priceNQT)) > 0 )
+                            if ( checkquoteid == quoteid && (iQ= is_valid_offer(quoteid,dir,assetid,qty,priceNQT)) != 0 )
                             {
                                 iQ->matched = 1;
-                                sprintf(retbuf,"{\"requestType\":\"respondtx\",\"NXT\":\"%llu\",\"qty\":\"%llu\",\"assetid\":\"%llu\",\"priceNQT\":\"%llu\",\"fee\":\"%llu\",\"quoteid\":\"%llu\",\"minperc\":\"%u\"}",(long long)calc_nxt64bits(NXTaddr),(long long)qty,(long long)assetid,(long long)priceNQT,fee,(long long)quoteid,minperc);
+                                sprintf(retbuf,"{\"requestType\":\"respondtx\",\"NXT\":\"%llu\",\"qty\":\"%llu\",\"assetid\":\"%llu\",\"priceNQT\":\"%llu\",\"fee\":\"%llu\",\"quoteid\":\"%llu\",\"minperc\":\"%u\"}",(long long)calc_nxt64bits(NXTaddr),(long long)qty,(long long)assetid,(long long)priceNQT,(long long)fee,(long long)quoteid,minperc);
                                 feetxid = send_feetx(NXT_ASSETID,fee,triggerhash,retbuf);
                                 sprintf(retbuf+strlen(retbuf)-1,",\"feetxid\":\"%llu\"}",(long long)feetxid);
                                 if ( (txid= submit_to_exchange(INSTANTDEX_EXCHANGEID,&submitstr,assetid,qty,priceNQT,dir,calc_nxt64bits(NXTaddr),NXTACCTSECRET,triggerhash,retbuf)) == 0 )
