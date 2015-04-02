@@ -198,7 +198,7 @@ struct NXT_tx *set_NXT_tx(cJSON *json)
     assetidbits = NXT_ASSETID;
     quantity = price = 0;
     size = sizeof(*utx);
-    if ( strcmp(type,"2") == 0 || strcmp(type,"5") == 0 )//&& strcmp(subtype,"3") == 0) )
+    //if ( strcmp(type,"2") == 0 || strcmp(type,"5") == 0 )//&& strcmp(subtype,"3") == 0) )
     {
         attachmentobj = cJSON_GetObjectItem(json,"attachment");
         if ( attachmentobj != 0 )
