@@ -1301,7 +1301,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         sleep(3);
     }
     int32_t tmp = 0;
-    if ( Global_mp->gatewayid >= 1 || Global_mp->iambridge != 0 )
+    if ( strncmp(Global_mp->ipaddr,"209",3) != 0 && (Global_mp->gatewayid >= 1 || Global_mp->iambridge != 0) )
         tmp = 1;
     return((tmp << 17) | ((SUPERNET_PORT & 0xffff) << 1) | (USESSL&1));
 }

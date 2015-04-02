@@ -195,7 +195,7 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
             cJSON_AddItemToObject(json,"baseiQ",baseobj);
         if ( relobj != 0 )
             cJSON_AddItemToObject(json,"reliQ",relobj);
-        cJSON_AddItemToObject(json,"minperc",cJSON_CreateNumber(iQ->minperc));
+        cJSON_AddItemToObject(json,"minperc",cJSON_CreateNumber(iQ->minperc!=0?iQ->minperc:INSTANTDEX_MINVOL));
     }
     else
     {

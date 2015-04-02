@@ -10,7 +10,7 @@
 
 #define _issue_curl(curl_handle,label,url) bitcoind_RPC(curl_handle,label,url,0,0,0)
 
-#define ORDERBOOK_EXPIRATION 300
+#define ORDERBOOK_EXPIRATION 3600
 #define INSTANTDEX_MINVOL 75
 #define INSTANTDEX_MINVOLPERC ((double)INSTANTDEX_MINVOL / 100.)
 #define INSTANTDEX_PRICESLIPPAGE 0.001

@@ -2045,6 +2045,13 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
         nxtobj = cJSON_GetObjectItem(argjson,"NXT");
         secretobj = cJSON_GetObjectItem(argjson,"secret");
         copy_cJSON(NXTaddr,nxtobj);
+        if ( is_remote_access(previpaddr) == 0 && strcmp(NXTaddr,Global_mp->myNXTADDR) != 0 )// && strcmp(NXTaddr,Global_mp->privateNXTADDR) != 0 )
+        {
+            strcpy(NXTaddr,Global_mp->myNXTADDR);
+            ensure_jsonitem(argjson,"NXT",NXTaddr);
+            valid = 1;
+            printf("subsititute NXT.%s\n",NXTaddr);
+        }
         copy_cJSON(command,obj);
         if ( is_enabled_command(command) == 0 )
             return(clonestr("{\"error\":\"command disabled\"}"));
@@ -2076,7 +2083,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
             //printf("needvalid.(%c) sender.(%s) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],sender,valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
             if ( strcmp(cmdinfo[1],command) == 0 )
             {
-                //printf("%d %d\n",cmdinfo[2][0],valid);
+               // printf("%d %d\n",cmdinfo[2][0],valid);
                 if ( cmdinfo[2][0] != 0 && valid <= 0 )
                     return(0);
                 for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
