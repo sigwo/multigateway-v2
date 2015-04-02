@@ -405,7 +405,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
 int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *other,struct pending_offer *pt,char *NXTACCTSECRET)
 {
     char _tokbuf[4096],cmdstr[1024],ipaddr[64],*jsonstr;
-    uint64_t offerNXT; int32_t len;
+    int32_t len;
     struct nodestats *stats;
     struct pserver_info *pserver;
     if ( half->T.closed != 0 )
@@ -429,7 +429,7 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
         if ( stats != 0 && stats->ipbits != 0 )
         {
             sprintf(cmdstr,"{\"requestType\":\"respondtx\",\"cmd\":\"%s\",\"assetid\":\"%llu\",\"quantityQNT\":\"%llu\",\"priceNQT\":\"%llu\",\"triggerhash\":\"%s\",\"quoteid\":\"%llu\",\"sig\":\"%s\",\"utx\":\"%s\"}",(dir < 0) ? "buy" : "sell",(long long)half->T.assetid,(long long)half->T.qty,(long long)half->T.priceNQT,pt->triggerhash,(long long)pt->quoteid,pt->feesighash,pt->feeutxbytes);
-            printf("submit_trade.(%s) to offerNXT.%llu %x\n",cmdstr,(long long)offerNXT,stats->ipbits);
+            printf("submit_trade.(%s) to offerNXT.%llu %x\n",cmdstr,(long long)otherNXT(pt,half),stats->ipbits);
             len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
             expand_ipbits(ipaddr,stats->ipbits);
             pserver = get_pserver(0,ipaddr,0,0);
