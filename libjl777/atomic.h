@@ -135,14 +135,16 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
     uint64_t baseamount,relamount;
     if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->matched == 0 )
     {
-        polarity = (iQ->isask != 0) ? -1 : 1;
+        
         if ( dir == 0 )
         {
             printf("need to validate iQ details\n"); // combo orderbook entries, polling, automatch
+            polarity = (iQ->isask == 0) ? -1 : 1;
             dir = polarity;
-        }
+        } else polarity = (iQ->isask != 0) ? -1 : 1;
         if ( Debuglevel > 1 )
             printf("found quoteid.%llu polarity.%d %llu/%llu vs %llu dir.%d\n",(long long)quoteid,polarity,(long long)iQ->baseid,(long long)iQ->relid,(long long)assetid,dir);
+        //found quoteid.7555841528599494229 polarity.1 6932037131189568014/6854596569382794790 vs 6854596569382794790 dir.1
         if ( polarity*dir > 0 && ((polarity > 0 && iQ->baseid == assetid) || (polarity < 0 && iQ->relid == assetid)) )
         {
             baseamount = calc_baseamount(&relamount,assetid,qty,priceNQT);
