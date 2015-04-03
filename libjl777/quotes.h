@@ -19,8 +19,6 @@ struct InstantDEX_quote
     char exchangeid,gui[9];
 };
 
-//0000000000000000000000000000000049c0e0592e1ae1ee2636ac3c436b205f000e2707000000000e425f160b8b336080969800000000009b30f378f284e105ec1c1f55084b00000000000000000000
-//00000000000000000000000000000000582fa8aadc893b590e425f160b8b3360000e2707000000002636ac3c436b205f80969800000000009b30f378f284e105ec1c1f55080000000000000000000000
 void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 0; }
 void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 1; }
 

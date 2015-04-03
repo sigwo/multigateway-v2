@@ -215,9 +215,15 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
             }
             if ( (quoteid= calc_quoteid(&iQ)) != 0 )
             {
-                char iQstr[1024];
+                char iQstr[1024],exchangestr[64];
                 init_hexbytes_noT(iQstr,(uint8_t *)&iQ,sizeof(iQ));
-                sprintf(buf,"{\"result\":\"success\",\"quoteid\":\"%llu\",\"iQquoteid\":\"%llu\",\"quotedata\":\"%s\"}",(long long)quoteid,(long long)iQ.quoteid,iQstr);
+                /*uint64_t quoteid,baseid,baseamount,relid,relamount,nxt64bits;
+                struct InstantDEX_quote *baseiQ,*reliQ;
+                uint32_t timestamp;
+                uint8_t closed:1,sent:1,matched:1,isask:1,pad2:4,minperc:7;
+                char exchangeid,gui[9];*/
+                iQ_exchangestr(exchangestr,&iQ);
+                sprintf(buf,"{\"result\":\"success\",\"quoteid\":\"%llu\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"offerNXT\":\"%llu\",\"baseiQ\":\"%llu\",\"reliQ\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\",\"iQdata\":\"%s\"}",(long long)quoteid,(long long)iQ.baseid,(long long)iQ.baseamount,(long long)iQ.relid,(long long)iQ.relamount,(long long)iQ.nxt64bits,(long long)calc_quoteid(iQ.baseiQ),(long long)calc_quoteid(iQ.reliQ),iQ.timestamp,iQ.isask,exchangestr,iQ.gui,iQstr);
                 retstr = clonestr(buf);
                 printf("placequote.(%s)\n",buf);
             }
