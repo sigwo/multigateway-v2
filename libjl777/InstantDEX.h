@@ -211,7 +211,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
                 iQ.relid = tmpiQ.baseid, iQ.relamount = tmpiQ.baseamount;
                 iQ.isask = 0;
             }
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ.isask,&iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ.isask,&iQ,iQ.baseid,iQ.relid,0)) != 0 )
             {
                 cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString((iQ.isask != 0) ? "ask" : "bid"));
                 jsonstr = cJSON_Print(json);
