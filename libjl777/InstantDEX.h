@@ -204,7 +204,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
         {
             rb = add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,timestamp,dir,baseid,relid,price,volume,baseamount,relamount,gui,0);
             iQ.minperc = minperc;
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ.isask,&iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ.isask,&iQ,rb->assetids[!iQ.isask],rb->assetids[iQ.isask],0)) != 0 )
             {
                 cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString((iQ.isask != 0) ? "ask" : "bid"));
                 jsonstr = cJSON_Print(json);
@@ -217,11 +217,8 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
             {
                 char iQstr[1024],exchangestr[64];
                 init_hexbytes_noT(iQstr,(uint8_t *)&iQ,sizeof(iQ));
-                /*uint64_t quoteid,baseid,baseamount,relid,relamount,nxt64bits;
-                struct InstantDEX_quote *baseiQ,*reliQ;
-                uint32_t timestamp;
-                uint8_t closed:1,sent:1,matched:1,isask:1,pad2:4,minperc:7;
-                char exchangeid,gui[9];*/
+                //placequote.({"result":"success","quoteid":"7361104699691647616","baseid":"6932037131189568014","baseamount":"120000000","relid":"6854596569382794790","relamount":"10000000","offerNXT":"423766016895692955","baseiQ":"0","reliQ":"0","timestamp":"1428103396","isask":"1","exchange":"InstantDEX","gui":"","iQdata":"8042943bb9e527660e425f160b8b3360000e2707000000002636ac3c436b205f80969800000000009b30f378f284e10500000000000000000000000000000000e4201f55080000000000000000000000"})
+                //placequote.({"result":"success","quoteid":"16482302578879468063","baseid":"6854596569382794790","baseamount":"120000000","relid":"6932037131189568014","relamount":"10000000","offerNXT":"423766016895692955","baseiQ":"0","reliQ":"0","timestamp":"1428103396","isask":"1","exchange":"InstantDEX","gui":"","iQdata":"1f929d56dee6bce42636ac3c436b205f000e2707000000000e425f160b8b336080969800000000009b30f378f284e10500000000000000000000000000000000e4201f55084b00000000000000000000"})
                 iQ_exchangestr(exchangestr,&iQ);
                 sprintf(buf,"{\"result\":\"success\",\"quoteid\":\"%llu\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"offerNXT\":\"%llu\",\"baseiQ\":\"%llu\",\"reliQ\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\",\"iQdata\":\"%s\"}",(long long)quoteid,(long long)iQ.baseid,(long long)iQ.baseamount,(long long)iQ.relid,(long long)iQ.relamount,(long long)iQ.nxt64bits,(long long)calc_quoteid(iQ.baseiQ),(long long)calc_quoteid(iQ.reliQ),iQ.timestamp,iQ.isask,exchangestr,iQ.gui,iQstr);
                 retstr = clonestr(buf);
