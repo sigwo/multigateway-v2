@@ -70,18 +70,22 @@ void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_
         update_orderbook(iter,op,numbidsp,numasksp,iQ,polarity,gui);
 }
 
-void sort_orderbook(struct orderbook *op)
+void sort_orderbook(struct orderbook *op,int32_t jumpflag)
 {
     if ( op != 0 && (op->numbids > 0 || op->numasks > 0) )
     {
         if ( op->numbids > 0 )
             qsort(op->bids,op->numbids,sizeof(*op->bids),_decreasing_quotes);
         if ( op->numasks > 0 )
-            qsort(op->asks,op->numasks,sizeof(*op->asks),_increasing_quotes);
+        {
+            if ( jumpflag == 0 )
+                qsort(op->asks,op->numasks,sizeof(*op->asks),_increasing_quotes);
+            else qsort(op->asks,op->numasks,sizeof(*op->asks),_decreasing_quotes);
+        }
     }
 }
 
-struct orderbook *merge_books(char *base,char *rel,struct orderbook *books[],int32_t n)
+struct orderbook *merge_books(char *base,char *rel,struct orderbook *books[],int32_t n,int32_t jumpflag)
 {
     struct orderbook *op = 0;
     int32_t i,numbids,numasks;
@@ -107,7 +111,7 @@ struct orderbook *merge_books(char *base,char *rel,struct orderbook *books[],int
             if ( books[i]->numasks != 0 )
                 memcpy(&op->asks[numasks],books[i]->asks,books[i]->numasks * sizeof(*op->asks)), numasks += books[i]->numasks;
     }
-    sort_orderbook(op);
+    sort_orderbook(op,jumpflag);
     return(op);
 }
 
@@ -186,7 +190,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,char *jumper,char *re
             }
         }
     }
-    sort_orderbook(op);
+    sort_orderbook(op,1);
     return(op);
 }
 
@@ -254,7 +258,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
             if ( op->numasks > 0 )
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
-        } else sort_orderbook(op);
+        } else sort_orderbook(op,0);
     }
     //printf("(%f %f %llu %u)\n",quotes->price,quotes->vol,(long long)quotes->nxt64bits,quotes->timestamp);
     if ( op != 0 && (op->numbids + op->numasks) == 0 )

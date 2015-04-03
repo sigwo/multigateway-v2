@@ -215,7 +215,7 @@ int32_t matches_halfquote(struct pending_offer *pt,struct pendinghalf *half,stru
     //printf("tx quoteid.%llu %llu\n",(long long)tx->quoteid,(long long)half->T.quoteid);
     if ( tx->quoteid != half->T.quoteid )
         return(0);
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("sell.%d tx type.%d subtype.%d otherNXT.%llu sender.%llu myasset.%llu txasset.%llu Uamount.%llu qty.%llu\n",half->T.sell,tx->type,tx->subtype,(long long)otherNXT(half),(long long)tx->senderbits,(long long)myasset(half),(long long)tx->assetidbits,(long long)tx->U.amountNQT,(long long)half->T.qty);
     if ( tx->type == 0 )
     {
@@ -613,12 +613,17 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
             set_pendinghalf(pt,-dir,rel,relid,relamount,baseid,baseamount,quoteid,pt->nxt64bits,offerNXT,exchange,1);
             base->T.transfer = rel->T.transfer = 1;
             base->T.qty = baseamount / basemult, rel->T.qty = relamount / relmult;
-            if ( dir < 0 && srcqty < rel->T.qty )
-                pt->ratio = ((double)srcqty / rel->T.qty), base->T.qty = ((double)base->T.qty * pt->ratio), rel->T.qty = srcqty;
-            else if ( dir > 0 && srcqty < base->T.qty )
-                pt->ratio = ((double)srcqty / base->T.qty), rel->T.qty = ((double)rel->T.qty * pt->ratio), base->T.qty = srcqty;
-            else pt->ratio = 1.;
-            price = calc_price_volume(&volume,base->T.qty * basemult,rel->T.qty * relmult);
+            printf("prices.(%f) vol %f dir.%d srcqty %d baseqty %d relqty %d\n",price,volume,dir,(int)srcqty,(int)base->T.qty,(int)rel->T.qty);
+            pt->ratio = 1.;
+            if ( srcqty != 0 )
+            {
+                if ( dir < 0 && srcqty < rel->T.qty )
+                    pt->ratio = ((double)srcqty / rel->T.qty), base->T.qty = ((double)base->T.qty * pt->ratio), rel->T.qty = srcqty;
+                else if ( dir > 0 && srcqty < base->T.qty )
+                    pt->ratio = ((double)srcqty / base->T.qty), rel->T.qty = ((double)rel->T.qty * pt->ratio), base->T.qty = srcqty;
+                price = calc_price_volume(&volume,base->T.qty * basemult,rel->T.qty * relmult);
+                printf("ratio %f prices.(%f %f) vol %f dir.%d srcqty %d baseqty %d relqty %d\n",pt->ratio,price,pt->price,volume,dir,(int)srcqty,(int)base->T.qty,(int)rel->T.qty);
+            }
             if ( price != pt->price )
             {
                 if ( basemult <= relmult )
