@@ -141,7 +141,7 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
             printf("need to validate iQ details\n"); // combo orderbook entries, polling, automatch
             dir = polarity;
         }
-        if ( Debuglevel > 2 )
+        if ( Debuglevel > 1 )
             printf("found quoteid.%llu polarity.%d %llu/%llu vs %llu dir.%d\n",(long long)quoteid,polarity,(long long)iQ->baseid,(long long)iQ->relid,(long long)assetid,dir);
         if ( polarity*dir > 0 && ((polarity > 0 && iQ->baseid == assetid) || (polarity < 0 && iQ->relid == assetid)) )
         {
@@ -149,7 +149,7 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
             if ( polarity > 0 )
                 price = calc_price_volume(&vol,baseamount,relamount), refprice = calc_price_volume(&refvol,iQ->baseamount,iQ->relamount);
             else price = calc_price_volume(&vol,relamount,baseamount), refprice = calc_price_volume(&refvol,iQ->relamount,iQ->baseamount);
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 printf("polarity.%d dir.%d (%f %f) vs ref.(%f %f)\n",polarity,dir,price,vol,refprice,refvol);
             if ( vol >= refvol*(double)iQ->minperc/100. && vol <= refvol )
             {
