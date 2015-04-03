@@ -147,7 +147,9 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
         //found quoteid.7555841528599494229 polarity.1 6932037131189568014/6854596569382794790 vs 6854596569382794790 dir.1
         if ( polarity*dir > 0 && ((polarity > 0 && iQ->baseid == assetid) || (polarity < 0 && iQ->relid == assetid)) )
         {
-            baseamount = calc_baseamount(&relamount,assetid,qty,priceNQT);
+            if ( priceNQT != 0 )
+                baseamount = calc_baseamount(&relamount,assetid,qty,priceNQT);
+            else baseamount = qty * get_assetmult(assetid), relamount = otherqty * get_assetmult(otherassetid);
             if ( polarity > 0 )
                 price = calc_price_volume(&vol,baseamount,relamount), refprice = calc_price_volume(&refvol,iQ->baseamount,iQ->relamount);
             else price = calc_price_volume(&vol,relamount,baseamount), refprice = calc_price_volume(&refvol,iQ->relamount,iQ->baseamount);
