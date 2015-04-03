@@ -257,8 +257,10 @@ void _on_udprecv(int32_t queueflag,int32_t internalflag,uv_udp_t *udp,ssize_t nr
     if ( cp != 0 && nread > 0 )
     {
         
-        if ( Debuglevel > 2 )//|| (nread > 400 && nread != MAX_UDPLEN) )
+        if ( Debuglevel > 2 || nread > MAX_UDPLEN )//|| (nread > 400 && nread != MAX_UDPLEN) )
             fprintf(stderr,"UDP RECEIVED %ld from %s/%d crc.%x\n",nread,ipaddr,supernet_port,_crc32(0,rcvbuf->base,nread));
+        if ( nread > MAX_UDPLEN )
+            nread = MAX_UDPLEN;
         ASSERT(addr->sa_family == AF_INET);
         server_xferred += nread;
         if ( queueflag != 0 )
