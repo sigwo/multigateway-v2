@@ -483,6 +483,22 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
     return(0);
 }
 
+void submit_quote(char *quotestr)
+{
+    int32_t len;
+    char _tokbuf[4096];
+    //struct pserver_info *pserver;
+    struct coin_info *cp = get_coin_info("BTCD");
+    if ( cp != 0 )
+    {
+        printf("submit_quote.(%s)\n",quotestr);
+        len = construct_tokenized_req(_tokbuf,quotestr,cp->srvNXTACCTSECRET);
+        //if ( get_top_MMaker(&pserver) == 0 )
+        //    call_SuperNET_broadcast(pserver,_tokbuf,len,ORDERBOOK_EXPIRATION);
+        call_SuperNET_broadcast(0,_tokbuf,len,ORDERBOOK_EXPIRATION);
+    }
+}
+
 struct NXT_tx *is_valid_trigger(uint64_t *quoteidp,cJSON *triggerjson,char *sender)
 {
     char otherNXT[64]; cJSON *commentobj; struct NXT_tx *triggertx;

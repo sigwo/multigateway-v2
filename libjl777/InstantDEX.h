@@ -119,22 +119,6 @@ int32_t get_top_MMaker(struct pserver_info **pserverp)
     return(-1);
 }
 
-void submit_quote(char *quotestr)
-{
-    int32_t len;
-    char _tokbuf[4096];
-    struct pserver_info *pserver;
-    struct coin_info *cp = get_coin_info("BTCD");
-    if ( cp != 0 )
-    {
-        printf("submit_quote.(%s)\n",quotestr);
-        len = construct_tokenized_req(_tokbuf,quotestr,cp->srvNXTACCTSECRET);
-        if ( get_top_MMaker(&pserver) == 0 )
-            call_SuperNET_broadcast(pserver,_tokbuf,len,ORDERBOOK_EXPIRATION);
-        call_SuperNET_broadcast(0,_tokbuf,len,ORDERBOOK_EXPIRATION);
-    }
-}
-
 int32_t time_to_nextblock(int32_t lookahead)
 {
     /*
@@ -183,7 +167,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     struct InstantDEX_quote iQ;
     int32_t remoteflag,automatch;
     struct rambook_info *rb;
-    char buf[MAX_JSON_FIELD],txidstr[64],gui[MAX_JSON_FIELD],*jsonstr,*retstr = 0;
+    char buf[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],*jsonstr,*retstr = 0;
     if ( (xchg= find_exchange(INSTANTDEX_NAME,1)) == 0 || xchg->exchangeid != INSTANTDEX_EXCHANGEID )
         return(clonestr("{\"error\":\"unexpected InstantDEX exchangeid\"}"));
     remoteflag = (is_remote_access(previpaddr) != 0);
@@ -202,10 +186,11 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
         price = get_API_float(objs[3]);
         set_best_amounts(&baseamount,&relamount,price,volume);
     }
+    memset(&iQ,0,sizeof(iQ));
     timestamp = (uint32_t)get_API_int(objs[4],0);
     copy_cJSON(gui,objs[7]), gui[sizeof(iQ.gui)-1] = 0;
     automatch = (int32_t)get_API_int(objs[8],0);
-    minperc = (int32_t)get_API_int(objs[9],INSTANTDEX_MINVOL);
+    minperc = (int32_t)get_API_int(objs[9],0);
     ensure_rambook(baseid,relid);
     printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
     /*if ( automatch != 0 && remoteflag == 0 && (retstr= auto_makeoffer2(NXTaddr,NXTACCTSECRET,dir,baseid,baseamount,relid,relamount,gui)) != 0 )
@@ -218,7 +203,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
         if ( price != 0. && volume != 0. && dir != 0 )
         {
             rb = add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,timestamp,dir,baseid,relid,price,volume,baseamount,relamount,gui,0);
-            iQ.minperc = INSTANTDEX_MINVOL;
+            iQ.minperc = minperc;
             if ( remoteflag == 0 && (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ.isask,&iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
             {
                 cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString((iQ.isask != 0) ? "ask" : "bid"));
@@ -230,8 +215,9 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
             }
             if ( (quoteid= calc_quoteid(&iQ)) != 0 )
             {
-                expand_nxt64bits(txidstr,quoteid);
-                sprintf(buf,"{\"result\":\"success\",\"quoteid\":\"%s\"}",txidstr);
+                char iQstr[1024];
+                init_hexbytes_noT(iQstr,(uint8_t *)&iQ,sizeof(iQ));
+                sprintf(buf,"{\"result\":\"success\",\"quoteid\":\"%llu\",\"iQquoteid\":\"%llu\",\"quotedata\":\"%s\"}",(long long)quoteid,(long long)iQ.quoteid,iQstr);
                 retstr = clonestr(buf);
                 printf("placequote.(%s)\n",buf);
             }
