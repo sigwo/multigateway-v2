@@ -428,10 +428,9 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
 
 int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *other,struct pending_offer *pt,char *NXTACCTSECRET)
 {
-    char _tokbuf[4096],cmdstr[4096],ipaddr[64],*jsonstr;
+    char _tokbuf[4096],cmdstr[4096],*jsonstr;
     int32_t len;
-    struct nodestats *stats;
-    struct pserver_info *pserver;
+    //struct nodestats *stats;
     if ( half->T.closed != 0 )
         return(0);
     half->T.sent = 1;
@@ -451,22 +450,31 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
         else
         {
             printf("%p send sell.%d dir.%d closed.%d\n",half,half->T.sell,dir,half->T.closed);
-            stats = get_nodestats(otherNXT(half));
-            if ( stats != 0 && stats->ipbits != 0 )
+            //stats = get_nodestats(otherNXT(half));
+            //if ( stats != 0 && stats->ipbits != 0 )
             {
-                sprintf(cmdstr,"{\"requestType\":\"respondtx\",\"offerNXT\":\"%llu\",\"NXT\":\"%llu\",\"assetid\":\"%llu\",\"quantityQNT\":\"%llu\",\"triggerhash\":\"%s\",\"quoteid\":\"%llu\",\"sig\":\"%s\",\"utx\":\"%s\"",(long long)pt->nxt64bits,(long long)pt->nxt64bits,(long long)half->T.assetid,(long long)half->T.qty,pt->triggerhash,(long long)pt->quoteid,pt->feesighash,pt->feeutxbytes);
+                sprintf(cmdstr,"{\"requestType\":\"respondtx\",\"offerNXT\":\"%llu\",\"NXT\":\"%llu\",\"assetid\":\"%llu\",\"quantityQNT\":\"%llu\",\"triggerhash\":\"%s\",\"quoteid\":\"%llu\",\"sig\":\"%s\",\"data\":\"%s\"",(long long)pt->nxt64bits,(long long)pt->nxt64bits,(long long)half->T.assetid,(long long)half->T.qty,pt->triggerhash,(long long)pt->quoteid,pt->feesighash,pt->feeutxbytes);
                 if ( half->T.transfer != 0 )
                 {
                     if ( half->T.sell == 0 )
                         sprintf(cmdstr+strlen(cmdstr),",\"cmd\":\"transfer\",\"otherassetid\":\"%llu\",\"otherqty\":\"%llu\"}",(long long)other->T.assetid,(long long)other->T.qty);
                     else { printf("unexpected request for transfer with dir.%d sell.%d\n",dir,half->T.sell); return(-1); }
                 } else sprintf(cmdstr+strlen(cmdstr),",\"cmd\":\"%s\",\"priceNQT\":\"%llu\"}",(dir > 0) ? "buy" : "sell",(long long)half->T.priceNQT);
-                printf("submit_trade.(%s) to offerNXT.%llu %x\n",cmdstr,(long long)otherNXT(half),stats->ipbits);
+                printf("submit_trade.(%s) to offerNXT.%llu\n",cmdstr,(long long)otherNXT(half));
                 len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
-                expand_ipbits(ipaddr,stats->ipbits);
-                pserver = get_pserver(0,ipaddr,0,0);
+                //expand_ipbits(ipaddr,stats->ipbits);
+                //pserver = get_pserver(0,ipaddr,0,0);
                 //call_SuperNET_broadcast(pserver,_tokbuf,len,ORDERBOOK_EXPIRATION);
-                send_packet(0,stats->ipbits,0,(uint8_t *)_tokbuf,len);
+                //send_packet(0,stats->ipbits,0,(uint8_t *)_tokbuf,len);
+                //send_to_ipaddr(0,0,ipaddr,_tokbuf,NXTACCTSECRET);
+                {
+                    char hopNXTaddr[64],NXTaddr[64],destNXTaddr[64],*retstr;
+                    hopNXTaddr[0] = 0;
+                    expand_nxt64bits(NXTaddr,pt->nxt64bits);
+                    expand_nxt64bits(destNXTaddr,otherNXT(half));
+                    if ( (retstr= send_tokenized_cmd(!prevent_queueing("respondtx"),hopNXTaddr,0,NXTaddr,NXTACCTSECRET,cmdstr,destNXTaddr)) != 0 )
+                        free(retstr);
+                }
             }
         }
     }
