@@ -227,7 +227,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
     double price,volume;
     cJSON *json = 0;
     baseamount = iQ->baseamount, relamount = iQ->relamount;
-    if ( (iQ->isask == 0 && (baseid != iQ->baseid || relid != iQ->relid)) || (iQ->isask != 0 && (baseid != iQ->relid || relid != iQ->baseid)) )
+    if ( (iQ->isask == 0 && (baseid != iQ->baseid || relid != iQ->relid)) )//|| (iQ->isask != 0 && (baseid != iQ->relid || relid != iQ->baseid)) )
         printf("gen_orderbook_item: isask.%d %llu/%llu != %llu/%llu\n",iQ->isask,(long long)iQ->baseid,(long long)iQ->relid,(long long)baseid,(long long)relid), getchar();
     if ( (json= gen_InstantDEX_json(&baseamount,&relamount,0,iQ->isask,iQ,baseid,relid,jumpasset)) != 0 )
     {

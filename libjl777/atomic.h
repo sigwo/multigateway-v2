@@ -14,7 +14,7 @@ struct tradeinfo
 {
     uint64_t quoteid,assetid,relid,qty,priceNQT,txid;
     uint32_t expiration;
-    uint16_t exchangeid; uint16_t sell:1,needsubmit:1,sent:1,unconf:1,closed:1,error:1;
+    uint16_t exchangeid; uint16_t sell:1,needsubmit:1,sent:1,unconf:1,closed:1,error:1,aeflag:1;
 };
 
 struct pendinghalf
@@ -56,7 +56,7 @@ int32_t scale_qty(struct pending_offer *pt,char *NXTaddr,struct pendinghalf *bas
         mult = 1;
     else
     {
-        expand_nxt64bits(assetidstr,rel->T.assetid);
+        expand_nxt64bits(assetidstr,assetid);
         ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
         mult = ap->mult;
     }
@@ -169,8 +169,8 @@ uint64_t otherNXT(struct pending_offer *pt,struct pendinghalf *half)
     if ( half->T.sell == 0 )
         otherNXT = half->seller;
     else otherNXT = half->buyer;
-    if ( otherNXT != pt->offerNXT )
-        printf("otherNXT error %llu != %llu\n",(long long)otherNXT,(long long)pt->offerNXT);
+    //if ( otherNXT != pt->offerNXT )
+    //    printf("otherNXT error %llu != %llu\n",(long long)otherNXT,(long long)pt->offerNXT);
     return(otherNXT);
 }
 
@@ -278,7 +278,7 @@ int32_t pendinghalf_is_complete(struct pending_offer *pt,struct pendinghalf *hal
     return(0);
 }
 
-uint64_t need_to_submithalf(struct pendinghalf *half,int32_t dir,struct pending_offer *pt)
+uint64_t need_to_submithalf(struct pendinghalf *half,int32_t dir,struct pending_offer *pt,int32_t simpleflag)
 {
     printf("dir.%d exch.%d T.sell.%d %llu/%llu %llu\n",dir,half->T.exchangeid,half->T.sell,(long long)half->T.assetid,(long long)half->T.relid,(long long)otherasset(half));
     if ( half->T.exchangeid == INSTANTDEX_EXCHANGEID )
@@ -287,8 +287,12 @@ uint64_t need_to_submithalf(struct pendinghalf *half,int32_t dir,struct pending_
     {
         if ( (dir > 0 && half->T.sell == 0) || (dir < 0 && half->T.sell != 0) )
         {
-            if ( myasset(half) != NXT_ASSETID )
-                half->T.closed = 1;
+            if ( simpleflag != 0 )
+            {
+                if ( myasset(half) != NXT_ASSETID )
+                    half->T.closed = 1;
+                else half->T.aeflag = 1;
+            } else half->T.aeflag = 1;
             return(1);
         }
         half->T.closed = 1;
@@ -297,7 +301,7 @@ uint64_t need_to_submithalf(struct pendinghalf *half,int32_t dir,struct pending_
     return(0);
 }
 
-int32_t set_pendinghalf(struct pending_offer *pt,int32_t dir,struct pendinghalf *half,uint64_t assetid,uint64_t baseamount,uint64_t relid,uint64_t relamount,uint64_t quoteid,uint64_t buyer,uint64_t seller,char *exchangestr)
+int32_t set_pendinghalf(struct pending_offer *pt,int32_t dir,struct pendinghalf *half,uint64_t assetid,uint64_t baseamount,uint64_t relid,uint64_t relamount,uint64_t quoteid,uint64_t buyer,uint64_t seller,char *exchangestr,int32_t closeflag)
 {
     struct exchange_info *find_exchange(char *exchangestr,int32_t createflag);
     struct exchange_info *exchange;
@@ -312,7 +316,7 @@ int32_t set_pendinghalf(struct pending_offer *pt,int32_t dir,struct pendinghalf 
         if ( dir < 0 )
             half->T.sell = 1;
         half->T.exchangeid = exchange->exchangeid;
-        half->T.needsubmit = need_to_submithalf(half,dir,pt);
+        half->T.needsubmit = need_to_submithalf(half,dir,pt,closeflag);
         printf("%s exchange.%d sethalf other.%llu asset.%llu | myasset.%llu tradedasset.%llu | closed.%d needsubmit.%d\n",exchangestr,half->T.exchangeid,(long long)otherNXT(pt,half),(long long)otherasset(half),(long long)myasset(half),(long long)tradedasset(half),half->T.closed,half->T.needsubmit);
         if ( otherNXT(pt,half) != 0 && half->baseamount != 0 && half->relamount != 0 )
             return(half->T.exchangeid == INSTANTDEX_EXCHANGEID);
@@ -333,7 +337,8 @@ int32_t extract_pendinghalf(struct pending_offer *pt,int32_t dir,struct pendingh
         quoteid = get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
         offerNXT = get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
         copy_cJSON(exchange,cJSON_GetObjectItem(obj,"exchange"));
-        return(set_pendinghalf(pt,dir,half,assetid,baseamount,jumpasset,relamount,quoteid,dir>0?pt->nxt64bits:offerNXT,dir<0?pt->nxt64bits:offerNXT,exchange));
+        //set_pendinghalf(pt,-dir,base,relid,relamount,baseid,baseamount,quoteid,pt->nxt64bits,offerNXT,exchange);
+        return(set_pendinghalf(pt,dir,half,assetid,baseamount,jumpasset,relamount,quoteid,pt->nxt64bits,offerNXT,exchange,0));
     }
     return(-1);
 }
@@ -451,7 +456,7 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
     half->T.sent = 1;
     if ( half->T.needsubmit != 0 )
     {
-        if ( myasset(half) == NXT_ASSETID )
+        if ( half->T.aeflag != 0 )
         {
             printf("%p SUBMIT sell.%d dir.%d closed.%d\n",half,half->T.sell,dir,half->T.closed);
             if ( (half->T.txid= submit_to_exchange(INSTANTDEX_NXTAEID,&jsonstr,half->T.assetid,half->T.qty,half->T.priceNQT,dir,pt->nxt64bits,NXTACCTSECRET,pt->triggerhash,pt->comment)) == 0 )
@@ -568,6 +573,7 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
     base = &pt->base, rel = &pt->rel;
     if ( baseobj != 0 && relobj != 0 )
     {
+        //return(set_pendinghalf(pt,dir,half,assetid,baseamount,jumpasset,relamount,quoteid,dir>0?pt->nxt64bits:offerNXT,dir<0?pt->nxt64bits:offerNXT,exchange));
         if ( extract_pendinghalf(pt,dir,base,baseobj,baseid,jumpasset) > 0 )
             pt->fee += INSTANTDEX_FEE;
         if ( extract_pendinghalf(pt,-dir,rel,relobj,relid,jumpasset) > 0 )
@@ -583,13 +589,17 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
         if ( baseid == NXT_ASSETID )
         {
             dir = -dir;
-            set_pendinghalf(pt,-dir,base,relid,relamount,baseid,baseamount,quoteid,pt->nxt64bits,offerNXT,exchange), pt->ratio = calc_asset_QNT(base,pt->nxt64bits,1,pt->srcqty);
-            set_pendinghalf(pt,dir,rel,relid,relamount,baseid,baseamount,quoteid,pt->nxt64bits,offerNXT,exchange), pt->ratio = calc_asset_QNT(rel,pt->nxt64bits,1,pt->srcqty);
+            set_pendinghalf(pt,-dir,base,relid,relamount,baseid,baseamount,quoteid,pt->nxt64bits,offerNXT,exchange,1);
+            //pt->ratio = calc_asset_QNT(base,pt->nxt64bits,1,pt->srcqty);
+            set_pendinghalf(pt,dir,rel,relid,relamount,baseid,baseamount,quoteid,pt->nxt64bits,offerNXT,exchange,1);
+            pt->ratio = calc_asset_QNT(rel,pt->nxt64bits,1,pt->srcqty);
         }
         else
         {
-            set_pendinghalf(pt,-dir,base,baseid,baseamount,relid,relamount,quoteid,pt->nxt64bits,offerNXT,exchange), pt->ratio = calc_asset_QNT(base,pt->nxt64bits,1,pt->srcqty);
-            set_pendinghalf(pt,dir,rel,baseid,baseamount,relid,relamount,quoteid,pt->nxt64bits,offerNXT,exchange), pt->ratio = calc_asset_QNT(rel,pt->nxt64bits,1,pt->srcqty);
+            set_pendinghalf(pt,-dir,base,baseid,baseamount,relid,relamount,quoteid,pt->nxt64bits,offerNXT,exchange,1);
+            pt->ratio = calc_asset_QNT(base,pt->nxt64bits,1,pt->srcqty);
+            set_pendinghalf(pt,dir,rel,baseid,baseamount,relid,relamount,quoteid,pt->nxt64bits,offerNXT,exchange,1);
+            //pt->ratio = calc_asset_QNT(rel,pt->nxt64bits,1,pt->srcqty);
         }
     }
     if ( (pt->ratio * 100.) < minperc && (base->T.exchangeid == INSTANTDEX_EXCHANGEID || rel->T.exchangeid == INSTANTDEX_EXCHANGEID) )
