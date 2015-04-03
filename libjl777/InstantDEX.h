@@ -204,7 +204,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
         {
             rb = add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,timestamp,dir,baseid,relid,price,volume,baseamount,relamount,gui,0);
             iQ.minperc = minperc;
-            if ( remoteflag == 0 && (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ.isask,&iQ,rb->assetids[!iQ.isask],rb->assetids[iQ.isask],0)) != 0 )
+            if ( remoteflag == 0 && (json= gen_InstantDEX_json(&basetmp,&reltmp,0,0*iQ.isask,&iQ,rb->assetids[!iQ.isask],rb->assetids[iQ.isask],0)) != 0 )
             {
                 cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString((iQ.isask != 0) ? "ask" : "bid"));
                 jsonstr = cJSON_Print(json);
