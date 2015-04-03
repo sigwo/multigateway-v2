@@ -428,35 +428,6 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
 
 int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *other,struct pending_offer *pt,char *NXTACCTSECRET)
 {
-   /* makeoffer3 7581814105672729429 offer 423766016895692955
-    dir.-1 sethalf 6932037131189568014/5527630 buyer.7581814105672729429 seller.423766016895692955
-    dir.-1 exch.0 T.sell.1 6932037131189568014/5527630 6932037131189568014
-    InstantDEX exchange.0 sethalf other.423766016895692955 asset.6932037131189568014 | myasset.5527630 tradedasset.6932037131189568014 | closed.0 needsubmit.1
-    7581814105672729429 balance 0.00000084 unconfirmed 0.00000077 vs price 288000000 qty 1 for asset.6932037131189568014 | (1.000000 * 2.880000) * (100000000 / 100000000)
-        dir.1 sethalf 6932037131189568014/5527630 buyer.7581814105672729429 seller.423766016895692955
-        dir.1 exch.0 T.sell.0 6932037131189568014/5527630 5527630
-        InstantDEX exchange.0 sethalf other.423766016895692955 asset.5527630 | myasset.6932037131189568014 tradedasset.6932037131189568014 | closed.0 needsubmit.1
-        7581814105672729429 balance 0.00000084 unconfirmed 0.00000077 vs price 288000000 qty 1 for asset.6932037131189568014 | (1.000000 * 2.880000) * (100000000 / 100000000)*/
-    
-    /*makeoffer3 7581814105672729429 offer 456272193289401243
-     dir.-1 sethalf 6932037131189568014/5527630 buyer.7581814105672729429 seller.456272193289401243
-     dir.-1 exch.2 T.sell.1 6932037131189568014/5527630 6932037131189568014
-     nxtae exchange.2 sethalf other.456272193289401243 asset.6932037131189568014 | myasset.5527630 tradedasset.6932037131189568014 | closed.1 needsubmit.1
-     7581814105672729429 balance 0.00000083 unconfirmed 0.00000078 vs price 283000000 qty 1 for asset.6932037131189568014 | (1.000000 * 2.830000) * (100000000 / 100000000)
-     dir.1 sethalf 6932037131189568014/5527630 buyer.7581814105672729429 seller.456272193289401243
-     dir.1 exch.2 T.sell.0 6932037131189568014/5527630 5527630
-     nxtae exchange.2 sethalf other.456272193289401243 asset.5527630 | myasset.6932037131189568014 tradedasset.6932037131189568014 | closed.0 needsubmit.1
-         
-         makeoffer3 7581814105672729429 offer 16166916883665310631
-         dir.1 sethalf 6932037131189568014/5527630 buyer.7581814105672729429 seller.16166916883665310631
-         dir.1 exch.2 T.sell.0 6932037131189568014/5527630 5527630
-         nxtae exchange.2 sethalf other.16166916883665310631 asset.5527630 | myasset.6932037131189568014 tradedasset.6932037131189568014 | closed.0 needsubmit.1
-         7581814105672729429 balance 0.00000083 unconfirmed 0.00000078 vs price 289000000 qty 1 for asset.6932037131189568014 | (1.000000 * 2.890000) * (100000000 / 100000000)
-             dir.-1 sethalf 6932037131189568014/5527630 buyer.7581814105672729429 seller.16166916883665310631
-             dir.-1 exch.2 T.sell.1 6932037131189568014/5527630 6932037131189568014
-             nxtae exchange.2 sethalf other.16166916883665310631 asset.6932037131189568014 | myasset.5527630 tradedasset.6932037131189568014 | closed.1 needsubmit.1
-*/
-
     char _tokbuf[4096],cmdstr[4096],ipaddr[64],*jsonstr;
     int32_t len;
     struct nodestats *stats;
@@ -494,7 +465,7 @@ int32_t submit_trade(int32_t dir,struct pendinghalf *half,struct pendinghalf *ot
                 len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
                 expand_ipbits(ipaddr,stats->ipbits);
                 pserver = get_pserver(0,ipaddr,0,0);
-                call_SuperNET_broadcast(pserver,_tokbuf,len,ORDERBOOK_EXPIRATION);
+                //call_SuperNET_broadcast(pserver,_tokbuf,len,ORDERBOOK_EXPIRATION);
                 send_packet(0,stats->ipbits,0,(uint8_t *)_tokbuf,len);
             }
         }

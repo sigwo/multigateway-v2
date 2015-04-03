@@ -3047,7 +3047,7 @@ void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr)
                 //printf("name is (%s) + (%s) -> (%s)\n",ram->name,Server_ipaddrs[gatewayid],name);
                 save_MGW_status(name,jsonstr);
             }
-        } else if ( Debuglevel > 1 && NORAMCHAINS == 0 ) printf("dont have ramchain_info for (%s) (%s)\n",coinstr,pingstr);
+        } else if ( Debuglevel > 1 && NORAMCHAINS == 0 && coinstr[0] != 0 ) printf("dont have ramchain_info for (%s) (%s)\n",coinstr,pingstr);
         if ( jsonstr != 0 )
             free(jsonstr);
         free_json(array);

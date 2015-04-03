@@ -362,6 +362,7 @@ char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     char cmdstr[MAX_JSON_FIELD],triggerhash[MAX_JSON_FIELD],utx[MAX_JSON_FIELD],sig[MAX_JSON_FIELD],*retstr = 0;
     uint64_t quoteid,assetid,qty,priceNQT,otherassetid,otherqty;
     int32_t minperc;
+    printf("got respond_tx\n");
     //if ( is_remote_access(previpaddr) == 0 )
     //    return(0);
     copy_cJSON(cmdstr,objs[0]);
