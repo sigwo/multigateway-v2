@@ -579,16 +579,6 @@ struct NXT_asset *get_NXTasset(int32_t *createdp,struct NXThandler_info *mp,char
     return(ap);
 }
 
-uint64_t get_assetmult(uint64_t assetid)
-{
-    struct NXT_asset *ap;
-    char assetidstr[64];
-    int32_t createdflag;
-    expand_nxt64bits(assetidstr,assetid);
-    ap = MTadd_hashtable(&createdflag,Global_mp->NXTassets_tablep,assetidstr);
-    return(ap->mult);
-}
-
 struct NXT_acct *get_NXTacct(int32_t *createdp,struct NXThandler_info *mp,char *NXTaddr)
 {
     struct NXT_acct *np;

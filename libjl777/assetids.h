@@ -326,6 +326,17 @@ double calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
     return(price);
 }
 
+uint64_t get_assetmult(uint64_t assetid)
+{
+    struct NXT_asset *ap;
+    char assetidstr[64];
+    int32_t createdflag;
+    expand_nxt64bits(assetidstr,assetid);
+    ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
+    //printf("ap->mult %llu\n",(long long)ap->mult);getchar();
+    return(ap->mult);
+}
+
 uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT)
 {
     *relamountp = (qty * priceNQT);

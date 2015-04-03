@@ -360,7 +360,7 @@ char *makeoffer3_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
 char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char cmdstr[MAX_JSON_FIELD],triggerhash[MAX_JSON_FIELD],utx[MAX_JSON_FIELD],sig[MAX_JSON_FIELD],*retstr = 0;
-    uint64_t quoteid,assetid,qty,priceNQT;
+    uint64_t quoteid,assetid,qty,priceNQT,otherassetid,otherqty;
     int32_t minperc;
     //if ( is_remote_access(previpaddr) == 0 )
     //    return(0);
@@ -375,8 +375,10 @@ char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     minperc = (int32_t)get_API_int(objs[8],INSTANTDEX_MINVOL);
     if ( is_remote_access(previpaddr) == 0 )
         copy_cJSON(sender,objs[9]);
+    otherassetid = get_API_nxt64bits(objs[10]);
+    otherqty = get_API_nxt64bits(objs[11]);
     if ( sender[0] != 0 && valid > 0 && triggerhash[0] != 0 )
-        retstr = respondtx(NXTaddr,NXTACCTSECRET,sender,cmdstr,assetid,qty,priceNQT,triggerhash,quoteid,sig,utx,minperc);
+        retstr = respondtx(NXTaddr,NXTACCTSECRET,sender,cmdstr,assetid,qty,priceNQT,triggerhash,quoteid,sig,utx,minperc,otherassetid,otherqty);
     else retstr = clonestr("{\"result\":\"invalid respondtx_func request\"}");
     return(retstr);
 }
@@ -2007,7 +2009,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *bid[] = { (char *)bid_func, "bid", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", 0 };
     static char *ask[] = { (char *)ask_func, "ask", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", 0 };
     static char *makeoffer3[] = { (char *)makeoffer3_func, "makeoffer3", "V", "baseid", "relid", "quoteid", "srcqty", "flip", "baseiQ", "reliQ", "askoffer", "price", "volume", "exchange", "baseamount", "relamount", "offerNXT", "minperc", "jumpasset", 0 };
-    static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "cmd", "assetid", "quantityQNT", "priceNQT", "triggerhash", "quoteid", "sig", "utx", "minperc", "offerNXT", 0 };
+    static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "cmd", "assetid", "quantityQNT", "priceNQT", "triggerhash", "quoteid", "sig", "utx", "minperc", "offerNXT", "otherassetid", "otherqty", 0 };
     static char *jumptrades[] = { (char *)jumptrades_func, "jumptrades", "V", 0 };
     static char *tradehistory[] = { (char *)tradehistory_func, "tradehistory", "V", "timestamp", 0 };
   //static char *processjumptrade[] = { (char *)processjumptrade_func, "processjumptrade", "V", "assetA", "amountA", "other", "assetB", "amountB", "feeA", "feeAtxid", "triggerhash", "jumper", "jumpasset", "jumpamount", "balancing", "balancetxid", "gui", "quoteid", 0 };

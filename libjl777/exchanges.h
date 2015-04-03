@@ -570,16 +570,24 @@ int32_t init_rambooks(char *base,char *rel,uint64_t baseid,uint64_t relid)
     return(0);
 }*/
 
-uint64_t submit_to_exchange(int32_t exchangeid,char **jsonstrp,uint64_t assetid,uint64_t qty,uint64_t priceNQT,int32_t dir,uint64_t nxt64bits,char *NXTACCTSECRET,char *triggerhash,char *comment)
+uint64_t submit_to_exchange(int32_t exchangeid,char **jsonstrp,uint64_t assetid,uint64_t qty,uint64_t priceNQT,int32_t dir,uint64_t nxt64bits,char *NXTACCTSECRET,char *triggerhash,char *comment,uint64_t otherNXT)
 {
     uint64_t txid = 0;
+    char assetidstr[64],*cmd;
+    struct NXT_asset *ap;
+    int32_t createdflag;
     *jsonstrp = 0;
+    expand_nxt64bits(assetidstr,assetid);
+    ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
+    if ( dir == 0 || priceNQT == 0 )
+        cmd = (ap->type == 2 ? "transferAsset" : "transferCurrency"), priceNQT = 0;
+    else cmd = ((dir > 0) ? (ap->type == 2 ? "placeBidOrder" : "currencyBuy") : (ap->type == 2 ? "placeAskOrder" : "currencySell")), otherNXT = 0;
     if ( exchangeid == INSTANTDEX_NXTAEID || exchangeid == INSTANTDEX_UNCONFID )
     {
-        if ( assetid != NXT_ASSETID && qty != 0 && priceNQT != 0 )
+        if ( assetid != NXT_ASSETID && qty != 0 && (dir == 0 || priceNQT != 0) )
         {
             printf("submit to exchange dir.%d\n",dir);
-            txid = submit_triggered_bidask(jsonstrp,(dir > 0) ? "placeBidOrder" : "placeAskOrder",nxt64bits,NXTACCTSECRET,assetid,qty,priceNQT,triggerhash,comment);
+            txid = submit_triggered_nxtae(jsonstrp,ap->type == 5,cmd,nxt64bits,NXTACCTSECRET,assetid,qty,priceNQT,triggerhash,comment,otherNXT);
             if ( *jsonstrp != 0 )
                 txid = 0;
         }
