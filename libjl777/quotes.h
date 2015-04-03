@@ -19,16 +19,28 @@ struct InstantDEX_quote
     char exchangeid,gui[9];
 };
 
+//00000000000000000000000000000000fcf299ed3689ec402636ac3c436b205f000e2707000000000e425f160b8b336080969800000000009b30f378f284e10550191f55084b00000000000000000000
+//000000000000000000000000000000002e4ded27e862bd6c0e425f160b8b3360000e2707000000002636ac3c436b205f80969800000000009b30f378f284e10550191f55080000000000000000000000
 void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 0; }
 void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 1; }
 
 uint64_t calc_quoteid(struct InstantDEX_quote *iQ)
 {
     struct InstantDEX_quote Q;
+    if ( iQ == 0 )
+        return(0);
     if ( iQ->quoteid == 0 )
     {
         Q = *iQ;
+        Q.baseiQ = (uint64_t)calc_quoteid(iQ->baseiQ);
+        Q.reliQ = (uint64_t)calc_quoteid(iQ->re;iQ);
         clear_InstantDEX_quoteflags(&Q);
+        if ( Q.isask != 0 )
+        {
+            Q.baseid = iQ->relid, Q.baseamount = iQ->relamount;
+            Q.relid = iQ->baseid, Q.relamount = iQ->baseamount;
+            Q.isask = Q.minperc = 0;
+        }
         return(calc_txid((uint8_t *)&Q,sizeof(Q)));
     } return(iQ->quoteid);
 }
