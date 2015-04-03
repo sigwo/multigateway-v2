@@ -135,12 +135,12 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
     uint64_t baseamount,relamount;
     if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->matched == 0 )
     {
+        polarity = (iQ->isask != 0) ? -1 : 1;
         if ( dir == 0 )
         {
-            printf("need to validate iQ details\n");
-            return(iQ);
+            printf("need to validate iQ details\n"); // combo orderbook entries, polling, automatch
+            dir = polarity;
         }
-        polarity = (iQ->isask != 0) ? -1 : 1;
         if ( Debuglevel > 2 )
             printf("found quoteid.%llu polarity.%d %llu/%llu vs %llu dir.%d\n",(long long)quoteid,polarity,(long long)iQ->baseid,(long long)iQ->relid,(long long)assetid,dir);
         if ( polarity*dir > 0 && ((polarity > 0 && iQ->baseid == assetid) || (polarity < 0 && iQ->relid == assetid)) )
@@ -213,7 +213,6 @@ int32_t matches_halfquote(struct pending_offer *pt,struct pendinghalf *half,stru
         return(0);
     if ( Debuglevel > 2 )
         printf("sell.%d tx type.%d subtype.%d otherNXT.%llu sender.%llu myasset.%llu txasset.%llu Uamount.%llu qty.%llu\n",half->T.sell,tx->type,tx->subtype,(long long)otherNXT(half),(long long)tx->senderbits,(long long)myasset(half),(long long)tx->assetidbits,(long long)tx->U.amountNQT,(long long)half->T.qty);
-    
     if ( tx->type == 0 )
     {
         if ( tx->subtype != 0 || otherNXT(half) != tx->senderbits || myasset(half) != NXT_ASSETID )
@@ -241,6 +240,7 @@ int32_t pendinghalf_is_complete(struct pending_offer *pt,struct pendinghalf *hal
     int32_t i;
     bits256 refhash;
     struct NXT_tx *tx;
+    
     //printf("check for complete asset.%llu unconf.%d closed.%d needsubmit.%d sent.%d sell.%d exchange.%d\n",(long long)half->T.assetid,half->T.unconf,half->T.closed,half->T.needsubmit,half->T.sent,half->T.sell,half->T.exchangeid);
     if ( half->T.error != 0 )
         return(0);
@@ -552,13 +552,16 @@ char *respondtx(char *NXTaddr,char *NXTACCTSECRET,char *sender,char *cmdstr,uint
                         {
                             if ( checkquoteid == quoteid && (iQ= is_valid_offer(quoteid,dir,assetid,qty,priceNQT,calc_nxt64bits(sender),otherassetid,otherqty)) != 0 )
                             {
-                                iQ->matched = 1;
                                 sprintf(retbuf,"{\"requestType\":\"respondtx\",\"NXT\":\"%llu\",\"qty\":\"%llu\",\"assetid\":\"%llu\",\"priceNQT\":\"%llu\",\"fee\":\"%llu\",\"quoteid\":\"%llu\",\"minperc\":\"%u\",\"otherassetid\":\"%llu\",\"otherqty\":\"%llu\"}",(long long)calc_nxt64bits(NXTaddr),(long long)qty,(long long)assetid,(long long)priceNQT,(long long)fee,(long long)quoteid,minperc,(long long)otherassetid,(long long)otherqty);
                                 feetxid = send_feetx(NXT_ASSETID,fee,triggerhash,retbuf);
                                 sprintf(retbuf+strlen(retbuf)-1,",\"feetxid\":\"%llu\"}",(long long)feetxid);
                                 if ( (txid= submit_to_exchange(INSTANTDEX_NXTAEID,&submitstr,assetid,qty,priceNQT,dir,calc_nxt64bits(NXTaddr),NXTACCTSECRET,triggerhash,retbuf,calc_nxt64bits(sender))) == 0 )
                                     sprintf(retbuf,"{\"error\":[%s],\"submit_txid\":\"%llu\",\"quoteid\":\"%llu\"}",submitstr == 0 ? "submit error" : submitstr,(long long)txid,(long long)quoteid), free(submitstr);
-                                else sprintf(retbuf,"{\"result\":\"%s\",:\"submit_txid\":\"%llu\",:\"quoteid\":\"%llu\"}",cmdstr,(long long)txid,(long long)quoteid);
+                                else
+                                {
+                                    iQ->matched = 1;
+                                    sprintf(retbuf,"{\"result\":\"%s\",:\"submit_txid\":\"%llu\",:\"quoteid\":\"%llu\"}",cmdstr,(long long)txid,(long long)quoteid);
+                                }
                             } else printf("invalid offer or quoteid mismatch %llu vs %llu\n",(long long)checkquoteid,(long long)quoteid);
                             free(triggertx);
                         } else printf("invalid trigger\n");
