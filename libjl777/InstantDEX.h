@@ -164,7 +164,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     uint32_t timestamp;
     uint8_t minperc;
     struct exchange_info *xchg;
-    struct InstantDEX_quote iQ,tmpiQ;
+    struct InstantDEX_quote iQ;
     int32_t remoteflag,automatch;
     struct rambook_info *rb;
     char buf[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],*jsonstr,*retstr = 0;
@@ -204,13 +204,6 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
         {
             rb = add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,timestamp,dir,baseid,relid,price,volume,baseamount,relamount,gui,0);
             iQ.minperc = minperc;
-            tmpiQ = iQ;
-            if ( iQ.isask != 0 )
-            {
-                iQ.baseid = tmpiQ.relid, iQ.baseamount = tmpiQ.relamount;
-                iQ.relid = tmpiQ.baseid, iQ.relamount = tmpiQ.baseamount;
-                iQ.isask = 0;
-            }
             if ( remoteflag == 0 && (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ.isask,&iQ,iQ.baseid,iQ.relid,0)) != 0 )
             {
                 cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString((iQ.isask != 0) ? "ask" : "bid"));
@@ -220,7 +213,6 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
                 free_json(json);
                 free(jsonstr);
             }
-            iQ = tmpiQ;
             if ( (quoteid= calc_quoteid(&iQ)) != 0 )
             {
                 char iQstr[1024],exchangestr[64];

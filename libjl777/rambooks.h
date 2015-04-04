@@ -244,12 +244,13 @@ struct rambook_info *add_rambook_quote(char *exchange,struct InstantDEX_quote *i
     if ( dir > 0 )
     {
         rb = get_rambook(0,baseid,0,relid,exchange);
-        _add_rambook_quote(iQ,rb,nxt64bits,timestamp,dir,price,volume,baseid,baseamount,relid,relamount,gui,quoteid);
+        _add_rambook_quote(iQ,rb,nxt64bits,timestamp,0,price,volume,baseid,baseamount,relid,relamount,gui,quoteid);
     }
     else
     {
-        rb = get_rambook(0,relid,0,baseid,exchange);
-        _add_rambook_quote(iQ,rb,nxt64bits,timestamp,dir,price,volume,baseid,baseamount,relid,relamount,gui,quoteid);
+        //rb = get_rambook(0,relid,0,baseid,exchange);
+        rb = get_rambook(0,baseid,0,relid,exchange);
+        _add_rambook_quote(iQ,rb,nxt64bits,timestamp,1,price,volume,baseid,baseamount,relid,relamount,gui,quoteid);
     }
     save_InstantDEX_quote(rb,iQ);
     emit_iQ(rb,iQ);
@@ -503,7 +504,10 @@ void ensure_rambook(uint64_t baseid,uint64_t relid)
 {
     if ( baseid != NXT_ASSETID && relid != NXT_ASSETID )
     {
-        init_rambooks(0,0,baseid,relid);
+        get_rambook(0,baseid,0,relid,INSTANTDEX_NAME);
+        get_rambook(0,relid,0,baseid,INSTANTDEX_NAME);
+        //init_rambooks(0,0,relid,baseid);
+        //init_rambooks(0,0,baseid,relid);
         init_rambooks(0,0,baseid,NXT_ASSETID);
         init_rambooks(0,0,relid,NXT_ASSETID);
     }

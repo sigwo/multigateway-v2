@@ -138,23 +138,23 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
     cJSON *relobj=0,*baseobj=0;
     struct InstantDEX_quote *baseiQ,*reliQ;
     uint64_t mult;
-    if ( iQ->isask == 0 )
+    //if ( iQ->isask == 0 )
         baseamount = iQ->baseamount, relamount = iQ->relamount;
-    else relamount = iQ->baseamount, baseamount = iQ->relamount;
+   // else relamount = iQ->baseamount, baseamount = iQ->relamount;
     baseiQ = iQ->baseiQ, reliQ = iQ->reliQ;
     if ( depth == 0 )
         *baseamountp = baseamount, *relamountp = relamount;
     if ( baseiQ != 0 && reliQ != 0 )
     {
-        if ( baseiQ->isask == 0 )
+       //if ( baseiQ->isask == 0 )
             frombase = baseiQ->baseamount, fromrel = baseiQ->relamount;
-        else fromrel = baseiQ->baseamount, frombase = baseiQ->relamount;
-        if ( reliQ->isask == 0 )
+       // else fromrel = baseiQ->baseamount, frombase = baseiQ->relamount;
+       // if ( reliQ->isask == 0 )
             tobase = reliQ->baseamount, torel = reliQ->relamount;
-        else torel = reliQ->baseamount, tobase = reliQ->relamount;
+       // else torel = reliQ->baseamount, tobase = reliQ->relamount;
         make_jumpquote(baseamountp,relamountp,&frombase,&fromrel,&tobase,&torel);
     } else frombase = fromrel = tobase = torel = 0;
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("%p depth.%d %p %p %.8f %.8f: %.8f %.8f %.8f %.8f\n",iQ,depth,baseiQ,reliQ,dstr(*baseamountp),dstr(*relamountp),dstr(frombase),dstr(fromrel),dstr(tobase),dstr(torel));
     if ( depth == 0 )
     {
@@ -243,7 +243,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
     {
         if ( cJSON_GetObjectItem(json,"minbase_error") != 0 || cJSON_GetObjectItem(json,"minrel_error") != 0 )
         {
-            //printf("gen_orderbook_item has error\n");
+            printf("gen_orderbook_item has error (%s)\n",cJSON_Print(json));
             free_json(json);
             return(0);
         }
@@ -254,7 +254,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
             free_json(json);
             return(cJSON_Parse(offerstr));
         }
-    }
+    } else printf("error generating InstantDEX_json\n");
     return(json);
 }
 

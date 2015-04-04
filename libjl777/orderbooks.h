@@ -44,8 +44,6 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
             bid = &op->bids[(*numbidsp)++];
             *bid = *iQ;
             bid->isask = 0;
-            //if ( quoteid != 0 )
-            //    bid->quoteid = quoteid;
             if ( Debuglevel > 2 )
                 p = calc_price_volume(&v,iQ->baseamount,iQ->relamount), printf("B.(%f %f) ",p,v);
         }
@@ -54,8 +52,8 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
             ask = &op->asks[(*numasksp)++];
             *ask = *iQ;
             ask->isask = 1;
-            //if ( quoteid != 0 )
-            //    ask->quoteid = quoteid;
+            //if ( iQ->nxt64bits == (long long)calc_nxt64bits("423766016895692955") )
+            //    printf("numbids.%d numasks.%d: %llu/%llu\n",*numbidsp,*numasksp,(long long)iQ->baseamount,(long long)iQ->relamount);
             //ask->baseamount = iQ->relamount;
             //ask->relamount = iQ->baseamount;
             if ( Debuglevel > 2 )
@@ -187,6 +185,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,char *jumper,char *re
                     for (i=0; i<rawop->numasks; i++)
                         op->asks[n++] = rawop->asks[i];
                 op->numasks = n;
+                printf("rawop.%p numasks.%d n.%d\n",rawop,rawop!=0?rawop->numasks:0,n);
             }
         }
     }
@@ -237,7 +236,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 rb = obooks[i];
                 if ( strcmp(rb->exchange,INSTANTDEX_NAME) != 0 )
                     haveexchanges++;
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("[%d] numquotes.%d: (%s).%llu (%s).%llu | (%s).%llu (%s).%llu\n",i,rb->numquotes,rb->base,(long long)rb->assetids[0],rb->rel,(long long)rb->assetids[1],op->base,(long long)op->baseid,op->rel,(long long)op->relid);
                 if ( rb->numquotes == 0 )
                     continue;
@@ -246,7 +245,11 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else if ( (rb->assetids[1] == refbaseid && rb->assetids[0] == refrelid) || (strcmp(op->base,rb->rel) == 0 && strcmp(op->rel,rb->base) == 0)  )
                     polarity = -1;
                 else continue;
-                //printf("[%d] numquotes.%d: %llu %llu | oldest.%u\n",i,rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1],oldest);
+                if ( 0 && rb->numquotes == 1 )
+                {
+                    double vol;
+                    printf("[%d] numquotes.%d: %llu %llu | oldest.%u polarity.%d %f isask.%d quoteid.%llu\n",i,rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1],oldest,polarity,calc_price_volume(&vol,rb->quotes[0].baseamount,rb->quotes[0].relamount),rb->quotes[0].isask,(long long)calc_quoteid(&rb->quotes[0]));
+                }
                 for (j=0; j<rb->numquotes; j++)
                     add_to_orderbook(op,iter,&numbids,&numasks,rb,&rb->quotes[j],polarity,oldest,gui);
             }
@@ -278,7 +281,7 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     struct orderbook *op=0,*toNXT=0,*fromNXT=0,*rawop=0;
     char obook[64],buf[MAX_JSON_FIELD],baserel[1024],gui[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],assetA[64],assetB[64],*retstr = 0;
     baseid = get_API_nxt64bits(objs[0]), relid = get_API_nxt64bits(objs[1]), allflag = get_API_int(objs[2],0), oldest = get_API_int(objs[3],0);
-    maxdepth = get_API_int(objs[4],13), copy_cJSON(base,objs[5]), copy_cJSON(rel,objs[6]), copy_cJSON(gui,objs[7]), gui[sizeof(iQ->gui)-1] = 0;
+    maxdepth = get_API_int(objs[4],2), copy_cJSON(base,objs[5]), copy_cJSON(rel,objs[6]), copy_cJSON(gui,objs[7]), gui[sizeof(iQ->gui)-1] = 0;
     expand_nxt64bits(obook,_obookid(baseid,relid));
     sprintf(buf,"{\"baseid\":\"%llu\",\"relid\":\"%llu\",\"oldest\":%u}",(long long)baseid,(long long)relid,oldest);
     retstr = 0;
@@ -320,7 +323,7 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         {
             strcpy(op->base,base), strcpy(op->rel,rel);
             sprintf(baserel,"%s/%s",op->base,op->rel);
-            printf("ORDERBOOK.(%s) %s/%s iQsize.%ld\n",buf,op->base,op->rel,sizeof(struct InstantDEX_quote));
+            printf("ORDERBOOK.(%s) %s/%s iQsize.%ld numbids.%d numasks.%d maxdepth.%d\n",buf,op->base,op->rel,sizeof(struct InstantDEX_quote),op->numbids,op->numasks,maxdepth);
             json = cJSON_CreateObject();
             bids = cJSON_CreateArray();
             asks = cJSON_CreateArray();
@@ -333,7 +336,7 @@ char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
                 }
                 for (i=0; i<op->numasks; i++)
                 {
-                    if ( (i < maxdepth || op->asks[i].nxt64bits == nxt64bits) && (item= gen_orderbook_item(&op->asks[i],allflag,baseid,relid,op->jumpasset)) != 0 )
+                    if ( (item= gen_orderbook_item(&op->asks[i],allflag,baseid,relid,op->jumpasset)) != 0 && (i < maxdepth || op->asks[i].nxt64bits == nxt64bits) )
                         cJSON_AddItemToArray(asks,item), debug_json(item);
                 }
             }
