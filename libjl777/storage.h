@@ -896,7 +896,7 @@ int32_t init_multisigDB()
                         {
                             if ( is_active_coin(msigram->coinstr) != 0 && find_msigaddr(msigram->multisigaddr) == 0 )
                             {
-                                printf("ADD.%d %s.(%s) NXT.(%s) NXTpubkey.(%s)\n",added,msigram->coinstr,msigram->multisigaddr,msigram->NXTaddr,msigram->NXTpubkey);
+                                printf("ADD.%d %s.(%s) NXT.(%s) NXTpubkey.(%s) (%s)\n",added,msigram->coinstr,msigram->multisigaddr,msigram->NXTaddr,msigram->NXTpubkey,msigram->pubkeys[0].coinaddr);
                                 if ( is_zeroes(msigram->NXTpubkey) != 0 )
                                 {
                                     set_NXTpubkey(msigram->NXTpubkey,msigram->NXTaddr);
