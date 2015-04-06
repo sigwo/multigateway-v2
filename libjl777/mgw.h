@@ -4,16 +4,6 @@
 //  Created by jl777 2014, refactored MGW
 //  Copyright (c) 2014 jl777. MIT License.
 //
-// tighten security
-// missing some data? need to sync missing data between servers, maybe make generic API for this
-// "ecBlockId":"10516864215908046020"
-
-// BTC, BTCD, DOGE, VRC, OPAL, BITS, VPN
-// wrong status on withdrawn: 		http://jnxt.org/init/?requestType=status&NXT=NXT-HTB8-GGJG-ZDRK-6N3LC&coin=BTCD&convertNXT=10
-// "redeemtxid":	"9666141869701832622",
-//"value":	"5.00000000",
-//"timestamp":	25943545,
-//"status":	"pending"
 
 #ifndef mgw_h
 #define mgw_h

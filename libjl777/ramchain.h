@@ -1728,13 +1728,21 @@ int32_t _map_msigaddr(char *redeemScript,struct ramchain_info *ram,char *normala
     if ( (msig= find_msigaddr(msigaddr)) == 0 )
     {
         strcpy(normaladdr,msigaddr);
+        printf("cant find_msigaddr.(%s)\n",msigaddr);
         return(0);
+    }
+    if ( msig->redeemScript[0] != 0 && ram->S.gatewayid >= 0 && ram->S.gatewayid < NUM_GATEWAYS )
+    {
+        strcpy(normaladdr,msig->pubkeys[ram->S.gatewayid].coinaddr);
+        strcpy(redeemScript,msig->redeemScript);
+        printf("return (%s) redeem.(%s)\n",normaladdr,redeemScript);
+        return(1);
     }
     sprintf(args,"\"%s\"",msig->multisigaddr);
     retstr = bitcoind_RPC(0,ram->name,ram->serverport,ram->userpass,"validateaddress",args);
     if ( retstr != 0 )
     {
-        //printf("got retstr.(%s)\n",retstr);
+        printf("got retstr.(%s)\n",retstr);
         if ( (json = cJSON_Parse(retstr)) != 0 )
         {
             if ( (array= cJSON_GetObjectItem(json,"addresses")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
