@@ -245,6 +245,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     minperc = (int32_t)get_API_int(objs[9],0);
     ensure_rambook(baseid,relid);
     printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
+    minbasevol = get_minvolume(baseid), minrelvol = get_minvolume(relid);
     if ( volume < minbasevol || (volume * price) < minrelvol )
     {
         sprintf(buf,"{\"error\":\"not enough volume\",\"price\":%f,\"volume\":%f,\"minbasevol\":%f,\"minrelvol\":%f,\"relvol\":%f}",price,volume,minbasevol,minrelvol,price*volume);
@@ -436,13 +437,13 @@ int32_t orderbook_testpair(cJSON **items,uint64_t quoteid,uint64_t nxt64bits,cha
     if ( (json= orderbook_json(nxt64bits,base,baseid,rel,relid,maxdepth,1,gui)) != 0 )
     {
         if ( (items[0]= detach_orderbook_item(json,quoteid,baseid,relid)) == 0 )
-            printf("couldnt find quoteid.%llu\n",quoteid);
+            printf("couldnt find quoteid.%llu\n",(long long)quoteid);
         free_json(json);
     }
     if ( (json= orderbook_json(nxt64bits,rel,relid,base,baseid,maxdepth,1,gui)) != 0 )
     {
         if ( (items[1]= detach_orderbook_item(json,quoteid,relid,baseid)) == 0 )
-            printf("couldnt find quoteid.%llu\n",quoteid);
+            printf("couldnt find quoteid.%llu\n",(long long)quoteid);
         free_json(json);
     }
     if ( items[0] != 0 && items[1] != 0 )
@@ -565,7 +566,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
     uint64_t baseid,relid,quoteid,mult;
     double baseprice,relprice,testprice,price,minbasevol,minrelvol,volume = 1.;
     cJSON *items[2],*json;
-    int32_t dir,iter;
+    int32_t dir,iter,j;
     expand_nxt64bits(NXTaddr,nxt64bits);
     baseprice = get_median(refbaseid), relprice = get_median(refrelid);
     if ( baseprice == 0. || relprice == 0. )
@@ -587,8 +588,9 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
         minrelvol = get_minvolume(relid);
         printf("base.(%s %.8f) rel.(%s %.8f)\n",base,minbasevol,rel,minrelvol);
         for (dir=1; dir>=-1; dir-=2)
+        for (j=1; j<100; j++)
         {
-            testprice = (price * (1. - .01*dir));
+            testprice = (price * (1. - .01*dir*j));
             volume = .1;
             if ( volume < minbasevol || (volume * testprice) < minrelvol )
                 volume = MAX(minbasevol * 1.2,1.2 * minrelvol/testprice);
