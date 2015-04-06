@@ -271,7 +271,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
                 {
                     retstr = placequote_str(&iQ);
                     if ( Debuglevel > 2 )
-                        printf("placequote.(%s)\n",buf);
+                        printf("placequote.(%s)\n",retstr);
                 }
                 if ( remoteflag == 0 )
                 {
