@@ -273,17 +273,15 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
                     if ( Debuglevel > 2 )
                         printf("placequote.(%s)\n",retstr);
                 }
-                if ( remoteflag == 0 )
+                if ( (jsonstr= submitquote_str(&iQ,baseid,relid)) != 0 )
                 {
-                    if ( (jsonstr= submitquote_str(&iQ,baseid,relid)) != 0 )
+                    if ( remoteflag == 0 )
                     {
                         submit_quote(jsonstr);
-                        free(jsonstr);
+                        //free(jsonstr);
+                        retstr = jsonstr;
                     }
-                }
-                else
-                {
-                    
+                    else retstr = check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ,jsonstr);
                 }
             } else return(clonestr("{\"error\":\"cant get price close enough due to limited decimals\"}"));
         }
