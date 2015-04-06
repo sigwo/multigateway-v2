@@ -166,7 +166,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,char *jumper,char *re
                 {
                     for (i=0; i<to->numasks&&i<m; i++)
                         for (j=0; j<from->numbids&&j<m; j++)
-                            make_jumpiQ(baseid,relid,0,&op->bids[n++],&from->bids[j],&to->asks[i],gui);
+                            make_jumpiQ(baseid,relid,0,&op->bids[n++],&from->bids[j],&to->asks[i],gui,0);
                 }
                 if ( rawop != 0 && rawop->numbids > 0 )
                     for (i=0; i<rawop->numbids; i++)
@@ -183,7 +183,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,char *jumper,char *re
                 {
                     for (i=0; i<from->numasks&&i<m; i++)
                         for (j=0; j<to->numbids&&j<m; j++)
-                            make_jumpiQ(baseid,relid,1,&op->asks[n++],&from->asks[i],&to->bids[j],gui);
+                            make_jumpiQ(baseid,relid,1,&op->asks[n++],&from->asks[i],&to->bids[j],gui,0);
                 }
                 if ( rawop != 0 && rawop->numasks > 0 )
                     for (i=0; i<rawop->numasks; i++)

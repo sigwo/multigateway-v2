@@ -254,7 +254,7 @@ void convram_NXT_quotejson(struct NXT_tx *txptrs[],int32_t numptrs,uint64_t asse
             printf("i.%d: assetid.%llu type.%d subtype.%d time.%u\n",i,(long long)tx->assetidbits,tx->type,tx->subtype,tx->timestamp);
             baseamount = (tx->U.quantityQNT * ap_mult);
             relamount = (tx->U.quantityQNT * tx->priceNQT);
-            add_rambook_quote(INSTANTDEX_NXTAENAME,&iQ,tx->senderbits,tx->timestamp,dir,assetid,NXT_ASSETID,0.,0.,baseamount,relamount,gui,0);
+            add_rambook_quote(INSTANTDEX_NXTAENAME,&iQ,tx->senderbits,tx->timestamp,dir,assetid,NXT_ASSETID,0.,0.,baseamount,relamount,gui,0,0);
         }
     }
     srcobj = cJSON_GetObjectItem(json,fieldname);
@@ -268,7 +268,7 @@ void convram_NXT_quotejson(struct NXT_tx *txptrs[],int32_t numptrs,uint64_t asse
                 baseamount = (get_satoshi_obj(srcitem,"quantityQNT") * ap_mult);
                 relamount = (get_satoshi_obj(srcitem,"quantityQNT") * get_satoshi_obj(srcitem,"priceNQT"));
                 timestamp = get_blockutime((uint32_t)get_API_int(cJSON_GetObjectItem(srcitem,"height"),0));
-                add_rambook_quote(INSTANTDEX_NXTAENAME,&iQ,get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"account")),timestamp,dir,assetid,NXT_ASSETID,0.,0.,baseamount,relamount,gui,get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"order")));
+                add_rambook_quote(INSTANTDEX_NXTAENAME,&iQ,get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"account")),timestamp,dir,assetid,NXT_ASSETID,0.,0.,baseamount,relamount,gui,get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"order")),0);
             }
         }
     }

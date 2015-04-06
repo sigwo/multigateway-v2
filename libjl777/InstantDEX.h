@@ -217,7 +217,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     uint8_t minperc;
     struct exchange_info *xchg;
     struct InstantDEX_quote iQ;
-    int32_t remoteflag,automatch;
+    int32_t remoteflag,automatch,duration;
     struct rambook_info *rb;
     char buf[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],*jsonstr,*retstr = 0;
     if ( (xchg= find_exchange(INSTANTDEX_NAME,1)) == 0 || xchg->exchangeid != INSTANTDEX_EXCHANGEID )
@@ -243,6 +243,9 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     copy_cJSON(gui,objs[7]), gui[sizeof(iQ.gui)-1] = 0;
     automatch = (int32_t)get_API_int(objs[8],0);
     minperc = (int32_t)get_API_int(objs[9],0);
+    duration = (int32_t)get_API_int(objs[10],ORDERBOOK_EXPIRATION);
+    if ( duration < 0 || duration > ORDERBOOK_EXPIRATION )
+        duration = ORDERBOOK_EXPIRATION;
     ensure_rambook(baseid,relid);
     printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
     minbasevol = get_minvolume(baseid), minrelvol = get_minvolume(relid);
@@ -261,7 +264,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     {
         if ( price != 0. && volume != 0. && dir != 0 )
         {
-            if ( (rb= add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,timestamp,dir,baseid,relid,price,volume,baseamount,relamount,gui,0)) != 0 )
+            if ( (rb= add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,timestamp,dir,baseid,relid,price,volume,baseamount,relamount,gui,0,duration)) != 0 )
             {
                 iQ.minperc = minperc;
                 if ( remoteflag == 0 && (jsonstr= submitquote_str(&iQ,baseid,relid)) != 0 )
@@ -595,7 +598,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
             if ( volume < minbasevol || (volume * testprice) < minrelvol )
                 volume = MAX(minbasevol * 1.2,1.2 * minrelvol/testprice);
             printf("iter.%d dir.%d testprice %f basevol %f relvol %f\n",iter,dir,testprice,volume,volume*testprice);
-            if ( (rb= add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,(uint32_t)time(NULL),dir,baseid,relid,testprice,volume,0,0,gui,0)) == 0 )
+            if ( (rb= add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,(uint32_t)time(NULL),dir,baseid,relid,testprice,volume,0,0,gui,0,13)) == 0 )
             {
                 printf("skip low resolution price point\n");
                 continue;
