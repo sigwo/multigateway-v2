@@ -131,6 +131,34 @@ int32_t time_to_nextblock(int32_t lookahead)
     return(lookahead * 600); // clearly need to do some calcs
 }
 
+void submit_quote(char *quotestr)
+{
+    int32_t len;
+    char _tokbuf[4096];
+    //struct pserver_info *pserver;
+    struct coin_info *cp = get_coin_info("BTCD");
+    if ( cp != 0 )
+    {
+        printf("submit_quote.(%s)\n",quotestr);
+        len = construct_tokenized_req(_tokbuf,quotestr,cp->srvNXTACCTSECRET);
+        //if ( get_top_MMaker(&pserver) == 0 )
+        //    call_SuperNET_broadcast(pserver,_tokbuf,len,ORDERBOOK_EXPIRATION);
+        call_SuperNET_broadcast(0,_tokbuf,len,ORDERBOOK_EXPIRATION);
+    }
+}
+
+void submit_respondtx(char *respondtxstr,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t dest64bits)
+{
+    char _tokbuf[8192],hopNXTaddr[64],NXTaddr[64],destNXTaddr[64],*retstr;
+    int32_t len;
+    len = construct_tokenized_req(_tokbuf,respondtxstr,NXTACCTSECRET);
+    hopNXTaddr[0] = 0;
+    expand_nxt64bits(NXTaddr,nxt64bits);
+    expand_nxt64bits(destNXTaddr,dest64bits);
+    if ( (retstr= send_tokenized_cmd(!prevent_queueing("respondtx"),hopNXTaddr,0,NXTaddr,NXTACCTSECRET,respondtxstr,destNXTaddr)) != 0 )
+        free(retstr);
+}
+
 #include "assetids.h"
 #include "NXT_tx.h"
 #include "quotes.h"
@@ -480,7 +508,7 @@ int32_t orderbook_verifymatch(int32_t dir,uint64_t baseid,uint64_t relid,double 
         if ( (dir < 0 && strcmp(buyerstr,"transmit") == 0 && strcmp(sellerstr,"nxtae") == 0 && assetidB == baseid && assetid == relid) || (dir > 0 && strcmp(buyerstr,"nxtae") == 0 && strcmp(sellerstr,"transmit") == 0 && assetidB == baseid && assetid == relid) )
         {
             buyprice = sellprice = ((double)buyerqty * get_assetmult(assetid)) / (sellerqty * get_assetmult(assetidB));
-            if ( fabs(buyprice - price)/price < calc_precision(assetid,assetidB) )// < .95/get_assetmult(assetid) || fabs(buyprice - price)/price < 0.001 )
+            if ( fabs(buyprice - price)/price < calc_precision(assetid,assetidB) || fabs(buyprice - price)/price < 0.005 )
                 retval = 0;
             printf(">>>>>>>>>> swap at price %f %f/%f (%llu * %llu) / (%llu * %llu) | precision %.15f diff %.15f\n",buyprice,((double)buyerqty*get_assetmult(assetid)),((double)sellerqty*get_assetmult(assetidB)),(long long)buyerqty,(long long)get_assetmult(assetid),(long long)sellerqty,(long long)get_assetmult(assetidB),calc_precision(assetid,assetidB),fabs(buyprice - price)/price);
         }
@@ -626,7 +654,7 @@ void init_InstantDEX(uint64_t nxt64bits,int32_t testflag)
 #ifdef __APPLE__
     if ( testflag != 0 )
     {
-        static char *testids[] = { "6932037131189568014", "6854596569382794790", "17554243582654188572", "15344649963748848799", "12982485703607823902", "8688289798928624137", "4630752101777892988" };//, "12465186738101000735" }; // jlh.0, skynet.4, mgwBTC.8, superBITS.6, coinoUSD.2, nemstake.1
+        static char *testids[] = { "6932037131189568014", "6854596569382794790", "17554243582654188572", "15344649963748848799", "8688289798928624137", "12071612744977229797" };
         long i,j;
         uint64_t assetA,assetB;
         //orderbook_test(nxt64bits,calc_nxt64bits(testids[0]),calc_nxt64bits(testids[1]),13);
@@ -644,6 +672,7 @@ void init_InstantDEX(uint64_t nxt64bits,int32_t testflag)
                 else orderbook_test(nxt64bits,assetA,NXT_ASSETID,13), orderbook_test(nxt64bits,NXT_ASSETID,assetA,13);
             }
         }
+        printf("FINISHED tests\n");
         getchar();
     }
 #endif
