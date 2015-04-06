@@ -1279,12 +1279,8 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
             }
         }
     }
-    init_pingpong_queue(&Pending_offersQ,"pending_offers",process_Pending_offersQ,0,0);
-    find_exchange(INSTANTDEX_NAME,1);
-    find_exchange(INSTANTDEX_NXTAEUNCONF,1);
-    find_exchange(INSTANTDEX_NXTAENAME,1);
-    if ( find_exchange(INSTANTDEX_NXTAENAME,0)->exchangeid != INSTANTDEX_NXTAEID || find_exchange(INSTANTDEX_NAME,0)->exchangeid != INSTANTDEX_EXCHANGEID )
-        printf("invalid exchangeid %d, %d\n",find_exchange(INSTANTDEX_NXTAENAME,0)->exchangeid,find_exchange(INSTANTDEX_NAME,0)->exchangeid);
+    init_InstantDEX(calc_nxt64bits(Global_mp->myNXTADDR),1);
+    getchar();
     if ( IS_LIBTEST != 7 )
     {
         /*#ifndef _WIN32

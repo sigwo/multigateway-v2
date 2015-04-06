@@ -506,6 +506,24 @@ int32_t init_rambooks(char *base,char *rel,uint64_t baseid,uint64_t relid)
     return(n);
 }
 
+void update_NXTAE_books(uint64_t baseid,uint64_t relid,int32_t maxdepth,char *gui)
+{
+    int32_t i;
+    struct orderpair *pair;
+    struct exchange_info *exchange;
+    if ( (exchange= find_exchange(INSTANTDEX_NXTAENAME,0)) != 0 )
+    {
+        for (i=0; i<exchange->num; i++)
+        {
+            pair = &exchange->orderpairs[i];
+            if ( pair->bids->assetids[0] == baseid || pair->bids->assetids[0] == relid || pair->bids->assetids[1] == baseid || pair->bids->assetids[1] == relid || pair->asks->assetids[0] == baseid || pair->asks->assetids[0] == relid || pair->asks->assetids[1] == baseid || pair->asks->assetids[1] == relid )
+            {
+                ramparse_NXT(pair->bids,pair->asks,maxdepth*3,gui);
+            }
+        }
+    }
+}
+
 /*void *poll_exchange(void *_exchangeidp)
 {
     int32_t maxdepth = 13;

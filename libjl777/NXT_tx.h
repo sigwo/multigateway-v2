@@ -24,7 +24,7 @@ struct NXT_tx
 
 uint32_t calc_expiration(struct NXT_tx *tx)
 {
-    if ( tx->timestamp == 0 )
+    if ( tx == 0 || tx->timestamp == 0 )
         return(0);
     return((NXT_GENESISTIME + tx->timestamp) + 60*tx->deadline);
 }
@@ -107,7 +107,7 @@ cJSON *gen_NXT_tx_json(struct NXT_tx *utx,char *reftxid,double myshare,char *NXT
             sprintf(cmd+strlen(cmd),"&deadline=%u&feeNQT=%lld&secretPhrase=%s&recipient=%s&broadcast=false",utx->deadline,(long long)utx->feeNQT,NXTACCTSECRET,destNXTaddr);
             if ( reftxid != 0 && reftxid[0] != 0 )
                 sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s",reftxid);
-            printf("generated cmd.(%s) reftxid.(%s)\n",cmd,reftxid);
+            //printf("generated cmd.(%s) reftxid.(%s)\n",cmd,reftxid);
             retstr = issue_NXTPOST(0,cmd);
             if ( retstr != 0 )
             {
@@ -334,10 +334,11 @@ struct NXT_tx *conv_txbytes(char *txbytes)
     return(tx);
 }
 
-void get_txhashes(char *sighash,char *fullhash,struct NXT_tx *tx)
+uint32_t get_txhashes(char *sighash,char *fullhash,struct NXT_tx *tx)
 {
     init_hexbytes_noT(sighash,tx->sighash.bytes,sizeof(tx->sighash));
     init_hexbytes_noT(fullhash,tx->fullhash.bytes,sizeof(tx->fullhash));
+    return(calc_expiration(tx));
 }
 
 uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t assetid,uint64_t qty,uint64_t NXTprice,char *triggerhash,char *comment,uint64_t otherNXT)

@@ -469,7 +469,7 @@ uint64_t _get_bestassetprice(uint64_t *volp,char *assetcmd,char *arrayfield,uint
     sprintf(cmd,"%s=%s&asset=%llu&firstIndex=0&lastIndex=0",NXTSERVER,assetcmd,(long long)assetid);
     if ( (jsonstr= issue_curl(0,cmd)) != 0 )
     {
-        printf("cmd.(%s) -> (%s)\n",cmd,jsonstr);
+        //printf("cmd.(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (array= cJSON_GetObjectItem(json,arrayfield)) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) == 1 )
@@ -2019,6 +2019,8 @@ int32_t get_API_int(cJSON *obj,int32_t val)
     char buf[MAX_JSON_FIELD+2];
     if ( obj != 0 )
     {
+        if ( is_cJSON_Number(obj) != 0 )
+            return((int32_t)obj->valuedouble);
         copy_cJSON(buf,obj);
         val = atoi(buf);
     }
@@ -2030,6 +2032,8 @@ uint32_t get_API_uint(cJSON *obj,uint32_t val)
     char buf[MAX_JSON_FIELD+2];
     if ( obj != 0 )
     {
+        if ( is_cJSON_Number(obj) != 0 )
+            return((uint32_t)obj->valuedouble);
         copy_cJSON(buf,obj);
         val = atoi(buf);
     }
@@ -2042,6 +2046,8 @@ uint64_t get_API_nxt64bits(cJSON *obj)
     char buf[MAX_JSON_FIELD+2];
     if ( obj != 0 )
     {
+        if ( is_cJSON_Number(obj) != 0 )
+            return((uint64_t)obj->valuedouble);
         copy_cJSON(buf,obj);
         nxt64bits = calc_nxt64bits(buf);
     }
@@ -2054,6 +2060,8 @@ double get_API_float(cJSON *obj)
     char buf[MAX_JSON_FIELD+2];
     if ( obj != 0 )
     {
+        if ( is_cJSON_Number(obj) != 0 )
+            return(obj->valuedouble);
         copy_cJSON(buf,obj);
         val = atof(buf);
     }

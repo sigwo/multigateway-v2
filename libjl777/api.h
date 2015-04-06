@@ -315,29 +315,12 @@ char *makeoffer2_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
 
 char *makeoffer3_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    uint64_t srcqty,quoteid,baseid,relid,baseamount,relamount,offerNXT,jumpasset;
-    char exchange[MAX_JSON_FIELD];
-    double price,volume;
-    int32_t minperc,flip = 0;
     char *retstr = 0;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
     //static char *makeoffer2[] = { (char *)makeoffer2_func, "makeoffer2", "V", "baseid", "baseamount", "jumpaddr", "jumpasset", "jumpamount", "other", "relid", "relamount", 0 };
-    baseid = get_API_nxt64bits(objs[0]);
-    relid = get_API_nxt64bits(objs[1]);
-    quoteid = get_API_nxt64bits(objs[2]);
-    srcqty = get_API_nxt64bits(objs[3]);
-    flip = (int32_t)get_API_int(objs[4],0);
-    price = get_API_float(objs[8]);
-    volume = get_API_float(objs[9]);
-    copy_cJSON(exchange,objs[10]);
-    baseamount = get_API_nxt64bits(objs[11]);
-    relamount = get_API_nxt64bits(objs[12]);
-    offerNXT = get_API_nxt64bits(objs[13]);
-    minperc = (int32_t)get_API_int(objs[14],INSTANTDEX_MINVOL);
-    jumpasset = get_API_nxt64bits(objs[15]);
     if ( sender[0] != 0 && valid > 0 )
-        retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,volume,flip,srcqty,baseid,relid,objs[5],objs[6],quoteid,get_API_int(objs[7],0),exchange,baseamount,relamount,offerNXT,minperc,jumpasset);
+        retstr = call_makeoffer3(NXTaddr,NXTACCTSECRET,objs);
     else retstr = clonestr("{\"result\":\"invalid makeoffer3_func request\"}");
     return(retstr);
 }
@@ -2009,7 +1992,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *placeask[] = { (char *)placeask_func, "placeask", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", ",gui", "automatch", "minperc", 0 };
     static char *bid[] = { (char *)bid_func, "bid", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", 0 };
     static char *ask[] = { (char *)ask_func, "ask", "V", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", 0 };
-    static char *makeoffer3[] = { (char *)makeoffer3_func, "makeoffer3", "V", "baseid", "relid", "quoteid", "srcqty", "flip", "baseiQ", "reliQ", "askoffer", "price", "volume", "exchange", "baseamount", "relamount", "offerNXT", "minperc", "jumpasset", 0 };
+    static char *makeoffer3[] = { (char *)makeoffer3_func, "makeoffer3", "V", "baseid", "relid", "quoteid", "srcqty", "deprecated", "baseiQ", "reliQ", "askoffer", "price", "volume", "exchange", "baseamount", "relamount", "offerNXT", "minperc", "jumpasset", 0 };
     static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "cmd", "assetid", "quantityQNT", "priceNQT", "triggerhash", "quoteid", "sig", "data", "minperc", "offerNXT", "otherassetid", "otherqty", 0 };
     static char *jumptrades[] = { (char *)jumptrades_func, "jumptrades", "V", 0 };
     static char *tradehistory[] = { (char *)tradehistory_func, "tradehistory", "V", "timestamp", 0 };

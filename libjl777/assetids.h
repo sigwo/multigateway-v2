@@ -148,6 +148,18 @@ uint64_t min_asset_amount(uint64_t assetid)
     return(ap->mult);
 }
 
+int32_t get_assetdecimals(uint64_t assetid)
+{
+    struct NXT_asset *ap;
+    int32_t createdflag;
+    char assetidstr[64];
+    if ( assetid == NXT_ASSETID )
+        return(8);
+    expand_nxt64bits(assetidstr,assetid);
+    ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
+    return(ap->decimals);
+}
+
 uint64_t calc_assetoshis(uint64_t assetidbits,uint64_t amount)
 {
     struct NXT_asset *ap;
@@ -252,7 +264,7 @@ uint64_t calc_asset_qty(uint64_t *availp,uint64_t *priceNQTp,char *NXTaddr,int32
         {
             //price = (double)get_satoshi_obj(srcitem,"priceNQT") / ap_mult;
             //vol = (double)get_satoshi_obj(srcitem,"quantityQNT") * ((double)ap_mult / SATOSHIDEN);
-            priceNQT = (price * ap->mult);
+            priceNQT = (price * ap->mult + ap->mult/2);
             quantityQNT = (vol * SATOSHIDEN) / ap->mult;
             balance = get_asset_quantity(&unconfirmed,NXTaddr,assetidstr);
             printf("%s balance %.8f unconfirmed %.8f vs price %llu qty %llu for asset.%s | price_vol.(%f * %f) * (%ld / %llu)\n",NXTaddr,dstr(balance),dstr(unconfirmed),(long long)priceNQT,(long long)quantityQNT,assetidstr,price,vol,SATOSHIDEN,(long long)ap->mult);
@@ -276,7 +288,7 @@ uint64_t calc_asset_qty(uint64_t *availp,uint64_t *priceNQTp,char *NXTaddr,int32
 
 double _calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
 {
-    *volumep = (((double)baseamount + 0.0000000099) / SATOSHIDEN);
+    *volumep = (((double)baseamount + 0.000000009999999) / SATOSHIDEN);
     if ( baseamount > 0. )
         return((double)relamount / (double)baseamount);
     else return(0.);
@@ -322,7 +334,7 @@ double calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
     else return(0.);
     set_best_amounts(&checkbase,&checkrel,price,vol);
     if ( checkbase != baseamount || checkrel != relamount )
-        printf("(%llu/%llu) -> %f %f -> (%llu %llu)\n",(long long)baseamount,(long long)relamount,price,vol,(long long)checkbase,(long long)checkrel);
+        printf("calc_price_volume error: (%llu/%llu) -> %f %f -> (%llu %llu)\n",(long long)baseamount,(long long)relamount,price,vol,(long long)checkbase,(long long)checkrel);
     return(price);
 }
 
@@ -335,6 +347,11 @@ uint64_t get_assetmult(uint64_t assetid)
     ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
     //printf("ap->mult %llu\n",(long long)ap->mult);getchar();
     return(ap->mult);
+}
+
+double get_minvolume(uint64_t assetid)
+{
+    return(dstr(get_assetmult(assetid)));
 }
 
 uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT)
