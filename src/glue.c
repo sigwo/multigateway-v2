@@ -108,7 +108,7 @@ void *_launch_SuperNET(void *_myip)
     int32_t retval;
     void *processptr = 0;
 #ifdef _WIN32
-    cmdstr = "./SuperNET.exe";
+    cmdstr = "SuperNET.exe";
     osstr = "_WIN32";
     rmstr = "del"
 #else
@@ -123,7 +123,7 @@ void *_launch_SuperNET(void *_myip)
         system(cmd);
     }
     if ( portable_spawn(osstr,cmdstr,myip) != 0 )
-        printf("error launching (%s)\n",cmd);
+        printf("error launching (%s)\n",cmdstr);
     else
     {
         retval = set_SuperNET_url(SuperNET_url);
