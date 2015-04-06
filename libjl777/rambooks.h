@@ -477,7 +477,7 @@ int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ;
     char nxtaddr[64];
-    if ( (iQ= findquoteid(quoteid,0)) != 0 )
+    if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(NXTaddr) && iQ->baseiQ == 0 && iQ->reliQ == 0 && iQ->exchangeid == INSTANTDEX_EXCHANGEID )
     {
         expand_nxt64bits(nxtaddr,iQ->nxt64bits);
         if ( strcmp(NXTaddr,nxtaddr) == 0 && calc_quoteid(iQ) == quoteid )
@@ -499,7 +499,7 @@ char *cancelquote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     printf("cancelquote %llu\n",(long long)quoteid);
     if ( cancelquote(NXTaddr,quoteid) > 0 )
         return(clonestr("{\"result\":\"quote cancelled\"}"));
-    else return(clonestr("{\"result\":\"no quote to cancel\"}"));
+    else return(clonestr("{\"result\":\"you can only cancel your InstantDEX orders\"}"));
 }
 
 void ensure_rambook(uint64_t baseid,uint64_t relid)

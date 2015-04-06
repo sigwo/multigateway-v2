@@ -267,16 +267,23 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
             if ( (rb= add_rambook_quote(INSTANTDEX_NAME,&iQ,nxt64bits,timestamp,dir,baseid,relid,price,volume,baseamount,relamount,gui,0,duration)) != 0 )
             {
                 iQ.minperc = minperc;
-                if ( remoteflag == 0 && (jsonstr= submitquote_str(&iQ,baseid,relid)) != 0 )
-                {
-                    submit_quote(jsonstr);
-                    free(jsonstr);
-                }
                 if ( (quoteid= calc_quoteid(&iQ)) != 0 )
                 {
                     retstr = placequote_str(&iQ);
                     if ( Debuglevel > 2 )
                         printf("placequote.(%s)\n",buf);
+                }
+                if ( remoteflag == 0 )
+                {
+                    if ( (jsonstr= submitquote_str(&iQ,baseid,relid)) != 0 )
+                    {
+                        submit_quote(jsonstr);
+                        free(jsonstr);
+                    }
+                }
+                else
+                {
+                    
                 }
             } else return(clonestr("{\"error\":\"cant get price close enough due to limited decimals\"}"));
         }

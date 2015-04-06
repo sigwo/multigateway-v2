@@ -68,11 +68,7 @@ void sort_orderbook(struct orderbook *op,int32_t jumpflag)
         if ( op->numbids > 0 )
             qsort(op->bids,op->numbids,sizeof(*op->bids),_decreasing_quotes);
         if ( op->numasks > 0 )
-        {
-            if ( 1 )//0 && jumpflag == 0 )
-                qsort(op->asks,op->numasks,sizeof(*op->asks),_increasing_quotes);
-            else qsort(op->asks,op->numasks,sizeof(*op->asks),_decreasing_quotes);
-        }
+            qsort(op->asks,op->numasks,sizeof(*op->asks),_increasing_quotes);
     }
 }
 
