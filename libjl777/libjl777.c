@@ -1296,7 +1296,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
             printf("ERROR hist run_libwebsockets\n");
         sleep(3);
     }
-    
+    if ( 0 )
     {
         int32_t _map_msigaddr(char *redeemScript,struct ramchain_info *ram,char *normaladdr,char *msigaddr);
         char normaladdr[1024],redeemScript[4096];
