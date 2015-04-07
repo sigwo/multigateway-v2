@@ -14,7 +14,7 @@ SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
     libtom/aes.c libtom/cast5.c libtom/khazad.c libtom/rc2.c libtom/safer.c libtom/skipjack.c \
     libtom/aes_tab.c libtom/crypt_argchk.c  libtom/kseed.c    libtom/rc5.c     libtom/saferp.c     libtom/twofish.c \
     libtom/anubis.c libtom/des.c libtom/multi2.c libtom/rc6.c libtom/safer_tab.c libtom/twofish_tab.c \
-    libtom/blowfish.c libtom/kasumi.c  libtom/noekeon.c libtom/rmd160.c libtom/sha256.c libtom/xtea.c
+    libtom/blowfish.c libtom/kasumi.c  libtom/noekeon.c libtom/rmd160.c libtom/sha256.c libtom/hmac_sha512.c libtom/xtea.c
 OBJS	:= $(SRCS:%.c=%.o)
 
 all: $(TARGET)
