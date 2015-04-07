@@ -459,25 +459,23 @@ int32_t submit_trade(cJSON **jsonp,char *whostr,int32_t dir,struct pendinghalf *
 }
 
 // phasing! https://nxtforum.org/index.php?topic=6490.msg171048#msg171048
-int32_t extract_pendingpair(struct pendingpair *pt,int32_t dir,struct pendinghalf *half,cJSON *obj,uint64_t assetid,uint64_t jumpasset)
+char *set_combohalf(struct pendingpair *pt,cJSON *obj,struct pending_offer *offer,uint64_t baseid,uint64_t relid,int32_t dir,int32_t minperc,uint64_t srcqty,double ratio)
 {
-    char exchangestr[MAX_JSON_FIELD];
-    struct exchange_info *exchange;
-    uint64_t baseamount,relamount,quoteid,offerNXT;
-    if ( obj != 0 )
+    char *retstr;
+    pt->baseamount = ratio * get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
+    pt->relamount = ratio * get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
+    pt->quoteid = get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
+    pt->offerNXT = get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
+    copy_cJSON(pt->exchange,cJSON_GetObjectItem(obj,"exchange"));
+    pt->nxt64bits = offer->nxt64bits, pt->baseid = baseid, pt->relid = relid, pt->ratio = ratio;
+    pt->price = calc_price_volume(&pt->volume,pt->baseamount,pt->relamount);
+    pt->sell = (dir < 0);
+    if ( (retstr= set_buyer_seller(&offer->halves[offer->numhalves++],&offer->halves[offer->numhalves++],pt,offer,dir,minperc,srcqty)) != 0 )
     {
-        baseamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
-        relamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
-        quoteid = get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
-        offerNXT = get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
-        copy_cJSON(exchangestr,cJSON_GetObjectItem(obj,"exchange"));
-        if ( (exchange= find_exchange(half->exchange,0)) != 0 )
-            half->T.exchangeid = exchange->exchangeid;
-        else return(-1);
-        return(half->T.exchangeid == INSTANTDEX_EXCHANGEID);
-        //return(set_pendinghalf(pt,dir,half,assetid,baseamount,jumpasset,relamount,quoteid,pt->nxt64bits,offerNXT,exchange,0));
+        free(offer);
+        return(retstr);
     }
-    return(-1);
+    return(0);
 }
 
 char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,int32_t deprecated,uint64_t srcqty,uint64_t baseid,uint64_t relid,cJSON *baseobj,cJSON *relobj,uint64_t quoteid,int32_t askoffer,char *exchange,uint64_t baseamount,uint64_t relamount,uint64_t offerNXT,int32_t minperc,uint64_t jumpasset)
@@ -500,31 +498,12 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
     pt = &offer->A;
     if ( baseobj != 0 && relobj != 0 )
     {
-        pt->baseamount = get_API_nxt64bits(cJSON_GetObjectItem(baseobj,"baseamount"));
-        pt->relamount = get_API_nxt64bits(cJSON_GetObjectItem(baseobj,"relamount"));
-        pt->quoteid = get_API_nxt64bits(cJSON_GetObjectItem(baseobj,"quoteid"));
-        pt->offerNXT = get_API_nxt64bits(cJSON_GetObjectItem(baseobj,"offerNXT"));
-        copy_cJSON(pt->exchange,cJSON_GetObjectItem(baseobj,"exchange"));
-        pt->nxt64bits = offer->nxt64bits, pt->baseid = baseid, pt->relid = jumpasset, pt->ratio = 1.;
-        pt->price = calc_price_volume(&pt->volume,pt->baseamount,pt->relamount);
-        if ( (pt->sell= offer->sell) != 0 )
-            pt->srcqty = srcqty;
-        if ( (retstr= set_buyer_seller(&offer->halves[offer->numhalves++],&offer->halves[offer->numhalves++],pt,offer,dir,minperc,pt->srcqty)) != 0 )
+        if ( (retstr= set_combohalf(&offer->A,baseobj,offer,baseid,jumpasset,-dir,minperc,srcqty,1.)) != 0 )
         {
             free(offer);
             return(retstr);
         }
-        pt = &offer->B;
-        pt->baseamount = get_API_nxt64bits(cJSON_GetObjectItem(relobj,"baseamount"));
-        pt->relamount = get_API_nxt64bits(cJSON_GetObjectItem(relobj,"relamount"));
-        pt->quoteid = get_API_nxt64bits(cJSON_GetObjectItem(relobj,"quoteid"));
-        pt->offerNXT = get_API_nxt64bits(cJSON_GetObjectItem(relobj,"offerNXT"));
-        copy_cJSON(pt->exchange,cJSON_GetObjectItem(relobj,"exchange"));
-        pt->nxt64bits = offer->nxt64bits, pt->baseid = relid, pt->relid = jumpasset, pt->ratio = 1.;
-        pt->price = calc_price_volume(&pt->volume,pt->baseamount,pt->relamount);
-        if ( (pt->sell= offer->sell) == 0 )
-            pt->srcqty = srcqty;
-        if ( (retstr= set_buyer_seller(&offer->halves[offer->numhalves++],&offer->halves[offer->numhalves++],pt,offer,dir,minperc,pt->srcqty)) != 0 )
+        if ( (retstr= set_combohalf(&offer->B,relobj,offer,relid,jumpasset,dir,minperc,0,offer->A.ratio)) != 0 )
         {
             free(offer);
             return(retstr);
