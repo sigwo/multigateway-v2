@@ -1296,14 +1296,6 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
             printf("ERROR hist run_libwebsockets\n");
         sleep(3);
     }
-    if ( 1 )
-    {
-        int32_t _map_msigaddr(char *redeemScript,struct ramchain_info *ram,char *normaladdr,char *msigaddr);
-        char normaladdr[1024],redeemScript[4096];
-        _map_msigaddr(redeemScript,get_ramchain_info("BTC"),normaladdr,"3LntHEZY2of29ptqACx6SK1homtsZX6aWj");
-        getchar();
-
-    }
     int32_t tmp = 1;
     if ( strncmp(Global_mp->ipaddr,"209",3) != 0 && (Global_mp->gatewayid >= 0 || Global_mp->iambridge != 0) )
         tmp = 0;
