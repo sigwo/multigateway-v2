@@ -875,9 +875,6 @@ int32_t init_multisigDB()
                 //if ( createdflag != 0 )
                 memcpy(msigram,msigs[i],sizeof(*msigram) + (msigs[i]->n*sizeof(msigs[i]->pubkeys[0])));
                 m++;
-                if ( i == 0 )
-                    printf("%d of %d: %s.(%s) NXT.(%s) NXTpubkey.(%s) coinaddr.(%s) redeem.(%s)\n",i,n,msigram->coinstr,msigram->multisigaddr,msigram->NXTaddr,msigram->NXTpubkey,msigram->pubkeys[0].coinaddr,msigram->redeemScript);
-                //else printf("unexpected duplicate.(%s)\n",msigram->multisigaddr);
                 free(msigs[i]);
             }
             free(msigs);
@@ -915,7 +912,7 @@ int32_t init_multisigDB()
             }
         }
         printf("added.%d multisig addrs\n",added);
-        if ( 1 )
+        if ( 0 )
         {
             int32_t _map_msigaddr(char *redeemScript,struct ramchain_info *ram,char *normaladdr,char *msigaddr);
             char normaladdr[1024],redeemScript[4096];
