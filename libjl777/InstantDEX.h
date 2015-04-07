@@ -402,7 +402,7 @@ cJSON *detach_orderbook_item(cJSON *json,uint64_t quoteid,uint64_t baseid,uint64
                 fprintf(stderr,"%.8f ",prevprice);
                 item = cJSON_GetArrayItem(array,i);
                 if ( (prevprice= verify_orderbook_json(prevprice,i,iter,item,baseid,relid)) == 0. )
-                    printf("error iter.%d i.%d (%s)\n",iter,i,cJSON_Print(item)), getchar();
+                    printf("error iter.%d i.%d (%s)\n",iter,i,cJSON_Print(item));//, getchar();
                 if ( get_API_nxt64bits(cJSON_GetObjectItem(item,"quoteid")) == quoteid )
                 {
                     if ( matchitem != 0 )
@@ -618,7 +618,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
                     {
                         if ( orderbook_verifymatch(dir,baseid,relid,testprice,volume,items[0],items[1],cJSON_GetObjectItem(json,"buyer"),cJSON_GetObjectItem(json,"seller")) < 0 )
                         {
-                            printf("orderbook_verifymatch failed dir.%d %s/%s testprice %f %llu %f || %llu %f\n",dir,base,rel,testprice,(long long)refbaseid,baseprice,(long long)refrelid,relprice), getchar();
+                            printf("orderbook_verifymatch failed dir.%d %s/%s testprice %f %llu %f || %llu %f\n",dir,base,rel,testprice,(long long)refbaseid,baseprice,(long long)refrelid,relprice);//, getchar();
                             getchar();
                         } else printf("VERIFIED <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< iter.%d dir.%d %s/%s price %f vol %f\n",iter,dir,base,rel,price,volume);
                         free_json(json);
@@ -638,14 +638,14 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
                                 } free(jsonstr2);
                             }
                         }
-                    } else printf("error parsing (%s)\n",retstr), getchar();
+                    } else printf("error parsing (%s)\n",retstr);//, getchar();
                     free(retstr);
-                } else printf("error makeoffer3_stub\n"), getchar();
+                } else printf("error makeoffer3_stub\n");//, getchar();
                 printf("Q.%llu %s %llu / %s %llu price %f volume %f (%s)\n",(long long)quoteid,base,(long long)baseid,rel,(long long)relid,testprice,volume,jsonstr!=0?jsonstr:"nosubmitstr");
                 free_json(items[0]), free_json(items[1]);
                 if ( jsonstr != 0 )
                     free(jsonstr);
-            } else printf("error getting testpair dir.%d testprice %f %llu %f || %llu %f\n",dir,testprice,(long long)refbaseid,baseprice,(long long)refrelid,relprice), getchar();
+            } else printf("error getting testpair dir.%d testprice %f %llu %f || %llu %f\n",dir,testprice,(long long)refbaseid,baseprice,(long long)refrelid,relprice);//, getchar();
         }
         relid = refbaseid, baseid = refrelid;
         price = (relprice / baseprice), volume = (1. / price) / .9;

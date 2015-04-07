@@ -282,7 +282,6 @@ char *orderbook_jsonstr(uint64_t nxt64bits,struct orderbook *op,char *base,char 
     strcpy(op->base,base), strcpy(op->rel,rel);
     sprintf(baserel,"%s/%s",op->base,op->rel);
     printf("ORDERBOOK %s/%s iQsize.%ld numbids.%d numasks.%d maxdepth.%d\n",op->base,op->rel,sizeof(struct InstantDEX_quote),op->numbids,op->numasks,maxdepth);
-    if ( strcmp(op->base,"unknown") == 0 ) getchar();
     json = cJSON_CreateObject();
     bids = cJSON_CreateArray();
     asks = cJSON_CreateArray();

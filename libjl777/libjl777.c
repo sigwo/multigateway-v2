@@ -1280,7 +1280,6 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         }
     }
     init_InstantDEX(calc_nxt64bits(Global_mp->myNXTADDR),1);
-    getchar();
     if ( IS_LIBTEST != 7 )
     {
         /*#ifndef _WIN32
