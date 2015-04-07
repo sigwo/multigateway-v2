@@ -498,12 +498,12 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
     pt = &offer->A;
     if ( baseobj != 0 && relobj != 0 )
     {
-        if ( (retstr= set_combohalf(&offer->A,baseobj,offer,baseid,jumpasset,askoffer!=0,dir,minperc,srcqty,1.)) != 0 )
+        if ( (retstr= set_combohalf(&offer->A,baseobj,offer,baseid,jumpasset,askoffer,dir,minperc,srcqty,1.)) != 0 )
         {
             free(offer);
             return(retstr);
         }
-        if ( (retstr= set_combohalf(&offer->B,relobj,offer,relid,jumpasset,askoffer==0,dir,minperc,0,offer->A.ratio)) != 0 )
+        if ( (retstr= set_combohalf(&offer->B,relobj,offer,relid,jumpasset,askoffer,dir,minperc,0,offer->A.ratio)) != 0 )
         {
             free(offer);
             return(retstr);
