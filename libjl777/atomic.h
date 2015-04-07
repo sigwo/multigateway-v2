@@ -459,7 +459,7 @@ int32_t submit_trade(cJSON **jsonp,char *whostr,int32_t dir,struct pendinghalf *
 }
 
 // phasing! https://nxtforum.org/index.php?topic=6490.msg171048#msg171048
-char *set_combohalf(struct pendingpair *pt,cJSON *obj,struct pending_offer *offer,uint64_t baseid,uint64_t relid,int32_t dir,int32_t minperc,uint64_t srcqty,double ratio)
+char *set_combohalf(struct pendingpair *pt,cJSON *obj,struct pending_offer *offer,uint64_t baseid,uint64_t relid,int32_t askoffer,int32_t dir,int32_t minperc,uint64_t srcqty,double ratio)
 {
     char *retstr;
     pt->baseamount = ratio * get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
@@ -469,7 +469,7 @@ char *set_combohalf(struct pendingpair *pt,cJSON *obj,struct pending_offer *offe
     copy_cJSON(pt->exchange,cJSON_GetObjectItem(obj,"exchange"));
     pt->nxt64bits = offer->nxt64bits, pt->baseid = baseid, pt->relid = relid, pt->ratio = ratio;
     pt->price = calc_price_volume(&pt->volume,pt->baseamount,pt->relamount);
-    pt->sell = (dir < 0);
+    pt->sell = askoffer;
     if ( (retstr= set_buyer_seller(&offer->halves[offer->numhalves++],&offer->halves[offer->numhalves++],pt,offer,dir,minperc,srcqty)) != 0 )
     {
         free(offer);
@@ -498,12 +498,12 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
     pt = &offer->A;
     if ( baseobj != 0 && relobj != 0 )
     {
-        if ( (retstr= set_combohalf(&offer->A,baseobj,offer,baseid,jumpasset,-dir,minperc,srcqty,1.)) != 0 )
+        if ( (retstr= set_combohalf(&offer->A,baseobj,offer,baseid,jumpasset,askoffer!=0,dir,minperc,srcqty,1.)) != 0 )
         {
             free(offer);
             return(retstr);
         }
-        if ( (retstr= set_combohalf(&offer->B,relobj,offer,relid,jumpasset,dir,minperc,0,offer->A.ratio)) != 0 )
+        if ( (retstr= set_combohalf(&offer->B,relobj,offer,relid,jumpasset,askoffer==0,dir,minperc,0,offer->A.ratio)) != 0 )
         {
             free(offer);
             return(retstr);
