@@ -1735,7 +1735,7 @@ int32_t _map_msigaddr(char *redeemScript,struct ramchain_info *ram,char *normala
     {
         strcpy(normaladdr,msig->pubkeys[ram->S.gatewayid].coinaddr);
         strcpy(redeemScript,msig->redeemScript);
-        printf("return (%s) redeem.(%s)\n",normaladdr,redeemScript);
+        printf("_map_msigaddr.(%s) -> return (%s) redeem.(%s)\n",msigaddr,normaladdr,redeemScript);
         return(1);
     }
     sprintf(args,"\"%s\"",msig->multisigaddr);

@@ -871,9 +871,11 @@ int32_t init_multisigDB()
                 if ( is_active_coin(msigs[i]->coinstr) == 0 )
                     continue;
                 msigram = ram_add_msigaddr(msigs[i]->multisigaddr,msigs[i]->n,msigs[i]->NXTaddr,msigs[i]->NXTpubkey,msigs[i]->buyNXT);//MTadd_hashtable(&createdflag,&sdb->ramtable,msigs[i]->multisigaddr);
-                printf("%d of %d: %s.(%s) NXT.(%s) NXTpubkey.(%s) coinaddr.(%s)\n",i,n,msigs[i]->coinstr,msigs[i]->multisigaddr,msigs[i]->NXTaddr,msigs[i]->NXTpubkey,msigs[i]->pubkeys[0].coinaddr);
+                printf("%d of %d: %s.(%s) NXT.(%s) NXTpubkey.(%s) coinaddr.(%s) redeem.(%s)\n",i,n,msigs[i]->coinstr,msigs[i]->multisigaddr,msigs[i]->NXTaddr,msigs[i]->NXTpubkey,msigs[i]->pubkeys[0].coinaddr,msigs[i]->redeemScript);
                 //if ( createdflag != 0 )
                 *msigram = *msigs[i], m++;
+                if ( i == 0 )
+                    printf("%d of %d: %s.(%s) NXT.(%s) NXTpubkey.(%s) coinaddr.(%s) redeem.(%s)\n",i,n,msigram->coinstr,msigram->multisigaddr,msigram->NXTaddr,msigram->NXTpubkey,msigram->pubkeys[0].coinaddr,msigram->redeemScript);
                 //else printf("unexpected duplicate.(%s)\n",msigram->multisigaddr);
                 free(msigs[i]);
             }
