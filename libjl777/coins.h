@@ -1172,6 +1172,12 @@ void init_SuperNET_settings(char *userdir)
             printf("NXTISSUERACCT.(%s) -> %llu\n",NXTISSUERACCT,(long long)nxt64bits);
         expand_nxt64bits(NXTISSUERACCT,nxt64bits);
     }
+    extract_cJSON_str(APIKEY_BTCE,sizeof(APIKEY_BTCE),MGWconf,"APIKEY_BTCE");
+    extract_cJSON_str(APISECRET_BTCE,sizeof(APISECRET_BTCE),MGWconf,"APISECRET_BTCE");
+    extract_cJSON_str(APIKEY_BITTREX,sizeof(APIKEY_BITTREX),MGWconf,"APIKEY_BITTREX");
+    extract_cJSON_str(APISECRET_BITTREX,sizeof(APISECRET_BITTREX),MGWconf,"APISECRET_BITTREX");
+    extract_cJSON_str(APIKEY_POLONIEX,sizeof(APIKEY_POLONIEX),MGWconf,"APIKEY_POLONIEX");
+    extract_cJSON_str(APISECRET_POLONIEX,sizeof(APISECRET_POLONIEX),MGWconf,"APISECRET_POLONIEX");
     extract_cJSON_str(DATADIR,sizeof(NXTISSUERACCT),MGWconf,"DATADIR");
     extract_cJSON_str(MGWROOT,sizeof(MGWROOT),MGWconf,"MGWROOT");
     if ( IS_LIBTEST >= 0 )
