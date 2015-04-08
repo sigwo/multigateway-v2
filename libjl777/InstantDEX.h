@@ -599,7 +599,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
         for (j=1; j<100; j++)
         {
             testprice = (price * (1. - .01*dir*j));
-            volume = .1;
+            volume = .5;
             if ( volume < minbasevol || (volume * testprice) < minrelvol )
                 volume = MAX(minbasevol * 1.2,1.2 * minrelvol/testprice);
             printf("iter.%d dir.%d testprice %f basevol %f relvol %f\n",iter,dir,testprice,volume,volume*testprice);
