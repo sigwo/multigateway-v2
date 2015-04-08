@@ -135,11 +135,13 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
 
 cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t depth,int32_t flip,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset)
 {
-    cJSON *relobj=0,*baseobj=0,*json = cJSON_CreateObject();
+    cJSON *relobj=0,*baseobj=0,*json = 0;
     char numstr[64],base[64],rel[64],exchange[64];
     struct InstantDEX_quote *baseiQ,*reliQ;
     uint64_t baseamount,relamount,frombase,fromrel,tobase,torel,mult;
     double price,volume,ratio;
+    int32_t minperc;
+    minperc = (iQ->minperc != 0) ? iQ->minperc : INSTANTDEX_MINVOL;
     baseamount = iQ->baseamount, relamount = iQ->relamount;
     baseiQ = iQ->baseiQ, reliQ = iQ->reliQ;
     if ( depth == 0 )
@@ -148,8 +150,10 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
     {
         frombase = baseiQ->baseamount, fromrel = baseiQ->relamount;
         tobase = reliQ->baseamount, torel = reliQ->relamount;
-        make_jumpquote(baseamountp,relamountp,&frombase,&fromrel,&tobase,&torel);
+        if ( make_jumpquote(refbaseid,refrelid,baseamountp,relamountp,&frombase,&fromrel,&tobase,&torel) == 0. )
+            return(0);
     } else frombase = fromrel = tobase = torel = 0;
+    json = cJSON_CreateObject();
     if ( Debuglevel > 2 )
         printf("%p depth.%d %p %p %.8f %.8f: %.8f %.8f %.8f %.8f\n",iQ,depth,baseiQ,reliQ,dstr(*baseamountp),dstr(*relamountp),dstr(frombase),dstr(fromrel),dstr(tobase),dstr(torel));
     cJSON_AddItemToObject(json,"askoffer",cJSON_CreateNumber(flip));
@@ -158,7 +162,6 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
         cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("makeoffer3"));
         set_assetname(&mult,base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
         set_assetname(&mult,rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
-        
         cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
         cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
         if ( iQ->matched != 0 )
@@ -176,6 +179,10 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
             sprintf(numstr,"%llu",(long long)jumpasset), cJSON_AddItemToObject(json,"jumpasset",cJSON_CreateString(numstr));
         if ( iQ->baseiQ != 0 && iQ->reliQ != 0 )
         {
+            if ( baseiQ->minperc > minperc )
+                minperc = baseiQ->minperc;
+            if ( reliQ->minperc > minperc )
+                minperc = reliQ->minperc;
             baseamount = frombase, relamount = fromrel;
             baseobj = gen_InstantDEX_json(&baseamount,&relamount,depth+1,iQ->isask,iQ->baseiQ,refbaseid,jumpasset,0);
             *baseamountp = baseamount;
@@ -199,7 +206,7 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
             cJSON_AddItemToObject(json,"baseiQ",baseobj);
         if ( relobj != 0 )
             cJSON_AddItemToObject(json,"reliQ",relobj);
-        cJSON_AddItemToObject(json,"minperc",cJSON_CreateNumber(iQ->minperc!=0?iQ->minperc:INSTANTDEX_MINVOL));
+        cJSON_AddItemToObject(json,"minperc",cJSON_CreateNumber(minperc));
     }
     else
     {
@@ -264,7 +271,8 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
     uint32_t timestamp;
     frombase = fromiQ->baseamount, fromrel = fromiQ->relamount;
     tobase = toiQ->baseamount, torel = toiQ->relamount;
-    make_jumpquote(&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel);
+    if ( make_jumpquote(refbaseid,refrelid,&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel) == 0. )
+        return(0);
     if ( (timestamp= toiQ->timestamp) > fromiQ->timestamp )
         timestamp = fromiQ->timestamp;
     iQ_exchangestr(exchange,iQ);
