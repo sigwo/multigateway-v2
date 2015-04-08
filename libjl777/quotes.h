@@ -280,9 +280,9 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
     if ( Debuglevel > 2 )
         printf("jump%s: %f (%llu/%llu) %llu %llu (%f %f) %llu %llu\n",flip==0?"BID":"ASK",calc_price_volume(&vol,iQ->baseamount,iQ->relamount),(long long)baseamount,(long long)relamount,(long long)frombase,(long long)fromrel,calc_price_volume(&vol,frombase,fromrel),calc_price_volume(&vol,tobase,torel),(long long)tobase,(long long)torel);
     iQ->isask = flip;
-    iQ->minperc = baseiQ->minperc;
-    if ( reliQ->minperc > iQ->minperc )
-        iQ->minperc = reliQ->minperc;
+    iQ->minperc = fromiQ->minperc;
+    if ( toiQ->minperc > iQ->minperc )
+        iQ->minperc = toiQ->minperc;
     return(1);
 }
 
