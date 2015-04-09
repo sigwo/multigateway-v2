@@ -439,9 +439,9 @@ void add_exchange_pair(char *base,uint64_t baseid,char *rel,uint64_t relid,char 
                 pair = &exchange->orderpairs[i];
                 if ( strcmp(Base,pair->bids->base) == 0 && strcmp(Rel,pair->bids->rel) == 0 )
                     break;
-                printf("(%s/%s) ",pair->bids->base,pair->bids->rel);
+                //printf("(%s/%s) ",pair->bids->base,pair->bids->rel);
             }
-            printf(" vs (%s/%s)\n",base,rel);
+            //printf(" vs (%s/%s)\n",base,rel);
         }
         if ( i == n )
         {
