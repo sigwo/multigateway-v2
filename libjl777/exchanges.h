@@ -410,9 +410,12 @@ void ramparse_NXT(struct rambook_info *bids,struct rambook_info *asks,int32_t ma
 void add_exchange_pair(char *base,uint64_t baseid,char *rel,uint64_t relid,char *exchangestr,void (*ramparse)(struct rambook_info *bids,struct rambook_info *asks,int32_t maxdepth,char *gui))
 {
     struct rambook_info *bids,*asks;
+    char Base[16],Rel[16];
     int32_t exchangeid,i,n;
     struct orderpair *pair;
     struct exchange_info *exchange = 0;
+    strcpy(Base,base), touppercase(Base);
+    strcpy(Rel,rel), touppercase(Rel);
     bids = get_rambook(base,baseid,rel,relid,exchangestr);
     asks = get_rambook(rel,relid,base,baseid,exchangestr);
     if ( (exchange= find_exchange(exchangestr,1)) == 0 )
@@ -434,9 +437,11 @@ void add_exchange_pair(char *base,uint64_t baseid,char *rel,uint64_t relid,char 
             for (i=0; i<n; i++)
             {
                 pair = &exchange->orderpairs[i];
-                if ( strcmp(base,pair->bids->base) == 0 && strcmp(rel,pair->bids->rel) == 0 )
+                if ( strcmp(Base,pair->bids->base) == 0 && strcmp(Rel,pair->bids->rel) == 0 )
                     break;
+                printf("(%s/%s) ",pair->bids->base,pair->bids->rel);
             }
+            printf(" vs (%s/%s)\n",base,rel);
         }
         if ( i == n )
         {
@@ -446,7 +451,7 @@ void add_exchange_pair(char *base,uint64_t baseid,char *rel,uint64_t relid,char 
             {
                 printf("exchange.(%s) orderpairs hit max\n",exchangestr);
                 exchange->num = ((int32_t)(sizeof(exchange->orderpairs)/sizeof(*exchange->orderpairs)) - 1);
-            }
+            } else printf("exchange.(%s) orderpairs n.%d of %d\n",exchangestr,n,(int32_t)(sizeof(exchange->orderpairs)/sizeof(*exchange->orderpairs)));
         }
     }
 }

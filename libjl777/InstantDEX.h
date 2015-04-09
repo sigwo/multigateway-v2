@@ -596,7 +596,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
         minrelvol = get_minvolume(relid);
         printf("base.(%s %.8f) rel.(%s %.8f)\n",base,minbasevol,rel,minrelvol);
         for (dir=1; dir>=-1; dir-=2)
-        for (j=1; j<100; j++)
+        for (j=1; j<1; j++)
         {
             testprice = (price * (1. - .01*dir*j));
             volume = .5;
