@@ -263,26 +263,26 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
     return(json);
 }
 
-int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct InstantDEX_quote *iQ,struct InstantDEX_quote *fromiQ,struct InstantDEX_quote *toiQ,char *gui,int32_t duration)
+int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct InstantDEX_quote *iQ,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,char *gui,int32_t duration)
 {
     uint64_t baseamount,relamount,frombase,fromrel,tobase,torel;
     double vol;
     char exchange[64];
     uint32_t timestamp;
-    frombase = fromiQ->baseamount, fromrel = fromiQ->relamount;
-    tobase = toiQ->baseamount, torel = toiQ->relamount;
+    frombase = baseiQ->baseamount, fromrel = baseiQ->relamount;
+    tobase = reliQ->baseamount, torel = reliQ->relamount;
     if ( make_jumpquote(refbaseid,refrelid,&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel) == 0. )
         return(0);
-    if ( (timestamp= toiQ->timestamp) > fromiQ->timestamp )
-        timestamp = fromiQ->timestamp;
+    if ( (timestamp= reliQ->timestamp) > baseiQ->timestamp )
+        timestamp = baseiQ->timestamp;
     iQ_exchangestr(exchange,iQ);
-    create_InstantDEX_quote(iQ,timestamp,0,calc_quoteid(fromiQ) ^ calc_quoteid(toiQ),0.,0.,refbaseid,baseamount,refrelid,relamount,exchange,0,gui,fromiQ,toiQ,duration);
+    create_InstantDEX_quote(iQ,timestamp,0,calc_quoteid(baseiQ) ^ calc_quoteid(reliQ),0.,0.,refbaseid,baseamount,refrelid,relamount,exchange,0,gui,baseiQ,reliQ,duration);
     if ( Debuglevel > 2 )
         printf("jump%s: %f (%llu/%llu) %llu %llu (%f %f) %llu %llu\n",flip==0?"BID":"ASK",calc_price_volume(&vol,iQ->baseamount,iQ->relamount),(long long)baseamount,(long long)relamount,(long long)frombase,(long long)fromrel,calc_price_volume(&vol,frombase,fromrel),calc_price_volume(&vol,tobase,torel),(long long)tobase,(long long)torel);
     iQ->isask = flip;
-    iQ->minperc = fromiQ->minperc;
-    if ( toiQ->minperc > iQ->minperc )
-        iQ->minperc = toiQ->minperc;
+    iQ->minperc = baseiQ->minperc;
+    if ( reliQ->minperc > iQ->minperc )
+        iQ->minperc = reliQ->minperc;
     return(1);
 }
 
