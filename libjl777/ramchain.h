@@ -8,8 +8,8 @@
 #ifdef INCLUDE_DEFINES
 #ifndef ramchain_h
 #define ramchain_h
-#include "nn.h"
-#include "bus.h"
+//#include "nn.h"
+//#include "bus.h"
 
 #ifdef _WIN32
 #include "mman-win.h"
