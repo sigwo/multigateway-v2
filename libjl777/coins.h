@@ -1221,7 +1221,7 @@ void init_SuperNET_settings(char *userdir)
 
 int32_t nano_socket(char *ipaddr,int32_t port)
 {
-    int32_t sock,err;
+    int32_t sock,err,to = 1;
     char tcpaddr[64];
     sprintf(tcpaddr,"tcp://%s:%d",ipaddr,port);
     if ( (sock= nn_socket(AF_SP,NN_BUS)) < 0 )
@@ -1235,10 +1235,63 @@ int32_t nano_socket(char *ipaddr,int32_t port)
         printf("error %d nn_bind.%d (%s) | %s\n",err,sock,tcpaddr,nn_strerror(nn_errno()));
         return(0);
     }
+    assert (nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&to,sizeof (to)) >= 0);
     printf("bound\n");
     return(sock);
 }
 
+void broadcastfile(char *NXTaddr,char *NXTACCTSECRET,char *fname)
+{
+    FILE *fp;
+    char *buf;
+    int32_t len,n;
+    if ( Global_mp->bussock >= 0 && (fp= fopen(fname,"rb")) != 0 )
+    {
+        fseek(fp,0,SEEK_END);
+        len = (int32_t)ftell(fp);
+        rewind(fp);
+        if ( len > 0 )
+        {
+            buf = malloc(len + strlen(fname) + 1);
+            strcpy(buf,fname);
+            if ( (n= (int32_t)fread(buf + strlen(fname) + 1,1,len,fp)) == len )
+            {
+                nn_send(Global_mp->bussock,buf,len + strlen(fname) + 1,0);
+                printf("send (%s).%d to bus\n",fname,len);
+            } else printf("read error (%s) got %d vs %d\n",fname,n,len);
+            free(buf);
+        }
+        fclose(fp);
+    }
+}
+
+void poll_nanomsg()
+{
+    int32_t recv;
+    char *buf;
+    if ( (recv= nn_recv(Global_mp->bussock,&buf,NN_MSG,0)) >= 0 )
+    {
+        printf ("RECEIVED (%s).%d FROM BUS\n",buf,recv);
+        nn_freemsg(buf);
+    }
+}
+/*
+int sz_n = strlen(argv[1]) + 1; // '\0' too
+printf ("%s: SENDING '%s' ONTO BUS\n", argv[1], argv[1]);
+int send = nn_send (sock, argv[1], sz_n, 0);
+assert (send == sz_n);
+while (1)
+{
+    // RECV
+    char *buf = NULL;
+    int recv = nn_recv (sock, &buf, NN_MSG, 0);
+    if (recv >= 0)
+    {
+        printf ("%s: RECEIVED '%s' FROM BUS\n", argv[1], buf);
+        nn_freemsg (buf);
+    }
+}
+*/
 int32_t nano_connect(int32_t sock,char *ipaddr,int32_t port)
 {
     int32_t err;
@@ -1281,7 +1334,7 @@ int32_t init_nanobus(char *myipaddr)
                 }
             }
         }
-    }
+    } else Global_mp->bussock = -1;
     return(err);
 }
 
