@@ -1250,7 +1250,7 @@ int32_t nano_connect(int32_t sock,char *ipaddr,int32_t port)
     return(err);
 }
 
-int32_t init_nanobus()
+int32_t init_nanobus(char *myipaddr)
 {
     cJSON *array,*item;
     int32_t i,n,err = 0;
@@ -1258,7 +1258,7 @@ int32_t init_nanobus()
     if ( Global_mp->gatewayid >= 0 || Global_mp->iambridge != 0 )
     {
         printf("call nano_socket\n");
-        if ( (Global_mp->bussock= nano_socket(Global_mp->ipaddr,SUPERNET_PORT)) < 0 )
+        if ( (Global_mp->bussock= nano_socket(myipaddr,SUPERNET_PORT)) < 0 )
         {
             printf("err %d nano_socket\n",Global_mp->bussock);
             return(err);
@@ -1335,7 +1335,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
         free(jsonstr);
     }
     //init_tradebots_conf(MGWconf);
-    init_nanobus(); getchar();
+    init_nanobus(myipaddr); getchar();
     didinit = 1;
     if ( Debuglevel > 1 )
         printf("gatewayid.%d MGWROOT.(%s)\n",Global_mp->gatewayid,MGWROOT);
