@@ -9694,7 +9694,11 @@ void *process_ramchains(void *_argcoinstr)
                 ram_update_disp(ram);
         }
         if ( processed == 0 )
-            sleep(30);
+        {
+            void poll_nanomsg();
+            poll_nanomsg();
+            sleep(1);
+        }
         MGW_initdone++;
     }
     printf("process_ramchains: finished launching\n");

@@ -326,8 +326,6 @@ void SuperNET_idler(uv_idle_t *handle)
         process_udpentry(up);
     if ( millis > (lastclock + 1000) )
     {
-        //void poll_nanomsg();
-        poll_nanomsg();
         poll_pending_offers(Global_mp->myNXTADDR,Global_mp->srvNXTACCTSECRET);
         //poll_pricedbs();
         every_second(counter);
