@@ -259,7 +259,7 @@ struct NXThandler_info
     char pubkeystr[crypto_box_PUBLICKEYBYTES*2+1],myhandle[64],*myNXTADDR,*srvNXTACCTSECRET;
     bits256 mypubkey,myprivkey;
     uint64_t nxt64bits,puzzlethreshold,*neighbors;//,coins[4];
-    int32_t initassets,Lfactor,gatewayid,gensocks[256];
+    int32_t initassets,Lfactor,gatewayid,gensocks[256],bussock;
     int32_t height,extraconfirms,maxpopdepth,maxpopheight,lastchanged,GLEFU,numblocks,timestamps[1000 * 365 * 10];
     int32_t isudpserver,istcpserver,numPrivacyServers,isMM,iambridge,insmallworld;
     uint32_t puzzletime;

@@ -1211,6 +1211,76 @@ void init_SuperNET_settings(char *userdir)
         Debuglevel = get_API_int(cJSON_GetObjectItem(MGWconf,"debug"),Debuglevel);
 }
 
+#ifdef __APPLE__
+#include "nn.h"
+#include "bus.h"
+#else
+#include "includes/nn.h"
+#include "includes/bus.h"
+#endif
+
+int32_t nano_socket(char *ipaddr,int32_t port)
+{
+    int32_t sock,err;
+    char tcpaddr[64];
+    sprintf(tcpaddr,"tcp://%s:%d",ipaddr,port);
+    if ( (sock= nn_socket(AF_SP,NN_BUS)) < 0 )
+    {
+        printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
+        return(0);
+    }
+    if ( (err= nn_bind(sock,tcpaddr)) < 0 )
+    {
+        printf("error %d nn_bind.%d (%s) | %s\n",err,sock,tcpaddr,nn_strerror(nn_errno()));
+        return(0);
+    }
+    return(sock);
+}
+
+int32_t nano_connect(int32_t sock,char *ipaddr,int32_t port)
+{
+    int32_t err;
+    char tcpaddr[64];
+    sprintf(tcpaddr,"tcp://%s:%d",ipaddr,port);
+    if ( (err= nn_connect(sock,tcpaddr)) < 0 )
+        printf("error %d nn_connect.%d (%s) | %s\n",err,sock,tcpaddr,nn_strerror(nn_errno()));
+    else printf("connected to (%s)\n",tcpaddr);
+    return(err);
+}
+
+int32_t init_nanobus()
+{
+    cJSON *array,*item;
+    int32_t i,n,err = 0;
+    char ipaddr[MAX_JSON_FIELD];
+    if ( Global_mp->gatewayid >= 0 || Global_mp->iambridge != 0 )
+    {
+        if ( (Global_mp->bussock= nano_socket(Global_mp->ipaddr,SUPERNET_PORT)) < 0 )
+        {
+            printf("err %d nano_socket\n",Global_mp->bussock);
+            return(err);
+        }
+        array = cJSON_GetObjectItem(MGWconf,"whitelist");
+        if ( array != 0 && is_cJSON_Array(array) != 0 )
+        {
+            n = cJSON_GetArraySize(array);
+            for (i=0; i<n; i++)
+            {
+                if ( array == 0 || n == 0 )
+                    break;
+                item = cJSON_GetArrayItem(array,i);
+                copy_cJSON(ipaddr,item);
+                if ( (err= nano_connect(Global_mp->bussock,ipaddr,SUPERNET_PORT)) != 0 )
+                {
+                    printf("err %d nano_connect i.%d of %d\n",err,i,n);
+                    return(err);
+                }
+            }
+        }
+    }
+    return(err);
+}
+
 char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
 {
     void init_rambases();
@@ -1261,6 +1331,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
         free(jsonstr);
     }
     //init_tradebots_conf(MGWconf);
+    init_nanobus();
     didinit = 1;
     if ( Debuglevel > 1 )
         printf("gatewayid.%d MGWROOT.(%s)\n",Global_mp->gatewayid,MGWROOT);
