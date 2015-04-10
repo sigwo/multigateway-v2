@@ -1229,11 +1229,13 @@ int32_t nano_socket(char *ipaddr,int32_t port)
         printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
         return(0);
     }
+    printf("got sock.%d\n",sock);
     if ( (err= nn_bind(sock,tcpaddr)) < 0 )
     {
         printf("error %d nn_bind.%d (%s) | %s\n",err,sock,tcpaddr,nn_strerror(nn_errno()));
         return(0);
     }
+    printf("bound\n");
     return(sock);
 }
 
@@ -1255,6 +1257,7 @@ int32_t init_nanobus()
     char ipaddr[MAX_JSON_FIELD];
     if ( Global_mp->gatewayid >= 0 || Global_mp->iambridge != 0 )
     {
+        printf("call nano_socket\n");
         if ( (Global_mp->bussock= nano_socket(Global_mp->ipaddr,SUPERNET_PORT)) < 0 )
         {
             printf("err %d nano_socket\n",Global_mp->bussock);
@@ -1270,6 +1273,7 @@ int32_t init_nanobus()
                     break;
                 item = cJSON_GetArrayItem(array,i);
                 copy_cJSON(ipaddr,item);
+                printf("call connect(%d) -> (%s)\n",Global_mp->bussock,ipaddr);
                 if ( (err= nano_connect(Global_mp->bussock,ipaddr,SUPERNET_PORT)) != 0 )
                 {
                     printf("err %d nano_connect i.%d of %d\n",err,i,n);
