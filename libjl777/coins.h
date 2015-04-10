@@ -1246,7 +1246,7 @@ int32_t nano_connect(int32_t sock,char *ipaddr,int32_t port)
     sprintf(tcpaddr,"tcp://%s:%d",ipaddr,port);
     if ( (err= nn_connect(sock,tcpaddr)) < 0 )
         printf("error %d nn_connect.%d (%s) | %s\n",err,sock,tcpaddr,nn_strerror(nn_errno()));
-    else printf("connected to (%s)\n",tcpaddr);
+    else printf("connected to (%s) err.%d\n",tcpaddr,err);
     return(err);
 }
 
@@ -1274,7 +1274,7 @@ int32_t init_nanobus(char *myipaddr)
                 item = cJSON_GetArrayItem(array,i);
                 copy_cJSON(ipaddr,item);
                 printf("call connect(%d) -> (%s)\n",Global_mp->bussock,ipaddr);
-                if ( (err= nano_connect(Global_mp->bussock,ipaddr,SUPERNET_PORT)) != 0 )
+                if ( (err= nano_connect(Global_mp->bussock,ipaddr,SUPERNET_PORT)) < 0 )
                 {
                     printf("err %d nano_connect i.%d of %d\n",err,i,n);
                     return(err);
