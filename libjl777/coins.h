@@ -1388,7 +1388,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
         free(jsonstr);
     }
     //init_tradebots_conf(MGWconf);
-    init_nanobus(myipaddr); getchar();
+    init_nanobus(myipaddr); 
     didinit = 1;
     if ( Debuglevel > 1 )
         printf("gatewayid.%d MGWROOT.(%s)\n",Global_mp->gatewayid,MGWROOT);
