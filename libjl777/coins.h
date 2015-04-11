@@ -1267,11 +1267,40 @@ void broadcastfile(char *NXTaddr,char *NXTACCTSECRET,char *fname)
 
 void poll_nanomsg()
 {
-    int32_t recv;
-    char *buf;
+    FILE *fp;
+    char fname[1024];
+    int32_t recv,filelen,i,n,len,sameflag = 0;
+    char *buf,*filebuf;
     if ( (recv= nn_recv(Global_mp->bussock,&buf,NN_MSG,0)) >= 0 )
     {
-        printf ("RECEIVED (%s).%d FROM BUS\n",buf,recv);
+        sprintf(fname,"%s/RTmgw/%s",DATADIR,buf);
+        len = (int32_t)strlen(buf) + 1;
+        if ( len < recv )
+        {
+            filebuf = &buf[len];
+            filelen = (recv - len);
+            if ( (fp= fopen(fname,"rb")) != 0 )
+            {
+                fseek(fp,0,SEEK_END);
+                if ( ftell(fp) == filelen )
+                {
+                    rewind(fp);
+                    for (i=0; i<filelen; i++)
+                        if ( (fgetc(fp) & 0xff) != (filebuf[i] & 0xff) )
+                            break;
+                    if ( i == filelen )
+                        sameflag = 1;
+                }
+                fclose(fp);
+            }
+            if ( sameflag == 0 && (fp= fopen(fname,"wb")) != 0 )
+            {
+                if ( (n= (int32_t)fwrite(filebuf,1,filelen,fp)) != filelen )
+                    printf("error writing (%s) only %d written vs %d\n",fname,n,filelen);
+                fclose(fp);
+            }
+        }
+        printf ("RECEIVED (%s).%d FROM BUS -> (%s) sameflag.%d\n",buf,recv,fname,sameflag);
         nn_freemsg(buf);
     }
 }
