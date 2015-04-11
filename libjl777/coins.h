@@ -1273,7 +1273,7 @@ void poll_nanomsg()
     char *buf,*filebuf;
     if ( (recv= nn_recv(Global_mp->bussock,&buf,NN_MSG,0)) >= 0 )
     {
-        sprintf(fname,"%s/RTmgw/%s",DATADIR,buf);
+        sprintf(fname,"%s",buf);
         len = (int32_t)strlen(buf) + 1;
         if ( len < recv )
         {
