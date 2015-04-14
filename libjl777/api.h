@@ -7,7 +7,7 @@
 
 #ifndef API_H
 #define API_H
-//#include "Python.h"
+#include "Python.h"
 #ifndef _WIN32
 #include "includes/libwebsockets.h"
 #else
@@ -617,9 +617,9 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
 void call_python(FILE *fp,char *cmd,char *fname)
 {
-    //Py_Initialize();
-    //PyRun_SimpleFile(fp,fname);
-    //Py_Finalize();
+    Py_Initialize();
+    PyRun_SimpleFile(fp,fname);
+    Py_Finalize();
 }
 
 void call_system(FILE *fp,char *cmd,char *fname)
@@ -661,8 +661,9 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 {
     char fname[MAX_JSON_FIELD];
     copy_cJSON(fname,objs[0]);
-    if (file_exist (fname))
+    if ( file_exist(fname) != 0 )
     {
+        printf("python.(%s)\n",fname);
         return(language_func("python",fname,call_python));
     }
     else

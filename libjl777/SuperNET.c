@@ -854,6 +854,7 @@ if(nbst > bst*2) nbst = bst*2;
 var rbst = Math.floor((((blk.baseTarget*lasttime)/60)/153722867)*100);
 
 */
+//#include <stdlib.h>
 
 int main(int argc,const char *argv[])
 {
@@ -861,6 +862,9 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     int32_t retval = -666;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
+    
+    setenv("PYTHONHOME","/Users/jl777/btcd/libjl777/Python-3.4.3",1);
+    setenv("PYTHONPATH","/Users/jl777/btcd/libjl777/Python-3.4.3/Lib",1);
 #ifdef __APPLE__
 #define BTCe_GETINFO 3
     if ( 0 )
