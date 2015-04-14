@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -pedantic -g -fPIC -Iincludes -I/usr/include -IPython-3.4.2/Include -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  
+CFLAGS=-Wall -pedantic -g -fPIC -Iincludes -I/usr/include -IPython-3.4.3/Include -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  
 LIBS=-lm -lreadline 
 
 TARGET	= libjl777.a

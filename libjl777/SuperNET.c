@@ -863,9 +863,9 @@ int main(int argc,const char *argv[])
     int32_t retval = -666;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
     
-    setenv("PYTHONHOME","/Users/jl777/btcd/libjl777/Python-3.4.3",1);
-    setenv("PYTHONPATH","/Users/jl777/btcd/libjl777/Python-3.4.3/Lib",1);
 #ifdef __APPLE__
+    setenv("PYTHONHOME","/usr/local/Python-3.4.3",1);
+    setenv("PYTHONPATH","/usr/local/Python-3.4.3/Lib",1);
 #define BTCe_GETINFO 3
     if ( 0 )
     {
@@ -876,6 +876,8 @@ int main(int argc,const char *argv[])
     }
     
 #else
+    setenv("PYTHONHOME","./Python-3.4.3",1);
+    setenv("PYTHONPATH","./Python-3.4.3/Lib",1);
     if ( 1 && argc > 1 && strcmp(argv[1],"genfiles") == 0 )
 #endif
     {

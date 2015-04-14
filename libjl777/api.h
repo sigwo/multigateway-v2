@@ -617,6 +617,7 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
 void call_python(FILE *fp,char *cmd,char *fname)
 {
+    Py_SetProgramName("/usr/local/Python-3.4.3/python.exe");
     Py_Initialize();
     PyRun_SimpleFile(fp,fname);
     Py_Finalize();
@@ -664,6 +665,8 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     if ( file_exist(fname) != 0 )
     {
         printf("python.(%s)\n",fname);
+        //system("/Users/jimbolaptop/Downloads/Python-3.4.3/python.exe /Users/jl777/btcd/libjl777/hello.py");
+        //return(clonestr("[]"));
         return(language_func("python",fname,call_python));
     }
     else
