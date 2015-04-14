@@ -634,6 +634,7 @@ int file_exist (char *filename)
   struct stat   buffer;   
   return (stat (filename, &buffer) == 0);
 }
+
 char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,char *fname))
 {
     FILE *fp;
@@ -641,9 +642,8 @@ char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,ch
     int out_pipe[2];
     int saved_stdout;
     saved_stdout = dup(STDOUT_FILENO);
-    if( pipe(out_pipe) != 0 ) {
+    if( pipe(out_pipe) != 0 )
         return(clonestr("{\"error\":\"pipe creation error\"}"));
-    }
     dup2(out_pipe[1], STDOUT_FILENO);
     close(out_pipe[1]);
     if ( (fp= fopen(fname,"r")) != 0 )
@@ -652,21 +652,23 @@ char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,ch
         fclose(fp);
     }
     fflush(stdout);
-    read(out_pipe[0], buffer, MAX_LEN);
-    dup2(saved_stdout, STDOUT_FILENO);
+    read(out_pipe[0],buffer,MAX_LEN);
+    dup2(saved_stdout,STDOUT_FILENO);
     return(clonestr(buffer));
 }
 
 char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char fname[MAX_JSON_FIELD];
+    char fname[MAX_JSON_FIELD],*retstr;
+    if ( is_remote_access(previpaddr) != 0 )
+        return(0);
     copy_cJSON(fname,objs[0]);
     if ( file_exist(fname) != 0 )
     {
-        printf("python.(%s)\n",fname);
-        //system("/Users/jimbolaptop/Downloads/Python-3.4.3/python.exe /Users/jl777/btcd/libjl777/hello.py");
-        //return(clonestr("[]"));
-        return(language_func("python",fname,call_python));
+        retstr = language_func("python",fname,call_python);
+        if ( retstr != 0 )
+            printf("(%s) -> (%s)\n",fname,retstr);
+        return(retstr);
     }
     else
     {
@@ -677,6 +679,8 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char fname[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD];
+    if ( is_remote_access(previpaddr) != 0 )
+        return(0);
     copy_cJSON(fname,objs[0]);
     copy_cJSON(syscall,objs[1]);
     return(language_func(syscall,fname,call_system));
