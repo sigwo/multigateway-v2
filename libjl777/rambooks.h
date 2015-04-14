@@ -104,7 +104,7 @@ struct rambook_info **get_allrambooks(int32_t *numbooksp)
     obooks = calloc(*numbooksp,sizeof(*rb));
     HASH_ITER(hh,Rambooks,rb,tmp)
     {
-        //purge_oldest_order(rb,0);
+        purge_oldest_order(rb,0);
         obooks[i++] = rb;
     }
     if ( i != *numbooksp )
@@ -252,7 +252,7 @@ struct rambook_info *add_rambook_quote(char *exchangestr,struct InstantDEX_quote
 {
     void emit_iQ(struct rambook_info *rb,struct InstantDEX_quote *iQ);
     struct exchange_info *exchange;
-    struct rambook_info *rb;
+    struct rambook_info *rb = 0;
     memset(iQ,0,sizeof(*iQ));
     if ( (exchange= find_exchange(exchangestr,0,0)) != 0 )
     {

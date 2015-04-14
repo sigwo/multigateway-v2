@@ -763,18 +763,18 @@ void init_exchange(cJSON *json)
 {
     static void *exchangeptrs[][5] =
     {
-        { "poloniex", ramparse_poloniex, poloniex_supports, poloniex_trade, "echo.websocket.org" },
-        { "bittrex", ramparse_bittrex, bittrex_supports, bittrex_trade },
-        { "bter", ramparse_bter, bter_supports, bter_trade },
-        { "btce", ramparse_btce, btce_supports, btce_trade },
-        { "bitfinex", ramparse_bitfinex, bitfinex_supports, 0 },
-        { "bitstamp", ramparse_bitstamp, bitstamp_supports, 0 },
-        { "okcoin", ramparse_okcoin, okcoin_supports, 0 },
-        { "huobi", ramparse_huobi, huobi_supports, 0 },
-        { "bityes", ramparse_bityes, bityes_supports, 0 },
-        { "lakebtc", ramparse_lakebtc, lakebtc_supports, 0 },
-        { "exmo", ramparse_exmo, exmo_supports, 0 },
-        { "btc38", ramparse_btc38, btc38_supports, 0 },
+        { (void *)"poloniex", (void *)ramparse_poloniex, (void *)poloniex_supports, (void *)poloniex_trade, },
+        { (void *)"bittrex", (void *)ramparse_bittrex, (void *)bittrex_supports, (void *)bittrex_trade },
+        { (void *)"bter", (void *)ramparse_bter, (void *)bter_supports, (void *)bter_trade },
+        { (void *)"btce", (void *)ramparse_btce, (void *)btce_supports, (void *)btce_trade },
+        { (void *)"bitfinex", (void *)ramparse_bitfinex, (void *)bitfinex_supports, 0 },
+        { (void *)"bitstamp", (void *)ramparse_bitstamp, (void *)bitstamp_supports, 0 },
+        { (void *)"okcoin", (void *)ramparse_okcoin, (void *)okcoin_supports, 0 },
+        { (void *)"huobi", (void *)ramparse_huobi, (void *)huobi_supports, 0 },
+        { (void *)"bityes", (void *)ramparse_bityes, (void *)bityes_supports, 0 },
+        { (void *)"lakebtc", (void *)ramparse_lakebtc, (void *)lakebtc_supports, 0 },
+        { (void *)"exmo", (void *)ramparse_exmo, (void *)exmo_supports, 0 },
+        { (void *)"btc38", (void *)ramparse_btc38, (void *)btc38_supports, 0 },
     };
     struct exchange_info *exchange;
     char name[MAX_JSON_FIELD];
@@ -787,9 +787,9 @@ void init_exchange(cJSON *json)
         {
             if ( strcmp(exchangeptrs[i][0],name) == 0 )
             {
-                parse = exchangeptrs[i][1];
-                supports = exchangeptrs[i][2];
-                trade = exchangeptrs[i][3];
+                *(void **)&parse = exchangeptrs[i][1];
+                *(void **)&supports = exchangeptrs[i][2];
+                *(void **)&trade = exchangeptrs[i][3];
                 break;
             }
         }

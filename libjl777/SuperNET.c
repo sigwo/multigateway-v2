@@ -865,7 +865,7 @@ int main(int argc,const char *argv[])
     
 #ifdef __APPLE__
     setenv("PYTHONHOME","/usr/local/Python-3.4.3",1);
-    setenv("PYTHONPATH","/usr/local/Python-3.4.3/Lib; /usr/local/Python-3.4.3/build/lib.macosx-10.9-x86_64-3.4",1);
+    setenv("PYTHONPATH","/usr/local/Python-3.4.3/Lib",1);
 #define BTCe_GETINFO 3
     if ( 0 )
     {
