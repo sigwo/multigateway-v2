@@ -202,7 +202,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
     struct rambook_info **obooks,*rb;
     struct orderbook *op = 0;
     uint64_t basemult,relmult,baseequivs[512],relequivs[512];
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("create_orderbook %llu/%llu\n",(long long)refbaseid,(long long)refrelid);
     if ( refbaseid == 0 || refrelid == 0 )
         getchar();
@@ -365,24 +365,36 @@ struct orderbook *merge_books(char *base,uint64_t refbaseid,char *rel,uint64_t r
     return(op);
 }
 
-struct orderbook *make_orderbook(struct orderbook *obooks[],long max,char *base,uint64_t baseid,char *rel,uint64_t relid,int32_t maxdepth,uint32_t oldest,char *gui)
+struct orderbook *make_orderbook(struct orderbook *obooks[],long max,char *base,uint64_t refbaseid,char *rel,uint64_t refrelid,int32_t maxdepth,uint32_t oldest,char *gui)
 {
     uint64_t jumpassets[] = { NXT_ASSETID, BTC_ASSETID, BTCD_ASSETID, USD_ASSETID, CNY_ASSETID };
     struct orderbook *op=0,*baseop,*relop,*rawop,*jumpop,*jumpbooks[sizeof(jumpassets)/sizeof(*jumpassets) + 1];
-    int32_t i,m = 0,n = 0;
+    uint64_t baseid,relid,baseequivs[16],relequivs[16];
+    int32_t numbase,numrel,b,r,i,m = 0,n = 0;
     memset(jumpbooks,0,sizeof(jumpbooks));
-    if ( (rawop= create_orderbook(0,baseid,0,relid,oldest,gui)) != 0 )
-        jumpbooks[m++] = obooks[n++] = rawop;
-    for (i=0; i<(int32_t)(sizeof(jumpassets)/sizeof(*jumpassets)); i++)
+    if ( (numbase= get_equivalent_assetids(baseequivs,refbaseid)) <= 0 )
+        return(0);
+    if ( (numrel= get_equivalent_assetids(relequivs,refrelid)) <= 0 )
+        return(0);
+    for (b=0; b<numbase; b++)
     {
-        if ( baseid != jumpassets[i] && relid != jumpassets[i] )
+        for (r=0; r<numrel; r++)
         {
-            if ( (baseop= create_orderbook(0,baseid,0,jumpassets[i],oldest,gui)) != 0 )
-                obooks[n++] = baseop;
-            if ( (relop= create_orderbook(0,relid,0,jumpassets[i],oldest,gui)) != 0 )
-                obooks[n++] = relop;
-            if ( baseop != 0 && relop != 0 && (jumpop= make_jumpbook(base,baseid,jumpassets[i],rel,relid,relop,baseop,gui,0,maxdepth)) != 0 )
-                jumpbooks[m++] = obooks[n++] = jumpop;
+            baseid = baseequivs[b], relid = relequivs[r];
+            if ( (rawop= create_orderbook(0,baseid,0,relid,oldest,gui)) != 0 )
+                jumpbooks[m++] = obooks[n++] = rawop;
+            for (i=0; i<(int32_t)(sizeof(jumpassets)/sizeof(*jumpassets)); i++)
+            {
+                if ( baseid != jumpassets[i] && relid != jumpassets[i] )
+                {
+                    if ( (baseop= create_orderbook(0,baseid,0,jumpassets[i],oldest,gui)) != 0 )
+                        obooks[n++] = baseop;
+                    if ( (relop= create_orderbook(0,relid,0,jumpassets[i],oldest,gui)) != 0 )
+                        obooks[n++] = relop;
+                    if ( baseop != 0 && relop != 0 && (jumpop= make_jumpbook(base,baseid,jumpassets[i],rel,relid,relop,baseop,gui,0,maxdepth)) != 0 )
+                        jumpbooks[m++] = obooks[n++] = jumpop;
+                }
+            }
         }
     }
     if ( n > max )
@@ -394,7 +406,7 @@ struct orderbook *make_orderbook(struct orderbook *obooks[],long max,char *base,
     if ( m > 1 )
     {
         printf("num jumpbooks.%d\n",m);
-        op = merge_books(base,baseid,rel,relid,jumpbooks,m);
+        op = merge_books(base,refbaseid,rel,refrelid,jumpbooks,m);
     }
     else op = jumpbooks[0];
     return(op);

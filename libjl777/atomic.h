@@ -284,12 +284,19 @@ double calc_asset_QNT(struct pendinghalf *half,uint64_t nxt64bits,int32_t checkf
     return(ratio);
 }
 
+int32_t cleared_with_nxtae(int32_t exchangeid)
+{
+    if ( exchangeid == INSTANTDEX_EXCHANGEID || exchangeid == INSTANTDEX_NXTAEID || exchangeid == INSTANTDEX_UNCONFID )
+        return(1);
+    else return(0);
+}
+
 uint64_t need_to_submithalf(struct pendinghalf *half,int32_t dir,struct pendingpair *pt,int32_t simpleflag)
 {
     printf("need_to_submithalf dir.%d (%s) T.sell.%d %llu/%llu %llu\n",dir,Exchanges[half->T.exchangeid].name,half->T.sell,(long long)half->T.assetid,(long long)half->T.relid,(long long)otherasset(half));
     if ( half->T.exchangeid == INSTANTDEX_EXCHANGEID )
     {
-        if ( dir < 0 && half->T.sell != 0 && tradedasset(half) == half->T.assetid )
+        if ( tradedasset(half) == half->T.assetid )
             half->T.myflag = 1, half->T.exchangeid = INSTANTDEX_NXTAEID;
         return(1);
     }
@@ -297,7 +304,7 @@ uint64_t need_to_submithalf(struct pendinghalf *half,int32_t dir,struct pendingp
     {
         if ( (dir > 0 && half->T.sell == 0) || (dir < 0 && half->T.sell != 0) )
         {
-            if ( myasset(half) == NXT_ASSETID )
+            if ( myasset(half) == NXT_ASSETID && cleared_with_nxtae(half->T.exchangeid) != 0 )
                 half->T.closed = 1;
             else
             {
@@ -308,9 +315,9 @@ uint64_t need_to_submithalf(struct pendinghalf *half,int32_t dir,struct pendingp
             return(1);
         }
         half->T.closed = 1;
-        printf("%p close half dir.%d\n",half,dir);
+        printf("%p close half mismatched dir and T.sell: dir.%d sellflag.%d\n",half,dir,half->T.sell);
+        return(0);
     }
-    return(0);
 }
 
 int32_t submit_trade(cJSON **jsonp,char *whostr,int32_t dir,struct pendinghalf *half,struct pendinghalf *other,struct pending_offer *pt,char *NXTACCTSECRET,char *base,char *rel,double price,double volume)
