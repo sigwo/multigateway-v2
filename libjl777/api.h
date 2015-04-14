@@ -617,7 +617,6 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
 void call_python(FILE *fp,char *cmd,char *fname)
 {
-    Py_SetProgramName("/usr/local/Python-3.4.3/python.exe");
     Py_Initialize();
     PyRun_SimpleFile(fp,fname);
     Py_Finalize();
