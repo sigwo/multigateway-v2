@@ -864,8 +864,6 @@ int main(int argc,const char *argv[])
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
     
 #ifdef __APPLE__
-    setenv("PYTHONHOME","/usr/local/Python-3.4.3",1);
-    setenv("PYTHONPATH","/usr/local/Python-3.4.3/Lib",1);
 #define BTCe_GETINFO 3
     if ( 0 )
     {
