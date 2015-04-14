@@ -316,9 +316,9 @@ char *makeoffer2_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
 char *makeoffer3_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char *retstr = 0;
+    printf("makeoffer3 remote.%d\n",is_remote_access(previpaddr));
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
-    //static char *makeoffer2[] = { (char *)makeoffer2_func, "makeoffer2", "V", "baseid", "baseamount", "jumpaddr", "jumpasset", "jumpamount", "other", "relid", "relamount", 0 };
     if ( sender[0] != 0 && valid > 0 )
         retstr = call_makeoffer3(NXTaddr,NXTACCTSECRET,objs);
     else retstr = clonestr("{\"result\":\"invalid makeoffer3_func request\"}");
