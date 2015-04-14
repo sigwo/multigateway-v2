@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -pedantic -g -fPIC -I includes -I/usr/include -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  
+CFLAGS=-Wall -pedantic -g -fPIC -Iincludes -I/usr/include -IPython-3.4.2/Includes -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  
 LIBS=-lm -lreadline 
 
 TARGET	= libjl777.a
@@ -72,6 +72,9 @@ chessjs:  doesntexist; \
 
 nanomsg:  doesntexist; \
     git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make; make check; cp .libs/libnanomsg.a ../libs; cp src/*.h ../includes; cd ..
+
+python: doesntexist; \
+    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; make; cp python.exe libpython3.4m.a ../libs;
 
 patch: doesntexist; \
     #sudo apt-get install csync-owncloud librsync-dev libsmbclient-dev liblog4c-dev flex libsqlite3-dev bison csync2; \
