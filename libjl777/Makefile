@@ -139,7 +139,7 @@ patch2: doesntexist; \
     cp lib/*  ../../libs; \
     cd ../..;
 
-python: doesntexist; \
+oldpython: doesntexist; \
     tar xf python.tar.xz; \
     cd Python-3.4.3; \
     ./configure; \

@@ -798,7 +798,7 @@ void init_exchange(cJSON *json)
             exchange->pollgap = get_API_int(cJSON_GetObjectItem(json,"pollgap"),POLLGAP);
             extract_cJSON_str(exchange->apikey,sizeof(exchange->apikey),json,"key");
             extract_cJSON_str(exchange->apisecret,sizeof(exchange->apisecret),json,"secret");
-            exchange->trade = trade;
+            *(void **)&exchange->trade = trade;
             /*if ( exchangeptrs[i][4] != 0 )
             {
                 int libwebsocket_rx_flow_control(struct libwebsocket *wsi,int enable);
