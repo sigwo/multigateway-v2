@@ -93,7 +93,6 @@ struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t
             printf("CREATE RAMBOOK.(%llu -> %llu).%d %s (%s) (%s)\n",(long long)baseid,(long long)relid,(int)exchangebits,Exchanges[exchangeid].name,rb->base,rb->rel);
         HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
-    purge_oldest_order(rb,0);
     return(rb);
 }
 
@@ -212,9 +211,9 @@ void save_InstantDEX_quote(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     maxallowed = calc_users_maxopentrades(iQ->nxt64bits);
     expand_nxt64bits(NXTaddr,iQ->nxt64bits);
     np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
-    if ( np->openorders >= maxallowed )
-        purge_oldest_order(rb,iQ);
-    purge_oldest_order(rb,0);
+    //if ( np->openorders >= maxallowed )
+    //    purge_oldest_order(rb,iQ);
+    //purge_oldest_order(rb,0);
     add_user_order(rb,iQ);
     np->openorders++;
 }
