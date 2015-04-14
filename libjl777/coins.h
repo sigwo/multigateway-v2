@@ -1172,12 +1172,6 @@ void init_SuperNET_settings(char *userdir)
             printf("NXTISSUERACCT.(%s) -> %llu\n",NXTISSUERACCT,(long long)nxt64bits);
         expand_nxt64bits(NXTISSUERACCT,nxt64bits);
     }
-    extract_cJSON_str(APIKEY_BTCE,sizeof(APIKEY_BTCE),MGWconf,"APIKEY_BTCE");
-    extract_cJSON_str(APISECRET_BTCE,sizeof(APISECRET_BTCE),MGWconf,"APISECRET_BTCE");
-    extract_cJSON_str(APIKEY_BITTREX,sizeof(APIKEY_BITTREX),MGWconf,"APIKEY_BITTREX");
-    extract_cJSON_str(APISECRET_BITTREX,sizeof(APISECRET_BITTREX),MGWconf,"APISECRET_BITTREX");
-    extract_cJSON_str(APIKEY_POLONIEX,sizeof(APIKEY_POLONIEX),MGWconf,"APIKEY_POLONIEX");
-    extract_cJSON_str(APISECRET_POLONIEX,sizeof(APISECRET_POLONIEX),MGWconf,"APISECRET_POLONIEX");
     extract_cJSON_str(DATADIR,sizeof(NXTISSUERACCT),MGWconf,"DATADIR");
     extract_cJSON_str(MGWROOT,sizeof(MGWROOT),MGWconf,"MGWROOT");
     if ( IS_LIBTEST >= 0 )
@@ -1271,6 +1265,8 @@ void poll_nanomsg()
     char fname[1024];
     int32_t recv,filelen,i,n,len,sameflag = 0;
     char *buf,*filebuf;
+    if ( Global_mp->bussock < 0 )
+        return;
     if ( (recv= nn_recv(Global_mp->bussock,&buf,NN_MSG,0)) >= 0 )
     {
         sprintf(fname,"%s",buf);
@@ -1340,7 +1336,7 @@ int32_t init_nanobus(char *myipaddr)
     if ( Global_mp->gatewayid >= 0 || Global_mp->iambridge != 0 )
     {
         printf("call nano_socket\n");
-        if ( (Global_mp->bussock= nano_socket(myipaddr,SUPERNET_PORT)) < 0 )
+        if ( (Global_mp->bussock= nano_socket(myipaddr,SUPERNET_PORT-1)) < 0 )
         {
             printf("err %d nano_socket\n",Global_mp->bussock);
             return(err);

@@ -870,12 +870,12 @@ char *getdb_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender
 
 char *cosign_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
+#ifdef enablemsig
     static unsigned char zerokey[32];
     char retbuf[MAX_JSON_FIELD],plaintext[MAX_JSON_FIELD],seedstr[MAX_JSON_FIELD],otheracctstr[MAX_JSON_FIELD],hexstr[65],ret0str[65];
     bits256 ret,ret0,seed,priv,pub,sha;
     struct nodestats *stats;
     // WARNING: if this is being remotely invoked, make sure you trust the requestor as the rawkey is being sent
-    
     copy_cJSON(otheracctstr,objs[0]);
     copy_cJSON(seedstr,objs[1]);
     copy_cJSON(plaintext,objs[2]);
@@ -902,11 +902,13 @@ char *cosign_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
         sprintf(retbuf,"{\"requestType\":\"cosigned\",\"seed\":\"%s\",\"result\":\"%s\",\"privacct\":\"%s\",\"pubacct\":\"%s\",\"ret0\":\"%s\"}",seedstr,ret0str,NXTaddr,otheracctstr,hexstr);
         return(clonestr(retbuf));
     }
+#endif
     return(clonestr("{\"error\":\"invalid cosign_func arguments\"}"));
 }
 
 char *cosigned_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
+#ifdef enablemsig
     char retbuf[MAX_JSON_FIELD],resultstr[MAX_JSON_FIELD],seedstr[MAX_JSON_FIELD],hexstr[65];
     bits256 ret,seed,priv,val;
     uint64_t privacct,pubacct;
@@ -930,6 +932,7 @@ char *cosigned_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
         sprintf(retbuf,"{\"seed\":\"%s\",\"result\":\"%s\",\"acct\":\"%s\",\"privacct\":\"%llu\",\"pubacct\":\"%llu\",\"input\":\"%s\"}",seedstr,hexstr,NXTaddr,(long long)privacct,(long long)pubacct,resultstr);
         return(clonestr(retbuf));
     }
+#endif
     return(clonestr("{\"error\":\"invalid cosigned_func arguments\"}"));
 }
 
