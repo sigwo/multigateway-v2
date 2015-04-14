@@ -876,8 +876,8 @@ int main(int argc,const char *argv[])
     }
     
 #else
-    setenv("PYTHONHOME","./Python-3.4.3",1);
-    setenv("PYTHONPATH","./Python-3.4.3/Lib",1);
+    setenv("PYTHONHOME","/home/ubuntu3/btcd/libjl777Python-3.4.3",1);
+    setenv("PYTHONPATH","/home/ubuntu3/btcd/libjl777Python-3.4.3/Lib",1);
     if ( 1 && argc > 1 && strcmp(argv[1],"genfiles") == 0 )
 #endif
     {
