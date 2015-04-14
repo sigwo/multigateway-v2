@@ -104,7 +104,7 @@ struct rambook_info **get_allrambooks(int32_t *numbooksp)
     obooks = calloc(*numbooksp,sizeof(*rb));
     HASH_ITER(hh,Rambooks,rb,tmp)
     {
-        purge_oldest_order(rb,0);
+        //purge_oldest_order(rb,0);
         obooks[i++] = rb;
     }
     if ( i != *numbooksp )
