@@ -46,8 +46,9 @@ struct exchange_info
 {
     void (*ramparse)(struct rambook_info *bids,struct rambook_info *asks,int32_t maxdepth,char *gui);
     int32_t (*ramsupports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid);
-    uint64_t (*trade)(struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
+    uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
     uint64_t nxt64bits;
+    struct libwebsocket *wsi;
     char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD];
     uint32_t num,exchangeid,lastblock,lastaccess,pollgap;
     float lastmilli;
@@ -264,9 +265,10 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     uint8_t minperc;
     struct exchange_info *xchg;
     struct InstantDEX_quote iQ;
+    struct exchange_info *exchange;
     int32_t remoteflag,automatch,duration;
     struct rambook_info *rb;
-    char buf[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],*jsonstr,*retstr = 0;
+    char buf[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[16],rel[16],*jsonstr,*retstr = 0;
     if ( (xchg= find_exchange(INSTANTDEX_NAME,0,0)) == 0 || xchg->exchangeid != INSTANTDEX_EXCHANGEID )
         return(clonestr("{\"error\":\"unexpected InstantDEX exchangeid\"}"));
     remoteflag = (is_remote_access(previpaddr) != 0);
@@ -293,7 +295,34 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     duration = (int32_t)get_API_int(objs[10],ORDERBOOK_EXPIRATION);
     if ( duration < 0 || duration > ORDERBOOK_EXPIRATION )
         duration = ORDERBOOK_EXPIRATION;
-    update_rambooks(baseid,relid,0,0);
+    copy_cJSON(exchangestr,objs[11]);
+    if ( exchangestr[0] == 0 )
+        strcpy(exchangestr,INSTANTDEX_NAME);
+    else
+    {
+        if ( remoteflag != 0 )
+        {
+            printf("remote node (%s) (%s) trying to place quote to exchange (%s)\n",previpaddr,sender,exchangestr);
+            return(clonestr("{\"error\":\"no remote exchange orders\"}"));
+        }
+        else
+        {
+            if ( is_native_crypto(base,baseid) > 0 && is_native_crypto(rel,relid) > 0 && price > 0 && volume > 0 && dir != 0 )
+            {
+                if ( (exchange= find_exchange(exchangestr,0,0)) != 0 )
+                {
+                    if ( exchange->trade != 0 )
+                    {
+                        printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",dir,base,rel,price,volume,exchangestr);
+                        (*exchange->trade)(&retstr,exchange,base,rel,dir,price,volume);
+                        return(retstr);
+                    }
+                    else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
+                } else return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
+            } else return(clonestr("{\"error\":\"illegal parameter baseid or relid not crypto or invalid price\"}\n"));
+        }
+    }
+    update_rambooks(baseid,relid,0,0,0);
     printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
     minbasevol = get_minvolume(baseid), minrelvol = get_minvolume(relid);
     if ( volume < minbasevol || (volume * price) < minrelvol )
@@ -650,7 +679,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
         return;
     }
     price = (baseprice / relprice);
-    update_rambooks(refbaseid,refrelid,maxdepth,gui);
+    update_rambooks(refbaseid,refrelid,maxdepth,gui,1);
     baseid = refbaseid, relid = refrelid;
     volume = 1.;
     printf("price %f = (%f / %f) vol %f\n",price,baseprice,relprice,volume);
@@ -658,7 +687,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
     {
         set_assetname(&mult,base,baseid);
         set_assetname(&mult,rel,relid);
-        update_rambooks(baseid,relid,maxdepth,gui);
+        update_rambooks(baseid,relid,maxdepth,gui,1);
         minbasevol = get_minvolume(baseid);
         minrelvol = get_minvolume(relid);
         printf("base.(%s %.8f) rel.(%s %.8f)\n",base,minbasevol,rel,minrelvol);
@@ -720,11 +749,21 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
     printf("--------------------------\n\n");
 }
 
+struct libwebsocket *init_exchangewss(char *addr)
+{
+    struct libwebsocket *libwebsocket_client_connect(struct libwebsocket_context *clients,const char *address,int port,int ssl_connection,const char *path,const char *host,const char *origin,const char *protocol,int ietf_version_or_minus_one);
+    int32_t port = 80,use_ssl = 0;
+    printf("init_exchangewss(%s)\n",addr);
+    if ( LWScontext != 0 )
+        return(libwebsocket_client_connect(LWScontext,addr,port,use_ssl,"/",addr,addr,"echo",-1));
+    else return(0);
+}
+
 void init_exchange(cJSON *json)
 {
-    static void *exchangeptrs[][4] =
+    static void *exchangeptrs[][5] =
     {
-        { "poloniex", ramparse_poloniex, poloniex_supports, poloniex_trade },
+        { "poloniex", ramparse_poloniex, poloniex_supports, poloniex_trade, "echo.websocket.org" },
         { "bittrex", ramparse_bittrex, bittrex_supports, bittrex_trade },
         { "bter", ramparse_bter, bter_supports, bter_trade },
         { "btce", ramparse_btce, btce_supports, btce_trade },
@@ -760,6 +799,16 @@ void init_exchange(cJSON *json)
             extract_cJSON_str(exchange->apikey,sizeof(exchange->apikey),json,"key");
             extract_cJSON_str(exchange->apisecret,sizeof(exchange->apisecret),json,"secret");
             exchange->trade = trade;
+            /*if ( exchangeptrs[i][4] != 0 )
+            {
+                int libwebsocket_rx_flow_control(struct libwebsocket *wsi,int enable);
+                int err;
+                if ( (exchange->wsi= init_exchangewss(exchangeptrs[i][4])) != 0 )
+                {
+                    err = libwebsocket_rx_flow_control(exchange->wsi,1);
+                }
+                printf("got wsi.%p | err.%d\n",exchange->wsi,err); getchar();
+            }*/
         }
     }
 }
@@ -788,7 +837,7 @@ void init_InstantDEX(uint64_t nxt64bits,int32_t testflag)
     if ( find_exchange(INSTANTDEX_NXTAENAME,0,0)->exchangeid != INSTANTDEX_NXTAEID || find_exchange(INSTANTDEX_NAME,0,0)->exchangeid != INSTANTDEX_EXCHANGEID )
         printf("invalid exchangeid %d, %d\n",find_exchange(INSTANTDEX_NXTAENAME,0,0)->exchangeid,find_exchange(INSTANTDEX_NAME,0,0)->exchangeid);
 #ifdef __APPLE__
-    if ( 1 && testflag != 0 )
+    if ( 0 && testflag != 0 )
     {
         static char *testids[] = { "6932037131189568014", "6854596569382794790", "17554243582654188572", "15344649963748848799", "8688289798928624137", "12071612744977229797" };
         long i,j;
