@@ -719,7 +719,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             {
                 libwebsockets_get_peer_addresses(context, wsi, (int)(long)in, client_name,sizeof(client_name), client_ip, sizeof(client_ip));
                 // if we returned non-zero from here, we kill the connection
-                if ( strcmp("127.0.0.1",client_ip) != 0  && strncmp("192.168.",client_ip,strlen("192.168.")) != 0 )
+                if ( strcmp("127.0.0.1",client_ip) != 0  && strncmp("192.168.",client_ip,strlen("192.168.")) != 0 && is_whitelisted(client_ip) == 0 )
                 {
                     if ( Debuglevel > 0 )
                         fprintf(stderr, "Received network connect from %s (%s)\n",client_name, client_ip);
