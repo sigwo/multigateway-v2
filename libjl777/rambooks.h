@@ -20,7 +20,7 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
 {
     char NXTaddr[64];
     struct NXT_acct *np;
-    int32_t age,oldi,createdflag;
+    int32_t age,oldi,createdflag,duration;
     uint64_t nxt64bits = 0;
     uint32_t now,i,oldest = 0;
     if ( rb->numquotes == 0 )
@@ -29,8 +29,11 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     now = (uint32_t)time(NULL);
     for (i=0; i<rb->numquotes; i++)
     {
+        duration = rb->quotes[i].duration;
+        if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
+            duration = ORDERBOOK_EXPIRATION;
         age = (now - rb->quotes[i].timestamp);
-        if ( rb->quotes[i].exchangeid == INSTANTDEX_EXCHANGEID && (age >= ORDERBOOK_EXPIRATION || age >= rb->quotes[i].duration) )
+        if ( rb->quotes[i].exchangeid == INSTANTDEX_EXCHANGEID && (age >= ORDERBOOK_EXPIRATION || age >= duration) )
         {
             if ( (iQ == 0 || rb->quotes[i].nxt64bits == iQ->nxt64bits) && (oldest == 0 || rb->quotes[i].timestamp < oldest) )
             {

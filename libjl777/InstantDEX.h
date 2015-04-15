@@ -293,7 +293,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,int32_t
     automatch = (int32_t)get_API_int(objs[8],0);
     minperc = (int32_t)get_API_int(objs[9],0);
     duration = (int32_t)get_API_int(objs[10],ORDERBOOK_EXPIRATION);
-    if ( duration < 0 || duration > ORDERBOOK_EXPIRATION )
+    if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
         duration = ORDERBOOK_EXPIRATION;
     copy_cJSON(exchangestr,objs[11]);
     if ( exchangestr[0] == 0 )
