@@ -629,10 +629,10 @@ void call_system(FILE *fp,char *cmd,char *fname)
     system(cmdstr);
 }
 
-int file_exist (char *filename)
+int file_exists(char *filename)
 {
-  struct stat   buffer;   
-  return (stat (filename, &buffer) == 0);
+    struct stat buffer;
+    return(stat(filename,&buffer) == 0);
 }
 
 char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,char *fname))
@@ -657,33 +657,57 @@ char *language_func(char *cmd,char *fname,void (*language)(FILE *fp,char *cmd,ch
     return(clonestr(buffer));
 }
 
+void launch_task()
+{
+   /* char *retstr;
+    memset(&args,0,sizeof(args));
+    args.mytxid = myhash.txid;
+    args.othertxid = otherhash.txid;
+    args.refaddr = cp->privatebits;
+    start_task(Task_mindmeld,"telepathy",1000000,(void *)&args,sizeof(args));
+    retstr = clonestr(retbuf);*/
+}
+
 char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char fname[MAX_JSON_FIELD],*retstr;
+    int32_t launchflag;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
     copy_cJSON(fname,objs[0]);
-    if ( file_exist(fname) != 0 )
+    launchflag = get_API_int(objs[1],0);
+    if ( file_exists(fname) != 0 )
     {
-        retstr = language_func("python",fname,call_python);
-        if ( retstr != 0 )
-            printf("(%s) -> (%s)\n",fname,retstr);
-        return(retstr);
+        if ( launchflag == 0 )
+        {
+            retstr = language_func("python",fname,call_python);
+            if ( retstr != 0 )
+                printf("(%s) -> (%s)\n",fname,retstr);
+            return(retstr);
+        }
+        else
+        {
+            return(0);
+        }
     }
-    else
-    {
-        return(clonestr("{\"error\":\"file doesn't exist\"}"));
-    }
+    else return(clonestr("{\"error\":\"file doesn't exist\"}"));
 }
 
 char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char fname[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD];
+    int32_t launchflag;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
     copy_cJSON(fname,objs[0]);
     copy_cJSON(syscall,objs[1]);
-    return(language_func(syscall,fname,call_system));
+    launchflag = get_API_int(objs[2],0);
+    if ( launchflag == 0 )
+        return(language_func(syscall,fname,call_system));
+    else
+    {
+        return(0);
+    }
 }
 
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -2024,8 +2048,8 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *lotto[] = { (char *)lotto_func, "lotto", "V", "refacct", "asset", "lottoseed", "prizefund", 0 };
 
     // Embedded Langs
-    static char *python[] = { (char *)python_func, "python", "V",  "name", 0 };
-    static char *syscall[] = { (char *)syscall_func, "syscall", "V",  "name", "cmd", 0 };
+    static char *python[] = { (char *)python_func, "python", "V",  "name", "launch", 0 };
+    static char *syscall[] = { (char *)syscall_func, "syscall", "V",  "name", "cmd", "launch", 0 };
 
     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, puzzles, nonces, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, syscall, getpeers, maketelepods, tradebot, respondtx, checkmsg, openorders, allorderbooks, placebid, bid, placeask, ask, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile, allsignals, getsignal, jumptrades, cancelquote, lottostats, tradehistory, makeoffer3 };
     int32_t i,j;

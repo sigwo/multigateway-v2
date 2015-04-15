@@ -125,6 +125,7 @@ cJSON *rambook_json(struct rambook_info *rb)
     sprintf(numstr,"%llu",(long long)rb->assetids[1]), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
     cJSON_AddItemToObject(json,"numquotes",cJSON_CreateNumber(rb->numquotes));
     cJSON_AddItemToObject(json,"exchange",cJSON_CreateString(rb->exchange));
+    cJSON_AddItemToObject(json,"type",cJSON_CreateString((rb->assetids[2]&1) == 0 ? "bids" : "asks"));
     return(json);
 }
 
@@ -216,7 +217,7 @@ void save_InstantDEX_quote(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
     //if ( np->openorders >= maxallowed )
     //    purge_oldest_order(rb,iQ);
-    //purge_oldest_order(rb,0);
+    purge_oldest_order(rb,0);
     add_user_order(rb,iQ);
     np->openorders++;
 }
