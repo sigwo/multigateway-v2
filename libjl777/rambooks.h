@@ -23,7 +23,7 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     int32_t age,oldi,createdflag,duration;
     uint64_t nxt64bits = 0;
     uint32_t now,i,oldest = 0;
-    if ( rb->numquotes == 0 )
+    if ( 1 || rb->numquotes == 0 )
         return(0);
     oldi = -1;
     now = (uint32_t)time(NULL);

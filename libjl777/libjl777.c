@@ -246,11 +246,14 @@ void SuperNET_idler(uv_idle_t *handle)
     void *up;
     struct udp_queuecmd *qp;
     struct write_req_t *wr,*firstwr = 0;
-    int32_t flag;
+    int32_t i,flag;
     char *jsonstr,*retstr,**ptrs;
     if ( Finished_init == 0 || IS_LIBTEST == 7 )
         return;
     millis = milliseconds();//((double)uv_hrtime() / 1000000);
+    for (i=0; i<10; i++)
+        if ( poll_daemons() <= 0 )
+            break;
     if ( millis > (lastattempt + APISLEEP) )
     {
         lastattempt = millis;
@@ -719,7 +722,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             {
                 libwebsockets_get_peer_addresses(context, wsi, (int)(long)in, client_name,sizeof(client_name), client_ip, sizeof(client_ip));
                 // if we returned non-zero from here, we kill the connection
-                if ( strcmp("127.0.0.1",client_ip) != 0  && strncmp("192.168.",client_ip,strlen("192.168.")) != 0 && is_whitelisted(client_ip) == 0 )
+                if ( strcmp("127.0.0.1",client_ip) != 0  && strncmp("192.168.",client_ip,strlen("192.168.")) != 0 && (is_whitelisted(client_ip) == 0 && (Global_mp->gatewayid >= 0 || Global_mp->iambridge != 0)) )
                 {
                     if ( Debuglevel > 0 )
                         fprintf(stderr, "Received network connect from %s (%s)\n",client_name, client_ip);
