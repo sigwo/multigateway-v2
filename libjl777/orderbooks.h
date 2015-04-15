@@ -476,7 +476,8 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
         baseid = assetids[i*3], relid = assetids[i*3+1], exchangeid = (int32_t)assetids[i*3+2];
         if ( (exchange= &Exchanges[exchangeid]) != 0 && exchangeid < MAX_EXCHANGES )
         {
-            if ( showall != 0 || exchange->trade != 0 )
+            int32_t cleared_with_nxtae(int32_t);
+            if ( showall != 0 || (exchange->trade != 0 || cleared_with_nxtae(exchangeid) != 0) )
             {
                 bids = get_rambook(0,baseid,0,relid,(exchangeid<<1));
                 asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1);
