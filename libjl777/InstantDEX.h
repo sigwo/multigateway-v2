@@ -205,11 +205,6 @@ void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx
     // updatestats
 }
 
-char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *iQ,char *submitstr) // called by placequote, should autofill
-{
-    return(submitstr);
-}
-
 #include "rambooks.h"
 #include "exchanges.h"
 #include "orderbooks.h"
@@ -217,6 +212,11 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
 #include "atomic.h"
 #include "bars.h"
 #include "signals.h"
+
+char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *iQ,char *submitstr) // called by placequote, should autofill
+{
+    return(submitstr);
+}
 
 char *lottostats_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
