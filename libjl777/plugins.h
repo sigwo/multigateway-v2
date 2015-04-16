@@ -262,7 +262,7 @@ void call_python(char *cmd,char *fname,uint64_t daemonid)
 void call_system(char *cmd,char *arg,uint64_t daemonid)
 {
     char cmdstr[MAX_JSON_FIELD];
-    sprintf(cmdstr,"%s %llu %s",cmd,(long long)daemonid,arg!=0?arg:" ");
+    sprintf(cmdstr,"%s %llu",cmd,(long long)daemonid);//,arg!=0?arg:" ");
     printf("SYSTEM.(%s)\n",cmdstr);
     system(cmdstr);
 }
