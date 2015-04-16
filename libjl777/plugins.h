@@ -174,7 +174,7 @@ char *launch_daemon(int32_t isws,char *cmd,char *arg,void (*daemonfunc)(char *cm
         dp->cmd = clonestr(cmd);
         dp->daemonid = daemonid;
         dp->daemonsock = daemonsock;
-        dp->arg = clonestr(arg);
+        dp->arg = clonestr(arg!=0?arg:"");
         dp->daemonfunc = daemonfunc;
         dp->isws = 1;
         Daemoninfos[Numdaemons++] = dp;
@@ -259,7 +259,7 @@ void call_python(char *cmd,char *fname,uint64_t daemonid)
     }
 }
 
-void call_system(char *arg,char *cmd,uint64_t daemonid)
+void call_system(char *cmd,char *arg,uint64_t daemonid)
 {
     char cmdstr[MAX_JSON_FIELD];
     sprintf(cmdstr,"%s %llu %s",cmd,(long long)daemonid,arg!=0?arg:"");
