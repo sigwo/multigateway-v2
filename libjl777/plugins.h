@@ -28,7 +28,7 @@ struct daemon_info *find_daemoninfo(uint64_t daemonid)
     if ( Numdaemons > 0 )
     {
         for (i=0; i<Numdaemons; i++)
-            if ( Daemoninfos[i]->daemonid == daemonid )
+            if ( Daemoninfos[i] != 0 && Daemoninfos[i]->daemonid == daemonid )
                 return(Daemoninfos[i]);
     }
     return(0);
@@ -126,25 +126,6 @@ int32_t init_daemonsock(int32_t *pubsockp,uint64_t daemonid)
     return(sock);
 }
 
-int32_t send_to_daemon(uint64_t daemonid,char *jsonstr)
-{
-    int32_t len;
-    cJSON *json;
-    struct daemon_info *dp;
-    if ( (json= cJSON_Parse(jsonstr)) != 0 )
-    {
-        free_json(json);
-        if ( (dp= find_daemoninfo(daemonid)) != 0 )
-        {
-            if ( (len= (int32_t)strlen(jsonstr)) > 0 )
-                return(nn_send(dp->daemonsock,jsonstr,len + 1,0));
-            else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);
-        }
-    }
-    printf("send_to_daemon: cant parse jsonstr.(%s)\n",jsonstr);
-    return(-1);
-}
-
 int32_t poll_daemons()
 {
     struct nn_pollfd pfd[sizeof(Daemoninfos)/sizeof(*Daemoninfos)];
@@ -195,7 +176,8 @@ int32_t poll_daemons()
                                         if ( add_instanceid(dp,instanceid) != 0 )
                                             connect_instanceid(dp,instanceid);
                                 } else printf("parse error.(%s)\n",msg);
-                                //queue_enqueue("daemon",&dp->messages,msg);
+                                if ( dp->websocket == 0 )
+                                    queue_enqueue("daemon",&dp->messages,msg);
                             }
                             processed++;
                         }
@@ -362,21 +344,32 @@ char *checkmsg_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
     return(retstr);
 }
 
-char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+int32_t send_to_daemon(uint64_t daemonid,char *jsonstr)
 {
-    if ( is_remote_access(previpaddr) == 0 )
-        return(clonestr("{\"error\":\"cant remote locally\"}"));
-    return(clonestr(origargstr));
+    int32_t len;
+    cJSON *json;
+    struct daemon_info *dp;
+    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+    {
+        free_json(json);
+        if ( (dp= find_daemoninfo(daemonid)) != 0 )
+        {
+            if ( (len= (int32_t)strlen(jsonstr)) > 0 )
+                return(nn_send(dp->daemonsock,jsonstr,len + 1,0));
+            else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);
+        }
+    }
+    else printf("send_to_daemon: cant parse jsonstr.(%s)\n",jsonstr);
+    return(-1);
 }
 
 char *passthru_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char hopNXTaddr[64],tagstr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],params[MAX_JSON_FIELD],*str2,*cmdstr,*retstr = 0;
     struct coin_info *cp = 0;
+    uint64_t daemonid;
     copy_cJSON(coinstr,objs[0]);
     copy_cJSON(method,objs[1]);
-    if ( coinstr[0] != 0 )
-        cp = get_coin_info(coinstr);
     if ( is_remote_access(previpaddr) != 0 )
     {
         if ( in_jsonarray(cJSON_GetObjectItem(MGWconf,"remote"),method) == 0 && in_jsonarray(cJSON_GetObjectItem(cp->json,"remote"),method) == 0 )
@@ -385,9 +378,19 @@ char *passthru_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
     copy_cJSON(params,objs[2]);
     unstringify(params);
     copy_cJSON(tagstr,objs[3]);
-    printf("tag.(%s) passthru.(%s) %p method=%s [%s]\n",tagstr,coinstr,cp,method,params);
-    if ( cp != 0 && method[0] != 0 && sender[0] != 0 && valid > 0 )
-        retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,method,params);
+    daemonid = get_API_nxt64bits(objs[4]);
+    printf("daemonid.%llu tag.(%s) passthru.(%s) %p method=%s [%s]\n",(long long)daemonid,tagstr,coinstr,cp,method,params);
+    if ( sender[0] != 0 && valid > 0 )
+    {
+        if ( daemonid != 0 )
+        {
+            unstringify(params);
+            send_to_daemon(daemonid,params);
+            return(clonestr("{\"result\":\"unstringified params sent to daemon\"}"));
+        }
+        else if ( (cp= get_coin_info(coinstr)) != 0 && method[0] != 0 )
+            retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,method,params);
+    }
     else retstr = clonestr("{\"error\":\"invalid passthru_func arguments\"}");
     if ( is_remote_access(previpaddr) != 0 )
     {
@@ -400,6 +403,13 @@ char *passthru_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
         free(cmdstr);
     }
     return(retstr);
+}
+
+char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    if ( is_remote_access(previpaddr) == 0 )
+        return(clonestr("{\"error\":\"cant remote locally\"}"));
+    return(clonestr(origargstr));
 }
 
 char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
