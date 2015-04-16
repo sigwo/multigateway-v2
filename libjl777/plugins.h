@@ -68,7 +68,7 @@ void connect_instanceid(struct daemon_info *dp,uint64_t instanceid)
 {
     int32_t err;
     cJSON *json;
-    char addr[64],*jsonstr;
+    char addr[64],numstr[64],*jsonstr;
     sprintf(addr,"ipc://%llu",(long long)instanceid);
     if ( (err= nn_connect(dp->daemonsock,addr)) < 0 )
     {
@@ -84,7 +84,9 @@ void connect_instanceid(struct daemon_info *dp,uint64_t instanceid)
     json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("instances"));
     cJSON_AddItemToObject(json,"instanceids",instances_json(dp));
+    sprintf(numstr,"%llu",(long long)dp->daemonid), cJSON_AddItemToObject(json,"myid",cJSON_CreateString(numstr));
     jsonstr = cJSON_Print(json);
+    stripwhite(jsonstr,strlen(jsonstr));
     free_json(json);
     nn_send(dp->daemonsock,jsonstr,strlen(jsonstr) + 1,0);
     free(jsonstr);
@@ -169,7 +171,7 @@ int32_t poll_daemons()
                         {
                             if ( (len= nn_recv(dp->daemonsock,&msg,NN_MSG,0)) > 0 )
                             {
-                                printf (">>>>>>>>>> RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu\n",n,i,Numdaemons,msg,dp->cmd,(long long)dp->daemonid);
+                                printf(">>>>>>>>>> RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu\n",n,i,Numdaemons,msg,dp->cmd,(long long)dp->daemonid);
                                 nn_send(dp->daemonsock,msg,len,0);
                                 if ( (json= cJSON_Parse(msg)) != 0 )
                                 {
@@ -181,8 +183,8 @@ int32_t poll_daemons()
                                     copy_cJSON(request,cJSON_GetObjectItem(json,"pluginrequest"));
                                     if ( strcmp(request,"SuperNET") == 0 )
                                     {
-                                        char *SuperNET_JSON(char *JSONstr);
-                                        if ( (retstr= SuperNET_JSON(msg)) != 0 )
+                                        char *call_SuperNET_JSON(char *JSONstr);
+                                        if ( (retstr= call_SuperNET_JSON(msg)) != 0 )
                                         {
                                             nn_send(dp->daemonsock,retstr,(int32_t)strlen(retstr)+1,0);
                                             free(retstr);
