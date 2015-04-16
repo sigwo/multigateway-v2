@@ -772,12 +772,12 @@ static int callback_websockets(struct libwebsocket_context *context,struct libwe
         case LWS_CALLBACK_SERVER_WRITEABLE:
             if ( (dp= pss->dp) != 0 && (str= queue_dequeue(&dp->messages)) != 0 )
             {
-                m = libwebsocket_write(wsi,(uint8_t *)str,n,LWS_WRITE_TEXT);
-                printf("wrote (%s).%d to wsi, got %d\n",str,n,m);
+                m = libwebsocket_write(wsi,(uint8_t *)str,(int32_t)len,LWS_WRITE_TEXT);
+                printf("wrote (%s).%ld to wsi, got %d\n",str,len,m);
                 nn_freemsg(str);
                 if ( m < n )
                 {
-                    lwsl_err("ERROR %d writing to di socket\n", n);
+                    lwsl_err("ERROR %ld writing to di socket\n",len);
                     return(-1);
                 }
             }

@@ -79,13 +79,13 @@ int32_t send_to_daemon(uint64_t daemonid,char *jsonstr)
 int32_t poll_daemons()
 {
     struct nn_pollfd pfd[sizeof(Daemoninfos)/sizeof(*Daemoninfos)];
-    int32_t flag,len,processed,rc,i,n = 0;
+    int32_t flag,len,processed=0,rc,i,n = 0;
     struct daemon_info *dp;
     char *msg;
     if ( Numdaemons > 0 )
     {
         memset(pfd,0,sizeof(pfd));
-        for (i=flag=processed=0; i<Numdaemons; i++)
+        for (i=flag=0; i<Numdaemons; i++)
         {
             if ( (dp= Daemoninfos[i]) != 0 )
             {
