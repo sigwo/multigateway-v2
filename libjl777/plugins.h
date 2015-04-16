@@ -353,10 +353,10 @@ char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     int32_t launchflag,isws;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
-    copy_cJSON(arg,objs[0]);
+    copy_cJSON(syscall,objs[0]);
     launchflag = get_API_int(objs[1],0);
     isws = get_API_int(objs[2],0);
-    copy_cJSON(syscall,objs[3]);
+    copy_cJSON(arg,objs[3]);
     return(language_func(isws,launchflag,syscall,arg,call_system));
 }
 
