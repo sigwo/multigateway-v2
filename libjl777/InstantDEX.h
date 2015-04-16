@@ -828,7 +828,14 @@ void init_exchanges()
             init_exchange(cJSON_GetArrayItem(exchanges,i));
     }
 }
-                          
+
+char *trollbox_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    if ( (rand() & 1) == 0 )
+        return(clonestr("{\"result\":\"buy it will go to the moon\",\"user\":\"troll\",\"whaleindex\":\"0\"}"));
+    else return(clonestr("{\"result\":\"sell it will be dumped\",\"user\":\"troll\",\"whaleindex\":\"0\"}"));
+}
+
 void init_InstantDEX(uint64_t nxt64bits,int32_t testflag)
 {
     //printf("NXT-> %llu BTC -> %llu\n",(long long)stringbits("NXT"),(long long)stringbits("BTC")); getchar();

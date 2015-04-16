@@ -14,7 +14,7 @@
 #include <libwebsockets.h>
 #endif
 #define MAX_LEN 40
-
+#include "plugins.h"
 
 int32_t is_BTCD_command(cJSON *json)
 {
@@ -226,52 +226,6 @@ char *sendbinary_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
     return(retstr);
 }
 
-
-/*char *makeoffer_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    uint64_t assetA,assetB,qtyA,qtyB,quoteid;
-    int32_t type;
-    char otherNXTaddr[MAX_JSON_FIELD],*retstr = 0;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
-    assetA = get_API_nxt64bits(objs[0]);
-    assetB = get_API_nxt64bits(objs[1]);
-    qtyA = get_API_nxt64bits(objs[2]);
-    qtyB = get_API_nxt64bits(objs[3]);
-    copy_cJSON(otherNXTaddr,objs[4]);
-    type = get_API_int(objs[5],0);
-    quoteid = get_API_nxt64bits(objs[6]);
-    printf("assetA.%llu %.8f -> assetB.%llu %.8f to NXT.%s\n",(long long)assetA,dstr(qtyA),(long long)assetB,dstr(qtyB),otherNXTaddr);
-    if ( sender[0] != 0 && valid > 0 && otherNXTaddr[0] != 0 )//&& assetA != 0 && qtyA != 0. && assetB != 0. && qtyB != 0. )
-        retstr = makeoffer(NXTaddr,NXTACCTSECRET,otherNXTaddr,assetA,qtyA,assetB,qtyB,type,quoteid);
-    else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
-    return(retstr);
-}
-
-char *makeoffer2_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    uint64_t quoteid,assetA,assetB,amountA,amountB,jumpasset,jumpamount;
-    char otherNXTaddr[MAX_JSON_FIELD],jumpNXTaddr[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],*retstr = 0;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
-    //static char *makeoffer2[] = { (char *)makeoffer2_func, "makeoffer2", "V", "baseid", "baseamount", "jumpaddr", "jumpasset", "jumpamount", "other", "relid", "relamount", 0 };
-    assetA = get_API_nxt64bits(objs[0]);
-    amountA = get_API_nxt64bits(objs[1]);
-    copy_cJSON(jumpNXTaddr,objs[2]);
-    jumpasset = get_API_nxt64bits(objs[3]);
-    jumpamount = get_API_nxt64bits(objs[4]);
-    copy_cJSON(otherNXTaddr,objs[5]);
-    assetB = get_API_nxt64bits(objs[6]);
-    amountB = get_API_nxt64bits(objs[7]);
-    quoteid = get_API_nxt64bits(objs[8]);
-    copy_cJSON(gui,objs[8]), gui[4] = 0;
-    printf("makeoffer2: sender.(%s) other.(%s) valid.%d\n",sender,otherNXTaddr,valid);
-    if ( sender[0] != 0 && valid > 0 && otherNXTaddr[0] != 0 )//&& assetA != 0 && qtyA != 0. && assetB != 0. && qtyB != 0. )
-        retstr = makeoffer2(NXTaddr,NXTACCTSECRET,assetA,amountA,jumpNXTaddr,jumpasset,jumpamount,otherNXTaddr,assetB,amountB,gui,quoteid);
-    else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
-    return(retstr);
-}*/
-
 char *makeoffer3_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char *retstr = 0;
@@ -283,21 +237,6 @@ char *makeoffer3_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
     else retstr = clonestr("{\"result\":\"invalid makeoffer3_func request\"}");
     return(retstr);
 }
-
-/*char *processutx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    char utx[MAX_JSON_FIELD],full[MAX_JSON_FIELD],sig[MAX_JSON_FIELD],*retstr = 0;
-    uint64_t feeAtxid,quoteid;
-    copy_cJSON(utx,objs[0]);
-    copy_cJSON(sig,objs[1]);
-    copy_cJSON(full,objs[2]);
-    feeAtxid = get_API_nxt64bits(objs[3]);
-    quoteid = get_API_nxt64bits(objs[4]);
-    if ( sender[0] != 0 && valid > 0 )
-        retstr = processutx(sender,utx,sig,full,feeAtxid,quoteid);
-    else retstr = clonestr("{\"result\":\"invalid processutx_func request\"}");
-    return(retstr);
-}*/
 
 char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -514,366 +453,6 @@ char *findaddress_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
         fclose(fp);
     return(retstr);
 }*/
-
-int32_t in_jsonarray(cJSON *array,char *value)
-{
-    int32_t i,n;
-    char remote[MAX_JSON_FIELD];
-    if ( array != 0 && is_cJSON_Array(array) != 0 )
-    {
-        n = cJSON_GetArraySize(array);
-        for (i=0; i<n; i++)
-        {
-            if ( array == 0 || n == 0 )
-                break;
-            copy_cJSON(remote,cJSON_GetArrayItem(array,i));
-            if ( strcmp(remote,value) == 0 )
-                return(1);
-        }
-    }
-    return(0);
-}
-
-char *passthru_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    char hopNXTaddr[64],tagstr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],params[MAX_JSON_FIELD],*str2,*cmdstr,*retstr = 0;
-    struct coin_info *cp = 0;
-    copy_cJSON(coinstr,objs[0]);
-    copy_cJSON(method,objs[1]);
-    if ( coinstr[0] != 0 )
-        cp = get_coin_info(coinstr);
-    if ( is_remote_access(previpaddr) != 0 )
-    {
-        if ( in_jsonarray(cJSON_GetObjectItem(MGWconf,"remote"),method) == 0 && in_jsonarray(cJSON_GetObjectItem(cp->json,"remote"),method) == 0 )
-            return(0);
-    }
-    copy_cJSON(params,objs[2]);
-    unstringify(params);
-    copy_cJSON(tagstr,objs[3]);
-    printf("tag.(%s) passthru.(%s) %p method=%s [%s]\n",tagstr,coinstr,cp,method,params);
-    if ( cp != 0 && method[0] != 0 && sender[0] != 0 && valid > 0 )
-        retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,method,params);
-    else retstr = clonestr("{\"error\":\"invalid passthru_func arguments\"}");
-    if ( is_remote_access(previpaddr) != 0 )
-    {
-        cmdstr = malloc(strlen(retstr)+512);
-        str2 = stringifyM(retstr);
-        sprintf(cmdstr,"{\"requestType\":\"remote\",\"coin\":\"%s\",\"method\":\"%s\",\"tag\":\"%s\",\"result\":\"%s\"}",coinstr,method,tagstr,str2);
-        free(str2);
-        hopNXTaddr[0] = 0;
-        retstr = send_tokenized_cmd(!prevent_queueing("passthru"),hopNXTaddr,0,NXTaddr,NXTACCTSECRET,cmdstr,sender);
-        free(cmdstr);
-    }
-    return(retstr);
-}
-
-char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    if ( is_remote_access(previpaddr) == 0 )
-        return(clonestr("{\"error\":\"cant remote locally\"}"));
-    return(clonestr(origargstr));
-}
-
-int file_exists(char *filename)
-{
-    struct stat buffer;
-    return(stat(filename,&buffer) == 0);
-}
-
-void call_python(FILE *fp,char *cmd,char *fname,uint64_t daemonid)
-{
-    Py_Initialize();
-    PyRun_SimpleFile(fp,fname);
-    Py_Finalize();
-}
-
-void call_system(FILE *fp,char *cmd,char *fname,uint64_t daemonid)
-{
-    char cmdstr[1024];
-    sprintf(cmdstr,"%s %s %llu",cmd,fname,(long long)daemonid);
-    system(cmdstr);
-}
-
-int32_t init_daemonsock(uint64_t daemonid)
-{
-    int32_t sock,err,to = 1;
-    char addr[MAX_JSON_FIELD];
-    sprintf(addr,"ipc://%llu",(long long)daemonid);
-    printf("init_daemonsocks %s\n",addr);
-    if ( (sock= nn_socket(AF_SP,NN_BUS)) < 0 )
-    {
-        printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
-        return(-1);
-    }
-    printf("got sock.%d\n",sock);
-    if ( (err= nn_bind(sock,addr)) < 0 )
-    {
-        printf("error %d nn_bind.%d (%s) | %s\n",err,sock,addr,nn_strerror(nn_errno()));
-        return(-1);
-    }
-    assert (nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&to,sizeof (to)) >= 0);
-    printf("bound\n");
-    sprintf(addr,"ipc://%llu",(long long)daemonid ^ 1);
-    if ( (err= nn_connect(sock,addr)) < 0 )
-    {
-        printf("error %d nn_connect err.%s (%llu to %s)\n",sock,nn_strerror(nn_errno()),(long long)daemonid,addr);
-        return(-1);
-    }
-    return(sock);
-}
-
-struct daemon_info { queue_t messages; uint64_t daemonid; int32_t finished,dereferenced,daemonsock,pluginsock; char *cmd,*fname; void (*daemonfunc)(FILE *fp,char *cmd,char *fname,uint64_t daemonid); } *Daemoninfos[1024]; int32_t Numdaemons;
-
-struct daemon_info *find_daemoninfo(uint64_t daemonid)
-{
-    int32_t i;
-    if ( Numdaemons > 0 )
-    {
-        for (i=0; i<Numdaemons; i++)
-            if ( Daemoninfos[i]->daemonid == daemonid )
-                return(Daemoninfos[i]);
-    }
-    return(0);
-}
-
-int32_t send_to_daemon(uint64_t daemonid,char *jsonstr)
-{
-    int32_t len;
-    cJSON *json;
-    struct daemon_info *dp;
-    if ( (json= cJSON_Parse(jsonstr)) != 0 )
-    {
-        free_json(json);
-        if ( (dp= find_daemoninfo(daemonid)) != 0 )
-        {
-            if ( (len= (int32_t)strlen(jsonstr)) > 0 )
-                return(nn_send(dp->daemonsock,jsonstr,len + 1,0));
-            else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);
-        }
-    }
-    printf("send_to_daemon: cant parse jsonstr.(%s)\n",jsonstr);
-    return(-1);
-}
-
-int32_t poll_daemons()
-{
-    struct nn_pollfd pfd[sizeof(Daemoninfos)/sizeof(*Daemoninfos)];
-    int32_t flag,len,processed,rc,i,n = 0;
-    struct daemon_info *dp;
-    char *msg;
-    if ( Numdaemons > 0 )
-    {
-        memset(pfd,0,sizeof(pfd));
-        for (i=flag=processed=0; i<Numdaemons; i++)
-        {
-            if ( (dp= Daemoninfos[i]) != 0 )
-            {
-                if ( dp->finished != 0 )
-                {
-                    printf("daemon.%llu finished\n",(long long)dp->daemonid);
-                    Daemoninfos[i] = 0;
-                    dp->dereferenced = 1;
-                    flag++;
-                }
-                else
-                {
-                    pfd[i].fd = dp->daemonsock;
-                    pfd[i].events = NN_POLLIN | NN_POLLOUT;
-                    n++;
-                }
-            }
-        }
-        if ( n > 0 )
-        {
-            if ( (rc= nn_poll(pfd,n,1)) > 0 )
-            {
-                for (i=0; i<Numdaemons; i++)
-                {
-                    if ( (pfd[i].revents & NN_POLLIN) != 0 )
-                    {
-                        if ( (dp= Daemoninfos[i]) != 0 && dp->finished == 0 )
-                        {
-                            if ( (len= nn_recv(dp->daemonsock,&msg,NN_MSG,0)) > 0 )
-                            {
-                                printf ("RECEIVED (%s).%ld FROM BUS -> (%s)\n",msg,len,dp->fname);
-                                queue_enqueue("daemon",&dp->messages,msg);
-                            }
-                            processed++;
-                        }
-                    }
-                }
-            }
-            else if ( rc < 0 )
-                printf("Error polling daemons.%d\n",rc);
-        }
-        if ( flag != 0 )
-        {
-            static portable_mutex_t mutex; static int didinit;
-            printf("compact Daemoninfos as %d have finished\n",flag);
-            if ( didinit == 0 )
-                portable_mutex_init(&mutex), didinit = 1;
-            portable_mutex_lock(&mutex);
-            for (i=n=0; i<Numdaemons; i++)
-                if ( (Daemons[n]= Daemons[i]) != 0 )
-                    n++;
-            Numdaemons = n;
-            portable_mutex_unlock(&mutex);
-        }
-    }
-    return(processed);
-}
-
-char *checkmessages(char *NXTaddr,char *NXTACCTSECRET,uint64_t daemonid)
-{
-    char *msg,*retstr = 0;
-    cJSON *array = 0,*json = 0;
-    struct daemon_info *dp;
-    int32_t i;
-    if ( (dp= find_daemoninfo(daemonid)) != 0 )
-    {
-        for (i=0; i<10; i++)
-        {
-            if ( (msg= queue_dequeue(&dp->messages)) != 0 )
-            {
-                if ( json == 0 )
-                    json = cJSON_CreateObject(), array = cJSON_CreateArray();
-                cJSON_AddItemToArray(array,cJSON_CreateString(msg));
-                nn_freemsg(msg);
-            }
-        }
-        if ( json == 0 )
-            return(clonestr("{\"result\":\"no messages\",\"messages\":[]}"));
-        else
-        {
-            cJSON_AddItemToObject(json,"result",cJSON_CreateString("daemon messages"));
-            cJSON_AddItemToObject(json,"messages",array);
-            retstr = cJSON_Print(json);
-            free_json(json);
-            return(retstr);
-        }
-    }
-    return(clonestr("{\"error\":\"cant find daemonid\"}"));
-}
-
-char *checkmsg_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    char *retstr = 0;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
-    if ( sender[0] != 0 && valid > 0 )
-        retstr = checkmessages(sender,NXTACCTSECRET,get_API_nxt64bits(objs[0]));
-    else retstr = clonestr("{\"result\":\"invalid checkmessages request\"}");
-    return(retstr);
-}
-
-void *daemon_loop(void *args)
-{
-    struct daemon_info *dp = args;
-    FILE *fp;
-    if ( (fp= fopen(dp->fname,"r")) != 0 )
-    {
-        (*dp->daemonfunc)(fp,dp->cmd,dp->fname,dp->daemonid);
-        fclose(fp);
-    }
-    printf("daemonid.%llu (%s %s) finished\n",(long long)dp->daemonid,dp->cmd,dp->fname);
-    dp->finished = 1;
-    while ( dp->dereferenced == 0 )
-        sleep(1);
-    printf("daemonid.%llu (%s %s) dereferenced\n",(long long)dp->daemonid,dp->cmd,dp->fname);
-    if ( dp->pluginsock >= 0 )
-        nn_shutdown(dp->pluginsock,0);
-    free(dp->cmd), free(dp->fname), free(dp);
-    return(0);
-}
-
-char *launch_daemon(char *cmd,char *fname,void (*daemonfunc)(FILE *fp,char *cmd,char *fname,uint64_t daemonid))
-{
-    struct daemon_info *dp;
-    char retbuf[1024];
-    int32_t daemonsock;
-    uint64_t daemonid;
-    FILE *fp;
-    if ( Numdaemons >= sizeof(Daemoninfos)/sizeof(*Daemoninfos) )
-        return(clonestr("{\"error\":\"too many daemons, cant create anymore\"}"));
-    if ( (fp= fopen(fname,"r")) != 0 )
-    {
-        fclose(fp);
-        daemonid = (uint64_t)(milliseconds() * 1000000) & (~(uint64_t)1);
-        if ( (daemonsock= init_daemonsock(daemonid ^ 1)) >= 0 )
-        {
-            dp = calloc(1,sizeof(*dp));
-            dp->cmd = clonestr(cmd);
-            dp->daemonid = daemonid;
-            dp->daemonsock = daemonsock;
-            dp->pluginsock = -1;
-            dp->fname = clonestr(fname);
-            dp->daemonfunc = daemonfunc;
-            Daemoninfos[Numdaemons++] = dp;
-            if ( portable_thread_create((void *)daemon_loop,dp) == 0 )
-            {
-                free(dp->cmd), free(dp->fname), free(dp);
-                nn_shutdown(dp->daemonsock,0);
-                return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
-            }
-            sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}",(long long)dp->daemonid);
-            return(clonestr(retbuf));
-        } else return(clonestr("{\"error\":\"cant create daemonsock\"}"));
-    } return(clonestr("{\"error\":\"cant open file to launch daemon\"}"));
-}
-
-char *language_func(int32_t launchflag,char *cmd,char *fname,void (*daemonfunc)(FILE *fp,char *cmd,char *fname,uint64_t daemonid))
-{
-    FILE *fp;
-    char buffer[MAX_LEN+1] = { 0 };
-    int out_pipe[2];
-    int saved_stdout;
-    if ( launchflag != 0 )
-        return(launch_daemon(cmd,fname,daemonfunc));
-    saved_stdout = dup(STDOUT_FILENO);
-    if( pipe(out_pipe) != 0 )
-        return(clonestr("{\"error\":\"pipe creation error\"}"));
-    dup2(out_pipe[1], STDOUT_FILENO);
-    close(out_pipe[1]);
-    if ( (fp= fopen(fname,"r")) != 0 )
-    {
-        (*daemonfunc)(fp,cmd,fname,0);
-        fclose(fp);
-    }
-    fflush(stdout);
-    read(out_pipe[0],buffer,MAX_LEN);
-    dup2(saved_stdout,STDOUT_FILENO);
-    return(clonestr(buffer));
-}
-
-char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    char fname[MAX_JSON_FIELD],*retstr;
-    int32_t launchflag;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
-    copy_cJSON(fname,objs[0]);
-    launchflag = get_API_int(objs[1],0);
-    if ( file_exists(fname) != 0 )
-    {
-        retstr = language_func(launchflag,"python",fname,call_python);
-        if ( retstr != 0 )
-            printf("(%s) -> (%s)\n",fname,retstr);
-        return(retstr);
-    }
-    else return(clonestr("{\"error\":\"file doesn't exist\"}"));
-}
-
-char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    char fname[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD];
-    int32_t launchflag;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
-    copy_cJSON(fname,objs[0]);
-    copy_cJSON(syscall,objs[1]);
-    launchflag = get_API_int(objs[2],0);
-    return(language_func(launchflag,syscall,fname,call_system));
-}
 
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -1210,43 +789,6 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     }
     return(retstr);
 }
-
-/*char *pricedb_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    char exchange[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],retstr[512];
-    int32_t stopflag;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
-    copy_cJSON(exchange,objs[0]);
-    copy_cJSON(base,objs[1]);
-    copy_cJSON(rel,objs[2]);
-    stopflag = (int32_t)get_API_int(objs[3],0);
-    if ( exchange[0] != 0 && base[0] != 0 && rel[0] != 0 && sender[0] != 0 && valid > 0 )
-    {
-        sprintf(retstr,"PRICEDB.(%s.%s_%s) stopflag.%d\n",exchange,base,rel,stopflag);
-        if ( stopflag != 0 )
-            stop_pricedb(exchange,base,rel);
-        else add_pricedb(exchange,base,rel);
-    } else strcpy(retstr,"{\"error\":\"bad pricedb paramater\"}");
-    return(clonestr(retstr));
-}
-
-char *getquotes_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    char exchange[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],*retstr;
-    uint32_t oldest;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
-    copy_cJSON(exchange,objs[0]);
-    copy_cJSON(base,objs[1]);
-    copy_cJSON(rel,objs[2]);
-    oldest = (uint32_t)get_API_int(objs[3],0);
-    if ( exchange[0] != 0 && base[0] != 0 && rel[0] != 0 && sender[0] != 0 && valid > 0 )
-    {
-        retstr = getquotes(exchange,base,rel,oldest);
-    } else return(clonestr("{\"error\":\"bad getquotes paramater\"}"));
-    return(retstr);
-}*/
 
 char *settings_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -2114,10 +1656,6 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *stop[] = { (char *)stop_func, "stop", "V", 0 };
     static char *settings[] = { (char *)settings_func, "settings", "V", "field", "value", "reinit", 0 };
     
-    // passthru
-    static char *passthru[] = { (char *)passthru_func, "passthru", "V", "coin", "method", "params", "tag", 0 };
-    static char *remote[] = { (char *)remote_func, "remote", "V",  "coin", "method", "result", "tag", 0 };
-
     // remotable ramchains
     static char *rampyramid[] = { (char *)rampyramid_func, "rampyramid", "V", "destip", "port", "coin", "blocknum", "type", 0 };
     static char *ramstatus[] = { (char *)ramstatus_func, "ramstatus", "V", "destip", "port", "coin", 0 };
@@ -2183,6 +1721,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *teleport[] = { (char *)teleport_func, "teleport", "V", "amount", "contact", "coin", "minage", "withdraw", 0 };
     
     // InstantDEX
+    static char *trollbox[] = { (char *)trollbox_func, "trollbox", "V", "post", "whaleindex", 0 };
     static char *allorderbooks[] = { (char *)allorderbooks_func, "allorderbooks", "V", 0 };
     static char *orderbook[] = { (char *)orderbook_func, "orderbook", "V", "baseid", "relid", "allfields", "oldest", "maxdepth", "base", "rel", "gui", "showall", 0 };
     static char *lottostats[] = { (char *)lottostats_func, "lottostats", "V", "timestamp", 0 };
@@ -2211,12 +1750,14 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     // Privatbet
     static char *lotto[] = { (char *)lotto_func, "lotto", "V", "refacct", "asset", "lottoseed", "prizefund", 0 };
 
-    // Embedded Langs
-    static char *python[] = { (char *)python_func, "python", "V",  "name", "launch", 0 };
-    static char *syscall[] = { (char *)syscall_func, "syscall", "V",  "name", "cmd", "launch", 0 };
+    // plugins
+    static char *passthru[] = { (char *)passthru_func, "passthru", "V", "coin", "method", "params", "tag", "daemonid", 0 };
+    static char *remote[] = { (char *)remote_func, "remote", "V",  "coin", "method", "result", "tag", 0 };
+    static char *python[] = { (char *)python_func, "python", "V",  "name", "launch", "isws", 0 };
+    static char *syscall[] = { (char *)syscall_func, "syscall", "V", "name", "launch", "isws", "cmd", 0 };
     static char *checkmsg[] = { (char *)checkmsg_func, "checkmessages", "V", "daemonid", 0 };
 
-    static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, puzzles, nonces, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, syscall, getpeers, maketelepods, tradebot, respondtx, checkmsg, openorders, allorderbooks, placebid, bid, placeask, ask, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile, allsignals, getsignal, jumptrades, cancelquote, lottostats, tradehistory, makeoffer3 };
+    static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, puzzles, nonces, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, python, syscall, getpeers, maketelepods, tradebot, respondtx, checkmsg, openorders, allorderbooks, placebid, bid, placeask, ask, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile, allsignals, getsignal, jumptrades, cancelquote, lottostats, tradehistory, makeoffer3, trollbox };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];

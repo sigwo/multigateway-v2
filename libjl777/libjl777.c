@@ -662,9 +662,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY:
-            str = malloc(len+1);
-            memcpy(str,in,len);
-            str[len] = 0;
+            str = malloc(len+1), memcpy(str,in,len), str[len] = 0;
             //printf("(%s)\n",str);
             //if ( wsi != 0 )
             //dump_handshake_info(wsi);
@@ -745,6 +743,57 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
 	return 0;
 }
 
+struct per_session_data { uint64_t daemonid; struct daemon_info *dp; };
+
+static int callback_websockets(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user, void *in,size_t len)
+{
+    uint64_t daemonid = 0;
+	int32_t n,m;
+    char *str = 0;
+    struct daemon_info *dp;
+	struct per_session_data *pss = (struct per_session_data *)user;
+ 	switch ( reason )
+    {
+        case LWS_CALLBACK_ESTABLISHED:
+            memset(pss,0,sizeof(*pss));
+            if ( len > 0 )
+            {
+                str = malloc(len+1), memcpy(str,in,len), str[len] = 0;
+                daemonid = calc_nxt64bits(str+1);
+                if ( (dp= find_daemoninfo(daemonid)) != 0 && dp->finished == 0 && dp->daemonid == daemonid && dp->isws != 0 )
+                {
+                    pss->dp = dp;
+                }
+            }
+            lwsl_info("callback_dumb_increment: LWS_CALLBACK_ESTABLISHED.%s %llu\n",str,(long long)daemonid);
+            if ( str != 0 )
+                free(str);
+            break;
+        case LWS_CALLBACK_SERVER_WRITEABLE:
+            if ( (dp= pss->dp) != 0 && (str= queue_dequeue(&dp->messages)) != 0 )
+            {
+                m = libwebsocket_write(wsi,(uint8_t *)str,n,LWS_WRITE_TEXT);
+                printf("wrote (%s).%d to wsi, got %d\n",str,n,m);
+                nn_freemsg(str);
+                if ( m < n )
+                {
+                    lwsl_err("ERROR %d writing to di socket\n", n);
+                    return(-1);
+                }
+            }
+            break;
+        case LWS_CALLBACK_RECEIVE:
+            printf("button.(%s)\n",(char *)in);
+            break;
+        case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:  // you could return non-zero here and kill the connection
+            dump_handshake_info(wsi);
+            break;
+        default:
+            break;
+	}
+	return(0);
+}
+
 static struct libwebsocket_protocols protocols[] =
 {
 	// first protocol must always be HTTP handler
@@ -755,7 +804,13 @@ static struct libwebsocket_protocols protocols[] =
 		sizeof (struct per_session_data__http),	// per_session_data_size
 		0,			// max frame size / rx buffer
 	},
-	{ NULL, NULL, 0, 0 } // terminator
+    {
+		"websockets",
+		callback_websockets,
+		sizeof(struct per_session_data),
+		65536,
+	},
+    { NULL, NULL, 0, 0 } // terminator
 };
 
 void sighandler(int sig)
@@ -810,7 +865,8 @@ int32_t init_API_port(int32_t use_ssl,uint16_t port,uint32_t millis)
     SSL_done |= (1 << use_ssl);
 	while ( n >= 0 && !force_exit )
     {
-		n = libwebsocket_service(LWScontext,millis);
+        libwebsocket_callback_on_writable_all_protocol(&protocols[1]);
+        n = libwebsocket_service(LWScontext,millis);
 	}
 	libwebsocket_context_destroy(LWScontext);
 	lwsl_notice("libwebsockets-test-server exited cleanly\n");

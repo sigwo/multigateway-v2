@@ -972,4 +972,23 @@ void ensure_jsonitem(cJSON *json,char *field,char *value)
     else cJSON_ReplaceItemInObject(json,field,cJSON_CreateString(value));
 }
 
+int32_t in_jsonarray(cJSON *array,char *value)
+{
+    int32_t i,n;
+    char remote[MAX_JSON_FIELD];
+    if ( array != 0 && is_cJSON_Array(array) != 0 )
+    {
+        n = cJSON_GetArraySize(array);
+        for (i=0; i<n; i++)
+        {
+            if ( array == 0 || n == 0 )
+                break;
+            copy_cJSON(remote,cJSON_GetArrayItem(array,i));
+            if ( strcmp(remote,value) == 0 )
+                return(1);
+        }
+    }
+    return(0);
+}
+
 void free_json(cJSON *json) { if ( json != 0 ) cJSON_Delete(json); }
