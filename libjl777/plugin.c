@@ -62,7 +62,10 @@ int main(int argc,const char *argv[])
                 printf ("RECEIVED (%s).%d FROM BUS -> daemonid.%llu\n",jsonstr,len,(long long)daemonid);
                 if ( (len= process_plugin_json(retbuf,sizeof(retbuf),jsonstr)) > 0 )
                     nn_send(sock,retbuf,len,0);
+                else nn_send(sock,"no messages",strlen("no messages"),0);
+                nn_freemsg(msg);
             }
+            sleep(1);
         }
         nn_shutdown(sock,0);
     }

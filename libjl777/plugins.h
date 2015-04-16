@@ -40,14 +40,12 @@ int32_t init_daemonsock(uint64_t daemonid)
         printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
         return(-1);
     }
-    printf("got sock.%d\n",sock);
     if ( (err= nn_bind(sock,addr)) < 0 )
     {
         printf("error %d nn_bind.%d (%s) | %s\n",err,sock,addr,nn_strerror(nn_errno()));
         return(-1);
     }
     assert (nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&to,sizeof (to)) >= 0);
-    printf("bound\n");
     sprintf(addr,"ipc://%llu",(long long)daemonid ^ 1);
     if ( (err= nn_connect(sock,addr)) < 0 )
     {
@@ -174,7 +172,7 @@ char *launch_daemon(int32_t isws,char *cmd,char *arg,void (*daemonfunc)(char *cm
         dp->cmd = clonestr(cmd);
         dp->daemonid = daemonid;
         dp->daemonsock = daemonsock;
-        dp->arg = (arg != 0) ? clonestr(arg) : 0;
+        dp->arg = (arg != 0 && arg[0] != 0) ? clonestr(arg) : 0;
         dp->daemonfunc = daemonfunc;
         dp->isws = 1;
         Daemoninfos[Numdaemons++] = dp;
@@ -184,7 +182,7 @@ char *launch_daemon(int32_t isws,char *cmd,char *arg,void (*daemonfunc)(char *cm
             nn_shutdown(dp->daemonsock,0);
             return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
         }
-        sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}",(long long)dp->daemonid);
+        sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}\n",(long long)dp->daemonid);
         return(clonestr(retbuf));
     }
     return(clonestr("{\"error\":\"cant open file to launch daemon\"}"));
@@ -347,7 +345,7 @@ char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     launchflag = get_API_int(objs[1],0);
     isws = get_API_int(objs[2],0);
     copy_cJSON(arg,objs[3]);
-    printf("isws.%d launchflag.%d syscall.(%s) arg.(%s)\n",isws,launchflag,syscall,arg);
+    printf("isws.%d launchflag.%d syscall.(%s) arg.(%s)\n",isws,launchflag,syscall,arg!=0?arg:"");
     return(language_func(isws,launchflag,syscall,arg,call_system));
 }
 
