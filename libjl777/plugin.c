@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include "nn.h"
 #include "bus.h"
 
@@ -60,10 +61,10 @@ int main(int argc,const char *argv[])
             {
                 printf ("RECEIVED (%s).%d FROM BUS -> daemonid.%llu\n",jsonstr,len,(long long)daemonid);
                 if ( (len= process_plugin_json(retbuf,sizeof(retbuf),jsonstr)) > 0 )
-                    nn_send(sock,retbuf,len,0));
+                    nn_send(sock,retbuf,len,0);
             }
         }
-        nn_shutdown(sock);
+        nn_shutdown(sock,0);
     }
     return(0);
 }
