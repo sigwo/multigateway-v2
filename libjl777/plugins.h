@@ -13,8 +13,8 @@ struct daemon_info
     queue_t messages;
     uint64_t daemonid;
     int32_t finished,dereferenced,daemonsock,isws;
-    char *cmd,*fname;
-    void (*daemonfunc)(FILE *fp,char *cmd,char *fname,uint64_t daemonid);
+    char *cmd,*arg;
+    void (*daemonfunc)(char *cmd,char *arg,uint64_t daemonid);
 } *Daemoninfos[1024]; int32_t Numdaemons;
 
 struct daemon_info *find_daemoninfo(uint64_t daemonid)
@@ -116,7 +116,7 @@ int32_t poll_daemons()
                         {
                             if ( (len= nn_recv(dp->daemonsock,&msg,NN_MSG,0)) > 0 )
                             {
-                                printf ("RECEIVED (%s).%d FROM BUS -> (%s)\n",msg,len,dp->fname);
+                                printf ("RECEIVED (%s).%d FROM BUS -> (%s)\n",msg,len,dp->cmd);
                                 queue_enqueue("daemon",&dp->messages,msg);
                             }
                             processed++;
@@ -147,62 +147,51 @@ int32_t poll_daemons()
 void *daemon_loop(void *args)
 {
     struct daemon_info *dp = args;
-    FILE *fp;
-    if ( (fp= fopen(dp->fname,"r")) != 0 )
-    {
-        // add_websocket(dp->daemonid); this is automatic
-        (*dp->daemonfunc)(fp,dp->cmd,dp->fname,dp->daemonid);
-        fclose(fp);
-    }
-    printf("daemonid.%llu (%s %s) finished\n",(long long)dp->daemonid,dp->cmd,dp->fname);
+    (*dp->daemonfunc)(dp->cmd,dp->arg,dp->daemonid);
+    printf("daemonid.%llu (%s %s) finished\n",(long long)dp->daemonid,dp->cmd,dp->arg);
     dp->finished = 1;
     while ( dp->dereferenced == 0 )
         sleep(1);
-    printf("daemonid.%llu (%s %s) dereferenced\n",(long long)dp->daemonid,dp->cmd,dp->fname);
+    printf("daemonid.%llu (%s %s) dereferenced\n",(long long)dp->daemonid,dp->cmd,dp->arg);
     if ( dp->daemonsock >= 0 )
         nn_shutdown(dp->daemonsock,0);
-    free(dp->cmd), free(dp->fname), free(dp);
+    free(dp->cmd), free(dp->arg), free(dp);
     return(0);
 }
 
-char *launch_daemon(int32_t isws,char *cmd,char *fname,void (*daemonfunc)(FILE *fp,char *cmd,char *fname,uint64_t daemonid))
+char *launch_daemon(int32_t isws,char *cmd,char *arg,void (*daemonfunc)(char *cmd,char *fname,uint64_t daemonid))
 {
     struct daemon_info *dp;
     char retbuf[1024];
     int32_t daemonsock;
     uint64_t daemonid;
-    FILE *fp;
     if ( Numdaemons >= sizeof(Daemoninfos)/sizeof(*Daemoninfos) )
         return(clonestr("{\"error\":\"too many daemons, cant create anymore\"}"));
-    if ( (fp= fopen(fname,"r")) != 0 )
+    daemonid = (uint64_t)(milliseconds() * 1000000) & (~(uint64_t)1);
+    if ( (daemonsock= init_daemonsock(daemonid ^ 1)) >= 0 )
     {
-        fclose(fp);
-        daemonid = (uint64_t)(milliseconds() * 1000000) & (~(uint64_t)1);
-        if ( (daemonsock= init_daemonsock(daemonid ^ 1)) >= 0 )
+        dp = calloc(1,sizeof(*dp));
+        dp->cmd = clonestr(cmd);
+        dp->daemonid = daemonid;
+        dp->daemonsock = daemonsock;
+        dp->arg = clonestr(arg);
+        dp->daemonfunc = daemonfunc;
+        dp->isws = 1;
+        Daemoninfos[Numdaemons++] = dp;
+        if ( portable_thread_create((void *)daemon_loop,dp) == 0 )
         {
-            dp = calloc(1,sizeof(*dp));
-            dp->cmd = clonestr(cmd);
-            dp->daemonid = daemonid;
-            dp->daemonsock = daemonsock;
-            dp->fname = clonestr(fname);
-            dp->daemonfunc = daemonfunc;
-            dp->isws = 1;
-            Daemoninfos[Numdaemons++] = dp;
-            if ( portable_thread_create((void *)daemon_loop,dp) == 0 )
-            {
-                free(dp->cmd), free(dp->fname), free(dp);
-                nn_shutdown(dp->daemonsock,0);
-                return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
-            }
-            sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}",(long long)dp->daemonid);
-            return(clonestr(retbuf));
-        } else return(clonestr("{\"error\":\"cant create daemonsock\"}"));
-    } return(clonestr("{\"error\":\"cant open file to launch daemon\"}"));
+            free(dp->cmd), free(dp->arg), free(dp);
+            nn_shutdown(dp->daemonsock,0);
+            return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
+        }
+        sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}",(long long)dp->daemonid);
+        return(clonestr(retbuf));
+    }
+    return(clonestr("{\"error\":\"cant open file to launch daemon\"}"));
 }
 
-char *language_func(int32_t isws,int32_t launchflag,char *cmd,char *fname,void (*daemonfunc)(FILE *fp,char *cmd,char *fname,uint64_t daemonid))
+char *language_func(int32_t isws,int32_t launchflag,char *cmd,char *fname,void (*daemonfunc)(char *cmd,char *fname,uint64_t daemonid))
 {
-    FILE *fp;
     char buffer[MAX_LEN+1] = { 0 };
     int out_pipe[2];
     int saved_stdout;
@@ -213,11 +202,7 @@ char *language_func(int32_t isws,int32_t launchflag,char *cmd,char *fname,void (
         return(clonestr("{\"error\":\"pipe creation error\"}"));
     dup2(out_pipe[1], STDOUT_FILENO);
     close(out_pipe[1]);
-    if ( (fp= fopen(fname,"r")) != 0 )
-    {
-        (*daemonfunc)(fp,cmd,fname,0);
-        fclose(fp);
-    }
+    (*daemonfunc)(cmd,fname,0);
     fflush(stdout);
     read(out_pipe[0],buffer,MAX_LEN);
     dup2(saved_stdout,STDOUT_FILENO);
@@ -262,17 +247,22 @@ int file_exists(char *filename)
     return(stat(filename,&buffer) == 0);
 }
 
-void call_python(FILE *fp,char *cmd,char *fname,uint64_t daemonid)
+void call_python(char *cmd,char *fname,uint64_t daemonid)
 {
-    Py_Initialize();
-    PyRun_SimpleFile(fp,fname);
-    Py_Finalize();
+    FILE *fp;
+    if ( (fp= fopen(fname,"r")) != 0 )
+    {
+        Py_Initialize();
+        PyRun_SimpleFile(fp,fname);
+        Py_Finalize();
+        fclose(fp);
+    }
 }
 
-void call_system(FILE *fp,char *cmd,char *arg,uint64_t daemonid)
+void call_system(char *arg,char *fname,uint64_t daemonid)
 {
     char cmdstr[MAX_JSON_FIELD];
-    sprintf(cmdstr,"%s %llu %s",cmd,(long long)daemonid,arg);
+    sprintf(cmdstr,"%s %llu %s",fname,(long long)daemonid,arg);
     printf("SYSTEM.(%s)\n",cmdstr);
     system(cmdstr);
 }
@@ -357,6 +347,7 @@ char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     launchflag = get_API_int(objs[1],0);
     isws = get_API_int(objs[2],0);
     copy_cJSON(arg,objs[3]);
+    printf("isws.%d launchflag.%d syscall.(%s) arg.(%s)\n",isws,launchflag,syscall,arg);
     return(language_func(isws,launchflag,syscall,arg,call_system));
 }
 
