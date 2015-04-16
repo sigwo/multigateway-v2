@@ -793,7 +793,7 @@ void init_exchange(cJSON *json)
                 break;
             }
         }
-        if ( parse != 0 && (exchange= find_exchange(name,parse,supports)) != 0 )
+        if ( parse != 0 && (exchange= find_exchange(name,parse,(int32_t (*)(int32_t, uint64_t *, int32_t, uint64_t, uint64_t))supports)) != 0 )
         {
             exchange->pollgap = get_API_int(cJSON_GetObjectItem(json,"pollgap"),POLLGAP);
             extract_cJSON_str(exchange->apikey,sizeof(exchange->apikey),json,"key");

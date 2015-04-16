@@ -174,7 +174,7 @@ char *launch_daemon(int32_t isws,char *cmd,char *arg,void (*daemonfunc)(char *cm
         dp->cmd = clonestr(cmd);
         dp->daemonid = daemonid;
         dp->daemonsock = daemonsock;
-        dp->arg = clonestr(arg!=0?arg:"");
+        dp->arg = (arg != 0) ? clonestr(arg) : 0;
         dp->daemonfunc = daemonfunc;
         dp->isws = 1;
         Daemoninfos[Numdaemons++] = dp;

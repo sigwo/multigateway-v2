@@ -66,6 +66,7 @@ int main(int argc,const char *argv[])
         }
         nn_shutdown(sock,0);
     }
+    printf("plugin.(%s) exiting\n",argv[0]);
     return(0);
 }
 
