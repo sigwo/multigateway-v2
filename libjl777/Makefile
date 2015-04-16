@@ -29,7 +29,7 @@ test:	all
 clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
-plugins: echo
+plugins: doesntexist; \
 	rm echo; gcc -o echo plugin.c -I includes libs/libnanomsg.a -lpthread -lanl
 
 SuperNET: $(TARGET); \

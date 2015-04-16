@@ -148,11 +148,11 @@ void *daemon_loop(void *args)
 {
     struct daemon_info *dp = args;
     (*dp->daemonfunc)(dp->cmd,dp->arg,dp->daemonid);
-    printf("daemonid.%llu (%s %s) finished\n",(long long)dp->daemonid,dp->cmd,dp->arg);
+    printf("daemonid.%llu (%s %s) finished\n",(long long)dp->daemonid,dp->cmd,dp->arg!=0?dp->arg:"");
     dp->finished = 1;
     while ( dp->dereferenced == 0 )
         sleep(1);
-    printf("daemonid.%llu (%s %s) dereferenced\n",(long long)dp->daemonid,dp->cmd,dp->arg);
+    printf("daemonid.%llu (%s %s) dereferenced\n",(long long)dp->daemonid,dp->cmd,dp->arg!=0?dp->arg:"");
     if ( dp->daemonsock >= 0 )
         nn_shutdown(dp->daemonsock,0);
     free(dp->cmd), free(dp->arg), free(dp);
@@ -262,7 +262,7 @@ void call_python(char *cmd,char *fname,uint64_t daemonid)
 void call_system(char *cmd,char *arg,uint64_t daemonid)
 {
     char cmdstr[MAX_JSON_FIELD];
-    sprintf(cmdstr,"%s %llu %s",cmd,(long long)daemonid,arg!=0?arg:"");
+    sprintf(cmdstr,"%s %llu %s",cmd,(long long)daemonid,arg!=0?arg:" ");
     printf("SYSTEM.(%s)\n",cmdstr);
     system(cmdstr);
 }
