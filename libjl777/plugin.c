@@ -19,7 +19,7 @@ int32_t process_plugin_json(char *retbuf,long max,char *jsonstr)
 int32_t init_daemonsock(uint64_t daemonid,int32_t timeoutmillis)
 {
     int32_t sock,err;
-    char addr[MAX_JSON_FIELD];
+    char addr[64];
     sprintf(addr,"ipc://%llu",(long long)daemonid);
     if ( (sock= nn_socket(AF_SP,NN_BUS)) < 0 )
     {

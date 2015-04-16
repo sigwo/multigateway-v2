@@ -269,10 +269,11 @@ void call_python(FILE *fp,char *cmd,char *fname,uint64_t daemonid)
     Py_Finalize();
 }
 
-void call_system(FILE *fp,char *cmd,char *fname,uint64_t daemonid)
+void call_system(FILE *fp,char *cmd,char *arg,uint64_t daemonid)
 {
-    char cmdstr[1024];
-    sprintf(cmdstr,"%s %s %llu",cmd,fname,(long long)daemonid);
+    char cmdstr[MAX_JSON_FIELD];
+    sprintf(cmdstr,"%s %llu %s",cmd,arg,(long long)daemonid);
+    printf("SYSTEM.(%s)\n",cmdstr);
     system(cmdstr);
 }
 
@@ -348,15 +349,15 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
 
 char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char fname[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD];
+    char arg[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD];
     int32_t launchflag,isws;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
-    copy_cJSON(fname,objs[0]);
+    copy_cJSON(arg,objs[0]);
     launchflag = get_API_int(objs[1],0);
     isws = get_API_int(objs[2],0);
     copy_cJSON(syscall,objs[3]);
-    return(language_func(isws,launchflag,syscall,fname,call_system));
+    return(language_func(isws,launchflag,syscall,arg,call_system));
 }
 
 #endif
