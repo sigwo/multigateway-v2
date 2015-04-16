@@ -29,6 +29,9 @@ test:	all
 clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
+plugin: plugin
+	rm plugin; gcc -o plugin plugin.c -I includes libs/libnanomsg.a
+
 SuperNET: $(TARGET); \
     pkill SuperNET; rm SuperNET; gcc -o SuperNET SuperNET.c libs/libminiupnpc.a libs/libjl777.a libs/libnanomsg.a  libs/libpython3.4m.a libs/libwebsockets.a libs/libuv.a libs/libdb.a -lssl -lcrypto -lpthread -lcurl -lm -lz -ldl -lutil -lpcre -lexpat -lanl
 
@@ -74,7 +77,7 @@ nanomsg:  doesntexist; \
     git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make; make check; cp .libs/libnanomsg.a ../libs; cp src/*.h ../includes; cd ..
 
 python: doesntexist; \
-    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; make libpython3.so; make all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
+    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; make all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
 
 patch: doesntexist; \
     #sudo apt-get install csync-owncloud librsync-dev libsmbclient-dev liblog4c-dev flex libsqlite3-dev bison csync2; \

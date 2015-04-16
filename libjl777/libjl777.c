@@ -748,7 +748,7 @@ struct per_session_data { uint64_t daemonid; struct daemon_info *dp; };
 static int callback_websockets(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user, void *in,size_t len)
 {
     uint64_t daemonid = 0;
-	int32_t n,m;
+	int32_t n;
     char *str = 0;
     struct daemon_info *dp;
 	struct per_session_data *pss = (struct per_session_data *)user;
@@ -772,10 +772,10 @@ static int callback_websockets(struct libwebsocket_context *context,struct libwe
         case LWS_CALLBACK_SERVER_WRITEABLE:
             if ( (dp= pss->dp) != 0 && (str= queue_dequeue(&dp->messages)) != 0 )
             {
-                m = libwebsocket_write(wsi,(uint8_t *)str,(int32_t)len,LWS_WRITE_TEXT);
-                printf("wrote (%s).%ld to wsi, got %d\n",str,len,m);
+                n = libwebsocket_write(wsi,(uint8_t *)str,(int32_t)len,LWS_WRITE_TEXT);
+                printf("wrote (%s).%ld to wsi, got %d\n",str,len,n);
                 nn_freemsg(str);
-                if ( m < n )
+                if ( n < len )
                 {
                     lwsl_err("ERROR %ld writing to di socket\n",len);
                     return(-1);
