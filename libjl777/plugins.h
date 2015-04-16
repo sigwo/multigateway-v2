@@ -130,6 +130,7 @@ int32_t poll_daemons()
 {
     struct nn_pollfd pfd[sizeof(Daemoninfos)/sizeof(*Daemoninfos)];
     int32_t flag,len,processed=0,rc,i,n = 0;
+    char request[MAX_JSON_FIELD],*retstr;
     uint64_t instanceid;
     struct daemon_info *dp;
     cJSON *json;
@@ -173,8 +174,20 @@ int32_t poll_daemons()
                                 if ( (json= cJSON_Parse(msg)) != 0 )
                                 {
                                     if ( (instanceid= get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"))) != 0 )
+                                    {
                                         if ( add_instanceid(dp,instanceid) != 0 )
                                             connect_instanceid(dp,instanceid);
+                                    }
+                                    copy_cJSON(request,cJSON_GetObjectItem(json,"pluginrequest"));
+                                    if ( strcmp(request,"SuperNET") == 0 )
+                                    {
+                                        char *SuperNET_JSON(char *JSONstr);
+                                        if ( (retstr= SuperNET_JSON(msg)) != 0 )
+                                        {
+                                            nn_send(dp->daemonsock,retstr,(int32_t)strlen(retstr)+1,0);
+                                            free(retstr);
+                                        }
+                                    }
                                 } else printf("parse error.(%s)\n",msg);
                                 if ( dp->websocket == 0 )
                                     queue_enqueue("daemon",&dp->messages,msg);
