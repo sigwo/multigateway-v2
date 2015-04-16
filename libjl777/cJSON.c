@@ -915,6 +915,20 @@ cJSON *gen_list_json(char **list)
     return(array);
 }
 
+uint64_t get_API_nxt64bits(cJSON *obj)
+{
+    uint64_t nxt64bits = 0;
+    char buf[MAX_JSON_FIELD+2];
+    if ( obj != 0 )
+    {
+        if ( is_cJSON_Number(obj) != 0 )
+            return((uint64_t)obj->valuedouble);
+        copy_cJSON(buf,obj);
+        nxt64bits = calc_nxt64bits(buf);
+    }
+    return(nxt64bits);
+}
+
 uint64_t get_satoshi_obj(cJSON *json,char *field)
 {
     int32_t i,n;
