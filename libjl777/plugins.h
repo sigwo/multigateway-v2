@@ -169,7 +169,7 @@ int32_t poll_daemons()
                     {
                         if ( (dp= Daemoninfos[i]) != 0 && dp->finished == 0 )
                         {
-                            if ( (len= nn_recv(dp->daemonsock,&msg,NN_MSG,0)) > 0 )
+                            while ( (len= nn_recv(dp->daemonsock,&msg,NN_MSG,0)) > 0 )
                             {
                                 printf(">>>>>>>>>> RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu\n",n,i,Numdaemons,msg,dp->cmd,(long long)dp->daemonid);
                                 nn_send(dp->daemonsock,msg,len,0);
@@ -191,10 +191,10 @@ int32_t poll_daemons()
                                         }
                                     }
                                 } else printf("parse error.(%s)\n",msg);
-                                if ( dp->websocket == 0 )
+                                if ( 0 && dp->websocket == 0 )
                                     queue_enqueue("daemon",&dp->messages,msg);
+                                processed++;
                             }
-                            processed++;
                         }
                     }
                 }

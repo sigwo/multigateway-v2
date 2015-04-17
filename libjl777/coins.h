@@ -798,6 +798,55 @@ void init_Specialaddrs()
     MGW_blacklist[n++] = "";
 }
 
+int32_t is_trusted_issuer(char *issuer)
+{
+    int32_t i,n;
+    cJSON *array;
+    uint64_t nxt64bits;
+    char str[MAX_JSON_FIELD];
+    array = cJSON_GetObjectItem(MGWconf,"issuers");
+    if ( array != 0 && is_cJSON_Array(array) != 0 )
+    {
+        n = cJSON_GetArraySize(array);
+        for (i=0; i<n; i++)
+        {
+            if ( array == 0 || n == 0 )
+                break;
+            copy_cJSON(str,cJSON_GetArrayItem(array,i));
+            if ( str[0] == 'N' && str[1] == 'X' && str[2] == 'T' )
+            {
+                nxt64bits = conv_rsacctstr(str,0);
+                printf("str.(%s) -> %llu\n",str,(long long)nxt64bits);
+                expand_nxt64bits(str,nxt64bits);
+            }
+            if ( strcmp(str,issuer) == 0 )
+                return(1);
+        }
+    }
+    return(0);
+}
+
+void init_SuperNET_whitelist()
+{
+    cJSON *array,*item;
+    int32_t i,n;
+    char ipaddr[MAX_JSON_FIELD];
+    array = cJSON_GetObjectItem(MGWconf,"whitelist");
+    if ( array != 0 && is_cJSON_Array(array) != 0 )
+    {
+        int32_t add_SuperNET_whitelist(char *ipaddr);
+        n = cJSON_GetArraySize(array);
+        for (i=0; i<n; i++)
+        {
+            if ( array == 0 || n == 0 )
+                break;
+            item = cJSON_GetArrayItem(array,i);
+            copy_cJSON(ipaddr,item);
+            add_SuperNET_whitelist(ipaddr);
+        }
+    }
+}
+
 void init_ram_MGWconfs(struct ramchain_info *ram,cJSON *confjson,char *MGWredemption,struct NXT_asset *ap)
 {
     cJSON *array,*item;
@@ -934,57 +983,9 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
     } //else printf("skip activate ramchains\n");
 }
 
-int32_t is_trusted_issuer(char *issuer)
-{
-    int32_t i,n;
-    cJSON *array;
-    uint64_t nxt64bits;
-    char str[MAX_JSON_FIELD];
-    array = cJSON_GetObjectItem(MGWconf,"issuers");
-    if ( array != 0 && is_cJSON_Array(array) != 0 )
-    {
-        n = cJSON_GetArraySize(array);
-        for (i=0; i<n; i++)
-        {
-            if ( array == 0 || n == 0 )
-                break;
-            copy_cJSON(str,cJSON_GetArrayItem(array,i));
-            if ( str[0] == 'N' && str[1] == 'X' && str[2] == 'T' )
-            {
-                nxt64bits = conv_rsacctstr(str,0);
-                printf("str.(%s) -> %llu\n",str,(long long)nxt64bits);
-                expand_nxt64bits(str,nxt64bits);
-            }
-            if ( strcmp(str,issuer) == 0 )
-                return(1);
-        }
-    }
-    return(0);
-}
-
-void init_SuperNET_whitelist()
-{
-    cJSON *array,*item;
-    int32_t i,n;
-    char ipaddr[MAX_JSON_FIELD];
-    array = cJSON_GetObjectItem(MGWconf,"whitelist");
-    if ( array != 0 && is_cJSON_Array(array) != 0 )
-    {
-        int32_t add_SuperNET_whitelist(char *ipaddr);
-        n = cJSON_GetArraySize(array);
-        for (i=0; i<n; i++)
-        {
-            if ( array == 0 || n == 0 )
-                break;
-            item = cJSON_GetArrayItem(array,i);
-            copy_cJSON(ipaddr,item);
-            add_SuperNET_whitelist(ipaddr);
-        }
-    }
-}
-
 void init_coinsarray(char *userdir,char *myipaddr)
 {
+    uint32_t get_blockheight(struct coin_info *cp);
     char *pubNXT,*BTCDaddr,*BTCaddr;
     cJSON *array,*item;
     char coinstr[MAX_JSON_FIELD];

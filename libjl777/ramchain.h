@@ -9724,5 +9724,6 @@ int32_t set_bridge_dispbuf(char *dispbuf,char *coinstr)
     }
     return(0);
 }
+
 #endif
 #endif

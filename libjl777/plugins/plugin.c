@@ -18,7 +18,7 @@
 #include "bus.h"
 #include "pair.h"
 #include "pubsub.h"
-#include "cJSON.c"
+#include "../cJSON.c"
 
 void randombytes(uint8_t *x,uint64_t xlen)
 {
@@ -154,7 +154,9 @@ int main(int argc,const char *argv[])
                 if ( (len= process_plugin_json(daemonid,sock,myid,retbuf,sizeof(retbuf),line)) > 1 )
                 {
                     printf("%s\n",retbuf), fflush(stdout);
-                    nn_send(sock,retbuf,len+1,0); // send the null terminator too
+                    int j;
+                    for (j=0; j<1000; j++)
+                        nn_send(sock,retbuf,len+1,0); // send the null terminator too
                 }
             }
         }
