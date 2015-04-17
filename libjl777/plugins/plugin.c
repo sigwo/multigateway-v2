@@ -47,16 +47,16 @@ int32_t mygetline(char *line,int32_t max)
 {
     struct timeval timeout;
     fd_set fdset;
-    int32_t s,len = 0;
+    int32_t s;
     line[0] = 0;
     FD_ZERO(&fdset);
     FD_SET(STDIN_FILENO,&fdset);
     timeout.tv_sec = 0, timeout.tv_usec = 100000;
     if ( (s= select(1,&fdset,NULL,NULL,&timeout)) < 0 )
         fprintf(stderr,"wait_for_input: error select s.%d\n",s);
-    else if ( FD_ISSET(STDIN_FILENO,&fdset) == 0 || (len= (int32_t)fgets(line,max,stdin)) <= 0 )
+    else if ( FD_ISSET(STDIN_FILENO,&fdset) == 0 || fgets(line,max,stdin) != 0 )
         return(-1);//sprintf(retbuf,"{\"result\":\"no messages\",\"myid\":\"%llu\",\"counter\":%d}",(long long)myid,counter), retbuf[0] = 0;
-    return(len);
+    return(strlen(line));
 }
 
 int32_t get_newinput(char *line,int32_t max,int32_t sock,int32_t timeoutmillis)
