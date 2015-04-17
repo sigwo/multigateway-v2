@@ -251,7 +251,7 @@ void SuperNET_idler(uv_idle_t *handle)
     if ( Finished_init == 0 || IS_LIBTEST == 7 )
         return;
     millis = milliseconds();//((double)uv_hrtime() / 1000000);
-    for (i=0; i<10; i++)
+    for (i=0; i<100; i++)
         if ( poll_daemons() <= 0 )
             break;
     if ( millis > (lastattempt + APISLEEP) )

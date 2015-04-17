@@ -172,7 +172,7 @@ int32_t process_plugin_json(int32_t permanentflag,uint64_t daemonid,int32_t sock
         {
             if ( sender == daemonid )
                 process_daemon_json(jsonstr,json);
-            else printf("process message from %llu: (%s)\n",(long long)sender,jsonstr), fflush(stdout);
+            else if ( sender != 0 ) printf("process message from %llu: (%s)\n",(long long)sender,jsonstr), fflush(stdout);
         } else printf("gotack.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
     }
     else
@@ -210,14 +210,16 @@ int main(int argc,const char *argv[])
             {
                 if ( line[len-1] == '\n' )
                     line[--len] = 0;
-                printf("<<<<<<<<<<<<<< RECEIVED (%s).%d -> daemonid.%llu PERM.%d\n",line,len,(long long)daemonid,permanentflag), fflush(stdout);
+                counter++;
+                //if ( (rand() % 1000) == 0 )
+                printf("%d <<<<<<<<<<<<<< RECEIVED (%s).%d -> daemonid.%llu PERM.%d\n",counter,line,len,(long long)daemonid,permanentflag), fflush(stdout);
                 if ( (len= process_plugin_json(permanentflag,daemonid,sock,myid,retbuf,sizeof(retbuf),line)) > 1 )
                 {
                     printf("%s\n",retbuf), fflush(stdout);
                     nn_send(sock,retbuf,len+1,0); // send the null terminator too
                 }
             }
-            if ( permanentflag == 0 )
+            if ( 0 && permanentflag == 0 )
             {
                 //sleep(3);
                 //printf("hello\n"), fflush(stdout);

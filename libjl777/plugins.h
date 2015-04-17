@@ -124,12 +124,12 @@ int32_t init_daemonsock(int32_t permanentflag,uint64_t daemonid)
 
 int32_t poll_daemons()
 {
-    static int counter;
+    static int counter,processed=0;
     struct nn_pollfd pfd[sizeof(Daemoninfos)/sizeof(*Daemoninfos)];
-    int32_t flag,len,permflag,processed=0,timeoutmillis,rc,i,n = 0;
+    int32_t flag,len,permflag,timeoutmillis,rc,i,n = 0;
     char request[MAX_JSON_FIELD],*retstr,*str;
     uint64_t instanceid;
-    struct daemon_info *dp,*firstdp = 0;
+    struct daemon_info *dp;
     cJSON *json;
     char *msg;
     timeoutmillis = 1;
@@ -166,12 +166,11 @@ int32_t poll_daemons()
                     {
                         if ( (dp= Daemoninfos[i]) != 0 && dp->finished == 0 )
                         {
-                            if ( firstdp == 0 )
-                                firstdp = dp;
                             if ( (len= nn_recv((counter & 1) == 0 ? dp->daemonsock : dp->pairsock,&msg,NN_MSG,0)) > 0 )
                             {
                                 str = clonestr(msg);
                                 nn_freemsg(msg);
+                                //if ( (processed % 1000) == 0 )
                                 printf("%d %.6f >>>>>>>>>> RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu\n",processed,milliseconds(),n,i,Numdaemons,str,dp->cmd,(long long)dp->daemonid);
                                 //nn_send(dp->daemonsock,str,len,0);
                                 nn_send(dp->pairsock,str,len,0);
@@ -206,9 +205,6 @@ int32_t poll_daemons()
             else if ( rc < 0 )
                 printf("Error polling daemons.%d\n",rc);
         }
-        if ( 0 && firstdp != 0 )
-            nn_send(firstdp->pairsock,"hello",6,0);
-
         if ( flag != 0 )
         {
             static portable_mutex_t mutex; static int didinit;
