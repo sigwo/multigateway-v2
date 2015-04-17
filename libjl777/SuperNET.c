@@ -844,122 +844,28 @@ bits256 transparent_forging(char *nextgensig,uint32_t height,bits256 *NXTpubkeys
     return(NXTpubkeys[winner]);
 }
 
-
-/*
-
-// seconds to forge from last block: hit / ( basetarget * effective balanceNXT)
-var nbst = Math.floor((((blk.baseTarget*accum2)/60)/153722867)*100);
-if(nbst < bst/2) nbst = bst/2;
-if(nbst > bst*2) nbst = bst*2;
-var rbst = Math.floor((((blk.baseTarget*lasttime)/60)/153722867)*100);
-
-*/
-//#include <stdlib.h>
-
 int main(int argc,const char *argv[])
 {
     FILE *fp;
     cJSON *json = 0;
     int32_t retval = -666;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
-    
-#ifdef __APPLE__
-#define BTCe_GETINFO 3
-    if ( 0 )
-    {
-        char *issue_BTCe(int cmd,char *arg,double price,double amount);
-        char *init_MGWconf(char *JSON_or_fname,char *myipaddr);
-        init_MGWconf("SuperNET.conf",0);
-        printf("%s\n",issue_BTCe(BTCe_GETINFO,"",0,0)); getchar();
-    }
-    
-#else
-    if ( 1 && argc > 1 && strcmp(argv[1],"genfiles") == 0 )
-#endif
-    {
-        void *process_ramchains(void *argcoinstr);
-        void *args[4];
-        retval = SuperNET_start("SuperNET.conf","127.0.0.1");
-        memset(args,0,sizeof(args));
-#ifdef __APPLE__
-        args[0] = "BTCD";
-        *(long *)&args[1] = 0;
-        *(long *)&args[2] = 2;
-#else
-        if ( argc > 2 )
-             args[0] = (char *)argv[2];
-        else args[0] = 0;
-        if ( argc > 4 )
-        {
-            *(long *)&args[1] = atol(argv[3]);
-            *(long *)&args[2] = atol(argv[4]);
-        }
-#endif
-        if ( IS_LIBTEST == 7 )
-        {
-            printf(">>>>>>>>>>>>> process coinblocks.(%s)\n",(char *)args[0]);
-            process_ramchains(args);
-            printf("finished genfiles.(%s)\n",(char *)(args[0]!=0?args[0]:""));
-            getchar();
-        }
-    }
-#ifdef fortesting
-    if ( 0 )
-    {
-        void huff_iteminit(struct huffitem *hip,void *ptr,int32_t size,int32_t isptr,int32_t ishex);
-        char *p,buff[1024];//,*str = "this is an example for huffman encoding";
-        int i,c,n,numinds = 256;
-        int probs[256];
-        //struct huffcode *huff;
-        struct huffitem *items = calloc(numinds,sizeof(*items));
-        int testhuffcode(char *str,struct huffitem *freqs,int32_t numinds);
-        for (i=0; i<numinds; i++)
-            huff_iteminit(&items[i],&i,1,0,0);
-        while ( 1 )
-        {
-            for (i=0; i<256; i++)
-                probs[i] = ((rand()>>8) % 1000);
-            for (i=n=0; i<128; i++)
-            {
-                c = (rand() >> 8) & 0xff;
-                while ( c > 0 && ((rand()>>8) % 1000) > probs[c] )
-                {
-                    buff[n++] = (c % 64) + ' ';
-                    if ( n >= sizeof(buff)-1 )
-                        break;
-                }
-            }
-            buff[n] = 0;
-            for (i=0; i<numinds; i++)
-                items[i].freq = 0;
-            p = buff;
-            while ( *p != '\0' )
-                items[*p++].freq++;
-            testhuffcode(0,items,numinds);
-            fprintf(stderr,"*");
-        }
-        //getchar();
-    }
-#endif
     IS_LIBTEST = 1;
     if ( argc > 1 && argv[1] != 0 )
     {
         char *init_MGWconf(char *JSON_or_fname,char *myipaddr);
         //printf("ARGV1.(%s)\n",argv[1]);
-        if ( (argv[1][0] == '{' || argv[1][0] == '[') )
+        if ( (json= cJSON_Parse(argv[1])) != 0 )
         {
-            if ( (json= cJSON_Parse(argv[1])) != 0 )
+            Debuglevel = IS_LIBTEST = -1;
+            init_MGWconf(argv[2] != 0 ? (char *)argv[2] : "SuperNET.conf",0);
+            if ( (retstr= process_commandline_json(json)) != 0 )
             {
-                Debuglevel = IS_LIBTEST = -1;
-                init_MGWconf(argv[2] != 0 ? (char *)argv[2] : "SuperNET.conf",0);
-                if ( (retstr= process_commandline_json(json)) != 0 )
-                {
-                    printf("%s\n",retstr);
-                    free(retstr);
-                }
-                free_json(json);
-                return(0);
+                printf("%s\n",retstr);
+                free(retstr);
             }
+            free_json(json);
+            return(0);
         }
         else strcpy(ipaddr,argv[1]);
     }
@@ -970,10 +876,6 @@ int main(int argc,const char *argv[])
     oldport = newport = portstr;
     if ( UPNP != 0 && upnpredirect(oldport,newport,"UDP","SuperNET_https") == 0 )
         printf("TEST ERROR: failed redirect (%s) to (%s)\n",oldport,newport);
-    //sprintf(portstr,"%d",SUPERNET_PORT+1);
-    //oldport = newport = portstr;
-    //if ( upnpredirect(oldport,newport,"UDP","SuperNET_http") == 0 )
-    //    printf("TEST ERROR: failed redirect (%s) to (%s)\n",oldport,newport);
     printf("saving retval.%x (%d usessl.%d) UPNP.%d MULTIPORT.%d\n",retval,retval>>1,retval&1,UPNP,MULTIPORT);
     if ( (fp= fopen("horrible.hack","wb+")) != 0 )
     {
@@ -983,20 +885,11 @@ int main(int argc,const char *argv[])
     if ( Debuglevel > 0 )
         system("git log | head -n 1");
     if ( retval >= 0 && ENABLE_GUIPOLL != 0 )
-    {
         GUIpoll_loop(ipaddr);
-        //if ( portable_thread_create((void *)GUIpoll_loop,ipaddr) == 0 )
-        //    printf("ERROR hist process_hashtablequeues\n");
-    }
-    while ( 1 )
-    {
-        //extern void do_bridge_things();
-        //do_bridge_things();
-        sleep(20);
-    }
+    while ( 1 ) sleep(20);
     return(0);
 }
-
+//#include "child.h"
 
 // stubs
 int32_t SuperNET_broadcast(char *msg,int32_t duration) { return(0); }

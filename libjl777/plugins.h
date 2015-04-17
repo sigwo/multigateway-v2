@@ -124,9 +124,9 @@ int32_t init_daemonsock(int32_t permanentflag,uint64_t daemonid)
 
 int32_t poll_daemons()
 {
-    static int counter,processed=0;
+    static int counter=0;
     struct nn_pollfd pfd[sizeof(Daemoninfos)/sizeof(*Daemoninfos)];
-    int32_t flag,len,permflag,timeoutmillis,rc,i,n = 0;
+    int32_t flag,len,permflag,timeoutmillis,processed=0,rc,i,n = 0;
     char request[MAX_JSON_FIELD],*retstr,*str;
     uint64_t instanceid;
     struct daemon_info *dp;
@@ -170,7 +170,8 @@ int32_t poll_daemons()
                             {
                                 str = clonestr(msg);
                                 nn_freemsg(msg);
-                                //if ( (processed % 1000) == 0 )
+                                processed++;
+                                //if ( (counter % 1000) == 0 )
                                 printf("%d %.6f >>>>>>>>>> RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu\n",processed,milliseconds(),n,i,Numdaemons,str,dp->cmd,(long long)dp->daemonid);
                                 //nn_send(dp->daemonsock,str,len,0);
                                 nn_send(dp->pairsock,str,len,0);
@@ -196,7 +197,6 @@ int32_t poll_daemons()
                                 } else printf("parse error.(%s)\n",str);
                                 if ( 0 && dp->websocket == 0 )
                                     queue_enqueue("daemon",&dp->messages,str);
-                                processed++;
                             }
                         }
                     }
@@ -300,8 +300,7 @@ char *launch_daemon(int32_t websocket,char *cmd,char *arg,void (*daemonfunc)(int
         if ( portable_thread_create((void *)daemon_loop,dp) == 0 )
         {
             free(dp->cmd), free(dp->arg), free(dp);
-            //nn_shutdown(dp->daemonsock,0);
-            //nn_shutdown(dp->pairsock,0);
+            nn_shutdown(dp->daemonsock,0);
             return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
         }
         sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}\n",(long long)dp->daemonid);

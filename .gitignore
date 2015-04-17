@@ -83,3 +83,5 @@ libjl777/includes/lws_config.h
 src/leveldb/db/db_test.cc
 
 foo
+
+libjl777/plugins/echo.perm

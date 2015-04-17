@@ -225,6 +225,7 @@ int main(int argc,const char *argv[])
                 //printf("hello\n"), fflush(stdout);
                 nn_send(sock,"{\"hello\":\"test\"}",strlen("{\"hello\":\"test\"}")+1,0); // send the null terminator too
             }
+            usleep(1000);
         }
         nn_shutdown(sock,0);
     }
