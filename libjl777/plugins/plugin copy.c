@@ -95,71 +95,64 @@ uint32_t wait_for_sendable(int32_t sock)
     return(0);
 }
 
-int32_t get_newinput(int32_t permanentflag,char *line,int32_t max,int32_t sock,int32_t timeoutmillis)
+int32_t get_newinput(char *line,int32_t max,int32_t sock,int32_t timeoutmillis)
 {
     int32_t rc,len;
     char *jsonstr = 0;
     line[0] = 0;
-    if ( (permanentflag != 0 || ((rc= get_socket_status(sock,timeoutmillis)) > 0 && (rc & NN_POLLIN) != 0)) && (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
+    if ( (rc= get_socket_status(sock,timeoutmillis)) > 0 && (rc & NN_POLLIN) != 0 && (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
     {
         strncpy(line,jsonstr,max-1);
         line[max-1] = 0;
         nn_freemsg(jsonstr);
     }
-    else if ( permanentflag == 0 )
-        mygetline(line,max);
+    else mygetline(line,max);
     return((int32_t)strlen(line));
 }
 
-int32_t init_daemonsock(int32_t permanentflag,uint64_t myid,uint64_t daemonid,int32_t timeoutmillis)
+int32_t init_daemonsock(int32_t *pairsockp,uint64_t myid,uint64_t daemonid,int32_t timeoutmillis)
 {
     int32_t sock,err;
     char addr[64];
-    if ( permanentflag == 0 )
+    sprintf(addr,"ipc://%llu",(long long)myid);
+    /*if ( (*pairsockp= nn_socket(AF_SP,NN_PAIR)) < 0 )
     {
-        if ( (sock= nn_socket(AF_SP,NN_BUS)) < 0 )
-        {
-            printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
-            return(-1);
-        }
-        sprintf(addr,"ipc://%llu",(long long)daemonid);
-        if ( (err= nn_connect(sock,addr)) < 0 )
-        {
-            printf("error %d nn_connect err.%s (%llu to %s)\n",sock,nn_strerror(nn_errno()),(long long)daemonid,addr);
-            return(-1);
-        }
+        printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
+        return(-1);
     }
-    else
+    if ( (err= nn_bind(*pairsockp,addr)) < 0 )
     {
-        sprintf(addr,"ipc://%llu",(long long)daemonid+1);
-        if ( (sock= nn_socket(AF_SP,NN_BUS)) < 0 )
-        {
-            printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
-            return(-1);
-        }
-        if ( 1 && (err= nn_bind(sock,addr)) < 0 )
-        {
-            printf("error %d nn_bind.%d (%s) | %s\n",err,sock,addr,nn_strerror(nn_errno()));
-            return(-1);
-        }
-        sprintf(addr,"ipc://%llu",(long long)daemonid+2);
-        if ( 0 && (err= nn_connect(sock,addr)) < 0 )
-        {
-            printf("error %d nn_connect err.%s (%llu to %s)\n",sock,nn_strerror(nn_errno()),(long long)daemonid,addr);
-            return(-1);
-        }
+        printf("error %d nn_bind.%d (%s) | %s\n",err,sock,addr,nn_strerror(nn_errno()));
+        return(-1);
+    }*/
+    if ( (sock= nn_socket(AF_SP,NN_PAIR)) < 0 )
+    {
+        printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
+        return(-1);
     }
-    //nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
-    printf("daemonsock: %d nn_connect (%llu <-> %s)\n",sock,(long long)daemonid,addr);
+    if ( (err= nn_bind(sock,addr)) < 0 )
+    {
+        printf("error %d nn_bind.%d (%s) | %s\n",err,sock,addr,nn_strerror(nn_errno()));
+        return(-1);
+    }
+    sprintf(addr,"ipc://%llu",(long long)daemonid);
+    if ( (err= nn_connect(sock,addr)) < 0 )
+    {
+        printf("error %d nn_connect err.%s (%llu to %s)\n",sock,nn_strerror(nn_errno()),(long long)daemonid,addr);
+        return(-1);
+    }
+    //printf("reuse.%d\n",nn_setsockopt(sock,NN_SOL_SOCKET,SO_REUSEADDR ,&timeoutmillis,sizeof(timeoutmillis)));
+    //nn_setsockopt(*pairsockp,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
+    printf("bussock: %d nn_connect (%llu <-> %s) pairsock.%d bound to %llu\n",sock,(long long)daemonid,addr,*pairsockp,(long long)myid);
     return(sock);
 }
 
 void process_daemon_json(char *jsonstr,cJSON *json)
 {
-    printf("host.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
+    //printf("host.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
 }
 
-int32_t process_plugin_json(int32_t permanentflag,uint64_t daemonid,int32_t sock,uint64_t myid,char *retbuf,long max,char *jsonstr)
+int32_t process_plugin_json(uint64_t daemonid,uint64_t myid,char *retbuf,long max,char *jsonstr)
 {
     int32_t err,i,n,len = (int32_t)strlen(jsonstr);
     cJSON *json,*array;
@@ -173,7 +166,7 @@ int32_t process_plugin_json(int32_t permanentflag,uint64_t daemonid,int32_t sock
             if ( sender == daemonid )
                 process_daemon_json(jsonstr,json);
             else printf("process message from %llu: (%s)\n",(long long)sender,jsonstr), fflush(stdout);
-        } else printf("gotack.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
+        } //else printf("gotack.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
     }
     else
     {
@@ -181,7 +174,7 @@ int32_t process_plugin_json(int32_t permanentflag,uint64_t daemonid,int32_t sock
             jsonstr[--len] = 0;
         if ( strcmp(jsonstr,"getpeers") == 0 )
             sprintf(retbuf,"{\"pluginrequest\":\"SuperNET\",\"requestType\":\"getpeers\"}");
-        else sprintf(retbuf,"{\"result\":\"echo\",\"permanent\":%d,\"myid\":\"%llu\",\"message\":\"%s\",\"millis\":%f}",permanentflag,(long long)myid,jsonstr,milliseconds());
+        else sprintf(retbuf,"{\"result\":\"echo\",\"myid\":\"%llu\",\"message\":\"%s\",\"millis\":%f}",(long long)myid,jsonstr,milliseconds());
     }
     return(strlen(retbuf));
 }
@@ -189,43 +182,36 @@ int32_t process_plugin_json(int32_t permanentflag,uint64_t daemonid,int32_t sock
 int main(int argc,const char *argv[])
 {
     uint64_t daemonid,myid;
-    int32_t permanentflag,rc,sock,len,timeout,counter = 0;
+    int32_t rc,sock,pairsock,len,counter = 0;
     char line[8192],retbuf[8192],*retstr;
-    fprintf(stderr,"(%s).argc%d\n",argv[0],argc);
     if ( argc < 2 )
     {
         printf("usage: %s <daemonid>\n",argv[0]), fflush(stdout);
         return(-1);
     }
-    timeout = 1;
     daemonid = atol(argv[1]);
     randombytes((uint8_t *)&myid,sizeof(myid));
-    permanentflag = (argc > 2);
-    fprintf(stderr,"argc.%d: myid.%llu daemonid.%llu\n",argc,(long long)myid,(long long)daemonid);
-    if ( (sock= init_daemonsock(permanentflag,myid,daemonid,timeout)) >= 0 )
+    if ( (sock= init_daemonsock(&pairsock,myid,daemonid,1)) >= 0 )//&& pairsock >= 0 )
     {
         while ( 1 )
         {
-            if ( (len= get_newinput(permanentflag,line,sizeof(line),sock,timeout)) > 0 )
+            counter++;
+            if ( (len= get_newinput(line,sizeof(line),(counter & 1) ? sock : pairsock,1)) > 0 )
             {
                 if ( line[len-1] == '\n' )
                     line[--len] = 0;
-                printf("<<<<<<<<<<<<<< RECEIVED (%s).%d -> daemonid.%llu PERM.%d\n",line,len,(long long)daemonid,permanentflag), fflush(stdout);
-                if ( (len= process_plugin_json(permanentflag,daemonid,sock,myid,retbuf,sizeof(retbuf),line)) > 1 )
+                //printf("<<<<<<<<<<<<<< RECEIVED (%s).%d -> daemonid.%llu\n",line,len,(long long)daemonid), fflush(stdout);
+                if ( (len= process_plugin_json(daemonid,myid,retbuf,sizeof(retbuf),line)) > 1 )
                 {
                     printf("%s\n",retbuf), fflush(stdout);
                     nn_send(sock,retbuf,len+1,0); // send the null terminator too
                 }
             }
-            if ( 0 && permanentflag != 0 )
-            {
-                sleep(3);
-                //printf("hello\n"), fflush(stdout);
-                nn_send(sock,"{\"hello\":\"test\"}",strlen("{\"hello\":\"test\"}")+1,0); // send the null terminator too
-            }
         }
+        nn_shutdown(pairsock,0);
         nn_shutdown(sock,0);
     }
     printf("plugin.(%s) exiting\n",argv[0]), fflush(stdout);
     return(0);
 }
+
