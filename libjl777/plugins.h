@@ -325,7 +325,7 @@ int file_exists(char *filename)
     return(stat(filename,&buffer) == 0);
 }
 
-void call_python(int32_t websocket,char *cmd,char *fname,uint64_t daemonid)
+/*void call_python(int32_t websocket,char *cmd,char *fname,uint64_t daemonid)
 {
     FILE *fp;
     if ( (fp= fopen(fname,"r")) != 0 )
@@ -335,7 +335,7 @@ void call_python(int32_t websocket,char *cmd,char *fname,uint64_t daemonid)
         Py_Finalize();
         fclose(fp);
     }
-}
+}*/
 
 void call_system(int32_t websocket,char *cmd,char *arg,uint64_t daemonid)
 {
@@ -427,7 +427,7 @@ char *remote_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     return(clonestr(origargstr));
 }
 
-char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+/*char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char fname[MAX_JSON_FIELD],*retstr;
     int32_t launchflag,websocket;
@@ -444,7 +444,7 @@ char *python_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
         return(retstr);
     }
     else return(clonestr("{\"error\":\"file doesn't exist\"}"));
-}
+}*/
 
 char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
