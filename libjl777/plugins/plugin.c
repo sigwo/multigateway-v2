@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <math.h>
@@ -19,6 +20,18 @@
 #include "pair.h"
 #include "pubsub.h"
 #include "../cJSON.c"
+
+double milliseconds(void)
+{
+    static struct timeval timeval,first_timeval;
+    gettimeofday(&timeval,0);
+    if ( first_timeval.tv_sec == 0 )
+    {
+        first_timeval = timeval;
+        return(0);
+    }
+    return((timeval.tv_sec - first_timeval.tv_sec) * 1000. + (timeval.tv_usec - first_timeval.tv_usec)/1000.);
+}
 
 void randombytes(uint8_t *x,uint64_t xlen)
 {
@@ -59,15 +72,35 @@ int32_t mygetline(char *line,int32_t max)
     return(strlen(line));
 }
 
-int32_t get_newinput(char *line,int32_t max,int32_t sock,int32_t timeoutmillis)
+int32_t get_socket_status(int32_t sock,int32_t timeoutmillis)
 {
     struct nn_pollfd pfd;
+    int32_t rc;
+    pfd.fd = sock;
+    pfd.events = NN_POLLIN | NN_POLLOUT;
+    if ( (rc= nn_poll(&pfd,1,timeoutmillis)) == 0 )
+        return(pfd.revents);
+    else return(-1);
+}
+
+uint32_t wait_for_sendable(int32_t sock)
+{
+    uint32_t rc,n = 0;
+    while ( 1 )
+    {
+        if ( (rc= get_socket_status(sock,1)) > 0 && (rc & NN_POLLOUT) != 0 )
+            return(n);
+        n++;
+    }
+    return(0);
+}
+
+int32_t get_newinput(char *line,int32_t max,int32_t sock,int32_t timeoutmillis)
+{
     int32_t rc,len;
     char *jsonstr = 0;
     line[0] = 0;
-    pfd.fd = sock;
-    pfd.events = NN_POLLIN | NN_POLLOUT;
-    if ( (rc= nn_poll(&pfd,1,timeoutmillis)) > 0 && (pfd.revents & NN_POLLIN) != 0 && (len= nn_recv(pfd.fd,&jsonstr,NN_MSG,0)) > 0 )
+    if ( (rc= get_socket_status(sock,timeoutmillis)) > 0 && (rc & NN_POLLIN) != 0 && (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
     {
         strncpy(line,jsonstr,max-1);
         line[max-1] = 0;
@@ -98,9 +131,9 @@ int32_t init_daemonsock(uint64_t myid,uint64_t daemonid,int32_t timeoutmillis)
     return(sock);
 }
 
-void process_daemon_json(cJSON *json)
+void process_daemon_json(char *jsonstr,cJSON *json)
 {
-    
+    //printf("host.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
 }
 
 int32_t process_plugin_json(uint64_t daemonid,int32_t sock,uint64_t myid,char *retbuf,long max,char *jsonstr)
@@ -115,9 +148,9 @@ int32_t process_plugin_json(uint64_t daemonid,int32_t sock,uint64_t myid,char *r
         if ( (sender= get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"))) != myid )
         {
             if ( sender == daemonid )
-                process_daemon_json(json);
+                process_daemon_json(jsonstr,json);
             else printf("process message from %llu: (%s)\n",(long long)sender,jsonstr), fflush(stdout);
-        }
+        } //else printf("gotack.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
     }
     else
     {
@@ -125,7 +158,7 @@ int32_t process_plugin_json(uint64_t daemonid,int32_t sock,uint64_t myid,char *r
             jsonstr[--len] = 0;
         if ( strcmp(jsonstr,"getpeers") == 0 )
             sprintf(retbuf,"{\"pluginrequest\":\"SuperNET\",\"requestType\":\"getpeers\"}");
-        else sprintf(retbuf,"{\"result\":\"echo\",\"myid\":\"%llu\",\"message\":\"%s\"}",(long long)myid,jsonstr);
+        else sprintf(retbuf,"{\"result\":\"echo\",\"myid\":\"%llu\",\"message\":\"%s\",\"millis\":%f}",(long long)myid,jsonstr,milliseconds());
     }
     return(strlen(retbuf));
 }
@@ -150,13 +183,11 @@ int main(int argc,const char *argv[])
             {
                 if ( line[len-1] == '\n' )
                     line[--len] = 0;
-                printf("<<<<<<<<<<<<<< RECEIVED (%s).%d -> daemonid.%llu\n",line,len,(long long)daemonid), fflush(stdout);
+                //printf("<<<<<<<<<<<<<< RECEIVED (%s).%d -> daemonid.%llu\n",line,len,(long long)daemonid), fflush(stdout);
                 if ( (len= process_plugin_json(daemonid,sock,myid,retbuf,sizeof(retbuf),line)) > 1 )
                 {
                     printf("%s\n",retbuf), fflush(stdout);
-                    int j;
-                    for (j=0; j<1000; j++)
-                        nn_send(sock,retbuf,len+1,0); // send the null terminator too
+                    nn_send(sock,retbuf,len+1,0); // send the null terminator too
                 }
             }
         }

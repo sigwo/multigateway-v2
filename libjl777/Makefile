@@ -152,13 +152,7 @@ oldpython: doesntexist; \
     cd ..;
 
 onetime: doesntexist; \
-    tar xf python.tar.xz; \
-    cd Python-3.4.3; \
-    ./configure; \
-    make libpython3.4m.a; \
-    cp libpython3.4m.a ../libs/; \
-    cp /Users/whit/Downloads/Python-3.4.3/Include/Python.h ../includes; \
-    cd ..; \
+    git clone https://github.com/joewalnes/websocketd; git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make; make check; cp .libs/libnanomsg.a ../libs; cp src/*.h ../includes; cd ..; \
     cd miniupnpc; \
     make; \
     cp libminiupnpc.a ../libs; \

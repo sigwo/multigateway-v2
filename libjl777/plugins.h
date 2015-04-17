@@ -92,7 +92,7 @@ void connect_instanceid(struct daemon_info *dp,uint64_t instanceid)
     free(jsonstr);
 }
 
-int32_t init_daemonsock(int32_t *pubsockp,uint64_t daemonid)
+int32_t init_daemonsock(uint64_t daemonid)
 {
     int32_t sock,err,to = 1;
     char addr[64];
@@ -108,23 +108,7 @@ int32_t init_daemonsock(int32_t *pubsockp,uint64_t daemonid)
         printf("error %d nn_bind.%d (%s) | %s\n",err,sock,addr,nn_strerror(nn_errno()));
         return(-1);
     }
-    /*if ( (*pubsockp= nn_socket(AF_SP,NN_PUB)) < 0 )
-    {
-        printf("error %d nn_socket err.%s\n",*pubsockp,nn_strerror(nn_errno()));
-        return(-1);
-    }
-    sprintf(addr,"ipc://%llu",(long long)daemonid+1);
-    if ( (err= nn_bind(*pubsockp,addr)) < 0 )
-    {
-        printf("error %d nn_bind.%d (%s) | %s\n",err,*pubsockp,addr,nn_strerror(nn_errno()));
-        return(-1);
-    }*/
-   /* if ( (err= nn_device(sock,*pubsockp)) < 0 )
-    {
-        printf("error %d nn_device.%d %d | %s\n",err,sock,*pubsockp,nn_strerror(nn_errno()));
-        return(-1);
-    }*/
-    assert (nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&to,sizeof (to)) >= 0);
+    assert(nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&to,sizeof (to)) >= 0);
     return(sock);
 }
 
@@ -169,9 +153,9 @@ int32_t poll_daemons()
                     {
                         if ( (dp= Daemoninfos[i]) != 0 && dp->finished == 0 )
                         {
-                            while ( (len= nn_recv(dp->daemonsock,&msg,NN_MSG,0)) > 0 )
+                            if ( (len= nn_recv(dp->daemonsock,&msg,NN_MSG,0)) > 0 )
                             {
-                                printf(">>>>>>>>>> RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu\n",n,i,Numdaemons,msg,dp->cmd,(long long)dp->daemonid);
+                                printf("%d %.6f >>>>>>>>>> RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu\n",processed,milliseconds(),n,i,Numdaemons,msg,dp->cmd,(long long)dp->daemonid);
                                 nn_send(dp->daemonsock,msg,len,0);
                                 if ( (json= cJSON_Parse(msg)) != 0 )
                                 {
@@ -240,12 +224,13 @@ char *launch_daemon(int32_t websocket,char *cmd,char *arg,void (*daemonfunc)(int
 {
     struct daemon_info *dp;
     char retbuf[1024];
-    int32_t daemonsock,pubsock;
+    int32_t daemonsock;
     uint64_t daemonid;
     if ( Numdaemons >= sizeof(Daemoninfos)/sizeof(*Daemoninfos) )
         return(clonestr("{\"error\":\"too many daemons, cant create anymore\"}"));
     daemonid = (uint64_t)(milliseconds() * 1000000) & (~(uint64_t)1);
-    if ( (daemonsock= init_daemonsock(&pubsock,daemonid)) >= 0 && pubsock >= 0 )
+    printf("launch daemon (%s) (%s) %llu\n",cmd,arg,(long long)daemonid);
+    if ( (daemonsock= init_daemonsock(daemonid)) >= 0 )
     {
         dp = calloc(1,sizeof(*dp));
         dp->cmd = clonestr(cmd);
@@ -265,7 +250,7 @@ char *launch_daemon(int32_t websocket,char *cmd,char *arg,void (*daemonfunc)(int
         sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}\n",(long long)dp->daemonid);
         return(clonestr(retbuf));
     }
-    return(clonestr("{\"error\":\"cant open file to launch daemon\"}"));
+    return(clonestr("{\"error\":\"cant get daemonsock\"}"));
 }
 
 char *language_func(int32_t websocket,int32_t launchflag,char *cmd,char *fname,void (*daemonfunc)(int32_t websocket,char *cmd,char *fname,uint64_t daemonid))
@@ -341,7 +326,7 @@ void call_system(int32_t websocket,char *cmd,char *arg,uint64_t daemonid)
 {
     char cmdstr[MAX_JSON_FIELD];
     if ( websocket != 0 )
-        sprintf(cmdstr,"../websocketd --port=%d %s",websocket,(Debuglevel > 0) ? "--devconsole ":"");
+        sprintf(cmdstr,"websocketd --port=%d %s",websocket,(Debuglevel > 0) ? "--devconsole ":"");
     else cmdstr[0] = 0;
     sprintf(cmdstr + strlen(cmdstr),"%s %llu",cmd,(long long)daemonid);//,arg!=0?arg:" ");
     printf("SYSTEM.(%s)\n",cmdstr);
@@ -450,13 +435,13 @@ char *syscall_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
 {
     char arg[MAX_JSON_FIELD],syscall[MAX_JSON_FIELD];
     int32_t launchflag,websocket;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
-    copy_cJSON(syscall,objs[0]);
+     copy_cJSON(syscall,objs[0]);
     launchflag = get_API_int(objs[1],0);
     websocket = get_API_int(objs[2],0);
     copy_cJSON(arg,objs[3]);
     printf("websocket.%d launchflag.%d syscall.(%s) arg.(%s)\n",websocket,launchflag,syscall,arg!=0?arg:"");
+    if ( is_remote_access(previpaddr) != 0 )
+        return(0);
     return(language_func(websocket,launchflag,syscall,arg,call_system));
 }
 
