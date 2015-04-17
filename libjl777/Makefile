@@ -30,7 +30,7 @@ clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
 plugins: doesntexist; \
-	cd plugins; gcc -o echo plugin.c -I includes libs/libnanomsg.a -lpthread -lanl -lm; cd ..
+	cd plugins; gcc -o echo plugin.c -I ../includes ../libs/libnanomsg.a -lpthread -lanl -lm; cd ..
 
 SuperNET: $(TARGET); \
     pkill SuperNET; rm SuperNET; gcc -o SuperNET SuperNET.c libs/libminiupnpc.a libs/libjl777.a libs/libnanomsg.a libs/libwebsockets.a libs/libuv.a libs/libdb.a -lssl -lcrypto -lpthread -lcurl -lm -lz -ldl -lutil -lpcre -lexpat -lanl
