@@ -92,7 +92,7 @@ void connect_instanceid(struct daemon_info *dp,uint64_t instanceid,int32_t perma
 
 int32_t init_daemonsock(int32_t permanentflag,uint64_t daemonid)
 {
-    int32_t sock,err;//,to = 1;
+    int32_t sock,err,to = 1;
     char addr[64];
     sprintf(addr,"ipc://%llu",(long long)daemonid + permanentflag*2);
     printf("init_daemonsocks %s\n",addr);
@@ -118,7 +118,7 @@ int32_t init_daemonsock(int32_t permanentflag,uint64_t daemonid)
     else
     {
     }
-    //assert(nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&to,sizeof (to)) >= 0);
+    assert(nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&to,sizeof (to)) >= 0);
     return(sock);
 }
 

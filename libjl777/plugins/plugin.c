@@ -149,7 +149,7 @@ int32_t init_daemonsock(int32_t permanentflag,uint64_t myid,uint64_t daemonid,in
             return(-1);
         }
     }
-    //nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
+    nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
     printf("daemonsock: %d nn_connect (%llu <-> %s)\n",sock,(long long)daemonid,addr);
     return(sock);
 }
@@ -217,9 +217,9 @@ int main(int argc,const char *argv[])
                     nn_send(sock,retbuf,len+1,0); // send the null terminator too
                 }
             }
-            if ( 0 && permanentflag != 0 )
+            if ( permanentflag == 0 )
             {
-                sleep(3);
+                //sleep(3);
                 //printf("hello\n"), fflush(stdout);
                 nn_send(sock,"{\"hello\":\"test\"}",strlen("{\"hello\":\"test\"}")+1,0); // send the null terminator too
             }
