@@ -924,9 +924,9 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         //getchar();
     }
     myipaddr = init_MGWconf(JSON_or_fname,myipaddr);
-    setenv("PYTHONHOME",PYTHONPATH,1);
-    strcat(PYTHONPATH,"/Lib");
-    setenv("PYTHONPATH",PYTHONPATH,1);
+    //setenv("PYTHONHOME",PYTHONPATH,1);
+    //strcat(PYTHONPATH,"/Lib");
+    //setenv("PYTHONPATH",PYTHONPATH,1);
     /*if ( 0 )
     {
         struct cointx_info *_decode_rawtransaction(char *hexstr,int32_t oldtx);

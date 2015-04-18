@@ -154,9 +154,12 @@ int32_t init_daemonsock(int32_t permanentflag,uint64_t myid,uint64_t daemonid,in
     return(sock);
 }
 
-void process_daemon_json(char *jsonstr,cJSON *json)
+void process_daemon_json(char *retbuf,char *jsonstr,cJSON *json)
 {
-    printf("host.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
+    char *str;
+    str = stringifyM(jsonstr);
+    sprintf(retbuf,"{\"args\":%s,\"milliseconds\":%f}\n",str,milliseconds());
+    free(str);
 }
 
 int32_t process_plugin_json(int32_t permanentflag,uint64_t daemonid,int32_t sock,uint64_t myid,char *retbuf,long max,char *jsonstr)
@@ -171,7 +174,7 @@ int32_t process_plugin_json(int32_t permanentflag,uint64_t daemonid,int32_t sock
         if ( (sender= get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"))) != myid )
         {
             if ( sender == daemonid )
-                process_daemon_json(jsonstr,json);
+                process_daemon_json(retbuf,jsonstr,json);
             else if ( sender != 0 ) printf("process message from %llu: (%s)\n",(long long)sender,jsonstr), fflush(stdout);
         } else printf("gotack.(%s) %f\n",jsonstr,milliseconds()), fflush(stdout);
     }
@@ -186,44 +189,58 @@ int32_t process_plugin_json(int32_t permanentflag,uint64_t daemonid,int32_t sock
     return(strlen(retbuf));
 }
 
+void process_json(char *jsonargs)
+{
+    char line[8192],retbuf[8192],*retstr,*jsonstr;
+    cJSON *json;
+    json = cJSON_Parse(jsonargs);
+    jsonstr = cJSON_Print(json);
+    //fprintf(stderr,"got jsonargs.(%s) %s %p\n",jsonargs,jsonstr,json);
+    process_daemon_json(line,jsonstr,json);
+    if ( jsonstr != 0 )
+        free(jsonstr);
+    if ( json != 0 )
+        free_json(json);
+    printf("%s\n",line), fflush(stdout);
+}
+
 int main(int argc,const char *argv[])
 {
     uint64_t daemonid,myid;
-    int32_t permanentflag,rc,sock,len,timeout,counter = 0;
-    char line[8192],retbuf[8192],*retstr;
-    fprintf(stderr,"(%s).argc%d\n",argv[0],argc);
-    if ( argc < 2 )
-    {
-        printf("usage: %s <daemonid>\n",argv[0]), fflush(stdout);
-        return(-1);
-    }
+    int32_t permanentflag,rc,sock,len,timeout,ppid,counter = 0;
+    char line[8192],retbuf[8192],*retstr,*jsonargs,*jsonstr;
+    milliseconds();
+    ppid = getppid();
+    fprintf(stderr,"(%s).argc%d parent PID.%d\n",argv[0],argc,ppid);
     timeout = 1;
-    daemonid = atol(argv[1]);
+    if ( argc <= 2 )
+    {
+        jsonargs = (argc > 1) ? (char *)argv[1]:"{}";
+        process_json(jsonargs);
+        //fprintf(stderr,"PLUGIN_RETURNS.[%s]\n",line), fflush(stdout);
+        return(0);
+    }
     randombytes((uint8_t *)&myid,sizeof(myid));
-    permanentflag = (argc > 2);
-    fprintf(stderr,"argc.%d: myid.%llu daemonid.%llu\n",argc,(long long)myid,(long long)daemonid);
+    permanentflag = atoi(argv[1]);
+    daemonid = atol(argv[2]);
+    if ( argc >= 3 )
+        process_json((char *)argv[3]);
+    fprintf(stderr,"argc.%d: myid.%llu daemonid.%llu args.(%s)\n",argc,(long long)myid,(long long)daemonid,argc>=3?argv[3]:"");
     if ( (sock= init_daemonsock(permanentflag,myid,daemonid,timeout)) >= 0 )
     {
-        while ( 1 )
+        while ( ppid == getppid() )
         {
             if ( (len= get_newinput(permanentflag,line,sizeof(line),sock,timeout)) > 0 )
             {
                 if ( line[len-1] == '\n' )
                     line[--len] = 0;
                 counter++;
-                //if ( (rand() % 1000) == 0 )
                 printf("%d <<<<<<<<<<<<<< RECEIVED (%s).%d -> daemonid.%llu PERM.%d\n",counter,line,len,(long long)daemonid,permanentflag), fflush(stdout);
                 if ( (len= process_plugin_json(permanentflag,daemonid,sock,myid,retbuf,sizeof(retbuf),line)) > 1 )
                 {
                     printf("%s\n",retbuf), fflush(stdout);
                     nn_send(sock,retbuf,len+1,0); // send the null terminator too
                 }
-            }
-            if ( 0 && permanentflag == 0 )
-            {
-                //sleep(3);
-                //printf("hello\n"), fflush(stdout);
-                nn_send(sock,"{\"hello\":\"test\"}",strlen("{\"hello\":\"test\"}")+1,0); // send the null terminator too
             }
             usleep(1000);
         }

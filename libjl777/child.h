@@ -1,12 +1,12 @@
 //
-//  plugins.h
+//  child.h
 //
 //  Created by jl777 on 16/4/15.
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 
-#ifndef xcode_plugins_h
-#define xcode_plugins_h
+#ifndef xcode_child_h
+#define xcode_child_h
 
 int32_t child_diedflag; void sigchld_handler(int a) { child_diedflag = 1; }
 static void wait_child()
