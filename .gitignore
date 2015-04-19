@@ -74,8 +74,6 @@ n
 
 n
 
-main.cpp
-
 libjl777/includes/libwebsockets.h
 
 libjl777/includes/lws_config.h
@@ -85,3 +83,5 @@ src/leveldb/db/db_test.cc
 foo
 
 libjl777/plugins/echo.perm
+
+libjl777/plugins/stockfish/stockfish

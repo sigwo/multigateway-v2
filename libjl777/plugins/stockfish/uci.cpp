@@ -146,7 +146,7 @@ void UCI::loop(int argc, char* argv[]) {
   Position pos(StartFEN, false, Threads.main()); // The root position
   string token, cmd;
 
-  for (int i = 1; i < argc; ++i)
+  for (int i = 3; i < argc; ++i)
       cmd += std::string(argv[i]) + " ";
 
   do {
