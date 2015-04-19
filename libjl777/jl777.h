@@ -145,7 +145,14 @@
 
 char *os_compatible_path(char *fname);
 void sleepmillis(uint32_t milliseconds);
-
+void portable_sleep(int32_t n)
+{
+    sleep(n);
+}
+void msleep(int32_t n)
+{
+    usleep(n * 1000);
+}
 /*FILE *jl777fopen(char *fname,char *mode)
 {
     char *clonestr(char *);
@@ -224,29 +231,28 @@ long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NUL
 #define portable_mutex_t uv_mutex_t
 struct queueitem { struct queueitem *next,*prev; };
 
-/*typedef struct queue
+typedef struct queue
 {
 	struct queueitem *list;
 	portable_mutex_t mutex;
     char name[31],initflag;
-} queue_t;*/
+} queue_t;
 
 struct resultsitem { struct queueitem DL; char *argstr,*retstr; uint64_t txid; char retbuf[]; };
-typedef struct queue
+/*typedef struct queue
 {
-//#ifdef oldqueue
+#ifdef oldqueue
 	void **buffer;
-//#else
-	//void *buffer[65536];
-//#endif
-  	struct queueitem *list;
+#else
+	void *buffer[65536];
+#endif
     int32_t capacity,size,in,out,initflag;
 	portable_mutex_t mutex;
     char name[32];
 	//pthread_cond_t cond_full;
 	//pthread_cond_t cond_empty;
 } queue_t;
-//#define QUEUE_INITIALIZER(buffer) { buffer, sizeof(buffer) / sizeof(buffer[0]), 0, 0, 0, PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER }
+//#define QUEUE_INITIALIZER(buffer) { buffer, sizeof(buffer) / sizeof(buffer[0]), 0, 0, 0, PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER }*/
 void *queue_dequeue(queue_t *queue,int32_t offsetflag);
 void queue_enqueue(char *name,queue_t *queue,struct queueitem *ptr);
 
