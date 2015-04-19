@@ -226,6 +226,7 @@ typedef struct queue
     char name[31],initflag;
 } queue_t;
 
+struct resultsitem { struct queueitem DL; char *argstr,*retstr; uint64_t txid; char retbuf[]; };
 /*typedef struct queue
 {
 #ifdef oldqueue

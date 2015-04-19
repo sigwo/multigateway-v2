@@ -106,50 +106,53 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
     return(clonestr(retbuf));
 }
 
-void queue_GUIpoll(char **ptrs)
+void queue_GUIpoll(struct resultsitem *_rp)
 {
     uint16_t port;
     uint64_t txid;
-    char *str,*retbuf,*args,ipaddr[64];
-    args = stringifyM(ptrs[0]);
-    str = stringifyM(ptrs[1]);
-    retbuf = malloc(strlen(str) + strlen(args) + 256);
-    memcpy(retbuf,&ptrs,sizeof(ptrs));
-    if ( ((((long long)ptrs[2]) >> 48) & 0xffff) == 0 )
+    struct resultsitem *rp;
+    char *str,*args,ipaddr[64];
+    args = stringifyM(_rp->argstr);
+    str = stringifyM(_rp->retstr);
+    //retbuf = malloc(strlen(str) + strlen(args) + 256);
+   //memcpy(retbuf,&ptrs,sizeof(ptrs));
+    rp = calloc(1,strlen(str) + strlen(args) + 128);
+    *rp = *_rp;
+    txid = rp->txid;
+    if ( ((txid >> 48) & 0xffff) == 0 )
     {
-        txid = (long long)ptrs[2];
         port = (txid >> 32) & 0xffff;
         expand_ipbits(ipaddr,(uint32_t)txid);
-        sprintf(retbuf+sizeof(ptrs),"{\"result\":%s,\"from\":\"%s\",\"port\":%d,\"args\":%s}",str,ipaddr,port,args);
+        sprintf(rp->retbuf,"{\"result\":%s,\"from\":\"%s\",\"port\":%d,\"args\":%s}",str,ipaddr,port,args);
     }
-    else sprintf(retbuf+sizeof(ptrs),"{\"result\":%s,\"txid\":\"%llu\"}",str,(long long)ptrs[2]);
+    else sprintf(rp->retbuf,"{\"result\":%s,\"txid\":\"%llu\"}",str,(long long)txid);
     free(str); free(args);
-    retbuf = realloc(retbuf,sizeof(ptrs) + strlen(retbuf+sizeof(ptrs)) + 1);
-    //printf("QUEUED for GUI: (%s) -> (%s)\n",ptrs[0],retbuf+sizeof(ptrs));
-    queue_enqueue("resultsQ",&ResultsQ,queueitem(retbuf));
+    if ( Debuglevel > 2 )
+        printf("QUEUED for GUI: (%s) -> (%s) ptrs %p %p\n",rp->argstr,rp->retbuf,rp->argstr,rp->retstr);
+    queue_enqueue("resultsQ",&ResultsQ,&rp->DL);
 }
 
 char *GUIpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     static int counter;
-    char retbuf[MAX_JSON_FIELD*3],*ptr,**ptrs;
+    struct resultsitem *rp;
+    char retbuf[MAX_JSON_FIELD*3];
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
     counter++;
     retbuf[0] = 0;
     if ( retbuf[0] == 0 )
     {
-        if ( (ptr= queue_dequeue(&ResultsQ,1)) != 0 )
+        if ( (rp= queue_dequeue(&ResultsQ,0)) != 0 )
         {
-            memcpy(&ptrs,ptr,sizeof(ptrs));
-            if ( Debuglevel > 1 )
-                fprintf(stderr,"Got GUI ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
-            if ( ptrs[0] != 0 )
-                free(ptrs[0]);
-            if ( ptrs[1] != 0 )
-                free(ptrs[1]);
-            strcpy(retbuf,ptr+sizeof(ptrs));
-            free_queueitem(ptrs);
+            if ( Debuglevel > 2 )
+                fprintf(stderr,"Got GUI ResultsQ.(%s) ptrs.%p %p %p\n",rp->retbuf,rp,rp->argstr,rp->retstr);
+            if ( rp->argstr != 0 )
+                free(rp->argstr);
+            if ( rp->retstr != 0 )
+                free(rp->retstr);
+            strcpy(retbuf,rp->retbuf);
+            free(rp);
         }
     }
     if ( retbuf[0] == 0 )
@@ -1821,17 +1824,15 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
                 retstr = (*(json_handler)cmdinfo[0])(NXTaddr,NXTACCTSECRET,previpaddr,sender,valid,objs,j-3,origargstr);
                 if ( is_remote_access(previpaddr) != 0 )
                 {
-                    char **ptrs = calloc(3,sizeof(*ptrs));
-                    uint64_t txid = 0;
+                    struct resultsitem *rp = calloc(1,sizeof(*rp));
                     if ( origargstr != 0 )
-                        ptrs[0] = clonestr(origargstr);
-                    else ptrs[0] = clonestr("{}");
+                        rp->argstr = clonestr(origargstr);
+                    else rp->argstr = clonestr("{}");
                     if ( retstr != 0 )
-                        ptrs[1] = clonestr(retstr);
-                    else ptrs[1] = clonestr("{}");
-                    txid = calc_ipbits(previpaddr);
-                    memcpy(&ptrs[2],&txid,sizeof(ptrs[2]));
-                    queue_GUIpoll(ptrs);
+                        rp->retstr = clonestr(retstr);
+                    else rp->retstr = clonestr("{}");
+                    rp->txid = calc_ipbits(previpaddr);
+                    queue_GUIpoll(rp);
                 }
                 break;
             }

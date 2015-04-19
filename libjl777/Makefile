@@ -1,3 +1,12 @@
+OS=win
+SYS := $(shell gcc -dumpmachine)
+ifneq (, $(findstring linux, $(SYS)))
+ OS=unix
+else ifneq(, $(findstring apple, $(SYS)))
+ OS=osx
+endif
+
+
 CC=clang
 CFLAGS=-Wall -pedantic -g -fPIC -Iincludes -I/usr/include -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2
 LIBS=-lm -lreadline 
@@ -31,13 +40,13 @@ clean: doesntexist
 
 plugins: doesntexist; \
 	cd plugins; \
-    gcc -o echo plugin.c -I ../includes ../libs/libnanomsg.a -lpthread -lanl -lm; \
-    gcc -o MGW mgw.c bits777.c system777.c cJSON.c bitcoind_RPC.c bitcoind.c ramchain.c mgwapi.c utils777.c huffstream.c huff.c ramcoder.c -I ../includes ../libs/libnanomsg.a -lpthread -lcurl -lm; \
+    gcc -o echo plugin.c utils/cJSON.c -I ../includes ../libs/libnanomsg.a -lpthread -lanl -lm; \
+    gcc -o MGW -I ../includes -I . -I .. -I utils -I ramchain -I mgw mgw/mgw.c mgw/state.c mgw/msig.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c ramchain/storage.c ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bits777.c $(OS)/system777.c utils/cJSON.c utils/NXT777.c utils/bitcoind_RPC.c utils/bitcoind.c utils/utils777.c utils/huffstream.c utils/ramcoder.c ../libs/libnanomsg.a  -lpthread -lcurl -lm; \
     cd ..
 
 MGW: doesntexist; \
 	cd plugins; \
-    gcc -o MGW mgw.c mgwstate.c ramchain.c ramchaininit.c ramchaindb.c ramchainhash.c ramchainblocks.c ramchainapi.c ramchaintokens.c msig.c bits777.c system777.c cJSON.c NXT777.c bitcoind_RPC.c bitcoind.c utils777.c huffstream.c huff.c ramcoder.c -I ../includes ../libs/libnanomsg.a  -lpthread -lcurl -lm; \
+    gcc -o MGW -I. -Iutils -Iramchain -Imgw -I../includes -I.. -I../..  mgw/mgw.c mgw/state.c mgw/msig.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c ramchain/storage.c ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bits777.c $(OS)/system777.c utils/cJSON.c utils/NXT777.c utils/bitcoind_RPC.c utils/bitcoind.c utils/utils777.c utils/huffstream.c utils/ramcoder.c ../libs/libnanomsg.a  -lpthread -lcurl -lm; \
     cd ..
 
 SuperNET: $(TARGET); \

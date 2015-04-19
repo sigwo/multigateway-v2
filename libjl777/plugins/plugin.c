@@ -19,7 +19,7 @@
 #include "bus.h"
 //#include "../includes/pair.h"
 //#include "../includes/pubsub.h"
-#include "cJSON.c"
+#include "cJSON.h"
 
 double milliseconds(void)
 {

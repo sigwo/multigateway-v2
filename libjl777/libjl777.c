@@ -247,7 +247,8 @@ void SuperNET_idler(uv_idle_t *handle)
     struct udp_queuecmd *qp;
     struct write_req_t *wr,*firstwr = 0;
     int32_t i,flag;
-    char *jsonstr,*retstr,**ptrs;
+    char *jsonstr,*retstr;
+    struct resultsitem *rp;
     if ( Finished_init == 0 || IS_LIBTEST == 7 )
         return;
     millis = milliseconds();//((double)uv_hrtime() / 1000000);
@@ -300,16 +301,16 @@ void SuperNET_idler(uv_idle_t *handle)
                 free(qp);
                 flag++;
             }
-            else if ( (ptrs= queue_dequeue(&JSON_Q,1)) != 0 )
+            else if ( (rp= queue_dequeue(&JSON_Q,0)) != 0 )
             {
-                jsonstr = ptrs[0];
+                jsonstr = rp->argstr;
                 if ( Debuglevel > 3 )
                     printf("dequeue JSON_Q.(%s)\n",jsonstr);
                 if ( (retstr= call_SuperNET_JSON(jsonstr)) == 0 )
                     retstr = clonestr("{\"result\":null}");
-                ptrs[1] = retstr;
-                if ( ptrs[2] != 0 )
-                    queue_GUIpoll(ptrs);
+                rp->retstr = retstr;
+                if ( rp->txid != 0 )
+                    queue_GUIpoll(rp);
                 flag++;
             }
         }

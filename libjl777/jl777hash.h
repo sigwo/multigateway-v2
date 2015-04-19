@@ -59,7 +59,8 @@ void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
     lock_queue(queue);
     DL_APPEND(queue->list,item);
     portable_mutex_unlock(&queue->mutex);
-    //printf("name.(%s) append.%p list.%p (next.%p prev.%p)\n",name,item,queue->list,item->next,item->prev);
+    if ( Debuglevel > 2 )
+        printf("name.(%s) append.%p list.%p (next.%p prev.%p)\n",name,item,queue->list,item->next,item->prev);
 }
 
 void *queue_dequeue(queue_t *queue,int32_t offsetflag)
@@ -70,7 +71,8 @@ void *queue_dequeue(queue_t *queue,int32_t offsetflag)
     {
         item = queue->list;
         DL_DELETE(queue->list,item);
-        //printf("name.(%s) dequeue.%p list.%p\n",queue->name,item,queue->list);
+        if ( Debuglevel > 2 )
+            printf("name.(%s) dequeue.%p list.%p\n",queue->name,item,queue->list);
     }
 	portable_mutex_unlock(&queue->mutex);
     if ( item != 0 && offsetflag != 0 )
@@ -110,7 +112,8 @@ int32_t process_pingpong_queue(struct pingpong_queue *ppq,void *argptr)
     {
         while ( (ptr= queue_dequeue(&ppq->pingpong[iter],ppq->offset)) != 0 )
         {
-            //printf("%s pingpong[%d].%p action.%p\n",ppq->name,iter,ptr,ppq->action);
+            if ( Debuglevel > 2 )
+                printf("%s pingpong[%d].%p action.%p\n",ppq->name,iter,ptr,ppq->action);
             retval = (*ppq->action)(&ptr,argptr);
             if ( retval == 0 )
                 queue_enqueue(ppq->name,&ppq->pingpong[iter ^ 1],ptr);
@@ -118,7 +121,8 @@ int32_t process_pingpong_queue(struct pingpong_queue *ppq,void *argptr)
             {
                 if ( retval < 0 )
                 {
-                    printf("%s iter.%d errorqueue %p vs %p\n",ppq->name,iter,ppq->errorqueue,&ppq->pingpong[0]);
+                    if ( Debuglevel > 0 )
+                        printf("%s iter.%d errorqueue %p vs %p\n",ppq->name,iter,ppq->errorqueue,&ppq->pingpong[0]);
                     if ( ppq->errorqueue == &ppq->pingpong[0] )
                         queue_enqueue(ppq->name,&ppq->pingpong[iter ^ 1],ptr);
                     else if ( ppq->errorqueue != 0 )
@@ -127,7 +131,8 @@ int32_t process_pingpong_queue(struct pingpong_queue *ppq,void *argptr)
                 }
                 else if ( ppq->destqueue != 0 )
                 {
-                    printf("%s iter.%d destqueue %p vs %p\n",ppq->name,iter,ppq->destqueue,&ppq->pingpong[0]);
+                    if ( Debuglevel > 0 )
+                        printf("%s iter.%d destqueue %p vs %p\n",ppq->name,iter,ppq->destqueue,&ppq->pingpong[0]);
                     if ( ppq->destqueue == &ppq->pingpong[0] )
                         queue_enqueue(ppq->name,&ppq->pingpong[iter ^ 1],ptr);
                     else if ( ppq->destqueue != 0 )
