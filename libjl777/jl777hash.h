@@ -51,7 +51,7 @@ void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
 {
     if ( Debuglevel > 1 )
         fprintf(stderr,"name.(%s) append.%p list.%p (next.%p prev.%p)\n",name,item,queue->list,item->next,item->prev);
-    if ( queue->list == 0 )
+    if ( queue->list == 0 && name != 0 && name[0] != 0 )
         safecopy(queue->name,name,sizeof(queue->name));
     if ( item == 0 )
     {
@@ -428,7 +428,7 @@ void *process_hashtablequeues(void *_p) // serialize hashtable functions
         {
             while ( (ptr= queue_dequeue(&Global_mp->hashtable_queue[iter],0)) != 0 )
             {
-                //printf("numitems.%ld process.%p hp %p\n",(long)(*ptr->hp_ptr)->hashsize,ptr,ptr->hp_ptr);
+                printf("numitems.%ld process.%p hp %p\n",(long)(*ptr->hp_ptr)->hashsize,ptr,ptr->hp_ptr);
                 //printf(">>>>> Processs %p\n",ptr);
                 if ( ptr->funcid == 'A' )
                     ptr->U.result = add_hashtable(ptr->createdflagp,ptr->hp_ptr,ptr->key);
@@ -437,7 +437,7 @@ void *process_hashtablequeues(void *_p) // serialize hashtable functions
                 else printf("UNEXPECTED MThashtable funcid.(%c) %d\n",ptr->funcid,ptr->funcid);
                 ptr->doneflag = 1;
                 n++;
-                //printf("<<<<<< Finished Processs %p\n",ptr);
+                printf("<<<<<< Finished Processs %p\n",ptr);
                 //printf("finished numitems.%ld process.%p hp %p\n",(long)(*ptr->hp_ptr)->hashsize,ptr,ptr->hp_ptr);
             }
         }

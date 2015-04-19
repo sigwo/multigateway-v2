@@ -68,7 +68,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
     retbuf[0] = 0;
     if ( (ptr= queue_dequeue(&BroadcastQ,1)) != 0 )
     {
-        if ( Debuglevel > 2 )
+        if ( Debuglevel > 1 )
             printf("Got BroadcastQ\n");
         memcpy(&len,ptr,sizeof(len));
         str = &ptr[sizeof(len) + sizeof(duration)];
@@ -88,7 +88,8 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
     {
         if ( (ptr= queue_dequeue(&NarrowQ,1)) != 0 )
         {
-            //printf("Got NarrowQ\n");
+            if ( Debuglevel > 1 )
+printf("Got NarrowQ\n");
             memcpy(&len,ptr,sizeof(len));
             if ( len < 4096 && len > 0 )
             {
@@ -127,7 +128,7 @@ void queue_GUIpoll(struct resultsitem *_rp)
     }
     else sprintf(rp->retbuf,"{\"result\":%s,\"txid\":\"%llu\"}",str,(long long)txid);
     free(str); free(args);
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("QUEUED for GUI: (%s) -> (%s) ptrs %p %p\n",rp->argstr,rp->retbuf,rp->argstr,rp->retstr);
     queue_enqueue("resultsQ",&ResultsQ,&rp->DL);
 }
@@ -145,7 +146,7 @@ char *GUIpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     {
         if ( (rp= queue_dequeue(&ResultsQ,0)) != 0 )
         {
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 fprintf(stderr,"Got GUI ResultsQ.(%s) ptrs.%p %p %p\n",rp->retbuf,rp,rp->argstr,rp->retstr);
             if ( rp->argstr != 0 )
                 free(rp->argstr);
