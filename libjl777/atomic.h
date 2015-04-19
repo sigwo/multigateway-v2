@@ -365,6 +365,11 @@ int32_t submit_trade(cJSON **jsonp,char *whostr,int32_t dir,struct pendinghalf *
                     printf("failed to submit (%s) %llu sell.%d dir.%d closed.%d | qty %llu price %llu\n",half->exchange,(long long)half->T.assetid,half->T.sell,dir,half->T.closed,(long long)half->T.qty,(long long)half->T.priceNQT);
                     return(-1);
                 }
+                else
+                {
+                    sprintf(numstr,"%llu",(long long)half->T.txid), cJSON_AddItemToObject(item,"txid",cJSON_CreateString(numstr));
+                    cJSON_AddItemToObject(item,"order",cJSON_CreateString(dir>0?"buy":"sell"));
+                }
             }
         }
         else
@@ -495,16 +500,25 @@ char *submit_trades(struct pending_offer *offer,char *NXTACCTSECRET)
     cJSON *json;
     char whostr[64],*retstr;
     struct pendingpair *pt;
-    int32_t i,polarity = 1;
+    int32_t i,dir,dir2,polarity = 1;
     json = cJSON_Parse(offer->comment);
     pt = &offer->A;
     for (i=0; i<offer->numhalves; i+=2)
     {
-        sprintf(whostr,"%s%s",(-polarity < 0) ? "seller" : "buyer",(i == 0) ? "" : "2");
-        if ( submit_trade(&json,whostr,-polarity * pt->notxfer,&offer->halves[i],&offer->halves[i+1],offer,NXTACCTSECRET,offer->base,offer->rel,offer->price,offer->volume) < 0 )
+        dir = -2 * offer->halves[i].T.sell + 1;
+        dir2 = -2 * offer->halves[i+1].T.sell + 1;
+        printf("i.%d polarity.%d T.sells: %d %d | dirs: %d %d\n",i,polarity,offer->halves[i].T.sell,offer->halves[i+1].T.sell,dir,dir2);
+        if ( dir*dir2 > 0 )
+        {
+            cJSON_AddItemToObject(json,"error",cJSON_CreateString("both sides same direction"));
             return(pending_offer_error(offer,json));
-        sprintf(whostr,"%s%s",(polarity < 0) ? "seller" : "buyer",(i == 0) ? "" : "2");
-        if ( submit_trade(&json,whostr,polarity * pt->notxfer,&offer->halves[i+1],&offer->halves[i],offer,NXTACCTSECRET,offer->base,offer->rel,offer->price,offer->volume) < 0 )
+        }
+        sprintf(whostr,"%s%s",(polarity*dir < 0) ? "seller" : "buyer",(i == 0) ? "" : "2");
+        if ( submit_trade(&json,whostr,polarity*dir * pt->notxfer,&offer->halves[i],&offer->halves[i+1],offer,NXTACCTSECRET,offer->base,offer->rel,offer->price,offer->volume) < 0 )
+            return(pending_offer_error(offer,json));
+        printf("second quarter:\n");
+        sprintf(whostr,"%s%s",(polarity*dir2 < 0) ? "seller" : "buyer",(i == 0) ? "" : "2");
+        if ( submit_trade(&json,whostr,polarity*dir2 * pt->notxfer,&offer->halves[i+1],&offer->halves[i],offer,NXTACCTSECRET,offer->base,offer->rel,offer->price,offer->volume) < 0 )
             return(pending_offer_error(offer,json));
         polarity = -polarity;
         pt = &offer->B;
