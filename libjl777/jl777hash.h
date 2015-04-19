@@ -49,6 +49,8 @@ void lock_queue(queue_t *queue)
 
 void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
 {
+    if ( Debuglevel > 1 )
+        fprintf(stderr,"name.(%s) append.%p list.%p (next.%p prev.%p)\n",name,item,queue->list,item->next,item->prev);
     if ( queue->list == 0 )
         safecopy(queue->name,name,sizeof(queue->name));
     if ( item == 0 )
@@ -59,20 +61,19 @@ void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
     lock_queue(queue);
     DL_APPEND(queue->list,item);
     portable_mutex_unlock(&queue->mutex);
-    if ( Debuglevel > 2 )
-        printf("name.(%s) append.%p list.%p (next.%p prev.%p)\n",name,item,queue->list,item->next,item->prev);
 }
 
 void *queue_dequeue(queue_t *queue,int32_t offsetflag)
 {
     struct queueitem *item = 0;
     lock_queue(queue);
+    fprintf(stderr,"queue_dequeue name.(%s) dequeue.%p\n",queue->name,queue->list);
     if ( queue->list != 0 )
     {
         item = queue->list;
         DL_DELETE(queue->list,item);
-        if ( Debuglevel > 2 )
-            printf("name.(%s) dequeue.%p list.%p\n",queue->name,item,queue->list);
+        if ( Debuglevel > 1 )
+            fprintf(stderr,"name.(%s) dequeue.%p list.%p\n",queue->name,item,queue->list);
     }
 	portable_mutex_unlock(&queue->mutex);
     if ( item != 0 && offsetflag != 0 )

@@ -275,7 +275,7 @@ void _on_udprecv(int32_t queueflag,int32_t internalflag,uv_udp_t *udp,ssize_t nr
             up->len = (int32_t)nread;
             if ( addr != 0 )
                 up->addr = *addr;
-            //queue_enqueue("UDP_Q",&UDP_Q,&up->DL);
+            queue_enqueue("UDP_Q",&UDP_Q,&up->DL);
         }
         else
         {
