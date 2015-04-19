@@ -26,7 +26,7 @@ struct SuperNET_db
     uint32_t busy,type,flags,minsize,maxsize,duplicateflag,overlap_write;
 };
 
-struct dbreq { struct SuperNET_db *sdb; void *cursor; DB_TXN *txn; DBT key,*data; int32_t flags,retval,funcid,doneflag; };
+struct dbreq { struct queueitem DL; struct SuperNET_db *sdb; void *cursor; DB_TXN *txn; DBT key,*data; int32_t flags,retval,funcid,doneflag; };
 struct SuperNET_db SuperNET_dbs[NUM_SUPERNET_DBS],Price_dbs[MAX_PRICEDBS];
 long Total_stored,Num_pricedbs;
 
@@ -236,7 +236,7 @@ int32_t _process_dbiter(struct SuperNET_db *sdb)
     if ( sdb == 0 || sdb->dbp == 0 )
         return(0);
     n = 0;
-    if ( (req= queue_dequeue(&sdb->queue)) != 0 )
+    if ( (req= queue_dequeue(&sdb->queue,0)) != 0 )
     {
         memset(&data,0,sizeof(data));
         if ( req->data != 0 )
@@ -372,7 +372,7 @@ struct dbreq *_queue_dbreq(int32_t funcid,struct SuperNET_db *sdb,DB_TXN *txn,DB
         req->flags = flags;
         req->cursor = cursor;
         sdb->busy++;
-        queue_enqueue(sdb->name,&sdb->queue,req);
+        queue_enqueue(sdb->name,&sdb->queue,&req->DL);
         usleep(DBSLEEP); // allow context switch so request has a chance of completing
     }
     return(req);

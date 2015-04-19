@@ -44,6 +44,7 @@ union writeU { uv_udp_send_t ureq; uv_write_t req; };
 
 struct write_req_t
 {
+    struct queueitem DL;
     union writeU U;
     struct sockaddr addr;
     uv_udp_t *udp;
@@ -54,6 +55,7 @@ struct write_req_t
 
 struct udp_entry
 {
+    struct queueitem DL;
     struct sockaddr addr;
     void *buf;
     uv_udp_t *udp;
@@ -62,6 +64,7 @@ struct udp_entry
 
 struct udp_queuecmd
 {
+    struct queueitem DL;
     cJSON *argjson;
     struct NXT_acct *tokenized_np;
     char *decoded;
@@ -211,7 +214,7 @@ void after_write(uv_write_t *req,int status)
         free(wr->buf.base);
     }
     //printf("after write %p\n",wr);
-    free(wr);
+    free_queueitem(wr);
     if ( status == 0 )
         return;
     fprintf(stderr, "uv_write error: %d %s\n",status,uv_err_name(status));
@@ -272,7 +275,7 @@ void _on_udprecv(int32_t queueflag,int32_t internalflag,uv_udp_t *udp,ssize_t nr
             up->len = (int32_t)nread;
             if ( addr != 0 )
                 up->addr = *addr;
-            queue_enqueue("UDP_Q",&UDP_Q,up);
+            queue_enqueue("UDP_Q",&UDP_Q,&up->DL);
         }
         else
         {
@@ -419,7 +422,7 @@ int32_t portable_udpwrite(int32_t queueflag,const struct sockaddr *addr,int32_t 
     if ( Global_mp->isMM == 0 && FASTMODE == 0 && queueflag != 0 ) // support oversized packets?
     {
         wr->queuetime = (uint32_t)(milliseconds() + (rand() % MAX_UDPQUEUE_MILLIS));
-        queue_enqueue("sendQ",&sendQ,wr);
+        queue_enqueue("sendQ",&sendQ,&wr->DL);
     }
     else r = process_sendQ_item(wr);
     return(r);
@@ -1544,10 +1547,10 @@ void every_second(int32_t counter)
         firstmilli = milliseconds();
     if ( milliseconds() < firstmilli+5000 )
         return;
-    if ( (ip_port= queue_dequeue(&P2P_Q)) != 0 )
+    if ( (ip_port= queue_dequeue(&P2P_Q,1)) != 0 )
     {
         add_SuperNET_peer(ip_port);
-        free(ip_port);
+        free_queueitem(ip_port);
     }
     if ( (counter % 10) == 0 && Global_mp->gatewayid >= 0 )
     {

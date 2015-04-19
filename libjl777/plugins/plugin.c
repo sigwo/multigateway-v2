@@ -17,9 +17,9 @@
 #include <ctype.h>
 #include "nn.h"
 #include "bus.h"
-#include "pair.h"
-#include "pubsub.h"
-#include "../cJSON.c"
+//#include "../includes/pair.h"
+//#include "../includes/pubsub.h"
+#include "cJSON.c"
 
 double milliseconds(void)
 {
@@ -81,18 +81,6 @@ int32_t get_socket_status(int32_t sock,int32_t timeoutmillis)
     if ( (rc= nn_poll(&pfd,1,timeoutmillis)) == 0 )
         return(pfd.revents);
     else return(-1);
-}
-
-uint32_t wait_for_sendable(int32_t sock)
-{
-    uint32_t rc,n = 0;
-    while ( 1 )
-    {
-        if ( (rc= get_socket_status(sock,1)) > 0 && (rc & NN_POLLOUT) != 0 )
-            return(n);
-        n++;
-    }
-    return(0);
 }
 
 int32_t get_newinput(int32_t permanentflag,char *line,int32_t max,int32_t sock,int32_t timeoutmillis)

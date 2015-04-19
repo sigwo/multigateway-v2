@@ -185,7 +185,7 @@ struct NXT_asset
 #define INCLUDE_DEFINES
 #include "ramchain.h"
 #undef INCLUDE_DEFINES
-#include "uthash.h"
+#include "includes/uthash.h"
 
 struct multisig_addr
 {

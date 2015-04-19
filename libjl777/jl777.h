@@ -214,9 +214,19 @@ long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NUL
 #include "jsoncodec.h"
 #include "mappedptr.h"
 #include "ramchain.h"
+#include "includes/utlist.h"
 
 #define portable_mutex_t uv_mutex_t
+struct queueitem { struct queueitem *next,*prev; };
+
 typedef struct queue
+{
+	struct queueitem *list;
+	portable_mutex_t mutex;
+    char name[31],initflag;
+} queue_t;
+
+/*typedef struct queue
 {
 #ifdef oldqueue
 	void **buffer;
@@ -229,9 +239,9 @@ typedef struct queue
 	//pthread_cond_t cond_full;
 	//pthread_cond_t cond_empty;
 } queue_t;
-//#define QUEUE_INITIALIZER(buffer) { buffer, sizeof(buffer) / sizeof(buffer[0]), 0, 0, 0, PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER }
-void *queue_dequeue(queue_t *queue);
-void queue_enqueue(char *name,queue_t *queue,void *ptr);
+//#define QUEUE_INITIALIZER(buffer) { buffer, sizeof(buffer) / sizeof(buffer[0]), 0, 0, 0, PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER }*/
+void *queue_dequeue(queue_t *queue,int32_t offsetflag);
+void queue_enqueue(char *name,queue_t *queue,struct queueitem *ptr);
 
 
 struct pingpong_queue
@@ -239,6 +249,7 @@ struct pingpong_queue
     char *name;
     queue_t pingpong[2],*destqueue,*errorqueue;
     int32_t (*action)();
+    int offset;
 };
 
 union NXTtype { uint64_t nxt64bits; uint32_t uval; int32_t val; int64_t lval; double dval; char *str; cJSON *json; };

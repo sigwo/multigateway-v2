@@ -15,7 +15,7 @@
 #include <arpa/inet.h>
 #endif
 #include <sys/time.h>
-#include "uthash.h"
+#include "includes/uthash.h"
 
 //Miniupnp code for supernet by chanc3r
 #include <time.h>
@@ -843,6 +843,17 @@ bits256 transparent_forging(char *nextgensig,uint32_t height,bits256 *NXTpubkeys
     // seconds to forge from last block: hit / ( basetarget * effective balanceNXT)
     return(NXTpubkeys[winner]);
 }
+typedef struct queue
+{
+	struct queueitem *list;
+	portable_mutex_t mutex;
+    char name[31],initflag;
+} queue_t;
+int32_t queue_size(queue_t *queue);
+void *queue_dequeue(queue_t *queue,int32_t offsetflag);
+void queue_enqueue(char *name,queue_t *queue,struct queueitem *ptr);
+struct queueitem *queueitem(char *str);
+void free_queueitem(void *itemptr);
 
 int main(int argc,const char *argv[])
 {
@@ -851,6 +862,18 @@ int main(int argc,const char *argv[])
     int32_t retval = -666;
     char ipaddr[64],*oldport,*newport,portstr[64],*retstr;
     IS_LIBTEST = 1;
+    if ( 0 )
+    {
+        static queue_t q;
+        char *str;
+        queue_enqueue("test",&q,queueitem("test"));
+        printf("queuesize.%d\n",queue_size(&q));
+        str = queue_dequeue(&q,1);
+        printf("dequeued.(%s)\n",str);
+        free_queueitem(str);
+        printf("queuesize.%d\n",queue_size(&q));
+        getchar();
+    }
     if ( argc > 1 && argv[1] != 0 )
     {
         char *init_MGWconf(char *JSON_or_fname,char *myipaddr);

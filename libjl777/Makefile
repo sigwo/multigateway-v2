@@ -30,7 +30,15 @@ clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
 plugins: doesntexist; \
-	cd plugins; gcc -o echo plugin.c -I ../includes ../libs/libnanomsg.a -lpthread -lanl -lm; cd ..
+	cd plugins; \
+    gcc -o echo plugin.c -I ../includes ../libs/libnanomsg.a -lpthread -lanl -lm; \
+    gcc -o MGW mgw.c bits777.c system777.c cJSON.c bitcoind_RPC.c bitcoind.c ramchain.c mgwapi.c utils777.c huffstream.c huff.c ramcoder.c -I ../includes ../libs/libnanomsg.a -lpthread -lcurl -lm; \
+    cd ..
+
+MGW: doesntexist; \
+	cd plugins; \
+    gcc -o MGW mgw.c mgwstate.c ramchain.c ramchaininit.c ramchaindb.c ramchainhash.c ramchainblocks.c ramchainapi.c ramchaintokens.c msig.c bits777.c system777.c cJSON.c NXT777.c bitcoind_RPC.c bitcoind.c utils777.c huffstream.c huff.c ramcoder.c -I ../includes ../libs/libnanomsg.a  -lpthread -lcurl -lm; \
+    cd ..
 
 SuperNET: $(TARGET); \
     pkill SuperNET; rm SuperNET; gcc -o SuperNET SuperNET.c libs/libminiupnpc.a libs/libjl777.a libs/libnanomsg.a libs/libwebsockets.a libs/libuv.a libs/libdb.a -lssl -lcrypto -lpthread -lcurl -lm -lz -ldl -lutil -lpcre -lexpat -lanl
@@ -76,8 +84,8 @@ chessjs:  doesntexist; \
 nanomsg:  doesntexist; \
     git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make; make check; cp .libs/libnanomsg.a ../libs; cp src/*.h ../includes; cd ..
 
-#python: doesntexist; \
-#    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; make all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
+python: doesntexist; \
+    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; make all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
 
 patch: doesntexist; \
     #sudo apt-get install csync-owncloud librsync-dev libsmbclient-dev liblog4c-dev flex libsqlite3-dev bison csync2; \
@@ -141,15 +149,6 @@ patch2: doesntexist; \
     make; \
     cp lib/*  ../../libs; \
     cd ../..;
-
-oldpython: doesntexist; \
-    tar xf python.tar.xz; \
-    cd Python-3.4.3; \
-    ./configure; \
-    make libpython3.4m.a; \
-    cp libpython3.4m.a ../libs/; \
-    cp /Users/whit/Downloads/Python-3.4.3/Include/Python.h ../includes; \
-    cd ..;
 
 onetime: doesntexist; \
     git clone https://github.com/joewalnes/websocketd; git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make; make check; cp .libs/libnanomsg.a ../libs; cp src/*.h ../includes; cd ..; \

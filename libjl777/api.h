@@ -66,7 +66,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
     //printf("BTCDpoll.%d\n",counter);
     //BTCDpoll post_process_bitcoind_RPC.SuperNET can't parse.({"msg":"[{"requestType":"ping","NXT":"13434315136155299987","time":1414310974,"pubkey":"34b173939544eb01515119b5e0b05880eadaae3d268439c9cc1471d8681ecb6d","ipaddr":"209.126.70.159"},{"token":"im9n7c9ka58g3qq4b2oe1d8p7mndlqk0pj4jj1163pkdgs8knb0vsreb0kf6luo1bbk097buojs1k5o5c0ldn6r6aueioj8stgel1221fq40f0cvaqq0bciuniit0isi0dikd363f3bjd9ov24iltirp6h4eua0q"}]","duration":86400})
     retbuf[0] = 0;
-    if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
+    if ( (ptr= queue_dequeue(&BroadcastQ,1)) != 0 )
     {
         if ( Debuglevel > 2 )
             printf("Got BroadcastQ\n");
@@ -82,11 +82,11 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
             free(msg2);
             //printf("send back broadcast.(%s)\n",retbuf);
         } else printf("BTCDpoll BroadcastQ len mismatch %d != %ld (%s)\n",len,strlen(str)+1,str);
-        free(ptr);
+        free_queueitem(ptr);
     }
     if ( retbuf[0] == 0 )
     {
-        if ( (ptr= queue_dequeue(&NarrowQ)) != 0 )
+        if ( (ptr= queue_dequeue(&NarrowQ,1)) != 0 )
         {
             //printf("Got NarrowQ\n");
             memcpy(&len,ptr,sizeof(len));
@@ -98,7 +98,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
                 sprintf(retbuf,"{\"ip_port\":\"%s\",\"hex\":\"%s\",\"len\":%d}",ip_port,hexstr,len);
                 //printf("send back narrow.(%s)\n",retbuf);
             } else printf("BTCDpoll NarrowQ illegal len.%d\n",len);
-            free(ptr);
+            free_queueitem(ptr);
         }
     }
     if ( retbuf[0] == 0 )
@@ -126,7 +126,7 @@ void queue_GUIpoll(char **ptrs)
     free(str); free(args);
     retbuf = realloc(retbuf,sizeof(ptrs) + strlen(retbuf+sizeof(ptrs)) + 1);
     //printf("QUEUED for GUI: (%s) -> (%s)\n",ptrs[0],retbuf+sizeof(ptrs));
-    queue_enqueue("resultsQ",&ResultsQ,retbuf);
+    queue_enqueue("resultsQ",&ResultsQ,queueitem(retbuf));
 }
 
 char *GUIpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -139,17 +139,17 @@ char *GUIpoll_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     retbuf[0] = 0;
     if ( retbuf[0] == 0 )
     {
-        if ( (ptr= queue_dequeue(&ResultsQ)) != 0 )
+        if ( (ptr= queue_dequeue(&ResultsQ,1)) != 0 )
         {
             memcpy(&ptrs,ptr,sizeof(ptrs));
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 fprintf(stderr,"Got GUI ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
             if ( ptrs[0] != 0 )
                 free(ptrs[0]);
             if ( ptrs[1] != 0 )
                 free(ptrs[1]);
-            free(ptrs);
             strcpy(retbuf,ptr+sizeof(ptrs));
+            free_queueitem(ptrs);
         }
     }
     if ( retbuf[0] == 0 )
@@ -734,7 +734,7 @@ char *gotnewpeer_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *s
     copy_cJSON(ip_port,objs[0]);
     if ( ip_port[0] != 0 )
     {
-        queue_enqueue("P2P_Q",&P2P_Q,clonestr(ip_port));
+        queue_enqueue("P2P_Q",&P2P_Q,queueitem(ip_port));
         return(clonestr("{\"result\":\"ip_port queued\"}"));
     }
     return(0);
@@ -1754,7 +1754,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *passthru[] = { (char *)passthru_func, "passthru", "V", "coin", "method", "params", "tag", "daemonid", 0 };
     static char *remote[] = { (char *)remote_func, "remote", "V",  "coin", "method", "result", "tag", 0 };
     //static char *python[] = { (char *)python_func, "python", "V",  "name", "launch", "websocket", 0 };
-    static char *syscall[] = { (char *)syscall_func, "syscall", "V", "name", "launch", "websocket", "jsonargs", 0 };
+    static char *syscall[] = { (char *)syscall_func, "syscall", "V", "name", "daemonize", "websocket", "jsonargs", 0 };
     static char *checkmsg[] = { (char *)checkmsg_func, "checkmessages", "V", "daemonid", 0 };
 
     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, puzzles, nonces, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, syscall, getpeers, maketelepods, tradebot, respondtx, checkmsg, openorders, allorderbooks, placebid, bid, placeask, ask, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, passthru, remote, genmultisig, getmsigpubkey, setmsigpubkey, MGWaddr, MGWresponse, sendfrag, gotfrag, startxfer, lotto, ramstring, ramrawind, ramblock, ramcompress, ramexpand, ramscript, ramtxlist, ramrichlist, rambalances, ramstatus, ramaddrlist, rampyramid, ramresponse, getfile, allsignals, getsignal, jumptrades, cancelquote, lottostats, tradehistory, makeoffer3, trollbox };

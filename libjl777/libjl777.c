@@ -258,7 +258,7 @@ void SuperNET_idler(uv_idle_t *handle)
     {
         lastattempt = millis;
 #ifdef TIMESCRAMBLE
-        while ( (wr= queue_dequeue(&sendQ)) != 0 )
+        while ( (wr= queue_dequeue(&sendQ,0)) != 0 )
         {
             if ( wr == firstwr )
             {
@@ -276,7 +276,7 @@ void SuperNET_idler(uv_idle_t *handle)
             }
             if ( firstwr == 0 )
                 firstwr = wr;
-            queue_enqueue("sendQ",&sendQ,wr);
+            queue_enqueue("sendQ",&sendQ,&wr->DL);
         }
         if ( Debuglevel > 2 && queue_size(&sendQ) != 0 )
             printf("sendQ size.%d\n",queue_size(&sendQ));
@@ -286,7 +286,7 @@ void SuperNET_idler(uv_idle_t *handle)
         while ( flag != 0 )
         {
             flag = 0;
-            if ( (qp= queue_dequeue(&udp_JSON)) != 0 )
+            if ( (qp= queue_dequeue(&udp_JSON,0)) != 0 )
             {
                 //printf("process qp argjson.%p\n",qp->argjson);
                 char previpaddr[64];
@@ -300,7 +300,7 @@ void SuperNET_idler(uv_idle_t *handle)
                 free(qp);
                 flag++;
             }
-            else if ( (ptrs= queue_dequeue(&JSON_Q)) != 0 )
+            else if ( (ptrs= queue_dequeue(&JSON_Q,1)) != 0 )
             {
                 jsonstr = ptrs[0];
                 if ( Debuglevel > 3 )
@@ -319,13 +319,13 @@ void SuperNET_idler(uv_idle_t *handle)
         }
     }
 #ifndef TIMESCRAMBLE
-    while ( (wr= queue_dequeue(&sendQ)) != 0 )
+    while ( (wr= queue_dequeue(&sendQ,0)) != 0 )
     {
         //printf("sendQ size.%d\n",queue_size(&sendQ));
         process_sendQ_item(wr);
     }
 #endif
-    while ( (up= queue_dequeue(&UDP_Q)) != 0 )
+    while ( (up= queue_dequeue(&UDP_Q,0)) != 0 )
         process_udpentry(up);
     if ( millis > (lastclock + 1000) )
     {
@@ -1026,22 +1026,24 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
 {
     char **ptrs,*retstr,retbuf[1024];
     uint64_t txid = 0;
-    ptrs = calloc(3,sizeof(*ptrs));
-    ptrs[0] = clonestr(JSONstr);
+    ptrs = calloc(5,sizeof(*ptrs));
+    if ( sizeof(struct queueitem) != 2*sizeof(ptrs[0]) )
+        fatal("unexpected queueitem size");
+    ptrs[2] = clonestr(JSONstr);
     if ( blockflag == 0 )
     {
         txid = calc_txid((uint8_t *)JSONstr,(int32_t)strlen(JSONstr));
-        ptrs[2] = (char *)txid;
+        ptrs[4] = (char *)txid;
     }
     if ( Debuglevel > 3 )
         printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
-    queue_enqueue("JSON_Q",&JSON_Q,ptrs);
+    queue_enqueue("JSON_Q",&JSON_Q,(void *)ptrs);
     if ( blockflag != 0 )
     {
-        while ( (retstr= ptrs[1]) == 0 )
+        while ( (retstr= ptrs[3]) == 0 )
             usleep(1000);
-        if ( ptrs[0] != 0 )
-            free(ptrs[0]);
+        if ( ptrs[2] != 0 )
+            free(ptrs[2]);
         free(ptrs);
         //printf("block.%d returned.(%s)\n",blockflag,retstr);
         return(retstr);
@@ -1106,11 +1108,11 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
             debugstr[32] = 0;
             fprintf(stderr,"%s NARROWCAST.(%s) txid.%llu (%s) %llu\n",pserver->ipaddr,debugstr,(long long)txid,ip_port,(long long)pserver->nxt64bits);
         }
-        ptr = calloc(1,64 + sizeof(len) + len + 1);
-        memcpy(ptr,&len,sizeof(len));
-        memcpy(&ptr[sizeof(len)],ip_port,strlen(ip_port));
-        memcpy(&ptr[sizeof(len) + 64],msg,len);
-        queue_enqueue("NarrowQ",&NarrowQ,ptr);
+        ptr = calloc(1,sizeof(struct queueitem) + 64 + sizeof(len) + len + 1);
+        memcpy(&ptr[sizeof(struct queueitem)],&len,sizeof(len));
+        memcpy(&ptr[sizeof(struct queueitem) + sizeof(len)],ip_port,strlen(ip_port));
+        memcpy(&ptr[sizeof(struct queueitem) + sizeof(len) + 64],msg,len);
+        queue_enqueue("NarrowQ",&NarrowQ,(void *)ptr);
         return(txid);
     }
     else
@@ -1132,12 +1134,12 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
                 debugstr[32] = 0;
                 printf("BROADCAST parms.(%s) valid.%d duration.%d txid.%llu len.%d\n",debugstr,valid,duration,(long long)txid,len);
             }
-            ptr = calloc(1,sizeof(len) + sizeof(duration) + len + 1);
-            memcpy(ptr,&len,sizeof(len));
-            memcpy(&ptr[sizeof(len)],&duration,sizeof(duration));
-            memcpy(&ptr[sizeof(len) + sizeof(duration)],msg,len);
+            ptr = calloc(1,sizeof(struct queueitem) + sizeof(len) + sizeof(duration) + len + 1);
+            memcpy(&ptr[sizeof(struct queueitem)],&len,sizeof(len));
+            memcpy(&ptr[sizeof(struct queueitem) + sizeof(len)],&duration,sizeof(duration));
+            memcpy(&ptr[sizeof(struct queueitem) + sizeof(len) + sizeof(duration)],msg,len);
             ptr[sizeof(len) + sizeof(duration) + len] = 0;
-            queue_enqueue("BroadcastQ",&BroadcastQ,ptr);
+            queue_enqueue("BroadcastQ",&BroadcastQ,(void *)ptr);
             update_Allnodes(msg,len);
             return(txid);
         } else printf("cant broadcast non-JSON.(%s)\n",msg);

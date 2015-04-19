@@ -259,8 +259,8 @@ int32_t poll_daemons()
                                         }
                                     }
                                 } else printf("parse error.(%s)\n",str);
-                                if ( 0 && dp->websocket == 0 )
-                                    queue_enqueue("daemon",&dp->messages,str);
+                                if ( dp->websocket == 0 )
+                                    queue_enqueue("daemon",&dp->messages,queueitem(str));
                             }
                         }
                     }
@@ -341,7 +341,7 @@ char *launch_daemon(int32_t websocket,char *cmd,char *arg,int32_t (*daemonfunc)(
         dp->daemonfunc = daemonfunc;
         dp->websocket = websocket;
         Daemoninfos[Numdaemons++] = dp;
-        if ( portable_thread_create((void *)daemon_loop,dp) == 0 || portable_thread_create((void *)daemon_loop2,dp) == 0 )
+        if ( (websocket != 0 && portable_thread_create((void *)daemon_loop,dp) == 0) || portable_thread_create((void *)daemon_loop2,dp) == 0 )
         {
             free(dp->cmd), free(dp->arg), free(dp);
             nn_shutdown(dp->daemonsock,0);
@@ -383,12 +383,12 @@ char *checkmessages(char *NXTaddr,char *NXTACCTSECRET,uint64_t daemonid)
     {
         for (i=0; i<10; i++)
         {
-            if ( (msg= queue_dequeue(&dp->messages)) != 0 )
+            if ( (msg= queue_dequeue(&dp->messages,1)) != 0 )
             {
                 if ( json == 0 )
                     json = cJSON_CreateObject(), array = cJSON_CreateArray();
                 cJSON_AddItemToArray(array,cJSON_CreateString(msg));
-                nn_freemsg(msg);
+                free_queueitem(msg);
             }
         }
         if ( json == 0 )

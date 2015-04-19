@@ -902,7 +902,7 @@ int32_t add_address_entry(int32_t numvins,uint64_t inputsum,int32_t numvouts,uin
                 if ( (msig= find_msigaddr(addr)) != 0 && msig->NXTaddr[0] != 0 )
                 {
                     printf("queue DepositQ for NXT.(%s) %s %.8f\n",msig->NXTaddr,addr,dstr(value));
-                    queue_enqueue("DepositQ",&DepositQ,clonestr(addr));
+                    queue_enqueue("DepositQ",&DepositQ,queueitem(addr));
                 }
             }
             return(0);
@@ -4140,7 +4140,7 @@ void *Coinloop(void *ptr)
         {
             if ( Debuglevel > 2 )
                 printf("Coinloop: no work, sleep\n");
-            if ( (msigaddr= queue_dequeue(&DepositQ)) != 0 )
+            if ( (msigaddr= queue_dequeue(&DepositQ,1)) != 0 )
             {
                 if ( (msig= find_msigaddr(msigaddr)) != 0 )
                 {
@@ -4148,7 +4148,7 @@ void *Coinloop(void *ptr)
                     if ( (retstr= invoke_MGW(MGW_whitelist,cp,msig,1)) != 0 )
                         free(retstr);
                 }
-                free(msigaddr);
+                free_queueitem(msigaddr);
             }
             else sleep(10);
         }
