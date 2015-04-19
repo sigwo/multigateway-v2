@@ -396,7 +396,7 @@ char *extract_userpass(struct coin_info *cp,char *serverport,char *userpass,char
         return(serverport);
     }
     userpass[0] = 0;
-    if ( (fp= fopen(fname,"r")) != 0 )
+    if ( (fp= fopen(os_compatible_path(fname),"r")) != 0 )
     {
         if ( Debuglevel > 0 )
             printf("extract_userpass from (%s)\n",fname);
@@ -1243,7 +1243,7 @@ void broadcastfile(char *NXTaddr,char *NXTACCTSECRET,char *fname)
     FILE *fp;
     char *buf;
     int32_t len,n;
-    if ( Global_mp->bussock >= 0 && (fp= fopen(fname,"rb")) != 0 )
+    if ( Global_mp->bussock >= 0 && (fp= fopen(os_compatible_path(fname),"rb")) != 0 )
     {
         fseek(fp,0,SEEK_END);
         len = (int32_t)ftell(fp);
@@ -1279,7 +1279,7 @@ void poll_nanomsg()
         {
             filebuf = &buf[len];
             filelen = (recv - len);
-            if ( (fp= fopen(fname,"rb")) != 0 )
+            if ( (fp= fopen(os_compatible_path(fname),"rb")) != 0 )
             {
                 fseek(fp,0,SEEK_END);
                 if ( ftell(fp) == filelen )
@@ -1293,7 +1293,7 @@ void poll_nanomsg()
                 }
                 fclose(fp);
             }
-            if ( sameflag == 0 && (fp= fopen(fname,"wb")) != 0 )
+            if ( sameflag == 0 && (fp= fopen(os_compatible_path(fname),"wb")) != 0 )
             {
                 if ( (n= (int32_t)fwrite(filebuf,1,filelen,fp)) != filelen )
                     printf("error writing (%s) only %d written vs %d\n",fname,n,filelen);

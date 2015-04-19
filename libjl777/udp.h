@@ -148,7 +148,7 @@ int32_t load_handler_fname(void *dest,int32_t len,char *handler,char *name)
     int32_t retval = -1;
     char fname[1024];
     set_handler_fname(fname,handler,name);
-    if ( (fp= fopen(fname,"rb")) != 0 )
+    if ( (fp= fopen(os_compatible_path(fname),"rb")) != 0 )
     {
         fseek(fp,0,SEEK_END);
         if ( ftell(fp) == len )
@@ -407,7 +407,7 @@ int32_t process_sendQ_item(struct write_req_t *wr)
     if ( r < 0 )
         printf("uv_udp_send error.%d %s wr.%p wreq.%p %p len.%ld\n",r,uv_err_name(r),wr,&wr->U.ureq,wr->buf.base,wr->buf.len);
     if ( THROTTLE != 0 )
-        usleep(THROTTLE * 1000);
+        msleep(THROTTLE);
     return(r);
 }
 
@@ -1486,7 +1486,7 @@ void enter_smallworld(int32_t duration,uint64_t threshold)
         expand_nxt64bits(destNXTaddr,Identities[i].nxt64bits);
         if ( (str= send_tokenized_cmd(!prevent_queueing("puzzles"),hopNXTaddr,0,Global_mp->myNXTADDR,Global_mp->srvNXTACCTSECRET,jsonstr,destNXTaddr)) != 0 )
             free(str);
-        usleep(25000); // prevent saturating UDP output
+        msleep(25); // prevent saturating UDP output
     }
     Global_mp->endpuzzles = milliseconds() + (duration + 3) * 1000;
     printf("sent puzzles to %d nodes\n",i);

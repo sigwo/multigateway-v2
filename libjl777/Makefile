@@ -1,9 +1,15 @@
-OS=win
-SYS := $(shell gcc -dumpmachine)
-ifneq (, $(findstring linux, $(SYS)))
- OS=unix
-else ifneq(, $(findstring apple, $(SYS)))
- OS=osx
+ifneq (,$(findstring /cygdrive/,$(PATH)))
+    OS := win
+    PLIBS := nonportable/$(OS)/files.c nonportable/$(OS)/random.c ../libs/libnanomsg.a -lpthread -lanl -lm
+else
+ifneq (,$(findstring WINDOWS,$(PATH)))
+    OS := win
+    PLIBS := nonportable/$(OS)/files.c nonportable/$(OS)/random.c ../libs/libnanomsg.a -lpthread -lanl -lm
+else
+    OS := $(shell uname -s)
+    #PLIBS := nonportable/$(OS)/files.c nonportable/$(OS)/random.c ../libs/libnanomsg.a -lpthread -lanl -lm
+    PLIBS := nonportable/$(OS)/files.c nonportable/$(OS)/random.c ../libs/libnanomsg.a -lpthread -lm
+endif
 endif
 
 
@@ -38,15 +44,20 @@ test:	all
 clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
-plugins: doesntexist; \
+PINCLUDES := -Iincludes -I. -Iutils -Iramchain -Imgw -I ../includes -I../..
+
+makeMGW :=    gcc -o lib/MGW $(PINCLUDES) mgw/mgw.c mgw/state.c mgw/msig.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c ramchain/storage.c ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bits777.c utils/system777.c utils/cJSON.c utils/NXT777.c utils/files777.c utils/bitcoind_RPC.c utils/bitcoind.c utils/utils777.c utils/huffstream.c utils/ramcoder.c -lcurl $(PLIBS);
+
+plugins: lib/echo lib/MGW; lib/DB; \
 	cd plugins; \
-    gcc -o echo plugin.c utils/cJSON.c -I ../includes ../libs/libnanomsg.a -lpthread -lanl -lm; \
-    gcc -o MGW -I ../includes -I . -I .. -I utils -I ramchain -I mgw mgw/mgw.c mgw/state.c mgw/msig.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c ramchain/storage.c ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bits777.c $(OS)/system777.c utils/cJSON.c utils/NXT777.c utils/bitcoind_RPC.c utils/bitcoind.c utils/utils777.c utils/huffstream.c utils/ramcoder.c ../libs/libnanomsg.a  -lpthread -lcurl -lm; \
+    gcc -o lib/echo $(PINCLUDES) example.c utils/cJSON.c  utils/system777.c $(PLIBS); \
+    gcc -o lib/DB -c sophia/sophia.c -g -O2 -std=c99 -pedantic -Wextra -Wall -Wno-unused-function -fPIC -fno-stack-protector -fvisibility=hidden; $(PLIBS); \
+    $(makeMGW) \
     cd ..
 
-MGW: doesntexist; \
+rtMGW: plugins/rtMGW; \
 	cd plugins; \
-    gcc -o MGW -I. -Iutils -Iramchain -Imgw -I../includes -I.. -I../..  mgw/mgw.c mgw/state.c mgw/msig.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c ramchain/storage.c ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bits777.c $(OS)/system777.c utils/cJSON.c utils/NXT777.c utils/bitcoind_RPC.c utils/bitcoind.c utils/utils777.c utils/huffstream.c utils/ramcoder.c ../libs/libnanomsg.a  -lpthread -lcurl -lm; \
+    $(makeMGW) \
     cd ..
 
 SuperNET: $(TARGET); \
@@ -247,5 +258,7 @@ cstdlib/errno.o: cstdlib/errno.c interpreter.h platform.h
 cstdlib/ctype.o: cstdlib/ctype.c interpreter.h platform.h
 cstdlib/stdbool.o: cstdlib/stdbool.c interpreter.h platform.h
 cstdlib/unistd.o: cstdlib/unistd.c interpreter.h platform.h
-
+lib/DB: plugins/sophia/sophia.c
+lib/echo: plugins/example.c
+lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/msig.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/storage.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c plugins/utils/bitcoind_RPC.c plugins/utils/cJSON.c plugins/utils/bits777.c plugins/utils/NXT777.c plugins/utils/system777.c plugins/utils/files777.c plugins/utils/utils777.c plugins/nonportable/$(OS)/files.c plugins/nonportable/$(OS)/random.c
 

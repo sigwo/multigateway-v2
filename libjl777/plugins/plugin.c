@@ -41,14 +41,14 @@ void randombytes(uint8_t *x,uint64_t xlen)
         for (;;) {
             fd = open("/dev/urandom",O_RDONLY);
             if (fd != -1) break;
-            sleep(1);
+            portable_sleep(1);
         }
     }
     while (xlen > 0) {
         if (xlen < 1048576) i = (int32_t)xlen; else i = 1048576;
         i = (int32_t)read(fd,x,i);
         if (i < 1) {
-            sleep(1);
+            portable_sleep(1);
             continue;
         }
         x += i;
@@ -230,7 +230,7 @@ int main(int argc,const char *argv[])
                     nn_send(sock,retbuf,len+1,0); // send the null terminator too
                 }
             }
-            usleep(1000);
+            msleep(1);
         }
         nn_shutdown(sock,0);
     }

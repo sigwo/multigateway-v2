@@ -448,7 +448,7 @@ char *findaddress_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     copy_cJSON(fname,objs[0]);
     copy_cJSON(dest,objs[1]);
     L = get_API_int(objs[2],0);
-    fp = fopen(fname,"rb");
+    fp = fopen(os_compatible_path(fname),"rb");
     if ( fp != 0 && sender[0] != 0 && valid > 0 )
         retstr = onion_sendfile(L,previpaddr,NXTaddr,NXTACCTSECRET,sender,dest,fp);
     else retstr = clonestr("{\"error\":\"invalid sendfile_func arguments\"}");

@@ -149,7 +149,7 @@ struct exchange_state *init_exchange_state(int32_t writeflag,char *name,char *ba
     {
         ensure_directory("exchangedata");
         sprintf(fname,"exchangedata/%s_%s_%s",name,base,rel);
-        ep->fp = fopen(fname,ep->writeflag!=0?"rb+":"rb");
+        ep->fp = fopen(os_compatible_path(fname),ep->writeflag!=0?"rb+":"rb");
         if ( ep->fp != 0 )
         {
             fseek(ep->fp,0,SEEK_END);
@@ -758,13 +758,13 @@ void *poll_exchanges(void *flagp)
                     free(orders);
                 }
             }
-            sleep(1);
+            portable_sleep(1);
         }
     }
     while ( Numactivefiles > 0 )
     {
         poll_exchange_iter(maxdepth,exchangeid);
-        sleep(1);
+        portable_sleep(1);
     }
     return(0);
 }

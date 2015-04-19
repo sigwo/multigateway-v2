@@ -143,7 +143,10 @@
 //#include "utils/pthread.h"
 #include "includes/gettimeofday.h"
 
-FILE *jl777fopen(char *fname,char *mode)
+char *os_compatible_path(char *fname);
+void sleepmillis(uint32_t milliseconds);
+
+/*FILE *jl777fopen(char *fname,char *mode)
 {
     char *clonestr(char *);
     FILE *fp;
@@ -156,22 +159,24 @@ FILE *jl777fopen(char *fname,char *mode)
     free(name);
     return(fp);
 }
-#define fopen jl777fopen
+#define fopen jl777fopen*/
 
 
 #ifdef __MINGW32__
 #elif __MINGW64__
 #else
 #define STDIN_FILENO 0
-void sleep(int32_t);
-void usleep(int32_t);
+//void usleep(int32_t);
+void msleep(int32_t);
 #endif
 
 #endif
 
+void portable_sleep(int32_t);
 
-void *jl777malloc(size_t allocsize) { void *ptr = malloc(allocsize); if ( ptr == 0 ) { fprintf(stderr,"malloc(%ld) failed\n",allocsize); while ( 1 ) sleep(60); } return(ptr); }
-void *jl777calloc(size_t num,size_t allocsize) { void *ptr = calloc(num,allocsize); if ( ptr == 0 ) { fprintf(stderr,"calloc(%ld,%ld) failed\n",num,allocsize); while ( 1 ) sleep(60); } return(ptr); }
+
+void *jl777malloc(size_t allocsize) { void *ptr = malloc(allocsize); if ( ptr == 0 ) { fprintf(stderr,"malloc(%ld) failed\n",allocsize); while ( 1 ) portable_sleep(60); } return(ptr); }
+void *jl777calloc(size_t num,size_t allocsize) { void *ptr = calloc(num,allocsize); if ( ptr == 0 ) { fprintf(stderr,"calloc(%ld,%ld) failed\n",num,allocsize); while ( 1 ) portable_sleep(60); } return(ptr); }
 long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NULL)??\n"); return(0); } return(strlen(str)); }
 #define malloc jl777malloc
 #define calloc jl777calloc

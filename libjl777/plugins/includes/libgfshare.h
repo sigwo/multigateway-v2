@@ -29,7 +29,7 @@
 
 typedef struct _gfshare_ctx gfshare_ctx;
 
-typedef void (*gfshare_rand_func_t)(unsigned char*,unsigned long long);
+typedef void (*gfshare_rand_func_t)(unsigned char*,long);
 
 /* This will, by default, use random(). It's not very good so you should
  * replace it (perhaps with a function which reads from /dev/urandom).

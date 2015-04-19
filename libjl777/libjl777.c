@@ -13,85 +13,6 @@ struct pingpong_queue Pending_offersQ;
 #include "pton.h"
 #endif
 
-uv_async_t Tasks_async;
-uv_work_t Tasks;
-struct task_info
-{
-    char name[64];
-    int32_t sleepmicros,argsize;
-    tfunc func;
-    uint8_t args[];
-};
-
-void aftertask(uv_work_t *req,int status)
-{
-    struct task_info *task = (struct task_info *)req->data;
-    if ( task != 0 )
-    {
-        fprintf(stderr,"req.%p task.%s complete status.%d\n",req,task->name,status);
-        free(task);
-        req->data = 0;
-    } else fprintf(stderr,"task.%p complete\n",req);
-    free(req);
-    //uv_close((uv_handle_t *)&Tasks_async,NULL);
-    //uv_close((uv_handle_t *)req,NULL);
-}
-
-void Task_handler(uv_work_t *req)
-{
-    struct task_info *task = (struct task_info *)req->data;
-    while ( task != 0 )
-    {
-        //fprintf(stderr,"Task.(%s) sleep.%d\n",task->name,task->sleepmicros);
-        if ( task->func != 0 )
-        {
-            //printf("Task_handler.(%p)\n",*(void **)task->args);
-            if ( (*task->func)(task->args,task->argsize) < 0 )
-                break;
-            if ( task->sleepmicros != 0 )
-                usleep(task->sleepmicros);
-        }
-        else break;
-    }
-}
-
-uv_work_t *start_task(tfunc func,char *name,int32_t sleepmicros,void *args,int32_t argsize)
-{
-    uv_work_t *work;
-    struct task_info *task;
-    task = calloc(1,sizeof(*task) + argsize);
-    memcpy(task->args,args,argsize);
-    //printf("start_tasks copy %p %p\n",*(void **)args,*(void **)task->args);
-    task->func = func;
-    task->argsize = argsize;
-    safecopy(task->name,name,sizeof(task->name));
-    task->sleepmicros = sleepmicros;
-    work = calloc(1,sizeof(*work));
-    work->data = task;
-    uv_queue_work(UV_loop,work,Task_handler,aftertask);
-    return(work);
-}
-
-/*
-void async_handler(uv_async_t *handle)
-{
-    char *jsonstr = (char *)handle->data;
-    if ( jsonstr != 0 )
-    {
-        fprintf(stderr,"ASYNC(%s)\n",jsonstr);
-        free(jsonstr);
-        handle->data = 0;
-    } else fprintf(stderr,"ASYNC called\n");
-}
-
-void send_async_message(char *msg)
-{
-    while ( Tasks_async.data != 0 )
-        usleep(1000);
-    Tasks_async.data = clonestr(msg);
-    uv_async_send(&Tasks_async);
-}*/
-
 void handler_gotfile(char *sender,char *senderip,struct transfer_args *args,uint8_t *data,int32_t len,uint32_t crc)
 {
     void _RTmgw_handler(struct transfer_args *args);
@@ -112,7 +33,7 @@ void handler_gotfile(char *sender,char *senderip,struct transfer_args *args,uint
     if ( strcmp(args->handler,"mgw") == 0 || strcmp(args->handler,"RTmgw") == 0 )
     {
         set_handler_fname(buf,args->handler,args->name);
-        if ( (fp= fopen(buf,"wb")) != 0 )
+        if ( (fp= fopen(os_compatible_path(buf),"wb")) != 0 )
         {
             printf("handler_gotfile created.(%s).%d\n",buf,args->totallen);
             fwrite(args->data,1,args->totallen,fp);
@@ -349,7 +270,7 @@ void SuperNET_idler(uv_idle_t *handle)
         counter++;
         lastclock = millis;
     }
-    usleep(APISLEEP * 1000);
+    msleep(APISLEEP);
 }
 
 void run_UVloop(void *arg)
@@ -776,7 +697,7 @@ int32_t init_API_port(int32_t use_ssl,uint16_t port,uint32_t millis)
 	static struct lws_context_creation_info infos[2];
     struct lws_context_creation_info *info;
     while ( Finished_init == 0 )
-        fprintf(stderr,"."), sleep(1);
+        fprintf(stderr,"."), portable_sleep(1);
     info = &infos[use_ssl];
 	memset(info,0,sizeof(*info));
 	info->port = port;
@@ -817,7 +738,7 @@ int32_t init_API_port(int32_t use_ssl,uint16_t port,uint32_t millis)
     {
         //libwebsocket_callback_on_writable_all_protocol(&protocols[1]);
         n = libwebsocket_service(LWScontext,millis);
-        usleep(1000);
+        msleep(1);
 	}
 	libwebsocket_context_destroy(LWScontext);
 	lwsl_notice("libwebsockets-test-server exited cleanly\n");
@@ -950,13 +871,13 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
     Finished_loading = 1;
     if ( Debuglevel > 0 )
         printf("run_UVloop\n");
-    //sleep(3);
+    //portable_sleep(3);
      {
         struct coin_info *cp;
         while ( (cp= get_coin_info("BTCD")) == 0 )
         {
             printf("no BTCD coin info\n");
-            sleep(10);
+            portable_sleep(10);
         }
         parse_ipaddr(cp->myipaddr,myipaddr);
         bind_NXT_ipaddr(cp->srvpubnxtbits,myipaddr);
@@ -1259,7 +1180,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     printf("SuperNET_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
     if ( JSON_or_fname != 0 && JSON_or_fname[0] != '{' )
     {
-        fp = fopen(JSON_or_fname,"rb");
+        fp = fopen(os_compatible_path(JSON_or_fname),"rb");
         if ( fp == 0 )
             return(-1);
         fclose(fp);
@@ -1306,7 +1227,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         static int32_t zero;
         if ( portable_thread_create((void *)run_libwebsockets,&zero) == 0 )
             printf("ERROR hist run_libwebsockets\n");
-        sleep(3);
+        portable_sleep(3);
     }
     init_InstantDEX(calc_nxt64bits(Global_mp->myNXTADDR),1);
     int32_t tmp = 1;

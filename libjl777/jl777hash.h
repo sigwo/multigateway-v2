@@ -212,8 +212,6 @@ void **hashtable_gather_modified(int64_t *changedp,struct hashtable *hp,int32_t 
         return(0);
     if ( hp->modifiedoffset < 0 )
         forceflag = 1;
-    //while ( Global_mp->hashprocessing != 0 )
-    //    usleep(100);
     Global_mp->hashprocessing++;
     for (i=0; i<hp->hashsize; i++)
     {
@@ -379,7 +377,7 @@ void *MTadd_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key)
         printf("MTadd_hashtable.(%s) illegal key?? (%s)\n",*hp_ptr!=0?(*hp_ptr)->name:"",key);
 #ifdef __APPLE__
         while ( 1 )
-            sleep(1);
+            portable_sleep(1);
 #endif
     }
     ptr = calloc(1,sizeof(*ptr));
@@ -387,13 +385,11 @@ void *MTadd_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key)
     ptr->hp_ptr = hp_ptr;
     ptr->key = key;
     ptr->funcid = 'A';
-    //while ( Global_mp->hashprocessing != 0 )
-    //    usleep(1);
     Global_mp->hashprocessing++;
     queue_enqueue("hashtableQ1",&Global_mp->hashtable_queue[1],&ptr->DL);
-    usleep(APISLEEP);
+    msleep(APISLEEP);
     while ( ptr->doneflag == 0 )
-        usleep(APISLEEP * 10);
+        msleep(APISLEEP);
     result = ptr->U.result;
     free(ptr);
     Global_mp->hashprocessing--;
@@ -408,13 +404,11 @@ uint64_t MTsearch_hashtable(struct hashtable **hp_ptr,char *key)
     ptr->hp_ptr = hp_ptr;
     ptr->key = key;
     ptr->funcid = 'S';
-    //while ( Global_mp->hashprocessing != 0 )
-    //    usleep(1);
     Global_mp->hashprocessing++;
     queue_enqueue("hashtableQ0",&Global_mp->hashtable_queue[0],&ptr->DL);
-    usleep(APISLEEP);
+    msleep(APISLEEP);
     while ( ptr->doneflag == 0 )
-        usleep(APISLEEP * 10);
+        msleep(APISLEEP);
     hashval = ptr->U.hashval;
     free(ptr);
     Global_mp->hashprocessing--;
@@ -428,7 +422,7 @@ void *process_hashtablequeues(void *_p) // serialize hashtable functions
     while ( 1 )//Historical_done == 0 )
     {
         if ( Global_mp->hashprocessing == 0 && n == 0 )
-            usleep(100 * APISLEEP);
+            msleep(APISLEEP);
         for (iter=n=0; iter<2; iter++)
         {
             while ( (ptr= queue_dequeue(&Global_mp->hashtable_queue[iter],0)) != 0 )

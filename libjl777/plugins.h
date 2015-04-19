@@ -28,7 +28,9 @@ struct daemon_info
     int32_t (*daemonfunc)(int32_t permanentflag,int32_t websocket,char *cmd,char *jsonargs,uint64_t daemonid);
 } *Daemoninfos[1024]; int32_t Numdaemons;
 
-int32_t launch_plugin(char *args[])
+int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags) { return(waitpid(childpid,statusp,0)); }
+
+int32_t OS_launch_process(char *args[])
 {
     pid_t child_pid;
     if ( (child_pid= fork()) >= 0 )
@@ -57,9 +59,9 @@ int32_t call_system(int32_t permanentflag,int32_t websocket,char *cmd,char *json
         {
             sprintf(cmdstr,"%s \"%s\"",cmd,jsonargs);
             //printf("SYSTEM.(%s)\n",cmdstr);
-            system(cmdstr);
+            system(os_compatible_path(cmdstr));
         }
-        else system(cmd);
+        else system(os_compatible_path(cmd));
         return(0);
     }
     memset(args,0,sizeof(args));
@@ -86,7 +88,7 @@ int32_t call_system(int32_t permanentflag,int32_t websocket,char *cmd,char *json
     if ( jsonargs != 0 && jsonargs[0] != 0 )
         args[n++] = jsonargs;
     args[n++] = 0;
-    return(launch_plugin(args));
+    return(OS_launch_process(args));
 }
 
 struct daemon_info *find_daemoninfo(uint64_t daemonid)
@@ -292,13 +294,13 @@ void *_daemon_loop(struct daemon_info *dp,int32_t permanentflag)
     if ( permanentflag != 0 )
         dp->pairsock = init_daemonsock(permanentflag,dp->daemonid);
     childpid = (*dp->daemonfunc)(permanentflag,dp->websocket,dp->cmd,dp->arg,dp->daemonid);
-    waitpid(childpid,&status,0);
+    OS_waitpid(childpid,&status,0);
     printf("daemonid.%llu (%s %s) finished child.%d status.%d\n",(long long)dp->daemonid,dp->cmd,dp->arg!=0?dp->arg:"",childpid,status);
     if ( permanentflag != 0 )
     {
         dp->finished = 1;
         while ( dp->dereferenced == 0 )
-            sleep(1);
+            portable_sleep(1);
         printf("daemonid.%llu (%s %s) dereferenced\n",(long long)dp->daemonid,dp->cmd,dp->arg!=0?dp->arg:"");
         if ( dp->daemonsock >= 0 )
             nn_shutdown(dp->daemonsock,0);

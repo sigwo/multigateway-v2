@@ -176,7 +176,7 @@ int32_t send_email(char *email,char *destNXTaddr,char *pubkeystr,char *msg)
     char cmd[1024],fname[512],*hexstr;
     len = (int32_t)strlen(msg);
     sprintf(fname,"/tmp/%s.%d",destNXTaddr,_crc32(0,(uint8_t *)msg,len));
-    if ( (fp= fopen(fname,"wb")) != 0 )
+    if ( (fp= fopen(os_compatible_path(fname),"wb")) != 0 )
     {
         fprintf(fp,"To: %s\n",email);
         fprintf(fp,"From: MGWstatus@gmail.com\n");
@@ -197,7 +197,7 @@ int32_t send_email(char *email,char *destNXTaddr,char *pubkeystr,char *msg)
         fprintf(fp,"\n");
         fclose(fp);
         sprintf(cmd,"ssmtp %s < %s",email,fname);
-        retval = system(cmd);
+        retval = system(os_compatible_path(cmd));
         //printf("(%s) -> retval.%d\n",cmd,retval);
     }
     return(retval);
