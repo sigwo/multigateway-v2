@@ -389,9 +389,9 @@ void *MTadd_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key)
     ptr->funcid = 'A';
     Global_mp->hashprocessing++;
     queue_enqueue("hashtableQ1",&Global_mp->hashtable_queue[1],&ptr->DL);
-    sleep(APISLEEP);
+    msleep(10*APISLEEP);
     while ( ptr->doneflag == 0 )
-        msleep(APISLEEP);
+        msleep(10*APISLEEP);
     result = ptr->U.result;
     free(ptr);
     Global_mp->hashprocessing--;
@@ -408,9 +408,9 @@ uint64_t MTsearch_hashtable(struct hashtable **hp_ptr,char *key)
     ptr->funcid = 'S';
     Global_mp->hashprocessing++;
     queue_enqueue("hashtableQ0",&Global_mp->hashtable_queue[0],&ptr->DL);
-    sleep(APISLEEP);
+    msleep(10*APISLEEP);
     while ( ptr->doneflag == 0 )
-        msleep(APISLEEP);
+        msleep(10*APISLEEP);
     hashval = ptr->U.hashval;
     free(ptr);
     Global_mp->hashprocessing--;
