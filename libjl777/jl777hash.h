@@ -66,7 +66,6 @@ void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
 void *queue_dequeue(queue_t *queue,int32_t offsetflag)
 {
     struct queueitem *item = 0;
-    return(0);
     lock_queue(queue);
     if ( Debuglevel > 2 )
         fprintf(stderr,"queue_dequeue name.(%s) dequeue.%p\n",queue->name,queue->list);
@@ -390,7 +389,7 @@ void *MTadd_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key)
     ptr->funcid = 'A';
     Global_mp->hashprocessing++;
     queue_enqueue("hashtableQ1",&Global_mp->hashtable_queue[1],&ptr->DL);
-    msleep(APISLEEP);
+    sleep(APISLEEP);
     while ( ptr->doneflag == 0 )
         msleep(APISLEEP);
     result = ptr->U.result;
@@ -409,7 +408,7 @@ uint64_t MTsearch_hashtable(struct hashtable **hp_ptr,char *key)
     ptr->funcid = 'S';
     Global_mp->hashprocessing++;
     queue_enqueue("hashtableQ0",&Global_mp->hashtable_queue[0],&ptr->DL);
-    msleep(APISLEEP);
+    sleep(APISLEEP);
     while ( ptr->doneflag == 0 )
         msleep(APISLEEP);
     hashval = ptr->U.hashval;
