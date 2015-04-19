@@ -197,7 +197,7 @@ int32_t aligned_free(void *ptr)
     }
     memcpy(&realptr,(void *)((long)ptr - sizeof(realptr)),sizeof(realptr));
     diff = ((long)ptr - (long)realptr);
-    if ( diff < sizeof(ptr) || diff > 32 )
+    if ( diff < (long)sizeof(ptr) || diff > 32 )
     {
         printf("ptr %p and realptr %p too far apart %ld\n",ptr,realptr,diff);
         return(-2);

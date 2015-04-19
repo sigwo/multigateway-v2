@@ -28,7 +28,7 @@ struct daemon_info
     int32_t (*daemonfunc)(int32_t permanentflag,int32_t websocket,char *cmd,char *jsonargs,uint64_t daemonid);
 } *Daemoninfos[1024]; int32_t Numdaemons;
 
-int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags) { return(waitpid(childpid,statusp,0)); }
+int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags) { return(waitpid(childpid,statusp,flags)); }
 
 int32_t OS_launch_process(char *args[])
 {

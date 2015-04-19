@@ -48,7 +48,7 @@ int32_t sortds(double *buf,uint32_t num,int32_t size);
 int32_t sort64s(uint64_t *buf,uint32_t num,int32_t size);
 int32_t revsort64s(uint64_t *buf,uint32_t num,int32_t size);
 
-double estimate_completion(char *coinstr,double startmilli,int32_t processed,int32_t numleft);
+double estimate_completion(double startmilli,int32_t processed,int32_t numleft);
 
 void clear_alloc_space(struct alloc_space *mem);
 void *memalloc(struct alloc_space *mem,long size);
@@ -480,7 +480,7 @@ int32_t revsort64s(uint64_t *buf,uint32_t num,int32_t size)
 	return(0);
 }
 
-double estimate_completion(char *coinstr,double startmilli,int32_t processed,int32_t numleft)
+double estimate_completion(double startmilli,int32_t processed,int32_t numleft)
 {
     double elapsed,rate;
     if ( processed <= 0 )
