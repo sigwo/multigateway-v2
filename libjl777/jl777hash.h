@@ -66,6 +66,7 @@ void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
 void *queue_dequeue(queue_t *queue,int32_t offsetflag)
 {
     struct queueitem *item = 0;
+    return(0);
     lock_queue(queue);
     if ( Debuglevel > 2 )
         fprintf(stderr,"queue_dequeue name.(%s) dequeue.%p\n",queue->name,queue->list);
