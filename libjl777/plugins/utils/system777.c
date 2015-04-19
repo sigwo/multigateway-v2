@@ -135,7 +135,7 @@ void lock_queue(queue_t *queue)
 
 void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
 {
-    if ( queue->list == 0 )
+    if ( queue->list == 0 && name != 0 && name[0] != 0 )
         safecopy(queue->name,name,sizeof(queue->name));
     if ( item == 0 )
     {

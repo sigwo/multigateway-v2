@@ -37,59 +37,68 @@ void free_queueitem(void *itemptr)
     free((void *)((long)itemptr - sizeof(struct queueitem)));
 }
 
-void lock_queue(queue_t *queue)
+void queue_enqueue(char *name,queue_t *queue,struct queueitem *ptr)
 {
     if ( queue->initflag == 0 )
     {
         portable_mutex_init(&queue->mutex);
         queue->initflag = 1;
     }
-	portable_mutex_lock(&queue->mutex);
-}
-
-void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
-{
-    if ( Debuglevel > 2 )
-        fprintf(stderr,"name.(%s) append.%p list.%p (next.%p prev.%p)\n",name,item,queue->list,item->next,item->prev);
-    if ( queue->list == 0 && name != 0 && name[0] != 0 )
-        safecopy(queue->name,name,sizeof(queue->name));
-    if ( item == 0 )
+	portable_mutex_lock(&(queue->mutex));
+	while ( queue->size == queue->capacity )
     {
-        printf("FATAL type error: queueing empty value\n"), getchar();
-        return;
+        queue->capacity++;
+        queue->buffer = realloc(queue->buffer,sizeof(*queue->buffer) * queue->capacity);
+        queue->buffer[queue->size] = 0;
+        if ( queue->in == 0 )
+            queue->in = queue->size;
+        //pthread_cond_wait(&(queue->cond_full), &(queue->mutex));
     }
-    lock_queue(queue);
-    DL_APPEND(queue->list,item);
-    portable_mutex_unlock(&queue->mutex);
+    //printf("enqueue %lx -> [%d] size.%d capacity.%d\n",*(long *)value,queue->in,queue->size,queue->capacity);
+	queue->buffer[queue->in] = ptr;
+	++queue->size;
+	++queue->in;
+	queue->in %= queue->capacity;
+	portable_mutex_unlock(&(queue->mutex));
+	//pthread_cond_broadcast(&(queue->cond_empty));
 }
 
 void *queue_dequeue(queue_t *queue,int32_t offsetflag)
 {
-    struct queueitem *item = 0;
-    lock_queue(queue);
-    if ( Debuglevel > 2 )
-        fprintf(stderr,"queue_dequeue name.(%s) dequeue.%p\n",queue->name,queue->list);
-    if ( queue->list != 0 )
+    void *item = 0;
+    if ( queue->initflag == 0 )
     {
-        item = queue->list;
-        DL_DELETE(queue->list,item);
-        if ( Debuglevel > 2 )
-            fprintf(stderr,"name.(%s) dequeue.%p list.%p\n",queue->name,item,queue->list);
+        portable_mutex_init(&queue->mutex);
+        queue->initflag = 1;
     }
-	portable_mutex_unlock(&queue->mutex);
+    portable_mutex_lock(&(queue->mutex));
+	//while ( queue->size == 0 )
+	//	pthread_cond_wait(&(queue->cond_empty), &(queue->mutex));
+    if ( queue->size > 0 )
+    {
+        item = queue->buffer[queue->out];
+        queue->buffer[queue->out] = 0;
+        //printf("dequeue %lx from %d, size.%d capacity.%d\n",*(long *)value,queue->out,queue->size,queue->capacity);
+        --queue->size;
+        ++queue->out;
+        queue->out %= queue->capacity;
+    }
+	portable_mutex_unlock(&(queue->mutex));
+	//pthread_cond_broadcast(&(queue->cond_full));
     if ( item != 0 && offsetflag != 0 )
         return((void *)((long)item + sizeof(struct queueitem)));
     else return(item);
+    //return value;
 }
 
 int32_t queue_size(queue_t *queue)
 {
-    int32_t count = 0;
-    struct queueitem *tmp;
-    lock_queue(queue);
-    DL_COUNT(queue->list,tmp,count);
-    portable_mutex_unlock(&queue->mutex);
-	return count;
+    if ( queue->buffer == 0 )
+        portable_mutex_init(&queue->mutex);
+	portable_mutex_lock(&(queue->mutex));
+	int32_t size = queue->size;
+	portable_mutex_unlock(&(queue->mutex));
+	return size;
 }
 
 int32_t init_pingpong_queue(struct pingpong_queue *ppq,char *name,int32_t (*action)(),queue_t *destq,queue_t *errorq)
