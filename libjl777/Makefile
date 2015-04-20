@@ -46,28 +46,33 @@ clean: doesntexist
 
 PINCLUDES := -Iincludes -I. -Iutils -Iramchain -Imgw -I ../includes -I../..
 
-makeMGW :=    gcc -o lib/MGW $(PINCLUDES) mgw/main.c mgw/mgw.c mgw/state.c mgw/msig.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c ramchain/storage.c ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bitcoind_RPC.c utils/bitcoind.c utils/NXT777.c utils/huffstream.c utils/ramcoder.c utils/sha256.c utils/crypt_argchk.c -lcurl $(PLIBS)
+_echo := rm lib/echo; gcc -o lib/echo $(PINCLUDES) echodemo.c $(PLIBS)
 
-makesophia := gcc -o lib/sophia $(PINCLUDES)  -g -O2 -std=c99 -pedantic -Wextra -Wall -Wunused-parameter -Wsign-compare -Wno-unused-function -fPIC -fno-stack-protector -fvisibility=hidden sophia/main.c sophia/sophia.c $(PLIBS)
+_MGW :=    rm lib/MGW; gcc -o lib/MGW $(PINCLUDES) mgw/main.c mgw/mgw.c mgw/state.c mgw/msig.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c ramchain/storage.c ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bitcoind_RPC.c utils/bitcoind.c utils/NXT777.c utils/huffstream.c utils/ramcoder.c utils/sha256.c utils/crypt_argchk.c -lcurl $(PLIBS)
 
-makestockfish := cd sophia; make build ARCH=x86-64-modern; cp stockfish ../lib; cd ..
+_sophia := rm lib/sophia; gcc -o lib/sophia $(PINCLUDES)  -g -O2 -std=c99 -pedantic -Wextra -Wall -Wunused-parameter -Wsign-compare -Wno-unused-function -fPIC -fno-stack-protector -fvisibility=hidden sophia/main.c sophia/sophia.c $(PLIBS)
 
-plugins: lib/echo lib/MGW; lib/DB; \
+_stockfish := cd stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../lib; cd ..
+
+plugins: lib/echo lib/MGW lib/stockfish lib/sophia; \
 	cd plugins; \
-    gcc -o lib/echo $(PINCLUDES) example.c utils/cJSON.c  utils/system777.c $(PLIBS); \
-    $(makestockfish); \
-    $(makesophia); \
-    $(makeMGW); \
+    $(_echo); \
+    $(_stockfish); \
+    $(_sophia); \
+    $(_MGW); \
     cd ..
 
+echo: lib/echo; \
+ 	cd plugins; $(_echo); cd ..
+
 stockfish: lib/stockfish; \
- 	cd plugins; $(makestockfish); cd ..
+ 	cd plugins; $(_stockfish); cd ..
 
 sophia: lib/sophia; \
- 	cd plugins; $(makesophia); cd ..
+ 	cd plugins; $(_sophia); cd ..
 
 MGW: lib/MGW; \
-	cd plugins; $(makeMGW); cd ..
+	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(TARGET); \
     pkill SuperNET; rm SuperNET; gcc -o SuperNET SuperNET.c libs/libminiupnpc.a libs/libjl777.a libs/libnanomsg.a libs/libwebsockets.a libs/libuv.a libs/libdb.a -lssl -lcrypto -lpthread -lcurl -lm -lz -ldl -lutil -lpcre -lexpat -lanl
@@ -266,6 +271,6 @@ cstdlib/stdbool.o: cstdlib/stdbool.c interpreter.h platform.h
 cstdlib/unistd.o: cstdlib/unistd.c interpreter.h platform.h
 lib/stockfish: plugins/stockfish/stockfish.cpp
 lib/sophia: plugins/sophia/sophia.c plugins/sophia/main.c
-lib/echo: plugins/example.c
+lib/echo: plugins/echodemo.c
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/msig.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/storage.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c plugins/utils/bitcoind_RPC.c plugins/utils/cJSON.c plugins/utils/bits777.c plugins/utils/NXT777.c plugins/utils/system777.c plugins/utils/files777.c plugins/utils/utils777.c plugins/nonportable/$(OS)/files.c plugins/nonportable/$(OS)/random.c
 

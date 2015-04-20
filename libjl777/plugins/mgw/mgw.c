@@ -990,7 +990,7 @@ uint32_t ram_process_blocks(struct ramchain_info *ram,struct mappedblocks *block
         } //else printf("ram_process_blocks: hpptr.%p hp.%p\n",hpptr,hp);
         blocks->processed += (1 << blocks->shift);
         blocks->blocknum += (1 << blocks->shift);
-        estimated = estimate_completion(ram->name,startmilli,blocks->processed,(int32_t)ram->S.RTblocknum-blocks->blocknum) / 60000.;
+        estimated = estimate_completion(startmilli,blocks->processed,(int32_t)ram->S.RTblocknum-blocks->blocknum) / 60000.;
         //break;
     }
     //printf("(%d >> %d) < (%d >> %d)\n",blocks->blocknum,blocks->shift,prev->blocknum,blocks->shift);

@@ -61,6 +61,7 @@ void sleepmillis(uint32_t milliseconds);
 
 int32_t getline777(char *line,int32_t max);
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *args);
+uint16_t wait_for_myipaddr(char *ipaddr);
 
 #endif
 #else
@@ -223,5 +224,12 @@ int32_t getline777(char *line,int32_t max)
     return(strlen(line));
 }
 
+uint16_t wait_for_myipaddr(char *ipaddr)
+{
+    uint16_t port = 0;
+    printf("need a portable way to find IP addr\n");
+    getchar();
+    return(port);
+}
 #endif
 #endif
