@@ -182,6 +182,16 @@ struct NXT_asset
     uint16_t type,subtype;
 };
 
+int32_t portable_truncate(char *fname,long filesize);
+void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite);
+int32_t os_supports_mappedfiles();
+char *os_compatible_path(char *str);
+char *OS_rmstr();
+int32_t OS_launch_process(char *args[]);
+int32_t OS_getppid();
+int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags);
+int32_t is_bundled_plugin(char *plugin);
+
 #define INCLUDE_DEFINES
 #include "ramchain.h"
 #undef INCLUDE_DEFINES

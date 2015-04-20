@@ -399,7 +399,7 @@ void *alloc_aligned_buffer(uint64_t allocsize)
 	return(ptr);
 }
 
-void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)
+/*void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)
 {
 	void *mmap64(void *addr,size_t len,int32_t prot,int32_t flags,int32_t fildes,off_t off);
 	int32_t fd,rwflags,flags = MAP_FILE|MAP_SHARED;
@@ -449,7 +449,7 @@ void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)
 	//	printf("MAPPED(%s).rw%d %lx %ld %.1fmb    | ",fname,enablewrite,filesize,filesize,(double)filesize/1000000);
 	*filesizep = filesize;
 	return(ptr);
-}
+}*/
 
 int32_t release_map_file(void *ptr,uint64_t filesize)
 {

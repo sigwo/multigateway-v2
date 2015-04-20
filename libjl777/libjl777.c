@@ -1214,7 +1214,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         printf("finished addcontact SUPERNET_PORT.%d USESSL.%d\n",SUPERNET_PORT,USESSL);
         for (i=0; i<Numcoins; i++)
         {
-            cp = Daemons[i];
+            cp = Coin_daemons[i];
             if ( is_active_coin(cp->name) > 0 && cp->assetid[0] != 0 )
             {
                 printf("initializing NXT %s asset.%s\n",cp->name,cp->assetid);

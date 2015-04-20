@@ -14,12 +14,12 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "utlist.h"
 #include "utils777.c"
 #include "mutex.h"
 #include "utlist.h"
 
 // nonportable functions needed in the OS specific directory
+int32_t is_bundled_plugin(char *plugin);
 int32_t portable_truncate(char *fname,long filesize);
 void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite);
 int32_t os_supports_mappedfiles();
@@ -27,6 +27,7 @@ char *os_compatible_path(char *str);
 char *OS_rmstr();
 int32_t OS_launch_process(char *args[]);
 int32_t OS_getppid();
+int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags);
 
 // only OS portable functions in this file
 #define portable_mutex_t struct nn_mutex
@@ -231,5 +232,6 @@ uint16_t wait_for_myipaddr(char *ipaddr)
     getchar();
     return(port);
 }
+
 #endif
 #endif

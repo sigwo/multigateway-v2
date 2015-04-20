@@ -36,8 +36,8 @@ void sleepmillis(int32_t n)
 {
     usleep(n * 1000);
 }
-char *os_compatible_path(char *str) { return(str); }
-char *OS_rmstr() { return("rm"); }
+//char *os_compatible_path(char *str) { return(str); }
+//char *OS_rmstr() { return("rm"); }
 
 /************************************************************************
  *

@@ -1203,8 +1203,8 @@ void update_coinacct_addresses(uint64_t nxt64bits,cJSON *json,char *txid)
         printf("update_coinacct_addresses.(%s)\n",NXTaddr);
     for (i=0; i<Numcoins; i++)
     {
-        cp = Daemons[i];
-        if ( (cp= Daemons[i]) != 0 && is_active_coin(cp->name) >= 0 )
+        cp = Coin_daemons[i];
+        if ( (cp= Coin_daemons[i]) != 0 && is_active_coin(cp->name) >= 0 )
         {
             coinjson = cJSON_GetObjectItem(json,cp->name);
             if ( coinjson == 0 )

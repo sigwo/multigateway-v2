@@ -26,7 +26,7 @@
 
 struct plugin_info
 {
-    char bindaddr[64],connectaddr[64],ipaddr[64],name[64];
+    char bindaddr[64],connectaddr[64],ipaddr[64],name[64],retbuf[8192],registerbuf[8192];
     uint64_t daemonid,myid;
     uint32_t permanentflag,ppid,transportid,extrasize,timeout,counter;
     int32_t sock;
@@ -73,7 +73,7 @@ int32_t get_newinput(int32_t permanentflag,char *line,int32_t max,int32_t sock,i
     return((int32_t)strlen(line));
 }
 
-int32_t init_daemonsock(int32_t permanentflag,char *addr,int32_t timeoutmillis)
+int32_t init_daemonsock(int32_t permanentflag,char *bindaddr,char *connectaddr,int32_t timeoutmillis)
 {
     int32_t sock,err;
     if ( (sock= nn_socket(AF_SP,NN_BUS)) < 0 )
@@ -81,45 +81,47 @@ int32_t init_daemonsock(int32_t permanentflag,char *addr,int32_t timeoutmillis)
         printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
         return(-1);
     }
-    if ( permanentflag == 0 )
+    if ( permanentflag != 0 )
     {
-        if ( (err= nn_connect(sock,addr)) < 0 )
+        if ( (err= nn_connect(sock,connectaddr)) < 0 )
         {
-            printf("error %d nn_connect err.%s (%s to %s)\n",sock,nn_strerror(nn_errno()),permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",addr);
+            printf("error %d nn_connect err.%s (%s to %s)\n",sock,nn_strerror(nn_errno()),permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",connectaddr);
             return(-1);
         }
+        printf("plugin >>>>>>>>>>>>>>> %d nn_connect (%s <-> %s)\n",sock,permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",connectaddr);
     }
-    else
+   // if ( permanentflag == 0 )
     {
-        if ( (err= nn_bind(sock,addr)) < 0 )
+        if ( (err= nn_bind(sock,bindaddr)) < 0 )
         {
-            printf("error %d nn_bind.%d (%s) | %s\n",err,sock,addr,nn_strerror(nn_errno()));
+            printf("error %d nn_bind.%d (%s) | %s\n",err,sock,bindaddr,nn_strerror(nn_errno()));
             return(-1);
         }
+        printf("plugin >>>>>>>>>>>>>>> %d nn_bind %s bind.(%s) connect.(%s)\n",sock,permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",bindaddr,connectaddr);
     }
     nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
-    printf("daemonsock: %d nn_connect (%s <-> %s)\n",sock,permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",addr);
     return(sock);
 }
 
-void append_stdfields(struct plugin_info *plugin,char *retbuf)
+void append_stdfields(struct plugin_info *plugin)
 {
-    sprintf(retbuf+strlen(retbuf)-1,",\"permanent\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%f}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds());
+    sprintf(plugin->retbuf+strlen(plugin->retbuf)-1,",\"permanent\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%f}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds());
 }
 
-int32_t process_plugin_json(struct plugin_info *plugin,int32_t permanentflag,uint64_t daemonid,int32_t sock,uint64_t myid,char *retbuf,int32_t max,char *jsonstr)
+int32_t process_plugin_json(struct plugin_info *plugin,int32_t permanentflag,uint64_t daemonid,int32_t sock,uint64_t myid,char *jsonstr)
 {
     int32_t len = (int32_t)strlen(jsonstr);
     cJSON *json;
     uint64_t sender;
-    retbuf[0] = 0;
+    plugin->retbuf[0] = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( (sender= get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"))) != myid )
         {
-            if ( sender == daemonid )
+            fprintf(stderr,"sender.%llu vs myid.%llu daemon.%llu\n",(long long)sender,(long long)myid,(long long)daemonid);
+            if ( sender == daemonid || daemonid == plugin->daemonid )
             {
-                if ( (len= PLUGNAME(_process_json)(plugin,retbuf,max,jsonstr,json,0)) < 0 )
+                if ( (len= PLUGNAME(_process_json)(plugin,plugin->retbuf,(int32_t)sizeof(plugin->retbuf)-1,jsonstr,json,0)) < 0 )
                     return(len);
             }
             else if ( sender != 0 )
@@ -131,54 +133,58 @@ int32_t process_plugin_json(struct plugin_info *plugin,int32_t permanentflag,uin
         if ( jsonstr[len-1] == '\r' || jsonstr[len-1] == '\n' || jsonstr[len-1] == '\t' || jsonstr[len-1] == ' ' )
             jsonstr[--len] = 0;
         if ( strcmp(jsonstr,"getpeers") == 0 )
-            sprintf(retbuf,"{\"pluginrequest\":\"SuperNET\",\"requestType\":\"getpeers\"}");
-        else sprintf(retbuf,"{\"result\":\"unparseable\",\"message\":\"%s\"}",jsonstr);
+            sprintf(plugin->retbuf,"{\"pluginrequest\":\"SuperNET\",\"requestType\":\"getpeers\"}");
+        else sprintf(plugin->retbuf,"{\"result\":\"unparseable\",\"message\":\"%s\"}",jsonstr);
     }
-    append_stdfields(plugin,retbuf);
-    return((int32_t)strlen(retbuf));
+    if ( plugin->retbuf[0] != 0 )
+        append_stdfields(plugin);
+    return((int32_t)strlen(plugin->retbuf));
 }
 
 int32_t process_json(struct plugin_info *plugin,char *jsonargs,int32_t initflag)
 {
-    char retbuf[8192],ipaddr[MAX_JSON_FIELD],*jsonstr = 0;
-    cJSON *json = 0;
+    char ipaddr[MAX_JSON_FIELD],*jsonstr = 0;
+    cJSON *obj,*json = 0;
     uint16_t port;
     int32_t retval = 0;
     if ( jsonargs != 0 )
     {
         json = cJSON_Parse(jsonargs);
-        jsonstr = cJSON_Print(json);
+        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+            obj = cJSON_GetArrayItem(json,0);
+        else obj = json;
+        jsonstr = cJSON_Print(obj);
         _stripwhite(jsonstr,' ');
     }
-    if ( initflag > 0 && json != 0 )
+    if ( initflag > 0 && obj != 0 )
     {
-        if ( (port = get_API_int(cJSON_GetObjectItem(json,"port"),0)) != 0 )
+        if ( (port = get_API_int(cJSON_GetObjectItem(obj,"port"),0)) != 0 )
         {
-            copy_cJSON(ipaddr,cJSON_GetObjectItem(json,"ipaddr"));
+            copy_cJSON(ipaddr,cJSON_GetObjectItem(obj,"ipaddr"));
             if ( ipaddr[0] != 0 )
                 strcpy(plugin->ipaddr,ipaddr), plugin->port = port;
             fprintf(stderr,"Set ipaddr (%s:%d)\n",plugin->ipaddr,plugin->port);
         }
     }
-    fprintf(stderr,"initflag.%d got jsonargs.(%p) %p %p\n",initflag,jsonargs,jsonstr,json);
-    if ( jsonstr != 0 && json != 0 )
-        retval = PLUGNAME(_process_json)(plugin,retbuf,sizeof(retbuf)-1,jsonstr,json,initflag);
+    fprintf(stderr,"initflag.%d got jsonargs.(%p) %p %p\n",initflag,jsonargs,jsonstr,obj);
+    if ( jsonstr != 0 && obj != 0 )
+        retval = PLUGNAME(_process_json)(plugin,plugin->retbuf,sizeof(plugin->retbuf)-1,jsonstr,obj,initflag);
     if ( jsonstr != 0 )
         free(jsonstr);
     if ( json != 0 )
         free_json(json);
-    printf("%s\n",retbuf), fflush(stdout);
+    printf("%s\n",plugin->retbuf), fflush(stdout);
     return(retval);
 }
 
-int32_t registerAPI(struct plugin_info *plugin,char *retbuf,int32_t maxlen)
+int32_t registerAPI(struct plugin_info *plugin)
 {
     cJSON *json,*array;
     char *jsonstr;
     int32_t i;
     uint64_t disableflags = 0;
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
-    retbuf[0] = 0;
+    plugin->retbuf[0] = 0;
     disableflags = PLUGNAME(_init)(plugin,(void *)plugin->pluginspace);
     for (i=0; i<(sizeof(PLUGNAME(_methods))/sizeof(*PLUGNAME(_methods))); i++)
     {
@@ -187,13 +193,15 @@ int32_t registerAPI(struct plugin_info *plugin,char *retbuf,int32_t maxlen)
         if ( ((1LL << i) & disableflags) == 0 )
             cJSON_AddItemToArray(array,cJSON_CreateString(PLUGNAME(_methods)[i]));
     }
+    cJSON_AddItemToObject(json,"pluginrequest",cJSON_CreateString("SuperNET"));
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("register"));
     cJSON_AddItemToObject(json,"methods",array);
     jsonstr = cJSON_Print(json), free_json(json);
     _stripwhite(jsonstr,' ');
-    strcpy(retbuf,jsonstr), free(jsonstr);
-    append_stdfields(plugin,retbuf);
-    return((int32_t)strlen(retbuf));
+    strcpy(plugin->retbuf,jsonstr), free(jsonstr);
+    append_stdfields(plugin);
+    printf(">>>>>>>>>>> ret.(%s)\n",plugin->retbuf);
+    return((int32_t)strlen(plugin->retbuf));
 }
 
 void configure_plugin(struct plugin_info *plugin,char *jsonargs,int32_t initflag)
@@ -203,6 +211,8 @@ void configure_plugin(struct plugin_info *plugin,char *jsonargs,int32_t initflag
         plugin = realloc(plugin,sizeof(*plugin) + plugin->extrasize);
         memset(plugin->pluginspace,0,plugin->extrasize);
     }
+    if ( initflag != 0 )
+        unstringify(jsonargs);
     process_json(plugin,jsonargs,initflag);
 }
 
@@ -213,62 +223,56 @@ void set_transportaddr(char *addr,char *transportstr,char *ipaddr,uint64_t num)
     else sprintf(addr,"%s://%llu",transportstr,(long long)num);
 }
 
-#ifdef GLOBAL_TRANSPORT
-static char *globalstr = "tcp";
-#else
-char *globalstr = 0;
-#endif
-
 #ifdef BUNDLED
-static char *transportstr = "inproc"; static int32_t transportid = 'T'; // internal threads
 int32_t PLUGNAME(_main)
 #else
-
-static char *transportstr = "ipc"; static int32_t transportid = 'L'; // local
-
 int32_t main
 #endif
 (int argc,const char *argv[])
 {
     struct plugin_info *plugin = calloc(1,sizeof(*plugin));
     int32_t len = 0;
-    char line[8192],retbuf[8192],*jsonargs,*addr;
+    char line[8192],*jsonargs,*transportstr;
     milliseconds();
     plugin->ppid = OS_getppid();
     strcpy(plugin->name,PLUGINSTR);
-    fprintf(stderr,"%s (%s).argc%d parent PID.%d\n",plugin->name,argv[0],argc,plugin->ppid);
+    printf("%s (%s).argc%d parent PID.%d\n",plugin->name,argv[0],argc,plugin->ppid);
     plugin->timeout = 1;
     if ( argc <= 2 )
     {
         jsonargs = (argc > 1) ? (char *)argv[1]:"{}";
         configure_plugin(plugin,jsonargs,-1);
-        //fprintf(stderr,"PLUGIN_RETURNS.[%s]\n",line), fflush(stdout);
+        //fprintf(stderr,"PLUGIN_RETURNS.[%s]\n",plugin->retbuf), fflush(stdout);
         return(0);
     }
     randombytes((uint8_t *)&plugin->myid,sizeof(plugin->myid));
     plugin->permanentflag = atoi(argv[1]);
     plugin->daemonid = atol(argv[2]);
-    if ( plugin->permanentflag != 0 && globalstr != 0 )
+    transportstr = is_bundled_plugin(plugin->name) != 0 ? "inproc" : "ipc";
+    if ( plugin->permanentflag != 0 )
     {
-        transportstr = globalstr;
-        plugin->transportid = 'G';
-        if ( plugin->ipaddr[0] == 0 )
-            plugin->port = wait_for_myipaddr(plugin->ipaddr);
-        addr = (plugin->permanentflag == 0 ? plugin->connectaddr : plugin->bindaddr);
-        set_transportaddr(addr,transportstr,plugin->ipaddr,plugin->port + plugin->permanentflag);
-    }
-    else
+        if ( plugin->ipaddr[0] != 0 || plugin->port != 0 )
+        {
+            if ( plugin->ipaddr[0] == 0 || plugin->port == 0 )
+                plugin->port = wait_for_myipaddr(plugin->ipaddr);
+        }
+        if ( plugin->ipaddr[0] != 0 && plugin->port != 0 )
+        {
+            plugin->transportid = 'G';
+            set_transportaddr(plugin->bindaddr,"tcp",plugin->ipaddr,plugin->port + 1);
+        } else set_transportaddr(plugin->bindaddr,transportstr,0,plugin->daemonid + 1);
+    } else set_transportaddr(plugin->bindaddr,transportstr,0,plugin->daemonid + 1);
+    set_transportaddr(plugin->connectaddr,transportstr,0,plugin->daemonid);
+    jsonargs = (argc >= 3) ? (char *)argv[3] : 0;
+    configure_plugin(plugin,jsonargs,1);
+    printf("argc.%d: %s myid.%llu daemonid.%llu args.(%s)\n",argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",(long long)plugin->myid,(long long)plugin->daemonid,jsonargs!=0?jsonargs:"");
+    if ( (plugin->sock= init_daemonsock(plugin->permanentflag,plugin->bindaddr,plugin->connectaddr,plugin->timeout)) >= 0 )
     {
-        addr = (plugin->permanentflag == 0 ? plugin->connectaddr : plugin->bindaddr);
-        set_transportaddr(addr,transportstr,0,plugin->daemonid + plugin->permanentflag);
-        plugin->transportid = transportid;
-    }
-    configure_plugin(plugin,(argc >= 3) ? (char *)argv[3] : 0,1);
-    fprintf(stderr,"argc.%d: %s.(%s) myid.%llu daemonid.%llu args.(%s)\n",argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",addr,(long long)plugin->myid,(long long)plugin->daemonid,argc>=3?argv[3]:"");
-    if ( (plugin->sock= init_daemonsock(plugin->permanentflag,addr,plugin->timeout)) >= 0 )
-    {
-        if ( registerAPI(plugin,retbuf,sizeof(retbuf)-1) > 0 && plugin->permanentflag != 0 ) // register supported API
-            nn_send(plugin->sock,retbuf,len+1,0); // send the null terminator too
+        if ( (len= registerAPI(plugin)) > 0 )//&& plugin->permanentflag != 0 ) // register supported API
+        {
+            strcpy(plugin->registerbuf,plugin->retbuf);
+            nn_send(plugin->sock,plugin->retbuf,len+1,0); // send the null terminator too
+        }
         while ( OS_getppid() == plugin->ppid )
         {
             if ( (len= get_newinput(plugin->permanentflag,line,sizeof(line),plugin->sock,plugin->timeout)) > 0 )
@@ -276,17 +280,17 @@ int32_t main
                 if ( line[len-1] == '\n' )
                     line[--len] = 0;
                 plugin->counter++;
-                printf("%d <<<<<<<<<<<<<< RECEIVED (%s).%d -> (%s) %s\n",plugin->counter,line,len,addr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
-                if ( (len= process_plugin_json(plugin,plugin->permanentflag,plugin->daemonid,plugin->sock,plugin->myid,retbuf,sizeof(retbuf)-1,line)) > 1 )
+                printf("%d <<<<<<<<<<<<<< RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s json.%p\n",plugin->counter,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",cJSON_Parse(line)), fflush(stdout);
+                if ( (len= process_plugin_json(plugin,plugin->permanentflag,plugin->daemonid,plugin->sock,plugin->myid,line)) > 0 )
                 {
-                    printf("%s\n",retbuf), fflush(stdout);
-                    nn_send(plugin->sock,retbuf,len+1,0); // send the null terminator too
+                    printf("%s\n",plugin->retbuf), fflush(stdout);
+                    fprintf(stderr,"return.(%s)\n",plugin->retbuf);
+                    nn_send(plugin->sock,plugin->retbuf,len+1,0); // send the null terminator too
                 } else if ( len < 0 )
                     break;
             }
-            len = 0;
-            msleep(1);
-        }
+            usleep(10);
+        } fprintf(stderr,"ppid.%d changed to %d\n",plugin->ppid,OS_getppid());
         PLUGNAME(_shutdown)(plugin,len); // rc == 0 -> parent process died
         nn_shutdown(plugin->sock,0);
         free(plugin);
