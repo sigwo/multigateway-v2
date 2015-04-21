@@ -186,7 +186,7 @@ void *aligned_alloc(uint64_t allocsize)
     realptr = calloc(1,allocsize + 16 + sizeof(realptr));
     ptr = (void *)_align16((uint64_t)realptr + sizeof(ptr));
     memcpy((void *)((long)ptr - sizeof(realptr)),&realptr,sizeof(realptr));
-    printf("aligned_alloc(%llu) realptr.%p -> ptr.%p, diff.%ld\n",allocsize,realptr,ptr,((long)ptr - (long)realptr));
+    printf("aligned_alloc(%llu) realptr.%p -> ptr.%p, diff.%ld\n",(long long)allocsize,realptr,ptr,((long)ptr - (long)realptr));
     return(ptr);
 }
 
