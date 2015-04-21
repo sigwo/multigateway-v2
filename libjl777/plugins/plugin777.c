@@ -252,7 +252,7 @@ int32_t main
     randombytes((uint8_t *)&plugin->myid,sizeof(plugin->myid));
     plugin->permanentflag = atoi(argv[1]);
     plugin->daemonid = atol(argv[2]);
-    transportstr = is_bundled_plugin(plugin->name) != 0 ? "inproc" : "ipc";
+    transportstr = get_bundled_plugin(plugin->name) != 0 ? "inproc" : "ipc";
     if ( plugin->permanentflag != 0 )
     {
         if ( plugin->ipaddr[0] != 0 || plugin->port != 0 )

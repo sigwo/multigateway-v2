@@ -191,6 +191,7 @@ int32_t OS_launch_process(char *args[]);
 int32_t OS_getppid();
 int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags);
 int32_t is_bundled_plugin(char *plugin);
+typedef int32_t (*ptm)(int32_t,char *args[]);
 
 #define INCLUDE_DEFINES
 #include "ramchain.h"

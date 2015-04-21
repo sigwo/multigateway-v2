@@ -85,7 +85,7 @@ int32_t choose_socket(struct daemon_info *dp,int32_t permanentflag,int32_t ind,u
         }
         dp->pairsocks[ind] = sock;
     }
-    set_pair_bindconnect(bindaddr,connectaddr,dp->bundledflag,permanentflag,dp->myid,instanceid);
+    set_pair_bindconnect(bindaddr,connectaddr,dp->main != 0,permanentflag,dp->myid,instanceid);
     if ( bindaddr[0] != 0 )
     {
         if ( (err= nn_bind(sock,bindaddr)) < 0 )

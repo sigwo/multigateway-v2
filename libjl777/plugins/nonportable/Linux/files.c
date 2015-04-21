@@ -6,13 +6,6 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-int32_t is_bundled_plugin(char *plugin)
-{
-    if ( strcmp(plugin,"sophia") == 0 )
-        return(1);
-    else return(0);
-}
-
 int32_t os_supports_mappedfiles() { return(1); }
 char *os_compatible_path(char *str) { return(str); }
 int32_t portable_truncate(char *fname,long filesize) { return(truncate(fname,filesize)); }

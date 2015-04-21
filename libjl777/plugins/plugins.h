@@ -23,9 +23,10 @@ struct daemon_info
     char name[64],ipaddr[64],*cmd,*jsonargs;
     cJSON *methodsjson;
     double lastsearch;
+    ptm main;
     int32_t (*daemonfunc)(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs);
     uint64_t daemonid,myid,instanceids[256];
-    int32_t finished,permsock,websocket,wssock,allowremote,bundledflag,pairsocks[256];
+    int32_t finished,permsock,websocket,wssock,allowremote,pairsocks[256];
     uint16_t port;
 } *Daemoninfos[1024]; int32_t Numdaemons;
 queue_t DaemonQ;
@@ -238,15 +239,17 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
     if ( dp->jsonargs != 0 && dp->jsonargs[0] != 0 )
         args[n++] = dp->jsonargs;
     args[n++] = 0;
-    return(OS_launch_process(args));
+    if ( dp->main != 0 && permanentflag != 0 && dp->websocket == 0 )
+        return((*dp->main)(n,args));
+    else return(OS_launch_process(args));
 }
 
 void *_daemon_loop(struct daemon_info *dp,int32_t permanentflag)
 {
     char bindaddr[512],connectaddr[512];
     int32_t childpid,status,sock;
-    set_bind_transport(bindaddr,dp->bundledflag,permanentflag,dp->ipaddr,dp->port,dp->daemonid);
-    set_connect_transport(connectaddr,dp->bundledflag,permanentflag,dp->ipaddr,dp->port,dp->daemonid);
+    set_bind_transport(bindaddr,dp->main != 0,permanentflag,dp->ipaddr,dp->port,dp->daemonid);
+    set_connect_transport(connectaddr,dp->main != 0,permanentflag,dp->ipaddr,dp->port,dp->daemonid);
     sock = init_permpairsock(permanentflag,bindaddr,connectaddr,dp->myid);
     if ( permanentflag != 0 )
         dp->permsock = sock;
@@ -275,6 +278,14 @@ void *daemon_loop2(void *args) // launch permanent plugin process
     return(_daemon_loop(dp,1));
 }
 
+ptm get_bundled_plugin(char *plugin)
+{
+    extern ptm *echo_main;
+    if ( strcmp(plugin,"echo") == 0 )
+        return*((echo_main));
+    else return(0);
+}
+
 char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,char *cmd,char *arg,int32_t (*daemonfunc)(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs))
 {
     struct daemon_info *dp;
@@ -284,7 +295,7 @@ char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,ch
     dp = calloc(1,sizeof(*dp));
     memset(dp->pairsocks,-1,sizeof(dp->pairsocks));
     dp->port = port;
-    dp->bundledflag = is_bundled_plugin(dp->name);
+    dp->main = get_bundled_plugin(dp->name);
     if ( ipaddr != 0 )
         strcpy(dp->ipaddr,ipaddr);
     if ( plugin != 0 )
