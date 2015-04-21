@@ -21,24 +21,12 @@ struct return_string {
 
 size_t accumulate(void *ptr, size_t size, size_t nmemb, struct return_string *s);
 void init_string(struct return_string *s);
-double milliseconds();
+
+#define DEFINES_ONLY
+#include "plugins/utils/system777.c"
+#undef DEFINES_ONLY
 //char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr);
 //char *bitcoind_RPC(CURL *curl_handle,char *debugstr,char *url,char *userpass,char *command,char *params);
-void portable_sleep(int32_t n)
-{
-    sleep(n);
-}
-void msleep(int32_t n)
-{
-    usleep(n * 1000);
-}
-/*void sleepmillis(int32_t n)
-{
-    usleep(n * 1000);
-}*/
-void portable_sleep(int32_t n);
-void msleep(int32_t n);
-void sleepmillis(int32_t n);
 
 //char *os_compatible_path(char *str) { return(str); }
 //char *OS_rmstr() { return("rm"); }

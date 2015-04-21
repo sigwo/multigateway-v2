@@ -179,15 +179,15 @@ void msleep(int32_t);
 
 #endif
 
-void portable_sleep(int32_t);
+//void portable_sleep(int32_t);
 
 
-void *jl777malloc(size_t allocsize) { void *ptr = malloc(allocsize); if ( ptr == 0 ) { fprintf(stderr,"malloc(%ld) failed\n",allocsize); while ( 1 ) portable_sleep(60); } return(ptr); }
+/*void *jl777malloc(size_t allocsize) { void *ptr = malloc(allocsize); if ( ptr == 0 ) { fprintf(stderr,"malloc(%ld) failed\n",allocsize); while ( 1 ) portable_sleep(60); } return(ptr); }
 void *jl777calloc(size_t num,size_t allocsize) { void *ptr = calloc(num,allocsize); if ( ptr == 0 ) { fprintf(stderr,"calloc(%ld,%ld) failed\n",num,allocsize); while ( 1 ) portable_sleep(60); } return(ptr); }
 long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NULL)??\n"); return(0); } return(strlen(str)); }
 #define malloc jl777malloc
 #define calloc jl777calloc
-#define strlen jl777strlen
+#define strlen jl777strlen*/
 
 #ifdef UDP_OLDWAY
 #define portable_udp_t int32_t
@@ -198,9 +198,7 @@ long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NUL
 #define portable_tcp_t uv_tcp_t
 
 //#define portable_mutex_t pthread_mutex_t
-#define portable_thread_t uv_thread_t
 
-#define portable_mutex_t uv_mutex_t
 
 // includes that include actual code
 //#include "includes/crypto_box.h"
@@ -227,8 +225,9 @@ long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NUL
 #include "mappedptr.h"
 #include "ramchain.h"
 #include "includes/utlist.h"
+struct resultsitem { struct queueitem DL; char *argstr,*retstr; uint64_t txid; char retbuf[]; };
 
-#define portable_mutex_t uv_mutex_t
+/*#define portable_mutex_t uv_mutex_t
 struct queueitem { struct queueitem *next,*prev; };
 
 typedef struct queue
@@ -238,8 +237,7 @@ typedef struct queue
     char name[31],initflag;
 } queue_t;
 
-struct resultsitem { struct queueitem DL; char *argstr,*retstr; uint64_t txid; char retbuf[]; };
-/*typedef struct queue
+typedef struct queue
 {
 #ifdef oldqueue
 	void **buffer;

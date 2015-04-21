@@ -21,7 +21,7 @@
 typedef int32_t (*ptm)(int32_t,char *args[]);
 
 // nonportable functions needed in the OS specific directory
-void *get_bundled_plugin(char *plugin);
+ptm get_bundled_plugin(char *plugin);
 int32_t portable_truncate(char *fname,long filesize);
 void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite);
 int32_t os_supports_mappedfiles();
