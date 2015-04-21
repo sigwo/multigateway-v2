@@ -148,7 +148,7 @@ int32_t process_plugin_json(struct plugin_info *plugin,int32_t permanentflag,uin
 int32_t process_json(struct plugin_info *plugin,char *jsonargs,int32_t initflag)
 {
     char ipaddr[MAX_JSON_FIELD],*jsonstr = 0;
-    cJSON *obj,*json = 0;
+    cJSON *obj=0,*json = 0;
     uint16_t port;
     int32_t retval = 0;
     if ( jsonargs != 0 )
