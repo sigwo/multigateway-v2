@@ -12,6 +12,7 @@
 //#include <curl/easy.h>
 
 #include "cJSON.h"
+double milliseconds();
 
 // return data from the server
 struct return_string {
