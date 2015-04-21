@@ -1,6 +1,10 @@
 //
 //  plugin777.c
 //  SuperNET API extension
+//  crypto777
+//
+//  Created by James on 4/9/15.
+//  Copyright (c) 2015 jl777. All rights reserved.
 //
 
 #ifdef DEFINES_ONLY

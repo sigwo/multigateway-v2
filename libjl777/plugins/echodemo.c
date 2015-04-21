@@ -1,10 +1,10 @@
 //
 //  echodemo.c
 //  SuperNET API extension example plugin
+//  crypto777
 //
-
-//#define GLOBAL_TRANSPORT // define if endpoint should be globally accessible
-//#define BUNDLED // define if bundled into SuperNET
+//  Copyright (c) 2015 jl777. All rights reserved.
+//
 
 #define PLUGINSTR "echo"
 #define PLUGNAME(NAME) echo ## NAME

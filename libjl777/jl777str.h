@@ -166,7 +166,7 @@ char *clonestr(char *str)
 #endif
         str = (char *)"<nullstr>";
     }
-    clone = (char *)mymalloc(strlen(str)+1);
+    clone = (char *)mymalloc(strlen(str)+16);
     strcpy(clone,str);
     return(clone);
 }
