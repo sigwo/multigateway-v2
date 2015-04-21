@@ -13,7 +13,7 @@
 
 #include "cJSON.h"
 #define DEFINES_ONLY
-#include "system777.c"
+#include "plugins/utils/system777.c"
 #undef DEFINES_ONLY
 
 // return data from the server

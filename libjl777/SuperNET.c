@@ -31,6 +31,9 @@
 #include "miniupnpc/upnpcommands.h"
 #include "miniupnpc/upnperrors.h"
 
+#define DEFINES_ONLY
+#include "plugins/utils/system777.c"
+#undef DEFINES_ONLY
 
 #include "SuperNET.h"
 #include "cJSON.h"
