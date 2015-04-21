@@ -362,7 +362,7 @@ char *_mbstr2(double n)
 	return(str);
 }
 
-uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (ptrval & 15); return(ptrval); }
+static uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (ptrval & 15); return(ptrval); }
 
 void *alloc_aligned_buffer(uint64_t allocsize)
 {

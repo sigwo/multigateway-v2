@@ -220,7 +220,7 @@ void configure_plugin(struct plugin_info *plugin,char *jsonargs,int32_t initflag
     process_json(plugin,jsonargs,initflag);
 }
 
-void set_transportaddr(char *addr,char *transportstr,char *ipaddr,uint64_t num)
+void plugin_transportaddr(char *addr,char *transportstr,char *ipaddr,uint64_t num)
 {
     if ( ipaddr != 0 )
         sprintf(addr,"%s://%s:%llu",transportstr,ipaddr,(long long)num);
@@ -263,10 +263,10 @@ int32_t main
         if ( plugin->ipaddr[0] != 0 && plugin->port != 0 )
         {
             plugin->transportid = 'G';
-            set_transportaddr(plugin->bindaddr,"tcp",plugin->ipaddr,plugin->port + 1);
-        } else set_transportaddr(plugin->bindaddr,transportstr,0,plugin->daemonid + 1);
-    } else set_transportaddr(plugin->bindaddr,transportstr,0,plugin->daemonid + 1);
-    set_transportaddr(plugin->connectaddr,transportstr,0,plugin->daemonid);
+            plugin_transportaddr(plugin->bindaddr,"tcp",plugin->ipaddr,plugin->port + 1);
+        } else plugin_transportaddr(plugin->bindaddr,transportstr,0,plugin->daemonid + 1);
+    } else plugin_transportaddr(plugin->bindaddr,transportstr,0,plugin->daemonid + 1);
+    plugin_transportaddr(plugin->connectaddr,transportstr,0,plugin->daemonid);
     jsonargs = (argc >= 3) ? (char *)argv[3] : 0;
     configure_plugin(plugin,jsonargs,1);
     printf("argc.%d: %s myid.%llu daemonid.%llu args.(%s)\n",argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",(long long)plugin->myid,(long long)plugin->daemonid,jsonargs!=0?jsonargs:"");

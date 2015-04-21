@@ -6,9 +6,10 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 
+#define BUNDLED
 #define PLUGINSTR "echo"
 #define PLUGNAME(NAME) echo ## NAME
-#define STRUCTNAME struct PLUGNAME(_info) //echo_info
+#define STRUCTNAME struct PLUGNAME(_info) 
 #define STRINGIFY(NAME) #NAME
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
 

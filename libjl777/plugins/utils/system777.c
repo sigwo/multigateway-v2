@@ -176,7 +176,7 @@ int32_t queue_size(queue_t *queue)
 	return count;
 }
 
-uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (ptrval & 15); return(ptrval); }
+static uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (ptrval & 15); return(ptrval); }
 
 void *aligned_alloc(uint64_t allocsize)
 {
@@ -222,7 +222,7 @@ int32_t getline777(char *line,int32_t max)
         fprintf(stderr,"wait_for_input: error select s.%d\n",s);
     else if ( FD_ISSET(STDIN_FILENO,&fdset) == 0 || fgets(line,max,stdin) != 0 )
         return(-1);//sprintf(retbuf,"{\"result\":\"no messages\",\"myid\":\"%llu\",\"counter\":%d}",(long long)myid,counter), retbuf[0] = 0;
-    return(strlen(line));
+    return((int32_t)strlen(line));
 }
 
 uint16_t wait_for_myipaddr(char *ipaddr)

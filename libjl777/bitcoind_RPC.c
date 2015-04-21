@@ -32,10 +32,14 @@ void msleep(int32_t n)
 {
     usleep(n * 1000);
 }
-void sleepmillis(int32_t n)
+/*void sleepmillis(int32_t n)
 {
     usleep(n * 1000);
-}
+}*/
+void portable_sleep(int32_t n);
+void msleep(int32_t n);
+void sleepmillis(int32_t n);
+
 //char *os_compatible_path(char *str) { return(str); }
 //char *OS_rmstr() { return("rm"); }
 
@@ -44,7 +48,7 @@ void sleepmillis(int32_t n)
  * return the current system time in milliseconds
  *
  ************************************************************************/
-double milliseconds(void)
+/*double milliseconds(void)
 {
     static struct timeval timeval,first_timeval;
     gettimeofday(&timeval,0);
@@ -54,7 +58,7 @@ double milliseconds(void)
         return(0);
     }
     return((timeval.tv_sec - first_timeval.tv_sec) * 1000. + (timeval.tv_usec - first_timeval.tv_usec)/1000.);
-}
+}*/
 
 #define EXTRACT_BITCOIND_RESULT     // if defined, ensures error is null and returns the "result" field
 #ifdef EXTRACT_BITCOIND_RESULT

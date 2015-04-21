@@ -7,8 +7,8 @@
 #ifndef gateway_jl777_h
 #define gateway_jl777_h
 
-#define HARDCODED_VERSION "0.599"
-#define TIMESCRAMBLE
+#define HARDCODED_VERSION "0.707"
+//#define TIMESCRAMBLE
 
 #define MGW0_IPADDR "209.126.70.170"
 #define MGW1_IPADDR "209.126.70.156"
@@ -720,6 +720,9 @@ double _pairave(float valA,float valB)
 	else if ( valA != 0.f ) return(valA);
 	else return(valB);
 }
+int32_t queue_size(queue_t *queue);
+struct queueitem *queueitem(char *str);
+void free_queueitem(void *itemptr);
 
 #include "NXTservices.h"
 #include "jl777hash.h"

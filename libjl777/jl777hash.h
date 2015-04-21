@@ -24,7 +24,7 @@ struct hashpacket
 };
 
 extern int32_t Historical_done;
-
+#ifdef portig
 struct queueitem *queueitem(char *str)
 {
     struct queueitem *item = calloc(1,sizeof(struct queueitem) + strlen(str) + 1);
@@ -91,6 +91,7 @@ int32_t queue_size(queue_t *queue)
     portable_mutex_unlock(&queue->mutex);
 	return count;
 }
+#endif
 
 int32_t init_pingpong_queue(struct pingpong_queue *ppq,char *name,int32_t (*action)(),queue_t *destq,queue_t *errorq)
 {

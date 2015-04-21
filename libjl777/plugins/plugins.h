@@ -247,7 +247,7 @@ void *_daemon_loop(struct daemon_info *dp,int32_t permanentflag)
     int32_t childpid,status,sock;
     set_bind_transport(bindaddr,dp->bundledflag,permanentflag,dp->ipaddr,dp->port,dp->daemonid);
     set_connect_transport(connectaddr,dp->bundledflag,permanentflag,dp->ipaddr,dp->port,dp->daemonid);
-    sock = init_daemonsock(permanentflag,bindaddr,connectaddr,dp->myid);
+    sock = init_permpairsock(permanentflag,bindaddr,connectaddr,dp->myid);
     if ( permanentflag != 0 )
         dp->permsock = sock;
     else dp->wssock = sock;
@@ -301,7 +301,7 @@ char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,ch
         free_daemon_info(dp);
         return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
     }
-    queue_enqueue("DamonQ",&DaemonQ,&dp->DL);
+    queue_enqueue("DaemonQ",&DaemonQ,&dp->DL);
     sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}\n",(long long)dp->daemonid);
     return(clonestr(retbuf));
  }

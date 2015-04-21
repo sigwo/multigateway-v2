@@ -166,7 +166,7 @@ void SuperNET_idler(uv_idle_t *handle)
     double millis;
     void *up;
     struct udp_queuecmd *qp;
-    struct write_req_t *wr,*firstwr = 0;
+    struct write_req_t *wr;//,*firstwr = 0;
     int32_t i,flag;
     char *jsonstr,*retstr;
     struct resultsitem *rp;

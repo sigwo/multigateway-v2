@@ -44,10 +44,10 @@ void set_pair_bindconnect(char *bindaddr,char *connectaddr,int32_t bundledflag,i
     }
 }
 
-int32_t init_daemonsock(int32_t permanentflag,char *bindaddr,char *connectaddr,uint64_t instanceid)
+int32_t init_permpairsock(int32_t permanentflag,char *bindaddr,char *connectaddr,uint64_t instanceid)
 {
     int32_t sock,err,to = 1;
-    printf("<<<<<<<<<<<<< init_daemonsocks bind.(%s) connect.(%s)\n",bindaddr,connectaddr);
+    printf("<<<<<<<<<<<<< init_permpairsocks bind.(%s) connect.(%s)\n",bindaddr,connectaddr);
     if ( (sock= nn_socket(AF_SP,(permanentflag == 0) ? NN_BUS : NN_BUS)) < 0 )
     {
         printf("error %d nn_socket err.%s\n",sock,nn_strerror(nn_errno()));
