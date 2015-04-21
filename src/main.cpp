@@ -3930,10 +3930,10 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 }
 
 //bitcoindark:
-#include <curl/curl.h>
-#include <curl/easy.h>
-#include "../libjl777/cJSON.c"
-#include "../libjl777/bitcoind_RPC.c"
+//#include <curl/curl.h>
+//#include <curl/easy.h>
+#include "../libjl777/plugins/includes/cJSON.h"
+//#include "../libjl777/bitcoind_RPC.c"
 
 void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
 {
@@ -3967,7 +3967,7 @@ void broadcastPubAddr(char *msg,int32_t duration)
     }
     delete pubaddr;
 }
-
+/*
 int32_t _unhex(char c)
 {
     if ( c >= '0' && c <= '9' )
@@ -4053,7 +4053,11 @@ char *unstringify(char *str)
     str[j] = 0;
     return(str);
 }
-
+*/
+extern "C" int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
+extern "C" int32_t get_API_int(cJSON *obj,int32_t val);
+extern "C" char *stringifyM(char *str);
+extern "C" char *unstringify(char *str);
 
 extern "C" const char* getDataDir()
 {

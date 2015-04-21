@@ -177,6 +177,7 @@ void copy_cJSON(char *dest,cJSON *obj);
     char *get_cJSON_fieldname(cJSON *obj);
     void ensure_jsonitem(cJSON *json,char *field,char *value);
     int32_t in_jsonarray(cJSON *array,char *value);
+    char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
 
     char *stringifyM(char *str);
 #define replace_backslashquotes unstringify
