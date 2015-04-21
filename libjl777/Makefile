@@ -14,7 +14,7 @@ endif
 
 
 CC=clang  
-CFLAGS=-Wall -pedantic -g -fPIC -Iplugins/includes -Iincludes -I/usr/include -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2
+CFLAGS=-Wall -pedantic -g -fPIC -Iplugins/includes  -Iplugins/utils -Iincludes -I/usr/include -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2
 LIBS=-lm -lreadline 
 
 TARGET	= libjl777.a
