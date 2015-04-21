@@ -223,7 +223,7 @@ long jl777strlen(const char *str) { if ( str == 0 ) { fprintf(stderr,"strlen(NUL
 #include "SuperNET.h"
 #include "jsoncodec.h"
 #include "mappedptr.h"
-#include "ramchain.h"
+//#include "ramchain.h"
 #include "includes/utlist.h"
 struct resultsitem { struct queueitem DL; char *argstr,*retstr; uint64_t txid; char retbuf[]; };
 
@@ -733,7 +733,7 @@ void free_queueitem(void *itemptr);
 //#include "coincache.h"
 #include "kademlia.h"
 #include "packets.h"
-#include "mofnfs.h"
+//#include "mofnfs.h"
 #include "contacts.h"
 #include "deaddrop.h"
 #include "telepathy.h"
@@ -745,7 +745,7 @@ void free_queueitem(void *itemptr);
 //#include "bars.h"
 #include "InstantDEX.h"
 #include "teleport.h"
-#include "mgw.h"
+//#include "mgw.h"
 #include "tradebot.h"
 #include "lotto.h"
 //#include "NXTservices.c"

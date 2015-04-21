@@ -59,7 +59,7 @@ int32_t safecopy(char *dest,char *src,long len);
 #undef DEFINES_ONLY
 
 #define INCLUDE_CODE
-#include "ramchain.h"
+//#include "ramchain.h"
 #undef INCLUDE_CODE
 
 
@@ -148,6 +148,7 @@ char *GUIpoll(char *txidstr,char *senderipaddr,uint16_t *portp)
 
 char *process_commandline_json(cJSON *json)
 {
+#ifdef later
     char *inject_pushtx(char *coinstr,cJSON *json);
     bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
     char *issue_ramstatus(char *coinstr);
@@ -401,6 +402,8 @@ char *process_commandline_json(cJSON *json)
         else break;
     }
     return(retstr);
+#endif
+    return(clonestr("later"));
 }
 
 char *load_filestr(char *userNXTaddr,int32_t gatewayid)
@@ -626,6 +629,7 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     return 1; //ok - we are mapped:)
 }
 
+#define NXTSERVER "https://127.0.0.1:7876/nxt?requestType"
 uint64_t get_NXT_forginginfo(char *gensig,uint32_t height)
 {
     cJSON *json;

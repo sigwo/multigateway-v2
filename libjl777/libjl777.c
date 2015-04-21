@@ -17,8 +17,8 @@ void handler_gotfile(char *sender,char *senderip,struct transfer_args *args,uint
 {
     void _RTmgw_handler(struct transfer_args *args);
     void bridge_handler(struct transfer_args *args);
-    FILE *fp;
-    char buf[512],*str;
+    //FILE *fp;
+    //char buf[512],*str;
     uint32_t now = (uint32_t)time(NULL);
     if ( args->syncmem != 0 )
     {
@@ -30,6 +30,7 @@ void handler_gotfile(char *sender,char *senderip,struct transfer_args *args,uint
         args->handlercrc = crc;
         args->handlertime = now;
     }
+#ifdef later
     if ( strcmp(args->handler,"mgw") == 0 || strcmp(args->handler,"RTmgw") == 0 )
     {
         set_handler_fname(buf,args->handler,args->name);
@@ -52,6 +53,7 @@ void handler_gotfile(char *sender,char *senderip,struct transfer_args *args,uint
             free(str);
     }
     else printf("unknown handler.(%s)\n",args->handler);
+#endif
     if ( args->syncmem == 0 )
     {
         memset(args->data,0,args->totallen);
@@ -1191,9 +1193,11 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     myipaddr = init_NXTservices(JSON_or_fname,myipaddr);
     //if ( IS_LIBTEST < 7 )
     {
+#ifdef later
         uint64_t pendingtxid;
         if ( Global_mp->gatewayid >= 0 )
             ready_to_xferassets(&pendingtxid);
+#endif
         //if ( Debuglevel > 0 )
         //    printf("back from init_NXTservices (%s) NXTheight.%d\n",myipaddr,get_NXTheight());
         p2p_publishpacket(0,0);

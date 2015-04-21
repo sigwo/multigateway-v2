@@ -1974,7 +1974,7 @@ int is_printable(const char *s)
     return 1;
 }
 
-uint32_t calc_file_crc(uint64_t *filesizep,char *fname)
+/*uint32_t calc_file_crc(uint64_t *filesizep,char *fname)
 {
     void *ptr;
     uint32_t totalcrc = 0;
@@ -2001,7 +2001,7 @@ uint32_t calc_file_crc(uint64_t *filesizep,char *fname)
     }
 #endif
     return(totalcrc);
-}
+}*/
 
 cJSON *parse_json_AM(struct json_AM *ap)
 {

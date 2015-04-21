@@ -417,8 +417,10 @@ uint64_t check_txout(uint32_t *createtimep,struct coin_info *cp,int32_t minconfi
             if ( (confirmations= (int32_t)get_cJSON_int(cJSON_GetObjectItem(json,"confirmations"),0)) >= minconfirms )
             {
                 *createtimep = (uint32_t)(time(NULL) - confirmations*cp->estblocktime);
+#ifdef later
                 if ( refscript != 0 )
                     _extract_txvals(coinaddr,refscript,cp->nohexout,json);
+#endif
             }
             free_json(json);
         }
