@@ -269,7 +269,9 @@ int32_t gen_pingstr(char *cmdstr,int32_t completeflag,char *coinstr)
     char MGWpingstr[1024];
     if ( cp != 0 )
     {
+#ifdef later
         ram_get_MGWpingstr(coinstr==0?0:get_ramchain_info(coinstr),MGWpingstr,-1);
+#endif
         sprintf(cmdstr,"{\"requestType\":\"ping\",%s\"NXT\":\"%s\",\"timestamp\":%ld,\"MMatrix\":%d,\"pubkey\":\"%s\",\"ipaddr\":\"%s\",\"ver\":\"%s\"",MGWpingstr,cp->srvNXTADDR,(long)time(NULL),Global_mp->isMM,Global_mp->pubkeystr,cp->myipaddr,HARDCODED_VERSION);
         if ( completeflag != 0 )
             strcat(cmdstr,"}");
@@ -561,12 +563,14 @@ char *kademlia_ping(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,c
             change_nodeinfo(ipaddr,prevport,calc_nxt64bits(sender),isMM);
             //sprintf(retstr,"{\"error\":\"kademlia_ping from %s doesnt verify (%s) -> new IP (%s:%d)\"}",sender,origargstr,ipaddr,prevport);
         }
+#ifdef later  
         if ( cp->RAM.S.gatewayid >= 0 || Global_mp->iambridge != 0 || cp->RAM.remotemode != 0 )
         {
             void ram_parse_MGWpingstr(struct ramchain_info *ram,char *sender,char *pingstr);
             //printf("parse MGWpingstr.(%s)\n",origargstr);
             ram_parse_MGWpingstr(0,sender,origargstr);
         }
+#endif
         txid = send_kademlia_cmd(0,get_pserver(0,ipaddr,prevport,0),"pong",NXTACCTSECRET,0,0);
         sprintf(retstr,"{\"result\":\"kademlia_pong to (%s/%d)\",\"txid\":\"%llu\"}",ipaddr,prevport,(long long)txid);
     }

@@ -888,8 +888,10 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
             void *process_ramchains(void *_argcoinstr);
             if ( Global_mp->gatewayid >= 0 )
                 init_SuperNET_storage(cp->backupdir);
+#ifdef later
             if ( IS_LIBTEST > 0 && IS_LIBTEST < 7 && NORAMCHAINS == 0 && portable_thread_create((void *)process_ramchains,0) == 0 )
                 printf("ERROR hist run_libwebsockets\n");
+#endif
         }
         if ( portable_thread_create((void *)run_UVloop,Global_mp) == 0 )
             printf("ERROR hist process_hashtablequeues\n");

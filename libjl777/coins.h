@@ -979,7 +979,9 @@ void init_ramchain_info(struct ramchain_info *ram,struct coin_info *cp,int32_t D
         if ( Debuglevel > 0 )
             printf("gatewayid.%d MGWissuer.(%s) init_ramchain_info(%s) (%s) active.%d (%s %s) multisigchar.(%c) confirms.(deposit %d withdraw %d) rate %.8f\n",ram->S.gatewayid,cp->MGWissuer,ram->name,cp->name,is_active_coin(cp->name),ram->serverport,ram->userpass,ram->multisigchar,ram->depositconfirms,ram->withdrawconfirms,ram->NXTconvrate);
         init_ram_MGWconfs(ram,cp->json,(cp->MGWissuer[0] != 0) ? cp->MGWissuer : NXTISSUERACCT,get_NXTasset(&createdflag,Global_mp,cp->assetid));
+#ifdef later
         activate_ramchain(ram,cp->name);
+#endif
     } //else printf("skip activate ramchains\n");
 }
 
