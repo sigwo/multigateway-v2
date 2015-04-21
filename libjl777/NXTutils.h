@@ -88,7 +88,10 @@ char *_issue_cmd_to_buffer(char *prog,char *arg1,char *arg2,char *arg3)
     char buffer[4096],cmd[512];
     int32_t fd[2];
     unsigned long len;
-	static portable_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    static int didinit;
+	static portable_mutex_t mutex;//= PTHREAD_MUTEX_INITIALIZER;
+    if ( didinit == 0 )
+        portable_mutex_init(&mutex), didinit = 1;
  	portable_mutex_lock(&mutex);
     if ( pipe(fd) != 0 )
         printf("_issue_cmd_to_buffer error doing pipe(fd)\n");
