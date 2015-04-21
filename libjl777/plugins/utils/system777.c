@@ -15,8 +15,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include "utils777.c"
-#include "mutex.h"
-#include "utlist.h"
+#include "../../includes/mutex.h"
+#include "../../includes/utlist.h"
 
 typedef int32_t (*ptm)(int32_t,char *args[]);
 
