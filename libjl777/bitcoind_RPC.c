@@ -24,6 +24,7 @@ void init_string(struct return_string *s);
 
 #define DEFINES_ONLY
 #include "plugins/utils/system777.c"
+#include "plugins/utils/utils777.c"
 #undef DEFINES_ONLY
 //char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr);
 //char *bitcoind_RPC(CURL *curl_handle,char *debugstr,char *url,char *userpass,char *command,char *params);

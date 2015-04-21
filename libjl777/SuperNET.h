@@ -14,6 +14,7 @@
 
 #define DEFINES_ONLY
 #include "plugins/utils/system777.c"
+#include "plugins/utils/utils777.c"
 #undef DEFINES_ONLY
 
 #define MAX_PUBADDR_TIME (24 * 60 * 60)

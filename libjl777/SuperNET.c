@@ -33,6 +33,7 @@
 
 #define DEFINES_ONLY
 #include "plugins/utils/system777.c"
+#include "plugins/utils/utils777.c"
 #undef DEFINES_ONLY
 
 #include "SuperNET.h"
@@ -56,10 +57,6 @@ struct coin_info *get_coin_info(char *coinstr);
 uint32_t get_blockheight(struct coin_info *cp);
 long stripwhite_ns(char *buf,long len);
 int32_t safecopy(char *dest,char *src,long len);
-
-#define DEFINES_ONLY
-#include "plugins/utils/system777.c"
-#undef DEFINES_ONLY
 
 #define INCLUDE_CODE
 //#include "ramchain.h"
