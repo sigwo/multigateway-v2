@@ -14,7 +14,7 @@
 #include <libwebsockets.h>
 #endif
 #define MAX_LEN 40
-#include "plugins.h"
+#include "plugins/plugins.h"
 
 int32_t is_BTCD_command(cJSON *json)
 {
