@@ -73,7 +73,7 @@ uint16_t wait_for_myipaddr(char *ipaddr);
 
 #ifndef crypto777_system777_h
 #define DEFINES_ONLY
-#include __BASE_FILE__
+#include "system777.c"
 #undef DEFINES_ONLY
 #endif
 
