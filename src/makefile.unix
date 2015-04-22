@@ -176,7 +176,7 @@ obj/%.o: %.cpp
 	  rm -f $(@:%.o=%.d)
 
 BitcoinDarkd: $(OBJS:obj/%=obj/%)
-	gcc -c glue.c ../libjl777/plugins/utils/cJSON.c  ../libjl777/plugins/utils/bitcoind_RPC.c  ../libjl777/plugins/utils/system777.c ../libjl777/plugins/utils/utils777.c; $(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
+	gcc -c -I../src/libjl777/plugins/includes -I../src/libjl777/includes glue.c ../libjl777/plugins/utils/cJSON.c  ../libjl777/plugins/utils/bitcoind_RPC.c  ../libjl777/plugins/utils/system777.c ../libjl777/plugins/utils/utils777.c; $(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
 clean:
 	-rm -f BitcoinDarkd
