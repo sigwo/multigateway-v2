@@ -37,7 +37,7 @@ int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags);
 #define portable_mutex_lock nn_mutex_lock
 #define portable_mutex_unlock nn_mutex_unlock
 
-struct queueitem { struct queueitem *next,*prev; void *ptr; };
+struct queueitem { struct queueitem *next,*prev; };
 typedef struct queue
 {
 	struct queueitem *list;
