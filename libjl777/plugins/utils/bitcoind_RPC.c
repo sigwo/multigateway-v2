@@ -11,7 +11,7 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
-#include "cJSON.h"
+#include "../includes/cJSON.h"
 #define DEFINES_ONLY
 #include "plugins/utils/system777.c"
 #include "plugins/utils/utils777.c"
