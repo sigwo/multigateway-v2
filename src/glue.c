@@ -58,8 +58,8 @@ int8_t portable_spawn(char *os, char *cmd, char *argv) //TODO: extend for other 
 return status;
 } 
 
-void *portable_thread_create(void *funcp,void *argp)
-{
+void *portable_thread_create(void *funcp,void *argp);
+/*{
     pthread_t *ptr;
     ptr = (pthread_t *)malloc(sizeof(*ptr));
     if ( pthread_create(ptr,NULL,funcp,argp) != 0 )
@@ -67,7 +67,7 @@ void *portable_thread_create(void *funcp,void *argp)
         free(ptr);
         return(0);
     } else return(ptr);
-}
+}*/
 
 int32_t set_SuperNET_url(char *url)
 {
