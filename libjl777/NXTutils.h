@@ -2287,22 +2287,6 @@ long load_varfilestr(int32_t *lenp,char *str,FILE *fp,int32_t maxlen)
     return(-1);
 }*/
 
-void ensure_directory(char *dirname) // jl777: does this work in windows?
-{
-    FILE *fp;
-    char fname[512],cmd[512];
-    sprintf(fname,"%s/tmp",dirname);
-    if ( (fp= fopen(os_compatible_path(fname),"rb")) == 0 )
-    {
-        sprintf(cmd,"mkdir %s",dirname);
-        if ( system(os_compatible_path(cmd)) != 0 )
-            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
-        fp = fopen(os_compatible_path(fname),"wb");
-        if ( fp != 0 )
-            fclose(fp);
-    }
-    else fclose(fp);
-}
 
 #ifdef oldway
 

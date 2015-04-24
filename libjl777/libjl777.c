@@ -386,6 +386,8 @@ void return_http_str(struct libwebsocket *wsi,uint8_t *retstr,int32_t retlen,cha
     int32_t len;
     unsigned char buffer[8192];
     len = retlen;
+    if ( retlen == 0 )
+        return;
     if ( insertstr != 0 && insertstr[0] != 0 )
         len += (int32_t)strlen(insertstr);
     sprintf((char *)buffer,
@@ -920,6 +922,8 @@ char *call_SuperNET_JSON(char *JSONstr)
             cJSON_AddItemToObject(json,"pubkey",cJSON_CreateString(Global_mp->pubkeystr));
         if ( cJSON_GetObjectItem(json,"timestamp") == 0 )
             cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(time(NULL)));
+        if ( cJSON_GetObjectItem(json,"tag") == 0 )
+            cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(rand()));
         cmdstr = cJSON_Print(json);
         if ( cmdstr != 0 )
         {
@@ -1235,6 +1239,9 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
             printf("ERROR hist run_libwebsockets\n");
         portable_sleep(3);
     }
+    char path[1024];
+    ensure_directory(SOPHIA_DIR);
+    //SuperNET_JSON("{\"requestType\":\"syscall\",\"plugin\":\"sophia\"}");
     init_InstantDEX(calc_nxt64bits(Global_mp->myNXTADDR),1);
     int32_t tmp = 1;
     if ( strncmp(Global_mp->ipaddr,"209",3) != 0 && (Global_mp->gatewayid >= 0 || Global_mp->iambridge != 0) )

@@ -31,20 +31,29 @@ uint64_t PLUGNAME(_init)(struct plugin_info *plugin,STRUCTNAME *data)
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
-int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
+int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *str;
+    char onetimestr[64],resultstr[MAX_JSON_FIELD],*str;
     retbuf[0] = 0;
-    printf("process %s (%s)\n",plugin->name,jsonstr);
+    //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
     }
     else
     {
-        str = stringifyM(jsonstr);
-        sprintf(retbuf,"{\"args\":%s,\"milliseconds\":%f,\"onetime\":%d}\n",str,milliseconds(),initflag < 0);
-        free(str);
+        copy_cJSON(resultstr,cJSON_GetObjectItem(json,"result"));
+        if ( strcmp(resultstr,"registered") == 0 )
+            plugin->registered = 1;
+        else
+        {
+            str = stringifyM(jsonstr);
+            if ( initflag < 0 )
+                sprintf(onetimestr,",\"onetime\":%d",initflag);
+            else onetimestr[0] = 0;
+            sprintf(retbuf,"{\"tag\":%llu,\"args\":%s,\"milliseconds\":%f%s}\n",(long long)tag,str,milliseconds(),onetimestr);
+            free(str);
+        }
     }
     return((int32_t)strlen(retbuf));
 }
