@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 
 int32_t OS_getppid() { return(getppid()); }
-int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags) { while ( 1 ) sleep(60); return(waitpid(childpid,statusp,flags)); }
+int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags) { return(waitpid(childpid,statusp,flags)); }
 
 int32_t OS_launch_process(char *args[])
 {

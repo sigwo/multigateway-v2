@@ -334,14 +334,6 @@ void *_daemon_loop(struct daemon_info *dp,int32_t permanentflag)
     init_pluginhostsocks(dp,permanentflag,bindaddr,connectaddr,dp->myid);
     printf("<<<<<<<<<<<<<<<<<< %s plugin.(%s) bind.(%s) connect.(%s)\n",permanentflag!=0?"PERMANENT":"WEBSOCKETD",dp->name,bindaddr,connectaddr);
     childpid = (*dp->daemonfunc)(dp,permanentflag,0,0);
-    /*while ( strcmp(dp->name,"SuperNET") == 0 )
-    {
-        for (i=0; i<1000; i++)
-            if ( poll_daemons() <= 0 )
-                break;
-        msleep(1);
-    }*/
-
     OS_waitpid(childpid,&status,0);
     printf("daemonid.%llu (%s %s) finished child.%d status.%d\n",(long long)dp->daemonid,dp->cmd,dp->jsonargs!=0?dp->jsonargs:"",childpid,status);
     if ( permanentflag != 0 )
