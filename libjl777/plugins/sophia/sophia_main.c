@@ -272,9 +272,9 @@ void sophia_setget(char *retbuf,int32_t max,cJSON *json)
                                 else strcpy(retbuf,"{\"error\":\"value size too big\"}");
                                 sp_destroy(value);
                             } else strcpy(retbuf,"{\"error\":\"cant get value from item\"}");
+                            sp_destroy(item);
                         } else strcpy(retbuf,"{\"error\":\"cant find item\"}");
                     }
-                    sp_destroy(item);
                 } else strcpy(retbuf,"{\"error\":\"cant set object key\"}");
                 sp_destroy(obj);
             } else strcpy(retbuf,"{\"error\":\"invalid db or cant allocate object\"}");
