@@ -752,7 +752,6 @@ void SuperNET_loop(void *ipaddr)
 {
     int32_t i;
     printf("start SuperNET.(%s)\n",ipaddr);
-    getchar();
     SuperNET_start("SuperNET.conf",ipaddr);
     while ( 1 )
     {
