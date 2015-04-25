@@ -750,15 +750,12 @@ char *SuperNET_url()
 
 void SuperNET_loop(void *ipaddr)
 {
-    int32_t i;
     printf("start SuperNET.(%s)\n",ipaddr);
     SuperNET_start("SuperNET.conf",ipaddr);
     while ( 1 )
     {
-        for (i=0; i<1000; i++)
-            if ( poll_daemons() <= 0 )
-                break;
-        sleep(1);
+        if ( poll_daemons() <= 0 )
+            msleep(10);
         //fprintf(stderr,".");
     }
 }
@@ -811,7 +808,7 @@ int main(int argc,const char *argv[])
         for (i=0; i<1000; i++)
             if ( poll_daemons() <= 0 )
                 break;
-        sleep(10);
+        msleep(10);
     }
     free(jsonstr);
     return(0);
