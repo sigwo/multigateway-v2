@@ -108,7 +108,7 @@ int32_t db777_close(struct db777 *DB);
 #undef DEFINES_ONLY
 #endif
 
-extern int32_t Debuglevel;
+int32_t Debuglevel;
 
 struct nn_clock
 {

@@ -361,9 +361,9 @@ int32_t db777_find(char *retbuf,int32_t max,struct db777 *DB,char *key);
 struct multisig_addr *find_msigaddr(char *msigaddr)
 {
     struct multisig_addr *msig = 0;
-    msig = calloc(1,sizeof(*msig) + 16*sizeof(struct pubkey));
-    if ( db777_find((char *)msig,(int32_t)(sizeof(*msig) + 16*sizeof(struct pubkey)),MSIG_DB,msigaddr) != 0 )
-        free(msig), msig = 0;
+    //msig = calloc(1,sizeof(*msig) + 16*sizeof(struct pubkey));
+   // if ( db777_find((char *)msig,(int32_t)(sizeof(*msig) + 16*sizeof(struct pubkey)),MSIG_DB,msigaddr) != 0 )
+   //     free(msig), msig = 0;
     return(msig);
 }
 
