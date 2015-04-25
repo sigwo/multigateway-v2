@@ -9,6 +9,8 @@
 void *poll_for_broadcasts(void *args);
 extern int32_t SuperNET_retval,did_SuperNET_init;
 char SuperNET_url[512];
+int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
+char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *args);
 
 int8_t portable_spawn(char *os, char *cmd, char *argv) //TODO: extend for other OSes
 {
@@ -280,9 +282,10 @@ int32_t got_newpeer(const char *ip_port)
     return(0);
 }
 
-char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
+char *process_jl777_msg(char *from_ipaddr,char *msg, int32_t duration)
 {
-	static long retlen;
+	char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port);
+    static long retlen;
 	static char *retbuf;
 	int32_t len;
     char *retstr,params[MAX_JSON_FIELD*2],*str;
@@ -295,10 +298,10 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 		return((char *)"{\"result\":null}");
 	}
     memset(params,0,sizeof(params));
-	//retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
+	retstr = SuperNET_gotpacket(msg,duration,from_ipaddr);//(char *)from->addr.ToString().c_str());
     // static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
     str = stringifyM(msg);
-    sprintf(params,"{\"requestType\":\"gotpacket\",\"msg\":%s,\"dur\":%d,\"ip_port\":\"%s\"}",str,duration,(char *)from->addr.ToString().c_str());
+    sprintf(params,"{\"requestType\":\"gotpacket\",\"msg\":%s,\"dur\":%d,\"ip_port\":\"%s\"}",str,duration,from_ipaddr);
     free(str);
     retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url,(char *)"",(char *)"SuperNET",params);
     if ( retstr == 0 )
@@ -308,7 +311,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
     }
 	if ( retstr != 0 )
 	{
-		if ( (len= strlen(retstr)) >= retlen )
+		if ( (len= (int32_t)strlen(retstr)) >= retlen )
 		{
 			retlen = len + 1;
 			retbuf = (char *)realloc(retbuf,len+1);
@@ -320,53 +323,10 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	return(retbuf);
 }
 
-extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
+void *poll_for_broadcasts(void *args)
 {
-    printf("inside SuperNET_broadcast.(%s) retval.%d\n",msg,SuperNET_retval);
-    if ( SuperNET_retval <= 0 )
-        return(-1);
-    broadcastPubAddr(msg,duration);
-	return(0);
-}
-
-extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
-{
-    int32_t retflag = 0;
-    CPubAddr *pubaddr = new CPubAddr;
-    std::string supernetmsg = "";
-    CNode *peer;
-    if ( SuperNET_retval <= 0 )
-        return(-1);
-    peer = FindNode((CService)destip);
-    if ( peer == NULL )
-    {
-        std::cout << "<<<<<<< narrowcast sent to null peer. Trying to find node " << destip << std::endl;
-        CService *serv = new CService(destip);
-        CAddress *addrConnect = new CAddress(*serv);
-        peer = ConnectNode(*addrConnect, destip);
-        free(serv);
-        free(addrConnect);
-        // opennetworkconnection((CService)destip);
-        //   peer = FindNode((CService)destip);
-    }
-    if ( peer == NULL )
-    {
-        std::cout << destip << " could not be located for narrowcast." << std::endl;
-        return(-1); // Not a known peer
-    }
-    std::cout << destip << " was located for narrowcast." << std::endl;
-    for(int32_t i=0; i<len; i++)
-        supernetmsg += msg[i];//std::string(msg[i]);
-    set_pubaddr(*pubaddr,supernetmsg,60); // just one minute should be plenty of time
-    if ( pubaddr->RelayTo(peer) != true )
-        retflag = -2;
-    delete pubaddr;
-    //printf("SuperNET_narrowcast  relay error\n");
-    return(retflag);
-}
-
-extern "C" void *poll_for_broadcasts(void *args)
-{
+    int32_t SuperNET_broadcast(char *msg,int32_t duration);
+    int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len);
     cJSON *json;
     int32_t duration,len,sleeptime = 1;
     unsigned char data[4098];

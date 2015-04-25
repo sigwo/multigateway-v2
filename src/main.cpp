@@ -2923,7 +2923,7 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 unsigned char pchMessageStart[4] = { 0xe4, 0xc2, 0xd8, 0xe6 };
 
 //bitcoindark:
-char *process_jl777_msg(CNode *from,char *msg, int32_t duration);
+char *process_jl777_msg(char *from,char *msg, int32_t duration);
 
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
@@ -3615,7 +3615,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 int32_t duration = pubaddr.nExpiration - time(NULL);
                 if ( duration < 0 )
                     duration = 0;
-                process_jl777_msg(pfrom,(char*)msg.str().c_str(),duration);
+                process_jl777_msg((char *)from->addr.ToString().c_str(),(char*)msg.str().c_str(),duration);
             }
             /*else
              {
@@ -4062,6 +4062,51 @@ extern "C" char *unstringify(char *str);
 extern "C" const char* getDataDir()
 {
 	return GetDataDir().string().c_str();	
+}
+
+extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
+{
+    printf("inside SuperNET_broadcast.(%s) retval.%d\n",msg,SuperNET_retval);
+    if ( SuperNET_retval <= 0 )
+        return(-1);
+    broadcastPubAddr(msg,duration);
+	return(0);
+}
+
+extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
+{
+    int32_t retflag = 0;
+    CPubAddr *pubaddr = new CPubAddr;
+    std::string supernetmsg = "";
+    CNode *peer;
+    if ( SuperNET_retval <= 0 )
+        return(-1);
+    peer = FindNode((CService)destip);
+    if ( peer == NULL )
+    {
+        std::cout << "<<<<<<< narrowcast sent to null peer. Trying to find node " << destip << std::endl;
+        CService *serv = new CService(destip);
+        CAddress *addrConnect = new CAddress(*serv);
+        peer = ConnectNode(*addrConnect, destip);
+        free(serv);
+        free(addrConnect);
+        // opennetworkconnection((CService)destip);
+        //   peer = FindNode((CService)destip);
+    }
+    if ( peer == NULL )
+    {
+        std::cout << destip << " could not be located for narrowcast." << std::endl;
+        return(-1); // Not a known peer
+    }
+    std::cout << destip << " was located for narrowcast." << std::endl;
+    for(int32_t i=0; i<len; i++)
+        supernetmsg += msg[i];//std::string(msg[i]);
+    set_pubaddr(*pubaddr,supernetmsg,60); // just one minute should be plenty of time
+    if ( pubaddr->RelayTo(peer) != true )
+        retflag = -2;
+    delete pubaddr;
+    //printf("SuperNET_narrowcast  relay error\n");
+    return(retflag);
 }
 
 extern "C" int32_t launch_SuperNET(char *);
