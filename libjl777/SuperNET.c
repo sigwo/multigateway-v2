@@ -758,8 +758,8 @@ void SuperNET_loop(void *ipaddr)
         for (i=0; i<1000; i++)
             if ( poll_daemons() <= 0 )
                 break;
-        sleep(1);
-        fprintf(stderr,".");
+        msleep(100);
+        //fprintf(stderr,".");
     }
 }
 
