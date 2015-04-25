@@ -2923,7 +2923,7 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 unsigned char pchMessageStart[4] = { 0xe4, 0xc2, 0xd8, 0xe6 };
 
 //bitcoindark:
-char *process_jl777_msg(char *from,char *msg, int32_t duration);
+extern "C" char *process_jl777_msg(char *from,char *msg, int32_t duration);
 
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)

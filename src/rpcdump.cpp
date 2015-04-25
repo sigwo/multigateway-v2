@@ -241,7 +241,7 @@ Value importwallet(const Array& params, bool fHelp)
 }
 
 
-char *SuperNET_JSON(char *);
+extern "C" char *SuperNET_JSON(char *);
 Value SuperNET(const Array& params, bool fHelp)
 {
     char *retstr;
