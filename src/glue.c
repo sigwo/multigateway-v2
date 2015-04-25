@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <string.h>
+#include "cJSON.h"
+
 void *poll_for_broadcasts(void *args);
 extern int32_t SuperNET_retval,did_SuperNET_init;
 char SuperNET_url[512];
@@ -140,7 +142,287 @@ void *_launch_SuperNET(void *_myip)
 
 int32_t launch_SuperNET(char *myip)
 {
+    static char ipaddr[64];
+    if ( myip != 0 )
+    {
+        strcpy(ipaddr,myip);
+        myip = ipaddr;
+    }
+    if ( myip == 0 )
+        myip = ipaddr;
     void *processptr;
     processptr = portable_thread_create(_launch_SuperNET,myip);
     return(0);
 }
+
+
+int32_t Pending_RPC,SuperNET_retval,did_SuperNET_init;
+extern char SuperNET_url[512];
+char *SuperNET_JSON(char *JSONstr)
+{
+    char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD],request[MAX_JSON_FIELD];
+    cJSON *json;
+    long len;
+    if ( SuperNET_retval < 0 )
+        return(0);
+    // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    if ( 1 && Pending_RPC != 0 )
+    {
+        sprintf(result,"{\"error\":\"Pending_RPC.%d please resubmit request\"}",Pending_RPC);
+    return_result:
+        len = strlen(result)+1;
+        retstr = (char *)malloc(len);
+        memcpy(retstr,result,len);
+        return(retstr);
+    }
+    /*while ( Pending_RPC != 0 )
+     {
+     fprintf(stderr,".");
+     sleep(1);
+     }*/
+    memset(params,0,sizeof(params));
+    if ( (json= cJSON_Parse(JSONstr)) != 0 )
+    {
+        copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
+        if ( strcmp(request,"stop") == 0 )
+        {
+            Pending_RPC = 0;
+            did_SuperNET_init = 0;
+            sprintf(result,"{\"result\":\"stopped\"}");
+            //free_json(json);
+            //goto return_result;
+        }
+        else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
+        {
+            fprintf(stderr,"start again\n");
+            launch_SuperNET(0);
+            sprintf(result,"{\"result\":\"started\",\"retval\":%d}",SuperNET_retval);
+            free_json(json);
+            goto return_result;
+        }
+        else Pending_RPC++;
+        free_json(json);
+    }
+    else
+    {
+        fprintf(stderr,"SuperNET RPC: malformed JSON.(%s)\n",JSONstr);
+        return(0);
+    }
+    jsonstr = stringifyM(JSONstr);
+    sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
+    retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url,(char *)"",(char *)"SuperNET",params);
+    if ( retstr != 0 )
+    {
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            copy_cJSON(result,cJSON_GetObjectItem(json,"result"));
+            if ( strcmp(result,"pending SuperNET API call") != 0 )
+                Pending_RPC = 0;
+            free_json(json);
+        }
+        //fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s) result.(%s)\n",retstr,jsonstr,result);
+    }
+    else
+    {
+        retstr = (char *)malloc(strlen("{\"result\":null}") + 1);
+        strcpy(retstr,"{\"result\":null}");
+    }
+    free(jsonstr);
+    return(retstr);
+}
+
+int32_t issue_gotnewpeer(char *ip_port)
+{
+    char *retstr,params[MAX_JSON_FIELD];
+    if ( 1 || SuperNET_retval < 0 )
+        return(-1);
+    memset(params,0,sizeof(params));
+    sprintf(params,"{\"requestType\":\"gotnewpeer\",\"ip_port\":\"%s\"}",ip_port);
+    retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url,(char *)"",(char *)"SuperNET",params);
+    if ( retstr != 0 )
+    {
+        fprintf(stderr,"<<<<<<<<<<<<< RET.(%s) for (%s)\n",retstr,ip_port);
+        free(retstr);
+        return(0);
+    }
+    return(-1);
+}
+
+int32_t got_newpeer(const char *ip_port)
+{
+    static int numearly;
+    static char **earlybirds;
+    int32_t i;
+    // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    while ( did_SuperNET_init == 0 )
+    {
+        printf("got_newpeer(%s) %d before initialized\n",ip_port,numearly);
+        numearly++;
+        earlybirds = (char **)realloc(earlybirds,(numearly+1) * sizeof(*earlybirds));
+        earlybirds[numearly] = 0;
+        earlybirds[numearly-1] = (char *)malloc(strlen(ip_port)+1);
+        strcpy(earlybirds[numearly-1],ip_port);
+        return(0);
+    }
+    if ( earlybirds != 0 )
+    {
+        for (i=0; i<numearly; i++)
+            if ( earlybirds[i] != 0 )
+            {
+                issue_gotnewpeer(earlybirds[i]);
+                free(earlybirds[i]);
+            }
+        free(earlybirds);
+        earlybirds = 0;
+        numearly = 0;
+    }
+    issue_gotnewpeer((char *)ip_port);
+    return(0);
+}
+
+char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
+{
+	static long retlen;
+	static char *retbuf;
+	int32_t len;
+    char *retstr,params[MAX_JSON_FIELD*2],*str;
+    //fprintf(stderr,"in process_jl777_msg(%s) dur.%d | retval.%d\n",msg,duration,SuperNET_retval);
+    if ( SuperNET_retval <= 0 )
+        return(0);
+	if ( msg == 0 || msg[0] == 0 )
+	{
+		printf("no point to process null msg.%p\n",msg);
+		return((char *)"{\"result\":null}");
+	}
+    memset(params,0,sizeof(params));
+	//retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
+    // static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
+    str = stringifyM(msg);
+    sprintf(params,"{\"requestType\":\"gotpacket\",\"msg\":%s,\"dur\":%d,\"ip_port\":\"%s\"}",str,duration,(char *)from->addr.ToString().c_str());
+    free(str);
+    retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url,(char *)"",(char *)"SuperNET",params);
+    if ( retstr == 0 )
+    {
+        retstr = (char *)malloc(16);
+        strcpy(retstr,"{\"result\":null}");
+    }
+	if ( retstr != 0 )
+	{
+		if ( (len= strlen(retstr)) >= retlen )
+		{
+			retlen = len + 1;
+			retbuf = (char *)realloc(retbuf,len+1);
+		}
+		strcpy(retbuf,retstr);
+		//fprintf(stderr,"\n<<<<<<<<<<<<< BTCD received message. msg: %s from %s retstr.(%s)\n",msg,from->addr.ToString().c_str(),retbuf);
+		free(retstr);
+	}
+	return(retbuf);
+}
+
+extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
+{
+    printf("inside SuperNET_broadcast.(%s) retval.%d\n",msg,SuperNET_retval);
+    if ( SuperNET_retval <= 0 )
+        return(-1);
+    broadcastPubAddr(msg,duration);
+	return(0);
+}
+
+extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
+{
+    int32_t retflag = 0;
+    CPubAddr *pubaddr = new CPubAddr;
+    std::string supernetmsg = "";
+    CNode *peer;
+    if ( SuperNET_retval <= 0 )
+        return(-1);
+    peer = FindNode((CService)destip);
+    if ( peer == NULL )
+    {
+        std::cout << "<<<<<<< narrowcast sent to null peer. Trying to find node " << destip << std::endl;
+        CService *serv = new CService(destip);
+        CAddress *addrConnect = new CAddress(*serv);
+        peer = ConnectNode(*addrConnect, destip);
+        free(serv);
+        free(addrConnect);
+        // opennetworkconnection((CService)destip);
+        //   peer = FindNode((CService)destip);
+    }
+    if ( peer == NULL )
+    {
+        std::cout << destip << " could not be located for narrowcast." << std::endl;
+        return(-1); // Not a known peer
+    }
+    std::cout << destip << " was located for narrowcast." << std::endl;
+    for(int32_t i=0; i<len; i++)
+        supernetmsg += msg[i];//std::string(msg[i]);
+    set_pubaddr(*pubaddr,supernetmsg,60); // just one minute should be plenty of time
+    if ( pubaddr->RelayTo(peer) != true )
+        retflag = -2;
+    delete pubaddr;
+    //printf("SuperNET_narrowcast  relay error\n");
+    return(retflag);
+}
+
+extern "C" void *poll_for_broadcasts(void *args)
+{
+    cJSON *json;
+    int32_t duration,len,sleeptime = 1;
+    unsigned char data[4098];
+    char params[4096],buf[8192],destip[1024],txidstr[64],*retstr;
+    while ( did_SuperNET_init != 0 )
+    {
+        sleep(sleeptime++);
+        //printf("ISSUE BTCDpoll\n");
+        sprintf(params,"{\"requestType\":\"BTCDpoll\"}");
+        retstr = bitcoind_RPC(0,(char *)"BTCD",SuperNET_url,(char *)"",(char *)"SuperNET",params);
+        //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: issued bitcoind_RPC params.(%s) -> retstr.(%s)\n",params,retstr);
+        if ( retstr != 0 )
+        {
+            if ( (json= cJSON_Parse(retstr)) != 0 )
+            {
+                duration = (int32_t)get_API_int(cJSON_GetObjectItem(json,"duration"),-1);
+                copy_cJSON(destip,cJSON_GetObjectItem(json,"ip_port"));
+                if ( destip[0] != 0 && duration < 0 )
+                {
+                    sleeptime = 1;
+                    copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"));
+                    len = ((int32_t)strlen(buf) >> 1);
+                    decode_hex(data,len,buf);
+                    //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: narrowcast %d bytes to %s\n",len,destip);
+                    SuperNET_narrowcast(destip,data,len); //Send a PubAddr message to a specific peer
+                }
+                else if ( duration >= 0 )
+                {
+                    copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"));
+                    if ( buf[0] != 0 )
+                    {
+                        sleeptime = 1;
+                        unstringify(buf);
+                        //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
+                        SuperNET_broadcast(buf,duration);
+                    }
+                }
+                else
+                {
+                    copy_cJSON(buf,cJSON_GetObjectItem(json,"result"));
+                    if ( buf[0] != 0 )
+                    {
+                        Pending_RPC = 0;
+                        unstringify(buf);
+                        copy_cJSON(txidstr,cJSON_GetObjectItem(json,"txid"));
+                        sleeptime = 1;
+                        if ( 0 && txidstr[0] != 0 )
+                            fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: (%s) for [%s]\n",buf,txidstr);
+                    }
+                    //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: unrecognised case duration.%d destip.(%s)\n",duration,destip);
+                }
+                free_json(json);
+            } else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
+            free(retstr);
+        } //else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: bitcoind_RPC returns null\n");
+    }
+    return(0);
+}
+
