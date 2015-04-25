@@ -140,7 +140,8 @@ all: BitcoinDarkd
 # LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a libjl777.a libuv.a libnacl.a -lcurl -lm -ldl
 #LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a -ljl777 ../libjl777/libs/libuv.a ../libjl777/libs/randombytes.o -lm
 #LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a $(CURDIR)/../libjl777/libs/libjl777.a $(CURDIR)/../libjl777/libs/libuv.a $(CURDIR)/../libjl777/libs/libdb.a $(CURDIR)/../libjl777/libs/libwebsockets.a -lcurl -lm
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a glue.o system777.o cJSON.o bitcoind_RPC.o utils777.o -lcurl ../libjl777/libs/libnanomsg.a -lm -lanl
+#LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a glue.o system777.o cJSON.o bitcoind_RPC.o utils777.o ../libjl777/libs/libnanomsg.a  -lcurl -lm -lanl
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a  ../libjl777/libs/libjl777.a -lcurl -lm -lanl
 
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
@@ -166,7 +167,7 @@ obj/scrypt-x86_64.o: scrypt-x86_64.S
 obj/scrypt-arm.o: scrypt-arm.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
-obj/main.o: ../libjl777/plugins/utils/bitcoind_RPC.c ../libjl777/plugins/utils/cJSON.c ../libjl777/plugins/includes/cJSON.h main.cpp
+obj/main.o: main.cpp
 
 obj/%.o: %.cpp
 	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
@@ -176,7 +177,7 @@ obj/%.o: %.cpp
 	  rm -f $(@:%.o=%.d)
 
 BitcoinDarkd: $(OBJS:obj/%=obj/%)
-	gcc -c -I../libjl777/plugins/includes -I../libjl777/plugins/utils -I../libjl777/includes glue.c ../libjl777/plugins/utils/cJSON.c  ../libjl777/plugins/utils/bitcoind_RPC.c  ../libjl777/plugins/utils/system777.c ../libjl777/plugins/utils/utils777.c; $(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
+	gcc -c $(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
 clean:
 	-rm -f BitcoinDarkd
