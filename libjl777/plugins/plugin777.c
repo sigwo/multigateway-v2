@@ -23,7 +23,7 @@
 #include <math.h>
 #include <float.h>
 #include <ctype.h>
-#include "nn.h"
+#include "../includes/nn.h"
 #include "bus.h"
 #include "pubsub.h"
 #include "pipeline.h"
@@ -143,7 +143,7 @@ static int32_t registerAPI(struct plugin_info *plugin)
     }
     cJSON_AddItemToObject(json,"pluginrequest",cJSON_CreateString("SuperNET"));
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("register"));
-    sprintf(numstr,"%llu",plugin->myid), cJSON_AddItemToObject(json,"myid",cJSON_CreateString(numstr));
+    sprintf(numstr,"%llu",(long long)plugin->myid), cJSON_AddItemToObject(json,"myid",cJSON_CreateString(numstr));
     cJSON_AddItemToObject(json,"methods",array);
     jsonstr = cJSON_Print(json), free_json(json);
     _stripwhite(jsonstr,' ');

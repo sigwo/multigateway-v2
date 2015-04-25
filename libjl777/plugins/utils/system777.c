@@ -17,13 +17,17 @@
 #include "utils777.c"
 #include "../../includes/mutex.h"
 #include "../../includes/utlist.h"
+#ifdef __APPLE__
 #include "nn.h"
 #include "pubsub.h"
+#else
+#include "../../includes/nn.h"
+#include "../../includes/pubsub.h"
+#endif
 
 #define OFFSET_ENABLED (bundledflag == 0)
 
 typedef int32_t (*ptm)(int32_t,char *args[]);
-extern int32_t Debuglevel;
 // nonportable functions needed in the OS specific directory
 int32_t is_bundled_plugin(char *plugin);
 int32_t portable_truncate(char *fname,long filesize);
@@ -82,7 +86,9 @@ int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flag
 int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis);
 int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis);
 void ensure_directory(char *dirname);
+uint32_t calc_ipbits(char *ipaddr);
 
+extern int32_t Debuglevel;
 
 #define SOPHIA_USERDIR "/user"
 struct db777 { void *env,*ctl,*db,*asyncdb; char dbname[96]; };
@@ -101,6 +107,8 @@ int32_t db777_close(struct db777 *DB);
 #include "system777.c"
 #undef DEFINES_ONLY
 #endif
+
+extern int32_t Debuglevel;
 
 struct nn_clock
 {
@@ -391,6 +399,14 @@ int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_
     return(n);
 }
 
+#ifdef BUNDLED
+uint32_t calc_ipbits(char *ipaddr)
+{
+    printf("make portable ipbits for (%s)\n",ipaddr);
+    getchar();
+    return(0);
+}
+#endif
 
 #endif
 #endif

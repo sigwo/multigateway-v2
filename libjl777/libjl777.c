@@ -1239,7 +1239,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
             printf("ERROR hist run_libwebsockets\n");
         portable_sleep(3);
     }
-    char path[1024];
+    //char path[1024];
     ensure_directory(SOPHIA_DIR);
     //SuperNET_JSON("{\"requestType\":\"syscall\",\"plugin\":\"sophia\"}");
     init_InstantDEX(calc_nxt64bits(Global_mp->myNXTADDR),1);

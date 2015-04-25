@@ -86,7 +86,7 @@ char *plugin_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],tagstr[MAX_JSON_FIELD],*retstr = 0;
     struct daemon_info *dp;
     uint64_t daemonid,instanceid,tag;
-    int32_t ind,i,n = 1;
+    int32_t ind,i,async,n = 1;
     copy_cJSON(plugin,objs[0]);
     daemonid = get_API_nxt64bits(objs[1]);
     instanceid = get_API_nxt64bits(objs[2]);
@@ -94,6 +94,7 @@ char *plugin_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     copy_cJSON(tagstr,objs[4]);
     n = get_API_int(objs[5],1);
     tag = calc_nxt64bits(tagstr);
+    async = get_API_int(objs[6],0);
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) != 0 )
     {
         if ( dp->allowremote == 0 && is_remote_access(previpaddr) != 0 )
@@ -106,8 +107,10 @@ char *plugin_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
             for (i=0; i<n; i++)
             {
                 retstr = 0;
-                if ( send_to_daemon(&retstr,tag,dp->name,daemonid,instanceid,origargstr) != 0 )
+                if ( send_to_daemon(async==0?&retstr:0,tag,dp->name,daemonid,instanceid,origargstr) != 0 )
                     return(clonestr("{\"error\":\"method not allowed by plugin\"}"));
+                else if ( async != 0 )
+                    return(clonestr("{\"error\":\"request sent to plugin async\"}"));
                 if ( (retstr= wait_for_daemon(&retstr,tag)) == 0 || retstr[0] == 0 )
                     return(clonestr("{\"error\":\"plugin returned empty string\"}"));
                 else if ( i < n-1 )
