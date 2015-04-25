@@ -219,10 +219,10 @@ patch2: doesntexist; \
 onetime: doesntexist; \
     cd nanomsg; ./autogen.sh; ./configure; make; make check; cp .libs/libnanomsg.a ../libs; cp src/*.h src/utils/mutex.h ../plugins/includes; cd ..; \
     cd miniupnpc; make; cp libminiupnpc.a ../libs; cd ..; \
-    git clone https://go.googlesource.com/go; cd go; git checkout go1.4.1; cd src; ./all.bash; cd ..; \
-    export GOPATH=$BUILD_DIR/go/gocode;  export GOROOT=$BUILD_DIR/go; \
+    #git clone https://go.googlesource.com/go; cd go; git checkout go1.4.1; cd src; ./all.bash; cd ..; mkdir gocode; mkdir gocode/src; cd ..; \
+    mkdir go/gocode; mkdir go/gocode/src; export GOPATH=`pwd`/go/gocode;  export GOROOT=`pwd`/go; echo $$GOPATH; echo $$GOROOT; \
     go get golang.org/x/tools/cmd; go get golang.org/x/crypto; go get golang.org/x/image; go get golang.org/x/sys; go get golang.org/x/net; go get golang.org/x/text; go get golang.org/x/tools;\
-    cd gocode/src; mkdir github.com; cd github.com; mkdir joewalnes; cd joewalnes; git clone https://github.com/joewalnes/websocketd; cd websocketd; go build; cp websocketd ../../../../../../libs; cd ../../../../../..; 
+    cd go/gocode/src; mkdir github.com; cd github.com; mkdir joewalnes; cd joewalnes; git clone https://github.com/joewalnes/websocketd; cd websocketd; go build; cp websocketd ../../../../../../libs; cd ../../../../../..;
 
 
 winpatch: doesntexist; \
