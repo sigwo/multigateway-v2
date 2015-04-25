@@ -284,7 +284,7 @@ int32_t got_newpeer(const char *ip_port)
 
 char *process_jl777_msg(char *from_ipaddr,char *msg, int32_t duration)
 {
-	char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port);
+	//char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port);
     static long retlen;
 	static char *retbuf;
 	int32_t len;
@@ -298,7 +298,7 @@ char *process_jl777_msg(char *from_ipaddr,char *msg, int32_t duration)
 		return((char *)"{\"result\":null}");
 	}
     memset(params,0,sizeof(params));
-	retstr = SuperNET_gotpacket(msg,duration,from_ipaddr);//(char *)from->addr.ToString().c_str());
+	//retstr = SuperNET_gotpacket(msg,duration,from_ipaddr);//(char *)from->addr.ToString().c_str());
     // static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
     str = stringifyM(msg);
     sprintf(params,"{\"requestType\":\"gotpacket\",\"msg\":%s,\"dur\":%d,\"ip_port\":\"%s\"}",str,duration,from_ipaddr);
