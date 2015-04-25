@@ -177,7 +177,7 @@ obj/%.o: %.cpp
 	  rm -f $(@:%.o=%.d)
 
 BitcoinDarkd: $(OBJS:obj/%=obj/%)
-	gcc -c $(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
+    $(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
 clean:
 	-rm -f BitcoinDarkd
