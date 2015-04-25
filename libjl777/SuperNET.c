@@ -755,7 +755,7 @@ void SuperNET_loop(void *ipaddr)
     while ( 1 )
     {
         if ( poll_daemons() <= 0 )
-            msleep(10);
+            sleep(1);
         //fprintf(stderr,".");
     }
 }

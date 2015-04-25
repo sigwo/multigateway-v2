@@ -303,6 +303,7 @@ int32_t main
                 sleeptime = 10;
             msleep(sleeptime);
         } else sleeptime = 1;
+        sleep(1);
     } fprintf(stderr,"ppid.%d changed to %d\n",plugin->ppid,OS_getppid());
     PLUGNAME(_shutdown)(plugin,len); // rc == 0 -> parent process died
     shutdown_plugsocks(&plugin->all);
