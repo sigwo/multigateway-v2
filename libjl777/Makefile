@@ -16,7 +16,7 @@ PLIBS := ../libs/libjl777.a ../libs/libnanomsg.a -lpthread -lanl -lm
 
 LIBS= libs/libjl777.a libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lanl -lssl -lcrypto -lm
 
-CC=gcc
+CC=clang
 CFLAGS=-Wall -O2  -pedantic -g -fPIC -Iplugins/includes  -Iplugins/utils -Iincludes  -Iplugins/mgw -Iplugins/sophia -Iplugins/ramchain -Iplugins/includes/nanomsg -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -I../includes -I../../includes -I/usr/include -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2
 
 TARGET	= libjl777.a
@@ -44,7 +44,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	ar rcu  libs/libjl777.a  $(OBJS) libs/sophia.o
+	ar rcu  libs/libjl777.a  $(OBJS) #plugins/sophia/sophia.o
 
 test:	all
 	(cd tests; make test)
@@ -83,7 +83,7 @@ MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(TARGET); \
-    pkill SuperNET; rm SuperNET; gcc -o SuperNET $(CFLAGS) -D STANDALONE SuperNET.c $(LIBS) #-lz -ldl -lutil -lpcre -lexpat
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE SuperNET.c $(LIBS) #-lz -ldl -lutil -lpcre -lexpat
 
 special: /usr/lib/libjl777.so; \
     gcc -shared -Wl,-soname,libjl777.so -o libs/libjl777.so $(OBJS) -lstdc++ -lcurl -lm -ldl; \
@@ -256,11 +256,12 @@ libs/libuv.a:
 doesntexist:
 picoc.o: picoc.c picoc.h
 libgfshare.o: libgfshare.c libgfshare.h
-libjl777.o: libjl777.c atomic.h ciphers.h feeds.h jl777hash.h libgfshare.h mofnfs.h packets.h sorts.h tradebot.h \
-            storage.h bars.h cJSON.h jl777str.h NXTservices.h telepathy.h transporter.h \
-            bitcoind.h coincache.h jdatetime.h jsoncodec.h NXTutils.h sortnetworks.h telepods.h \
-            NXT_tx.h assetids.h exchanges.h orderbooks.h quotes.h rambooks.h signals.h trades.h \
-            bitcoinglue.h coins.h jl777.h kademlia.h mappedptr.h InstantDEX.h _sorts.h teleport.h udp.h tweetnacl.h
+libjl777.o: libjl777.c SuperNET.c
+    #atomic.h ciphers.h feeds.h jl777hash.h libgfshare.h mofnfs.h packets.h sorts.h tradebot.h \
+            #storage.h bars.h cJSON.h jl777str.h NXTservices.h telepathy.h transporter.h \
+            #bitcoind.h coincache.h jdatetime.h jsoncodec.h NXTutils.h sortnetworks.h telepods.h \
+            #NXT_tx.h assetids.h exchanges.h orderbooks.h quotes.h rambooks.h signals.h trades.h \
+            #bitcoinglue.h coins.h jl777.h kademlia.h mappedptr.h InstantDEX.h _sorts.h teleport.h udp.h tweetnacl.h
 table.o: table.c interpreter.h platform.h
 lex.o: lex.c interpreter.h platform.h
 parse.o: parse.c picoc.h interpreter.h platform.h
