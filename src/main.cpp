@@ -3615,7 +3615,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 int32_t duration = pubaddr.nExpiration - time(NULL);
                 if ( duration < 0 )
                     duration = 0;
-                process_jl777_msg((char *)from->addr.ToString().c_str(),(char*)msg.str().c_str(),duration);
+                process_jl777_msg((char *)pfrom->addr.ToString().c_str(),(char*)msg.str().c_str(),duration);
             }
             /*else
              {
@@ -4059,6 +4059,8 @@ extern "C" int32_t get_API_int(cJSON *obj,int32_t val);
 extern "C" char *stringifyM(char *str);
 extern "C" char *unstringify(char *str);
 */
+extern int32_t SuperNET_retval;
+
 extern "C" const char* getDataDir()
 {
 	return GetDataDir().string().c_str();	
