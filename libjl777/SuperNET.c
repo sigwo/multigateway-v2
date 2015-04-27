@@ -635,12 +635,14 @@ int32_t SuperNET_broadcast(char *msg,int32_t duration) { return(0); }
 int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { return(0); }
 #endif
 
+
 #include <stdio.h>
 #define DEFINES_ONLY
 #include "cJSON.h"
 #include "utils777.c"
 #include "files777.c"
 #include "plugins/plugins.h"
+#undef DEFINES_ONLY
 
 int32_t got_newpeer(const char *ip_port) { printf("got_newpeer.(%s)\n",ip_port); return(0); }
 
@@ -748,7 +750,6 @@ int32_t launch_SuperNET(char *ipaddr)
     return(0);
 }
 
-#ifdef STANDALONE
 int32_t SuperNET_broadcast(char *msg,int32_t duration) { printf(">>>>>>>>> BROADCAST.(%s)\n",msg); return(0); }
 int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { printf(">>>>>>>>>>> NARROWCAST.(%s) -> (%s)\n",msg,destip);  return(0); }
 
@@ -848,5 +849,4 @@ int main(int argc,const char *argv[])
     free(jsonstr);
     return(0);
 }
-#endif
 
