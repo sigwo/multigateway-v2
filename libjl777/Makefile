@@ -57,7 +57,7 @@ test:	all
 	(cd tests; make test)
 
 clean: doesntexist
-	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
+	rm libs/libjl777.a SuperNET; rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
 PINCLUDES := -Iincludes -Iincludes/nanomsg -Iincludes/libtom -Iincludes/miniupnp -I. -Iutils -Iramchain -Imgw -I ../includes -I../..
 

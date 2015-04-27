@@ -134,7 +134,6 @@ char *wait_for_daemon(char **dest,uint64_t tag,int32_t sleepmillis)
     int32_t poll_daemons();
     static long counter,sum;
     double startmilli = milliseconds();
-    int32_t i;
     char *retstr;
     usleep(5);
     while ( milliseconds() < (startmilli + 10000) )
@@ -142,7 +141,7 @@ char *wait_for_daemon(char **dest,uint64_t tag,int32_t sleepmillis)
         poll_daemons();
         if ( (retstr= *dest) != 0 )
         {
-            sum += i, counter++;
+            counter++;
             if ( (counter % 10000) == 0 )
                 printf("%ld: ave %.1f\n",counter,(double)sum/counter);
             return(retstr);
