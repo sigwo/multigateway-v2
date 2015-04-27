@@ -18,7 +18,7 @@
 #include "system777.c"
 #include "storage.c"
 
-struct db777 { void *env,*ctl,*db,*asyncdb; char dbname[96]; };
+struct db777 { void *env,*ctl,*db,*asyncdb; char dbname[96],name[64]; };
 
 #define SOPHIA_USERDIR "/user"
 struct db777 *db777_create(char *name,char *compression);

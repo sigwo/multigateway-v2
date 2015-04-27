@@ -298,12 +298,15 @@ int32_t db777_getind(struct db777 *DB)
     return(-1);
 }
 
-struct db777 *db777_getDB(char *dbname)
+struct db777 *db777_getDB(char *name)
 {
     int32_t i;
     for (i=0; i<SOPHIA.numdbs; i++)
-        if ( strcmp(SOPHIA.DBS[i]->dbname,dbname) == 0 )
+    {
+        printf("(%s) ",SOPHIA.DBS[i]->name);
+        if ( strcmp(SOPHIA.DBS[i]->name,name) == 0 )
             return(SOPHIA.DBS[i]);
+    }
     return(0);
 }
 
@@ -371,8 +374,10 @@ struct db777 *db777_create(char *name,char *compression)
     char path[1024],dbname[1024],*str;
     int32_t err;
     cJSON *json;
-    if ( strlen(name) >= sizeof(DB->dbname)-1 )
-        name[sizeof(DB->dbname)-1] = 0;
+    strcpy(dbname,name);
+    if ( strlen(dbname) >= sizeof(DB->name)-1 )
+        dbname[sizeof(DB->name)-1] = 0;
+    strcpy(DB->name,dbname);
     DB->env = sp_env();
     DB->ctl = sp_ctl(DB->env);
     ensure_directory(SUPERNET.SOPHIA_DIR);
@@ -440,7 +445,7 @@ struct db777 *db777_create(char *name,char *compression)
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *method,*dbname,*key,*value,*compression;
+    char *method,*name,*key,*value,*compression;
     struct db777 *DB;
     int32_t len,offset;
     retbuf[0] = 0;
@@ -454,24 +459,23 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     {
         if ( plugin_result(retbuf,json,tag) > 0 )
             return((int32_t)strlen(retbuf));
-        dbname = cJSON_str(cJSON_GetObjectItem(json,"dbname"));
+        name = cJSON_str(cJSON_GetObjectItem(json,"name"));
         method = cJSON_str(cJSON_GetObjectItem(json,"method"));
-        if ( method == 0 || dbname == 0 || dbname[0] == 0 )
+        if ( method == 0 || name == 0 || name[0] == 0 )
         {
             printf("(%s) has not method or dbname\n",jsonstr);
             return(0);
         }
-        printf("SOPHIA.(%s) for (%s)\n",method,dbname);
+        printf("SOPHIA.(%s) for (%s)\n",method,name);
         if ( strcmp(method,"create") == 0 )
         {
-            if ( strstr("../",dbname) != 0 || strstr("..\\",dbname) != 0 || dbname[0] == '/' || dbname[0] == '\\' || strcmp(dbname,"..") == 0  || strcmp(dbname,"*") == 0 )
+            if ( strstr("../",name) != 0 || strstr("..\\",name) != 0 || name[0] == '/' || name[0] == '\\' || strcmp(name,"..") == 0  || strcmp(name,"*") == 0 )
                 strcpy(retbuf,"{\"error\":\"no funny filenames\"}");
             else
             {
                 compression = cJSON_str(cJSON_GetObjectItem(json,"compression"));
-                if ( (DB= db777_create(dbname,compression)) != 0 )
+                if ( (DB= db777_create(name,compression)) != 0 )
                 {
-                    strcpy(DB->dbname,dbname);
                     strcpy(retbuf,"{\"result\":\"opened database\"}");
                 }
                 else strcpy(retbuf,"{\"error\":\"couldnt create database\"}");
@@ -481,14 +485,14 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             key = cJSON_str(cJSON_GetObjectItem(json,"key"));
             value = cJSON_str(cJSON_GetObjectItem(json,"value"));
-            if ( key != 0 && key[0] != 0 && (DB= db777_getDB(dbname)) != 0 )
+            if ( key != 0 && key[0] != 0 && (DB= db777_getDB(name)) != 0 )
                 sophia_retintstr(retbuf,"add",db777_addstr(DB,key,value));
             else strcpy(retbuf,"{\"error\":\"couldnt find database\"}");
         }
         else if ( strcmp(method,"find") == 0 )
         {
             key = cJSON_str(cJSON_GetObjectItem(json,"key"));
-            if ( key != 0 && key[0] != 0 && (DB= db777_getDB(dbname)) != 0 )
+            if ( key != 0 && key[0] != 0 && (DB= db777_getDB(name)) != 0 )
             {
                 strcpy(retbuf,"{\"method\":\"find\",\"result\":\"");
                 offset = (int32_t)strlen(retbuf);
@@ -499,7 +503,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else if ( strcmp(method,"close") == 0 )
         {
-            if ( (DB= db777_getDB(dbname)) != 0 )
+            if ( (DB= db777_getDB(name)) != 0 )
                 sophia_retintstr(retbuf,"close",db777_close(DB));
             else strcpy(retbuf,"{\"error\":\"couldnt find dbname\"}");
         }
