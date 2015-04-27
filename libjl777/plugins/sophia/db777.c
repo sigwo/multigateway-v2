@@ -94,12 +94,11 @@ void *db777_findM(int32_t *lenp,struct db777 *DB,char *key)
 int32_t db777_cmp(struct db777 *DB,char *key,void *value,int32_t reflen)
 {
     void *val;
-    int32_t n,len;
+    int32_t len;
     if ( (val= db777_findM(&len,DB,key)) != 0 )
     {
         if ( (len == reflen || len == (reflen + 1)) && memcmp(val,value,len) == 0 )
         {
-            printf("adding identical.(%s) skip\n",value);
             free(val);
             return(0);
         }
