@@ -455,7 +455,7 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
     char retbuf[8192],*str,*retstr = 0;
     uint64_t tag;
     int32_t i,ind,async = (timeout == 0);
-    fprintf(stderr,"PLUGINMETHOD.(%s)\n",method);
+    fprintf(stderr,"PLUGINMETHOD.(%s) for (%s)\n",method,plugin);
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) != 0 )
     {
         if ( dp->readyflag == 0 )
@@ -465,7 +465,7 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
         else if ( in_jsonarray(dp->methodsjson,method) == 0 )
         {
             fprintf(stderr,"??????????? methods.(%s)\n",cJSON_Print(dp->methodsjson));
-            sprintf(retbuf,"{\"error\":\"method not allowed by plugin\",\"%s\":\"%s\"}",method,cJSON_Print(dp->methodsjson));
+            sprintf(retbuf,"{\"error\":\"method not allowed\",\"plugin\":\"%s\",\"%s\":\"%s\"}",plugin,method,cJSON_Print(dp->methodsjson));
             return(clonestr(retbuf));
             //return(clonestr("{\"error\":\"method not allowed by plugin\"}"));
         }
@@ -478,7 +478,7 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
             {
                 retstr = 0;
                 if ( (tag= send_to_daemon(async==0?&retstr:0,dp->name,daemonid,instanceid,origargstr)) == 0 )
-                    return(clonestr("{\"error\":\"method not allowed by plugin\"}"));
+                    return(clonestr("{\"error\":\"null tag from send_to_daemon\"}"));
                 else if ( async != 0 )
                     return(clonestr("{\"error\":\"request sent to plugin async\"}"));
                 if ( (retstr= wait_for_daemon(&retstr,tag,timeout,10)) == 0 || retstr[0] == 0 )

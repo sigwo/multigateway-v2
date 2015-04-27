@@ -679,7 +679,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
         n = get_API_int(cJSON_GetObjectItem(json,"iters"),1);
-        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
+        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),1000);
         return(plugin_method(previpaddr,plugin,method,daemonid,instanceid,jsonstr,n,timeout));
     } else return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }

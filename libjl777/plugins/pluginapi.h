@@ -80,7 +80,7 @@ char *plugin_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     copy_cJSON(tagstr,objs[4]);
     n = get_API_int(objs[5],1);
     tag = calc_nxt64bits(tagstr);
-    timeout = get_API_int(objs[6],0);
+    timeout = get_API_int(objs[6],1000);
     return(plugin_method(previpaddr,plugin,method,daemonid,instanceid,tag,origargstr,n,timeout));
 }
 
