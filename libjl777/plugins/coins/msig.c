@@ -736,7 +736,7 @@ char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
             add_NXT_coininfo(calc_nxt64bits(sender),conv_acctstr(refNXTaddr),coinstr,myacctcoinaddr,mypubkey);
         if ( pubkey[0] != 0 && acctcoinaddr[0] != 0 )
         {
-            sprintf(buf,"{\"requestType\":\"setmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"addr\":\"%s\",\"userpubkey\":\"%s\",\"tag\":\"%u\"}",NXTaddr,coinstr,refNXTaddr,acctcoinaddr,pubkey,rand());
+            sprintf(buf,"{\"requestType\":\"plugin\",\"plugin\":\"coins\",\"method\":\"setmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"addr\":\"%s\",\"userpubkey\":\"%s\",\"tag\":\"%u\"}",NXTaddr,coinstr,refNXTaddr,acctcoinaddr,pubkey,rand());
             if ( nn_send(SUPERNET.all.socks.both.bus,buf,(int32_t)strlen(buf)+1,0) <= 0 )
                 printf("error sending (%s)\n",buf);
             return(clonestr(buf));
