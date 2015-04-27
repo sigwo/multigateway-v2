@@ -443,4 +443,4 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
-#include "plugin777.c"
+#include "../plugin777.c"
