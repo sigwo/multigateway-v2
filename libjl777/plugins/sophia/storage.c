@@ -1,5 +1,5 @@
 //
-//  ramchaindb.c
+//  storage.c
 //  crypto777
 //
 //  Created by James on 4/9/15.
@@ -7,8 +7,8 @@
 //
 
 #ifdef DEFINES_ONLY
-#ifndef crypto777_ramchaindb_h
-#define crypto777_ramchaindb_h
+#ifndef crypto777_storage_h
+#define crypto777_storage_h
 #include <stdio.h>
 #include <ctype.h>
 #include <stdint.h>
@@ -57,11 +57,11 @@ int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sende
 
 #endif
 #else
-#ifndef crypto777_ramchaindb_c
-#define crypto777_ramchaindb_c
+#ifndef crypto777_storage_c
+#define crypto777_storage_c
 
 
-#ifndef crypto777_ramchaindb_h
+#ifndef crypto777_storage_h
 #define DEFINES_ONLY
 #include "storage.c"
 #undef DEFINES_ONLY

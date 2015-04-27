@@ -17,7 +17,7 @@
 
 #define DEFINES_ONLY
 #include "cJSON.h"
-#include "plugin777.c"
+#include "../plugin777.c"
 #include "files777.c"
 #include "coins777.c"
 #undef DEFINES_ONLY
