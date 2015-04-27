@@ -292,7 +292,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     sprintf(retbuf+1,"{\"warning\":\"mismatched servers\",\"details\":\"n.%d j.%d vs M.%d N.%d\",",n,j,COINS.M,COINS.N);
                 else
                 {
-                    SUPERNET.all.socks.both.bus = make_MGWbus(COINS.myport,COINS.myipaddr,COINS.serverips,COINS.N);
+                    strcpy(COINS.serverips[COINS.N],COINS.bridgeipaddr);
+                    COINS.srv64bits[COINS.N] = calc_nxt64bits(COINS.bridgeacct);
+                    SUPERNET.all.socks.both.bus = make_MGWbus(COINS.myport,COINS.myipaddr,COINS.serverips,COINS.N+1);
                     SUPERNET.numgateways = COINS.N;
                     SUPERNET.gatewayid = COINS.gatewayid;
                     for (j=0; j<COINS.N; j++)
