@@ -284,6 +284,7 @@ int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sende
             add_NXT_coininfo(msig->pubkeys[i].nxt64bits,calc_nxt64bits(msig->NXTaddr),msig->coinstr,msig->pubkeys[i].coinaddr,msig->pubkeys[i].pubkey);
     if ( msig->size == 0 )
         msig->size = sizeof(*msig) + (msig->n * sizeof(msig->pubkeys[0]));
+    int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int32_t len);
     save_msigaddr(msig->coinstr,msig->NXTaddr,msig,msig->size);
     //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
         printf("add (%s) NXTpubkey.(%s)\n",msig->multisigaddr,msig->NXTpubkey);
@@ -304,6 +305,7 @@ struct multisig_addr *find_NXT_msig(char *NXTaddr,char *coinstr,uint64_t *srv64b
             printf("i.%d of nummsigs.%d: %p srvbits.%p n.(%d %d) %p\n",i,nummsigs,msigs[i],srv64bits,msigs[i]->valid,msigs[i]->n,msigs[i]);
             if ( msigs[i]->valid != msigs[i]->n && msigs[i]->valid < n && msigs[i]->n == n )
             {
+                struct multisig_addr *finalize_msig(struct multisig_addr *msig,uint64_t *srvbits,uint64_t refbits);
                 if ( finalize_msig(msigs[i],srv64bits,nxt64bits) == 0 )
                     continue;
                 //printf("FIXED %llu -> %s\n",(long long)nxt64bits,msigs[i]->multisigaddr);

@@ -58,6 +58,8 @@ char *_createrawtxid_json_params(char *coinstr,char *serverport,char *userpass,s
 #undef DEFINES_ONLY
 #endif
 
+int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *userpass,char *normaladdr,char *msigaddr,int32_t gatewayid,int32_t numgateways); //could map to rawind, but this is rarely called
+
 long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize)
 {
     uint16_t s; uint32_t i; int32_t c;
