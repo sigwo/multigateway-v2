@@ -4111,12 +4111,12 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     return(retflag);
 }
 
-extern "C" int32_t launch_SuperNET(char *);
+extern "C" int32_t SuperNET_start(char *,char *);
 void init_jl777(char *myip)
 {
      std::cout << "starting SuperNET " << myip << std::endl;
-    //SuperNET_start((char *)"SuperNET.conf",myip);
-    launch_SuperNET(myip);
+    SuperNET_start((char *)"SuperNET.conf",myip);
+    //launch_SuperNET(myip);
     SuperNET_retval = 1;
     std::cout << "back from start" << std::endl;
 }
