@@ -34,7 +34,7 @@ struct nodestats
 };
 
 struct acct_coin { uint64_t *srvbits; char name[16],**acctcoinaddrs,**pubkeys; int32_t numsrvbits; };
-struct acct_coin2 { uint64_t srvbits[1024]; char name[16],acctcoinaddrs[1024][64],pubkeys[1024][128]; int32_t numsrvbits; };
+struct acct_coin2 { uint64_t srvbits[64]; char name[16],acctcoinaddrs[128][64],pubkeys[128][128]; int32_t numsrvbits; };
 
 struct NXT_acct
 {
