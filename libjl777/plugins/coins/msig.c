@@ -768,10 +768,20 @@ char *setmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 
 char *setmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *origargstr)
 {
+    static uint32_t lastcrc = 0;
+    uint32_t crc;
     if ( Debuglevel > 0 )
         printf("MGWaddr_func(%s)\n",origargstr);
     if ( sender[0] != 0 && origargstr[0] != 0 )
+    {
+        if ( (crc= _crc32(0,origargstr,strlen(origargstr))) != lastcrc )
+        {
+            if ( nn_send(SUPERNET.all.socks.both.bus,origargstr,(int32_t)strlen(origargstr)+1,0) <= 0 )
+            printf("error sending (%s)\n",origargstr);
+            lastcrc = crc;
+        }
         add_MGWaddr(previpaddr,sender,1,origargstr);
+    }
     return(clonestr(origargstr));
 }
 
