@@ -4059,7 +4059,7 @@ extern "C" int32_t get_API_int(cJSON *obj,int32_t val);
 extern "C" char *stringifyM(char *str);
 extern "C" char *unstringify(char *str);
 */
-extern int32_t SuperNET_retval;
+ int32_t SuperNET_retval = 0;
 
 extern "C" const char* getDataDir()
 {
@@ -4117,6 +4117,7 @@ void init_jl777(char *myip)
      std::cout << "starting SuperNET " << myip << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
     launch_SuperNET(myip);
+    SuperNET_retval = 1;
     std::cout << "back from start" << std::endl;
 }
 
