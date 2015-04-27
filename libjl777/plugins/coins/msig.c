@@ -668,7 +668,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                         expand_nxt64bits(destNXTaddr,nxt64bits);
                         if ( (crc= _crc32(0,buf,strlen(buf))) != lastcrc )
                         {
-                            sprintf(buf+strlen(buf),",\"tag\":\"%u\")",rand());
+                            sprintf(buf+strlen(buf),",\"tag\":\"%u\"}",rand());
                             if ( (len= nn_send(SUPERNET.all.socks.both.bus,buf,(int32_t)strlen(buf)+1,0)) <= 0 )
                                 printf("error sending (%s)\n",buf);
                             else printf("sent.(%s).%d\n",buf,len);
