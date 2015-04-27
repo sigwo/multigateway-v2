@@ -711,19 +711,6 @@ char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
     return(retstr);
 }
 
-int SuperNET_start(char *fname,char *myip)
-{
-    char *jsonstr = 0;
-    uint64_t allocsize;
-    Debuglevel = 2;
-    if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
-        jsonstr = clonestr("{}");
-    language_func("SuperNET","",0,0,1,"SuperNET",jsonstr,call_system);
-    if ( jsonstr != 0 )
-        free(jsonstr);
-    return(0);
-}
-
 char *SuperNET_url()
 {
     static char url[64];
@@ -734,22 +721,85 @@ char *SuperNET_url()
 
 void SuperNET_loop(void *ipaddr)
 {
-    printf("start SuperNET.(%s)\n",ipaddr);
-    SuperNET_start("SuperNET.conf",ipaddr);
+    char *str,*msg;
+    int32_t i,n;
+    cJSON *json;
+    for (i=0; i<1; i++)
+    {
+        if ( poll_daemons() > 0 )
+            break;
+        msleep(10);
+    }
+    printf(">>>>>>>>> call bundled\n");
+    language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"/tmp/coins.conf\"}",call_system);
+    language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"/tmp/coins.conf\"}",call_system);
+    printf(">>>>>>>> addcoin\n");
     while ( 1 )
     {
-        if ( poll_daemons() <= 0 )
-            sleep(1);
-        //fprintf(stderr,".");
+        poll_daemons();
+        if ( (str= plugin_method(0,"coins","addcoin",0,milliseconds(),"{\"method\":\"addcoin\",\"plugin\":\"coins\"}",1,0)) != 0 )
+        {
+            printf("got (%s)\n",str);
+            if ( (json= cJSON_Parse(str)) != 0 )
+            {
+                if ( (msg= cJSON_str(cJSON_GetObjectItem(json,"result"))) != 0 && strcmp(msg,"addcoin") == 0 )
+                    break;
+            }
+            free(str);
+            sleep(3);
+        }
+    }
+    printf("start gen\n");
+    for (i=0; i<1; i++)
+    {
+        if ( (str= plugin_method(0,"coins","genmultisig",0,milliseconds(),"{\"refcontact\":\"NXT-F2N7-GHWK-GH6U-8LTJC\",\"plugin\":\"coins\",\"M\":2,\"N\":3,\"method\":\"genmultisig\",\"coin\":\"BTCD\",\"multisigchar\":\"b\",\"rpc\":\"127.0.0.1:14632\",\"path\":\"BitcoinDark\",\"conf\":\"BitcoinDark.conf\"}",1,0)) != 0 )
+        {
+            printf("got (%s)\n",str);
+            free(str);
+        }
+        poll_daemons();
+        if ( (n= nn_recv(SUPERNET.all.socks.both.bus,&msg,NN_MSG,0)) > 0 )
+        {
+            printf("MAIN.(%s) %d\n",msg,n);
+            nn_freemsg(msg);
+        }
+    }
+    printf("sock = %d\n",SUPERNET.all.socks.both.bus);
+    while ( 1 )
+    {
+        int n,timeoutmillis = 10;
+        char *messages[100];
+        for (i=0; i<1000; i++)
+           if ( poll_daemons() <= 0 )
+               break;
+        if ( (n= nn_recv(SUPERNET.all.socks.both.bus,&msg,NN_MSG,0)) > 0 )
+        {
+            printf("MAIN.(%s) %d\n",msg,n);
+            nn_freemsg(msg);
+        }
+        if ( (n= poll_endpoints(messages,&SUPERNET.numrecv,SUPERNET.numsent,&SUPERNET.all,timeoutmillis)) > 0 )
+        {
+            printf("polled.%d\n",n);
+            for (i=0; i<n; i++)
+                printf("%d of %d: %s\n",i,n,messages[i]), free(messages[i]);
+        }
+        msleep(10);
     }
 }
 
-int32_t launch_SuperNET(char *ipaddr)
+int SuperNET_start(char *fname,char *myip)
 {
-    portable_thread_create((void *)SuperNET_loop,ipaddr);
+    char *jsonstr = 0;
+    uint64_t allocsize;
+    Debuglevel = 2;
+    if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
+        jsonstr = clonestr("{}");
+    language_func("SuperNET","",0,0,1,"SuperNET",jsonstr,call_system);
+    if ( jsonstr != 0 )
+        free(jsonstr);
+    portable_thread_create((void *)SuperNET_loop,myip);
     return(0);
 }
-
 
 #ifdef STANDALONE
 int32_t SuperNET_broadcast(char *msg,int32_t duration) { printf(">>>>>>>>> BROADCAST.(%s)\n",msg); return(0); }
@@ -757,8 +807,8 @@ int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { print
 
 int main(int argc,const char *argv[])
 {
-    char _ipaddr[64],*jsonstr = 0,*msg,*ipaddr = "127.0.0.1:7777";//,*ipaddr6 = "[2001:16d8:dd24:0:86c9:681e:f931:256]";
-    int32_t i,n;
+    char _ipaddr[64],*jsonstr = 0,*ipaddr = "127.0.0.1:7777";//,*ipaddr6 = "[2001:16d8:dd24:0:86c9:681e:f931:256]";
+    int32_t i;
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
     if ( (jsonstr= loadfile(&allocsize,"SuperNET.conf")) == 0 )
@@ -780,83 +830,17 @@ int main(int argc,const char *argv[])
     }
     ipbits = calc_ipbits(ipaddr);
     expand_ipbits(_ipaddr,ipbits);
-    printf(">>>>>>>>> call SuperNET_start\n");
+    printf(">>>>>>>>> call SuperNET_start.(%s)\n",ipaddr);
     SuperNET_start("SuperNET.conf",ipaddr);
     printf("<<<<<<<<< back SuperNET_start\n");
-    for (i=0; i<1; i++)
-    {
-        if ( poll_daemons() > 0 )
-            break;
-        msleep(10);
-    }
-    printf(">>>>>>>>>>>>> (%s -> %s) after iter.%d\n",ipaddr,_ipaddr,i);
-    {
-        char *str;
-        sleep(10);
-        printf(">>>>>>>>> call sophia\n");
-        language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"/tmp/coins.conf\"}",call_system);
-        sleep(10);
-        printf(">>>>>>>>> call coins\n");
-        language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"/tmp/coins.conf\"}",call_system);
-        for (i=0; i<1; i++)
-        {
-            if ( poll_daemons() > 0 )
-                break;
-            msleep(10);
-        }
-        printf("wait\n");
-        sleep(13);
-        for (i=0; i<1; i++)
-        {
-            if ( poll_daemons() > 0 )
-                break;
-            msleep(10);
-        }
-        printf(">>>>>>>> addcoin\n");
-        if ( (str= plugin_method(0,"coins","addcoin",0,milliseconds(),"{\"method\":\"addcoin\",\"plugin\":\"coins\"}",1,0)) != 0 )
-        {
-            printf("got (%s)\n",str);
-            free(str);
-        }
-        for (i=0; i<1; i++)
-        {
-            if ( (str= plugin_method(0,"coins","genmultisig",0,milliseconds(),"{\"refcontact\":\"NXT-F2N7-GHWK-GH6U-8LTJC\",\"plugin\":\"coins\",\"M\":2,\"N\":3,\"method\":\"genmultisig\",\"coin\":\"BTCD\",\"multisigchar\":\"b\",\"rpc\":\"127.0.0.1:14632\",\"path\":\"BitcoinDark\",\"conf\":\"BitcoinDark.conf\"}",1,0)) != 0 )
-            {
-                printf("got (%s)\n",str);
-                free(str);
-            }
-            poll_daemons();
-            if ( (n= nn_recv(SUPERNET.all.socks.both.bus,&msg,NN_MSG,0)) > 0 )
-            {
-                printf("MAIN.(%s) %d\n",msg,n);
-                nn_freemsg(msg);
-            }
-        }
-    }
-
     if ( i < argc )
     {
         for (; i<argc; i++)
             if ( is_bundled_plugin((char *)argv[i]) != 0 )
                 language_func((char *)argv[i],"",0,0,1,(char *)argv[i],jsonstr,call_system);
     }
-    printf("sock = %d\n",SUPERNET.all.socks.both.bus);
     while ( 1 )
-    {
-        int n,timeoutmillis = 1000;
-        char *messages[100];
-        //for (i=0; i<1000; i++)
-         //   if ( poll_daemons() <= 0 )
-         //       break;
-        if ( (n= poll_endpoints(messages,&SUPERNET.numrecv,SUPERNET.numsent,&SUPERNET.all,timeoutmillis)) > 0 )
-        {
-            printf("polled.%d\n",n);
-            for (i=0; i<n; i++)
-                printf("%d of %d: %s\n",i,n,messages[i]), free(messages[i]);
-        }
-        msleep(10);
-    }
-    free(jsonstr);
+        sleep(777);
     return(0);
 }
 #endif
