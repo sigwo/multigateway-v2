@@ -34,16 +34,12 @@ LIBTOM = libtom/yarrow.c libtom/aes.c libtom/cast5.c libtom/khazad.c libtom/rc2.
     libtom/blowfish.c libtom/kasumi.c  libtom/noekeon.c libtom/rmd160.c libtom/sha256.c libtom/hmac_sha512.c libtom/xtea.c
 
 U = plugins/utils
-UTILS = $(U)/ramcoder.c $(U)/huffstream.c $(U)/inet.c $(U)/cJSON.c  $(U)/bits777.c $(U)/NXT777.c $(U)/system777.c $(U)/files777.c $(U)/utils.c
-
-S = plugins/sophia
-SOPHIA = $(S)/sophia.c $(S)/sophia_main.c $(S)/db777.c $(S)/storage.c 
-
-NONPORTABLE = plugins/nonportable/$(OS)/files.c plugins/nonportable/$(OS)/random.c
-
 C = plugins/coins
+S = plugins/sophia
+UTILS = $(U)/ramcoder.c $(U)/huffstream.c $(U)/inet.c $(U)/cJSON.c  $(U)/bits777.c $(U)/NXT777.c $(U)/system777.c $(U)/files777.c $(U)/utils777.c
+SOPHIA = $(S)/sophia.c $(S)/sophia_main.c $(S)/db777.c $(S)/storage.c
+NONPORTABLE = plugins/nonportable/$(OS)/files.c plugins/nonportable/$(OS)/random.c
 COINS = $(C)/bitcoind_RPC.c $(C)/gen1.c $(C)/gen1auth.c $(C)/msig.c $(C)/gen1pub.c $(C)/cointx.c $(C)/coins777.c $(C)/coins777_main.c
-
 CRYPTO = $(U)/sha256.c $(U)/crypt_argchk.c $(U)/hmac_sha512.c $(U)/rmd160.c $(U)/sha384.c $(U)/sha512.c
 
 SRCS = libjl777.c $(CRYPTO) $(UTILS) $(SOPHIA) $(COINS) $(NONPORTABLE)
