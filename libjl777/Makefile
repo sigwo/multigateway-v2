@@ -46,7 +46,7 @@ COINS = $(C)/bitcoind_RPC.c $(C)/gen1.c $(C)/gen1auth.c $(C)/msig.c $(C)/gen1pub
 
 CRYPTO = $(U)/sha256.c $(U)/crypt_argchk.c $(U)/hmac_sha512.c $(U)/rmd160.c $(U)/sha384.c $(U)/sha512.c
 
-SRCS = libjl777.c %(CRYPTO) $(UTILS) $(SOPHIA) $(COINS) $(NONPORTABLE)
+SRCS = libjl777.c $(CRYPTO) $(UTILS) $(SOPHIA) $(COINS) $(NONPORTABLE)
 
  
 OBJS	:= $(SRCS:%.c=%.o)
