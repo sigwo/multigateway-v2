@@ -449,12 +449,12 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
     return(clonestr("{\"error\":\"cant register inactive plugin\"}"));
 }
 
-char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async)
+char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t timeout)
 {
     struct daemon_info *dp;
     char retbuf[8192],*str,*retstr = 0;
     uint64_t tag;
-    int32_t i,ind;
+    int32_t i,ind,async = (timeout == 0);
     fprintf(stderr,"PLUGINMETHOD.(%s)\n",method);
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) != 0 )
     {
@@ -481,7 +481,7 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
                     return(clonestr("{\"error\":\"method not allowed by plugin\"}"));
                 else if ( async != 0 )
                     return(clonestr("{\"error\":\"request sent to plugin async\"}"));
-                if ( (retstr= wait_for_daemon(&retstr,tag,10)) == 0 || retstr[0] == 0 )
+                if ( (retstr= wait_for_daemon(&retstr,tag,timeout,10)) == 0 || retstr[0] == 0 )
                 {
                     str = stringifyM(origargstr);
                     sprintf(retbuf,"{\"error\":\"\",\"args\":%s}",str);

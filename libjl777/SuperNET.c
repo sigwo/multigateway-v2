@@ -650,7 +650,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 {
     char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],request[MAX_JSON_FIELD],ipaddr[MAX_JSON_FIELD],path[MAX_JSON_FIELD];
     uint64_t daemonid,instanceid,tag;
-    int32_t ind,async,n = 1;
+    int32_t ind,async,timeout,n = 1;
     uint16_t port,websocket;
     cJSON *json;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -679,8 +679,8 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
         n = get_API_int(cJSON_GetObjectItem(json,"iters"),1);
-        async = get_API_int(cJSON_GetObjectItem(json,"async"),0);
-        return(plugin_method(previpaddr,plugin,method,daemonid,instanceid,jsonstr,n,async));
+        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
+        return(plugin_method(previpaddr,plugin,method,daemonid,instanceid,jsonstr,n,timeout));
     } else return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }
 
@@ -737,7 +737,7 @@ void SuperNET_loop(void *ipaddr)
     while ( 1 )
     {
         poll_daemons();
-        if ( (str= plugin_method(0,"coins","addcoin",0,milliseconds(),"{\"method\":\"addcoin\",\"plugin\":\"coins\"}",1,0)) != 0 )
+        if ( (str= plugin_method(0,"coins","addcoin",0,milliseconds(),"{\"method\":\"addcoin\",\"plugin\":\"coins\"}",1,5000)) != 0 )
         {
             printf("got (%s)\n",str);
             if ( (json= cJSON_Parse(str)) != 0 )
@@ -752,7 +752,7 @@ void SuperNET_loop(void *ipaddr)
     printf("start gen\n");
     for (i=0; i<1; i++)
     {
-        if ( (str= plugin_method(0,"coins","genmultisig",0,milliseconds(),"{\"refcontact\":\"NXT-F2N7-GHWK-GH6U-8LTJC\",\"plugin\":\"coins\",\"M\":2,\"N\":3,\"method\":\"genmultisig\",\"coin\":\"BTCD\",\"multisigchar\":\"b\",\"rpc\":\"127.0.0.1:14632\",\"path\":\"BitcoinDark\",\"conf\":\"BitcoinDark.conf\"}",1,0)) != 0 )
+        if ( (str= plugin_method(0,"coins","genmultisig",0,milliseconds(),"{\"refcontact\":\"NXT-F2N7-GHWK-GH6U-8LTJC\",\"plugin\":\"coins\",\"M\":2,\"N\":3,\"method\":\"genmultisig\",\"coin\":\"BTCD\",\"multisigchar\":\"b\",\"rpc\":\"127.0.0.1:14632\",\"path\":\"BitcoinDark\",\"conf\":\"BitcoinDark.conf\"}",1,50000)) != 0 )
         {
             printf("got (%s)\n",str);
             free(str);
