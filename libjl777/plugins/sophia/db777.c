@@ -22,6 +22,7 @@ struct db777 { void *env,*ctl,*db,*asyncdb; char dbname[96]; };
 
 #define SOPHIA_USERDIR "/user"
 struct db777 *db777_create(char *name,char *compression);
+int32_t db777_cmp(struct db777 *DB,char *key,void *value,int32_t reflen);
 int32_t db777_add(struct db777 *DB,char *key,void *value,int32_t len);
 int32_t db777_addstr(struct db777 *DB,char *key,char *value);
 int32_t db777_delete(struct db777 *DB,char *key);
@@ -44,32 +45,6 @@ extern struct db777 *DB_msigs,*DB_NXTaccts;//,*DB_NXTassettx,*DB_nodestats;
 #include "db777.c"
 #undef DEFINES_ONLY
 #endif
-
-int32_t db777_addstr(struct db777 *DB,char *key,char *value)
-{
-    void *obj;
-    int32_t err;
-    if ( DB == 0 || DB->db == 0 )
-        return(-1);
-    obj = sp_object(DB->db);
-    printf("db777_addstr: (%s) < (%s)\n",key,value);
-    if ( (err= sp_set(obj,"key",key,strlen(key))) != 0 || (err= sp_set(obj,"value",value,strlen(value))) != 0 )
-        return(err);
-    else return(sp_set(DB->db,obj));
-}
-
-int32_t db777_add(struct db777 *DB,char *key,void *value,int32_t len)
-{
-    void *obj;
-    int32_t err;
-    if ( DB == 0 || DB->db == 0 )
-        return(-1);
-    obj = sp_object(DB->db);
-    printf("db777_add: (%s) < (%p).%d\n",key,value,len);
-    if ( (err= sp_set(obj,"key",key,strlen(key))) != 0 || (err= sp_set(obj,"value",value,len)) != 0 )
-        return(err);
-    else return(sp_set(DB->db,obj));
-}
 
 int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
 {
@@ -114,6 +89,52 @@ void *db777_findM(int32_t *lenp,struct db777 *DB,char *key)
         sp_destroy(result);
     }
     return(ptr);
+}
+
+int32_t db777_cmp(struct db777 *DB,char *key,void *value,int32_t reflen)
+{
+    void *val;
+    int32_t n,len;
+    if ( (val= db777_findM(&len,DB,key)) != 0 )
+    {
+        if ( (len == reflen || len == (reflen + 1)) && memcmp(val,value,len) == 0 )
+        {
+            printf("adding identical.(%s) skip\n",value);
+            free(val);
+            return(0);
+        }
+    }
+    return(-1);
+}
+
+int32_t db777_addstr(struct db777 *DB,char *key,char *value)
+{
+    void *obj;
+    int32_t err;
+    if ( DB == 0 || DB->db == 0 )
+        return(-1);
+    if ( db777_cmp(DB,key,value,(int32_t)strlen(value)) == 0 )
+        return(0);
+    obj = sp_object(DB->db);
+    printf("db777_addstr: (%s) <- (%s)\n",key,value);
+    if ( (err= sp_set(obj,"key",key,strlen(key))) != 0 || (err= sp_set(obj,"value",value,strlen(value))) != 0 )
+        return(err);
+    else return(sp_set(DB->db,obj));
+}
+
+int32_t db777_add(struct db777 *DB,char *key,void *value,int32_t len)
+{
+    void *obj;
+    int32_t err;
+    if ( DB == 0 || DB->db == 0 )
+        return(-1);
+    if ( db777_cmp(DB,key,value,len) == 0 )
+        return(0);
+    obj = sp_object(DB->db);
+    printf("db777_add: (%s) <- (%p).%d\n",key,value,len);
+    if ( (err= sp_set(obj,"key",key,strlen(key))) != 0 || (err= sp_set(obj,"value",value,len)) != 0 )
+        return(err);
+    else return(sp_set(DB->db,obj));
 }
 
 void **db777_copy_all(int32_t *nump,struct db777 *DB)
