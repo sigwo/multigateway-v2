@@ -769,19 +769,15 @@ void SuperNET_loop(void *ipaddr)
     {
         int n,timeoutmillis = 10;
         char *messages[100];
-        for (i=0; i<1000; i++)
-           if ( poll_daemons() <= 0 )
-               break;
-        if ( (n= nn_recv(SUPERNET.all.socks.both.bus,&msg,NN_MSG,0)) > 0 )
-        {
-            printf("MAIN.(%s) %d\n",msg,n);
-            nn_freemsg(msg);
-        }
+        poll_daemons();
         if ( (n= poll_endpoints(messages,&SUPERNET.numrecv,SUPERNET.numsent,&SUPERNET.all,timeoutmillis)) > 0 )
         {
-            printf("polled.%d\n",n);
             for (i=0; i<n; i++)
-                printf("%d of %d: %s\n",i,n,messages[i]), free(messages[i]);
+            {
+                SuperNET_JSON(messages[i]);
+                printf("%d of %d: %s\n",i,n,messages[i]);
+                free(messages[i]);
+            }
         }
         msleep(10);
     }

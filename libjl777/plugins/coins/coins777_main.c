@@ -393,13 +393,18 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
                 if ( coinstr == 0 )
                     coinstr = zerobuf;
-                if ( strcmp(methodstr,"genmultisig") == 0 && coinstr[0] != 0 )
+                if ( strcmp(methodstr,"genmultisig") == 0 )
                 {
-                    copy_cJSON(buf0,cJSON_GetObjectItem(json,"refcontact"));
-                    copy_cJSON(buf1,cJSON_GetObjectItem(json,"userpubkey"));
-                    email = cJSON_str(cJSON_GetObjectItem(json,"email"));
-                    buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
-                    str = genmultisig(COINS.NXTADDR,COINS.NXTACCTSECRET,previpaddr,coinstr,buf0,COINS.M,COINS.N,COINS.srv64bits,COINS.N,buf1,email,buyNXT);
+                    if ( coinstr[0] == 0 )
+                        strcpy(retbuf,"{\"error\":\"no coin specified\"}");
+                    else
+                    {
+                        copy_cJSON(buf0,cJSON_GetObjectItem(json,"refcontact"));
+                        copy_cJSON(buf1,cJSON_GetObjectItem(json,"userpubkey"));
+                        email = cJSON_str(cJSON_GetObjectItem(json,"email"));
+                        buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
+                        str = genmultisig(COINS.NXTADDR,COINS.NXTACCTSECRET,previpaddr,coinstr,buf0,COINS.M,COINS.N,COINS.srv64bits,COINS.N,buf1,email,buyNXT);
+                    }
                 }
                 else if ( strcmp(methodstr,"setmultisig") == 0 )
                     str = setmultisig(COINS.NXTADDR,COINS.NXTACCTSECRET,previpaddr,sender,jsonstr);
