@@ -726,12 +726,12 @@ char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 {
     struct coin777 *coin;
     char acctcoinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],buf[MAX_JSON_FIELD];
-    printf("GETMSIGPUBKEY from sender.(%s) coin.(%s) ref.(%s)\n",sender,coinstr,refNXTaddr);
+    printf("GETMSIGPUBKEY from sender.(%s) coin.(%s) ref.(%s) myacct.(%s) mypub.(%s)\n",sender,coinstr,refNXTaddr,myacctcoinaddr,mypubkey);
     if ( refNXTaddr[0] != 0 && (coin= coin777_find(coinstr)) != 0 )
     {
         if ( myacctcoinaddr != 0 && myacctcoinaddr[0] != 0 && mypubkey != 0 && mypubkey[0] != 0 )
             add_NXT_coininfo(calc_nxt64bits(sender),conv_acctstr(refNXTaddr),coinstr,myacctcoinaddr,mypubkey);
-        if ( get_acct_coinaddr(myacctcoinaddr,coinstr,coin->serverport,coin->userpass,refNXTaddr) != 0 && get_pubkey(pubkey,coinstr,coin->serverport,coin->userpass,acctcoinaddr) != 0 )
+        if ( get_pubkey(pubkey,coinstr,coin->serverport,coin->userpass,acctcoinaddr) != 0 && get_acct_coinaddr(myacctcoinaddr,coinstr,coin->serverport,coin->userpass,refNXTaddr) != 0 )
         {
             sprintf(buf,"{\"requestType\":\"setmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"addr\":\"%s\",\"userpubkey\":\"%s\",\"tag\":\"%u\"}",NXTaddr,coinstr,refNXTaddr,acctcoinaddr,pubkey,rand());
             if ( nn_send(SUPERNET.all.socks.both.bus,buf,(int32_t)strlen(buf)+1,0) <= 0 )
@@ -742,7 +742,7 @@ char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
                 printf("GETMSIG sent to MGW bus (%s)\n",buf);
                 free(str);
             }*/
-        }
+        } else sprintf(buf,"{\"result\":\"setmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"addr\":\"%s\",\"userpubkey\":\"%s\"}",NXTaddr,coinstr,refNXTaddr,acctcoinaddr,pubkey);
     }
     return(clonestr("{\"error\":\"bad getmsigpubkey_func paramater\"}"));
 }

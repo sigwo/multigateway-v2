@@ -51,6 +51,7 @@ char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *user
     coinaddr[0] = 0;
     sprintf(addr,"\"%s\"",NXTaddr);
     retstr = bitcoind_passthru(coinstr,serverport,userpass,"getaccountaddress",addr);
+    printf("get_acct_coinaddr.(%s) -> (%s)\n",NXTaddr,retstr);
     if ( retstr != 0 )
     {
         strcpy(coinaddr,retstr);
@@ -89,6 +90,7 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
             len = (int32_t)strlen(pubkey);
             free_json(json);
         }
+        printf("get_pubkey.(%s) -> (%s)\n",retstr,pubkey);
         free(retstr);
     }
     return((int32_t)len);
