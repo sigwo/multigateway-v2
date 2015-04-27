@@ -726,12 +726,15 @@ char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 {
     struct coin777 *coin;
     char acctcoinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],buf[MAX_JSON_FIELD];
-    printf("GETMSIGPUBKEY from sender.(%s) coin.(%s) ref.(%s) myacct.(%s) mypub.(%s)\n",sender,coinstr,refNXTaddr,myacctcoinaddr,mypubkey);
-    if ( refNXTaddr[0] != 0 && (coin= coin777_find(coinstr)) != 0 )
+    coin = coin777_find(coinstr);
+    printf("GETMSIGPUBKEY from sender.(%s) coin.(%s).%p ref.(%s) myacct.(%s) mypub.(%s)\n",sender,coinstr,coin,refNXTaddr,myacctcoinaddr,mypubkey);
+    if ( refNXTaddr[0] != 0 && coin != 0 )
     {
+        get_acct_coinaddr(acctcoinaddr,coinstr,coin->serverport,coin->userpass,refNXTaddr);
+        get_pubkey(pubkey,coinstr,coin->serverport,coin->userpass,acctcoinaddr);
         if ( myacctcoinaddr != 0 && myacctcoinaddr[0] != 0 && mypubkey != 0 && mypubkey[0] != 0 )
             add_NXT_coininfo(calc_nxt64bits(sender),conv_acctstr(refNXTaddr),coinstr,myacctcoinaddr,mypubkey);
-        if ( get_pubkey(pubkey,coinstr,coin->serverport,coin->userpass,acctcoinaddr) != 0 && get_acct_coinaddr(myacctcoinaddr,coinstr,coin->serverport,coin->userpass,refNXTaddr) != 0 )
+        if ( pubkey[0] != 0 && myacctcoinaddr[0] != 0 )
         {
             sprintf(buf,"{\"requestType\":\"setmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"addr\":\"%s\",\"userpubkey\":\"%s\",\"tag\":\"%u\"}",NXTaddr,coinstr,refNXTaddr,acctcoinaddr,pubkey,rand());
             if ( nn_send(SUPERNET.all.socks.both.bus,buf,(int32_t)strlen(buf)+1,0) <= 0 )
