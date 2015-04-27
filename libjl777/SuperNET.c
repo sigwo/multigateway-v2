@@ -781,7 +781,7 @@ int main(int argc,const char *argv[])
     ipbits = calc_ipbits(ipaddr);
     expand_ipbits(_ipaddr,ipbits);
     SuperNET_start("SuperNET.conf",ipaddr);
-    for (i=0; i<1000; i++)
+    for (i=0; i<1; i++)
     {
         if ( poll_daemons() > 0 )
             break;
@@ -792,14 +792,15 @@ int main(int argc,const char *argv[])
         char *str;
         language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"/tmp/coins.conf\"}",call_system);
         language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"/tmp/coins.conf\"}",call_system);
-        for (i=0; i<1000; i++)
+        for (i=0; i<1; i++)
         {
             if ( poll_daemons() > 0 )
                 break;
             msleep(10);
         }
-        sleep(3);
-        for (i=0; i<1000; i++)
+        printf("wait\n");
+        sleep(13);
+        for (i=0; i<1; i++)
         {
             if ( poll_daemons() > 0 )
                 break;
