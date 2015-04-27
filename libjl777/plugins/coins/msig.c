@@ -726,8 +726,8 @@ char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 {
     struct coin777 *coin;
     char acctcoinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],buf[MAX_JSON_FIELD];
-    printf("GETMSIGPUBKEY from sender.(%s)\n",sender);
-    if ( coinstr[0] != 0 && refNXTaddr[0] != 0 && (coin= coin777_find(coinstr)) != 0 )
+    printf("GETMSIGPUBKEY from sender.(%s) coin.(%s) ref.(%s)\n",sender,coinstr,refNXTaddr);
+    if ( refNXTaddr[0] != 0 && (coin= coin777_find(coinstr)) != 0 )
     {
         if ( myacctcoinaddr != 0 && myacctcoinaddr[0] != 0 && mypubkey != 0 && mypubkey[0] != 0 )
             add_NXT_coininfo(calc_nxt64bits(sender),conv_acctstr(refNXTaddr),coinstr,myacctcoinaddr,mypubkey);
