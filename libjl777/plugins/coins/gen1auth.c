@@ -206,7 +206,7 @@ int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinst
     //extern int32_t MGW_initdone;
     char addr[1024],*retstr;
     cJSON *json,*redeemobj,*msigobj;
-    int32_t flag;
+    int32_t flag = 0;
     //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
         printf("multisig params.(%s)\n",params);
     if ( addmultisig != 0 )
