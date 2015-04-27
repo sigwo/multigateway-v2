@@ -455,6 +455,7 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
     char retbuf[8192],*str,*retstr = 0;
     uint64_t tag;
     int32_t i,ind;
+    fprintf(stderr,"PLUGINMETHOD.(%s)\n",method);
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) != 0 )
     {
         if ( dp->readyflag == 0 )

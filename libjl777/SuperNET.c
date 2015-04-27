@@ -774,8 +774,8 @@ void SuperNET_loop(void *ipaddr)
         {
             for (i=0; i<n; i++)
             {
-                SuperNET_JSON(messages[i]);
-                printf("%d of %d: %s\n",i,n,messages[i]);
+                msg = SuperNET_JSON(messages[i]);
+                printf("%d of %d: (%s)\n",i,n,msg);
                 free(messages[i]);
             }
         }
