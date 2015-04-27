@@ -736,6 +736,7 @@ char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
             sprintf(buf,"{\"requestType\":\"setmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"addr\":\"%s\",\"userpubkey\":\"%s\",\"tag\":\"%u\"}",NXTaddr,coinstr,refNXTaddr,acctcoinaddr,pubkey,rand());
             if ( nn_send(SUPERNET.all.socks.both.bus,buf,(int32_t)strlen(buf)+1,0) <= 0 )
                 printf("error sending (%s)\n",buf);
+            return(clonestr(buf));
             /*if ( (str= plugin_method(previpaddr,"coins","setmsigpubkey",0,milliseconds(),buf,1,1)) != 0 )
             {
                 printf("GETMSIG sent to MGW bus (%s)\n",buf);
