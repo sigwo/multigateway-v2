@@ -641,7 +641,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     for (iter=0; iter<2; iter++)
         for (i=0; i<n; i++)
         {
-            //fprintf(stderr,"iter.%d i.%d\n",iter,i);
+            fprintf(stderr,"iter.%d i.%d\n",iter,i);
             if ( (nxt64bits= srv64bits[i]) != 0 )
             {
                 if ( iter == 0 && my64bits == nxt64bits )
