@@ -454,11 +454,14 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     {
         if ( plugin_result(retbuf,json,tag) > 0 )
             return((int32_t)strlen(retbuf));
-        if ( (method= cJSON_str(cJSON_GetObjectItem(json,"method"))) == 0 || (dbname= cJSON_str(cJSON_GetObjectItem(json,"dbname"))) == 0 || dbname[0] == 0 )
+        dbname = cJSON_str(cJSON_GetObjectItem(json,"dbname"));
+        method = cJSON_str(cJSON_GetObjectItem(json,"method"));
+        if ( method == 0 || dbname == 0 || dbname[0] == 0 )
         {
             printf("(%s) has not method or dbname\n",jsonstr);
             return(0);
         }
+        printf("SOPHIA.(%s) for (%s)\n",method,dbname);
         if ( strcmp(method,"create") == 0 )
         {
             if ( strstr("../",dbname) != 0 || strstr("..\\",dbname) != 0 || dbname[0] == '/' || dbname[0] == '\\' || strcmp(dbname,"..") == 0  || strcmp(dbname,"*") == 0 )
@@ -498,6 +501,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             if ( (DB= db777_getDB(dbname)) != 0 )
                 sophia_retintstr(retbuf,"close",db777_close(DB));
+            else strcpy(retbuf,"{\"error\":\"couldnt find dbname\"}");
         }
 #ifdef BUNDLED
         else if ( strcmp(method,"object") == 0 )
