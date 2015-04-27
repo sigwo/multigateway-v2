@@ -20,6 +20,8 @@
 #include "../plugin777.c"
 #include "files777.c"
 #include "coins777.c"
+#include "gen1auth.c"
+#include "msig.c"
 #undef DEFINES_ONLY
 
 STRUCTNAME
