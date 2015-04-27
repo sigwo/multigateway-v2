@@ -780,7 +780,9 @@ int main(int argc,const char *argv[])
     }
     ipbits = calc_ipbits(ipaddr);
     expand_ipbits(_ipaddr,ipbits);
+    printf(">>>>>>>>> call SuperNET_start\n");
     SuperNET_start("SuperNET.conf",ipaddr);
+    printf("<<<<<<<<< back SuperNET_start\n");
     for (i=0; i<1; i++)
     {
         if ( poll_daemons() > 0 )
@@ -790,7 +792,11 @@ int main(int argc,const char *argv[])
     printf(">>>>>>>>>>>>> (%s -> %s) after iter.%d\n",ipaddr,_ipaddr,i);
     {
         char *str;
+        sleep(10);
+        printf(">>>>>>>>> call sophia\n");
         language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"/tmp/coins.conf\"}",call_system);
+        sleep(10);
+        printf(">>>>>>>>> call coins\n");
         language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"/tmp/coins.conf\"}",call_system);
         for (i=0; i<1; i++)
         {
@@ -806,6 +812,7 @@ int main(int argc,const char *argv[])
                 break;
             msleep(10);
         }
+        printf(">>>>>>>> addcoin\n");
         if ( (str= plugin_method(0,"coins","addcoin",0,milliseconds(),"{\"method\":\"addcoin\",\"plugin\":\"coins\"}",1,0)) != 0 )
         {
             printf("got (%s)\n",str);
