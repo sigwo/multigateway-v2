@@ -230,11 +230,18 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     cJSON *array,*item;
     int32_t i,n,buyNXT,allocflag,j = 0;
     struct coin777 *coin;
+    struct multisig_addr **msigs;
+    struct NXTacct **nps;
     retbuf[0] = 0;
     if ( initflag > 0 )
     {
         DB_msigs = db777_create("msigs",0);
+        msigs = (struct multisig_addr **)db777_copy_all(&n,DB_msigs);
+        printf("DB_msigs.%d\n",n);
+        
         DB_NXTaccts = db777_create("NXTacct",0);
+        nps = (struct NXTacct **)db777_copy_all(&n,DB_NXTaccts);
+        printf("DB_NXTaccts.%d\n",n);
         //DB_NXTassettx = db777_create("NXTassettxid",0);
         //DB_nodestats = db777_create("nodestats",0);
         if ( json != 0 )
