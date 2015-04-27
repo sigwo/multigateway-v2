@@ -790,8 +790,8 @@ int main(int argc,const char *argv[])
     printf(">>>>>>>>>>>>> (%s -> %s) after iter.%d\n",ipaddr,_ipaddr,i);
     {
         char *str;
-        language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"/Users/jimbolaptop/coins.conf\"}",call_system);
-        language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"/Users/jimbolaptop/coins.conf\"}",call_system);
+        language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"/tmp/coins.conf\"}",call_system);
+        language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"/tmp/coins.conf\"}",call_system);
         for (i=0; i<1000; i++)
         {
             if ( poll_daemons() > 0 )
