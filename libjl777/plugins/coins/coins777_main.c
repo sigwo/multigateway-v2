@@ -241,6 +241,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             json = check_conffile(&allocflag,json);
             copy_cJSON(COINS.myNXTacct,cJSON_GetObjectItem(json,"myNXTacct"));
+            copy_cJSON(SUPERNET.MGWROOT,cJSON_GetObjectItem(json,"MGWROOT"));
+            if ( SUPERNET.MGWROOT[0] == 0 )
+            {
+                strcpy(SUPERNET.MGWROOT,"MGW");
+                ensure_directory(SUPERNET.MGWROOT);
+            }
             COINS.my64bits = conv_acctstr(COINS.myNXTacct), expand_nxt64bits(COINS.myNXTaddr,COINS.my64bits);
             set_account_NXTSECRET(COINS.NXTACCT,COINS.NXTADDR,COINS.NXTACCTSECRET,sizeof(COINS.NXTACCTSECRET)-1,json,0,0,0);
             if ( 1 && COINS.NXTADDR[0] != 0 && COINS.myNXTaddr[0] != 0 && strcmp(COINS.myNXTaddr,COINS.NXTADDR) != 0 )
