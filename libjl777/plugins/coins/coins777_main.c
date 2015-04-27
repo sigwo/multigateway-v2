@@ -389,6 +389,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 zerobuf[0] = 0;
                 str = 0;
+                printf("INSIDE COINS.(%s)\n",jsonstr);
                 copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
                 coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
                 if ( coinstr == 0 )

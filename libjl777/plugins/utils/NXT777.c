@@ -467,7 +467,7 @@ int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *ra
         }
     }
     expand_nxt64bits(NXTaddr,conv_NXTpassword(mysecret,mypublic,(uint8_t *)NXTsecret,(int32_t)strlen(NXTsecret)));
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("NXT.%s NXTsecret.(%s)\n",NXTaddr,NXTsecret);
     return(0);
 }
