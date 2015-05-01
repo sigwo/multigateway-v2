@@ -890,7 +890,7 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr)
     ram->startmilli = milliseconds();
     strcpy(ram->name,coinstr);
     ram->blocknum = ram->startblocknum = ensure_ramchain_DBs(ram);
-    ram->huffallocsize = 65536*8, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);
+    ram->huffallocsize = sizeof(struct rawblock)/10, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);
     printf("allocated huffbits.%p %p %d\n",ram->huffbits,ram->huffbits2,ram->huffallocsize);
     ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coinstr,coin->serverport,coin->userpass,ram->lastgetinfo);
     printf("RTblock.%u\n",ram->RTblocknum);
