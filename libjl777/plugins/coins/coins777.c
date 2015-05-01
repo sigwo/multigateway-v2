@@ -760,7 +760,7 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     memset(&ram->EMIT,0,sizeof(ram->EMIT)), memset(&ram->DECODE,0,sizeof(ram->DECODE));
     if ( rawblock_load(&ram->EMIT,coin->name,coin->serverport,coin->userpass,blocknum) > 0 )
     {
-        ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coin->name,coin->serverport,coin->userpass,ram->lastgetinfo);
+        ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coin->name,coin->serverport,coin->userpass,ram->RTblocknum);
         len = ramchain_rawblock(ram,&ram->EMIT,blocknum,1), memset(ram->huffbits,0,ram->huffallocsize);
         ramchain_rawblock(ram,&ram->DECODE,blocknum,0);
         printf("%-4s [lag %-5d]    RTblock.%-6u    blocknum.%-6u  len.%-5d   minutes %.2f\n",coin->name,RTblocknum-blocknum,RTblocknum,blocknum,len,estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000);
@@ -892,7 +892,7 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr)
     strcpy(ram->name,coinstr);
     ram->blocknum = ram->startblocknum = ensure_ramchain_DBs(ram);
     ram->huffallocsize = sizeof(struct rawblock)/10, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);
-    ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coinstr,coin->serverport,coin->userpass,ram->lastgetinfo);
+    ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coinstr,coin->serverport,coin->userpass,ram->RTblocknum);
     ramchain_syncDBs(ram);
     coin->ramchain.readyflag = 1;
     return(0);
