@@ -357,8 +357,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                                     coin->multisigchar = msigchar[0];
                                 coin->use_addmultisig = get_API_int(cJSON_GetObjectItem(item,"useaddmultisig"),strcmp("BTC",coinstr)!=0);
                                 if ( strcmp(coinstr,"BTCD") == 0 )//&& COINS.NXTACCTSECRET[0] == 0 )
+                                {
+                                    if ( serverport[0] == 0 )
+                                        strcpy(serverport,"127.0.0.1:14632");
                                     set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,item,coinstr,serverport,userpass);
                                 }
+                            }
                         }
                         if ( userpass != 0 )
                             free(userpass);
