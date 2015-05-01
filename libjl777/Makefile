@@ -88,7 +88,7 @@ sophia: lib/sophia; \
 MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
-SuperNET: $(TARGET); \
+SuperNET: $(SRCS) $(TARGET); \
     pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE SuperNET.c $(LIBS) 
 
 #-lz -ldl -lutil -lpcre -lexpat

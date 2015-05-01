@@ -755,16 +755,11 @@ int32_t ramchain_rawblock(struct ramchain *ram,struct rawblock *raw,uint32_t blo
 
 int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RTblocknum)
 {
-    void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
     struct ramchain *ram = &coin->ramchain;
     int32_t len;
-    printf("process.%u\n",blocknum);
-    ram_clear_rawblock(&ram->EMIT,1);
-    ram_clear_rawblock(&ram->DECODE,1);
-    printf("cleared mem\n");
+    memset(&ram->EMIT,0,sizeof(ram->EMIT)), memset(&ram->DECODE,0,sizeof(ram->DECODE));
     if ( rawblock_load(&ram->EMIT,coin->name,coin->serverport,coin->userpass,blocknum) > 0 )
     {
-        printf("loaded.%u\n",blocknum);
         len = ramchain_rawblock(ram,&ram->EMIT,blocknum,1), memset(ram->huffbits,0,ram->huffallocsize);
         ramchain_rawblock(ram,&ram->DECODE,blocknum,0);
         printf("%-4s [lag %-5d]    RTblock.%-6u    blocknum.%-6u  len.%-5d   minutes %.2f\n",coin->name,RTblocknum-blocknum,RTblocknum,blocknum,len,estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000);
@@ -864,7 +859,7 @@ void ramchain_update(struct coin777 *coin)
 {
     uint32_t blocknum;
     struct address_entry B;
-    printf("%s ramchain_update: ready.%d\n",coin->name,coin->ramchain.readyflag);
+    //printf("%s ramchain_update: ready.%d\n",coin->name,coin->ramchain.readyflag);
     if ( coin->ramchain.readyflag == 0 )
         return;
     if ( (blocknum= coin->ramchain.blocknum) < coin->ramchain.RTblocknum )
@@ -896,11 +891,8 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr)
     strcpy(ram->name,coinstr);
     ram->blocknum = ram->startblocknum = ensure_ramchain_DBs(ram);
     ram->huffallocsize = sizeof(struct rawblock)/10, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);
-    printf("allocated huffbits.%p %p %d\n",ram->huffbits,ram->huffbits2,ram->huffallocsize);
     ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coinstr,coin->serverport,coin->userpass,ram->lastgetinfo);
-    printf("RTblock.%u\n",ram->RTblocknum);
     ramchain_syncDBs(ram);
-    printf("after syncDBs\n");
     coin->ramchain.readyflag = 1;
     return(0);
 }
