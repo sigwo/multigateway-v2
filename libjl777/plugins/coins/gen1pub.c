@@ -264,7 +264,9 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
     uint32_t blockid;
     int32_t txind,n;
     uint64_t total = 0;
+    printf("load\n");
     ram_clear_rawblock(raw,1);
+    printf("cleared\n");
     //raw->blocknum = blocknum;
     //printf("_get_blockinfo.%d\n",blocknum);
     raw->minted = raw->numtx = raw->numrawvins = raw->numrawvouts = 0;
@@ -279,7 +281,7 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
             for (txind=0; txind<n; txind++)
             {
                 copy_cJSON(txidstr,cJSON_GetArrayItem(txobj,txind));
-                //printf("block.%d txind.%d TXID.(%s)\n",blocknum,txind,txidstr);
+                printf("block.%d txind.%d TXID.(%s)\n",blocknum,txind,txidstr);
                 total += rawblock_txidinfo(raw,&raw->txspace[raw->numtx++],coinstr,serverport,userpass,txind,txidstr);
             }
         } else printf("error _get_blocktxarray for block.%d got %d, n.%d vs %d\n",blocknum,blockid,n,MAX_BLOCKTX);
@@ -287,8 +289,9 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
             raw->minted = total;
         free_json(json);
     } else printf("get_blockjson error parsing.(%s)\n",txidstr);
-    //printf("BLOCK.%d: block.%d numtx.%d minted %.8f rawnumvins.%d rawnumvouts.%d\n",blocknum,raw->blocknum,raw->numtx,dstr(raw->minted),raw->numrawvins,raw->numrawvouts);
+    printf("BLOCK.%d: block.%d numtx.%d minted %.8f rawnumvins.%d rawnumvouts.%d\n",blocknum,raw->blocknum,raw->numtx,dstr(raw->minted),raw->numrawvins,raw->numrawvouts);
     rawblock_patch(raw);
+    printf("patched\n");
     return(raw->numtx);
 }
 #endif
