@@ -755,10 +755,12 @@ int32_t ramchain_rawblock(struct ramchain *ram,struct rawblock *raw,uint32_t blo
 
 int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RTblocknum)
 {
+    void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
     struct ramchain *ram = &coin->ramchain;
     int32_t len;
     printf("process.%u\n",blocknum);
-    memset(&ram->EMIT,0,sizeof(ram->EMIT)), memset(&ram->DECODE,0,sizeof(ram->DECODE));
+    ram_clear_rawblock(&ram->EMIT,1);
+    ram_clear_rawblock(&ram->DECODE,1);
     printf("cleared mem\n");
     if ( rawblock_load(&ram->EMIT,coin->name,coin->serverport,coin->userpass,blocknum) > 0 )
     {
