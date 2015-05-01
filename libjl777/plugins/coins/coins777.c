@@ -759,6 +759,7 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     int32_t len;
     printf("process.%u\n",blocknum);
     memset(&ram->EMIT,0,sizeof(ram->EMIT)), memset(&ram->DECODE,0,sizeof(ram->DECODE));
+    printf("cleared mem\n");
     if ( rawblock_load(&ram->EMIT,coin->name,coin->serverport,coin->userpass,blocknum) > 0 )
     {
         printf("loaded.%u\n",blocknum);
