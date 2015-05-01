@@ -15,37 +15,21 @@
 #include "cJSON.h"
 #include "utils777.c"
 #include "coins777.c"
+#include "system777.c"
 #include "gen1auth.c"
 #include "msig.c"
 
-#define MAX_BLOCKTX 0xffff
-struct rawvin { char txidstr[128]; uint16_t vout; };
-struct rawvout { char coinaddr[64],script[256]; uint64_t value; };
-struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; };
-
-#define MAX_COINTX_INPUTS 16
-#define MAX_COINTX_OUTPUTS 8
-struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t value; uint32_t sequence; char used; };
-struct cointx_info
-{
-    uint32_t crc; // MUST be first
-    char coinstr[16];
-    uint64_t inputsum,amount,change,redeemtxid;
-    uint32_t allocsize,batchsize,batchcrc,gatewayid,isallocated;
-    // bitcoin tx order
-    uint32_t version,timestamp,numinputs;
-    uint32_t numoutputs;
-    struct cointx_input inputs[MAX_COINTX_INPUTS];
-    struct rawvout outputs[MAX_COINTX_OUTPUTS];
-    uint32_t nlocktime;
-    // end bitcoin txcalc_nxt64bits
-    char signedtx[];
-};
+//#define MAX_BLOCKTX 0xffff
+//struct rawvin { char txidstr[128]; uint16_t vout; };
+//struct rawvout { char coinaddr[64],script[256]; uint64_t value; };
+//struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; };
 char *_insert_OP_RETURN(char *rawtx,int32_t do_opreturn,int32_t replace_vout,uint64_t *redeems,int32_t numredeems,int32_t oldtx);
 struct cointx_info *_decode_rawtransaction(char *hexstr,int32_t oldtx);
 int32_t _emit_cointx(char *hexstr,long len,struct cointx_info *cointx,int32_t oldtx);
 char *_createsignraw_json_params(char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,char *rawbytes,char **privkeys,int32_t gatewayid,int32_t numgateways);
 char *_createrawtxid_json_params(char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t gatewayid,int32_t numgateways);
+int32_t hcalc_varint(uint8_t *buf,uint64_t x);
+long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize);
 
 #endif
 #else
