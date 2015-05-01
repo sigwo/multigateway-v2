@@ -25,7 +25,7 @@
 
 #define MAX_BLOCKTX 0xffff
 struct rawvin { char txidstr[128]; uint16_t vout; };
-struct rawvout { char coinaddr[64],script[255]; uint64_t value; };
+struct rawvout { char coinaddr[128],script[1024]; uint64_t value; };
 struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; };
 
 struct rawblock
@@ -204,7 +204,6 @@ uint32_t ramchain_setblocknum(struct ramchain_hashtable *hash,uint32_t blocknum)
         hash->ind = hash->maxind = blocknum-1;
         return(hash->ind);
     }
-    return(0);
     hash->maxind = numpurged = 0;
     if ( (ptrs= db777_copy_all(&n,hash->DB,"key",sizeof(*bp))) != 0 )
     {
@@ -847,11 +846,11 @@ uint32_t ensure_ramchain_DBs(struct ramchain *ram)
         printf("%u ",ram->DBs[i]->minblocknum);
     }
     //minblocknum = MIN(f,MIN(e,MIN(MIN(a,b),MIN(b,c))));
-    if ( minblocknum <= 2 )
-        minblocknum = 1;
-    else minblocknum -= 1;
+    //if ( minblocknum <= 2 )
+    //    minblocknum = 1;
+    //else minblocknum -= 1;
     printf("minblocknums -> %d\n",minblocknum);
-    //ramchain_setblocknums(ram,minblocknum);
+    ramchain_setblocknums(ram,minblocknum);
     return(minblocknum);
 }
 
