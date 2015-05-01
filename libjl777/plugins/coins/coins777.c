@@ -83,9 +83,9 @@ struct ramchain
 {
     char name[16];
     double lastgetinfo,startmilli;
-    uint32_t startblocknum,RTblocknum,blocknum,confirmednum,huffallocsize,numupdates,numDBs;
+    uint32_t startblocknum,RTblocknum,blocknum,confirmednum,huffallocsize,numupdates,numDBs,readyflag;
     struct ramchain_hashtable blocks,addrs,txids,scripts,unspents,*DBs[100];
-    uint8_t *huffbits,*huffbits2,*huffbits3;
+    uint8_t *huffbits,*huffbits2;
     struct rawblock EMIT,DECODE;
 };
 
@@ -851,6 +851,7 @@ uint32_t ensure_ramchain_DBs(struct ramchain *ram)
     //else minblocknum -= 1;
     printf("minblocknums -> %d\n",minblocknum);
     ramchain_setblocknums(ram,minblocknum);
+    printf("finished setblocknums\n");
     return(minblocknum);
 }
 
@@ -858,6 +859,9 @@ void ramchain_update(struct coin777 *coin)
 {
     uint32_t blocknum;
     struct address_entry B;
+    printf("%s ramchain_update: ready.%d\n",coin->name,coin->ramchain.readyflag);
+    if ( coin->ramchain.readyflag == 0 )
+        return;
     if ( (blocknum= coin->ramchain.blocknum) < coin->ramchain.RTblocknum )
     {
         if ( blocknum == 0 )
@@ -886,9 +890,13 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr)
     ram->startmilli = milliseconds();
     strcpy(ram->name,coinstr);
     ram->blocknum = ram->startblocknum = ensure_ramchain_DBs(ram);
-    ram->huffallocsize = 65536*8, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize), ram->huffbits3 = calloc(1,ram->huffallocsize);
+    ram->huffallocsize = 65536*8, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);
+    printf("allocated huffbits.%p %p %d\n",ram->huffbits,ram->huffbits2,ram->huffallocsize);
     ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coinstr,coin->serverport,coin->userpass,ram->lastgetinfo);
+    printf("RTblock.%u\n",ram->RTblocknum);
     ramchain_syncDBs(ram);
+    printf("after syncDBs\n");
+    coin->ramchain.readyflag = 1;
     return(0);
 }
 
