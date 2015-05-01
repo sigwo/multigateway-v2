@@ -328,13 +328,13 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 if ( (array= cJSON_GetObjectItem(json,"coins")) == 0 )
                     array = cJSON_GetObjectItem(COINS.argjson,"coins");
-               // array = check_conffile(&allocflag,array);
+                allocflag = 0;
+                // array = check_conffile(&allocflag,array);
                 if ( array != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                 {
                     // { "name":"BTCD","rpc":"127.0.0.1:14631","dir":".BitcoinDark","conf":"BitcoinDark.conf","multisigchar":"b" }
                     for (i=j=0; i<n; i++)
                     {
-                        allocflag = 0;
                         item = cJSON_GetArrayItem(array,i);
                         coinstr = cJSON_str(cJSON_GetObjectItem(item,"name"));
                         serverport = cJSON_str(cJSON_GetObjectItem(item,"rpc"));
