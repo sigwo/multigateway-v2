@@ -847,9 +847,9 @@ uint32_t ensure_ramchain_DBs(struct ramchain *ram)
         printf("%u ",ram->DBs[i]->minblocknum);
     }
     //minblocknum = MIN(f,MIN(e,MIN(MIN(a,b),MIN(b,c))));
-    if ( minblocknum <= 1000 )
+    if ( minblocknum <= 2 )
         minblocknum = 1;
-    else minblocknum -= 1000;
+    else minblocknum -= 1;
     printf("minblocknums -> %d\n",minblocknum);
     ramchain_setblocknums(ram,minblocknum);
     return(minblocknum);
