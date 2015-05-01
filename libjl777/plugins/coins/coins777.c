@@ -851,7 +851,7 @@ uint32_t ensure_ramchain_DBs(struct ramchain *ram)
         minblocknum = 1;
     else minblocknum -= 1;
     printf("minblocknums -> %d\n",minblocknum);
-    ramchain_setblocknums(ram,minblocknum);
+    //ramchain_setblocknums(ram,minblocknum);
     return(minblocknum);
 }
 
