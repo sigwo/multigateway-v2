@@ -225,15 +225,18 @@ void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag)
 {
     int32_t i;
     long len;
+    printf("ram_clear\n");
     if ( totalflag != 0 )
     {
         uint8_t *ptr = (uint8_t *)raw;
         len = sizeof(*raw);
+        printf("clear %p len.%ld\n",ptr,len);
         while ( len > 0 )
         {
             memset(ptr,0,len < 1024*1024 ? len : 1024*1024);
             len -= 1024 * 1024;
             ptr += 1024 * 1024;
+            printf("len.%ld ptr.%p\n",len,ptr);
         }
     }
     else
