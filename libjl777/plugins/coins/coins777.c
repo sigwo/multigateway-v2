@@ -563,7 +563,7 @@ int32_t unspent_create(struct ramchain *ram,struct unspent_output *U,struct ramc
     U->B = *B, U->B.rawind = unspentind;
     if ( unspentind > unspents->maxind )
         unspents->maxind = unspentind;
-    //printf("create unspentind.%u txidind.%-6u.v%d addrind.%-6u scriptind.%-6u %.8f\n",unspentind,txidind,vout,U->addrind,U->scriptind,dstr(value));
+    printf("create unspentind.%u txidind.%-6u.v%d addrind.%-6u scriptind.%-6u %.8f\n",unspentind,txidind,vout,U->addrind,U->scriptind,dstr(value));
     return(unspent_add(ram,unspents,U));
  }
 
@@ -573,7 +573,7 @@ int32_t unspent_find(struct unspent_output *U,struct ramchain_hashtable *unspent
     if ( (up= db777_findM(&len,unspents->DB,&unspentind,sizeof(unspentind))) != 0 )
     {
         *U = *up;
-        printf("found unspentind.%u addrind.%u txidind.%d %.8f\n",up->B.rawind,up->addrind,up->txidind,dstr(up->value));
+        printf("found unspentind.%u addrind.%u txidind.%d %.8f | spendtxind.%u v.%d\n",up->B.rawind,up->addrind,up->txidind,dstr(up->value),up->spend_txidind,up->spend_vout);
         free(up);
         return(0);
     }

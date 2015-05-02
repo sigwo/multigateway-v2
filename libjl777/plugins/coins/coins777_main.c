@@ -318,6 +318,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
+            COINS.readyflag = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
         else
@@ -450,6 +451,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 {
     uint64_t disableflags = 0;
     printf("register init %s size.%ld\n",plugin->name,sizeof(struct coins_info));
+    COINS.readyflag = 1;
     // runtime specific state can be created and put into *data
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
