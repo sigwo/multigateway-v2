@@ -670,7 +670,8 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
     int32_t n,len,sendlen;
     sprintf(request,"{\"requestType\":\"getbridges\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
     len = (int32_t)strlen(request) + 1;
-    printf("get_bridgeaddr send(%s)\n",request);
+    //printf("get_bridgeaddr send(%s)\n",request);
+    bridgeaddr[0] = 0;
     if ( (sendlen= nn_send(lbsock,request,len,0)) == len )
     {
         if ( (len= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
@@ -685,6 +686,7 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
                 free_json(json);
             }
             nn_freemsg(msg);
+            return(0);
         } else printf("get_bridgeaddr: got len %d: %s\n",len,nn_errstr());
     } else printf("got sendlen.%d instead of %d\n",sendlen,len);
     return(-1);
