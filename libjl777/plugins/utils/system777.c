@@ -553,9 +553,11 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RCVTIMEO,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
-        priority = nn_addservers(priority,reqsock,servers,num);
-        priority = nn_addservers(priority,reqsock,backups,numbacks);
-        priority = nn_addservers(priority,reqsock,(char (*)[128])failsafe,1);
+        if ( nn_connect(reqsock,"tcp://209.126.70.170:4000") < 0 )
+            printf("error connecting to (%s) (%s)\n","tcp://209.126.70.170:4000",nn_errstr());
+        //priority = nn_addservers(priority,reqsock,servers,num);
+        //priority = nn_addservers(priority,reqsock,backups,numbacks);
+        //priority = nn_addservers(priority,reqsock,(char (*)[128])failsafe,1);
     } else printf("error getting req socket %s\n",nn_errstr());
     return(reqsock);
 }
@@ -613,30 +615,6 @@ char *loadbalanced_response(char *jsonstr,cJSON *json)
     else return(clonestr("{\"error\":\"no known bridges\"}"));
 }
 
-int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
-{
-    cJSON *json,*item;
-    char *msg,*request = "{\"requestType\":\"getbridges\"}";
-    int32_t n,len,sendlen;
-    len = (int32_t)strlen(request) + 1;
-    if ( (sendlen= nn_send(lbsock,request,len,0)) == len )
-    {
-        if ( (len= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
-        {
-            if ( (json= cJSON_Parse(msg)) != 0 )
-            {
-                if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
-                    item = cJSON_GetArrayItem(json,rand() % n);
-                else item = cJSON_GetObjectItem(json,"endpoint");
-                copy_cJSON(bridgeaddr,item);
-                free_json(json);
-            }
-            nn_freemsg(msg);
-        } else printf("get_bridgeaddr: got len %d: %s\n",len,nn_errstr());
-    } else printf("got sendlen.%d instead of %d\n",sendlen,len);
-    return(-1);
-}
-
 char *global_response(char *jsonstr,cJSON *json)
 {
     char *request,*endpoint;
@@ -680,6 +658,30 @@ char *nn_response(int32_t type,char *jsonstr)
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
     return(retstr);
+}
+
+int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
+{
+    cJSON *json,*item;
+    char *msg,*request = "{\"requestType\":\"getbridges\"}";
+    int32_t n,len,sendlen;
+    len = (int32_t)strlen(request) + 1;
+    if ( (sendlen= nn_send(lbsock,request,len,0)) == len )
+    {
+        if ( (len= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
+        {
+            if ( (json= cJSON_Parse(msg)) != 0 )
+            {
+                if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
+                    item = cJSON_GetArrayItem(json,rand() % n);
+                else item = cJSON_GetObjectItem(json,"endpoint");
+                copy_cJSON(bridgeaddr,item);
+                free_json(json);
+            }
+            nn_freemsg(msg);
+        } else printf("get_bridgeaddr: got len %d: %s\n",len,nn_errstr());
+    } else printf("got sendlen.%d instead of %d\n",sendlen,len);
+    return(-1);
 }
 
 char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
@@ -806,7 +808,7 @@ void serverloop(void *_args)
     memset(pfds,0xff,sizeof(pfds)); memset(errQs,0,sizeof(errQs));
     timeoutmillis = 1;
     for (i=n=0; i<numtypes; i++)
-    {
+    {break;
         for (j=err=0; j<2; j++,n++)
         {
             type = (j == 0) ? nntypes[i] : nn_oppotype(nntypes[i]);
@@ -829,14 +831,14 @@ void serverloop(void *_args)
         }
     }
     launch_serverthread(&args[0],NN_REP,1);
-    launch_serverthread(&args[1],NN_RESPONDENT,1);
+    //launch_serverthread(&args[1],NN_RESPONDENT,1);
     if  ( i == numtypes )
     {
         while ( 1 )
         {
             if ( MGW.gatewayid >= 0 || MGW.srv64bits[MGW.N] == SUPERNET.my64bits )
                 MGW_loop();
-            if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",3000)) != 0 )
+            if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",30000)) != 0 )
             {
                 printf("GLOBALRESPONSE.(%s)\n",retstr);
                 free(retstr);
