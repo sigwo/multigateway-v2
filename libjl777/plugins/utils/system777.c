@@ -856,16 +856,17 @@ void serverloop(void *_args)
         printf("serverloop start\n");
         // char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
         //test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
-        int32_t len,sendlen,timeout,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr;//,bindaddr[128];//*bindaddr = "tcp://*:4010";
+        int32_t len,sendlen,timeout; char *msg,*jsonstr;//,bindaddr[128];//*bindaddr = "tcp://*:4010";
         set_endpointaddr(args[0].endpoint,"*",SUPERNET.port,NN_REP);
-        if ( sock >= 0 )
+        args[0].sock = nn_socket(AF_SP,NN_REP);
+        if ( args[0].sock >= 0 )
         {
-            if ( nn_bind(sock,args[0].endpoint) < 0 )
+            if ( nn_bind(args[0].sock,args[0].endpoint) < 0 )
                 printf("error binding (%s)\n",args[0].endpoint);
             else
             {
-                timeout = 10, nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
-                timeout = 10000, nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
+                timeout = 10, nn_setsockopt(args[0].sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
+                timeout = 10000, nn_setsockopt(args[0].sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
                 printf("start serverloop bound to (%s)\n",args[0].endpoint);
                 args[0].type = type, args[0].respondfunc = nn_response, args[0].bindflag = 1;
                 portable_thread_create((void *)provider_respondloop,&args[0]);
@@ -873,14 +874,14 @@ void serverloop(void *_args)
                 while ( 1 ) sleep(1);
                 while ( 1 )
                 {
-                    if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
+                    if ( (len= nn_recv(args[0].sock,&msg,NN_MSG,0)) > 0 )
                     {
                         printf("got %d bytes (%s)\n",len,msg);
                         if ( (jsonstr= nn_response(NN_REP,msg)) != 0 )
                         {
                             len = (int32_t)strlen(jsonstr)+1;
                             printf("send response.(%s)\n",jsonstr);
-                            if ( (sendlen= nn_send(sock,jsonstr,len,0)) != len )
+                            if ( (sendlen= nn_send(args[0].sock,jsonstr,len,0)) != len )
                                 printf("warning: sendlen.%d vs %ld for (%s)\n",sendlen,strlen(jsonstr)+1,jsonstr);
                             free(jsonstr);
                         }
