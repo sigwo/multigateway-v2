@@ -845,7 +845,7 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
-        char *sargs[] = { "nn", "--rep", "--bind", "ws://*:4010", "-Dpong", "-A" }; //
+        char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
         printf("serverloop start\n");
         test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)"world",6);
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
@@ -877,7 +877,7 @@ void serverloop(void *_args)
     }
     else
     {
-        char *cargs[] = { "nn", "--req", "--connect", "ws://209.126.70.170:4010", "-Dping", "-A" }; //
+        char *cargs[] = { "nn", "--req", "--connect", "tcp://209.126.70.170:4010", "-Dping", "-A" }; //
         printf("client loop\n");
         while ( 1 )
         {
