@@ -144,6 +144,8 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
             free(privkey);
         }
     }
+    else if ( strcmp(secret,"randvals") == 0 )
+        gen_randomacct(33,NXTaddr,secret,"randvals");
     nxt64bits = conv_NXTpassword(mysecret,mypublic,(uint8_t *)secret,(int32_t)strlen(secret));
     expand_nxt64bits(NXTaddr,nxt64bits);
    if ( 0 )
