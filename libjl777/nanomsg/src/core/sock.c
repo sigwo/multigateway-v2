@@ -476,8 +476,7 @@ int nn_sock_add_ep (struct nn_sock *self, struct nn_transport *transport,
 
     /*  Instantiate the endpoint. */
     ep = nn_alloc (sizeof (struct nn_ep), "endpoint");
-    rc = nn_ep_init (ep, NN_SOCK_SRC_EP, self, self->eid, transport,
-        bind, addr);
+    rc = nn_ep_init (ep, NN_SOCK_SRC_EP, self, self->eid, transport,bind, addr);
     if (nn_slow (rc < 0)) {
         nn_free (ep);
         nn_ctx_leave (&self->ctx);
