@@ -739,6 +739,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     free_json(array);
     return(retstr);
 }
+
 void provider_respondloop(void *_args)
 {
     struct loopargs *args = _args;
@@ -785,7 +786,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
         else
         {
             printf("launch type.%d endpoint.(%s)\n",args->type,args->endpoint);
-            portable_thread_create(provider_respondloop,args);
+            portable_thread_create((void *)provider_respondloop,args);
         }
     } else printf("error getting socket for type.%d (%s)\n",args->type,nn_errstr());
 }

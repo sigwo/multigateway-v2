@@ -658,8 +658,6 @@ char *SuperNET_url()
 
 void SuperNET_loop(void *ipaddr)
 {
-    char *msg;
-    int32_t i;
     while ( SUPERNET.readyflag == 0 )
     {
         if ( poll_daemons() > 0 )
@@ -672,6 +670,8 @@ void SuperNET_loop(void *ipaddr)
     while ( SOPHIA.readyflag == 0 || COINS.readyflag == 0 || RAMCHAINS.readyflag == 0 )
         poll_daemons();
 #ifdef __APPLE__
+    char *msg;
+    int32_t i;
     char *str;
     int32_t n;
     cJSON *json;
@@ -708,7 +708,8 @@ void SuperNET_loop(void *ipaddr)
         }
     }
 #endif
-    printf("sock = %d\n",MGW.all.socks.both.bus);
+    if ( MGW.gatewayid >= 0 )
+        printf("MGW sock = %d\n",MGW.all.socks.both.bus);
     void serverloop(void *_args);
     serverloop(0);
 }

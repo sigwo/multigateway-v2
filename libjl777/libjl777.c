@@ -1338,7 +1338,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( SOPHIA.PATH[0] == 0 )
             strcpy(SOPHIA.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH);
-        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s)\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER);
+        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port);
         SUPERNET.readyflag = 1;
     }
     else
