@@ -807,7 +807,7 @@ void run_device(void *_args)
     nn_device(pfds[0].fd,pfds[1].fd);
 }
 
-int testmain(int argc, char **argv);
+int test_nn(int argc, char **argv);
 
 void serverloop(void *_args)
 {
@@ -845,6 +845,8 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
+        char *sargs[] = { "nn", "--rep", "--connect", "tcp://*:4010", "-Dpong", "-A" };
+        test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs);
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
         if ( sock >= 0 )
         {
@@ -870,6 +872,16 @@ void serverloop(void *_args)
                     } else fprintf(stderr,".");
                 }
             }
+        }
+    }
+    else
+    {
+        char *cargs[] = { "nn", "--req", "--connect", "tcp://209.126.70.170:4010", "-Dping", "-A" };
+        printf("client loop\n");
+        while ( 1 )
+        {
+            test_nn((int32_t)sizeof(cargs)/sizeof(*cargs),cargs);
+            sleep(10);
         }
     }
   //  launch_serverthread(&args[0],NN_REP,1);

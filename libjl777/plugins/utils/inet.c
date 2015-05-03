@@ -1681,7 +1681,7 @@ void nn_resp_loop (nn_options_t *options, int sock)
     }
 }
 
-int testmain(int argc, char **argv)
+int test_nn(int argc, char **argv)
 {
     int sock;
     nn_options_t options = {
