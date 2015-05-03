@@ -787,6 +787,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
         printf("responder loop doesnt deal with type.%d\n",type);
         return;
     }
+    args->type = type, args->respondfunc = nn_response, args->bindflag = 1;
     set_endpointaddr(args->endpoint,"*",SUPERNET.port,type);
     if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
     {
