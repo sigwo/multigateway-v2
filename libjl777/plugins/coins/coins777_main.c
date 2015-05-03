@@ -291,7 +291,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 {
                     strcpy(MGW.serverips[MGW.N],MGW.bridgeipaddr);
                     MGW.srv64bits[MGW.N] = calc_nxt64bits(MGW.bridgeacct);
-                    MGW.all.socks.both.bus = make_MGWbus(SUPERNET.port,SUPERNET.myipaddr,MGW.serverips,MGW.N+1);
+                    MGW.all.socks.both.bus = make_MGWbus(SUPERNET.port + nn_portoffset(NN_BUS),SUPERNET.myipaddr,MGW.serverips,MGW.N+1);
                     MGW.numgateways = MGW.N;
                     MGW.gatewayid = MGW.gatewayid;
                 }

@@ -150,6 +150,7 @@ int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flag
 int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis);
 int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis);
 void ensure_directory(char *dirname);
+int32_t nn_portoffset(int32_t type);
 
 uint64_t calc_ipbits(char *ipaddr);
 void expand_ipbits(char *ipaddr,uint64_t ipbits);
@@ -824,7 +825,7 @@ void serverloop(void *_args)
             pfds[i][j].fd = sock;
             pfds[i][j].events = NN_POLLIN | NN_POLLOUT;
         }
-        portable_thread_create(run_device,&pfds[i]);
+        portable_thread_create((void *)run_device,&pfds[i]);
         if ( j != 2 )
         {
             printf("error.%d launching bridges at i.%d of %d j.%d %s\n",err,i,numtypes,j,nn_errstr());
