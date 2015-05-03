@@ -692,7 +692,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     char *msg,*retstr;
     printf("make_globalrequest\n");
     if ( timeoutmillis <= 0 )
-        timeoutmillis = 1000;
+        timeoutmillis = 10000;
     if ( lbsock < 0 )
     {
         //lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
@@ -701,7 +701,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
         if ( nn_connect(lbsock,fallback) < 0 )
             printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
-        else printf("connected\n");
+        else printf("connected to .(%s)\n",fallback);
     }
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
@@ -845,15 +845,15 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
-        int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr;
+        int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
         if ( sock >= 0 )
         {
-            if ( nn_bind(sock,"tcp://*:4010") < 0 )
+            if ( nn_bind(sock,bindaddr) < 0 )
                 printf("error binding\n");
             else
             {
                 nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
-                    printf("start serverloop\n");
+                printf("start serverloop bound to (%s)\n",bindaddr);
                 while ( 1 )
                 {
                     if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
@@ -880,7 +880,7 @@ void serverloop(void *_args)
         {
             //if ( MGW.gatewayid >= 0 || MGW.srv64bits[MGW.N] == SUPERNET.my64bits )
             //    MGW_loop();
-            if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",3000)) != 0 )
+            if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
             {
                 printf("GLOBALRESPONSE.(%s)\n",retstr);
                 free(retstr);
