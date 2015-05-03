@@ -561,8 +561,8 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
         //if ( nn_connect(lbsock,fallback) < 0 )
         //    printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
         priority = nn_addservers(priority,lbsock,servers,num);
-        //priority = nn_addservers(priority,lbsock,backups,numbacks);
-        //priority = nn_addservers(priority,lbsock,failsafes,numfailsafes);
+        priority = nn_addservers(priority,lbsock,backups,numbacks);
+        priority = nn_addservers(priority,lbsock,failsafes,numfailsafes);
     } else printf("error getting req socket %s\n",nn_errstr());
     return(lbsock);
 }
