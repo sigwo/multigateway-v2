@@ -469,7 +469,7 @@ int32_t getline777(char *line,int32_t max)
 }
 
 #define MAX_SERVERNAME 128
-int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH };
+int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
 struct loopargs { char *(*respondfunc)(int32_t type,char *); int32_t sock,type,bindflag; char endpoint[MAX_SERVERNAME]; };
 
 int32_t nn_oppotype(int32_t type)
@@ -841,7 +841,7 @@ void serverloop(void *_args)
             break;
         }
     }
-    if ( 0 )
+    if ( MGW.gatewayid >= 0 )
     {
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr;
         if ( sock >= 0 )
