@@ -847,7 +847,7 @@ void serverloop(void *_args)
     {
         char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
         printf("serverloop start\n");
-        test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)"world",6);
+        test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
         if ( sock >= 0 )
         {
@@ -881,7 +881,7 @@ void serverloop(void *_args)
         printf("client loop\n");
         while ( 1 )
         {
-            test_nn((int32_t)sizeof(cargs)/sizeof(*cargs),cargs,(uint8_t *)"hello",6);
+            test_nn((int32_t)sizeof(cargs)/sizeof(*cargs),cargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
             sleep(10);
         }
     }
