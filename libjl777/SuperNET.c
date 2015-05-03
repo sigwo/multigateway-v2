@@ -550,7 +550,7 @@ int main(int argc,const char *argv[])
         retval = SuperNET_start("SuperNET.conf",ipaddr);
     sprintf(portstr,"%d",SUPERNET_PORT);
     oldport = newport = portstr;
-    if ( UPNP != 0 && upnpredirect(oldport,newport,"UDP","SuperNET_https") == 0 )
+    if ( UPNP != 0 && upnpredirect(oldport,newport,"UDP","SuperNET_http") == 0 )
         printf("TEST ERROR: failed redirect (%s) to (%s)\n",oldport,newport);
     printf("saving retval.%x (%d usessl.%d) UPNP.%d MULTIPORT.%d\n",retval,retval>>1,retval&1,UPNP,MULTIPORT);
     if ( (fp= fopen("horrible.hack","wb+")) != 0 )

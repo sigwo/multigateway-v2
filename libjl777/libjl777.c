@@ -1296,6 +1296,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);
         SUPERNET.port = get_API_int(cJSON_GetObjectItem(json,"SUPERNET_PORT"),7777);
         SUPERNET.usessl = get_API_int(cJSON_GetObjectItem(json,"USESSL"),0);
+#ifndef __linux__
+        SUPERNET.UPNP = 1;
+#endif
+        SUPERNET.UPNP = get_API_int(cJSON_GetObjectItem(json,"UPNP"),SUPERNET.UPNP);
         SUPERNET.ismainnet = get_API_int(cJSON_GetObjectItem(json,"MAINNET"),1);
         SUPERNET.APISLEEP = get_API_int(cJSON_GetObjectItem(json,"APISLEEP"),DEFAULT_APISLEEP);
         if ( SUPERNET.NXTAPIURL[0] == 0 )
@@ -1339,8 +1343,17 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( SOPHIA.PATH[0] == 0 )
             strcpy(SOPHIA.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH);
-        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port);
+        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP);
         SUPERNET.readyflag = 1;
+        if ( SUPERNET.UPNP != 0 )
+        {
+            char portstr[16];
+            for (i=0; i<10; i++)
+            {
+                sprintf(portstr,"%d",SUPERNET.port+i);
+                upnpredirect(portstr,portstr,"TCP","SuperNET");
+            }
+        }
     }
     else
     {
