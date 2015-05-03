@@ -838,7 +838,7 @@ void serverloop(void *_args)
     int32_t nntypes[] = { NN_REP, NN_RESPONDENT, NN_PUB, NN_PULL };
     struct nn_pollfd pfds[4][2]; queue_t errQs[4][2]; char bindaddr[128],*retstr;
     int32_t i,j,n,type,portoffset,sock,numtypes,timeoutmillis,err;//,bindflag = 1;
-    struct loopargs args[2];
+    static struct loopargs args[2];
     numtypes = (int32_t)(sizeof(nntypes)/sizeof(*nntypes));
     memset(args,0,sizeof(args));
     memset(pfds,0xff,sizeof(pfds)); memset(errQs,0,sizeof(errQs));
