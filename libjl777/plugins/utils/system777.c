@@ -545,7 +545,7 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
     return(priority);
 }
 
-int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafe[MAX_SERVERNAME])
+int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafes[][MAX_SERVERNAME],int32_t numfailsafes)
 {
     int32_t reqsock,timeout=10,priority = 1;
     if ( (reqsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
@@ -558,21 +558,24 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
         priority = nn_addservers(priority,reqsock,servers,num);
         priority = nn_addservers(priority,reqsock,backups,numbacks);
-        priority = nn_addservers(priority,reqsock,(char (*)[128])failsafe,1);
+        priority = nn_addservers(priority,reqsock,failsafes,numfailsafes);
     } else printf("error getting req socket %s\n",nn_errstr());
     return(reqsock);
 }
 
 int32_t loadbalanced_socket(int32_t retrymillis,int32_t europeflag,int32_t port)
 {
-    char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],jnxtaddr[MAX_SERVERNAME];
-    int32_t n,m,lbsock;
-    set_endpointaddr(jnxtaddr,"jnxt.org",port,NN_REP);
+    char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
+    int32_t n,m,lbsock,numfailsafes = 0;
+    set_endpointaddr(failsafes[numfailsafes++],"jnxt.org",port,NN_REP);
+    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.156",port,NN_REP);
+    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.159",port,NN_REP);
+    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.170",port,NN_REP);
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
     if ( europeflag != 0 )
-        lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,jnxtaddr);
-    else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,jnxtaddr);
+        lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
+    else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,failsafes,numfailsafes);
     return(lbsock);
 }
 
@@ -663,8 +666,9 @@ char *nn_response(int32_t type,char *jsonstr)
 int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
 {
     cJSON *json,*item;
-    char *msg,*request = "{\"requestType\":\"getbridges\"}";
+    char *msg,request[512];
     int32_t n,len,sendlen;
+    sprintf(request,"{\"requestType\":\"getbridges\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
     len = (int32_t)strlen(request) + 1;
     printf("get_bridgeaddr send(%s)\n",request);
     if ( (sendlen= nn_send(lbsock,request,len,0)) == len )
@@ -873,6 +877,7 @@ void serverloop(void *_args)
                         if ( (jsonstr= nn_response(NN_REP,msg)) != 0 )
                         {
                             len = (int32_t)strlen(jsonstr)+1;
+                            printf("send response.(%s)\n",jsonstr);
                             if ( (sendlen= nn_send(sock,jsonstr,len,0)) != len )
                                 printf("warning: sendlen.%d vs %ld for (%s)\n",sendlen,strlen(jsonstr)+1,jsonstr);
                             free(jsonstr);
