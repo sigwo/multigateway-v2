@@ -882,13 +882,19 @@ void serverloop(void *_args)
     }
     else
     {
-        char *cargs[] = { "nn", "--req", "--connect", "tcp://209.126.70.170:4010", "-Dping", "-A" }; //
+        if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
+        {
+            printf("GLOBALRESPONSE.(%s)\n",retstr);
+            free(retstr);
+        }
+        sleep(1);
+        /*char *cargs[] = { "nn", "--req", "--connect", "tcp://209.126.70.170:4010", "-Dping", "-A" }; //
         printf("client loop\n");
         while ( 1 )
         {
             test_nn((int32_t)sizeof(cargs)/sizeof(*cargs),cargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
             sleep(10);
-        }
+        }*/
     }
   //  launch_serverthread(&args[0],NN_REP,1);
     //launch_serverthread(&args[1],NN_RESPONDENT,1);
