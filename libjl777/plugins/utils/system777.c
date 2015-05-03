@@ -868,7 +868,7 @@ void serverloop(void *_args)
                 timeout = 10, nn_setsockopt(args[0].sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
                 timeout = 10000, nn_setsockopt(args[0].sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
                 printf("start serverloop bound to (%s)\n",args[0].endpoint);
-                args[0].type = type, args[0].respondfunc = nn_response, args[0].bindflag = 1;
+                args[0].type = NN_REP, args[0].respondfunc = nn_response, args[0].bindflag = 1;
                 portable_thread_create((void *)provider_respondloop,&args[0]);
                 //launch_serverthread(&args[0],NN_REP,1);
                 while ( 1 ) sleep(1);
