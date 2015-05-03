@@ -327,7 +327,7 @@ static int inet_pton6(char *src, unsigned char *dst) {
 #include "reqrep.h"
 #include "bus.h"
 #include "pair.h"
-#include "options.h"
+#include "../../nanomsg/tools/options.h"
 #include "clock.h"
 #include "sleep.h"
 //#include "../../nanomsg/src/utils/sleep.c"
