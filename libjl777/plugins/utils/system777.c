@@ -580,7 +580,7 @@ int32_t loadbalanced_socket(int32_t retrymillis,int32_t europeflag,int32_t port)
     //if ( europeflag != 0 )
     //    lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     //else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,failsafes,numfailsafes);
-    lbsock = nn_loadbalanced_socket(retrymillis,failsafes,numfailsafes,Bservers,0*m,Cservers,0*n);
+    lbsock = nn_loadbalanced_socket(retrymillis,failsafes,numfailsafes,Bservers,m,Cservers,n);
     return(lbsock);
 }
 
