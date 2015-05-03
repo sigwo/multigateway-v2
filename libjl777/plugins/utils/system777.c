@@ -845,7 +845,8 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
-        char *sargs[] = { "nn", "--rep", "--connect", "tcp://*:4010", "-Dpong", "-A" };
+        char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" };
+        printf("serverloop start\n");
         test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs);
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
         if ( sock >= 0 )
