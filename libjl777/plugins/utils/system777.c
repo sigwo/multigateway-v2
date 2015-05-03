@@ -694,23 +694,24 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
 
 char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
-    static char bridgeaddr[MAX_SERVERNAME];//,*fallback = "tcp://209.126.70.170:4010";
+    static char bridgeaddr[MAX_SERVERNAME],*fallback = "tcp://209.126.70.170:4010";
     static int32_t lbsock = -1;
     cJSON *item,*array = cJSON_CreateArray();
     int32_t n,len,surveysock;
     char *msg,*retstr;
+    printf("make_globalrequest\n");
     if ( timeoutmillis <= 0 )
         timeoutmillis = 10000;
     if ( lbsock < 0 )
     {
-        lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
-        /*if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
+        //lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
+        if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
             printf("error getting lbsock\n");
         nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
         timeoutmillis = 10, nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeoutmillis,sizeof(timeoutmillis));
         if ( nn_connect(lbsock,fallback) < 0 )
             printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
-        else printf("connected to .(%s)\n",fallback);*/
+        else printf("connected to .(%s)\n",fallback);
     }
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
