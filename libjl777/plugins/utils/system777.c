@@ -685,7 +685,7 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
 
 char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
-    static char bridgeaddr[MAX_SERVERNAME];
+    static char bridgeaddr[MAX_SERVERNAME],*fallback = "tcp://209.126.70.170:4010";
     static int32_t lbsock = -1;
     cJSON *item,*array = cJSON_CreateArray();
     int32_t n,len,surveysock;
@@ -699,8 +699,8 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         if ( (lbsock= nn_socket(AF_SP,NN_BUS)) < 0 )
             printf("error getting lbsock\n");
         nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
-        if ( nn_connect(lbsock,"tcp://209.126.70.170:4000") < 0 )
-            printf("error connecting to (%s) (%s)\n","tcp://209.126.70.170:4000",nn_errstr());
+        if ( nn_connect(lbsock,fallback) < 0 )
+            printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
         else printf("connected\n");
     }
     if ( lbsock < 0 )
@@ -807,6 +807,8 @@ void run_device(void *_args)
     nn_device(pfds[0].fd,pfds[1].fd);
 }
 
+int testmain(int argc, char **argv);
+
 void serverloop(void *_args)
 {
     int32_t nntypes[] = { NN_REP, NN_RESPONDENT, NN_PUB, NN_PULL };
@@ -846,7 +848,7 @@ void serverloop(void *_args)
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr;
         if ( sock >= 0 )
         {
-            if ( nn_bind(sock,"tcp://*:4000") < 0 )
+            if ( nn_bind(sock,"tcp://*:4010") < 0 )
                 printf("error binding\n");
             else
             {
