@@ -547,13 +547,15 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
 
 int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafe[MAX_SERVERNAME])
 {
-    int32_t reqsock,priority = 1;
+    int32_t reqsock,timeout=10,priority = 1;
     if ( (reqsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
         if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RCVTIMEO,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
+        if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
+            printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
         priority = nn_addservers(priority,reqsock,servers,num);
         priority = nn_addservers(priority,reqsock,backups,numbacks);
         priority = nn_addservers(priority,reqsock,(char (*)[128])failsafe,1);
@@ -699,6 +701,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
             printf("error getting lbsock\n");
         nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
+        timeoutmillis = 10, nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeoutmillis,sizeof(timeoutmillis));
         if ( nn_connect(lbsock,fallback) < 0 )
             printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
         else printf("connected to .(%s)\n",fallback);
@@ -947,6 +950,8 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
         //printf("bind\n");
         if ( (err= nn_bind(sock,bindaddr)) < 0 )
             return(report_err(typestr,err,"nn_bind",type,bindaddr,connectaddr));
+        if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
+            return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
         if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
     }
