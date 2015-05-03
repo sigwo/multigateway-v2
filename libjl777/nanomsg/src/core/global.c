@@ -517,7 +517,7 @@ int nn_global_create_socket (int domain, int protocol)
           it = nn_list_next (&self.socktypes, it))
     {
         socktype = nn_cont (it, struct nn_socktype, item);
-        //printf("socktype.(%d %d) ",socktype->domain,socktype->protocol);
+        printf("socktype.(%d %d) ",socktype->domain,socktype->protocol);
         if (socktype->domain == domain && socktype->protocol == protocol)
         {
 
@@ -537,7 +537,7 @@ int nn_global_create_socket (int domain, int protocol)
             return s;
         }
     }
-    printf("cant find match\n");
+    printf("cant find match for (%d %d)\n",domain,protocol);
     /*  Specified socket type wasn't found. */
     return -EINVAL;
 }
