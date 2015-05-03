@@ -538,8 +538,8 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
     if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
-            if ( nn_connect(sock,servers[i]) < 0 )
-                printf("error connecting to (%s) (%s)\n",servers[i],nn_errstr());
+            if ( nn_connect(sock,servers[i]) >= 0 )
+                printf("(%s) ",servers[i]);
         priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
     return(priority);
@@ -548,14 +548,7 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
 int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafes[][MAX_SERVERNAME],int32_t numfailsafes)
 {
     int32_t lbsock,timeout,priority = 1; char *fallback = "tcp://209.126.70.170:4010";
-    /*if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
-        printf("error getting lbsock\n");
-    timeout = 1000, nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
-    timeout = 10, nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
-    if ( nn_connect(lbsock,fallback) < 0 )
-        printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
-    else printf("connected to .(%s)\n",fallback);*/
-    if ( 1 && (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
+    if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
@@ -567,7 +560,7 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
         if ( nn_connect(lbsock,fallback) < 0 )
             printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
-        //priority = nn_addservers(priority,lbsock,servers,num);
+        priority = nn_addservers(priority,lbsock,servers,num);
         //priority = nn_addservers(priority,lbsock,backups,numbacks);
         //priority = nn_addservers(priority,lbsock,failsafes,numfailsafes);
     } else printf("error getting req socket %s\n",nn_errstr());
@@ -584,9 +577,10 @@ int32_t loadbalanced_socket(int32_t retrymillis,int32_t europeflag,int32_t port)
     set_endpointaddr(failsafes[numfailsafes++],"209.126.70.159",port,NN_REP);
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
-    if ( europeflag != 0 )
-        lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
-    else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,failsafes,numfailsafes);
+    //if ( europeflag != 0 )
+    //    lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
+    //else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,failsafes,numfailsafes);
+    lbsock = nn_loadbalanced_socket(retrymillis,failsafes,numfailsafes,Bservers,m,Cservers,n);
     return(lbsock);
 }
 
