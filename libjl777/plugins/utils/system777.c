@@ -787,8 +787,9 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
         printf("responder loop doesnt deal with type.%d\n",type);
         return;
     }
+    args->type = type, args->respondfunc = nn_response, args->bindflag = 1;
     set_endpointaddr(args->endpoint,"*",SUPERNET.port,NN_REP);
-    args->sock = nn_socket(AF_SP,NN_REP);
+    args->sock = nn_socket(AF_SP,type);
     if ( args->sock >= 0 )
     {
         if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
@@ -802,7 +803,6 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
             timeout = 10, nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
             timeout = 10000, nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
             printf("start serverloop bound to (%s)\n",args->endpoint);
-            args->type = NN_REP, args->respondfunc = nn_response, args->bindflag = 1;
             portable_thread_create((void *)provider_respondloop,args);
         }
     }
