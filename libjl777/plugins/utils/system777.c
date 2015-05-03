@@ -696,7 +696,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     if ( lbsock < 0 )
     {
         //lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
-        if ( (lbsock= nn_socket(AF_SP,NN_BUS)) < 0 )
+        if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
             printf("error getting lbsock\n");
         nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
         if ( nn_connect(lbsock,fallback) < 0 )
