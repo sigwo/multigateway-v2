@@ -539,7 +539,7 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
     {
         for (i=0; i<num; i++)
             if ( nn_connect(sock,servers[i]) >= 0 )
-                printf("(%s) ",servers[i]);
+                printf("+%s ",servers[i]);
         priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
     return(priority);
@@ -547,7 +547,7 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
 
 int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafes[][MAX_SERVERNAME],int32_t numfailsafes)
 {
-    int32_t lbsock,timeout,priority = 1; char *fallback = "tcp://209.126.70.170:4010";
+    int32_t lbsock,timeout,priority = 1; //char *fallback = "tcp://209.126.70.170:4010";
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
@@ -558,8 +558,8 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
         timeout = 1000;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
-        if ( nn_connect(lbsock,fallback) < 0 )
-            printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
+        //if ( nn_connect(lbsock,fallback) < 0 )
+        //    printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
         priority = nn_addservers(priority,lbsock,servers,num);
         //priority = nn_addservers(priority,lbsock,backups,numbacks);
         //priority = nn_addservers(priority,lbsock,failsafes,numfailsafes);
