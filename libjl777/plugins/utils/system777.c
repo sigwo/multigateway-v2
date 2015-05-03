@@ -675,6 +675,7 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
     {
         if ( (len= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
         {
+            printf("got response.(%s)\n",msg);
             if ( (json= cJSON_Parse(msg)) != 0 )
             {
                 if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
@@ -771,6 +772,7 @@ void provider_respondloop(void *_args)
                 if ( (jsonstr= (*args->respondfunc)(args->type,msg)) != 0 )
                 {
                     len = (int32_t)strlen(jsonstr)+1;
+                    printf("respond.(%s)\n",jsonstr);
                     if ( (sendlen= nn_send(args->sock,jsonstr,len,0)) != len )
                         printf("warning: sendlen.%d vs %ld for (%s)\n",sendlen,strlen(jsonstr)+1,jsonstr);
                     free(jsonstr);
