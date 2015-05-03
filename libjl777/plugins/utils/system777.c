@@ -794,7 +794,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
     {
         if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
             printf("error connecting to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
-        else if ( args->bindflag == 0 && nn_bind(args->sock,args->endpoint) < 0 )
+        else if ( args->bindflag != 0 && nn_bind(args->sock,args->endpoint) < 0 )
             printf("error binding to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
         //if ( nn_bind(args->sock,args->endpoint) < 0 )
         //    printf("error binding (%s)\n",args->endpoint);
