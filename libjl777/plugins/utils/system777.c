@@ -547,30 +547,37 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
 
 int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafes[][MAX_SERVERNAME],int32_t numfailsafes)
 {
-    int32_t reqsock,timeout=10,priority = 1;
-    if ( (reqsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
+    int32_t lbsock,timeout,priority = 1; char *fallback = "tcp://209.126.70.170:4010";
+    if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
+        printf("error getting lbsock\n");
+    timeout = 1000, nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
+    timeout = 10, nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
+    if ( nn_connect(lbsock,fallback) < 0 )
+        printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
+    else printf("connected to .(%s)\n",fallback);
+    if ( 0 && (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
-        if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
+        if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-        if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RCVTIMEO,&retrymillis,sizeof(retrymillis)) < 0 )
+        if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
-        if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
+        if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
-        priority = nn_addservers(priority,reqsock,servers,num);
-        priority = nn_addservers(priority,reqsock,backups,numbacks);
-        priority = nn_addservers(priority,reqsock,failsafes,numfailsafes);
+        priority = nn_addservers(priority,lbsock,servers,num);
+        priority = nn_addservers(priority,lbsock,backups,numbacks);
+        priority = nn_addservers(priority,lbsock,failsafes,numfailsafes);
     } else printf("error getting req socket %s\n",nn_errstr());
-    return(reqsock);
+    return(lbsock);
 }
 
 int32_t loadbalanced_socket(int32_t retrymillis,int32_t europeflag,int32_t port)
 {
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
     int32_t n,m,lbsock,numfailsafes = 0;
+    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.170",port,NN_REP);
     set_endpointaddr(failsafes[numfailsafes++],"jnxt.org",port,NN_REP);
     set_endpointaddr(failsafes[numfailsafes++],"209.126.70.156",port,NN_REP);
     set_endpointaddr(failsafes[numfailsafes++],"209.126.70.159",port,NN_REP);
-    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.170",port,NN_REP);
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
     if ( europeflag != 0 )
@@ -694,7 +701,7 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
 
 char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
-    static char bridgeaddr[MAX_SERVERNAME],*fallback = "tcp://209.126.70.170:4010";
+    static char bridgeaddr[MAX_SERVERNAME];
     static int32_t lbsock = -1;
     cJSON *item,*array = cJSON_CreateArray();
     int32_t n,len,surveysock;
@@ -703,16 +710,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     if ( timeoutmillis <= 0 )
         timeoutmillis = 10000;
     if ( lbsock < 0 )
-    {
-        //lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
-        if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
-            printf("error getting lbsock\n");
-        nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
-        timeoutmillis = 10, nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeoutmillis,sizeof(timeoutmillis));
-        if ( nn_connect(lbsock,fallback) < 0 )
-            printf("error connecting to (%s) (%s)\n",fallback,nn_errstr());
-        else printf("connected to .(%s)\n",fallback);
-    }
+        lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
     if ( bridgeaddr[0] == 0 && get_bridgeaddr(bridgeaddr,lbsock) < 0 )
