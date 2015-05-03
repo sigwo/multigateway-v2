@@ -660,23 +660,17 @@ void SuperNET_loop(void *ipaddr)
 {
     char *msg;
     int32_t i;
-    for (i=0; i<1; i++)
+    while ( SUPERNET.readyflag == 0 )
     {
         if ( poll_daemons() > 0 )
             break;
         msleep(10);
     }
-     printf(">>>>>>>>> call bundled\n");
-    //sleep(3);
     language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"SuperNET.conf\"}",call_system);
-    //sleep(3);
     language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"SuperNET.conf\"}",call_system);
-   // sleep(3);
     language_func((char *)"ramchain","",0,0,1,(char *)"ramchain","{\"filename\":\"SuperNET.conf\"}",call_system);
-    printf(">>>>>>>> addcoin\n");
-    poll_daemons();
-    sleep(3);
-    poll_daemons();
+    while ( SOPHIA.readyflag == 0 || COINS.readyflag == 0 || RAMCHAINS.readyflag == 0 )
+        poll_daemons();
 #ifdef __APPLE__
     char *str;
     int32_t n;
@@ -743,10 +737,6 @@ int main(int argc,const char *argv[])
     int32_t i;
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
-    void serverloop(void *_args);
-    SUPERNET.port = 7777;
-    serverloop(0); getchar();
- ///test();
     if ( (jsonstr= loadfile(&allocsize,"SuperNET.conf")) == 0 )
         jsonstr = clonestr("{}");
     else if ( (json= cJSON_Parse(jsonstr)) == 0 )

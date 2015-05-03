@@ -1291,7 +1291,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! initflag.%d process %s\n",plugin->name,initflag,plugin->name);
     if ( initflag > 0 )
     {
-        printf("********************** (%s) (%s) (%s)\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER);
         Debuglevel = 2;
         SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);
         SUPERNET.port = get_API_int(cJSON_GetObjectItem(json,"SUPERNET_PORT"),7777);
@@ -1309,15 +1308,15 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         strcpy(SUPERNET.NXTSERVER,SUPERNET.NXTAPIURL);
         strcat(SUPERNET.NXTSERVER,"?requestType");
-        MGW.issuers[MGW.numissuers++] = conv_rsacctstr("NXT-JXRD-GKMR-WD9Y-83CK7",0);
-        MGW.issuers[MGW.numissuers++] = conv_rsacctstr("NXT-3TKA-UH62-478B-DQU6K",0);
-        MGW.issuers[MGW.numissuers++] = conv_rsacctstr("NXT-5294-T9F6-WAWK-9V7WM",0);
+        MGW.issuers[MGW.numissuers++] = calc_nxt64bits("423766016895692955");//conv_rsacctstr("NXT-JXRD-GKMR-WD9Y-83CK7",0);
+        MGW.issuers[MGW.numissuers++] = calc_nxt64bits("12240549928875772593");//conv_rsacctstr("NXT-3TKA-UH62-478B-DQU6K",0);
+        MGW.issuers[MGW.numissuers++] = calc_nxt64bits("8279528579993996036");//conv_rsacctstr("NXT-5294-T9F6-WAWK-9V7WM",0);
         if ( (array= cJSON_GetObjectItem(json,"issuers")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
         {
             for (i=0; i<n; i++)
             {
                 copy_cJSON(NXTaddr,cJSON_GetArrayItem(array,i));
-                nxt64bits = conv_rsacctstr(NXTaddr,0);
+                nxt64bits = calc_nxt64bits(NXTaddr);//conv_rsacctstr(NXTaddr,0);
                 for (j=0; j<MGW.numissuers; j++)
                     if ( nxt64bits == MGW.issuers[j] )
                         break;
@@ -1335,10 +1334,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             strcpy(SUPERNET.WEBSOCKETD,"libs/websocketd");
         }
         else strcpy(SUPERNET.WEBSOCKETD,"websocketd");
+        copy_cJSON(SOPHIA.PATH,cJSON_GetObjectItem(json,"SOPHIA"));
         if ( SOPHIA.PATH[0] == 0 )
             strcpy(SOPHIA.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH);
-        printf("********************** (%s) (%s) (%s)\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER);
+        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s)\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER);
+        SUPERNET.readyflag = 1;
     }
     else
     {

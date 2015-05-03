@@ -146,7 +146,8 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
     }
     nxt64bits = conv_NXTpassword(mysecret,mypublic,(uint8_t *)secret,(int32_t)strlen(secret));
     expand_nxt64bits(NXTaddr,nxt64bits);
-    conv_rsacctstr(NXTacct,nxt64bits);
+   if ( 0 )
+       conv_rsacctstr(NXTacct,nxt64bits);
     //printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,secret);
     return(nxt64bits);
 }
@@ -272,7 +273,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     copy_cJSON(nxtaddr,cJSON_GetArrayItem(array,(i<<1)+1));
                     if ( strcmp(ipaddr,MGW.bridgeipaddr) != 0 )
                     {
-                        MGW.srv64bits[j] = conv_rsacctstr(nxtaddr,0);
+                        MGW.srv64bits[j] = calc_nxt64bits(nxtaddr);//conv_rsacctstr(nxtaddr,0);
                         strcpy(MGW.serverips[j],ipaddr);
                         printf("%d.(%s).%llu ",j,ipaddr,(long long)MGW.srv64bits[j]);
                         j++;
@@ -301,6 +302,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             //int32_t init_public_msigs();
             //init_public_msigs();
         } else strcpy(retbuf,"{\"result\":\"no JSON for init\"}");
+        COINS.readyflag = 1;
     }
     else
     {
@@ -318,7 +320,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
-            COINS.readyflag = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
         else
