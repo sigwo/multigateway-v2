@@ -841,7 +841,7 @@ void serverloop(void *_args)
             break;
         }
     }
-    if ( 1 )
+    if ( 0 )
     {
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr;
         if ( sock >= 0 )
