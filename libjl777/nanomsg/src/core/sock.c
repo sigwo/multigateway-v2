@@ -69,7 +69,7 @@ static void nn_sock_action_zombify (struct nn_sock *self);
 
 int nn_sock_init (struct nn_sock *self, struct nn_socktype *socktype, int fd)
 {
-    int rc;
+    int rc = 0;
     int i;
 
     /* Make sure that at least one message direction is supported. */
