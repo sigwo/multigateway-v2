@@ -533,10 +533,10 @@ int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
     int32_t i;
-    if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) == 0 )
+    if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
-            if ( nn_connect(sock,servers[i]) != 0 )
+            if ( nn_connect(sock,servers[i]) < 0 )
                 printf("error connecting to (%s) (%s)\n",servers[i],nn_errstr());
         priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
@@ -548,8 +548,8 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
     int32_t reqsock,priority = 1;
     if ( (reqsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
-        if ( nn_setsockopt(reqsock,NN_REQ,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) == 0 )
-            printf("error setting NN_SOL_SOCKET NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+        if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
+            printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RCVTIMEO,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
         priority = nn_addservers(priority,reqsock,servers,num);
@@ -563,6 +563,7 @@ int32_t loadbalanced_socket(int32_t retrymillis,int32_t europeflag,int32_t port)
 {
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],jnxtaddr[MAX_SERVERNAME];
     int32_t n,m,lbsock;
+    set_endpointaddr(jnxtaddr,"209.126.70.170",port,NN_REP);
     set_endpointaddr(jnxtaddr,"jnxt.org",port,NN_REP);
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
@@ -642,9 +643,9 @@ void provider_respondloop(void *_args)
     if ( args->sock >= 0 )
     {
         printf("respondloop.sock %d type.%d -> (%s).%d\n",args->sock,args->type,args->endpoint,nn_oppotype(args->type));
-        if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) != 0 )
+        if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
             printf("error connecting to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
-        else if ( args->bindflag == 0 && nn_bind(args->sock,args->endpoint) != 0 )
+        else if ( args->bindflag == 0 && nn_bind(args->sock,args->endpoint) < 0 )
             printf("error binding to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
         else
         {
@@ -652,7 +653,7 @@ void provider_respondloop(void *_args)
             {
                 if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
                 {
-                    printf("got %ld bytes (%s)\n",len,msg);
+                    printf("got %d bytes (%s)\n",len,msg);
                     if ( (jsonstr= (*args->respondfunc)(args->type,msg)) != 0 )
                     {
                         len = (int32_t)strlen(jsonstr)+1;
@@ -771,16 +772,16 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
-    if ( bridgeaddr[0] == 0 && get_bridgeaddr(bridgeaddr,lbsock) != 0 )
+    if ( bridgeaddr[0] == 0 && get_bridgeaddr(bridgeaddr,lbsock) < 0 )
         return(clonestr("{\"error\":\"getting bridgeaddr\"}"));
     if ( (surveysock= nn_socket(AF_SP,NN_SURVEYOR)) < 0 )
         return(clonestr("{\"error\":\"getting surveysocket\"}"));
-    else if ( nn_connect(surveysock,bridgeaddr) != 0 )
+    else if ( nn_connect(surveysock,bridgeaddr) < 0 )
     {
         nn_shutdown(surveysock,0);
         return(clonestr("{\"error\":\"connecting to bridgepoint\"}"));
     }
-    else if ( nn_setsockopt(surveysock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) != 0 )
+    else if ( nn_setsockopt(surveysock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
     {
         nn_shutdown(surveysock,0);
         return(clonestr("{\"error\":\"setting timeout\"}"));

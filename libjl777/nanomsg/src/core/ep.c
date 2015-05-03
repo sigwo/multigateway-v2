@@ -69,7 +69,7 @@ int nn_ep_init (struct nn_ep *self, int src, struct nn_sock *sock, int eid,
         rc = transport->bind ((void*) self, &self->epbase);
     else
         rc = transport->connect ((void*) self, &self->epbase);
-    printf("bindflag.%d -> rc.%d\n",bind,rc);
+    //printf("bindflag.%d -> rc.%d\n",bind,rc);
     /*  Endpoint creation failed. */
     if (rc < 0) {
         nn_list_item_term (&self->item);

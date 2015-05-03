@@ -657,7 +657,7 @@ int nn_bind (int s, const char *addr)
 
     nn_glock_lock();
     rc = nn_global_create_ep (s, addr, 1);
-    printf("nn_bind returns.%d\n",rc);
+   // printf("nn_bind returns.%d\n",rc);
     nn_glock_unlock();
     if (rc < 0) {
         errno = -rc;
@@ -675,7 +675,7 @@ int nn_connect (int s, const char *addr)
 
     nn_glock_lock();
     rc = nn_global_create_ep (s, addr, 0);
-    printf("nn_connect returns.%d\n",rc);
+    //printf("nn_connect returns.%d\n",rc);
     nn_glock_unlock();
     if (rc < 0) {
         errno = -rc;
@@ -1191,7 +1191,7 @@ static int nn_global_create_ep (int s, const char *addr, int bind)
     size_t protosz;
     struct nn_transport *tp;
     struct nn_list_item *it;
-    printf("global_create_ep.(%s)\n",addr);
+    //printf("global_create_ep.(%s)\n",addr);
     /*  Check whether address is valid. */
     if (!addr)
         return -EINVAL;
@@ -1203,7 +1203,7 @@ static int nn_global_create_ep (int s, const char *addr, int bind)
     delim = strchr (addr, ':');
     if (!delim)
         return -EINVAL;
-    printf("delim.%s\n",delim);
+    //printf("delim.%s\n",delim);
     if (delim [1] != '/' || delim [2] != '/')
         return -EINVAL;
     protosz = delim - addr;
@@ -1215,22 +1215,22 @@ static int nn_global_create_ep (int s, const char *addr, int bind)
           it != nn_list_end (&self.transports);
           it = nn_list_next (&self.transports, it)) {
         tp = nn_cont (it, struct nn_transport, item);
-        printf("%ld.(vs |%s| %d %d).%ld ",strlen (tp->name),tp->name,strlen (tp->name) == protosz,memcmp (tp->name, proto, protosz) == 0,protosz);
+        //printf("%ld.(vs |%s| %d %d).%ld ",strlen (tp->name),tp->name,strlen (tp->name) == protosz,memcmp (tp->name, proto, protosz) == 0,protosz);
         if (strlen (tp->name) == protosz &&
               memcmp (tp->name, proto, protosz) == 0)
             break;
         tp = NULL;
     }
-    printf("tp.%p (%s)\n",tp,proto);
+    //printf("tp.%p (%s)\n",tp,proto);
     /*  The protocol specified doesn't match any known protocol. */
     if (!tp) {
-        printf("null tp\n");
+        //printf("null tp\n");
         return -EPROTONOSUPPORT;
     }
 
     /*  Ask the socket to create the endpoint. */
     rc = nn_sock_add_ep (self.socks [s], tp, bind, addr);
-    printf("rc.%d from nn_sock_add_ep\n",rc);
+    //printf("rc.%d from nn_sock_add_ep\n",rc);
     return rc;
 }
 
