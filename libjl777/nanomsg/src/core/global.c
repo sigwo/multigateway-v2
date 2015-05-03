@@ -497,7 +497,7 @@ int nn_global_create_socket (int domain, int protocol)
     struct nn_socktype *socktype;
     struct nn_sock *sock;
     /* The function is called with nn_glock held */
-
+printf("create.(%d %d)\n",domain,protocol);
     /*  Only AF_SP and AF_SP_RAW domains are supported. */
     if (nn_slow (domain != AF_SP && domain != AF_SP_RAW)) {
         return -EAFNOSUPPORT;
@@ -516,6 +516,7 @@ int nn_global_create_socket (int domain, int protocol)
           it != nn_list_end (&self.socktypes);
           it = nn_list_next (&self.socktypes, it)) {
         socktype = nn_cont (it, struct nn_socktype, item);
+printf("(vs %d %d) ",socktype->domain,socktype->protocol);
         if (socktype->domain == domain && socktype->protocol == protocol) {
 
             /*  Instantiate the socket. */
@@ -523,7 +524,10 @@ int nn_global_create_socket (int domain, int protocol)
             alloc_assert (sock);
             rc = nn_sock_init (sock, socktype, s);
             if (rc < 0)
+{
+printf("rc.%d\n",rc);
                 return rc;
+}
 
             /*  Adjust the global socket table. */
             self.socks [s] = sock;
@@ -532,6 +536,7 @@ int nn_global_create_socket (int domain, int protocol)
         }
     }
     /*  Specified socket type wasn't found. */
+printf("socket type not found\n");
     return -EINVAL;
 }
 
