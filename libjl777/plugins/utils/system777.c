@@ -497,7 +497,7 @@ int32_t nn_portoffset(int32_t type)
     int32_t i;
     for (i=0; i<(int32_t)(sizeof(nn_typelist)/sizeof(*nn_typelist)); i++)
         if ( nn_typelist[i] == type )
-            return(i+1);
+            return(i);
     return(-1);
 }
 
@@ -534,16 +534,14 @@ int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port
 
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
-    int32_t i,n = 0;
+    int32_t i;
     if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
-            if ( nn_connect(sock,servers[i]) >= 0 )
-                printf("(%s) ",servers[i]), n++;
+            if ( nn_connect(sock,servers[i]) < 0 )
+                printf("error connecting to (%s) (%s)\n",servers[i],nn_errstr());
         priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
-    if ( n > 0 )
-        printf("connected at priority.%d\n",priority-1);
     return(priority);
 }
 
@@ -864,7 +862,7 @@ void serverloop(void *_args)
        // char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
         printf("serverloop start\n");
         //test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
-        int32_t len,sendlen,timeout,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr,*bindaddr = "tcp://*:4001";
+        int32_t len,sendlen,timeout,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
         if ( sock >= 0 )
         {
             if ( nn_bind(sock,bindaddr) < 0 )
