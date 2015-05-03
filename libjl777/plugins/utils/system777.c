@@ -664,6 +664,7 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
     char *msg,*request = "{\"requestType\":\"getbridges\"}";
     int32_t n,len,sendlen;
     len = (int32_t)strlen(request) + 1;
+    printf("get_bridgeaddr send(%s)\n",request);
     if ( (sendlen= nn_send(lbsock,request,len,0)) == len )
     {
         if ( (len= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
@@ -697,6 +698,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         //lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
         if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
             printf("error getting lbsock\n");
+        nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
         if ( nn_connect(lbsock,"tcp://209.126.70.170:4000") < 0 )
             printf("error connecting to (%s) (%s)\n","tcp://209.126.70.170:4000",nn_errstr());
         else printf("connected\n");
@@ -705,6 +707,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
     if ( bridgeaddr[0] == 0 && get_bridgeaddr(bridgeaddr,lbsock) < 0 )
         return(clonestr("{\"error\":\"getting bridgeaddr\"}"));
+    printf("got bridgeaddr.(%s)\n",bridgeaddr);
     if ( (surveysock= nn_socket(AF_SP,NN_SURVEYOR)) < 0 )
         return(clonestr("{\"error\":\"getting surveysocket\"}"));
     else if ( nn_connect(surveysock,bridgeaddr) < 0 )
@@ -838,6 +841,7 @@ void serverloop(void *_args)
             break;
         }
     }
+    if ( 0 )
     {
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr;
         if ( sock >= 0 )
