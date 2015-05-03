@@ -854,9 +854,10 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
-       // char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
         printf("serverloop start\n");
-        //test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
+         launch_serverthread(&args[0],NN_REP,1);
+        // char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
+        /*test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
         int32_t len,sendlen,timeout,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
         if ( sock >= 0 )
         {
@@ -884,7 +885,7 @@ void serverloop(void *_args)
                     } else fprintf(stderr,".");
                 }
             }
-        }
+        }*/
     }
     else
     {
