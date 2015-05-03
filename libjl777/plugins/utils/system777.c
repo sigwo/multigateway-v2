@@ -549,7 +549,9 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
     if ( (reqsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
         if ( nn_setsockopt(reqsock,NN_REQ,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) == 0 )
-            printf("error setting NN_SOL_SOCKET socket %s\n",nn_errstr());
+            printf("error setting NN_SOL_SOCKET NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+        if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RCVTIMEO,&retrymillis,sizeof(retrymillis)) < 0 )
+            printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
         priority = nn_addservers(priority,reqsock,servers,num);
         priority = nn_addservers(priority,reqsock,backups,numbacks);
         priority = nn_addservers(priority,reqsock,(char (*)[128])failsafe,1);
@@ -639,7 +641,7 @@ void provider_respondloop(void *_args)
     }
     if ( args->sock >= 0 )
     {
-        printf("respondloop.sock %d type.%d\n",args->sock,args->type);
+        printf("respondloop.sock %d type.%d -> (%s).%d\n",args->sock,args->type,args->endpoint,nn_oppotype(args->type));
         if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) != 0 )
             printf("error connecting to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
         else if ( args->bindflag == 0 && nn_bind(args->sock,args->endpoint) != 0 )
@@ -650,6 +652,7 @@ void provider_respondloop(void *_args)
             {
                 if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
                 {
+                    printf("got %ld bytes (%s)\n",len,msg);
                     if ( (jsonstr= (*args->respondfunc)(args->type,msg)) != 0 )
                     {
                         len = (int32_t)strlen(jsonstr)+1;
