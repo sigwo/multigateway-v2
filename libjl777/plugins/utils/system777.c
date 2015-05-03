@@ -572,9 +572,9 @@ int32_t loadbalanced_socket(int32_t retrymillis,int32_t europeflag,int32_t port)
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
     int32_t n,m,lbsock,numfailsafes = 0;
     set_endpointaddr(failsafes[numfailsafes++],"209.126.70.170",port,NN_REP);
-    set_endpointaddr(failsafes[numfailsafes++],"jnxt.org",port,NN_REP);
-    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.156",port,NN_REP);
-    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.159",port,NN_REP);
+    //set_endpointaddr(failsafes[numfailsafes++],"jnxt.org",port,NN_REP);
+    //set_endpointaddr(failsafes[numfailsafes++],"209.126.70.156",port,NN_REP);
+    //set_endpointaddr(failsafes[numfailsafes++],"209.126.70.159",port,NN_REP);
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
     //if ( europeflag != 0 )
