@@ -554,11 +554,9 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         if ( nn_setsockopt(reqsock,NN_SOL_SOCKET,NN_RCVTIMEO,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
-        if ( nn_connect(reqsock,"tcp://209.126.70.170:4000") < 0 )
-            printf("error connecting to (%s) (%s)\n","tcp://209.126.70.170:4000",nn_errstr());
-        //priority = nn_addservers(priority,reqsock,servers,num);
-        //priority = nn_addservers(priority,reqsock,backups,numbacks);
-        //priority = nn_addservers(priority,reqsock,(char (*)[128])failsafe,1);
+        priority = nn_addservers(priority,reqsock,servers,num);
+        priority = nn_addservers(priority,reqsock,backups,numbacks);
+        priority = nn_addservers(priority,reqsock,(char (*)[128])failsafe,1);
     } else printf("error getting req socket %s\n",nn_errstr());
     return(reqsock);
 }
@@ -567,8 +565,7 @@ int32_t loadbalanced_socket(int32_t retrymillis,int32_t europeflag,int32_t port)
 {
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],jnxtaddr[MAX_SERVERNAME];
     int32_t n,m,lbsock;
-    set_endpointaddr(jnxtaddr,"209.126.70.170",port,NN_REP);
-    //set_endpointaddr(jnxtaddr,"jnxt.org",port,NN_REP);
+    set_endpointaddr(jnxtaddr,"jnxt.org",port,NN_REP);
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
     if ( europeflag != 0 )
@@ -692,10 +689,18 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     cJSON *item,*array = cJSON_CreateArray();
     int32_t n,len,surveysock;
     char *msg,*retstr;
+    printf("make_globalrequest\n");
     if ( timeoutmillis <= 0 )
         timeoutmillis = 1000;
     if ( lbsock < 0 )
-        lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
+    {
+        //lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
+        if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
+            printf("error getting lbsock\n");
+        if ( nn_connect(lbsock,"tcp://209.126.70.170:4000") < 0 )
+            printf("error connecting to (%s) (%s)\n","tcp://209.126.70.170:4000",nn_errstr());
+        else printf("connected\n");
+    }
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
     if ( bridgeaddr[0] == 0 && get_bridgeaddr(bridgeaddr,lbsock) < 0 )
@@ -747,7 +752,7 @@ void provider_respondloop(void *_args)
     int32_t len,sendlen; char *msg,*jsonstr;
     if ( args->sock >= 0 )
     {
-        printf("respondloop.sock %d type.%d -> (%s).%d\n",args->sock,args->type,args->endpoint,nn_oppotype(args->type));
+        printf("respondloop.sock %d type.%d <- (%s).%d\n",args->sock,args->type,args->endpoint,nn_oppotype(args->type));
         while ( 1 )
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
@@ -769,12 +774,12 @@ void provider_respondloop(void *_args)
 void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
 {
     int32_t timeout = 1000;
-    set_endpointaddr(args->endpoint,"*",SUPERNET.port,type);
     if ( type != NN_RESPONDENT && type != NN_REP && type != NN_PAIR )
     {
         printf("responder loop doesnt deal with type.%d\n",type);
         return;
     }
+    set_endpointaddr(args->endpoint,"*",SUPERNET.port,type);
     if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
     {
         if ( nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
@@ -786,7 +791,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
             printf("error binding to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
         else
         {
-            printf("launch type.%d endpoint.(%s)\n",args->type,args->endpoint);
+            printf("launch type.%d bindflag.%d endpoint.(%s)\n",args->type,bindflag,args->endpoint);
             portable_thread_create((void *)provider_respondloop,args);
         }
     } else printf("error getting socket for type.%d (%s)\n",args->type,nn_errstr());
@@ -809,6 +814,7 @@ void serverloop(void *_args)
     memset(args,0,sizeof(args));
     memset(pfds,0xff,sizeof(pfds)); memset(errQs,0,sizeof(errQs));
     timeoutmillis = 1;
+    printf("serverloop\n");
     for (i=n=0; i<numtypes; i++)
     {break;
         for (j=err=0; j<2; j++,n++)
@@ -832,15 +838,43 @@ void serverloop(void *_args)
             break;
         }
     }
-    launch_serverthread(&args[0],NN_REP,1);
+    {
+        int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr;
+        if ( sock >= 0 )
+        {
+            if ( nn_bind(sock,"tcp://*:4000") < 0 )
+                printf("error binding\n");
+            else
+            {
+                nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
+                    printf("start serverloop\n");
+                while ( 1 )
+                {
+                    if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
+                    {
+                        printf("got %d bytes (%s)\n",len,msg);
+                        if ( (jsonstr= nn_response(NN_REP,msg)) != 0 )
+                        {
+                            len = (int32_t)strlen(jsonstr)+1;
+                            if ( (sendlen= nn_send(sock,jsonstr,len,0)) != len )
+                                printf("warning: sendlen.%d vs %ld for (%s)\n",sendlen,strlen(jsonstr)+1,jsonstr);
+                            free(jsonstr);
+                        }
+                        nn_freemsg(msg);
+                    } else fprintf(stderr,".");
+                }
+            }
+        }
+    }
+  //  launch_serverthread(&args[0],NN_REP,1);
     //launch_serverthread(&args[1],NN_RESPONDENT,1);
-    if  ( i == numtypes )
+    //if  ( i == numtypes )
     {
         while ( 1 )
         {
-            if ( MGW.gatewayid >= 0 || MGW.srv64bits[MGW.N] == SUPERNET.my64bits )
-                MGW_loop();
-            if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",30000)) != 0 )
+            //if ( MGW.gatewayid >= 0 || MGW.srv64bits[MGW.N] == SUPERNET.my64bits )
+            //    MGW_loop();
+            if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",3000)) != 0 )
             {
                 printf("GLOBALRESPONSE.(%s)\n",retstr);
                 free(retstr);
