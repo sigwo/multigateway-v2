@@ -696,7 +696,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     if ( lbsock < 0 )
     {
         //lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
-        if ( (lbsock= nn_socket(AF_SP,NN_REQ)) < 0 )
+        if ( (lbsock= nn_socket(AF_SP,NN_BUS)) < 0 )
             printf("error getting lbsock\n");
         nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeoutmillis,sizeof(timeoutmillis));
         if ( nn_connect(lbsock,"tcp://209.126.70.170:4000") < 0 )
@@ -843,7 +843,7 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
-        int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr;
+        int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr;
         if ( sock >= 0 )
         {
             if ( nn_bind(sock,"tcp://*:4000") < 0 )
