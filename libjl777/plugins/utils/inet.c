@@ -1546,7 +1546,7 @@ void nn_connect_socket (nn_options_t *options, int sock)
     }
 }
 
-void nn_send_loop (nn_options_t *options, int sock)
+void nn_send_loop (nn_options_t *options, int sock,uint8_t *data,int32_t datalen)
 {
     int rc;
     uint64_t start_time;
@@ -1558,9 +1558,7 @@ void nn_send_loop (nn_options_t *options, int sock)
     
     for (;;) {
         start_time = nn_clock_now (&clock);
-        rc = nn_send (sock,
-                      options->data_to_send.data, options->data_to_send.length,
-                      0);
+        rc = nn_send (sock,data,datalen, 0);
         if (rc < 0 && errno == EAGAIN) {
             fprintf (stderr, "Message not sent (EAGAIN)\n");
         } else {
@@ -1598,7 +1596,7 @@ void nn_recv_loop (nn_options_t *options, int sock)
     }
 }
 
-void nn_rw_loop (nn_options_t *options, int sock)
+void nn_rw_loop (nn_options_t *options, int sock,uint8_t *data,int32_t datalen)
 {
     int rc;
     void *buf;
@@ -1612,9 +1610,7 @@ void nn_rw_loop (nn_options_t *options, int sock)
     
     for (;;) {
         start_time = nn_clock_now (&clock);
-        rc = nn_send (sock,
-                      options->data_to_send.data, options->data_to_send.length,
-                      0);
+        rc = nn_send (sock,data,datalen,0);
         if (rc < 0 && errno == EAGAIN) {
             fprintf (stderr, "Message not sent (EAGAIN)\n");
         } else {
@@ -1656,7 +1652,7 @@ void nn_rw_loop (nn_options_t *options, int sock)
     nn_clock_term(&clock);
 }
 
-void nn_resp_loop (nn_options_t *options, int sock)
+void nn_resp_loop (nn_options_t *options, int sock,uint8_t *data,int32_t datalen)
 {
     int rc;
     void *buf;
@@ -1670,9 +1666,8 @@ void nn_resp_loop (nn_options_t *options, int sock)
         }
         nn_print_message (options, buf, rc);
         nn_freemsg (buf);
-        rc = nn_send (sock,
-                      options->data_to_send.data, options->data_to_send.length,
-                      0);
+        //rc = nn_send (sock,options->data_to_send.data, options->data_to_send.length,0);
+        rc = nn_send (sock,data,datalen,0);
         if (rc < 0 && errno == EAGAIN) {
             fprintf (stderr, "Message not sent (EAGAIN)\n");
         } else {
@@ -1681,7 +1676,7 @@ void nn_resp_loop (nn_options_t *options, int sock)
     }
 }
 
-int test_nn(int argc, char **argv)
+int test_nn(int argc, char **argv,uint8_t *data,int32_t datalen)
 {
     int sock;
     nn_options_t options = {
@@ -1706,7 +1701,7 @@ int test_nn(int argc, char **argv)
     switch (options.socket_type) {
         case NN_PUB:
         case NN_PUSH:
-            nn_send_loop (&options, sock);
+            nn_send_loop (&options, sock,data,datalen);
             break;
         case NN_SUB:
         case NN_PULL:
@@ -1715,19 +1710,19 @@ int test_nn(int argc, char **argv)
         case NN_BUS:
         case NN_PAIR:
             if (options.data_to_send.data) {
-                nn_rw_loop (&options, sock);
+                nn_rw_loop (&options, sock,data,datalen);
             } else {
                 nn_recv_loop (&options, sock);
             }
             break;
         case NN_SURVEYOR:
         case NN_REQ:
-            nn_rw_loop (&options, sock);
+            nn_rw_loop (&options, sock,data,datalen);
             break;
         case NN_REP:
         case NN_RESPONDENT:
             if (options.data_to_send.data) {
-                nn_resp_loop (&options, sock);
+                nn_resp_loop (&options, sock,data,datalen);
             } else {
                 nn_recv_loop (&options, sock);
             }

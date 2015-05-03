@@ -807,7 +807,7 @@ void run_device(void *_args)
     nn_device(pfds[0].fd,pfds[1].fd);
 }
 
-int test_nn(int argc, char **argv);
+int test_nn(int argc, char **argv,uint8_t *data,int32_t datalen);
 
 void serverloop(void *_args)
 {
@@ -845,9 +845,9 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
-        char *sargs[] = { "nn", "--rep", "--bind", "ws://*:4010", "-Dpong", "-A" };
+        char *sargs[] = { "nn", "--rep", "--bind", "ws://*:4010", "-A" }; //"-Dpong",
         printf("serverloop start\n");
-        test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs);
+        test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)"world",6);
         int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
         if ( sock >= 0 )
         {
@@ -877,11 +877,11 @@ void serverloop(void *_args)
     }
     else
     {
-        char *cargs[] = { "nn", "--req", "--connect", "ws://209.126.70.170:4010", "-Dping", "-A" };
+        char *cargs[] = { "nn", "--req", "--connect", "ws://209.126.70.170:4010", "-A" }; //"-Dping",
         printf("client loop\n");
         while ( 1 )
         {
-            test_nn((int32_t)sizeof(cargs)/sizeof(*cargs),cargs);
+            test_nn((int32_t)sizeof(cargs)/sizeof(*cargs),cargs,(uint8_t *)"hello",6);
             sleep(10);
         }
     }
