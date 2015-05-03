@@ -776,7 +776,7 @@ void provider_respondloop(void *_args)
 
 void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
 {
-    int32_t timeout = 1000;
+    int32_t timeout;
     if ( type != NN_RESPONDENT && type != NN_REP && type != NN_PAIR )
     {
         printf("responder loop doesnt deal with type.%d\n",type);
@@ -785,6 +785,10 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
     set_endpointaddr(args->endpoint,"*",SUPERNET.port,type);
     if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
     {
+        timeout = 10;
+        if ( nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
+            printf("error setting timeout.%d %s\n",timeout,nn_errstr());
+        timeout = 1000;
         if ( nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting timeout.%d %s\n",timeout,nn_errstr());
         args->type = type, args->respondfunc = nn_response, args->bindflag = bindflag;
@@ -845,17 +849,18 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
-        char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
+       // char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
         printf("serverloop start\n");
-        test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
-        int32_t len,sendlen,timeout=10000,sock = nn_socket(AF_SP,NN_BUS); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
+        //test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
+        int32_t len,sendlen,timeout,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr,*bindaddr = "tcp://*:4010";
         if ( sock >= 0 )
         {
             if ( nn_bind(sock,bindaddr) < 0 )
-                printf("error binding\n");
+                printf("error binding (%s)\n",bindaddr);
             else
             {
-                nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
+                timeout = 10, nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
+                timeout = 10000, nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
                 printf("start serverloop bound to (%s)\n",bindaddr);
                 while ( 1 )
                 {
