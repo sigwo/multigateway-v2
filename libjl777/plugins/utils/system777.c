@@ -895,7 +895,7 @@ void serverloop(void *_args)
             printf("GLOBALRESPONSE.(%s)\n",retstr);
             free(retstr);
         }
-        sleep(1);
+        sleep(10);
         /*char *cargs[] = { "nn", "--req", "--connect", "tcp://209.126.70.170:4010", "-Dping", "-A" }; //
         printf("client loop\n");
         while ( 1 )
@@ -917,7 +917,7 @@ void serverloop(void *_args)
                 printf("GLOBALRESPONSE.(%s)\n",retstr);
                 free(retstr);
             }
-            sleep(1);
+            sleep(10);
         }
     }
 }
