@@ -791,8 +791,12 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
     args->sock = nn_socket(AF_SP,NN_REP);
     if ( args->sock >= 0 )
     {
-        if ( nn_bind(args->sock,args->endpoint) < 0 )
-            printf("error binding (%s)\n",args->endpoint);
+        if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
+            printf("error connecting to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
+        else if ( args->bindflag == 0 && nn_bind(args->sock,args->endpoint) < 0 )
+            printf("error binding to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
+        //if ( nn_bind(args->sock,args->endpoint) < 0 )
+        //    printf("error binding (%s)\n",args->endpoint);
         else
         {
             timeout = 10, nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
@@ -822,7 +826,6 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
             portable_thread_create((void *)provider_respondloop,args);
         }
     } else printf("error getting socket for type.%d (%s)\n",args->type,nn_errstr());*/
-    portable_thread_create((void *)provider_respondloop,args);
 }
 
 void run_device(void *_args)
