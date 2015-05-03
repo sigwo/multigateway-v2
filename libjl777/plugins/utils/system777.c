@@ -468,7 +468,7 @@ int32_t getline777(char *line,int32_t max)
 }
 
 #define MAX_SERVERNAME 128
-int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_SURVEYOR, NN_RESPONDENT, NN_PUB, NN_SUB, NN_PULL, NN_PUSH };
+int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH };
 
 int32_t nn_oppotype(int32_t type)
 {
@@ -509,9 +509,9 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
     static char *tcpformat = "instantdex%d.anonymous.supply";
     char domain[MAX_SERVERNAME];
     int32_t i,n = 0;
-    for (i=1; i<=7&&n<max; i++,n++)
+    for (i=0; i<7&&n<max; i++,n++)
     {
-        sprintf(domain,tcpformat,i);
+        sprintf(domain,tcpformat,i+1);
         set_endpointaddr(servers[i],domain,port,NN_REP);
     }
     return(n);
@@ -548,7 +548,7 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
     int32_t reqsock,priority = 1;
     if ( (reqsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
-        if ( nn_setsockopt(reqsock,NN_REQ,NN_REQ_RESEND_IVL,&retrymillis,sizeof(retrymillis)) == 0 )
+        if ( nn_setsockopt(reqsock,NN_REQ,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) == 0 )
             printf("error setting NN_SOL_SOCKET socket %s\n",nn_errstr());
         priority = nn_addservers(priority,reqsock,servers,num);
         priority = nn_addservers(priority,reqsock,backups,numbacks);
@@ -561,7 +561,7 @@ int32_t loadbalanced_socket(int32_t retrymillis,int32_t europeflag,int32_t port)
 {
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],jnxtaddr[MAX_SERVERNAME];
     int32_t n,m,lbsock;
-    set_endpointaddr(jnxtaddr,"jnxt.org",port,NN_REQ);
+    set_endpointaddr(jnxtaddr,"jnxt.org",port,NN_REP);
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
     if ( europeflag != 0 )
@@ -632,7 +632,7 @@ void provider_respondloop(void *_args)
 {
     struct loopargs *args = _args;
     int32_t len,sendlen; char *msg,*jsonstr;
-    if ( args->type != NN_SURVEYOR && args->type != NN_REP && args->type != NN_PAIR )
+    if ( args->type != NN_RESPONDENT && args->type != NN_REP && args->type != NN_PAIR )
     {
         printf("responder loop doesnt deal with type.%d\n",args->type);
         return;
@@ -755,78 +755,6 @@ char *nn_response(int32_t type,char *jsonstr)
     return(retstr);
 }
 
-void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
-{
-    set_endpointaddr(args->endpoint,"127.0.0.1",SUPERNET.port,type);
-    args->type = type, args->respondfunc = nn_response, args->bindflag = bindflag;
-    printf("launch type.%d endpoint.(%s)\n",args->type,args->endpoint);
-    portable_thread_create(provider_respondloop,args);
-}
-
-void serverloop(void *_args)
-{
-    int32_t nntypes[] = { NN_REP, NN_SURVEYOR, NN_PUB, NN_PULL };
-    struct nn_pollfd pfds[4][2]; queue_t errQs[4][2]; char bindaddr[128];
-    int32_t i,j,rc,n,type,portoffset,sock,numtypes,timeoutmillis,err,bindflag = 1;
-    struct loopargs args[2];
-    numtypes = (int32_t)(sizeof(nntypes)/sizeof(*nntypes));
-    printf("numtypes.%d\n",numtypes);
-    memset(args,0,sizeof(args));
-    memset(pfds,0xff,sizeof(pfds)); memset(errQs,0,sizeof(errQs));
-    timeoutmillis = 1;
-    for (i=n=0; i<numtypes; i++)
-    {break;
-        printf("i.%d of numtypes.%d\n",i,numtypes);
-        for (j=err=0; j<2; j++,n++)
-        {
-            type = (j == 0) ? nntypes[i] : nn_oppotype(nntypes[i]);
-            if ( (portoffset= nn_portoffset(type)) != n )
-                printf("FATAL mismatched portoffset %d vs %d\n",portoffset,n), getchar();
-            set_endpointaddr(bindaddr,"127.0.0.1",SUPERNET.port,type);
-            printf("(%d) type.%d bindaddr.(%s)\n",nntypes[i],type,bindaddr);
-            if ( (sock= nn_socket(AF_SP_RAW,type)) < 0 )
-                break;
-            printf("got socket %d\n",sock);
-            if ( (err= nn_bind(sock,bindaddr)) < 0 )
-                break;
-            printf("nn_bind %d\n",sock);
-            pfds[i][j].fd = sock;
-            pfds[i][j].events = NN_POLLIN | NN_POLLOUT;
-        }
-        if ( j != 2 )
-        {
-            printf("error.%d launching bridges at i.%d of %d j.%d %s\n",err,i,numtypes,j,nn_errstr());
-            break;
-        }
-    }
-    type = NN_SURVEYOR;
-    set_endpointaddr(bindaddr,"127.0.0.1",SUPERNET.port,type);
-    args[0].sock = nn_socket(AF_SP_RAW,type);
-    err = nn_bind(args[0].sock,bindaddr);
-    printf("launch %d NN_REP %d err.%d %s\n",type,args[0].sock,err,nn_errstr());
-    //args[1].sock = nn_socket(AF_SP,NN_RESPONDENT);
-    //printf("launch %d NN_RESPONDENT %d\n",NN_RESPONDENT,args[1].sock);
-    if  ( i == numtypes )
-    {
-        launch_serverthread(&args[0],NN_REP,bindflag);
-        launch_serverthread(&args[1],NN_SURVEYOR,bindflag);
-        while ( 1 )
-        {
-            if ( (rc= nn_poll(&pfds[0][0],numtypes << 1,timeoutmillis)) > 0 )
-            {
-                for (i=0; i<numtypes; i++)
-                    process_bridge_pfds(pfds[i],errQs[i]);
-            }
-            else if ( rc < 0 )
-                printf("%s Error polling launch_bridging_point\n",nn_errstr());
-            if ( MGW.gatewayid >= 0 || MGW.srv64bits[MGW.N] == SUPERNET.my64bits )
-                MGW_loop();
-        }
-    }
-    for (i=0; i<numtypes; i++)
-        nn_shutdown_pfds(pfds[i]);
-}
-
 char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
     static char bridgeaddr[MAX_SERVERNAME];
@@ -881,6 +809,94 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     printf("globalrequest(%s) via bridge.(%s) returned (%s) from n.%d respondents\n",jsonquery,bridgeaddr,retstr,n);
     free_json(array);
     return(retstr);
+}
+
+void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
+{
+    set_endpointaddr(args->endpoint,"127.0.0.1",SUPERNET.port,type);
+    if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
+    {
+        args->type = type, args->respondfunc = nn_response, args->bindflag = bindflag;
+        printf("launch type.%d endpoint.(%s)\n",args->type,args->endpoint);
+        portable_thread_create(provider_respondloop,args);
+    } else printf("error getting socket for type.%d (%s)\n",args->type,nn_errstr());
+}
+
+void run_device(void *_args)
+{
+    struct nn_pollfd *pfds = _args;
+    printf(">>>>>>>>>>>>>> RUNDEVICE.(%d <-> %d)\n",pfds[0].fd,pfds[1].fd);
+    nn_device(pfds[0].fd,pfds[1].fd);
+}
+
+void serverloop(void *_args)
+{
+    int32_t nntypes[] = { NN_REP, NN_RESPONDENT, NN_PUB, NN_PULL };
+    struct nn_pollfd pfds[4][2]; queue_t errQs[4][2]; char bindaddr[128],*retstr;
+    int32_t i,j,n,type,portoffset,sock,numtypes,timeoutmillis,err;//,bindflag = 1;
+    struct loopargs args[2];
+    numtypes = (int32_t)(sizeof(nntypes)/sizeof(*nntypes));
+    memset(args,0,sizeof(args));
+    memset(pfds,0xff,sizeof(pfds)); memset(errQs,0,sizeof(errQs));
+    timeoutmillis = 1;
+    for (i=n=0; i<numtypes; i++)
+    {//break;
+        //printf("i.%d of numtypes.%d\n",i,numtypes);
+        for (j=err=0; j<2; j++,n++)
+        {
+            type = (j == 0) ? nntypes[i] : nn_oppotype(nntypes[i]);
+            if ( (portoffset= nn_portoffset(type)) != n )
+                printf("FATAL mismatched portoffset %d vs %d\n",portoffset,n), getchar();
+            set_endpointaddr(bindaddr,"127.0.0.1",SUPERNET.port,type);
+            printf("(%d) type.%d bindaddr.(%s)\n",nntypes[i],type,bindaddr);
+            if ( (sock= nn_socket(AF_SP_RAW,type)) < 0 )
+                break;
+            //printf("got socket %d\n",sock);
+            if ( (err= nn_bind(sock,bindaddr)) < 0 )
+                break;
+            //printf("nn_bind %d\n",sock);
+            pfds[i][j].fd = sock;
+            pfds[i][j].events = NN_POLLIN | NN_POLLOUT;
+        }
+        portable_thread_create(run_device,&pfds[i]);
+        if ( j != 2 )
+        {
+            printf("error.%d launching bridges at i.%d of %d j.%d %s\n",err,i,numtypes,j,nn_errstr());
+            break;
+        }
+    }
+    /*type = NN_RESPONDENT;
+     set_endpointaddr(bindaddr,"127.0.0.1",SUPERNET.port,type);
+     args[0].sock = nn_socket(AF_SP_RAW,type);
+     err = nn_bind(args[0].sock,bindaddr);
+     printf("launch %d NN_REP %d err.%d %s\n",type,args[0].sock,err,nn_errstr());
+     //args[1].sock = nn_socket(AF_SP,NN_RESPONDENT);
+     //printf("launch %d NN_RESPONDENT %d\n",NN_RESPONDENT,args[1].sock);*/
+    launch_serverthread(&args[0],NN_REP,1);
+    launch_serverthread(&args[1],NN_RESPONDENT,1);
+    if  ( i == numtypes )
+    {
+        while ( 1 )
+        {
+            /*if ( (rc= nn_poll(&pfds[0][0],numtypes << 1,timeoutmillis)) > 0 )
+             {
+             for (i=0; i<numtypes; i++)
+             process_bridge_pfds(pfds[i],errQs[i]);
+             }
+             else if ( rc < 0 )
+             printf("%s Error polling launch_bridging_point\n",nn_errstr());*/
+            if ( MGW.gatewayid >= 0 || MGW.srv64bits[MGW.N] == SUPERNET.my64bits )
+                MGW_loop();
+            if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",3000)) != 0 )
+            {
+                printf("GLOBALRESPONSE.(%s)\n",retstr);
+                free(retstr);
+            }
+            sleep(1);
+        }
+    }
+    for (i=0; i<numtypes; i++)
+        nn_shutdown_pfds(pfds[i]);
 }
 
 uint16_t wait_for_myipaddr(char *ipaddr)
