@@ -796,7 +796,6 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
         timeout = 1000;
         if ( nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting timeout.%d %s\n",timeout,nn_errstr());
-        args->type = type, args->respondfunc = nn_response, args->bindflag = bindflag;
         if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
             printf("error connecting to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
         else if ( args->bindflag == 0 && nn_bind(args->sock,args->endpoint) < 0 )
@@ -855,20 +854,23 @@ void serverloop(void *_args)
     if ( MGW.gatewayid >= 0 )
     {
         printf("serverloop start\n");
-        //launch_serverthread(&args[0],NN_REP,1); while ( 1 ) sleep(1);
         // char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
         //test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
-        int32_t len,sendlen,timeout,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr,bindaddr[128];//*bindaddr = "tcp://*:4010";
-        set_endpointaddr(bindaddr,"*",SUPERNET.port,NN_REP);
+        int32_t len,sendlen,timeout,sock = nn_socket(AF_SP,NN_REP); char *msg,*jsonstr;//,bindaddr[128];//*bindaddr = "tcp://*:4010";
+        set_endpointaddr(args[0].endpoint,"*",SUPERNET.port,NN_REP);
         if ( sock >= 0 )
         {
-            if ( nn_bind(sock,bindaddr) < 0 )
-                printf("error binding (%s)\n",bindaddr);
+            if ( nn_bind(sock,args[0].endpoint) < 0 )
+                printf("error binding (%s)\n",args[0].endpoint);
             else
             {
                 timeout = 10, nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
                 timeout = 10000, nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
-                printf("start serverloop bound to (%s)\n",bindaddr);
+                printf("start serverloop bound to (%s)\n",args[0].endpoint);
+                args[0].type = type, args[0].respondfunc = nn_response, args[0].bindflag = 1;
+                portable_thread_create((void *)provider_respondloop,&args[0]);
+                //launch_serverthread(&args[0],NN_REP,1);
+                while ( 1 ) sleep(1);
                 while ( 1 )
                 {
                     if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
