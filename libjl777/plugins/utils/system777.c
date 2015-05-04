@@ -1025,7 +1025,7 @@ void serverloop(void *_args)
         }
     }
     args[0].bussock = args[1].bussock = args[2].bussock = args[2].sock = -1;
-    launch_serverthread(&args[0],NN_SURVEYOR,1);
+   // launch_serverthread(&args[0],NN_SURVEYOR,1);
     if ( SUPERNET.iamrelay != 0 )
     {
         char str[1024];
