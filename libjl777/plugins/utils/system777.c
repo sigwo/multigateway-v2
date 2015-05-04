@@ -66,7 +66,7 @@ union endpoints { int32_t all[sizeof(struct allendpoints) / sizeof(int32_t)]; st
 struct SuperNET_info
 {
     char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],**publications;
-    char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512],endpointB[512];
+    char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512],hostname[512];
     uint64_t my64bits;
     int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,numpubs,readyflag,UPNP;
     uint16_t port;
@@ -532,13 +532,126 @@ int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port
     return(n);
 }
 
+int32_t parse_ipaddr(char *ipaddr,char *ip_port)
+{
+    int32_t j,port = 0;
+    if ( ip_port != 0 && ip_port[0] != 0 )
+    {
+		strcpy(ipaddr,ip_port);
+        for (j=0; ipaddr[j]!=0&&j<60; j++)
+            if ( ipaddr[j] == ':' )
+            {
+                port = atoi(ipaddr+j+1);
+                break;
+            }
+        ipaddr[j] = 0;
+        printf("(%s) -> (%s:%d)\n",ip_port,ipaddr,port);
+    } else strcpy(ipaddr,"127.0.0.1");
+    return(port);
+}
+
+uint64_t calc_ipbits(char *ip_port)
+{
+    int32_t port;
+    char ipaddr[64];
+    struct sockaddr_in addr;
+    port = parse_ipaddr(ipaddr,ip_port);
+    memset(&addr,0,sizeof(addr));
+    portable_pton(ip_port[0] == '[' ? AF_INET6 : AF_INET,ipaddr,&addr);
+    {
+        int i;
+        for (i=0; i<16; i++)
+            printf("%02x ",((uint8_t *)&addr)[i]);
+        printf("<- %s %x\n",ip_port,*(uint32_t *)&addr);
+    }
+    return(*(uint32_t *)&addr | ((uint64_t)port << 32));
+}
+
+void expand_ipbits(char *ipaddr,uint64_t ipbits)
+{
+    uint16_t port;
+    struct sockaddr_in addr;
+    memset(&addr,0,sizeof(addr));
+    *(uint32_t *)&addr = (uint32_t)ipbits;
+    portable_ntop(AF_INET,&addr,ipaddr,64);
+    if ( (port= (uint16_t)(ipbits>>32)) != 0 )
+        sprintf(ipaddr + strlen(ipaddr),":%d",port);
+    //sprintf(ipaddr,"%d.%d.%d.%d",(ipbits>>24)&0xff,(ipbits>>16)&0xff,(ipbits>>8)&0xff,(ipbits&0xff));
+}
+
+char *ipbits_str(uint64_t ipbits)
+{
+    static char ipaddr[64];
+    expand_ipbits(ipaddr,ipbits);
+    return(ipaddr);
+}
+
+char *ipbits_str2(uint64_t ipbits)
+{
+    static char ipaddr[64];
+    expand_ipbits(ipaddr,ipbits);
+    return(ipaddr);
+}
+
+int32_t is_ipaddr(char *str)
+{
+    uint64_t ipbits; char ipaddr[64];
+    if ( (ipbits= calc_ipbits(str)) != 0 )
+    {
+        expand_ipbits(ipaddr,(uint32_t)ipbits);
+        if ( strncmp(ipaddr,str,strlen(ipaddr)) == 0 )
+            return(1);
+    }
+    printf("(%s) is not ipaddr\n",str);
+    return(0);
+}
+
+uint32_t conv_domainname(char *ipaddr,char *domain)
+{
+    int32_t conv_domain(struct sockaddr_storage *ss,const char *addr,int32_t ipv4only);
+    int32_t ipv4only = 1;
+    struct sockaddr_in ss;
+    if ( conv_domain((struct sockaddr_storage *)&ss,(const char *)domain,ipv4only) == 0 )
+    {
+        //if ( *(uint32_t *)&ss.sin_addr == 0 )
+        //    portable_ntop(AF_INET,(void *)&ss.sin_addr,domain,INET_ADDRSTRLEN);
+        //printf("addr.(%s)\n",domain);
+        expand_ipbits(ipaddr,*(uint32_t *)&ss.sin_addr);
+        printf("conv_domainname (%s) -> (%s)\n",domain,ipaddr);
+    } else printf("error conv_domain.(%s)\n",domain);
+    return(0);
+}
+
+int32_t ismyaddress(char *server)
+{
+    char ipaddr[64];
+    if ( strncmp(server,"tcp://",6) == 0 )
+        server += 6;
+    else if ( strncmp(server,"ws://",5) == 0 )
+        server += 5;
+    if ( is_ipaddr(server) != 0 )
+    {
+        if ( strcmp(server,SUPERNET.myipaddr) == 0 )
+            return(1);
+    }
+    else
+    {
+        if ( SUPERNET.hostname[0] != 0 && strcmp(SUPERNET.hostname,server) == 0 )
+            return(1);
+        if ( conv_domainname(ipaddr,server) == 0 && (strcmp(SUPERNET.myipaddr,ipaddr) == 0 || strcmp(SUPERNET.hostname,ipaddr) == 0) )
+            return(1);
+    }
+    printf("(%s) is not me (%s)\n",server,SUPERNET.myipaddr);
+    return(0);
+}
+
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
     int32_t i;
     if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
-            if ( nn_connect(sock,servers[i]) >= 0 )
+            if ( ismyaddress(servers[i]) == 0 && nn_connect(sock,servers[i]) >= 0 )
                 printf("+%s ",servers[i]);
         priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
@@ -857,7 +970,7 @@ void serverloop(void *_args)
     {
         char str[1024];
         printf("serverloop start\n");
-        sprintf(str,"{\"requestType\":\"newbridge\",\"endpoint\":\"%s\"}",SUPERNET.endpointB);
+        sprintf(str,"{\"requestType\":\"newbridge\",\"endpoint\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
         if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
         {
             printf("GLOBALRESPONSE.(%s)\n",retstr);
@@ -1036,67 +1149,6 @@ int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_
             messages[0] = clonestr(line), n = 1;
     }
     return(n);
-}
-
-int32_t parse_ipaddr(char *ipaddr,char *ip_port)
-{
-    int32_t j,port = 0;
-    if ( ip_port != 0 && ip_port[0] != 0 )
-    {
-		strcpy(ipaddr, ip_port);
-        for (j=0; ipaddr[j]!=0&&j<60; j++)
-            if ( ipaddr[j] == ':' )
-            {
-                port = atoi(ipaddr+j+1);
-                break;
-            }
-        ipaddr[j] = 0;
-        printf("(%s) -> (%s:%d)\n",ip_port,ipaddr,port);
-    } else strcpy(ipaddr,"127.0.0.1");
-    return(port);
-}
-
-uint64_t calc_ipbits(char *ip_port)
-{
-    int32_t port;
-    char ipaddr[64];
-    struct sockaddr_in addr;
-    port = parse_ipaddr(ipaddr,ip_port);
-    memset(&addr,0,sizeof(addr));
-    portable_pton(ip_port[0] == '[' ? AF_INET6 : AF_INET,ipaddr,&addr);
-    {
-        int i;
-        for (i=0; i<16; i++)
-            printf("%02x ",((uint8_t *)&addr)[i]);
-        printf("<- %s %x\n",ip_port,*(uint32_t *)&addr);
-    }
-    return(*(uint32_t *)&addr | ((uint64_t)port << 32));
-}
-
-void expand_ipbits(char *ipaddr,uint64_t ipbits)
-{
-    uint16_t port;
-    struct sockaddr_in addr;
-    memset(&addr,0,sizeof(addr));
-    *(uint32_t *)&addr = (uint32_t)ipbits;
-    portable_ntop(AF_INET,&addr,ipaddr,64);
-    if ( (port= (uint16_t)(ipbits>>32)) != 0 )
-        sprintf(ipaddr + strlen(ipaddr),":%d",port);
-    //sprintf(ipaddr,"%d.%d.%d.%d",(ipbits>>24)&0xff,(ipbits>>16)&0xff,(ipbits>>8)&0xff,(ipbits&0xff));
-}
-
-char *ipbits_str(uint64_t ipbits)
-{
-    static char ipaddr[64];
-    expand_ipbits(ipaddr,ipbits);
-    return(ipaddr);
-}
-
-char *ipbits_str2(uint64_t ipbits)
-{
-    static char ipaddr[64];
-    expand_ipbits(ipaddr,ipbits);
-    return(ipaddr);
 }
 
 /*struct sockaddr_in conv_ipbits(uint64_t ipbits)
