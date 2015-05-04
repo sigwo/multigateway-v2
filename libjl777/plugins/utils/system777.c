@@ -730,6 +730,7 @@ char *publist_jsonstr(char *category)
 cJSON *Bridges;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
+    printf("loadbalanced.(%s)\n",jsonstr);
     if ( SUPERNET.iambridge != 0 )
     {
         if ( Bridges == 0 )
@@ -807,6 +808,7 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
             printf("iambridge sent by (%s)\n",hostname);
             add_newbridge(bussock,type,hostname,jsonstr);
         }
+        printf("hostname.%p request.%p\n",hostname,request);
         switch ( type )
         {
             case NN_REP: retstr = loadbalanced_response(jsonstr,json); break;
