@@ -730,12 +730,45 @@ char *publist_jsonstr(char *category)
 cJSON *Bridges;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
-    if ( Bridges == 0 )
+    if ( SUPERNET.iambridge != 0 )
     {
-        Bridges = cJSON_CreateArray();
-        cJSON_AddItemToArray(Bridges,cJSON_CreateString(SUPERNET.myipaddr));
+        if ( Bridges == 0 )
+        {
+            Bridges = cJSON_CreateArray();
+            cJSON_AddItemToArray(Bridges,cJSON_CreateString(SUPERNET.myipaddr));
+        }
+        return(cJSON_Print(Bridges));
     }
-    return(cJSON_Print(Bridges));
+    else return(0);
+}
+
+int32_t add_newbridge(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
+{
+    char endpoint[512];
+    printf("newbridge.(%s) arrived\n",hostname);
+    if ( Bridges == 0 )
+        Bridges = cJSON_CreateArray();
+    if ( in_jsonarray(Bridges,hostname) == 0 )
+    {
+        if ( SUPERNET.iambridge != 0 && bussock >= 0 )
+        {
+            set_endpointaddr(endpoint,hostname,SUPERNET.port,NN_BUS);
+            if ( nn_connect(bussock,endpoint) < 0 )
+                printf("error connecting bus to (%s)\n",endpoint);
+            else
+            {
+                if ( type != NN_BUS )
+                {
+                    nn_send(bussock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                    printf("send to bus.(%s)\n",jsonstr);
+                }
+                printf("connected bus to hostname.(%s)\n",hostname);
+            }
+        }
+        cJSON_AddItemToArray(Bridges,cJSON_CreateString(hostname));
+        return(1);
+    }
+    return(0);
 }
 
 char *global_response(char *jsonstr,cJSON *json)
@@ -757,35 +790,22 @@ char *process_buspacket(char *jsonstr,cJSON *json)
 
 char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
 {
-    cJSON *json; char endpoint[512],*request,*hostname,*retstr = 0;
+    cJSON *json; char *request,*hostname,*retstr = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
         {
             if ( strcmp(request,"newbridge") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
             {
-                printf("newbridge.(%s) arrived\n",hostname);
-                if ( Bridges == 0 )
-                    Bridges = cJSON_CreateArray();
-                if ( in_jsonarray(Bridges,hostname) == 0 )
-                {
-                    set_endpointaddr(endpoint,hostname,SUPERNET.port,NN_BUS);
-                    if ( bussock >= 0 )
-                    {
-                        if ( nn_connect(bussock,endpoint) < 0 )
-                            printf("error connecting bus to (%s)\n",endpoint);
-                        else
-                        {
-                            if ( type != NN_BUS )
-                                nn_send(bussock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
-                            printf("connected bus to hostname.(%s)\n",hostname);
-                        }
-                    }
-                    cJSON_AddItemToArray(Bridges,cJSON_CreateString(hostname));
+                if ( add_newbridge(bussock,type,hostname,jsonstr) > 0 )
                     return(clonestr("{\"result\":\"bridge added\"}"));
-                }
                 else return(clonestr("{\"result\":\"bridge already in list\"}"));
             }
+        }
+        if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iambridge"))) != 0 )
+        {
+            printf("iambridge sent by (%s)\n",hostname);
+            add_newbridge(bussock,type,hostname,jsonstr);
         }
         switch ( type )
         {
@@ -805,6 +825,8 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
     char *msg,request[512];
     int32_t n,len,sendlen;
     sprintf(request,"{\"requestType\":\"getbridges\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
+    if ( SUPERNET.iambridge != 0 )
+        sprintf(request + strlen(request) - 1,",\"iambridge\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
     len = (int32_t)strlen(request) + 1;
     //printf("get_bridgeaddr send(%s)\n",request);
     bridgeaddr[0] = 0;
