@@ -593,14 +593,14 @@ char *ipbits_str2(uint64_t ipbits)
     return(ipaddr);
 }
 
-int32_t is_ipaddr(char *str)
+uint32_t is_ipaddr(char *str)
 {
     uint64_t ipbits; char ipaddr[64];
     if ( (ipbits= calc_ipbits(str)) != 0 )
     {
         expand_ipbits(ipaddr,(uint32_t)ipbits);
         if ( strncmp(ipaddr,str,strlen(ipaddr)) == 0 )
-            return(1);
+            return((uint32_t)ipbits);
     }
     printf("(%s) is not ipaddr\n",str);
     return(0);
@@ -624,14 +624,14 @@ uint32_t conv_domainname(char *ipaddr,char *domain)
 
 int32_t ismyaddress(char *server)
 {
-    char ipaddr[64];
+    char ipaddr[64]; uint32_t ipbits;
     if ( strncmp(server,"tcp://",6) == 0 )
         server += 6;
     else if ( strncmp(server,"ws://",5) == 0 )
         server += 5;
-    if ( is_ipaddr(server) != 0 )
+    if ( (ipbits= is_ipaddr(server)) != 0 )
     {
-        if ( strcmp(server,SUPERNET.myipaddr) == 0 )
+        if ( strcmp(server,SUPERNET.myipaddr) == 0 || calc_ipbits(SUPERNET.myipaddr) == ipbits )
             return(1);
     }
     else
