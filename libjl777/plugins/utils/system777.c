@@ -508,34 +508,23 @@ void set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type)
 
 int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
-    //static char *tcpformat = "instantdex%d.anonymous.supply";
-    char domain[MAX_SERVERNAME];
     int32_t n = 0;
-    set_endpointaddr(servers[n++],"89.248.160.237",port,NN_REP);
-    set_endpointaddr(servers[n++],"89.248.160.238",port,NN_REP);
-    set_endpointaddr(servers[n++],"89.248.160.239",port,NN_REP);
-    set_endpointaddr(servers[n++],"89.248.160.240",port,NN_REP);
-    set_endpointaddr(servers[n++],"89.248.160.241",port,NN_REP);
-    set_endpointaddr(servers[n++],"89.248.160.242",port,NN_REP);
-    set_endpointaddr(servers[n++],"89.248.160.243",port,NN_REP);
-    /*for (i=0; i<7&&n<max; i++,n++)
-    {
-        sprintf(domain,tcpformat,i+1);
-        set_endpointaddr(servers[i],domain,port,NN_REP);
-    }*/
+    strcpy(servers[n++],"89.248.160.237");
+    strcpy(servers[n++],"89.248.160.238");
+    strcpy(servers[n++],"89.248.160.239");
+    strcpy(servers[n++],"89.248.160.240");
+    strcpy(servers[n++],"89.248.160.241");
+    strcpy(servers[n++],"89.248.160.242");
+    strcpy(servers[n++],"89.248.160.243");
     return(n);
 }
 
 int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     static char *tcpformat = "ps%02d.bitcoindark.ca";
-    char domain[MAX_SERVERNAME];
     int32_t i,n = 0;
     for (i=0; i<=20&&n<max; i++,n++)
-    {
-        sprintf(domain,tcpformat,i);
-        set_endpointaddr(servers[i],domain,port,NN_REP);
-    }
+        sprintf(servers[i],tcpformat,i);
     return(n);
 }
 
@@ -653,15 +642,26 @@ int32_t ismyaddress(char *server)
     return(0);
 }
 
+int32_t eligible_lbserver(char *server)
+{
+    if ( server == 0 || server[0] == 0 || ismyaddress(server) == 0 || is_remote_access(server) == 0 )
+        return(0);
+    return(1);
+}
+
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
-    int32_t i;
+    int32_t i; char endpoint[512];
     if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
-            if ( ismyaddress(servers[i]) == 0 && nn_connect(sock,servers[i]) >= 0 )
-                printf("+%s ",servers[i]);
-        priority++;
+            if ( eligible_lbserver(servers[i]) != 0 )
+            {
+                set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
+                if ( nn_connect(sock,endpoint) >= 0 )
+                    printf("+%s ",endpoint);
+            }
+         priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
     return(priority);
 }
@@ -871,7 +871,7 @@ char *send_loadbalanced(int32_t lbsock,char *request)
                             if ( (relay= cJSON_str(cJSON_GetArrayItem(array,i))) != 0 && ismyaddress(relay) == 0 )
                             {
                                 set_endpointaddr(endpoint,relay,SUPERNET.port,NN_REP);
-                                if ( nn_connect(lbsock,endpoint) >= 0 )
+                                if ( eligible_lbserver(relay) != 0 && nn_connect(lbsock,endpoint) >= 0 )
                                     printf("+%s ",endpoint);
                             }
                         }
