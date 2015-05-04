@@ -859,11 +859,11 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
 
 char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
-    static char bridgeaddr[MAX_SERVERNAME];
+    static char endpoint[512],bridgeaddr[MAX_SERVERNAME];
     static int32_t lbsock = -1;
     cJSON *item,*array = cJSON_CreateArray();
     int32_t n,len,surveysock;
-    char endpoint[512],*msg,*retstr;
+    char *msg,*retstr;
     printf("make_globalrequest.(%s)\n",jsonquery);
     if ( timeoutmillis <= 0 )
         timeoutmillis = 10000;
