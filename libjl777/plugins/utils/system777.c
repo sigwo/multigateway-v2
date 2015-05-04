@@ -162,6 +162,9 @@ int32_t eligible_lbserver(char *server);
 
 char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async);
 
+#define MAX_SERVERNAME 128
+struct loopargs { char *(*respondfunc)(int32_t pushsock,int32_t bussock,int32_t type,char *); int32_t pushsock,bussock,sock,type,bindflag; char endpoint[MAX_SERVERNAME]; };
+
 #endif
 #else
 #ifndef crypto777_system777_c
@@ -172,6 +175,8 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
 #include "system777.c"
 #undef DEFINES_ONLY
 #endif
+
+int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
 
 struct nn_clock
 {
@@ -470,10 +475,6 @@ int32_t getline777(char *line,int32_t max)
     return((int32_t)strlen(line));
 }
 
-#define MAX_SERVERNAME 128
-int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
-struct loopargs { char *(*respondfunc)(int32_t bussock,int32_t type,char *); int32_t bussock,sock,type,bindflag; char endpoint[MAX_SERVERNAME]; };
-
 int32_t nn_oppotype(int32_t type)
 {
     switch ( type )
@@ -743,7 +744,7 @@ char *publist_jsonstr(char *category)
 
 cJSON *Relays;
 
-int32_t add_newrelay(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
+int32_t add_newrelay(int32_t pushsock,int32_t bussock,int32_t type,char *hostname,char *jsonstr)
 {
     char endpoint[512];
     printf("newrelay.(%s) arrived\n",hostname);
@@ -756,7 +757,7 @@ int32_t add_newrelay(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
         Relays = cJSON_CreateArray();
     if ( in_jsonarray(Relays,hostname) == 0 )
     {
-        if ( SUPERNET.iamrelay != 0 && bussock >= 0 && eligible_lbserver(hostname) != 0 )
+        if ( SUPERNET.iamrelay != 0 && bussock >= 0 )//&& eligible_lbserver(hostname) != 0 )
         {
             set_endpointaddr(endpoint,hostname,SUPERNET.port,NN_BUS);
             if ( nn_connect(bussock,endpoint) < 0 )
@@ -770,6 +771,10 @@ int32_t add_newrelay(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
                 }
                 printf("connected bus to hostname.(%s)\n",hostname);
             }
+            set_endpointaddr(endpoint,hostname,SUPERNET.port,NN_PULL);
+            if ( nn_connect(pushsock,endpoint) < 0 )
+                printf("error connecting pushsock to pull.(%s)\n",endpoint);
+            else printf("connected PUSHsock to pull.(%s)\n",endpoint);
         }
         cJSON_AddItemToArray(Relays,cJSON_CreateString(hostname));
         return(1);
@@ -816,7 +821,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
     else return(0);
 }
 
-char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
+char *nn_response(int32_t pushsock,int32_t bussock,int32_t type,char *jsonstr)
 {
     cJSON *json; char *request,*hostname,*retstr = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -825,7 +830,7 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
         {
             if ( strcmp(request,"newrelay") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
             {
-                if ( add_newrelay(bussock,type,hostname,jsonstr) > 0 )
+                if ( add_newrelay(pushsock,bussock,type,hostname,jsonstr) > 0 )
                     retstr = clonestr("{\"result\":\"relay added\"}");
                 else retstr = clonestr("{\"result\":\"relay already in list\"}");
             }
@@ -833,7 +838,9 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
                 retstr = relays_jsonstr(jsonstr,json);
         }
         if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
-            add_newrelay(bussock,type,hostname,jsonstr);
+            add_newrelay(pushsock,bussock,type,hostname,jsonstr);
+        if ( type == NN_PULL )
+            printf("PULL.(%s)\n",jsonstr);
         /*switch ( type )
         {
             case NN_REP: retstr = loadbalanced_response(jsonstr,json); break;
@@ -859,7 +866,7 @@ char *send_loadbalanced(int32_t bussock,int32_t lbsock,char *request)
     {
         if ( (len= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
         {
-            printf("got response.(%s)\n",msg);
+            //printf("got response.(%s)\n",msg);
             if ( (json= cJSON_Parse(msg)) != 0 )
             {
                 if ( (array= cJSON_GetObjectItem(json,"relays")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -984,7 +991,7 @@ void provider_respondloop(void *_args)
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
                 printf("got %d bytes (%s)\n",len,msg);
-                if ( (jsonstr= (*args->respondfunc)(args->bussock,args->type,msg)) != 0 )
+                if ( (jsonstr= (*args->respondfunc)(args->pushsock,args->bussock,args->type,msg)) != 0 )
                 {
                     len = (int32_t)strlen(jsonstr)+1;
                     printf("respond.(%s)\n",jsonstr);
@@ -1001,7 +1008,7 @@ void provider_respondloop(void *_args)
 void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
 {
     int32_t timeout;
-    if ( type != NN_SURVEYOR && type != NN_REP && type != NN_PAIR && type != NN_BUS )
+    if ( type != NN_RESPONDENT && type != NN_REP && type != NN_PAIR && type != NN_BUS && type != NN_PULL )
     {
         printf("responder loop doesnt deal with type.%d\n",type);
         return;
@@ -1066,15 +1073,19 @@ void serverloop(void *_args)
             break;
         }
     }
-    args[0].bussock = args[1].bussock = args[2].bussock = args[2].sock = -1;
-   // launch_serverthread(&args[0],NN_SURVEYOR,1);
+    args[0].bussock = args[1].bussock = args[2].bussock = args[2].sock = args[3].bussock = -1;
+    args[0].pushsock = args[1].pushsock = args[2].pushsock = args[3].pushsock = args[3].sock = -1;
     if ( SUPERNET.iamrelay != 0 )
     {
         char str[1024];
+        args[0].pushsock = args[1].pushsock = args[2].pushsock = args[3].pushsock = nn_socket(AF_SP,NN_PUSH);
         launch_serverthread(&args[2],NN_BUS,1);
-        while ( args[2].sock < 0 )
+        launch_serverthread(&args[3],NN_PULL,1);
+        while ( args[2].sock < 0 || args[3].sock < 0 )
             sleep(1);
-        args[1].bussock = args[0].bussock = args[2].bussock = args[2].sock;
+        launch_serverthread(&args[0],NN_PULL,1);
+        args[0].bussock = args[1].bussock = args[2].bussock = args[3].bussock = args[2].sock;
+        args[0].pushsock = args[1].pushsock = args[2].pushsock = args[3].pushsock = args[3].sock;
         launch_serverthread(&args[1],NN_REP,1);
         printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_BUS.%d\n",NN_REP,NN_BUS);
         if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
