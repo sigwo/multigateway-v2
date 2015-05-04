@@ -736,20 +736,6 @@ char *publist_jsonstr(char *category)
 }
 
 cJSON *Relays;
-char *loadbalanced_response(char *jsonstr,cJSON *json)
-{
-    printf("loadbalanced.(%s)\n",jsonstr);
-    if ( SUPERNET.iamrelay != 0 && SUPERNET.myipaddr[0] != 0 )
-    {
-        if ( Relays == 0 )
-        {
-            Relays = cJSON_CreateArray();
-            cJSON_AddItemToArray(Relays,cJSON_CreateString(SUPERNET.myipaddr));
-        }
-        return(cJSON_Print(Relays));
-    }
-    else return(0);
-}
 
 int32_t add_newrelay(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
 {
@@ -785,7 +771,7 @@ int32_t add_newrelay(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
     return(0);
 }
 
-char *global_response(char *jsonstr,cJSON *json)
+char *survey_response(char *jsonstr,cJSON *json)
 {
     char *request;
     if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
@@ -802,6 +788,27 @@ char *process_buspacket(char *jsonstr,cJSON *json)
     return(0);
 }
 
+char *relays_jsonstr(char *jsonstr,cJSON *json)
+{
+    cJSON *retjson; char *retstr;
+    if ( SUPERNET.iamrelay != 0 && SUPERNET.myipaddr[0] != 0 )
+    {
+        if ( Relays == 0 )
+        {
+            Relays = cJSON_CreateArray();
+            cJSON_AddItemToArray(Relays,cJSON_CreateString(SUPERNET.myipaddr));
+        }
+        retjson = cJSON_CreateObject();
+        cJSON_AddItemToObject(retjson,"relays",Relays);
+        cJSON_AddItemToObject(retjson,"result",cJSON_CreateString("success"));
+        retstr = cJSON_Print(retjson);
+        Relays = cJSON_DetachItemFromObject(retjson,"relays");
+        free_json(retjson);
+        return(retstr);
+    }
+    else return(0);
+}
+
 char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
 {
     cJSON *json; char *request,*hostname,*retstr = 0;
@@ -812,35 +819,35 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
             if ( strcmp(request,"newrelay") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
             {
                 if ( add_newrelay(bussock,type,hostname,jsonstr) > 0 )
-                    return(clonestr("{\"result\":\"relay added\"}"));
-                else return(clonestr("{\"result\":\"relay already in list\"}"));
+                    retstr = clonestr("{\"result\":\"relay added\"}");
+                else retstr = clonestr("{\"result\":\"relay already in list\"}");
             }
+            else if ( strcmp(request,"getrelays") == 0 && type == NN_REP )
+                retstr = relays_jsonstr(jsonstr,json);
         }
         if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
             add_newrelay(bussock,type,hostname,jsonstr);
-        switch ( type )
+        /*switch ( type )
         {
             case NN_REP: retstr = loadbalanced_response(jsonstr,json); break;
-            case NN_RESPONDENT: retstr = global_response(jsonstr,json); break;
+            case NN_RESPONDENT: retstr = survey_response(jsonstr,json); break;
             case NN_BUS: retstr = process_buspacket(jsonstr,json); break;
             default: retstr = clonestr("{\"error\":\"invalid socket type\"}"); break;
-        }
+        }*/
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
     return(retstr);
 }
 
-int32_t get_relayaddr(int32_t lbsock)
+char *send_loadbalanced(int32_t lbsock,char *request)
 {
-    cJSON *json,*item;
-    char request[512],endpoint[512],*msg,*relay;
-    int32_t n,len,sendlen,priority = 2;
-    sprintf(request,"{\"requestType\":\"getrelays\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
+    cJSON *json,*array;
+    char endpoint[1024],*msg,*relay,*jsonstr = 0;
+    int32_t i,n,len,sendlen,priority = 2;
+    sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
     if ( SUPERNET.iamrelay != 0 && (SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0) )
         sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
     len = (int32_t)strlen(request) + 1;
-    //printf("get_relayaddr send(%s)\n",request);
-    relayaddr[0] = 0;
     if ( (sendlen= nn_send(lbsock,request,len,0)) == len )
     {
         if ( (len= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
@@ -848,48 +855,44 @@ int32_t get_relayaddr(int32_t lbsock)
             printf("got response.(%s)\n",msg);
             if ( (json= cJSON_Parse(msg)) != 0 )
             {
-                if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
+                if ( (array= cJSON_GetObjectItem(json,"relays")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                 {
                     if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
                     {
                         for (i=0; i<n; i++)
                         {
-                            if ( (relay= cJSON_str(cJSON_GetArrayItem(json,i))) != 0 && ismyaddress(relay) == 0 )
+                            if ( (relay= cJSON_str(cJSON_GetArrayItem(array,i))) != 0 && ismyaddress(relay) == 0 )
                             {
                                 set_endpointaddr(endpoint,relay,SUPERNET.port,NN_REP);
-                                if ( nn_connect(sock,endpoint) >= 0 )
+                                if ( nn_connect(lbsock,endpoint) >= 0 )
                                     printf("+%s ",endpoint);
                             }
                         }
                     }
                 }
                 free_json(json);
+                jsonstr = clonestr(msg);
             }
             nn_freemsg(msg);
-            return(0);
         } else printf("get_relayaddr: got len %d: %s\n",len,nn_errstr());
     } else printf("got sendlen.%d instead of %d\n",sendlen,len);
-    return(-1);
+    return(jsonstr);
 }
 
-
-char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
+char *loadbalanced_request(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
-    static char endpoint[512],relayaddr[MAX_SERVERNAME];
-    static int32_t lbsock = -1;
-    cJSON *item,*array = cJSON_CreateArray();
-    int32_t n,len,surveysock;
-    char *msg,*retstr;
-   // printf("make_globalrequest.(%s)\n",jsonquery);
+    static int32_t lbsock = -1; char cmdstr[8192];
+    strcpy(cmdstr,"{\"requestType\":\"getrelays\"}");
     if ( timeoutmillis <= 0 )
         timeoutmillis = 10000;
     if ( lbsock < 0 )
     {
         lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
-        update_relays(relayaddr,lbsock);
+        send_loadbalanced(lbsock,cmdstr);
     }
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
+    return(send_loadbalanced(lbsock,cmdstr));
 }
 
 char *make_surveyrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
@@ -906,13 +909,13 @@ char *make_surveyrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
-    if ( relayaddr[0] == 0 && get_relayaddr(relayaddr,lbsock) < 0 )
+   /* if ( relayaddr[0] == 0 && update_relays(lbsock) < 0 )
         return(clonestr("{\"error\":\"getting relayaddr\"}"));
     else
     {
         printf("got relayaddr.(%s) -> endpoint.(%s)\n",relayaddr,endpoint);
         set_endpointaddr(endpoint,relayaddr,SUPERNET.port,NN_SURVEYOR);
-    }
+    }*/
     if ( (surveysock= nn_socket(AF_SP,NN_SURVEYOR)) < 0 )
     {
         printf("error getting socket\n");
@@ -1018,8 +1021,6 @@ void run_device(void *_args)
     nn_device(pfds[0].fd,pfds[1].fd);
 }
 
-int test_nn(int argc, char **argv,uint8_t *data,int32_t datalen);
-
 void serverloop(void *_args)
 {
     int32_t nntypes[] = { NN_REP, NN_RESPONDENT, NN_PUB, NN_PULL };
@@ -1065,44 +1066,26 @@ void serverloop(void *_args)
             sleep(1);
         args[1].bussock = args[0].bussock = args[2].bussock = args[2].sock;
         launch_serverthread(&args[1],NN_REP,1);
-        printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_SURVEYOR.%d\n",NN_REP,NN_SURVEYOR);
+        printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_BUS.%d\n",NN_REP,NN_BUS);
         if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
         {
             sprintf(str,"{\"requestType\":\"newrelay\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
-            if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
+            if ( (retstr= loadbalanced_request(3000,str,3000)) != 0 )
             {
                 printf("GLOBALRESPONSE.(%s)\n",retstr);
                 free(retstr);
             }
         }
-       // while ( 1 ) sleep(1);
     }
-   // else
     while ( 1 )
     {
-        if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
+        if ( (retstr= loadbalanced_request(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
         {
             printf("GLOBALRESPONSE.(%s)\n",retstr);
             free(retstr);
         }
         sleep(10);
     }
-  //  launch_serverthread(&args[0],NN_REP,1);
-    //launch_serverthread(&args[1],NN_RESPONDENT,1);
-    //if  ( i == numtypes )
-   /* {
-        while ( 1 )
-        {
-            //if ( MGW.gatewayid >= 0 || MGW.srv64bits[MGW.N] == SUPERNET.my64bits )
-            //    MGW_loop();
-            if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
-            {
-                printf("GLOBALRESPONSE.(%s)\n",retstr);
-                free(retstr);
-            }
-            sleep(10);
-        }
-    }*/
 }
 
 uint16_t wait_for_myipaddr(char *ipaddr)
