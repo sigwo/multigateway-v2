@@ -163,7 +163,7 @@ int32_t eligible_lbserver(char *server);
 char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async);
 
 #define MAX_SERVERNAME 128
-struct loopargs { char *(*respondfunc)(int32_t pushsock,int32_t bussock,int32_t type,char *); int32_t pushsock,bussock,sock,type,bindflag; char endpoint[MAX_SERVERNAME]; };
+struct loopargs { char *(*respondfunc)(int32_t pushsock,int32_t bussock,int32_t type,char *); char name[16]; int32_t pushsock,bussock,sock,type,bindflag; char endpoint[MAX_SERVERNAME]; };
 
 #endif
 #else
@@ -1005,7 +1005,7 @@ void provider_respondloop(void *_args)
     } else printf("error getting socket type.%d %s\n",args->type,nn_errstr());
 }
 
-void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
+void launch_serverthread(struct loopargs *args,char *name,int32_t type,int32_t bindflag)
 {
     int32_t timeout;
     if ( type != NN_RESPONDENT && type != NN_REP && type != NN_PAIR && type != NN_BUS && type != NN_PULL )
@@ -1013,7 +1013,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
         printf("responder loop doesnt deal with type.%d\n",type);
         return;
     }
-    args->type = type, args->respondfunc = nn_response, args->bindflag = 1;
+    strcpy(args->name,name), args->type = type, args->respondfunc = nn_response, args->bindflag = 1;
     set_endpointaddr(args->endpoint,"*",SUPERNET.port,type);
     if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
     {
@@ -1025,7 +1025,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
         {
             timeout = 10, nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
             timeout = 10000, nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
-            printf("start serverloop bound to (%s)\n",args->endpoint);
+            printf("start serverloop.%s bound to (%s)\n",args->name,args->endpoint);
             portable_thread_create((void *)provider_respondloop,args);
         }
     } else printf("error getting nn_socket.%d %s\n",type,nn_errstr());
@@ -1079,15 +1079,14 @@ void serverloop(void *_args)
     {
         char str[1024];
         args[0].pushsock = args[1].pushsock = args[2].pushsock = args[3].pushsock = nn_socket(AF_SP,NN_PUSH);
-        launch_serverthread(&args[2],NN_BUS,1);
-        launch_serverthread(&args[3],NN_PULL,1);
-        while ( args[2].sock < 0 || args[3].sock < 0 )
+        launch_serverthread(&args[2],"NN_BUS",NN_BUS,1);
+        launch_serverthread(&args[3],"NN_PULL",NN_PULL,1);
+        while ( args[2].sock < 0 )
             sleep(1);
-        launch_serverthread(&args[0],NN_PULL,1);
         args[0].bussock = args[1].bussock = args[2].bussock = args[3].bussock = args[2].sock;
         args[0].pushsock = args[1].pushsock = args[2].pushsock = args[3].pushsock = args[3].sock;
-        launch_serverthread(&args[1],NN_REP,1);
-        printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_BUS.%d\n",NN_REP,NN_BUS);
+        launch_serverthread(&args[1],"NN_REP",NN_REP,1);
+        printf("&&&&&&&&&&&& serverloop start NN_REP.%d NN_BUS.%d NN_PULL.%d NN_PUSH.%d\n",NN_REP,NN_BUS,NN_PULL,NN_PUSH);
         if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
         {
             sprintf(str,"{\"requestType\":\"newrelay\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
