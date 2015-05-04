@@ -644,7 +644,7 @@ int32_t ismyaddress(char *server)
 
 int32_t eligible_lbserver(char *server)
 {
-    if ( server == 0 || server[0] == 0 || ismyaddress(server) == 0 || is_remote_access(server) == 0 )
+    if ( server == 0 || server[0] == 0 || ismyaddress(server) != 0 || is_remote_access(server) == 0 )
         return(0);
     return(1);
 }
