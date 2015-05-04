@@ -898,7 +898,7 @@ void complete_relay(struct relayargs *args,char *retstr)
     len = (int32_t)strlen(retstr)+1;
     printf("complete_relay.(%s)\n",retstr);
     if ( (sendlen= nn_send(args->sock,retstr,len,0)) != len )
-        printf("complete_relay warning: sendlen.%d vs %d for (%s)\n",sendlen,len,retstr);
+        printf("complete_relay.%s warning: sendlen.%d vs %d for (%s)\n",args->name,sendlen,len,retstr);
 }
 
 char *nn_publish(struct relayargs *args,char *publishstr)
@@ -918,6 +918,7 @@ void responseloop(void *_args)
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
+                printf("RECV.%s (%s)\n",args->name,msg);
                 if ( (retstr= (*args->commandprocessor)(args,(uint8_t *)msg,len)) != 0 )
                 {
                     complete_relay(args,retstr);
