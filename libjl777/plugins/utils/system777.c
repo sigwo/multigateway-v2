@@ -756,7 +756,7 @@ int32_t add_newrelay(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
         Relays = cJSON_CreateArray();
     if ( in_jsonarray(Relays,hostname) == 0 )
     {
-        if ( SUPERNET.iamrelay != 0 && bussock >= 0 )
+        if ( SUPERNET.iamrelay != 0 && bussock >= 0 && eligible_lbserver(hostname) != 0 )
         {
             set_endpointaddr(endpoint,hostname,SUPERNET.port,NN_BUS);
             if ( nn_connect(bussock,endpoint) < 0 )
@@ -846,7 +846,7 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
     return(retstr);
 }
 
-char *send_loadbalanced(int32_t lbsock,char *request)
+char *send_loadbalanced(int32_t bussock,int32_t lbsock,char *request)
 {
     cJSON *json,*array;
     char endpoint[1024],*msg,*relay,*jsonstr = 0;
@@ -872,7 +872,10 @@ char *send_loadbalanced(int32_t lbsock,char *request)
                             {
                                 set_endpointaddr(endpoint,relay,SUPERNET.port,NN_REP);
                                 if ( eligible_lbserver(relay) != 0 && nn_connect(lbsock,endpoint) >= 0 )
+                                {
+                                    add_newrelay(bussock,NN_PUB,relay,jsonstr);
                                     printf("+%s ",endpoint);
+                                }
                             }
                         }
                     }
@@ -886,7 +889,7 @@ char *send_loadbalanced(int32_t lbsock,char *request)
     return(jsonstr);
 }
 
-char *loadbalanced_request(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
+char *loadbalanced_request(int32_t bussock,int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
     static int32_t lbsock = -1; char cmdstr[8192];
     strcpy(cmdstr,"{\"requestType\":\"getrelays\"}");
@@ -895,11 +898,11 @@ char *loadbalanced_request(int32_t retrymillis,char *jsonquery,int32_t timeoutmi
     if ( lbsock < 0 )
     {
         lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
-        send_loadbalanced(lbsock,cmdstr);
+        send_loadbalanced(bussock,lbsock,cmdstr);
     }
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
-    return(send_loadbalanced(lbsock,cmdstr));
+    return(send_loadbalanced(bussock,lbsock,cmdstr));
 }
 
 char *make_surveyrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
@@ -1077,7 +1080,7 @@ void serverloop(void *_args)
         if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
         {
             sprintf(str,"{\"requestType\":\"newrelay\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
-            if ( (retstr= loadbalanced_request(3000,str,3000)) != 0 )
+            if ( (retstr= loadbalanced_request(args[2].bussock,3000,str,3000)) != 0 )
             {
                 printf("GLOBALRESPONSE.(%s)\n",retstr);
                 free(retstr);
@@ -1086,7 +1089,7 @@ void serverloop(void *_args)
     }
     while ( 1 )
     {
-        if ( (retstr= loadbalanced_request(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
+        if ( (retstr= loadbalanced_request(args[2].bussock,3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
         {
             printf("GLOBALRESPONSE.(%s)\n",retstr);
             free(retstr);
