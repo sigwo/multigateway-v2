@@ -508,14 +508,21 @@ void set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type)
 
 int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
-    static char *tcpformat = "instantdex%d.anonymous.supply";
+    //static char *tcpformat = "instantdex%d.anonymous.supply";
     char domain[MAX_SERVERNAME];
-    int32_t i,n = 0;
-    for (i=0; i<7&&n<max; i++,n++)
+    int32_t n = 0;
+    set_endpointaddr(servers[n++],"89.248.160.237",port,NN_REP);
+    set_endpointaddr(servers[n++],"89.248.160.238",port,NN_REP);
+    set_endpointaddr(servers[n++],"89.248.160.239",port,NN_REP);
+    set_endpointaddr(servers[n++],"89.248.160.240",port,NN_REP);
+    set_endpointaddr(servers[n++],"89.248.160.241",port,NN_REP);
+    set_endpointaddr(servers[n++],"89.248.160.242",port,NN_REP);
+    set_endpointaddr(servers[n++],"89.248.160.243",port,NN_REP);
+    /*for (i=0; i<7&&n<max; i++,n++)
     {
         sprintf(domain,tcpformat,i+1);
         set_endpointaddr(servers[i],domain,port,NN_REP);
-    }
+    }*/
     return(n);
 }
 
