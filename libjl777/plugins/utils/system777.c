@@ -670,12 +670,11 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
     if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
-            //if ( eligible_lbserver(servers[i]) != 0 )
-            {
-                set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
-                if ( nn_connect(sock,endpoint) >= 0 )
-                    printf("+%s ",endpoint);
-            }
+        {
+            set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
+            if ( nn_connect(sock,endpoint) >= 0 )
+                printf("+%s ",endpoint);
+        }
          priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
     return(priority);
@@ -705,10 +704,10 @@ int32_t loadbalanced_socket(int32_t retrymillis,int32_t port)
 {
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
     int32_t n,m,lbsock,numfailsafes = 0;
-    set_endpointaddr(failsafes[numfailsafes++],"jnxt.org",port,NN_REP);
-    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.156",port,NN_REP);
-    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.159",port,NN_REP);
-    set_endpointaddr(failsafes[numfailsafes++],"209.126.70.170",port,NN_REP);
+    strcpy(failsafes[numfailsafes++],"jnxt.org");
+    strcpy(failsafes[numfailsafes++],"209.126.70.156");
+    strcpy(failsafes[numfailsafes++],"209.126.70.159");
+    strcpy(failsafes[numfailsafes++],"209.126.70.170");
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
     //if ( europeflag != 0 )
@@ -914,7 +913,7 @@ void responseloop(void *_args)
     int32_t len; char *msg,*retstr;
     if ( args->sock >= 0 )
     {
-        printf("respondloop.sock %d type.%d <- (%s).%d\n",args->sock,args->type,args->endpoint,nn_oppotype(args->type));
+        printf("respondloop.%s %d type.%d <- (%s).%d\n",args->name,args->sock,args->type,args->endpoint,nn_oppotype(args->type));
         while ( 1 )
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
