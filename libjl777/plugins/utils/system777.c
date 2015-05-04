@@ -987,7 +987,7 @@ void serverloop(void *_args)
     }
     while ( 1 )
     {
-        sprintf(request,"{\"plugin\":\"relay\",\"method\":\"%s\"}",(rand() & 1) != 0 ? "listrelays" : "listpubs");
+        sprintf(request,"{\"plugin\":\"relays\",\"method\":\"%s\"}",(rand() & 1) != 0 ? "list" : "listpubs");
         if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
         {
             printf("LB_RESPONSE.(%s)\n",retstr);

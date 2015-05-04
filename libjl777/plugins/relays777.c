@@ -20,7 +20,7 @@
 void relays_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
-char *PLUGNAME(_methods)[] = { "list", "newrelays", "listpeers", "newpeers" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "list", "newrelays", "listpeers", "newpeers", "listpubs", "newpubs" }; // list of supported methods
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
