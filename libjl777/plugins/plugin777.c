@@ -39,7 +39,7 @@ struct plugin_info
     char bindaddr[64],connectaddr[64],ipaddr[64],name[64];
     uint64_t daemonid,myid;
     union endpoints all;
-    uint32_t permanentflag,ppid,transportid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis;
+    uint32_t permanentflag,ppid,transportid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis,allowremote;
     uint16_t port;
     uint8_t pluginspace[];
 };
@@ -60,7 +60,8 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
 {
     int32_t errs = 0;
     struct allendpoints *socks = &plugin->all.socks;
-    printf("<<<<<<<<<<<<< init_permpairsocks bind.(%s) connect.(%s)\n",bindaddr,connectaddr);
+    if ( Debuglevel > 2 )
+        printf("%s.%p <<<<<<<<<<<<< init_permpairsocks bind.(%s) connect.(%s)\n",plugin->name,plugin,bindaddr,connectaddr);
     if ( plugin->bundledflag != 0 && (socks->both.pair= init_socket(".pair","pair",NN_PAIR,0,connectaddr,timeout)) < 0 ) errs++;
     //if ( plugin->bundledflag != 0 && (socks->both.bus= init_socket("","bus",NN_BUS,0,connectaddr,timeout)) < 0 ) errs++;
     //if ( (socks->send.push= init_socket(".pipeline","push",NN_PUSH,bindaddr,0,timeout)) < 0 ) errs++;
@@ -123,7 +124,7 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
     if ( tag != 0 )
         sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
     else tagstr[0] = 0;
-    sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u%s}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv,tagstr);
+    sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"allowremote\":%d,\"millis\":%.2f,\"sent\":%u,\"recv\":%u%s}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,plugin->allowremote,milliseconds(),plugin->numsent,plugin->numrecv,tagstr);
     //printf("APPEND.(%s)\n",retbuf);
 }
 

@@ -665,9 +665,22 @@ void SuperNET_loop(void *ipaddr)
         msleep(10);
     }
     language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"SuperNET.conf\"}",call_system);
+    while ( SOPHIA.readyflag == 0 )
+        poll_daemons();
     language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"SuperNET.conf\"}",call_system);
+    while ( COINS.readyflag == 0 )
+        poll_daemons();
     language_func((char *)"ramchain","",0,0,1,(char *)"ramchain","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( SOPHIA.readyflag == 0 || COINS.readyflag == 0 || RAMCHAINS.readyflag == 0 )
+    while ( RAMCHAINS.readyflag == 0 )
+        poll_daemons();
+    language_func((char *)"relays","",0,0,1,(char *)"relays","{\"filename\":\"SuperNET.conf\"}",call_system);
+    while ( RELAYS.readyflag == 0 )
+        poll_daemons();
+    language_func((char *)"peers","",0,0,1,(char *)"peers","{\"filename\":\"SuperNET.conf\"}",call_system);
+    while ( PEERS.readyflag == 0 )
+        poll_daemons();
+    language_func((char *)"subscriptions","",0,0,1,(char *)"subscriptions","{\"filename\":\"SuperNET.conf\"}",call_system);
+    while ( SUBSCRIPTIONS.readyflag == 0 )
         poll_daemons();
 #ifdef __APPLE__
     char *msg;

@@ -69,7 +69,8 @@ int32_t init_pluginhostsocks(struct daemon_info *dp,int32_t permanentflag,char *
     if ( permanentflag != 0 )
         socks = &dp->perm.socks;
     else socks = &dp->wss.socks;
-    printf("<<<<<<<<<<<<< init_permpairsocks bind.(%s) connect.(%s)\n",bindaddr,connectaddr);
+    if ( Debuglevel > 2 )
+        printf("<<<<<<<<<<<<< init_permpairsocks bind.(%s) connect.(%s)\n",bindaddr,connectaddr);
     if ( dp->bundledflag != 0 && (socks->both.pair= init_socket(".pair","pair",NN_PAIR,bindaddr,0,1)) < 0 ) errs++;
     //if ( dp->bundledflag != 0 && (socks->both.bus= init_socket("","bus",NN_BUS,bindaddr,0,1)) < 0 ) errs++;
     //if ( (socks->send.push= init_socket(".pipeline","push",NN_PUSH,bindaddr,0,1)) < 0 ) errs++;
@@ -92,7 +93,7 @@ int32_t connect_instanceid(struct daemon_info *dp,uint64_t instanceid)
     return(err);
 }
 
-int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest)
+int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,struct relayargs *args)
 {
     int32_t i;
    // printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
@@ -102,7 +103,7 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest)
         {
             if ( Debuglevel > 2 )
                 printf("slot.%d <- tag.%llu dest.%p\n",i,(long long)tag,dest);
-            dp->tags[i][0] = tag, dp->tags[i][1] = (uint64_t)dest;
+            dp->tags[i][0] = tag, dp->tags[i][1] = (uint64_t)dest, dp->tags[i][2] = (uint64_t)args;
             return(i);
         }
     }
@@ -110,7 +111,7 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest)
     return(-1);
 }
 
-char **get_tagstr(struct daemon_info *dp,uint64_t tag)
+char **get_tagstr(struct relayargs **argsp,struct daemon_info *dp,uint64_t tag)
 {
     int32_t i;
     char **dest;
@@ -119,6 +120,8 @@ char **get_tagstr(struct daemon_info *dp,uint64_t tag)
         if ( dp->tags[i][0] == tag )
         {
             dest = (char **)dp->tags[i][1];
+            if ( dp->tags[i][2] != 0 )
+                *argsp = (struct relayargs *)dp->tags[i][2];
             dp->tags[i][0] = dp->tags[i][1] = 0;
             if ( Debuglevel > 2 )
                 printf("slot.%d found tag.%llu dest.%p\n",i,(long long)tag,dest);
@@ -153,7 +156,7 @@ char *wait_for_daemon(char **dest,uint64_t tag,int32_t timeout,int32_t sleepmill
     return(0);
 }
  
-uint64_t send_to_daemon(char **retstrp,char *name,uint64_t daemonid,uint64_t instanceid,char *jsonstr)
+uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_t daemonid,uint64_t instanceid,char *jsonstr)
 {
     struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
     struct daemon_info *dp;
@@ -185,7 +188,7 @@ uint64_t send_to_daemon(char **retstrp,char *name,uint64_t daemonid,uint64_t ins
                 if ( Debuglevel > 2 )
                     fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s)\n",(long long)tag,jsonstr);
                 if ( tag != 0 )
-                    add_tagstr(dp,tag,retstrp);
+                    add_tagstr(dp,tag,retstrp,args);
                 dp->numsent++;
                 if ( nn_broadcast(&dp->perm.socks,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len + 1) < 0 )
                     printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
