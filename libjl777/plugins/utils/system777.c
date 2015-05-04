@@ -798,7 +798,7 @@ void start_devices()
 char *nn_loadbalanced(struct relayargs *args,char *request)
 {
     char *msg,*jsonstr = 0;
-    int32_t len,sendlen,recvlen;
+    int32_t len,sendlen,recvlen = 0;
     if ( args->lbsock < 0 )
         return(clonestr("{\"error\":\"invalid load balanced socket\"}"));
     sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
@@ -816,7 +816,7 @@ char *nn_loadbalanced(struct relayargs *args,char *request)
 char *nn_allpeers(struct relayargs *args,char *jsonquery,int32_t timeoutmillis)
 {
     cJSON *item,*array = cJSON_CreateArray();
-    int32_t n,len;
+    int32_t len,n = 0;
     char *msg,*retstr;
     printf("request_allpeers.(%s)\n",jsonquery);
     if ( args->peersock < 0 )
@@ -828,7 +828,6 @@ char *nn_allpeers(struct relayargs *args,char *jsonquery,int32_t timeoutmillis)
     }
     if ( (len= nn_send(args->peersock,jsonquery,(int32_t)strlen(jsonquery)+1,0)) > 0 )
     {
-        n = 0;
         while ( (len= nn_recv(args->peersock,&msg,NN_MSG,0)) > 0 )
         {
             if ( (item= cJSON_Parse(msg)) != 0 )
@@ -961,12 +960,12 @@ void serverloop(void *_args)
     peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1), launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
     lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
+    lbargs = &args[n++];
     if ( SUPERNET.iamrelay != 0 )
     {
-        bussock = launch_responseloop(&args[n++],"NN_BUS",NN_BUS,1,nn_relays);
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_relays);
-    } else bussock = -1;
-    lbargs = &args[n++], lbargs->commandprocessor = nn_relays, lbargs->sock = lbsock;
+        bussock = launch_responseloop(&args[n++],"NN_BUS",NN_BUS,1,nn_relays);
+    } else bussock = -1, lbargs->commandprocessor = nn_relays, lbargs->sock = lbsock;
     for (i=0; i<n; i++)
     {
         arg = &args[i];
