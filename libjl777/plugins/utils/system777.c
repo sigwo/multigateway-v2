@@ -615,7 +615,7 @@ uint32_t conv_domainname(char *ipaddr,char *domain)
     if ( conv_domain((struct sockaddr_storage *)&ss,(const char *)domain,ipv4only) == 0 )
     {
         expand_ipbits(ipaddr,*(uint32_t *)&ss.sin_addr);
-        printf("conv_domainname (%s) -> (%s)\n",domain,ipaddr);
+        //printf("conv_domainname (%s) -> (%s)\n",domain,ipaddr);
     } else printf("error conv_domain.(%s)\n",domain);
     return(0);
 }
@@ -642,7 +642,7 @@ int32_t ismyaddress(char *server)
         if ( conv_domainname(ipaddr,server) == 0 && (strcmp(SUPERNET.myipaddr,ipaddr) == 0 || strcmp(SUPERNET.hostname,ipaddr) == 0) )
             return(1);
     }
-    printf("(%s) is not me (%s)\n",server,SUPERNET.myipaddr);
+    //printf("(%s) is not me (%s)\n",server,SUPERNET.myipaddr);
     return(0);
 }
 
@@ -985,7 +985,7 @@ void serverloop(void *_args)
     if ( MGW.gatewayid >= 0 )
     {
         char str[1024];
-        printf("serverloop start NN_REP.%d and NN_RESPONDENT.%d\n",NN_REP,NN_RESPONDENT);
+        printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_RESPONDENT.%d\n",NN_REP,NN_RESPONDENT);
         sprintf(str,"{\"requestType\":\"newbridge\",\"endpoint\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
         if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
         {
