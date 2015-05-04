@@ -654,7 +654,7 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
     if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
-            if ( eligible_lbserver(servers[i]) != 0 )
+            //if ( eligible_lbserver(servers[i]) != 0 )
             {
                 set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
                 if ( nn_connect(sock,endpoint) >= 0 )
