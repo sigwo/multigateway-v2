@@ -765,9 +765,10 @@ char *global_response(char *jsonstr,cJSON *json)
             if ( in_jsonarray(Bridges,endpoint) == 0 )
             {
                 cJSON_AddItemToArray(Bridges,cJSON_CreateString(endpoint));
-                return(clonestr("{\"result\":\"bridge added\"}"));
+                //return(clonestr("{\"result\":\"bridge added\"}"));
             }
-            else return(clonestr("{\"result\":\"bridge already in list\"}"));
+            //else return(clonestr("{\"result\":\"bridge already in list\"}"));
+            return(0);
         }
         if ( strcmp(request,"servicelist") == 0 )
             return(publist_jsonstr(cJSON_str(cJSON_GetObjectItem(json,"category"))));
@@ -833,7 +834,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     static int32_t lbsock = -1;
     cJSON *item,*array = cJSON_CreateArray();
     int32_t n,len,surveysock;
-    char *msg,*retstr;
+    char endpoint[512],*msg,*retstr;
     printf("make_globalrequest.(%s)\n",jsonquery);
     if ( timeoutmillis <= 0 )
         timeoutmillis = 10000;
@@ -843,10 +844,11 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
     if ( bridgeaddr[0] == 0 && get_bridgeaddr(bridgeaddr,lbsock) < 0 )
         return(clonestr("{\"error\":\"getting bridgeaddr\"}"));
-    printf("got bridgeaddr.(%s)\n",bridgeaddr);
+    set_endpointaddr(endpoint,bridgeaddr,SUPERNET.port,NN_RESPONDENT);
+    printf("got bridgeaddr.(%s) -> endpoint.(%s)\n",bridgeaddr,endpoint);
     if ( (surveysock= nn_socket(AF_SP,NN_SURVEYOR)) < 0 )
         return(clonestr("{\"error\":\"getting surveysocket\"}"));
-    else if ( nn_connect(surveysock,bridgeaddr) < 0 )
+    else if ( nn_connect(surveysock,endpoint) < 0 )
     {
         nn_shutdown(surveysock,0);
         return(clonestr("{\"error\":\"connecting to bridgepoint\"}"));
@@ -991,6 +993,7 @@ void serverloop(void *_args)
             free(retstr);
         }
         launch_serverthread(&args[0],NN_REP,1);
+        launch_serverthread(&args[0],NN_RESPONDENT,1);
         while ( 1 ) sleep(1);
     }
     else
