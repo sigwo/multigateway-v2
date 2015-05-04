@@ -936,7 +936,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
             printf("start serverloop bound to (%s)\n",args->endpoint);
             portable_thread_create((void *)provider_respondloop,args);
         }
-    } else printf("error getting nn_socket %s\n",nn_errstr());
+    } else printf("error getting nn_socket.%d %s\n",type,nn_errstr());
 }
 
 void run_device(void *_args)
@@ -985,7 +985,7 @@ void serverloop(void *_args)
     if ( MGW.gatewayid >= 0 )
     {
         char str[1024];
-        printf("serverloop start\n");
+        printf("serverloop start NN_REP.%d and NN_RESPONDENT.%d\n",NN_REP,NN_RESPONDENT);
         sprintf(str,"{\"requestType\":\"newbridge\",\"endpoint\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
         if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
         {
