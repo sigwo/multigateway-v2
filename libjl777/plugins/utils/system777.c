@@ -993,7 +993,7 @@ void serverloop(void *_args)
             free(retstr);
         }
         launch_serverthread(&args[0],NN_REP,1);
-        launch_serverthread(&args[0],NN_RESPONDENT,1);
+        launch_serverthread(&args[1],NN_RESPONDENT,1);
         while ( 1 ) sleep(1);
     }
     else
