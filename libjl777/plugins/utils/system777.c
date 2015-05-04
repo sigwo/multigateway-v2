@@ -830,11 +830,11 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
     return(retstr);
 }
 
-int32_t get_relayaddr(char *relayaddr,int32_t lbsock)
+int32_t get_relayaddr(int32_t lbsock)
 {
     cJSON *json,*item;
-    char *msg,request[512];
-    int32_t n,len,sendlen;
+    char request[512],endpoint[512],*msg,*relay;
+    int32_t n,len,sendlen,priority = 2;
     sprintf(request,"{\"requestType\":\"getrelays\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
     if ( SUPERNET.iamrelay != 0 && (SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0) )
         sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
@@ -849,9 +849,20 @@ int32_t get_relayaddr(char *relayaddr,int32_t lbsock)
             if ( (json= cJSON_Parse(msg)) != 0 )
             {
                 if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
-                    item = cJSON_GetArrayItem(json,rand() % n);
-                else item = cJSON_GetObjectItem(json,"endpoint");
-                copy_cJSON(relayaddr,item);
+                {
+                    if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
+                    {
+                        for (i=0; i<n; i++)
+                        {
+                            if ( (relay= cJSON_str(cJSON_GetArrayItem(json,i))) != 0 && ismyaddress(relay) == 0 )
+                            {
+                                set_endpointaddr(endpoint,relay,SUPERNET.port,NN_REP);
+                                if ( nn_connect(sock,endpoint) >= 0 )
+                                    printf("+%s ",endpoint);
+                            }
+                        }
+                    }
+                }
                 free_json(json);
             }
             nn_freemsg(msg);
@@ -861,7 +872,27 @@ int32_t get_relayaddr(char *relayaddr,int32_t lbsock)
     return(-1);
 }
 
+
 char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
+{
+    static char endpoint[512],relayaddr[MAX_SERVERNAME];
+    static int32_t lbsock = -1;
+    cJSON *item,*array = cJSON_CreateArray();
+    int32_t n,len,surveysock;
+    char *msg,*retstr;
+   // printf("make_globalrequest.(%s)\n",jsonquery);
+    if ( timeoutmillis <= 0 )
+        timeoutmillis = 10000;
+    if ( lbsock < 0 )
+    {
+        lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
+        update_relays(relayaddr,lbsock);
+    }
+    if ( lbsock < 0 )
+        return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
+}
+
+char *make_surveyrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
     static char endpoint[512],relayaddr[MAX_SERVERNAME];
     static int32_t lbsock = -1;
