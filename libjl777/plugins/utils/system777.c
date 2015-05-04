@@ -603,7 +603,7 @@ uint32_t is_ipaddr(char *str)
         if ( strncmp(ipaddr,str,strlen(ipaddr)) == 0 )
             return((uint32_t)ipbits);
     }
-    printf("(%s) is not ipaddr\n",str);
+   // printf("(%s) is not ipaddr\n",str);
     return(0);
 }
 
@@ -731,13 +731,12 @@ cJSON *Bridges;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
     char retbuf[1024];
-    if ( Bridges != 0 )
-        return(cJSON_Print(Bridges));
-    else
+    if ( Bridges == 0 )
     {
-        sprintf(retbuf,"{\"error\":\"no known bridges\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
-        return(clonestr(retbuf));
+        Bridges = cJSON_CreateArray();
+        cJSON_AddItemToArray(Bridges,cJSON_CreateString(SUPERNET.myipaddr));
     }
+    return(cJSON_Print(Bridges));
 }
 
 char *global_response(char *jsonstr,cJSON *json)
