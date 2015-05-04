@@ -730,7 +730,21 @@ char *publist_jsonstr(char *category)
 cJSON *Bridges;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
-    char retbuf[1024];
+    char *request,*endpoint;
+    if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
+    {
+        if ( strcmp(request,"newbridge") == 0 && (endpoint= cJSON_str(cJSON_GetObjectItem(json,"endpoint"))) != 0 )
+        {
+            if ( Bridges == 0 )
+                Bridges = cJSON_CreateArray();
+            if ( in_jsonarray(Bridges,endpoint) == 0 )
+            {
+                cJSON_AddItemToArray(Bridges,cJSON_CreateString(endpoint));
+                return(clonestr("{\"result\":\"bridge added\"}"));
+            }
+            else return(clonestr("{\"result\":\"bridge already in list\"}"));
+        }
+    }
     if ( Bridges == 0 )
     {
         Bridges = cJSON_CreateArray();
