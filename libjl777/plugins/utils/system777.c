@@ -616,9 +616,14 @@ char *publist_jsonstr(char *category)
 cJSON *Bridges;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
+    char retbuf[1024];
     if ( Bridges != 0 )
         return(cJSON_Print(Bridges));
-    else return(clonestr("{\"error\":\"no known bridges\"}"));
+    else
+    {
+        sprintf(retbuf,"{\"error\":\"no known bridges\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
+        return(clonestr(retbuf));
+    }
 }
 
 char *global_response(char *jsonstr,cJSON *json)
@@ -789,15 +794,12 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
     }
     args->type = type, args->respondfunc = nn_response, args->bindflag = 1;
     set_endpointaddr(args->endpoint,"*",SUPERNET.port,NN_REP);
-    args->sock = nn_socket(AF_SP,type);
-    if ( args->sock >= 0 )
+    if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
     {
         if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
             printf("error connecting to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
         else if ( args->bindflag != 0 && nn_bind(args->sock,args->endpoint) < 0 )
             printf("error binding to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
-        //if ( nn_bind(args->sock,args->endpoint) < 0 )
-        //    printf("error binding (%s)\n",args->endpoint);
         else
         {
             timeout = 10, nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
@@ -805,27 +807,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
             printf("start serverloop bound to (%s)\n",args->endpoint);
             portable_thread_create((void *)provider_respondloop,args);
         }
-    }
-   /* args->type = type, args->respondfunc = nn_response, args->bindflag = 1;
-    set_endpointaddr(args->endpoint,"*",SUPERNET.port,type);
-    if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
-    {
-        timeout = 10;
-        if ( nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
-            printf("error setting timeout.%d %s\n",timeout,nn_errstr());
-        timeout = 1000;
-        if ( nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
-            printf("error setting timeout.%d %s\n",timeout,nn_errstr());
-        if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
-            printf("error connecting to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
-        else if ( args->bindflag == 0 && nn_bind(args->sock,args->endpoint) < 0 )
-            printf("error binding to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
-        else
-        {
-            printf("launch type.%d bindflag.%d endpoint.(%s)\n",args->type,bindflag,args->endpoint);
-            portable_thread_create((void *)provider_respondloop,args);
-        }
-    } else printf("error getting socket for type.%d (%s)\n",args->type,nn_errstr());*/
+    } else printf("error getting nn_socket %s\n",nn_errstr());
 }
 
 void run_device(void *_args)
@@ -874,44 +856,13 @@ void serverloop(void *_args)
     if ( MGW.gatewayid >= 0 )
     {
         printf("serverloop start\n");
-        // char *sargs[] = { "nn", "--rep", "--bind", "tcp://*:4010", "-Dpong", "-A" }; //
-        //test_nn((int32_t)sizeof(sargs)/sizeof(*sargs),sargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
-        int32_t len,sendlen,timeout; char *msg,*jsonstr;//,bindaddr[128];//*bindaddr = "tcp://*:4010";
+        if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
+        {
+            printf("GLOBALRESPONSE.(%s)\n",retstr);
+            free(retstr);
+        }
         launch_serverthread(&args[0],NN_REP,1);
         while ( 1 ) sleep(1);
-        set_endpointaddr(args[0].endpoint,"*",SUPERNET.port,NN_REP);
-        args[0].sock = nn_socket(AF_SP,NN_REP);
-        if ( args[0].sock >= 0 )
-        {
-            if ( nn_bind(args[0].sock,args[0].endpoint) < 0 )
-                printf("error binding (%s)\n",args[0].endpoint);
-            else
-            {
-                timeout = 10, nn_setsockopt(args[0].sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
-                timeout = 10000, nn_setsockopt(args[0].sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout));
-                printf("start serverloop bound to (%s)\n",args[0].endpoint);
-                args[0].type = NN_REP, args[0].respondfunc = nn_response, args[0].bindflag = 1;
-                portable_thread_create((void *)provider_respondloop,&args[0]);
-                //launch_serverthread(&args[0],NN_REP,1);
-                while ( 1 ) sleep(1);
-                while ( 1 )
-                {
-                    if ( (len= nn_recv(args[0].sock,&msg,NN_MSG,0)) > 0 )
-                    {
-                        printf("got %d bytes (%s)\n",len,msg);
-                        if ( (jsonstr= nn_response(NN_REP,msg)) != 0 )
-                        {
-                            len = (int32_t)strlen(jsonstr)+1;
-                            printf("send response.(%s)\n",jsonstr);
-                            if ( (sendlen= nn_send(args[0].sock,jsonstr,len,0)) != len )
-                                printf("warning: sendlen.%d vs %ld for (%s)\n",sendlen,strlen(jsonstr)+1,jsonstr);
-                            free(jsonstr);
-                        }
-                        nn_freemsg(msg);
-                    } else fprintf(stderr,".");
-                }
-            }
-        }
     }
     else
     {
@@ -921,13 +872,6 @@ void serverloop(void *_args)
             free(retstr);
         }
         sleep(10);
-        /*char *cargs[] = { "nn", "--req", "--connect", "tcp://209.126.70.170:4010", "-Dping", "-A" }; //
-        printf("client loop\n");
-        while ( 1 )
-        {
-            test_nn((int32_t)sizeof(cargs)/sizeof(*cargs),cargs,(uint8_t *)SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR));
-            sleep(10);
-        }*/
     }
   //  launch_serverthread(&args[0],NN_REP,1);
     //launch_serverthread(&args[1],NN_RESPONDENT,1);
