@@ -847,18 +847,23 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     set_endpointaddr(endpoint,bridgeaddr,SUPERNET.port,NN_RESPONDENT);
     printf("got bridgeaddr.(%s) -> endpoint.(%s)\n",bridgeaddr,endpoint);
     if ( (surveysock= nn_socket(AF_SP,NN_SURVEYOR)) < 0 )
+    {
+        printf("error getting socket\n");
         return(clonestr("{\"error\":\"getting surveysocket\"}"));
+    }
     else if ( nn_connect(surveysock,endpoint) < 0 )
     {
+        printf("error connecting\n");
         nn_shutdown(surveysock,0);
         return(clonestr("{\"error\":\"connecting to bridgepoint\"}"));
     }
     else if ( nn_setsockopt(surveysock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
     {
+        printf("error nn_setsockopt\n");
         nn_shutdown(surveysock,0);
         return(clonestr("{\"error\":\"setting timeout\"}"));
     }
-    _stripwhite(jsonquery,' ');
+    //_stripwhite(jsonquery,' ');
     if ( (len= nn_send(surveysock,jsonquery,(int32_t)strlen(jsonquery)+1,0)) > 0 )
     {
         n = 0;
