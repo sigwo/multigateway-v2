@@ -946,7 +946,7 @@ char *send_loadbalanced(int32_t pushsock,int32_t bussock,int32_t lbsock,char *re
             {
                 if ( (array= cJSON_GetObjectItem(json,"relays")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                 {
-                    mylist = get_myRelays(&m);
+                    //mylist = get_myRelays(&m);
                     unmatched = m;
                     if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
                     {
@@ -954,9 +954,9 @@ char *send_loadbalanced(int32_t pushsock,int32_t bussock,int32_t lbsock,char *re
                         {
                             if ( (relay= cJSON_str(cJSON_GetArrayItem(array,i))) != 0 && ismyaddress(relay) == 0 )
                             {
-                                if ( (ind= find_ipbits(mylist,m,(uint32_t)calc_ipbits(relay))) >= 0 )
+                                //if ( (ind= find_ipbits(mylist,m,(uint32_t)calc_ipbits(relay))) >= 0 )
                                 {
-                                    mylist[ind] = 0, unmatched--;
+                                   // mylist[ind] = 0, unmatched--;
                                     set_endpointaddr(endpoint,relay,SUPERNET.port,NN_REP);
                                     if ( nn_connect(lbsock,endpoint) >= 0 )
                                         printf("+%s ",endpoint);
@@ -966,7 +966,7 @@ char *send_loadbalanced(int32_t pushsock,int32_t bussock,int32_t lbsock,char *re
                             }
                         }
                     }
-                    if ( mylist != 0 )
+                    if ( 0 && mylist != 0 )
                     {
                         if ( SUPERNET.iamrelay != 0 && unmatched > 0 )
                         {
