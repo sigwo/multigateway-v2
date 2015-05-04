@@ -303,7 +303,7 @@ int32_t eligible_lbserver(char *server)
         {
             if ( (status= cJSON_str(cJSON_GetObjectItem(json,"status"))) != 0 )
             {
-                printf("(%s) status.(%s)\n",server,status);
+                //printf("(%s) status.(%s)\n",server,status);
                 if ( strcmp(status,"disabled") == 0 )
                     retval = 0;
             }

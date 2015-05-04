@@ -806,6 +806,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
         }
         retjson = cJSON_CreateObject();
         cJSON_AddItemToObject(retjson,"relays",Relays);
+        cJSON_AddItemToObject(retjson,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
         cJSON_AddItemToObject(retjson,"result",cJSON_CreateString("success"));
         retstr = cJSON_Print(retjson);
         Relays = cJSON_DetachItemFromObject(retjson,"relays");
