@@ -731,7 +731,7 @@ cJSON *Bridges;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
     printf("loadbalanced.(%s)\n",jsonstr);
-    if ( SUPERNET.iambridge != 0 )
+    if ( SUPERNET.iambridge != 0 && SUPERNET.myipaddr[0] != 0 )
     {
         if ( Bridges == 0 )
         {
@@ -873,8 +873,8 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
     if ( bridgeaddr[0] == 0 && get_bridgeaddr(bridgeaddr,lbsock) < 0 )
         return(clonestr("{\"error\":\"getting bridgeaddr\"}"));
+    else printf("got bridgeaddr.(%s) -> endpoint.(%s)\n",bridgeaddr,endpoint);
     set_endpointaddr(endpoint,bridgeaddr,SUPERNET.port,NN_RESPONDENT);
-    printf("got bridgeaddr.(%s) -> endpoint.(%s)\n",bridgeaddr,endpoint);
     if ( (surveysock= nn_socket(AF_SP,NN_SURVEYOR)) < 0 )
     {
         printf("error getting socket\n");
@@ -1027,11 +1027,14 @@ void serverloop(void *_args)
         args[1].bussock = args[0].bussock = args[2].bussock = args[2].sock;
         launch_serverthread(&args[1],NN_REP,1);
         printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_RESPONDENT.%d\n",NN_REP,NN_RESPONDENT);
-        sprintf(str,"{\"requestType\":\"newbridge\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
-        if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
+        if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
         {
-            printf("GLOBALRESPONSE.(%s)\n",retstr);
-            free(retstr);
+            sprintf(str,"{\"requestType\":\"newbridge\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+            if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
+            {
+                printf("GLOBALRESPONSE.(%s)\n",retstr);
+                free(retstr);
+            }
         }
        // while ( 1 ) sleep(1);
     }
