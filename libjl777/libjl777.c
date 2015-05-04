@@ -1352,7 +1352,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( SOPHIA.PATH[0] == 0 )
             strcpy(SOPHIA.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH);
-        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR);
+        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s iamrelay.%d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.iamrelay);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {
