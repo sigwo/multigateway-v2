@@ -896,7 +896,7 @@ void complete_relay(struct relayargs *args,char *retstr)
 {
     int32_t len,sendlen;
     len = (int32_t)strlen(retstr)+1;
-    printf("complete_relay.(%s)\n",retstr);
+    printf("complete_relay.(%s) -> sock.%d %s\n",retstr,args->sock,args->name);
     if ( (sendlen= nn_send(args->sock,retstr,len,0)) != len )
         printf("complete_relay.%s warning: sendlen.%d vs %d for (%s)\n",args->name,sendlen,len,retstr);
 }

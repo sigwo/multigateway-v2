@@ -181,7 +181,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     //printf("process_plugin_message.(%s)\n",str);
     if ( (json= cJSON_Parse(str)) != 0 )
     {
-        if ( (resultstr= cJSON_str(cJSON_GetObjectItem(json,"result"))) != 0 && strcmp(resultstr,"registered") == 0 )
+        if ( (resultstr= cJSON_str(cJSON_GetObjectItem(json,"result"))) != 0 )//&& strcmp(resultstr,"registered") == 0 )
         {
             dp->readyflag = 1;
             dp->allowremote = get_API_int(cJSON_GetObjectItem(json,"allowremote"),0);
