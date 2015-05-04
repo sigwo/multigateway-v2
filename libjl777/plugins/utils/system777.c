@@ -68,7 +68,7 @@ struct SuperNET_info
     char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],**publications;
     char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512],hostname[512];
     uint64_t my64bits;
-    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,numpubs,readyflag,UPNP,iambridge;
+    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,numpubs,readyflag,UPNP,iamrelay;
     uint16_t port;
 }; extern struct SuperNET_info SUPERNET;
 
@@ -713,6 +713,13 @@ void MGW_loop()
     }
 }
 
+int32_t add_publication(char *subscription)
+{
+    SUPERNET.publications = realloc(SUPERNET.publications,sizeof(*SUPERNET.publications) * (SUPERNET.numpubs + 1));
+    SUPERNET.publications[SUPERNET.numpubs] = clonestr(subscription);
+    return(++SUPERNET.numpubs);
+}
+
 char *publist_jsonstr(char *category)
 {
     cJSON *json,*array = cJSON_CreateArray();
@@ -720,6 +727,7 @@ char *publist_jsonstr(char *category)
     for (i=0; i<SUPERNET.numpubs; i++)
         cJSON_AddItemToArray(array,cJSON_CreateString(SUPERNET.publications[i]));
     json = cJSON_CreateObject();
+    set_endpointaddr(endpoint,SUPERNET.myipaddr,SUPERNET.port,NN_PUB);
     cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
     retstr = cJSON_Print(json);
     free_json(json);
@@ -727,36 +735,36 @@ char *publist_jsonstr(char *category)
     return(retstr);
 }
 
-cJSON *Bridges;
+cJSON *Relays;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
     printf("loadbalanced.(%s)\n",jsonstr);
-    if ( SUPERNET.iambridge != 0 && SUPERNET.myipaddr[0] != 0 )
+    if ( SUPERNET.iamrelay != 0 && SUPERNET.myipaddr[0] != 0 )
     {
-        if ( Bridges == 0 )
+        if ( Relays == 0 )
         {
-            Bridges = cJSON_CreateArray();
-            cJSON_AddItemToArray(Bridges,cJSON_CreateString(SUPERNET.myipaddr));
+            Relays = cJSON_CreateArray();
+            cJSON_AddItemToArray(Relays,cJSON_CreateString(SUPERNET.myipaddr));
         }
-        return(cJSON_Print(Bridges));
+        return(cJSON_Print(Relays));
     }
     else return(0);
 }
 
-int32_t add_newbridge(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
+int32_t add_newrelay(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
 {
     char endpoint[512];
-    printf("newbridge.(%s) arrived\n",hostname);
+    printf("newrelay.(%s) arrived\n",hostname);
     if ( hostname[0] == 0 || is_remote_access(hostname) == 0 )
     {
         printf("illegal hostname.(%s)\n",hostname);
         return(0);
     }
-    if ( Bridges == 0 )
-        Bridges = cJSON_CreateArray();
-    if ( in_jsonarray(Bridges,hostname) == 0 )
+    if ( Relays == 0 )
+        Relays = cJSON_CreateArray();
+    if ( in_jsonarray(Relays,hostname) == 0 )
     {
-        if ( SUPERNET.iambridge != 0 && bussock >= 0 )
+        if ( SUPERNET.iamrelay != 0 && bussock >= 0 )
         {
             set_endpointaddr(endpoint,hostname,SUPERNET.port,NN_BUS);
             if ( nn_connect(bussock,endpoint) < 0 )
@@ -771,7 +779,7 @@ int32_t add_newbridge(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
                 printf("connected bus to hostname.(%s)\n",hostname);
             }
         }
-        cJSON_AddItemToArray(Bridges,cJSON_CreateString(hostname));
+        cJSON_AddItemToArray(Relays,cJSON_CreateString(hostname));
         return(1);
     }
     return(0);
@@ -801,19 +809,15 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
     {
         if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
         {
-            if ( strcmp(request,"newbridge") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
+            if ( strcmp(request,"newrelay") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
             {
-                if ( add_newbridge(bussock,type,hostname,jsonstr) > 0 )
-                    return(clonestr("{\"result\":\"bridge added\"}"));
-                //else return(clonestr("{\"result\":\"bridge already in list\"}"));
+                if ( add_newrelay(bussock,type,hostname,jsonstr) > 0 )
+                    return(clonestr("{\"result\":\"relay added\"}"));
+                else return(clonestr("{\"result\":\"relay already in list\"}"));
             }
         }
-        if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iambridge"))) != 0 )
-        {
-            printf("iambridge sent by (%s)\n",hostname);
-            add_newbridge(bussock,type,hostname,jsonstr);
-        }
-        printf("hostname.%p request.%p\n",hostname,request);
+        if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
+            add_newrelay(bussock,type,hostname,jsonstr);
         switch ( type )
         {
             case NN_REP: retstr = loadbalanced_response(jsonstr,json); break;
@@ -826,17 +830,17 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
     return(retstr);
 }
 
-int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
+int32_t get_relayaddr(char *relayaddr,int32_t lbsock)
 {
     cJSON *json,*item;
     char *msg,request[512];
     int32_t n,len,sendlen;
-    sprintf(request,"{\"requestType\":\"getbridges\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
-    if ( SUPERNET.iambridge != 0 )
-        sprintf(request + strlen(request) - 1,",\"iambridge\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+    sprintf(request,"{\"requestType\":\"getrelays\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
+    if ( SUPERNET.iamrelay != 0 && (SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0) )
+        sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
     len = (int32_t)strlen(request) + 1;
-    //printf("get_bridgeaddr send(%s)\n",request);
-    bridgeaddr[0] = 0;
+    //printf("get_relayaddr send(%s)\n",request);
+    relayaddr[0] = 0;
     if ( (sendlen= nn_send(lbsock,request,len,0)) == len )
     {
         if ( (len= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
@@ -847,19 +851,19 @@ int32_t get_bridgeaddr(char *bridgeaddr,int32_t lbsock)
                 if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
                     item = cJSON_GetArrayItem(json,rand() % n);
                 else item = cJSON_GetObjectItem(json,"endpoint");
-                copy_cJSON(bridgeaddr,item);
+                copy_cJSON(relayaddr,item);
                 free_json(json);
             }
             nn_freemsg(msg);
             return(0);
-        } else printf("get_bridgeaddr: got len %d: %s\n",len,nn_errstr());
+        } else printf("get_relayaddr: got len %d: %s\n",len,nn_errstr());
     } else printf("got sendlen.%d instead of %d\n",sendlen,len);
     return(-1);
 }
 
 char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmillis)
 {
-    static char endpoint[512],bridgeaddr[MAX_SERVERNAME];
+    static char endpoint[512],relayaddr[MAX_SERVERNAME];
     static int32_t lbsock = -1;
     cJSON *item,*array = cJSON_CreateArray();
     int32_t n,len,surveysock;
@@ -871,10 +875,13 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
         lbsock = loadbalanced_socket(retrymillis,SUPERNET.europeflag,SUPERNET.port);
     if ( lbsock < 0 )
         return(clonestr("{\"error\":\"getting loadbalanced socket\"}"));
-    if ( bridgeaddr[0] == 0 && get_bridgeaddr(bridgeaddr,lbsock) < 0 )
-        return(clonestr("{\"error\":\"getting bridgeaddr\"}"));
-    else printf("got bridgeaddr.(%s) -> endpoint.(%s)\n",bridgeaddr,endpoint);
-    set_endpointaddr(endpoint,bridgeaddr,SUPERNET.port,NN_RESPONDENT);
+    if ( relayaddr[0] == 0 && get_relayaddr(relayaddr,lbsock) < 0 )
+        return(clonestr("{\"error\":\"getting relayaddr\"}"));
+    else
+    {
+        printf("got relayaddr.(%s) -> endpoint.(%s)\n",relayaddr,endpoint);
+        set_endpointaddr(endpoint,relayaddr,SUPERNET.port,NN_SURVEYOR);
+    }
     if ( (surveysock= nn_socket(AF_SP,NN_SURVEYOR)) < 0 )
     {
         printf("error getting socket\n");
@@ -884,7 +891,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     {
         printf("error connecting\n");
         nn_shutdown(surveysock,0);
-        return(clonestr("{\"error\":\"connecting to bridgepoint\"}"));
+        return(clonestr("{\"error\":\"connecting to relaypoint\"}"));
     }
     else if ( nn_setsockopt(surveysock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
     {
@@ -911,12 +918,12 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     nn_shutdown(surveysock,0);
     if ( n == 0 )
     {
-        bridgeaddr[0] = 0;
+        relayaddr[0] = 0;
         free_json(array);
         return(clonestr("{\"error\":\"no responses\"}"));
     }
     retstr = cJSON_Print(array);
-    printf("globalrequest(%s) via bridge.(%s) returned (%s) from n.%d respondents\n",jsonquery,bridgeaddr,retstr,n);
+    printf("globalrequest(%s) via relay.(%s) returned (%s) from n.%d respondents\n",jsonquery,relayaddr,retstr,n);
     free_json(array);
     return(retstr);
 }
@@ -950,7 +957,7 @@ void provider_respondloop(void *_args)
 void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
 {
     int32_t timeout;
-    if ( type != NN_RESPONDENT && type != NN_REP && type != NN_PAIR && type != NN_BUS )
+    if ( type != NN_SURVEYOR && type != NN_REP && type != NN_PAIR && type != NN_BUS )
     {
         printf("responder loop doesnt deal with type.%d\n",type);
         return;
@@ -960,9 +967,9 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
     if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
     {
         if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
-            printf("error connecting to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
+            printf("error connecting to relaypoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
         else if ( args->bindflag != 0 && nn_bind(args->sock,args->endpoint) < 0 )
-            printf("error binding to bridgepoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
+            printf("error binding to relaypoint sock.%d type.%d to (%s) %s\n",args->sock,args->type,args->endpoint,nn_errstr());
         else
         {
             timeout = 10, nn_setsockopt(args->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout));
@@ -992,6 +999,7 @@ void serverloop(void *_args)
     memset(args,0,sizeof(args));
     memset(pfds,0xff,sizeof(pfds)); memset(errQs,0,sizeof(errQs));
     timeoutmillis = 1;
+    add_publication("quotes");
     printf("serverloop\n");
     for (i=n=0; i<numtypes; i++)
     {break;
@@ -1012,13 +1020,13 @@ void serverloop(void *_args)
         portable_thread_create((void *)run_device,&pfds[i]);
         if ( j != 2 )
         {
-            printf("error.%d launching bridges at i.%d of %d j.%d %s\n",err,i,numtypes,j,nn_errstr());
+            printf("error.%d launching relays at i.%d of %d j.%d %s\n",err,i,numtypes,j,nn_errstr());
             break;
         }
     }
     args[0].bussock = args[1].bussock = args[2].bussock = args[2].sock = -1;
-    launch_serverthread(&args[0],NN_RESPONDENT,1);
-    if ( SUPERNET.iambridge != 0 )
+    launch_serverthread(&args[0],NN_SURVEYOR,1);
+    if ( SUPERNET.iamrelay != 0 )
     {
         char str[1024];
         launch_serverthread(&args[2],NN_BUS,1);
@@ -1026,10 +1034,10 @@ void serverloop(void *_args)
             sleep(1);
         args[1].bussock = args[0].bussock = args[2].bussock = args[2].sock;
         launch_serverthread(&args[1],NN_REP,1);
-        printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_RESPONDENT.%d\n",NN_REP,NN_RESPONDENT);
+        printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_SURVEYOR.%d\n",NN_REP,NN_SURVEYOR);
         if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
         {
-            sprintf(str,"{\"requestType\":\"newbridge\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+            sprintf(str,"{\"requestType\":\"newrelay\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
             if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
             {
                 printf("GLOBALRESPONSE.(%s)\n",retstr);
