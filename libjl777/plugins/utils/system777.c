@@ -873,7 +873,7 @@ char *send_loadbalanced(int32_t bussock,int32_t lbsock,char *request)
                                 set_endpointaddr(endpoint,relay,SUPERNET.port,NN_REP);
                                 if ( eligible_lbserver(relay) != 0 && nn_connect(lbsock,endpoint) >= 0 )
                                 {
-                                    add_newrelay(bussock,NN_PUB,relay,jsonstr);
+                                    //add_newrelay(bussock,NN_PUB,relay,jsonstr);
                                     printf("+%s ",endpoint);
                                 }
                             }
