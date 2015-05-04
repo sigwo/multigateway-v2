@@ -922,7 +922,7 @@ void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
         return;
     }
     args->type = type, args->respondfunc = nn_response, args->bindflag = 1;
-    set_endpointaddr(args->endpoint,"*",SUPERNET.port,NN_REP);
+    set_endpointaddr(args->endpoint,"*",SUPERNET.port,type);
     if ( (args->sock= nn_socket(AF_SP,type)) >= 0 )
     {
         if ( args->bindflag == 0 && nn_connect(args->sock,args->endpoint) < 0 )
