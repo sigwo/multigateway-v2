@@ -157,6 +157,8 @@ void expand_ipbits(char *ipaddr,uint64_t ipbits);
 char *ipbits_str(uint64_t ipbits);
 char *ipbits_str2(uint64_t ipbits);
 struct sockaddr_in conv_ipbits(uint64_t ipbits);
+int32_t ismyaddress(char *server);
+int32_t eligible_lbserver(char *server);
 
 char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async);
 
@@ -607,12 +609,16 @@ uint32_t conv_domainname(char *ipaddr,char *domain)
 {
     int32_t conv_domain(struct sockaddr_storage *ss,const char *addr,int32_t ipv4only);
     int32_t ipv4only = 1;
+    uint32_t ipbits;
     struct sockaddr_in ss;
     if ( conv_domain((struct sockaddr_storage *)&ss,(const char *)domain,ipv4only) == 0 )
     {
-        expand_ipbits(ipaddr,*(uint32_t *)&ss.sin_addr);
+        ipbits = *(uint32_t *)&ss.sin_addr;
+        expand_ipbits(ipaddr,ipbits);
+        if ( (uint32_t)calc_ipbits(ipaddr) == ipbits )
+            return(ipbits);
         //printf("conv_domainname (%s) -> (%s)\n",domain,ipaddr);
-    } else printf("error conv_domain.(%s)\n",domain);
+    } //else printf("error conv_domain.(%s)\n",domain);
     return(0);
 }
 
@@ -640,13 +646,6 @@ int32_t ismyaddress(char *server)
     }
     //printf("(%s) is not me (%s)\n",server,SUPERNET.myipaddr);
     return(0);
-}
-
-int32_t eligible_lbserver(char *server)
-{
-    if ( server == 0 || server[0] == 0 || ismyaddress(server) != 0 || is_remote_access(server) == 0 )
-        return(0);
-    return(1);
 }
 
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)

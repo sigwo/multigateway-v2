@@ -17,6 +17,7 @@
 #include "uthash.h"
 #include "cJSON.h"
 #include "db777.c"
+#include "bits777.c"
 #include "NXT777.c"
 #include "system777.c"
 #include "storage.c"

@@ -1291,6 +1291,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! initflag.%d process %s\n",plugin->name,initflag,plugin->name);
     if ( initflag > 0 )
     {
+        if ( DB_msigs == 0 )
+            DB_msigs = db777_create(0,0,"msigs",0);
+        if ( DB_NXTaccts == 0 )
+            DB_NXTaccts = db777_create(0,0,"NXTacct",0);
         Debuglevel = 2;
         MGW.gatewayid = -1;
         SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);

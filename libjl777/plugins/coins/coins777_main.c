@@ -230,10 +230,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     retbuf[0] = 0;
     if ( initflag > 0 )
     {
-        if ( DB_msigs == 0 )
-            DB_msigs = db777_create(0,0,"msigs",0);
-        if ( DB_NXTaccts == 0 )
-            DB_NXTaccts = db777_create(0,0,"NXTacct",0);
         //DB_NXTassettx = db777_create(0,0,"NXTassettxid",0);
         //DB_nodestats = db777_create(0,0,"nodestats",0);
         if ( json != 0 )
