@@ -66,7 +66,7 @@ union endpoints { int32_t all[sizeof(struct allendpoints) / sizeof(int32_t)]; st
 struct SuperNET_info
 {
     char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],**publications;
-    char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512];
+    char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512],endpointB[512];
     uint64_t my64bits;
     int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,numpubs,readyflag,UPNP;
     uint16_t port;
@@ -855,8 +855,10 @@ void serverloop(void *_args)
     }
     if ( MGW.gatewayid >= 0 )
     {
+        char str[1024];
         printf("serverloop start\n");
-        if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
+        sprintf(str,"{\"requestType\":\"newbridge\",\"endpoint\":\"%s\"}",SUPERNET.endpointB);
+        if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
         {
             printf("GLOBALRESPONSE.(%s)\n",retstr);
             free(retstr);

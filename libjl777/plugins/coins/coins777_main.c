@@ -259,8 +259,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             COINS.argjson = cJSON_Duplicate(json,1);
             copy_cJSON(MGW.bridgeipaddr,cJSON_GetObjectItem(json,"bridgeipaddr"));
             copy_cJSON(MGW.bridgeacct,cJSON_GetObjectItem(json,"bridgeacct"));
-            copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
-            SUPERNET.port = get_API_int(cJSON_GetObjectItem(json,"SUPERNET_PORT"),0);
             copy_cJSON(SUPERNET.userhome,cJSON_GetObjectItem(json,"userdir"));
             if ( SUPERNET.userhome[0] == 0 )
                 strcpy(SUPERNET.userhome,"/root");
