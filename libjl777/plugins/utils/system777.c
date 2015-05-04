@@ -545,7 +545,7 @@ int32_t parse_ipaddr(char *ipaddr,char *ip_port)
                 break;
             }
         ipaddr[j] = 0;
-        printf("(%s) -> (%s:%d)\n",ip_port,ipaddr,port);
+        //printf("(%s) -> (%s:%d)\n",ip_port,ipaddr,port);
     } else strcpy(ipaddr,"127.0.0.1");
     return(port);
 }
@@ -558,6 +558,7 @@ uint64_t calc_ipbits(char *ip_port)
     port = parse_ipaddr(ipaddr,ip_port);
     memset(&addr,0,sizeof(addr));
     portable_pton(ip_port[0] == '[' ? AF_INET6 : AF_INET,ipaddr,&addr);
+    if ( 0 )
     {
         int i;
         for (i=0; i<16; i++)
@@ -613,9 +614,6 @@ uint32_t conv_domainname(char *ipaddr,char *domain)
     struct sockaddr_in ss;
     if ( conv_domain((struct sockaddr_storage *)&ss,(const char *)domain,ipv4only) == 0 )
     {
-        //if ( *(uint32_t *)&ss.sin_addr == 0 )
-        //    portable_ntop(AF_INET,(void *)&ss.sin_addr,domain,INET_ADDRSTRLEN);
-        //printf("addr.(%s)\n",domain);
         expand_ipbits(ipaddr,*(uint32_t *)&ss.sin_addr);
         printf("conv_domainname (%s) -> (%s)\n",domain,ipaddr);
     } else printf("error conv_domain.(%s)\n",domain);
@@ -632,7 +630,10 @@ int32_t ismyaddress(char *server)
     if ( (ipbits= is_ipaddr(server)) != 0 )
     {
         if ( strcmp(server,SUPERNET.myipaddr) == 0 || calc_ipbits(SUPERNET.myipaddr) == ipbits )
+        {
+            printf("(%s) MATCHES me (%s)\n",server,SUPERNET.myipaddr);
             return(1);
+        }
     }
     else
     {
