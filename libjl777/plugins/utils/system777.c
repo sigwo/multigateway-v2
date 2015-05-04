@@ -775,7 +775,6 @@ int32_t add_newrelay(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
                 }
                 printf("connected bus to hostname.(%s)\n",hostname);
             }
-            set_endpointaddr(endpoint,hostname,SUPERNET.port,NN_PULL);
         }
         cJSON_AddItemToArray(Relays,cJSON_CreateString(hostname));
         return(1);
