@@ -68,7 +68,7 @@ struct SuperNET_info
     char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],**publications;
     char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512],hostname[512];
     uint64_t my64bits;
-    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,numpubs,readyflag,UPNP;
+    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,numpubs,readyflag,UPNP,iambridge;
     uint16_t port;
 }; extern struct SuperNET_info SUPERNET;
 
@@ -470,7 +470,7 @@ int32_t getline777(char *line,int32_t max)
 
 #define MAX_SERVERNAME 128
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
-struct loopargs { char *(*respondfunc)(int32_t type,char *); int32_t sock,type,bindflag; char endpoint[MAX_SERVERNAME]; };
+struct loopargs { char *(*respondfunc)(int32_t bussock,int32_t type,char *); int32_t bussock,sock,type,bindflag; char endpoint[MAX_SERVERNAME]; };
 
 int32_t nn_oppotype(int32_t type)
 {
@@ -730,7 +730,6 @@ char *publist_jsonstr(char *category)
 cJSON *Bridges;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
-    char *request,*endpoint;
     if ( Bridges == 0 )
     {
         Bridges = cJSON_CreateArray();
@@ -741,7 +740,7 @@ char *loadbalanced_response(char *jsonstr,cJSON *json)
 
 char *global_response(char *jsonstr,cJSON *json)
 {
-    char *request,*endpoint;
+    char *request;
     if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
     {
         if ( strcmp(request,"servicelist") == 0 )
@@ -756,21 +755,33 @@ char *process_buspacket(char *jsonstr,cJSON *json)
     return(clonestr("{\"result\":\"processed bus packet\"}"));
 }
 
-char *nn_response(int32_t type,char *jsonstr)
+char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
 {
-    cJSON *json; char *request,*endpoint,*retstr = 0;
+    cJSON *json; char endpoint[512],*request,*hostname,*retstr = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
         {
-            if ( strcmp(request,"newbridge") == 0 && (endpoint= cJSON_str(cJSON_GetObjectItem(json,"endpoint"))) != 0 )
+            if ( strcmp(request,"newbridge") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
             {
-                printf("newbridge.(%s) arrived\n",endpoint);
+                printf("newbridge.(%s) arrived\n",hostname);
                 if ( Bridges == 0 )
                     Bridges = cJSON_CreateArray();
-                if ( in_jsonarray(Bridges,endpoint) == 0 )
+                if ( in_jsonarray(Bridges,hostname) == 0 )
                 {
-                    cJSON_AddItemToArray(Bridges,cJSON_CreateString(endpoint));
+                    set_endpointaddr(endpoint,hostname,SUPERNET.port,NN_BUS);
+                    if ( bussock >= 0 )
+                    {
+                        if ( nn_connect(bussock,endpoint) < 0 )
+                            printf("error connecting bus to (%s)\n",endpoint);
+                        else
+                        {
+                            if ( type != NN_BUS )
+                                nn_send(bussock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                            printf("connected bus to hostname.(%s)\n",hostname);
+                        }
+                    }
+                    cJSON_AddItemToArray(Bridges,cJSON_CreateString(hostname));
                     return(clonestr("{\"result\":\"bridge added\"}"));
                 }
                 else return(clonestr("{\"result\":\"bridge already in list\"}"));
@@ -893,7 +904,7 @@ void provider_respondloop(void *_args)
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
                 printf("got %d bytes (%s)\n",len,msg);
-                if ( (jsonstr= (*args->respondfunc)(args->type,msg)) != 0 )
+                if ( (jsonstr= (*args->respondfunc)(args->bussock,args->type,msg)) != 0 )
                 {
                     len = (int32_t)strlen(jsonstr)+1;
                     printf("respond.(%s)\n",jsonstr);
@@ -976,22 +987,27 @@ void serverloop(void *_args)
             break;
         }
     }
+    args[0].bussock = args[1].bussock = args[2].bussock = args[2].sock = -1;
     launch_serverthread(&args[0],NN_RESPONDENT,1);
-    if ( MGW.gatewayid >= 0 )
+    if ( SUPERNET.iambridge != 0 )
     {
         char str[1024];
+        launch_serverthread(&args[2],NN_BUS,1);
+        while ( args[2].sock < 0 )
+            sleep(1);
+        args[1].bussock = args[0].bussock = args[2].bussock = args[2].sock;
+        launch_serverthread(&args[1],NN_REP,1);
         printf("&&&&&&&&&&&& serverloop start NN_REP.%d and NN_RESPONDENT.%d\n",NN_REP,NN_RESPONDENT);
-        sprintf(str,"{\"requestType\":\"newbridge\",\"endpoint\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+        sprintf(str,"{\"requestType\":\"newbridge\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
         if ( (retstr= make_globalrequest(3000,str,3000)) != 0 )
         {
             printf("GLOBALRESPONSE.(%s)\n",retstr);
             free(retstr);
         }
-        launch_serverthread(&args[1],NN_REP,1);
-        launch_serverthread(&args[2],NN_BUS,1);
-        while ( 1 ) sleep(1);
+       // while ( 1 ) sleep(1);
     }
-    else
+   // else
+    while ( 1 )
     {
         if ( (retstr= make_globalrequest(3000,"{\"requestType\":\"servicelist\"}",13000)) != 0 )
         {
@@ -1003,7 +1019,7 @@ void serverloop(void *_args)
   //  launch_serverthread(&args[0],NN_REP,1);
     //launch_serverthread(&args[1],NN_RESPONDENT,1);
     //if  ( i == numtypes )
-    {
+   /* {
         while ( 1 )
         {
             //if ( MGW.gatewayid >= 0 || MGW.srv64bits[MGW.N] == SUPERNET.my64bits )
@@ -1015,7 +1031,7 @@ void serverloop(void *_args)
             }
             sleep(10);
         }
-    }
+    }*/
 }
 
 uint16_t wait_for_myipaddr(char *ipaddr)

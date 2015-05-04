@@ -1293,6 +1293,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     {
         Debuglevel = 2;
         MGW.gatewayid = -1;
+        SUPERNET.iambridge = get_API_int(cJSON_GetObjectItem(json,"iambridge"),1);
         SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);
         copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
         copy_cJSON(SUPERNET.hostname,cJSON_GetObjectItem(json,"hostname"));
