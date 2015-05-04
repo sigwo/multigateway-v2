@@ -731,20 +731,6 @@ cJSON *Bridges;
 char *loadbalanced_response(char *jsonstr,cJSON *json)
 {
     char *request,*endpoint;
-    if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
-    {
-        if ( strcmp(request,"newbridge") == 0 && (endpoint= cJSON_str(cJSON_GetObjectItem(json,"endpoint"))) != 0 )
-        {
-            if ( Bridges == 0 )
-                Bridges = cJSON_CreateArray();
-            if ( in_jsonarray(Bridges,endpoint) == 0 )
-            {
-                cJSON_AddItemToArray(Bridges,cJSON_CreateString(endpoint));
-                return(clonestr("{\"result\":\"bridge added\"}"));
-            }
-            else return(clonestr("{\"result\":\"bridge already in list\"}"));
-        }
-    }
     if ( Bridges == 0 )
     {
         Bridges = cJSON_CreateArray();
@@ -758,18 +744,6 @@ char *global_response(char *jsonstr,cJSON *json)
     char *request,*endpoint;
     if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
     {
-        if ( strcmp(request,"newbridge") == 0 && (endpoint= cJSON_str(cJSON_GetObjectItem(json,"endpoint"))) != 0 )
-        {
-            if ( Bridges == 0 )
-                Bridges = cJSON_CreateArray();
-            if ( in_jsonarray(Bridges,endpoint) == 0 )
-            {
-                cJSON_AddItemToArray(Bridges,cJSON_CreateString(endpoint));
-                //return(clonestr("{\"result\":\"bridge added\"}"));
-            }
-            //else return(clonestr("{\"result\":\"bridge already in list\"}"));
-            return(0);
-        }
         if ( strcmp(request,"servicelist") == 0 )
             return(publist_jsonstr(cJSON_str(cJSON_GetObjectItem(json,"category"))));
     }
@@ -784,9 +758,24 @@ char *process_buspacket(char *jsonstr,cJSON *json)
 
 char *nn_response(int32_t type,char *jsonstr)
 {
-    cJSON *json; char *retstr = 0;
+    cJSON *json; char *request,*endpoint,*retstr = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
+        if ( (request= cJSON_str(cJSON_GetObjectItem(json,"requestType"))) != 0 )
+        {
+            if ( strcmp(request,"newbridge") == 0 && (endpoint= cJSON_str(cJSON_GetObjectItem(json,"endpoint"))) != 0 )
+            {
+                printf("newbridge.(%s) arrived\n",endpoint);
+                if ( Bridges == 0 )
+                    Bridges = cJSON_CreateArray();
+                if ( in_jsonarray(Bridges,endpoint) == 0 )
+                {
+                    cJSON_AddItemToArray(Bridges,cJSON_CreateString(endpoint));
+                    return(clonestr("{\"result\":\"bridge added\"}"));
+                }
+                else return(clonestr("{\"result\":\"bridge already in list\"}"));
+            }
+        }
         switch ( type )
         {
             case NN_REP: retstr = loadbalanced_response(jsonstr,json); break;
@@ -884,7 +873,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     {
         bridgeaddr[0] = 0;
         free_json(array);
-        return(clonestr("{\"error\":\"no responses\n"));
+        return(clonestr("{\"error\":\"no responses\"}"));
     }
     retstr = cJSON_Print(array);
     printf("globalrequest(%s) via bridge.(%s) returned (%s) from n.%d respondents\n",jsonquery,bridgeaddr,retstr,n);
@@ -921,7 +910,7 @@ void provider_respondloop(void *_args)
 void launch_serverthread(struct loopargs *args,int32_t type,int32_t bindflag)
 {
     int32_t timeout;
-    if ( type != NN_RESPONDENT && type != NN_REP && type != NN_PAIR )
+    if ( type != NN_RESPONDENT && type != NN_REP && type != NN_PAIR && type != NN_BUS )
     {
         printf("responder loop doesnt deal with type.%d\n",type);
         return;
@@ -958,7 +947,7 @@ void serverloop(void *_args)
     int32_t nntypes[] = { NN_REP, NN_RESPONDENT, NN_PUB, NN_PULL };
     struct nn_pollfd pfds[4][2]; queue_t errQs[4][2]; char bindaddr[128],*retstr;
     int32_t i,j,n,type,portoffset,sock,numtypes,timeoutmillis,err;//,bindflag = 1;
-    static struct loopargs args[2];
+    static struct loopargs args[8];
     numtypes = (int32_t)(sizeof(nntypes)/sizeof(*nntypes));
     memset(args,0,sizeof(args));
     memset(pfds,0xff,sizeof(pfds)); memset(errQs,0,sizeof(errQs));
@@ -987,6 +976,7 @@ void serverloop(void *_args)
             break;
         }
     }
+    launch_serverthread(&args[0],NN_RESPONDENT,1);
     if ( MGW.gatewayid >= 0 )
     {
         char str[1024];
@@ -997,8 +987,8 @@ void serverloop(void *_args)
             printf("GLOBALRESPONSE.(%s)\n",retstr);
             free(retstr);
         }
-        launch_serverthread(&args[0],NN_REP,1);
-        launch_serverthread(&args[1],NN_RESPONDENT,1);
+        launch_serverthread(&args[1],NN_REP,1);
+        launch_serverthread(&args[2],NN_BUS,1);
         while ( 1 ) sleep(1);
     }
     else
