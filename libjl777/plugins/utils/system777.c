@@ -786,7 +786,7 @@ char *global_response(char *jsonstr,cJSON *json)
 char *process_buspacket(char *jsonstr,cJSON *json)
 {
     printf("BUSPACKET.(%s)\n",jsonstr);
-    return(clonestr("{\"result\":\"processed bus packet\"}"));
+    return(0);
 }
 
 char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
