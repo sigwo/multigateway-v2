@@ -747,6 +747,11 @@ int32_t add_newbridge(int32_t bussock,int32_t type,char *hostname,char *jsonstr)
 {
     char endpoint[512];
     printf("newbridge.(%s) arrived\n",hostname);
+    if ( hostname[0] == 0 || is_remote_access(hostname) == 0 )
+    {
+        printf("illegal hostname.(%s)\n",hostname);
+        return(0);
+    }
     if ( Bridges == 0 )
         Bridges = cJSON_CreateArray();
     if ( in_jsonarray(Bridges,hostname) == 0 )
@@ -800,7 +805,7 @@ char *nn_response(int32_t bussock,int32_t type,char *jsonstr)
             {
                 if ( add_newbridge(bussock,type,hostname,jsonstr) > 0 )
                     return(clonestr("{\"result\":\"bridge added\"}"));
-                else return(clonestr("{\"result\":\"bridge already in list\"}"));
+                //else return(clonestr("{\"result\":\"bridge already in list\"}"));
             }
         }
         if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iambridge"))) != 0 )
