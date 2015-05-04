@@ -707,7 +707,7 @@ char *make_globalrequest(int32_t retrymillis,char *jsonquery,int32_t timeoutmill
     cJSON *item,*array = cJSON_CreateArray();
     int32_t n,len,surveysock;
     char *msg,*retstr;
-    printf("make_globalrequest\n");
+    printf("make_globalrequest.(%s)\n",jsonquery);
     if ( timeoutmillis <= 0 )
         timeoutmillis = 10000;
     if ( lbsock < 0 )
