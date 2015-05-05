@@ -978,7 +978,7 @@ void serverloop(void *_args)
     {
         if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
         {
-            sprintf(request,"{\"plugin\":\"relays\",\"method\":\"newrelay\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+            sprintf(request,"{\"plugin\":\"relays\",\"method\":\"newrelays\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
             if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
             {
                 printf("LB_RESPONSE.(%s)\n",retstr);

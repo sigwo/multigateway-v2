@@ -164,6 +164,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
     int32_t len,ind,flag = 0;
     uint64_t tmp,tag = 0;
     cJSON *json;
+    printf("send_to_daemon.(%s)\n",jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( retstrp != 0 )

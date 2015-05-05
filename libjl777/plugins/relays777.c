@@ -215,7 +215,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else
         {
-            if ( strcmp(methodstr,"newrelay") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
+            if ( strcmp(methodstr,"newrelays") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
             {
                 if ( add_newrelay(hostname,jsonstr,json) > 0 )
                     strcpy(retbuf,"{\"result\":\"relay added\"}");
