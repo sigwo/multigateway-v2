@@ -59,7 +59,7 @@ char *publish_jsonstr(char *category)
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,*methodstr,*retstr;
+    char *resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -87,8 +87,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
         else if ( strcmp(methodstr,"list") == 0 )
-        {
             retstr = publish_jsonstr(cJSON_str(cJSON_GetObjectItem(json,"category")));
+        else if ( strcmp(methodstr,"publish") == 0 )
+            retstr = publish_jsonstr(cJSON_str(cJSON_GetObjectItem(json,"content")));
+        if ( retstr != 0 )
+        {
             strcpy(retbuf,retstr);
             free(retstr);
         }

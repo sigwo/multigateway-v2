@@ -1013,7 +1013,7 @@ char *nn_publish(char *publishstr)
     if ( (sendlen= nn_send(RELAYS.pubsock,publishstr,len,0)) != len )
         printf("add_connections warning: send.%d vs %d for (%s) sock.%d %s\n",sendlen,len,publishstr,RELAYS.pubsock,nn_errstr());
     else printf("published.(%s)\n",publishstr);
-    sprintf(retbuf,"{\"result\":\"published\",\"len\":%d,\"sendlen\":%d}",len,sendlen);
+    sprintf(retbuf,"{\"result\":\"published\",\"len\":%d,\"sendlen\":%d,\"content\":\"%s\"}",len,sendlen,publishstr);
     return(clonestr(retbuf));
 }
 
@@ -1061,11 +1061,14 @@ int32_t launch_responseloop(struct relayargs *args,char *name,int32_t type,int32
 
 void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char *line)
 {
-    char plugin[512],method[512],*str,*cmdstr,*retstr; cJSON *json; int i,j;
+    char plugin[512],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
-    if ( line[i+1] != 0 )
+    pubstr = line;
+    if ( strcmp(plugin,"pub") == 0 )
+        strcpy(plugin,"subscriptions"), strcpy(method,"publish"), pubstr += 4;
+    else if ( line[i+1] != 0 )
     {
         for (++i,j=0; i<512&&line[i]!=' '&&line[i]!=0; i++,j++)
             method[j] = line[i];
@@ -1077,7 +1080,7 @@ void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char 
         if ( line[i+1] != 0 )
         {
             str = stringifyM(&line[i+1]);
-            cJSON_AddItemToObject(json,"jsonargs",cJSON_CreateString(str));
+            cJSON_AddItemToObject(json,"content",cJSON_CreateString(pubstr));
             free(str);
         }
     }
@@ -1093,6 +1096,8 @@ void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char 
         _stripwhite(cmdstr,' ');
         if ( strcmp(plugin,"peers") == 0 )
             retstr = nn_allpeers(peerargs,cmdstr,RELAYS.surveymillis);
+        else if ( strcmp(plugin,"subscriptions") == 0 )
+            retstr = nn_publish(pubstr);
         else retstr = nn_loadbalanced(lbargs,cmdstr);
         printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
         free(cmdstr);
