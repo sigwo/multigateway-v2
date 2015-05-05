@@ -215,8 +215,11 @@ int32_t update_serverbits(struct relay_info *list,char *server,uint64_t ipbits,i
             printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
         else
         {
-            if ( type == NN_SUB )
+            if ( type == NN_PUB )
+            {
+                printf("subscribed to (%s)\n",endpoint);
                 nn_setsockopt(list->sock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
+            }
             add_relay(list,ipbits);
         }
     }
@@ -230,6 +233,7 @@ int32_t add_connections(char *server,int32_t skiplb)
         return(-1);
     ipbits = calc_ipbits(server);
     update_serverbits(&RELAYS.peer,server,ipbits,NN_SURVEYOR);
+    printf("update_sub\n");
     update_serverbits(&RELAYS.sub,server,ipbits,NN_PUB);
     n = RELAYS.lb.num;
     if ( skiplb == 0 )
