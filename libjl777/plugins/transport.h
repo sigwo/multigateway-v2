@@ -182,6 +182,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
             }
         }
         free_json(json);
+        printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
             if ( (len= (int32_t)strlen(jsonstr)) > 0 )
