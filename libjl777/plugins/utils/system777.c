@@ -810,7 +810,7 @@ char *nn_loadbalanced(struct relayargs *args,char *request)
     len = (int32_t)strlen(request) + 1;
     if ( (sendlen= nn_send(args->lbsock,request,len,0)) == len && (recvlen= nn_recv(args->lbsock,&msg,NN_MSG,0)) > 0 )
     {
-        jsonstr = (*args->commandprocessor)(args,(uint8_t *)msg,len);
+        jsonstr = clonestr((char *)msg);//(*args->commandprocessor)(args,(uint8_t *)msg,len);
         nn_freemsg(msg);
     } else printf("got sendlen.%d instead of %d | recvlen.%d\n",sendlen,len,recvlen), jsonstr = clonestr("{\"error\":\"no response\"}");
     return(jsonstr);
