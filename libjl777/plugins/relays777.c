@@ -233,6 +233,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 strcpy(retbuf,"{\"result\":\"under construction\"}");
             }
+            else
+                strcpy(retbuf,"{\"result\":\"under construction\"}");
         }
         if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
             add_newrelay(hostname,jsonstr,json);
