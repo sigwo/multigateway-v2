@@ -802,8 +802,8 @@ void run_device(void *_args)
 
 void start_devices()
 {
-    int32_t i,j,n,err,numtypes,sock,portoffset,type,devicetypes[] = { NN_REP, NN_RESPONDENT, NN_PUB, NN_PULL };
-    struct nn_pollfd pfds[4][2];
+    int32_t i,j,n,err,numtypes,sock,portoffset,type,devicetypes[] = { NN_RESPONDENT }; //NN_REP, NN_PUB, NN_PULL };
+    static struct nn_pollfd pfds[4][2];
     char bindaddr[128];
     numtypes = (int32_t)(sizeof(devicetypes)/sizeof(*devicetypes));
     memset(pfds,0xff,sizeof(pfds));
@@ -812,18 +812,17 @@ void start_devices()
         for (j=err=0; j<2; j++,n++)
         {
             type = (j == 0) ? devicetypes[i] : nn_oppotype(devicetypes[i]);
-            if ( (portoffset= nn_portoffset(type)) != n )
-                printf("FATAL mismatched portoffset %d vs %d\n",portoffset,n), getchar();
+            portoffset = nn_portoffset(type);
             set_endpointaddr(bindaddr,"*",SUPERNET.port,type);
-            printf("(%d) type.%d bindaddr.(%s)\n",devicetypes[i],type,bindaddr);
             if ( (sock= nn_socket(AF_SP_RAW,type)) < 0 )
                 break;
             if ( (err= nn_bind(sock,bindaddr)) < 0 )
                 break;
+            printf("(%d) type.%d bindaddr.(%s) sock.%d\n",devicetypes[i],type,bindaddr,sock);
             pfds[i][j].fd = sock;
             pfds[i][j].events = NN_POLLIN | NN_POLLOUT;
         }
-        portable_thread_create((void *)run_device,&pfds[i]);
+        portable_thread_create((void *)run_device,&pfds[i][0]);
         if ( j != 2 )
         {
             printf("error.%d launching relays at i.%d of %d j.%d %s\n",err,i,numtypes,j,nn_errstr());
@@ -880,7 +879,7 @@ char *nn_allpeers(struct relayargs *args,char *_request,int32_t timeoutmillis)
     char *request;
     char *msg,*retstr;
     if ( timeoutmillis == 0 )
-        timeoutmillis = 5000;
+        timeoutmillis = 500;
     if ( args->peersock < 0 )
         return(clonestr("{\"error\":\"invalid peers socket\"}"));
     if ( nn_setsockopt(args->peersock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
@@ -1042,9 +1041,45 @@ int32_t launch_responseloop(struct relayargs *args,char *name,int32_t type,int32
     return(args->sock);
 }
 
-void process_userinput(char *line)
+void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char *line)
 {
-    printf("GOT USER INPUT.(%s)\n",line);
+    char plugin[512],method[512],*str,*cmdstr,*retstr; cJSON *json; int i,j;
+    for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
+        plugin[i] = line[i];
+    plugin[i] = 0;
+    if ( line[i+1] != 0 )
+    {
+        for (++i,j=0; i<512&&line[i]!=' '&&line[i]!=0; i++,j++)
+            method[j] = line[i];
+        method[j] = 0;
+    } else method[0] = 0;
+    if ( (json= cJSON_Parse(line+i+1)) == 0 )
+    {
+        json = cJSON_CreateObject();
+        if ( line[i+1] != 0 )
+        {
+            str = stringifyM(&line[i+1]);
+            cJSON_AddItemToObject(json,"jsonargs",cJSON_CreateString(str));
+            free(str);
+        }
+    }
+    if ( json != 0 )
+    {
+        if ( plugin[0] == 0 )
+            strcpy(plugin,"relays");
+        cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(plugin));
+        if ( method[0] == 0 )
+            strcpy(method,"help");
+        cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
+        cmdstr = cJSON_Print(json);
+        _stripwhite(cmdstr,' ');
+        if ( strcmp(plugin,"peers") == 0 )
+            retstr = nn_allpeers(peerargs,cmdstr,RELAYS.surveymillis);
+        else retstr = nn_loadbalanced(lbargs,cmdstr);
+        printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
+        free(cmdstr);
+        free_json(json);
+    } else printf("cant create json object for (%s)\n",line);
 }
 
 void serverloop(void *_args)
@@ -1054,8 +1089,9 @@ void serverloop(void *_args)
     char endpoint[128],request[1024],line[1024],ipaddr[64],*retstr;
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
+    start_devices();
     sendtimeout = 10, recvtimeout = 10000;
-    peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
+    peersock = nn_createsocket(endpoint,0,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     peerargs = &args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
@@ -1097,68 +1133,9 @@ void serverloop(void *_args)
     {
         int32_t poll_daemons();
         poll_daemons();
-        if ( SUPERNET.iamrelay == 0 && (rand() % 100000) == 0 )
-        {
-            if ( (rand() % 2) == 0 )
-            {
-                sprintf(request,"{\"plugin\":\"relays\",\"method\":\"%s\"}",(rand() & 1) != 0 ? "list" : "listpubs");
-                if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
-                {
-                    printf("LB_RESPONSE.(%s)\n",retstr);
-                    free(retstr);
-                }
-            }
-            else
-            {
-                sprintf(request,"{\"plugin\":\"peers\",\"method\":\"getinfo\"}");
-                if ( (retstr= nn_allpeers(peerargs,request,2000)) != 0 )
-                {
-                    printf("ALLPEERS.(%s)\n",retstr);
-                    free(retstr);
-                }
-            }
-        }
         if ( SUPERNET.APISLEEP > 0 ) msleep(SUPERNET.APISLEEP);
         if ( getline777(line,sizeof(line)-1) > 0 )
-        {
-            char plugin[512],method[512],*str,*cmdstr; cJSON *json; int j;
-            for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
-                plugin[i] = line[i];
-            plugin[i] = 0;
-            if ( line[i+1] != 0 )
-            {
-                for (++i,j=0; i<512&&line[i]!=' '&&line[i]!=0; i++,j++)
-                    method[j] = line[i];
-                method[j] = 0;
-            } else method[0] = 0;
-            if ( (json= cJSON_Parse(line+i+1)) == 0 )
-            {
-                json = cJSON_CreateObject();
-                if ( line[i+1] != 0 )
-                {
-                    str = stringifyM(&line[i+1]);
-                    cJSON_AddItemToObject(json,"jsonargs",cJSON_CreateString(str));
-                    free(str);
-                }
-            }
-            if ( json != 0 )
-            {
-                if ( plugin[0] == 0 )
-                    strcpy(plugin,"relays");
-                cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(plugin));
-                if ( method[0] == 0 )
-                    strcpy(method,"help");
-                cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
-                cmdstr = cJSON_Print(json);
-                _stripwhite(cmdstr,' ');
-                if ( strcmp(plugin,"peers") == 0 )
-                    retstr = nn_allpeers(peerargs,cmdstr,RELAYS.surveymillis);
-                else retstr = nn_loadbalanced(lbargs,cmdstr);
-                printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
-                free(cmdstr);
-                free_json(json);
-            } else printf("cant create json object for (%s)\n",line);
-        }
+            process_userinput(lbargs,peerargs,line);
     }
 }
 
