@@ -221,7 +221,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     strcpy(retbuf,"{\"result\":\"relay added\"}");
                 else strcpy(retbuf,"{\"result\":\"relay already in list\"}");
             }
-            else if ( strcmp(methodstr,"getrelays") == 0 )
+            else if ( strcmp(methodstr,"list") == 0 )
             {
                 if ( (retstr= relays_jsonstr(jsonstr,json)) != 0 )
                 {
