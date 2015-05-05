@@ -804,7 +804,7 @@ char *nn_loadbalanced(struct relayargs *args,char *request)
     int32_t len,sendlen,recvlen = 0;
     if ( args->lbsock < 0 )
         return(clonestr("{\"error\":\"invalid load balanced socket\"}"));
-    sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\",\"tag\":\"%llu\"}",SUPERNET.NXTADDR,(((uint64_t)rand() << 32) | (uint32_t)rand()));
+    sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\",\"tag\":\"%llu\"}",SUPERNET.NXTADDR,(((long long)rand() << 32) | (uint32_t)rand()));
     if ( SUPERNET.iamrelay != 0 && (SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0) )
         sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
     len = (int32_t)strlen(request) + 1;
