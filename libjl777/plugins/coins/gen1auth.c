@@ -115,6 +115,8 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                                 cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(str));
                                 cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
                                 cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
+                                if ( array == 0 )
+                                    array = cJSON_CreateArray();
                                 cJSON_AddItemToArray(array,item);
                             }
                         }
