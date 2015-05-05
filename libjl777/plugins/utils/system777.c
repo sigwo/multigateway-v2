@@ -700,7 +700,7 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
         for (i=0; i<num; i++)
         {
             port = set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
-            if ( ismyaddress(servers[i]) == 0 && nn_connect(sock,endpoint) >= 0 )
+            if ( ismyaddress(servers[i]) == 0 )//&& nn_connect(sock,endpoint) >= 0 )
             {
                 printf("+%s ",endpoint);
                 add_connections(servers[i]);
@@ -1021,6 +1021,8 @@ void serverloop(void *_args)
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,subsock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
     sendtimeout = 10, recvtimeout = 10000;
+    lbargs = &args[n++];
+    lbargs->sock = lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
     if ( 0 )
     {
         peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
@@ -1028,14 +1030,12 @@ void serverloop(void *_args)
         pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
         subsock = launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
     }
-    lbargs = &args[n++];
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_relays);
         //bussock = launch_responseloop(&args[n++],"NN_BUS",NN_BUS,1,nn_relays);
     } else bussock = -1, lbargs->commandprocessor = nn_relays;
-    RELAYS.bus.sock = bussock, RELAYS.sub.sock = subsock, RELAYS.peers.sock = peersock;
-    lbargs->sock = lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
+    RELAYS.bus.sock = bussock, RELAYS.sub.sock = subsock, RELAYS.peers.sock = peersock, RELAYS.lb.sock = lbsock;
     for (i=0; i<n; i++)
     {
         arg = &args[i];
