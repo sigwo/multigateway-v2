@@ -24,7 +24,7 @@ struct cointx_info *createrawtransaction(char *coinstr,char *serverport,char *us
 int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,char *txbytes,int32_t gatewayid,int32_t numgateways);
 int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params);
 int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr);
-char *get_msig_pubkeys(char *coinaddr,char *coinstr,char *serverport,char *userpass);
+char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass);
 
 
 #endif
@@ -62,12 +62,11 @@ char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *user
     return(0);
 }
 
-char *get_msig_pubkeys(char *coinaddr,char *coinstr,char *serverport,char *userpass)
+char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 {
     char str[MAX_JSON_FIELD],*retstr;
     cJSON *json;
     int32_t i,n;
-    coinaddr[0] = 0;
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts","")) != 0 )
     {
         printf("listaccounts.(%s)\n",retstr);
