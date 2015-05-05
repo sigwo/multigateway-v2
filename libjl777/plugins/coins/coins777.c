@@ -930,13 +930,13 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr)
 {
     struct ramchain *ram = &coin->ramchain;
     ram->startmilli = milliseconds();
-    get_msig_pubkeys(0,coin->name,coin->serverport,coin->userpass);
     strcpy(ram->name,coinstr);
     ram->blocknum = ram->startblocknum = ensure_ramchain_DBs(ram);
     ram->huffallocsize = sizeof(struct rawblock)/10, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);
     ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coinstr,coin->serverport,coin->userpass,ram->RTblocknum);
     ramchain_syncDBs(ram);
     coin->ramchain.readyflag = 1;
+    get_msig_pubkeys(0,coin->name,coin->serverport,coin->userpass);
     return(0);
 }
 

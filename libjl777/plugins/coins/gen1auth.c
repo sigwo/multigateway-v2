@@ -70,6 +70,7 @@ char *get_msig_pubkeys(char *coinaddr,char *coinstr,char *serverport,char *userp
     coinaddr[0] = 0;
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts",addr)) != 0 )
     {
+        printf("listaccounts.(%s)\n",retstr);
         retstr[0] = '[';
         n = (int32_t)strlen(retstr);
         retstr[n-1] = ']';
