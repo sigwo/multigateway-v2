@@ -65,7 +65,7 @@ char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *user
 char *get_msig_pubkeys(char *coinaddr,char *coinstr,char *serverport,char *userpass)
 {
     char addr[128],str[MAX_JSON_FIELD],*retstr;
-    cJSON *array,*json;
+    cJSON *json;
     int32_t i,n;
     coinaddr[0] = 0;
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts",addr)) != 0 )
@@ -78,7 +78,7 @@ char *get_msig_pubkeys(char *coinaddr,char *coinstr,char *serverport,char *userp
                 retstr[i] = ',';
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
-            if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
             {
                 for (i=0; i<n; i++)
                 {

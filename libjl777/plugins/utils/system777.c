@@ -1090,6 +1090,7 @@ void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char 
     }
     if ( json != 0 )
     {
+        struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
         if ( plugin[0] == 0 )
             strcpy(plugin,"relays");
         cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(plugin));
@@ -1102,8 +1103,9 @@ void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char 
             retstr = nn_allpeers(peerargs,cmdstr,RELAYS.surveymillis);
         else if ( strcmp(plugin,"relays") == 0 )
             retstr = nn_loadbalanced(lbargs,cmdstr);
-        else //if ( strcmp(plugin,"subscriptions") == 0 )
-            retstr = nn_publish(pubstr);
+        else if ( find_daemoninfo(&j,plugin,0,0) != 0 )
+            retstr = plugin_method(0,plugin,method,0,0,cmdstr,(int32_t)strlen(cmdstr),1000);
+        else retstr = nn_publish(pubstr);
         printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
         free(cmdstr);
         free_json(json);
