@@ -36,8 +36,8 @@
 
 struct plugin_info
 {
-    char bindaddr[64],connectaddr[64],ipaddr[64],name[64];
-    uint64_t daemonid,myid;
+    char bindaddr[64],connectaddr[64],ipaddr[64],name[64],NXTADDR[64];
+    uint64_t daemonid,myid,nxt64bits;
     union endpoints all;
     uint32_t permanentflag,ppid,transportid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis,allowremote;
     uint16_t port;
@@ -93,6 +93,8 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     }
     if ( obj != 0 )
     {
+        plugin->nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(obj,"port"));
+        expand_nxt64bits(plugin->NXTADDR,plugin->nxt64bits);
         tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"port"));
         if ( initflag > 0 )
         {
@@ -124,7 +126,7 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
     if ( tag != 0 )
         sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
     else tagstr[0] = 0;
-    sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\",\"allowremote\":%d%s}",SUPERNET.NXTADDR,plugin->allowremote,tagstr);
+    sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\",\"allowremote\":%d%s}",plugin->NXTADDR,plugin->allowremote,tagstr);
     if ( allfields != 0 )
         sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
     //printf("APPEND.(%s)\n",retbuf);
@@ -270,7 +272,7 @@ int32_t main
     plugin_transportaddr(plugin->connectaddr,transportstr,0,plugin->daemonid+2*OFFSET_ENABLED);
     jsonargs = (argc >= 3) ? (char *)argv[3] : 0;
     configure_plugin(retbuf,max,plugin,jsonargs,1);
-    printf("CONFIGURED.(%s) argc.%d: %s myid.%llu daemonid.%llu\n",plugin->name,argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",(long long)plugin->myid,(long long)plugin->daemonid);//,jsonargs!=0?jsonargs:"");
+    printf("CONFIGURED.(%s) argc.%d: %s myid.%llu daemonid.%llu NXT.%s\n",plugin->name,argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",(long long)plugin->myid,(long long)plugin->daemonid,plugin->NXTADDR);//,jsonargs!=0?jsonargs:"");
     if ( init_pluginsocks(plugin,plugin->permanentflag,plugin->bindaddr,plugin->connectaddr,plugin->myid,plugin->daemonid,plugin->timeout) == 0 )
     {
         argjson = cJSON_Parse(jsonargs);
