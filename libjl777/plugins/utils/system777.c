@@ -690,7 +690,7 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
         timeout = 10;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
-        timeout = 1000;
+        timeout = 10000;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
         priority = nn_addservers(priority,lbsock,servers,num);
@@ -970,7 +970,7 @@ void serverloop(void *_args)
     peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1), launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
-    lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
+    lbsock = loadbalanced_socket(13000,SUPERNET.port); // NN_REQ
     lbargs = &args[n++];
     if ( SUPERNET.iamrelay != 0 )
     {
