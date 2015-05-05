@@ -1164,8 +1164,10 @@ void serverloop(void *_args)
         int32_t poll_daemons();
         poll_daemons();
         if ( SUPERNET.APISLEEP > 0 ) msleep(SUPERNET.APISLEEP);
+#ifdef STANDALONE
         if ( getline777(line,sizeof(line)-1) > 0 )
             process_userinput(lbargs,peerargs,line);
+#endif
     }
 }
 
