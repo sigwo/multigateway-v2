@@ -62,55 +62,6 @@ char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *user
     return(0);
 }
 
-char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
-{
-    char str[MAX_JSON_FIELD],*retstr;
-    cJSON *json;
-    int32_t i,n;
-    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts","")) != 0 )
-    {
-        printf("listaccounts.(%s)\n",retstr);
-        retstr[0] = '[';
-        n = (int32_t)strlen(retstr);
-        retstr[n-1] = ']';
-        for (i=0; i<n; i++)
-            if ( retstr[i] == ':' )
-                retstr[i] = ',';
-        if ( (json= cJSON_Parse(retstr)) != 0 )
-        {
-            if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    copy_cJSON(str,cJSON_GetArrayItem(json,i));
-                    if ( is_decimalstr(str) != 0 )
-                        printf("%s ",str);
-                }
-                //sprintf(addr,"\"%s\"",NXTaddr);
-                //strcpy(coinaddr,retstr);
-                //free(retstr);
-                //return(coinaddr);
-            }
-            free_json(json);
-        } else printf("couldnt parse.(%s)\n",retstr);
-        free(retstr);
-    }
-    return(0);
-}
-
-cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass)
-{
-    char *retstr;
-    cJSON *json = 0;
-    retstr = bitcoind_passthru(coinstr,serverport,userpass,"listaddressgroupings","");
-    if ( retstr != 0 )
-    {
-        json = cJSON_Parse(retstr);
-        free(retstr);
-    }
-    return(json);
-}
-
 int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpass,char *coinaddr)
 {
     char quotes[512],*retstr;
@@ -131,6 +82,73 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
         free(retstr);
     }
     return((int32_t)len);
+}
+
+char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
+{
+    char str[MAX_JSON_FIELD],pubkey[512],coinaddr[512],*retstr;
+    cJSON *json,*item,*array = 0;
+    int32_t i,n;
+    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts","")) != 0 )
+    {
+        printf("listaccounts.(%s)\n",retstr);
+        retstr[0] = '[';
+        n = (int32_t)strlen(retstr);
+        retstr[n-1] = ']';
+        for (i=0; i<n; i++)
+            if ( retstr[i] == ':' )
+                retstr[i] = ',';
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
+            {
+                for (i=0; i<n; i+=2)
+                {
+                    copy_cJSON(str,cJSON_GetArrayItem(json,i));
+                    if ( is_decimalstr(str) != 0 )
+                    {
+                        if ( get_acct_coinaddr(coinaddr,coinstr,serverport,userpass,str) != 0 )
+                        {
+                            if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
+                            {
+                                item = cJSON_CreateObject();
+                                cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(str));
+                                cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
+                                cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
+                                cJSON_AddItemToArray(array,item);
+                            }
+                        }
+                    }
+                }
+                //sprintf(addr,"\"%s\"",NXTaddr);
+                //strcpy(coinaddr,retstr);
+                //free(retstr);
+                //return(coinaddr);
+            }
+            free_json(json);
+        } else printf("couldnt parse.(%s)\n",retstr);
+        free(retstr);
+    }
+    if ( array != 0 )
+    {
+        retstr = cJSON_Print(array);
+        free_json(array);
+        _stripwhite(retstr,' ');
+    } else retstr = 0;
+    return(retstr);
+}
+
+cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass)
+{
+    char *retstr;
+    cJSON *json = 0;
+    retstr = bitcoind_passthru(coinstr,serverport,userpass,"listaddressgroupings","");
+    if ( retstr != 0 )
+    {
+        json = cJSON_Parse(retstr);
+        free(retstr);
+    }
+    return(json);
 }
 
 char *sign_rawbytes(int32_t *completedp,char *signedbytes,int32_t max,char *coinstr,char *serverport,char *userpass,char *rawbytes)
