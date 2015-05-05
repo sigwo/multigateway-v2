@@ -812,7 +812,7 @@ char *nn_loadbalanced(struct relayargs *args,char *request)
     {
         jsonstr = clonestr((char *)msg);//(*args->commandprocessor)(args,(uint8_t *)msg,len);
         nn_freemsg(msg);
-    } else printf("got sendlen.%d instead of %d | recvlen.%d\n",sendlen,len,recvlen), jsonstr = clonestr("{\"error\":\"no response\"}");
+    } else printf("got sendlen.%d instead of %d | recvlen.%d %s\n",sendlen,len,recvlen,nn_errstr()), jsonstr = clonestr("{\"error\":\"no response\"}");
     return(jsonstr);
 }
 
@@ -970,7 +970,7 @@ void serverloop(void *_args)
     //peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     //peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     //pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1), launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
-    lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
+    lbsock = loadbalanced_socket(13000,SUPERNET.port); // NN_REQ
     lbargs = &args[n++];
     if ( SUPERNET.iamrelay != 0 )
     {
