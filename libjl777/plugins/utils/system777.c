@@ -1013,7 +1013,7 @@ void serverloop(void *_args)
 {
     static struct relayargs args[8];
     struct relayargs *peerargs,*lbargs,*arg;
-    char endpoint[128],request[1024],*retstr;
+    char endpoint[128],request[1024],ipaddr[64],*retstr;
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
     sendtimeout = 10, recvtimeout = 10000;
@@ -1036,6 +1036,12 @@ void serverloop(void *_args)
         arg->bussock = bussock;
         arg->pubsock = pubsock;
         arg->peersock = peersock;
+    }
+    int32_t add_connections(char *server,int32_t skiplb);
+    for (i=0; i<RELAYS.lb.num; i++)
+    {
+        expand_ipbits(ipaddr,(uint32_t)RELAYS.lb.servers[i]);
+        add_connections(ipaddr,1);
     }
     if ( SUPERNET.iamrelay != 0 )
     {

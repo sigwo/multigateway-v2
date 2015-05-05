@@ -218,13 +218,14 @@ int32_t update_serverbits(struct relay_info *list,char *server,uint64_t ipbits,i
     return(list->num);
 }
 
-int32_t add_connections(char *server)
+int32_t add_connections(char *server,int32_t skiplb)
 {
     uint64_t ipbits; int32_t n;
     ipbits = calc_ipbits(server);
     update_serverbits(&RELAYS.peer,server,ipbits,NN_SURVEYOR);
     n = RELAYS.lb.num;
-    update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
+    if ( skiplb == 0 )
+        update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
     if ( SUPERNET.iamrelay != 0 )
         update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
     return(RELAYS.lb.num > n);
