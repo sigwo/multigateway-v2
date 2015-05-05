@@ -167,9 +167,10 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
     printf("send_to_daemon.(%s)\n",jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
+        tmp = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
         if ( retstrp != 0 )
         {
-            if ( (tmp= get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"))) != 0 )
+            if ( tmp != 0 )
                 tag = tmp, flag = 1;
             if ( tag == 0 )
                 tag = (((uint64_t)rand() << 32) | rand()), flag = 1;
@@ -180,11 +181,12 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
                 jsonstr = cJSON_Print(json);
                 _stripwhite(jsonstr,' ');
             }
-        }
+        } else tag = tmp;
         free_json(json);
         printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
+            printf("send_to_daemon.(%s) tag.%llu dp.%p\n",jsonstr,(long long)tag,dp);
             if ( (len= (int32_t)strlen(jsonstr)) > 0 )
             {
                 if ( Debuglevel > 1 )
