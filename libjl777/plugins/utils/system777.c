@@ -876,6 +876,7 @@ char *nn_allpeers(struct relayargs *args,char *_request,int32_t timeoutmillis)
 {
     cJSON *item,*json,*array = 0;
     int32_t i,sendlen,len,n = 0;
+    double startmilli;
     char *request;
     char *msg,*retstr;
     if ( timeoutmillis == 0 )
@@ -895,6 +896,7 @@ char *nn_allpeers(struct relayargs *args,char *_request,int32_t timeoutmillis)
         if ( (get_socket_status(args->peersock,1) & NN_POLLOUT) != 0 )
             break;
     len = (int32_t)strlen(request) + 1;
+    startmilli = milliseconds();
     if ( (sendlen= nn_send(args->peersock,request,len,0)) == len )
     {
         for (i=0; i<1000; i++)
@@ -906,6 +908,7 @@ char *nn_allpeers(struct relayargs *args,char *_request,int32_t timeoutmillis)
             {
                 if ( array == 0 )
                     array = cJSON_CreateArray();
+                cJSON_AddItemToObject(item,"lag",cJSON_CreateNumber(milliseconds()-startmilli));
                 cJSON_AddItemToArray(array,item);
                 n++;
             }
