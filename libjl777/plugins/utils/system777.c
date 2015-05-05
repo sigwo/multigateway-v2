@@ -1093,7 +1093,7 @@ void serverloop(void *_args)
     memset(args,0,sizeof(args));
     //start_devices(NN_RESPONDENT);
     sendtimeout = 10, recvtimeout = 10000;
-    peersock = nn_createsocket(endpoint,0,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
+    peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     peerargs = &args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
