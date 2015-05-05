@@ -828,15 +828,20 @@ void start_devices()
     }
 }
 
+void add_standard_fields(char *request)
+{
+    sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\",\"tag\":\"%llu\"}",SUPERNET.NXTADDR,(((long long)rand() << 32) | (uint32_t)rand()));
+    if ( SUPERNET.iamrelay != 0 && (SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0) )
+        sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+}
+
 char *nn_loadbalanced(struct relayargs *args,char *request)
 {
     char *msg,*jsonstr = 0;
     int32_t len,sendlen,i,recvlen = 0;
     if ( args->lbsock < 0 )
         return(clonestr("{\"error\":\"invalid load balanced socket\"}"));
-    sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\",\"tag\":\"%llu\"}",SUPERNET.NXTADDR,(((long long)rand() << 32) | (uint32_t)rand()));
-    if ( SUPERNET.iamrelay != 0 && (SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0) )
-        sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+    add_standard_fields(request);
     len = (int32_t)strlen(request) + 1;
     for (i=0; i<1000; i++)
         if ( (get_socket_status(args->lbsock,1) & NN_POLLOUT) != 0 )
@@ -860,12 +865,13 @@ char *nn_loadbalanced(struct relayargs *args,char *request)
     return(jsonstr);
 }
 
-char *nn_allpeers(struct relayargs *args,char *jsonquery,int32_t timeoutmillis)
+char *nn_allpeers(struct relayargs *args,char *request,int32_t timeoutmillis)
 {
     cJSON *item,*array = cJSON_CreateArray();
-    int32_t i,len,n = 0;
+    int32_t i,sendlen,len,n = 0;
     char *msg,*retstr;
-    printf("request_allpeers.(%s)\n",jsonquery);
+    add_standard_fields(request);
+    printf("request_allpeers.(%s)\n",request);
     if ( args->peersock < 0 )
         return(clonestr("{\"error\":\"invalid peers socket\"}"));
     if ( nn_setsockopt(args->peersock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
@@ -876,7 +882,8 @@ char *nn_allpeers(struct relayargs *args,char *jsonquery,int32_t timeoutmillis)
     for (i=0; i<1000; i++)
         if ( (get_socket_status(args->peersock,1) & NN_POLLOUT) != 0 )
             break;
-    if ( (len= nn_send(args->peersock,jsonquery,(int32_t)strlen(jsonquery)+1,0)) > 0 )
+    len = (int32_t)strlen(request) + 1;
+    if ( (sendlen= nn_send(args->peersock,request,len,0)) == len )
     {
         for (i=0; i<1000; i++)
             if ( (get_socket_status(args->peersock,1) & NN_POLLIN) != 0 )
@@ -887,14 +894,15 @@ char *nn_allpeers(struct relayargs *args,char *jsonquery,int32_t timeoutmillis)
                 cJSON_AddItemToArray(array,item), n++;
             nn_freemsg(msg);
         }
-    }
+    } else printf("nn_allpeers: sendlen.%d vs len.%d\n",sendlen,len);
     if ( n == 0 )
     {
         free_json(array);
         return(clonestr("{\"error\":\"no responses\"}"));
     }
     retstr = cJSON_Print(array);
-    printf("globalrequest(%s) returned (%s) from n.%d respondents\n",jsonquery,retstr,n);
+    _stripwhite(retstr,' ');
+    //printf("globalrequest(%s) returned (%s) from n.%d respondents\n",request,retstr,n);
     free_json(array);
     return(retstr);
 }
@@ -914,7 +922,6 @@ char *nn_subscriptions(struct relayargs *args,uint8_t *msg,int32_t len)
 char *nn_peers(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     cJSON *json; char *plugin,*retstr = 0;
-    printf("nn_peers.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 )

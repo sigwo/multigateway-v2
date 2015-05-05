@@ -59,9 +59,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-        else
+        else if ( strcmp(methodstr,"getinfo") == 0 )
         {
+            strcpy(retbuf,"{\"result\":\"put getinfo here\"}");
         }
+        else strcpy(retbuf,"{\"error\":\"under construction\"}");
     }
     return((int32_t)strlen(retbuf));
 }
