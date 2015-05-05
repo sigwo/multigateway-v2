@@ -175,7 +175,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
  jsonstr = clonestr(msg);
  }*/
 
-
+/*
 int32_t find_ipbits(struct relay_info *list,uint32_t ipbits)
 {
     int32_t i;
@@ -224,7 +224,7 @@ int32_t add_connections(char *server)
     //    update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
     return(RELAYS.lb.num > n);
 }
-
+*/
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *resultstr,*retstr,*methodstr,*hostname;
