@@ -131,7 +131,7 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
 static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,cJSON *argjson)
 {
     cJSON *json,*array;
-    char numstr[64],*jsonstr;
+    char *jsonstr;
     int32_t i;
     uint64_t disableflags = 0;
     json = cJSON_CreateObject();
@@ -150,7 +150,6 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
     if ( plugin->sleepmillis == 0 )
         plugin->sleepmillis = get_API_int(cJSON_GetObjectItem(json,"sleepmillis"),SUPERNET.APISLEEP);
     cJSON_AddItemToObject(json,"sleepmillis",cJSON_CreateNumber(plugin->sleepmillis));
-    sprintf(numstr,"%llu",(long long)plugin->myid), cJSON_AddItemToObject(json,"myid",cJSON_CreateString(numstr));
     cJSON_AddItemToObject(json,"methods",array);
     jsonstr = cJSON_Print(json), free_json(json);
     _stripwhite(jsonstr,' ');
@@ -275,14 +274,14 @@ int32_t main
         argjson = cJSON_Parse(jsonargs);
         if ( (len= registerAPI(registerbuf,sizeof(registerbuf)-1,plugin,argjson)) > 0 )
         {
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 fprintf(stderr,">>>>>>>>>>>>>>> plugin sends REGISTER SEND.(%s)\n",registerbuf);
             nn_broadcast(&plugin->all.socks,0,0,(uint8_t *)registerbuf,(int32_t)strlen(registerbuf)+1), plugin->numsent++;
             //nn_send(plugin->sock,plugin->registerbuf,len+1,0); // send the null terminator too
-        }
+        } else printf("error register API\n");
         if ( argjson != 0 )
             free_json(argjson);
-    }
+    } else printf("error init_pluginsocks\n");
     while ( OS_getppid() == plugin->ppid )
     {
         retbuf[0] = 0;

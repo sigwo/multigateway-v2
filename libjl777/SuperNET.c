@@ -665,62 +665,13 @@ void SuperNET_loop(void *ipaddr)
         msleep(10);
     }
     language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( SOPHIA.readyflag == 0 )
-        poll_daemons();
     language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( COINS.readyflag == 0 )
-        poll_daemons();
     language_func((char *)"ramchain","",0,0,1,(char *)"ramchain","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( RAMCHAINS.readyflag == 0 )
-        poll_daemons();
     language_func((char *)"relays","",0,0,1,(char *)"relays","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( RELAYS.readyflag == 0 )
-        poll_daemons();
     language_func((char *)"peers","",0,0,1,(char *)"peers","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( PEERS.readyflag == 0 )
-        poll_daemons();
     language_func((char *)"subscriptions","",0,0,1,(char *)"subscriptions","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( SUBSCRIPTIONS.readyflag == 0 )
+    while ( SOPHIA.readyflag == 0 || PEERS.readyflag == 0 || COINS.readyflag == 0 || RAMCHAINS.readyflag == 0 || RELAYS.readyflag == 0 || SUBSCRIPTIONS.readyflag == 0 )
         poll_daemons();
-#ifdef __APPLE__
-    char *msg;
-    int32_t i;
-    char *str;
-    int32_t n;
-    cJSON *json;
-    sleep(3);
-    while ( 0 )
-    {
-        poll_daemons();
-        if ( (str= plugin_method(0,"coins","addcoin",0,milliseconds(),"{\"method\":\"addcoin\",\"plugin\":\"coins\",\"coin\":\"BTCD\"}",1,5000)) != 0 )
-        {
-            printf("got (%s)\n",str);
-            if ( (json= cJSON_Parse(str)) != 0 )
-            {
-                if ( (msg= cJSON_str(cJSON_GetObjectItem(json,"result"))) != 0 && strcmp(msg,"addcoin") == 0 )
-                    break;
-            }
-            free(str);
-            sleep(1);
-        }
-    }
-    printf("start gen\n");
-    for (i=0; i<1; i++)
-    {
-        if ( (str= plugin_method(0,"ramchain","create",0,milliseconds(),"{\"method\":\"create\",\"coin\":\"BTCD\",\"plugin\":\"ramchain\"}",1,1000)) != 0 )
-        //if ( (str= plugin_method(0,"coins","genmultisig",0,milliseconds(),"{\"refcontact\":\"NXT-F2N7-GHWK-GH6U-8LTJC\",\"plugin\":\"coins\",\"M\":2,\"N\":3,\"method\":\"genmultisig\",\"coin\":\"BTCD\",\"multisigchar\":\"b\",\"rpc\":\"127.0.0.1:14632\",\"path\":\"BitcoinDark\",\"conf\":\"BitcoinDark.conf\"}",1,50000)) != 0 )
-        {
-            printf("got (%s)\n",str);
-            free(str);
-        }
-        poll_daemons();
-        if ( (n= nn_recv(MGW.all.socks.both.bus,&msg,NN_MSG,0)) > 0 )
-        {
-            printf("MAIN.(%s) %d\n",msg,n);
-            nn_freemsg(msg);
-        }
-    }
-#endif
     if ( MGW.gatewayid >= 0 )
         printf("MGW sock = %d\n",MGW.all.socks.both.bus);
     void serverloop(void *_args);

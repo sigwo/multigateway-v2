@@ -177,16 +177,13 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     struct relayargs *args = 0;
     int32_t permflag,broadcastflag;
     uint64_t instanceid,tag = 0;
-    char request[8192],**dest,*retstr,*sendstr,*resultstr;
+    char request[8192],**dest,*retstr,*sendstr;
     //printf("process_plugin_message.(%s)\n",str);
     if ( (json= cJSON_Parse(str)) != 0 )
     {
-        if ( (resultstr= cJSON_str(cJSON_GetObjectItem(json,"result"))) != 0 )//&& strcmp(resultstr,"registered") == 0 )
-        {
-            dp->readyflag = 1;
-            dp->allowremote = get_API_int(cJSON_GetObjectItem(json,"allowremote"),0);
-            //printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
-        }
+        printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
+        dp->readyflag = 1;
+        dp->allowremote = get_API_int(cJSON_GetObjectItem(json,"allowremote"),0);
         permflag = get_API_int(cJSON_GetObjectItem(json,"permanentflag"),0);
         instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
         tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
