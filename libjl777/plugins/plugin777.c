@@ -299,7 +299,7 @@ int32_t main
                     if ( sendflag != 0 )
                     {
                         nn_broadcast(&plugin->all.socks,0,0,(uint8_t *)retbuf,len+1), plugin->numsent++;
-                        //if ( Debuglevel > 1 )
+                        if ( Debuglevel > 1 )
                             fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                         //nn_send(plugin->sock,retbuf,len+1,0); // send the null terminator too
                     }

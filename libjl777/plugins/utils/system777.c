@@ -855,7 +855,7 @@ char *nn_subscriptions(struct relayargs *args,uint8_t *msg,int32_t len)
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         plugin = cJSON_str(cJSON_GetObjectItem(json,"plugin"));
-        retstr = plugin_method("remote",plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,len,0);
+        retstr = plugin_method("remote",plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,len,1000);
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
     return(retstr);
@@ -870,7 +870,7 @@ char *nn_peers(struct relayargs *args,uint8_t *msg,int32_t len)
         {
             if ( strcmp(plugin,"subscriptions") == 0 )
                 retstr = nn_subscriptions(args,msg,len);
-            else retstr = plugin_method("remote",plugin==0?"peers":plugin,(char *)args,0,0,(char *)msg,len,0);
+            else retstr = plugin_method("remote",plugin==0?"peers":plugin,(char *)args,0,0,(char *)msg,len,1000);
         }
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
@@ -889,7 +889,7 @@ char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len)
                 retstr = nn_subscriptions(args,msg,len);
             else if ( strcmp(plugin,"peers") == 0 )
                 retstr = nn_peers(args,msg,len);
-            else retstr = plugin_method("remote",plugin==0?"relays":plugin,(char *)args,0,0,(char *)msg,len,0);
+            else retstr = plugin_method("remote",plugin==0?"relays":plugin,(char *)args,0,0,(char *)msg,len,1000);
         }
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
@@ -900,9 +900,9 @@ void complete_relay(struct relayargs *args,char *retstr)
 {
     int32_t len,sendlen;
     len = (int32_t)strlen(retstr)+1;
-    printf("complete_relay.(%s) -> sock.%d %s\n",retstr,args->sock,args->name);
     if ( (sendlen= nn_send(args->sock,retstr,len,0)) != len )
-        printf("complete_relay.%s warning: sendlen.%d vs %d for (%s) sock.%d %s\n",args->name,sendlen,len,retstr,args->sock,nn_errstr());
+        printf("complete_relay.%s warning: send.%d vs %d for (%s) sock.%d %s\n",args->name,sendlen,len,retstr,args->sock,nn_errstr());
+    else printf("SUCCESS complete_relay.(%s) -> sock.%d %s\n",retstr,args->sock,args->name);
 }
 
 char *nn_publish(struct relayargs *args,char *publishstr)
