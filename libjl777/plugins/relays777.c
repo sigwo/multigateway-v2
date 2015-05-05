@@ -175,7 +175,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
  jsonstr = clonestr(msg);
  }*/
 
-/*
+
 int32_t find_ipbits(struct relay_info *list,uint32_t ipbits)
 {
     int32_t i;
@@ -202,6 +202,11 @@ int32_t add_relay(struct relay_info *list,uint64_t ipbits)
 int32_t update_serverbits(struct relay_info *list,char *server,uint64_t ipbits,int32_t type)
 {
     char endpoint[1024];
+    if ( list->sock < 0 )
+    {
+        printf("illegal list sock.%d\n",list->sock);
+        return(-1);
+    }
     //printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
     if ( find_ipbits(list,(uint32_t)ipbits) < 0 )
     {
@@ -217,14 +222,14 @@ int32_t add_connections(char *server)
 {
     uint64_t ipbits; int32_t n;
     ipbits = calc_ipbits(server);
-    //update_serverbits(&RELAYS.peers,server,ipbits,NN_SURVEYOR);
+    update_serverbits(&RELAYS.peer,server,ipbits,NN_SURVEYOR);
     n = RELAYS.lb.num;
     update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
-    //if ( SUPERNET.iamrelay != 0 )
-    //    update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
+    if ( SUPERNET.iamrelay != 0 )
+        update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
     return(RELAYS.lb.num > n);
 }
-*/
+
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *resultstr,*retstr,*methodstr,*hostname;
