@@ -1108,7 +1108,7 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
                     str = clonestr(msg);
                     nn_freemsg(msg);
                     messages[received++] = str;
-                    if ( Debuglevel > 2 )
+                    //if ( Debuglevel > 1 )
                         printf("(%d %d) %d %.6f RECEIVED.%d i.%d/%ld (%s)\n",*numrecvp,numsent,received,milliseconds(),n,i,sizeof(socks->all)/sizeof(*socks->all),str);
                 }
             }
