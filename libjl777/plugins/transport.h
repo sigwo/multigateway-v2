@@ -185,7 +185,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
         {
             if ( (len= (int32_t)strlen(jsonstr)) > 0 )
             {
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s)\n",(long long)tag,jsonstr);
                 if ( tag != 0 )
                     add_tagstr(dp,tag,retstrp,args);
