@@ -1018,8 +1018,8 @@ void serverloop(void *_args)
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
     sendtimeout = 10, recvtimeout = 10000;
-    RELAYS.peer.sock = peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
-    peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
+    peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
+    peerargs = &args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
     lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
