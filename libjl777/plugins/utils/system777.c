@@ -62,7 +62,7 @@ struct biendpoints { int32_t bus,pair; };
 struct allendpoints { struct sendendpoints send; struct recvendpoints recv; struct biendpoints both; };
 union endpoints { int32_t all[sizeof(struct allendpoints) / sizeof(int32_t)]; struct allendpoints socks; };
 
-#define DEFAULT_APISLEEP 50
+#define DEFAULT_APISLEEP 100
 struct SuperNET_info
 {
     char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024];
@@ -174,7 +174,7 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
 int32_t shutdown_plugsocks(union endpoints *socks);
 int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len);
 int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis);
-int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis);
+int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis,void (*funcp)(char *line));
 void ensure_directory(char *dirname);
 int32_t nn_portoffset(int32_t type);
 uint32_t is_ipaddr(char *str);
@@ -498,8 +498,12 @@ int32_t getline777(char *line,int32_t max)
     timeout.tv_sec = 0, timeout.tv_usec = 10000;
     if ( (s= select(1,&fdset,NULL,NULL,&timeout)) < 0 )
         fprintf(stderr,"wait_for_input: error select s.%d\n",s);
-    else if ( FD_ISSET(STDIN_FILENO,&fdset) == 0 || fgets(line,max,stdin) != 0 )
-        return(-1);//sprintf(retbuf,"{\"result\":\"no messages\",\"myid\":\"%llu\",\"counter\":%d}",(long long)myid,counter), retbuf[0] = 0;
+    else
+    {
+        if ( FD_ISSET(STDIN_FILENO,&fdset) == 0 || fgets(line,max,stdin) != 0 )
+            sprintf(line,"{\"result\":\"no messages\"}");
+        else printf("gotline\n");
+    }
     return((int32_t)strlen(line));
 }
 
@@ -1026,11 +1030,16 @@ int32_t launch_responseloop(struct relayargs *args,char *name,int32_t type,int32
     return(args->sock);
 }
 
+void process_userinput(char *line)
+{
+    printf("GOT USER INPUT.(%s)\n",line);
+}
+
 void serverloop(void *_args)
 {
     static struct relayargs args[8];
     struct relayargs *peerargs,*lbargs,*arg;
-    char endpoint[128],request[1024],ipaddr[64],*retstr;
+    char endpoint[128],request[1024],line[1024],ipaddr[64],*retstr;
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
     sendtimeout = 10, recvtimeout = 10000;
@@ -1076,23 +1085,30 @@ void serverloop(void *_args)
     {
         int32_t poll_daemons();
         poll_daemons();
-        if ( SUPERNET.iamrelay == 0 )
+        if ( SUPERNET.iamrelay == 0 && (rand() % 100000) == 0 )
         {
-            sprintf(request,"{\"plugin\":\"relays\",\"method\":\"%s\"}",(rand() & 1) != 0 ? "list" : "listpubs");
-            if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
+            if ( (rand() % 2) == 0 )
             {
-                printf("LB_RESPONSE.(%s)\n",retstr);
-                free(retstr);
+                sprintf(request,"{\"plugin\":\"relays\",\"method\":\"%s\"}",(rand() & 1) != 0 ? "list" : "listpubs");
+                if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
+                {
+                    printf("LB_RESPONSE.(%s)\n",retstr);
+                    free(retstr);
+                }
             }
-            sleep(10);
-            sprintf(request,"{\"plugin\":\"peers\",\"method\":\"getinfo\"}");
-            if ( (retstr= nn_allpeers(peerargs,request,2000)) != 0 )
+            else
             {
-                printf("ALLPEERS.(%s)\n",retstr);
-                free(retstr);
+                sprintf(request,"{\"plugin\":\"peers\",\"method\":\"getinfo\"}");
+                if ( (retstr= nn_allpeers(peerargs,request,2000)) != 0 )
+                {
+                    printf("ALLPEERS.(%s)\n",retstr);
+                    free(retstr);
+                }
             }
-            sleep(10);
-        } else if ( SUPERNET.APISLEEP > 0 ) msleep(SUPERNET.APISLEEP);
+        }
+        if ( SUPERNET.APISLEEP > 0 ) msleep(SUPERNET.APISLEEP);
+        if ( getline777(line,sizeof(line)-1) > 0 )
+            process_userinput(line);
     }
 }
 
@@ -1212,7 +1228,7 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
     return(received);
 }
 
-int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis)
+int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis,void (*funcp)(char *line))
 {
     char line[8192];
     int32_t len,n = 0;
@@ -1223,7 +1239,11 @@ int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_
         if ( line[len-1] == '\n' )
             line[--len] = 0;
         if ( len > 0 )
-            messages[0] = clonestr(line), n = 1;
+        {
+            if ( funcp != 0 )
+                (*funcp)(line);
+            else messages[0] = clonestr(line), n = 1;
+        }
     }
     return(n);
 }

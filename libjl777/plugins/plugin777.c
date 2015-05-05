@@ -289,7 +289,7 @@ int32_t main
     while ( OS_getppid() == plugin->ppid )
     {
         retbuf[0] = 0;
-        if ( (n= get_newinput(messages,&plugin->numrecv,plugin->numsent,plugin->permanentflag,&plugin->all,plugin->timeout)) > 0 )
+        if ( (n= get_newinput(messages,&plugin->numrecv,plugin->numsent,plugin->permanentflag,&plugin->all,plugin->timeout,0)) > 0 )
         {
             for (i=0; i<n; i++)
             {
