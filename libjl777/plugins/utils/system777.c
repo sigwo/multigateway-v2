@@ -664,6 +664,17 @@ int32_t ismyaddress(char *server)
     return(0);
 }
 
+int32_t get_socket_status(int32_t sock,int32_t timeoutmillis)
+{
+    struct nn_pollfd pfd;
+    int32_t rc;
+    pfd.fd = sock;
+    pfd.events = NN_POLLIN | NN_POLLOUT;
+    if ( (rc= nn_poll(&pfd,1,timeoutmillis)) == 0 )
+        return(pfd.revents);
+    else return(-1);
+}
+
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
     int32_t i; char endpoint[512];
@@ -685,12 +696,13 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
     int32_t lbsock,timeout,priority = 1; //char *fallback = "tcp://209.126.70.170:4010";
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
+        //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-        timeout = 10;
+        timeout = 1000;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
-        timeout = 10000;
+        timeout = 10;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
         priority = nn_addservers(priority,lbsock,servers,num);
@@ -801,25 +813,39 @@ void start_devices()
 char *nn_loadbalanced(struct relayargs *args,char *request)
 {
     char *msg,*jsonstr = 0;
-    int32_t len,sendlen,recvlen = 0;
+    int32_t len,sendlen,i,recvlen = 0;
     if ( args->lbsock < 0 )
         return(clonestr("{\"error\":\"invalid load balanced socket\"}"));
     sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\",\"tag\":\"%llu\"}",SUPERNET.NXTADDR,(((long long)rand() << 32) | (uint32_t)rand()));
     if ( SUPERNET.iamrelay != 0 && (SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0) )
         sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
     len = (int32_t)strlen(request) + 1;
-    if ( (sendlen= nn_send(args->lbsock,request,len,0)) == len && (recvlen= nn_recv(args->lbsock,&msg,NN_MSG,0)) > 0 )
+    for (i=0; i<1000; i++)
+        if ( (get_socket_status(args->lbsock,1) & NN_POLLOUT) != 0 )
+            break;
+    if ( (sendlen= nn_send(args->lbsock,request,len,0)) == len )
     {
-        jsonstr = clonestr((char *)msg);//(*args->commandprocessor)(args,(uint8_t *)msg,len);
-        nn_freemsg(msg);
-    } else printf("got sendlen.%d instead of %d | recvlen.%d %s\n",sendlen,len,recvlen,nn_errstr()), jsonstr = clonestr("{\"error\":\"no response\"}");
+        for (i=0; i<1000; i++)
+            if ( (get_socket_status(args->lbsock,1) & NN_POLLIN) != 0 )
+                break;
+        if ( (recvlen= nn_recv(args->lbsock,&msg,NN_MSG,0)) > 0 )
+        {
+            jsonstr = clonestr((char *)msg);//(*args->commandprocessor)(args,(uint8_t *)msg,len);
+            nn_freemsg(msg);
+        }
+        else
+        {
+            printf("got recvlen.%d %s\n",recvlen,nn_errstr());
+            jsonstr = clonestr("{\"error\":\"lb send error\"}");
+        }
+    } else printf("got sendlen.%d instead of %d %s\n",sendlen,len,nn_errstr()), jsonstr = clonestr("{\"error\":\"lb send error\"}");
     return(jsonstr);
 }
 
 char *nn_allpeers(struct relayargs *args,char *jsonquery,int32_t timeoutmillis)
 {
     cJSON *item,*array = cJSON_CreateArray();
-    int32_t len,n = 0;
+    int32_t i,len,n = 0;
     char *msg,*retstr;
     printf("request_allpeers.(%s)\n",jsonquery);
     if ( args->peersock < 0 )
@@ -829,8 +855,14 @@ char *nn_allpeers(struct relayargs *args,char *jsonquery,int32_t timeoutmillis)
         printf("error nn_setsockopt\n");
         return(clonestr("{\"error\":\"setting NN_SURVEYOR_DEADLINE\"}"));
     }
+    for (i=0; i<1000; i++)
+        if ( (get_socket_status(args->peersock,1) & NN_POLLOUT) != 0 )
+            break;
     if ( (len= nn_send(args->peersock,jsonquery,(int32_t)strlen(jsonquery)+1,0)) > 0 )
     {
+        for (i=0; i<1000; i++)
+            if ( (get_socket_status(args->peersock,1) & NN_POLLIN) != 0 )
+                break;
         while ( (len= nn_recv(args->peersock,&msg,NN_MSG,0)) > 0 )
         {
             if ( (item= cJSON_Parse(msg)) != 0 )
@@ -970,7 +1002,7 @@ void serverloop(void *_args)
     //peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     //peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     //pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1), launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
-    lbsock = loadbalanced_socket(13000,SUPERNET.port); // NN_REQ
+    lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
     lbargs = &args[n++];
     if ( SUPERNET.iamrelay != 0 )
     {
@@ -1133,17 +1165,6 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
     //if ( n != 0 || received != 0 )
     //   printf("n.%d: received.%d\n",n,received);
     return(received);
-}
-
-int32_t get_socket_status(int32_t sock,int32_t timeoutmillis)
-{
-    struct nn_pollfd pfd;
-    int32_t rc;
-    pfd.fd = sock;
-    pfd.events = NN_POLLIN | NN_POLLOUT;
-    if ( (rc= nn_poll(&pfd,1,timeoutmillis)) == 0 )
-        return(pfd.revents);
-    else return(-1);
 }
 
 int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis)
