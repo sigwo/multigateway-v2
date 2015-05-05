@@ -560,10 +560,14 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 
 int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
-    static char *tcpformat = "ps%02d.bitcoindark.ca";
-    int32_t i,n = 0;
-    for (i=0; i<=20&&n<max; i++,n++)
-        sprintf(servers[i],tcpformat,i);
+    //static char *tcpformat = "ps%02d.bitcoindark.ca";
+    int32_t n = 0;
+    strcpy(servers[n++],"192.99.151.160");
+    strcpy(servers[n++],"167.114.96.223");
+    strcpy(servers[n++],"167.114.113.197");
+    //int32_t i,n = 0;
+    //for (i=0; i<=20&&n<max; i++,n++)
+    //    sprintf(servers[i],tcpformat,i);
     return(n);
 }
 
@@ -750,7 +754,7 @@ int32_t loadbalanced_socket(int32_t retrymillis,int32_t port)
     //if ( europeflag != 0 )
     //    lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     //else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,failsafes,numfailsafes);
-    lbsock = nn_loadbalanced_socket(retrymillis,failsafes,numfailsafes,Bservers,m,Cservers,n);
+    lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     return(lbsock);
 }
 
@@ -1096,9 +1100,10 @@ void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char 
         _stripwhite(cmdstr,' ');
         if ( strcmp(plugin,"peers") == 0 )
             retstr = nn_allpeers(peerargs,cmdstr,RELAYS.surveymillis);
-        else if ( strcmp(plugin,"subscriptions") == 0 )
+        else if ( strcmp(plugin,"relays") == 0 )
+            retstr = nn_loadbalanced(lbargs,cmdstr);
+        else //if ( strcmp(plugin,"subscriptions") == 0 )
             retstr = nn_publish(pubstr);
-        else retstr = nn_loadbalanced(lbargs,cmdstr);
         printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
         free(cmdstr);
         free_json(json);

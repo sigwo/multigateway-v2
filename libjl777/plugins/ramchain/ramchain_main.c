@@ -20,7 +20,7 @@
 #undef DEFINES_ONLY
 
 STRUCTNAME RAMCHAINS;
-char *PLUGNAME(_methods)[] = { "create", "stats" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "create", "list" }; // list of supported methods
 
 void ramchain_idle(struct plugin_info *plugin)
 {

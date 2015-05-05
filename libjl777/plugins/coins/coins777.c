@@ -306,7 +306,7 @@ int32_t coinaddr_update(struct ramchain *ram,struct unspent_output *U)
 
 int32_t unspent_add(struct ramchain *ram,struct ramchain_hashtable *unspents,struct unspent_output *U)
 {
-    int32_t err,err2; void *ptr; int32_t len; uint32_t rawind = U->B.rawind;
+    int32_t err,err2; void *ptr; int32_t len; uint32_t rawind = *(uint32_t *)U;
     if ( U->B.rawind > unspents->maxind )
         unspents->maxind = U->B.rawind;
     if ( (ptr= db777_findM(&len,unspents->DB,&rawind,sizeof(rawind))) != 0 )
@@ -563,7 +563,7 @@ int32_t unspent_create(struct ramchain *ram,struct unspent_output *U,struct ramc
     U->B = *B, U->B.rawind = unspentind;
     if ( unspentind > unspents->maxind )
         unspents->maxind = unspentind;
-    printf("create unspentind.%u txidind.%-6u.v%d addrind.%-6u scriptind.%-6u %.8f\n",unspentind,txidind,vout,U->addrind,U->scriptind,dstr(value));
+    //printf("create unspentind.%u txidind.%-6u.v%d addrind.%-6u scriptind.%-6u %.8f\n",unspentind,txidind,vout,U->addrind,U->scriptind,dstr(value));
     return(unspent_add(ram,unspents,U));
  }
 
@@ -573,9 +573,20 @@ int32_t unspent_find(struct unspent_output *U,struct ramchain_hashtable *unspent
     if ( (up= db777_findM(&len,unspents->DB,&unspentind,sizeof(unspentind))) != 0 )
     {
         *U = *up;
-        printf("found unspentind.%u addrind.%u txidind.%d %.8f | spendtxind.%u v.%d\n",up->B.rawind,up->addrind,up->txidind,dstr(up->value),up->spend_txidind,up->spend_vout);
+        //printf("found unspentind.%u addrind.%u txidind.%d %.8f | spendtxind.%u v.%d\n",up->B.rawind,up->addrind,up->txidind,dstr(up->value),up->spend_txidind,up->spend_vout);
         free(up);
         return(0);
+    }
+    else
+    {
+        unspentind |= (1 << 31);
+        if ( (up= db777_findM(&len,unspents->DB,&unspentind,sizeof(unspentind))) != 0 )
+        {
+            *U = *up;
+            printf("found SPENT unspentind.%u addrind.%u txidind.%d %.8f | spendtxind.%u v.%d\n",up->B.rawind,up->addrind,up->txidind,dstr(up->value),up->spend_txidind,up->spend_vout);
+            free(up);
+            return(0);
+        }
     }
     return(-1);
 }
@@ -880,10 +891,6 @@ uint32_t ensure_ramchain_DBs(struct ramchain *ram)
             minblocknum = ram->DBs[i]->minblocknum;
         printf("%u ",ram->DBs[i]->minblocknum);
     }
-    //minblocknum = MIN(f,MIN(e,MIN(MIN(a,b),MIN(b,c))));
-    //if ( minblocknum <= 2 )
-    //    minblocknum = 1;
-    //else minblocknum -= 1;
     printf("minblocknums -> %d\n",minblocknum);
     ramchain_setblocknums(ram,minblocknum);
     printf("finished setblocknums\n");
@@ -923,6 +930,7 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr)
 {
     struct ramchain *ram = &coin->ramchain;
     ram->startmilli = milliseconds();
+    get_msig_pubkeys(0,coin->name,coin->serverport,coin->userpass);
     strcpy(ram->name,coinstr);
     ram->blocknum = ram->startblocknum = ensure_ramchain_DBs(ram);
     ram->huffallocsize = sizeof(struct rawblock)/10, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);

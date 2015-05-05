@@ -24,6 +24,7 @@ struct cointx_info *createrawtransaction(char *coinstr,char *serverport,char *us
 int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,char *txbytes,int32_t gatewayid,int32_t numgateways);
 int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params);
 int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr);
+char *get_msig_pubkeys(char *coinaddr,char *coinstr,char *serverport,char *userpass);
 
 
 #endif
@@ -57,6 +58,42 @@ char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *user
         strcpy(coinaddr,retstr);
         free(retstr);
         return(coinaddr);
+    }
+    return(0);
+}
+
+char *get_msig_pubkeys(char *coinaddr,char *coinstr,char *serverport,char *userpass)
+{
+    char addr[128],str[MAX_JSON_FIELD],*retstr;
+    cJSON *array,*json;
+    int32_t i,n;
+    coinaddr[0] = 0;
+    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts",addr)) != 0 )
+    {
+        retstr[0] = '[';
+        n = (int32_t)strlen(retstr);
+        retstr[n-1] = ']';
+        for (i=0; i<n; i++)
+            if ( retstr[i] == ':' )
+                retstr[i] = ',';
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    copy_cJSON(str,cJSON_GetArrayItem(json,i));
+                    if ( is_decimalstr(str) != 0 )
+                        printf("%s ",str);
+                }
+                //sprintf(addr,"\"%s\"",NXTaddr);
+                //strcpy(coinaddr,retstr);
+                //free(retstr);
+                //return(coinaddr);
+            }
+            free_json(json);
+        } else printf("couldnt parse.(%s)\n",retstr);
+        free(retstr);
     }
     return(0);
 }
