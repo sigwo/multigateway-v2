@@ -891,7 +891,11 @@ char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len)
                 retstr = nn_peers(args,msg,len);
             else retstr = plugin_method("remote",plugin,(char *)args,0,0,(char *)msg,len,1000);
         }
-        else retstr = plugin_method("remote","relays",(char *)args,0,0,(char *)msg,len,1000);
+        else
+        {
+            retstr = plugin_method("remote","relays",(char *)args,0,0,(char *)msg,len,1000);
+            printf("returnpath.(%s) %s -> (%s)\n",args->name,jsonstr,retstr);
+        }
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
     return(retstr);

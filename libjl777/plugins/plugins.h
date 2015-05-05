@@ -471,7 +471,8 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
         method = methodbuf;
         override = 1;
     } else override = 0;
-    fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d (%s)\n",method,plugin,is_bundled_plugin(plugin),origargstr);
+    if ( Debuglevel > 2 )
+        fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d (%s)\n",method,plugin,is_bundled_plugin(plugin),origargstr);
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) == 0 )
     {
         if ( is_bundled_plugin(plugin) != 0 )
@@ -490,7 +491,8 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
         else if ( in_jsonarray(dp->methodsjson,method) == 0 )
         {
             methodsstr = cJSON_Print(dp->methodsjson);
-            fprintf(stderr,"available methods.(%s)\n",methodsstr);
+            if ( Debuglevel > 2 )
+                fprintf(stderr,"available methods.(%s)\n",methodsstr);
             sprintf(retbuf,"{\"error\":\"method not allowed\",\"plugin\":\"%s\",\"%s\":\"%s\"}",plugin,method,methodsstr);
             free(methodsstr);
             return(clonestr(retbuf));
