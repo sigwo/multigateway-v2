@@ -1092,7 +1092,7 @@ void serverloop(void *_args)
                 free(retstr);
             }
             sleep(10);
-        }
+        } else if ( SUPERNET.APISLEEP > 0 ) msleep(SUPERNET.APISLEEP);
     }
 }
 
