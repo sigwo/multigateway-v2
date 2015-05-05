@@ -890,7 +890,7 @@ char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len)
             else if ( strcmp(plugin,"peers") == 0 )
                 retstr = nn_peers(args,msg,len);
             else retstr = plugin_method("remote",plugin==0?"relays":plugin,(char *)args,0,0,(char *)msg,len,1000);
-        }
+        } else printf("nn_relays without plugin.(%s)\n",jsonstr);
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
     return(retstr);
