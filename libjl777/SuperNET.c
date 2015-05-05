@@ -659,12 +659,13 @@ char *SuperNET_url()
 void SuperNET_loop(void *ipaddr)
 {
     char *strs[16],jsonargs[512]; int32_t i,ind,n = 0;
-    while ( SUPERNET.readyflag == 0 )
+    while ( SUPERNET.readyflag == 0 || find_daemoninfo(&ind,"SuperNET",0,0) == 0 )
     {
         if ( poll_daemons() > 0 )
             break;
         msleep(10);
     }
+    sleep(1);
     sprintf(jsonargs,"{\"filename\":\"SuperNET.conf\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
     strs[n++] = language_func((char *)"sophia","",0,0,1,(char *)"sophia",jsonargs,call_system);
     while ( SOPHIA.readyflag == 0 || find_daemoninfo(&ind,"sophia",0,0) == 0 )
