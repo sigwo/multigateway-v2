@@ -207,7 +207,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        printf("RELAYS.(%s)\n",methodstr);
+        //printf("RELAYS.(%s)\n",methodstr);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
