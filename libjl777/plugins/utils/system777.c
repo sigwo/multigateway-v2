@@ -733,7 +733,11 @@ int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,
             printf("error setting sendtimeout %s\n",nn_errstr());
         else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
             printf("error setting sendtimeout %s\n",nn_errstr());
-        else return(sock);
+        else
+        {
+            printf("nn_createsocket.(%s) %d\n",name,sock);
+            return(sock);
+        }
     }
     return(-1);
 }
