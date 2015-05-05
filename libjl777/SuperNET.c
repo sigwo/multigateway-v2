@@ -658,7 +658,7 @@ char *SuperNET_url()
 
 void SuperNET_loop(void *ipaddr)
 {
-    char *strs[16]; int32_t i,n = 0;
+    char *strs[16]; int32_t i,ind,n = 0;
     while ( SUPERNET.readyflag == 0 )
     {
         if ( poll_daemons() > 0 )
@@ -666,16 +666,16 @@ void SuperNET_loop(void *ipaddr)
         msleep(10);
     }
     strs[n++] = language_func((char *)"sophia","",0,0,1,(char *)"sophia","{\"filename\":\"SuperNET.conf\"}",call_system);
-    strs[n++] = language_func((char *)"relays","",0,0,1,(char *)"relays","{\"filename\":\"SuperNET.conf\"}",call_system);
-    strs[n++] = language_func((char *)"peers","",0,0,1,(char *)"peers","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( SOPHIA.readyflag == 0 )
+    while ( SOPHIA.readyflag == 0 || find_daemoninfo(&ind,"sophia",0,0) == 0 )
          poll_daemons();
     strs[n++] = language_func((char *)"coins","",0,0,1,(char *)"coins","{\"filename\":\"SuperNET.conf\"}",call_system);
     strs[n++] = language_func((char *)"ramchain","",0,0,1,(char *)"ramchain","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( COINS.readyflag == 0 || RAMCHAINS.readyflag == 0 )
+    while ( COINS.readyflag == 0 || RAMCHAINS.readyflag == 0 || find_daemoninfo(&ind,"coins",0,0) == 0 || find_daemoninfo(&ind,"ramchain",0,0) == 0 )
         poll_daemons();
-     strs[n++] = language_func((char *)"subscriptions","",0,0,1,(char *)"subscriptions","{\"filename\":\"SuperNET.conf\"}",call_system);
-    while ( PEERS.readyflag == 0 || RELAYS.readyflag == 0 || SUBSCRIPTIONS.readyflag == 0 )
+    strs[n++] = language_func((char *)"relays","",0,0,1,(char *)"relays","{\"filename\":\"SuperNET.conf\"}",call_system);
+    strs[n++] = language_func((char *)"peers","",0,0,1,(char *)"peers","{\"filename\":\"SuperNET.conf\"}",call_system);
+    strs[n++] = language_func((char *)"subscriptions","",0,0,1,(char *)"subscriptions","{\"filename\":\"SuperNET.conf\"}",call_system);
+    while ( PEERS.readyflag == 0 || RELAYS.readyflag == 0 || SUBSCRIPTIONS.readyflag == 0 || find_daemoninfo(&ind,"relays",0,0) == 0 || find_daemoninfo(&ind,"peers",0,0) == 0 || find_daemoninfo(&ind,"subscriptions",0,0) == 0 )
         poll_daemons();
     for (i=0; i<n; i++)
     {
