@@ -29,11 +29,12 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
     // runtime specific state can be created and put into *data
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
+
 int32_t add_publication(char *subscription)
 {
-    SUPERNET.publications = realloc(SUPERNET.publications,sizeof(*SUPERNET.publications) * (SUPERNET.numpubs + 1));
-    SUPERNET.publications[SUPERNET.numpubs] = clonestr(subscription);
-    return(++SUPERNET.numpubs);
+    SUBSCRIPTIONS.publications = realloc(SUBSCRIPTIONS.publications,sizeof(*SUBSCRIPTIONS.publications) * (SUBSCRIPTIONS.numpubs + 1));
+    SUBSCRIPTIONS.publications[SUBSCRIPTIONS.numpubs] = clonestr(subscription);
+    return(++SUBSCRIPTIONS.numpubs);
 }
 
 char *publish_jsonstr(char *category)
@@ -42,10 +43,10 @@ char *publish_jsonstr(char *category)
     int32_t i; char endpoint[MAX_SERVERNAME],*retstr;
     if ( strcmp(category,"*") == 0 )
         category = 0;
-    for (i=0; i<SUPERNET.numpubs; i++)
+    for (i=0; i<SUBSCRIPTIONS.numpubs; i++)
     {
-        if ( category == 0 || strncmp(category,SUPERNET.publications[i],strlen(category)) == 0 )
-            cJSON_AddItemToArray(array,cJSON_CreateString(SUPERNET.publications[i]));
+        if ( category == 0 || strncmp(category,SUBSCRIPTIONS.publications[i],strlen(category)) == 0 )
+            cJSON_AddItemToArray(array,cJSON_CreateString(SUBSCRIPTIONS.publications[i]));
     }
     json = cJSON_CreateObject();
     set_endpointaddr(endpoint,SUPERNET.myipaddr,SUPERNET.port,NN_PUB);

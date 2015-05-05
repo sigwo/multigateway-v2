@@ -65,10 +65,10 @@ union endpoints { int32_t all[sizeof(struct allendpoints) / sizeof(int32_t)]; st
 #define DEFAULT_APISLEEP 50
 struct SuperNET_info
 {
-    char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],**publications;
+    char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024];
     char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512],hostname[512];
     uint64_t my64bits;
-    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,numpubs,readyflag,UPNP,iamrelay;
+    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,readyflag,UPNP,iamrelay;
     uint16_t port;
 }; extern struct SuperNET_info SUPERNET;
 
@@ -107,9 +107,23 @@ struct ramchain_info
     // this will be at the end of the plugins structure and will be called with all zeros to _init
 }; extern struct ramchain_info RAMCHAINS;
 
-struct relays_info { int32_t readyflag; }; extern struct relays_info RELAYS;
-struct peers_info { int32_t readyflag; }; extern struct peers_info PEERS;
-struct subscriptions_info { int32_t readyflag; }; extern struct subscriptions_info SUBSCRIPTIONS;
+struct relay_info { int32_t num,sock; uint64_t servers[4096]; };
+struct relays_info
+{
+    struct relay_info peers,lb,bus,sub;
+    int32_t readyflag;
+}; extern struct relays_info RELAYS;
+
+struct peers_info
+{
+    int32_t readyflag;
+}; extern struct peers_info PEERS;
+
+struct subscriptions_info
+{
+    char **publications;
+    int32_t readyflag,numpubs;
+}; extern struct subscriptions_info SUBSCRIPTIONS;
 
 #define MAX_SERVERNAME 128
 struct relayargs
@@ -170,7 +184,7 @@ char *ipbits_str(uint64_t ipbits);
 char *ipbits_str2(uint64_t ipbits);
 struct sockaddr_in conv_ipbits(uint64_t ipbits);
 int32_t ismyaddress(char *server);
-void set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type);
+uint16_t set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type);
 
 char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async);
 char *nn_publish(struct relayargs *args,char *publishstr);
@@ -519,9 +533,11 @@ int32_t nn_portoffset(int32_t type)
     return(-1);
 }
 
-void set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type)
+uint16_t set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type)
 {
-    sprintf(endpoint,"tcp://%s:%d",domain,port + nn_portoffset(type));
+    port += nn_portoffset(type);
+    sprintf(endpoint,"tcp://%s:%d",domain,port);
+    return(port);
 }
 
 int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
@@ -677,14 +693,18 @@ int32_t get_socket_status(int32_t sock,int32_t timeoutmillis)
 
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
-    int32_t i; char endpoint[512];
+    int32_t add_connections(char *server);
+    int32_t i; uint16_t port; char endpoint[512];
     if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
         {
-            set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
+            port = set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
             if ( ismyaddress(servers[i]) == 0 && nn_connect(sock,endpoint) >= 0 )
+            {
                 printf("+%s ",endpoint);
+                add_connections(servers[i]);
+            }
         }
          priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
@@ -696,6 +716,7 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
     int32_t lbsock,timeout,priority = 1; //char *fallback = "tcp://209.126.70.170:4010";
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
+        RELAYS.lb.sock = lbsock;
         //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
@@ -896,6 +917,7 @@ char *nn_subscriptions(struct relayargs *args,uint8_t *msg,int32_t len)
 char *nn_peers(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     cJSON *json; char *plugin,*retstr = 0;
+    printf("nn_peers msg.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 )
@@ -996,19 +1018,21 @@ void serverloop(void *_args)
     static struct relayargs args[8];
     struct relayargs *peerargs,*lbargs,*arg;
     char endpoint[128],request[1024],*retstr;
-    int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
+    int32_t i,sendtimeout,recvtimeout,lbsock,bussock,subsock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
     sendtimeout = 10, recvtimeout = 10000;
     peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
-    pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1), launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
-    lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
+    pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
+    subsock = launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
     lbargs = &args[n++];
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_relays);
         bussock = launch_responseloop(&args[n++],"NN_BUS",NN_BUS,1,nn_relays);
-    } else bussock = -1, lbargs->commandprocessor = nn_relays, lbargs->sock = lbsock;
+    } else bussock = -1, lbargs->commandprocessor = nn_relays;
+    RELAYS.bus.sock = bussock, RELAYS.sub.sock = subsock, RELAYS.peers.sock = peersock;
+    lbargs->sock = lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
     for (i=0; i<n; i++)
     {
         arg = &args[i];

@@ -102,15 +102,6 @@ uint32_t *get_myRelays(int32_t *nump)
     return(list);
 }
 
-int32_t find_ipbits(uint32_t *list,int32_t n,uint32_t ipbits)
-{
-    int32_t i;
-    for (i=0; i<n; i++)
-        if ( list[i] == ipbits )
-            return(i);
-    return(-1);
-}
-
 char *unmatched_jsonstr(uint32_t *list,int32_t n)
 {
     cJSON *json,*array = 0;
@@ -183,6 +174,56 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
  free_json(json);
  jsonstr = clonestr(msg);
  }*/
+
+
+int32_t find_ipbits(struct relay_info *list,uint32_t ipbits)
+{
+    int32_t i;
+    if ( list == 0 || list->num == 0 )
+        return(-1);
+    for (i=0; i<list->num&&i<(int32_t)(sizeof(list->servers)/sizeof(*list->servers)); i++)
+        if ( (uint32_t)list->servers[i] == ipbits )
+            return(i);
+    return(-1);
+}
+
+int32_t add_relay(struct relay_info *list,uint64_t ipbits)
+{
+    //static portable_mutex_t mutex; static int didinit;
+    //if ( didinit == 0 ) didinit++, portable_mutex_init(&mutex);
+    //portable_mutex_lock(&mutex);
+    list->servers[list->num % (sizeof(list->servers)/sizeof(*list->servers))] = ipbits, list->num++;
+    //portable_mutex_unlock(&mutex);
+    if ( list->num > (sizeof(list->servers)/sizeof(*list->servers)) )
+        printf("add_relay warning num.%d > %ld\n",list->num,(sizeof(list->servers)/sizeof(*list->servers)));
+    return(list->num);
+}
+
+int32_t update_serverbits(struct relay_info *list,char *server,uint64_t ipbits,int32_t type)
+{
+    char endpoint[1024];
+    //printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
+    if ( find_ipbits(list,(uint32_t)ipbits) < 0 )
+    {
+        set_endpointaddr(endpoint,server,SUPERNET.port,type);
+        if ( nn_connect(list->sock,endpoint) < 0 )
+            printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
+        else add_relay(list,ipbits);
+    }
+    return(list->num);
+}
+
+int32_t add_connections(char *server)
+{
+    uint64_t ipbits; int32_t n;
+    ipbits = calc_ipbits(server);
+    update_serverbits(&RELAYS.peers,server,ipbits,NN_SURVEYOR);
+    n = RELAYS.lb.num;
+    update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
+    if ( SUPERNET.iamrelay != 0 )
+        update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
+    return(RELAYS.lb.num > n);
+}
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
