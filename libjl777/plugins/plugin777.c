@@ -117,15 +117,16 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     return(retval);
 }
 
-static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin,uint64_t tag)
+static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin,uint64_t tag,int32_t allfields)
 {
     char tagstr[128];
     //printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
     if ( tag != 0 )
         sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
     else tagstr[0] = 0;
-    if ( plugin->allowremote == 0 )
-        sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"allowremote\":%d,\"millis\":%.2f,\"sent\":%u,\"recv\":%u%s}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,plugin->allowremote,milliseconds(),plugin->numsent,plugin->numrecv,tagstr);
+    sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\",\"allowremote\":%d%s}",SUPERNET.NXTADDR,plugin->allowremote,tagstr);
+    if ( allfields != 0 )
+        sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
     //printf("APPEND.(%s)\n",retbuf);
 }
 
@@ -155,7 +156,7 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
     jsonstr = cJSON_Print(json), free_json(json);
     _stripwhite(jsonstr,' ');
     strcpy(retbuf,jsonstr), free(jsonstr);
-    append_stdfields(retbuf,max,plugin,0);
+    append_stdfields(retbuf,max,plugin,0,1);
     if ( Debuglevel > 2 )
         printf(">>>>>>>>>>> ret.(%s)\n",retbuf);
     return((int32_t)strlen(retbuf));
@@ -194,7 +195,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         if ( strcmp(name,plugin->name) == 0 && (len= PLUGNAME(_process_json)(plugin,tag,retbuf,max,jsonstr,obj,0)) > 0 )
         {
             *sendflagp = 1;
-            append_stdfields(retbuf,max,plugin,tag);
+            append_stdfields(retbuf,max,plugin,tag,0);
             return((int32_t)strlen(retbuf));
         } else printf("(%s) -> no return.%d (%s) vs (%s) len.%d\n",jsonstr,strcmp(name,plugin->name),name,plugin->name,len);
     }
@@ -206,7 +207,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         sprintf(retbuf,"{\"result\":\"unparseable\",\"message\":\"%s\"}",jsonstr);
     }
     if ( *sendflagp != 0 && retbuf[0] != 0 )
-        append_stdfields(retbuf,max,plugin,tag);
+        append_stdfields(retbuf,max,plugin,tag,0);
     else retbuf[0] = *sendflagp = 0;
     return((int32_t)strlen(retbuf));
 }
