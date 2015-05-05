@@ -233,7 +233,6 @@ int32_t add_connections(char *server,int32_t skiplb)
         return(-1);
     ipbits = calc_ipbits(server);
     update_serverbits(&RELAYS.peer,server,ipbits,NN_SURVEYOR);
-    printf("update_sub\n");
     update_serverbits(&RELAYS.sub,server,ipbits,NN_PUB);
     n = RELAYS.lb.num;
     if ( skiplb == 0 )

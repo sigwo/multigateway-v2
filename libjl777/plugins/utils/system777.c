@@ -951,7 +951,7 @@ char *nn_subscriptions(struct relayargs *args,uint8_t *msg,int32_t len)
         }
         retstr = plugin_method("remote",plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,len,1000);
         free_json(json);
-    } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
+    } else retstr = clonestr((char *)msg);
     return(retstr);
 }
 
