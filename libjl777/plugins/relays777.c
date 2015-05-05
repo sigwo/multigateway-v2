@@ -217,11 +217,11 @@ int32_t add_connections(char *server)
 {
     uint64_t ipbits; int32_t n;
     ipbits = calc_ipbits(server);
-    update_serverbits(&RELAYS.peers,server,ipbits,NN_SURVEYOR);
+    //update_serverbits(&RELAYS.peers,server,ipbits,NN_SURVEYOR);
     n = RELAYS.lb.num;
     update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
-    if ( SUPERNET.iamrelay != 0 )
-        update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
+    //if ( SUPERNET.iamrelay != 0 )
+    //    update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
     return(RELAYS.lb.num > n);
 }
 

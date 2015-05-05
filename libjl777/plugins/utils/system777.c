@@ -1067,6 +1067,7 @@ void serverloop(void *_args)
             printf("LB_RESPONSE.(%s)\n",retstr);
             free(retstr);
         }
+        continue;
         sleep(10);
         sprintf(request,"{\"plugin\":\"peers\",\"method\":\"getinfo\"}");
         if ( (retstr= nn_allpeers(peerargs,request,2000)) != 0 )
