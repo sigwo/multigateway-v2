@@ -1084,7 +1084,7 @@ int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flag
         {
             if ( (len= nn_send(sock,(char *)retstr,len,0)) <= 0 )
                 errs++, printf("error %d sending to socket.%d send.%d len.%d (%s)\n",len,sock,i,len,nn_strerror(nn_errno()));
-            else// if ( Debuglevel > 2 )
+            else if ( Debuglevel > 2 )
                 printf("nn_broadcast SENT.(%s) len.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,strlen((char *)retstr),(long long)instanceid,sock);
         }
     }
@@ -1115,7 +1115,7 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
                     str = clonestr(msg);
                     nn_freemsg(msg);
                     messages[received++] = str;
-                    //if ( Debuglevel > 1 )
+                    if ( Debuglevel > 2 )
                         printf("(%d %d) %d %.6f RECEIVED.%d i.%d/%ld (%s)\n",*numrecvp,numsent,received,milliseconds(),n,i,sizeof(socks->all)/sizeof(*socks->all),str);
                 }
             }
