@@ -894,7 +894,7 @@ char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len)
         else
         {
             retstr = plugin_method("remote","relays",(char *)args,0,0,(char *)msg,len,1000);
-            printf("returnpath.(%s) %s -> (%s)\n",args->name,jsonstr,retstr);
+            printf("returnpath.(%s) (%s) -> (%s)\n",args->name,jsonstr,retstr);
         }
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
@@ -904,6 +904,7 @@ char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len)
 void complete_relay(struct relayargs *args,char *retstr)
 {
     int32_t len,sendlen;
+    _stripwhite(retstr,' ');
     len = (int32_t)strlen(retstr)+1;
     if ( (sendlen= nn_send(args->sock,retstr,len,0)) != len )
         printf("complete_relay.%s warning: send.%d vs %d for (%s) sock.%d %s\n",args->name,sendlen,len,retstr,args->sock,nn_errstr());
