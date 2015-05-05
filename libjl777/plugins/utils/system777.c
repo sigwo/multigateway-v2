@@ -1011,7 +1011,7 @@ void responseloop(void *_args)
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
-                if ( Debuglevel > 1 )
+                //if ( Debuglevel > 1 )
                     printf("RECV.%s (%s)\n",args->name,msg);
                 if ( (retstr= (*args->commandprocessor)(args,(uint8_t *)msg,len)) != 0 )
                 {
@@ -1019,7 +1019,7 @@ void responseloop(void *_args)
                     free(retstr);
                 }
                 nn_freemsg(msg);
-            } else fprintf(stderr,".");
+            }// else fprintf(stderr,".");
         }
     } else printf("error getting socket type.%d %s\n",args->type,nn_errstr());
 }
@@ -1154,9 +1154,9 @@ void serverloop(void *_args)
                 if ( strcmp(plugin,"peers") == 0 )
                     retstr = nn_allpeers(peerargs,cmdstr,RELAYS.surveymillis);
                 else retstr = nn_loadbalanced(lbargs,cmdstr);
+                printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
                 free(cmdstr);
                 free_json(json);
-                printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
             } else printf("cant create json object for (%s)\n",line);
         }
     }
