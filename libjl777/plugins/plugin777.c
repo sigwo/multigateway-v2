@@ -92,7 +92,7 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     }
     if ( obj != 0 )
     {
-        printf("jsonargs.(%s)\n",jsonargs);
+        //printf("jsonargs.(%s)\n",jsonargs);
         if ( (nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(obj,"NXT"))) != 0 )
         {
             plugin->nxt64bits = nxt64bits;
@@ -186,7 +186,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
     char name[MAX_JSON_FIELD];
     retbuf[0] = *sendflagp = 0;
     if ( Debuglevel > 2 )
-        printf("PLUGIN.(%s) process_plugin_json.(%s)\n",plugin->name,jsonstr);
+        printf("PLUGIN.(%s) process_plugin_json\n",plugin->name);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 )

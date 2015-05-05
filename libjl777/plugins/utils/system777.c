@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <conio.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/select.h>
@@ -123,7 +122,7 @@ struct relay_info { int32_t sock,num; uint64_t servers[4096]; };
 struct relays_info
 {
     struct relay_info lb,peer,bus,sub;
-    int32_t readyflag,pubsock;
+    int32_t readyflag,pubsock,surveymillis;
 }; extern struct relays_info RELAYS;
 
 #define MAX_SERVERNAME 128
@@ -490,9 +489,7 @@ int32_t aligned_free(void *ptr)
 
 int32_t getline777(char *line,int32_t max)
 {
-    static int32_t n;
-    int32_t c,retval;
-    /*struct timeval timeout;
+    struct timeval timeout;
     fd_set fdset;
     int32_t s;
     line[0] = 0;
@@ -503,24 +500,10 @@ int32_t getline777(char *line,int32_t max)
         fprintf(stderr,"wait_for_input: error select s.%d\n",s);
     else
     {
-        if ( FD_ISSET(STDIN_FILENO,&fdset) == 0 || fgets(line,max,stdin) != 0 )
-            sprintf(line,"{\"result\":\"no messages\"}");
-        else printf("gotline\n");
+        if ( FD_ISSET(STDIN_FILENO,&fdset) > 0 && fgets(line,max,stdin) == line )
+            line[strlen(line)-1] = 0;
     }
-    return((int32_t)strlen(line));*/
-    while ( kbhit() != 0 )
-    {
-        if ( (c= getchar()) == '\n' || c == '\r' )
-        {
-            line[n++] = 0;
-            retval = n;
-            n = 0;
-            return(retval);
-        }
-        line[n++] = c;
-        fprintf(stderr,"%c",c);
-    }
-    return(0);
+    return((int32_t)strlen(line));
 }
 
 int32_t nn_oppotype(int32_t type)
@@ -856,12 +839,14 @@ void add_standard_fields(char *request)
         sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
 }
 
-char *nn_loadbalanced(struct relayargs *args,char *request)
+char *nn_loadbalanced(struct relayargs *args,char *_request)
 {
-    char *msg,*jsonstr = 0;
+    char *msg,*request,*jsonstr = 0;
     int32_t len,sendlen,i,recvlen = 0;
     if ( args->lbsock < 0 )
         return(clonestr("{\"error\":\"invalid load balanced socket\"}"));
+    request = malloc(strlen(_request) + 512);
+    strcpy(request,_request);
     add_standard_fields(request);
     len = (int32_t)strlen(request) + 1;
     for (i=0; i<1000; i++)
@@ -883,16 +868,18 @@ char *nn_loadbalanced(struct relayargs *args,char *request)
             jsonstr = clonestr("{\"error\":\"lb send error\"}");
         }
     } else printf("got sendlen.%d instead of %d %s\n",sendlen,len,nn_errstr()), jsonstr = clonestr("{\"error\":\"lb send error\"}");
+    free(request);
     return(jsonstr);
 }
 
-char *nn_allpeers(struct relayargs *args,char *request,int32_t timeoutmillis)
+char *nn_allpeers(struct relayargs *args,char *_request,int32_t timeoutmillis)
 {
     cJSON *item,*json,*array = 0;
     int32_t i,sendlen,len,n = 0;
+    char *request;
     char *msg,*retstr;
-    add_standard_fields(request);
-    printf("request_allpeers.(%s)\n",request);
+    if ( timeoutmillis == 0 )
+        timeoutmillis = 5000;
     if ( args->peersock < 0 )
         return(clonestr("{\"error\":\"invalid peers socket\"}"));
     if ( nn_setsockopt(args->peersock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
@@ -900,6 +887,10 @@ char *nn_allpeers(struct relayargs *args,char *request,int32_t timeoutmillis)
         printf("error nn_setsockopt\n");
         return(clonestr("{\"error\":\"setting NN_SURVEYOR_DEADLINE\"}"));
     }
+    request = malloc(strlen(_request) + 512);
+    strcpy(request,_request);
+    add_standard_fields(request);
+    printf("request_allpeers.(%s)\n",request);
     for (i=0; i<1000; i++)
         if ( (get_socket_status(args->peersock,1) & NN_POLLOUT) != 0 )
             break;
@@ -924,6 +915,7 @@ char *nn_allpeers(struct relayargs *args,char *request,int32_t timeoutmillis)
     if ( n == 0 )
     {
         free_json(array);
+        free(request);
         return(clonestr("{\"error\":\"no responses\"}"));
     }
     json = cJSON_CreateObject();
@@ -933,6 +925,7 @@ char *nn_allpeers(struct relayargs *args,char *request,int32_t timeoutmillis)
     _stripwhite(retstr,' ');
     //printf("globalrequest(%s) returned (%s) from n.%d respondents\n",request,retstr,n);
     free_json(json);
+    free(request);
     return(retstr);
 }
 
@@ -1124,7 +1117,45 @@ void serverloop(void *_args)
         }
         if ( SUPERNET.APISLEEP > 0 ) msleep(SUPERNET.APISLEEP);
         if ( getline777(line,sizeof(line)-1) > 0 )
-            process_userinput(line);
+        {
+            char plugin[512],method[512],*str,*cmdstr; cJSON *json; int j;
+            for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
+                plugin[i] = line[i];
+            plugin[i] = 0;
+            if ( line[i+1] != 0 )
+            {
+                for (++i,j=0; i<512&&line[i]!=' '&&line[i]!=0; i++,j++)
+                    method[j] = line[i];
+                method[j] = 0;
+            } else method[0] = 0;
+            if ( (json= cJSON_Parse(line+i+1)) == 0 )
+            {
+                json = cJSON_CreateObject();
+                if ( line[i+1] != 0 )
+                {
+                    str = stringifyM(&line[i+1]);
+                    cJSON_AddItemToObject(json,"jsonargs",cJSON_CreateString(str));
+                    free(str);
+                }
+            }
+            if ( json != 0 )
+            {
+                if ( plugin[0] == 0 )
+                    strcpy(plugin,"relays");
+                cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(plugin));
+                if ( method[0] == 0 )
+                    strcpy(method,"help");
+                cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
+                cmdstr = cJSON_Print(json);
+                _stripwhite(cmdstr,' ');
+                if ( strcmp(plugin,"peers") == 0 )
+                    retstr = nn_allpeers(peerargs,cmdstr,RELAYS.surveymillis);
+                else retstr = nn_loadbalanced(lbargs,cmdstr);
+                free(cmdstr);
+                free_json(json);
+                printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
+            } else printf("cant create json object for (%s)\n",line);
+        }
     }
 }
 
