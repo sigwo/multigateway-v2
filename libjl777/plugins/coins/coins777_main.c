@@ -61,7 +61,7 @@ cJSON *coins777_json()
             {
                 item = cJSON_CreateObject();
                 cJSON_AddItemToObject(item,"name",cJSON_CreateString(coin->name));
-                if ( coin->serverport != 0 )
+                if ( coin->serverport[0] != 0 )
                     cJSON_AddItemToObject(item,"rpc",cJSON_CreateString(coin->serverport));
                 cJSON_AddItemToArray(array,item);
             }

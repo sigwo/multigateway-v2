@@ -868,7 +868,7 @@ char *nn_loadbalanced(struct relayargs *args,char *request)
 
 char *nn_allpeers(struct relayargs *args,char *request,int32_t timeoutmillis)
 {
-    cJSON *item,*array = cJSON_CreateArray();
+    cJSON *item,*json,*array = 0;
     int32_t i,sendlen,len,n = 0;
     char *msg,*retstr;
     add_standard_fields(request);
@@ -892,7 +892,12 @@ char *nn_allpeers(struct relayargs *args,char *request,int32_t timeoutmillis)
         while ( (len= nn_recv(args->peersock,&msg,NN_MSG,0)) > 0 )
         {
             if ( (item= cJSON_Parse(msg)) != 0 )
-                cJSON_AddItemToArray(array,item), n++;
+            {
+                if ( array == 0 )
+                    array = cJSON_CreateArray();
+                cJSON_AddItemToArray(array,item);
+                n++;
+            }
             nn_freemsg(msg);
         }
     } else printf("nn_allpeers: sendlen.%d vs len.%d\n",sendlen,len);
@@ -901,10 +906,13 @@ char *nn_allpeers(struct relayargs *args,char *request,int32_t timeoutmillis)
         free_json(array);
         return(clonestr("{\"error\":\"no responses\"}"));
     }
-    retstr = cJSON_Print(array);
+    json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"responses",array);
+    cJSON_AddItemToObject(json,"n",cJSON_CreateNumber(n));
+    retstr = cJSON_Print(json);
     _stripwhite(retstr,' ');
     //printf("globalrequest(%s) returned (%s) from n.%d respondents\n",request,retstr,n);
-    free_json(array);
+    free_json(json);
     return(retstr);
 }
 
@@ -1068,20 +1076,23 @@ void serverloop(void *_args)
     {
         int32_t poll_daemons();
         poll_daemons();
-        sprintf(request,"{\"plugin\":\"relays\",\"method\":\"%s\"}",(rand() & 1) != 0 ? "list" : "listpubs");
-        if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
+        if ( SUPERNET.iamrelay == 0 )
         {
-            printf("LB_RESPONSE.(%s)\n",retstr);
-            free(retstr);
+            sprintf(request,"{\"plugin\":\"relays\",\"method\":\"%s\"}",(rand() & 1) != 0 ? "list" : "listpubs");
+            if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
+            {
+                printf("LB_RESPONSE.(%s)\n",retstr);
+                free(retstr);
+            }
+            sleep(10);
+            sprintf(request,"{\"plugin\":\"peers\",\"method\":\"getinfo\"}");
+            if ( (retstr= nn_allpeers(peerargs,request,2000)) != 0 )
+            {
+                printf("ALLPEERS.(%s)\n",retstr);
+                free(retstr);
+            }
+            sleep(10);
         }
-        sleep(10);
-        sprintf(request,"{\"plugin\":\"peers\",\"method\":\"getinfo\"}");
-        if ( (retstr= nn_allpeers(peerargs,request,2000)) != 0 )
-        {
-            printf("ALLPEERS.(%s)\n",retstr);
-            free(retstr);
-        }
-        sleep(10);
     }
 }
 
@@ -1113,7 +1124,7 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
         strcpy(connectaddr,_connectaddr), strcat(connectaddr,suffix);
     if ( (sock= nn_socket(AF_SP,type)) < 0 )
         return(report_err(typestr,sock,"nn_socket",type,bindaddr,connectaddr));
-    if ( bindaddr != 0 && bindaddr[0] != 0 )
+    if ( bindaddr[0] != 0 )
     {
         //printf("bind\n");
         if ( (err= nn_bind(sock,bindaddr)) < 0 )
@@ -1123,7 +1134,7 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
         if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
     }
-    if ( connectaddr != 0 && connectaddr[0] != 0 )
+    if ( connectaddr[0] != 0 )
     {
         //printf("nn_connect\n");
         if ( (err= nn_connect(sock,connectaddr)) < 0 )
