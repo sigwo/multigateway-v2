@@ -800,14 +800,15 @@ void run_device(void *_args)
     nn_device(pfds[0].fd,pfds[1].fd);
 }
 
-void start_devices()
+int32_t start_devices(int32_t type)
 {
-    int32_t i,j,n,err,numtypes,sock,portoffset,type,devicetypes[] = { NN_RESPONDENT }; //NN_REP, NN_PUB, NN_PULL };
+    int32_t i,j,n,err,numtypes,sock,portoffset,devicetypes[] = { NN_RESPONDENT }; //NN_REP, NN_PUB, NN_PULL };
     static struct nn_pollfd pfds[4][2];
     char bindaddr[128];
     numtypes = (int32_t)(sizeof(devicetypes)/sizeof(*devicetypes));
     memset(pfds,0xff,sizeof(pfds));
-    for (i=n=0; i<numtypes; i++)
+    devicetypes[0] = type;
+    for (i=n=0; i<1; i++)
     {
         for (j=err=0; j<2; j++,n++)
         {
@@ -829,6 +830,7 @@ void start_devices()
             break;
         }
     }
+    return(pfds[0][0].fd);
 }
 
 void add_standard_fields(char *request)
@@ -1089,10 +1091,10 @@ void serverloop(void *_args)
     char endpoint[128],request[1024],line[1024],ipaddr[64],*retstr;
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
-    start_devices();
+    RELAYS.peer.sock = start_devices(NN_RESPONDENT);
     sendtimeout = 10, recvtimeout = 10000;
     peersock = nn_createsocket(endpoint,0,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
-    peerargs = &args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
+    peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
     lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
