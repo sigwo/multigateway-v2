@@ -1000,7 +1000,7 @@ void complete_relay(struct relayargs *args,char *retstr)
     int32_t len,sendlen;
     _stripwhite(retstr,' ');
     len = (int32_t)strlen(retstr)+1;
-    if ( (sendlen= nn_send(args->sock,retstr,len,0)) != len )
+    if ( args->type != NN_SUB && (sendlen= nn_send(args->sock,retstr,len,0)) != len )
         printf("complete_relay.%s warning: send.%d vs %d for (%s) sock.%d %s\n",args->name,sendlen,len,retstr,args->sock,nn_errstr());
     //else printf("SUCCESS complete_relay.(%s) -> sock.%d %s\n",retstr,args->sock,args->name);
 }
