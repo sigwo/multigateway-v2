@@ -471,7 +471,7 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
         method = methodbuf;
         override = 1;
     } else override = 0;
-    fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d\n",method,plugin,is_bundled_plugin(plugin));
+    fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d (%s)\n",method,plugin,is_bundled_plugin(plugin),origargstr);
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) == 0 )
     {
         if ( is_bundled_plugin(plugin) != 0 )
