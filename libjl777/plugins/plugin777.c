@@ -124,7 +124,8 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
     if ( tag != 0 )
         sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
     else tagstr[0] = 0;
-    sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"allowremote\":%d,\"millis\":%.2f,\"sent\":%u,\"recv\":%u%s}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,plugin->allowremote,milliseconds(),plugin->numsent,plugin->numrecv,tagstr);
+    if ( plugin->allowremote == 0 )
+        sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"allowremote\":%d,\"millis\":%.2f,\"sent\":%u,\"recv\":%u%s}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,plugin->allowremote,milliseconds(),plugin->numsent,plugin->numrecv,tagstr);
     //printf("APPEND.(%s)\n",retbuf);
 }
 

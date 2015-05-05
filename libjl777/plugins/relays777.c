@@ -213,11 +213,7 @@ int32_t update_serverbits(struct relay_info *list,char *server,uint64_t ipbits,i
         set_endpointaddr(endpoint,server,SUPERNET.port,type);
         if ( nn_connect(list->sock,endpoint) < 0 )
             printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
-        else
-        {
-            printf("add_relay sock.%d %llx\n",list->sock,(long long)ipbits);
-            add_relay(list,ipbits);
-        }
+        else add_relay(list,ipbits);
     }
     return(list->num);
 }
