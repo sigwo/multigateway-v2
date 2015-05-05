@@ -113,47 +113,6 @@ struct coin777 *coin777_create(char *coinstr,char *serverport,char *userpass,cJS
     return(coin);
 }
 
-uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass)
-{
-    uint64_t allocsize,nxt64bits;
-    uint8_t mysecret[32],mypublic[32];
-    char coinaddr[MAX_JSON_FIELD],*str,*privkey;
-    NXTaddr[0] = 0;
-    extract_cJSON_str(secret,max,argjson,"secret");
-    //printf("set_account_NXTSECRET.(%s)\n",secret);
-    if ( secret[0] == 0 )
-    {
-        extract_cJSON_str(coinaddr,sizeof(coinaddr),argjson,"privateaddr");
-        if ( strcmp(coinaddr,"privateaddr") == 0 )
-        {
-            if ( (str= loadfile(&allocsize,"privateaddr")) != 0 )
-            {
-                if ( allocsize < 128 )
-                    strcpy(coinaddr,str);
-                free(str);
-            }
-        }
-        if ( coinaddr[0] == 0 )
-            extract_cJSON_str(coinaddr,sizeof(coinaddr),argjson,"pubsrvaddr");
-        printf("coinaddr.(%s)\n",coinaddr);
-        if ( coinstr == 0 || serverport == 0 || userpass == 0 || (privkey= dumpprivkey(coinstr,serverport,userpass,coinaddr)) == 0 )
-            gen_randomacct(33,NXTaddr,secret,"randvals");
-        else
-        {
-            strcpy(secret,privkey);
-            free(privkey);
-        }
-    }
-    else if ( strcmp(secret,"randvals") == 0 )
-        gen_randomacct(33,NXTaddr,secret,"randvals");
-    nxt64bits = conv_NXTpassword(mysecret,mypublic,(uint8_t *)secret,(int32_t)strlen(secret));
-    expand_nxt64bits(NXTaddr,nxt64bits);
-   if ( 0 )
-       conv_rsacctstr(NXTacct,nxt64bits);
-    //printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,secret);
-    return(nxt64bits);
-}
-
 int32_t make_MGWbus(uint16_t port,char *bindaddr,char serverips[MAX_MGWSERVERS][64],int32_t n)
 {
     char tcpaddr[64];
@@ -223,6 +182,7 @@ cJSON *check_conffile(int32_t *allocflagp,cJSON *json)
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
+    uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass);
     char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],msigchar[64],nxtaddr[64],ipaddr[64],*coinstr,*serverport,*userpass,*arraystr,*str,*email,*previpaddr = 0;
     cJSON *array,*item;
     int32_t i,n,buyNXT,allocflag,j = 0;
@@ -242,9 +202,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 strcpy(MGW.PATH,"MGW");
                 ensure_directory(MGW.PATH);
             }
-            set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
-            SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
-            /*if ( 1 && SUPERNET.NXTADDR[0] != 0 && SUPERNET.myNXTaddr[0] != 0 && strcmp(SUPERNET.myNXTaddr,SUPERNET.NXTADDR) != 0 )
+             /*if ( 1 && SUPERNET.NXTADDR[0] != 0 && SUPERNET.myNXTaddr[0] != 0 && strcmp(SUPERNET.myNXTaddr,SUPERNET.NXTADDR) != 0 )
             {
                 sprintf(retbuf,"{\"error\":\"mismatched NXT accounts\",\"fromsecret\":\"%s\",\"myNXT\":\"%s\"}",SUPERNET.NXTADDR,SUPERNET.myNXTaddr);
                 printf("ERROR ERROR\n");

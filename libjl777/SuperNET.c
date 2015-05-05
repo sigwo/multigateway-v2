@@ -666,7 +666,7 @@ void SuperNET_loop(void *ipaddr)
         msleep(10);
     }
     sleep(1);
-    sprintf(jsonargs,"{\"filename\":\"SuperNET.conf\",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
+    sprintf(jsonargs,"{\"filename\":\"SuperNET.conf\",\"NXT\":\"%s\",\"ipaddr\":\"%s\",\"port\":%d}",SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.port);
     strs[n++] = language_func((char *)"sophia","",0,0,1,(char *)"sophia",jsonargs,call_system);
     while ( SOPHIA.readyflag == 0 || find_daemoninfo(&ind,"sophia",0,0) == 0 )
          poll_daemons();

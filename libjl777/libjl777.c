@@ -1271,6 +1271,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
 #include "plugins/plugin777.c"
 #include "plugins/sophia/storage.c"
 #include "plugins/utils/system777.c"
+#include "plugins/utils/files777.c"
 #undef DEFINES_ONLY
 
 void SuperNET_idle(struct plugin_info *plugin) {}
@@ -1279,6 +1280,47 @@ STRUCTNAME SUPERNET;
 int32_t Debuglevel;
 
 char *PLUGNAME(_methods)[] = { "install", "plugin" }; // list of supported methods
+
+uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass)
+{
+    uint64_t allocsize,nxt64bits;
+    uint8_t mysecret[32],mypublic[32];
+    char coinaddr[MAX_JSON_FIELD],*str,*privkey;
+    NXTaddr[0] = 0;
+    extract_cJSON_str(secret,max,argjson,"secret");
+    //printf("set_account_NXTSECRET.(%s)\n",secret);
+    if ( secret[0] == 0 )
+    {
+        extract_cJSON_str(coinaddr,sizeof(coinaddr),argjson,"privateaddr");
+        if ( strcmp(coinaddr,"privateaddr") == 0 )
+        {
+            if ( (str= loadfile(&allocsize,"privateaddr")) != 0 )
+            {
+                if ( allocsize < 128 )
+                    strcpy(coinaddr,str);
+                free(str);
+            }
+        }
+        if ( coinaddr[0] == 0 )
+            extract_cJSON_str(coinaddr,sizeof(coinaddr),argjson,"pubsrvaddr");
+        printf("coinaddr.(%s)\n",coinaddr);
+        if ( coinstr == 0 || serverport == 0 || userpass == 0 || (privkey= dumpprivkey(coinstr,serverport,userpass,coinaddr)) == 0 )
+            gen_randomacct(33,NXTaddr,secret,"randvals");
+        else
+        {
+            strcpy(secret,privkey);
+            free(privkey);
+        }
+    }
+    else if ( strcmp(secret,"randvals") == 0 )
+        gen_randomacct(33,NXTaddr,secret,"randvals");
+    nxt64bits = conv_NXTpassword(mysecret,mypublic,(uint8_t *)secret,(int32_t)strlen(secret));
+    expand_nxt64bits(NXTaddr,nxt64bits);
+    if ( 0 )
+        conv_rsacctstr(NXTacct,nxt64bits);
+    //printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,secret);
+    return(nxt64bits);
+}
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
@@ -1297,6 +1339,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             DB_NXTaccts = db777_create(0,0,"NXTacct",0);
         Debuglevel = 2;
         MGW.gatewayid = -1;
+        set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
+        SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
         SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);
         copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
         if ( strncmp(SUPERNET.myipaddr,"209.126",7) == 0 || strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
@@ -1352,7 +1396,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( SOPHIA.PATH[0] == 0 )
             strcpy(SOPHIA.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH);
-        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s iamrelay.%d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.iamrelay);
+        printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {

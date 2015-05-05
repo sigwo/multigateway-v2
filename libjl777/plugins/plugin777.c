@@ -77,10 +77,9 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
 
 static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,char *jsonargs,int32_t initflag)
 {
-    char ipaddr[MAX_JSON_FIELD],*jsonstr = 0;
+    char *myipaddr,*jsonstr = 0;
     cJSON *obj=0,*json = 0;
-    uint16_t port;
-    uint64_t tag = 0;
+    uint64_t nxt64bits,tag = 0;
     int32_t retval = 0;
     if ( jsonargs != 0 )
     {
@@ -93,18 +92,19 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     }
     if ( obj != 0 )
     {
-        plugin->nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(obj,"port"));
-        expand_nxt64bits(plugin->NXTADDR,plugin->nxt64bits);
-        tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"port"));
+        printf("jsonargs.(%s)\n",jsonargs);
+        if ( (nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(obj,"NXT"))) != 0 )
+        {
+            plugin->nxt64bits = nxt64bits;
+            expand_nxt64bits(plugin->NXTADDR,plugin->nxt64bits);
+        }
+        tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
         if ( initflag > 0 )
         {
-            if ( (port = get_API_int(cJSON_GetObjectItem(obj,"port"),0)) != 0 )
-            {
-                copy_cJSON(ipaddr,cJSON_GetObjectItem(obj,"ipaddr"));
-                if ( ipaddr[0] != 0 )
-                    strcpy(plugin->ipaddr,ipaddr), plugin->port = port;
-                fprintf(stderr,"Set ipaddr (%s:%d)\n",plugin->ipaddr,plugin->port);
-            }
+            myipaddr = cJSON_str(cJSON_GetObjectItem(obj,"ipaddr"));
+            if ( is_ipaddr(myipaddr) != 0 )
+                strcpy(plugin->ipaddr,myipaddr);
+            plugin->port = get_API_int(cJSON_GetObjectItem(obj,"port"),0);
         }
     }
     //fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%p) %p %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
@@ -126,7 +126,7 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
     if ( tag != 0 )
         sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
     else tagstr[0] = 0;
-    sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\",\"allowremote\":%d%s}",plugin->NXTADDR,plugin->allowremote,tagstr);
+    sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\",\"myipaddr\":\"%s\",\"allowremote\":%d%s}",plugin->NXTADDR,plugin->ipaddr,plugin->allowremote,tagstr);
     if ( allfields != 0 )
         sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
     //printf("APPEND.(%s)\n",retbuf);

@@ -177,6 +177,7 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
 int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis);
 void ensure_directory(char *dirname);
 int32_t nn_portoffset(int32_t type);
+uint32_t is_ipaddr(char *str);
 
 uint64_t calc_ipbits(char *ipaddr);
 void expand_ipbits(char *ipaddr,uint64_t ipbits);
@@ -625,7 +626,7 @@ char *ipbits_str2(uint64_t ipbits)
 uint32_t is_ipaddr(char *str)
 {
     uint64_t ipbits; char ipaddr[64];
-    if ( (ipbits= calc_ipbits(str)) != 0 )
+    if ( str != 0 && str[0] != 0 && (ipbits= calc_ipbits(str)) != 0 )
     {
         expand_ipbits(ipaddr,(uint32_t)ipbits);
         if ( strncmp(ipaddr,str,strlen(ipaddr)) == 0 )
