@@ -487,7 +487,10 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
         if ( dp->readyflag == 0 )
             return(clonestr("{\"error\":\"plugin not ready\"}"));
         if ( dp->allowremote == 0 && is_remote_access(previpaddr) != 0 )
-            return(clonestr("{\"error\":\"cant remote call plugin\"}"));
+        {
+            sprintf(retbuf,"{\"error\":\"cant remote call plugin\",\"ipaddr\":\"%s\",\"plugin\":\"%s\"}",SUPERNET.myipaddr,plugin);
+            return(clonestr(retbuf));
+        }
         else if ( in_jsonarray(dp->methodsjson,method) == 0 )
         {
             methodsstr = cJSON_Print(dp->methodsjson);
