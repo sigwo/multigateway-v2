@@ -914,6 +914,7 @@ char *nn_subscriptions(struct relayargs *args,uint8_t *msg,int32_t len)
 char *nn_peers(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     cJSON *json; char *plugin,*retstr = 0;
+    printf("nn_peers.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 )
@@ -978,7 +979,7 @@ void responseloop(void *_args)
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("RECV.%s (%s)\n",args->name,msg);
                 if ( (retstr= (*args->commandprocessor)(args,(uint8_t *)msg,len)) != 0 )
                 {
