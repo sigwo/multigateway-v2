@@ -196,6 +196,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
             }
             else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);
         } else printf("cant find (%s) for.(%s)\n",name,jsonstr);
+        printf("dp.%p (%s) tag.%llu\n",dp,jsonstr,(long long)tag);
         if ( flag != 0 )
             free(jsonstr);
         return(tag);
