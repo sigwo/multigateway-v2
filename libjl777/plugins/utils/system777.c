@@ -967,15 +967,15 @@ void serverloop(void *_args)
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
     sendtimeout = 10, recvtimeout = 10000;
-    peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
-    peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
-    pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1), launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
-    lbsock = loadbalanced_socket(13000,SUPERNET.port); // NN_REQ
+    //peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
+    //peerargs = &args[n++], launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
+    //pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1), launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
+    lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
     lbargs = &args[n++];
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_relays);
-        bussock = launch_responseloop(&args[n++],"NN_BUS",NN_BUS,1,nn_relays);
+        //bussock = launch_responseloop(&args[n++],"NN_BUS",NN_BUS,1,nn_relays);
     } else bussock = -1, lbargs->commandprocessor = nn_relays, lbargs->sock = lbsock;
     for (i=0; i<n; i++)
     {
