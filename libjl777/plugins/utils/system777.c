@@ -995,6 +995,7 @@ void serverloop(void *_args)
             free(retstr);
         }
         sleep(10);
+        continue;
         sprintf(request,"{\"plugin\":\"peers\",\"method\":\"getinfo\"}");
         if ( (retstr= nn_allpeers(peerargs,request,2000)) != 0 )
         {
