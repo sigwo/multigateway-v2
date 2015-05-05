@@ -1017,7 +1017,7 @@ char *nn_publish(char *publishstr)
     if ( (sendlen= nn_send(RELAYS.pubsock,publishstr,len,0)) != len )
         printf("add_connections warning: send.%d vs %d for (%s) sock.%d %s\n",sendlen,len,publishstr,RELAYS.pubsock,nn_errstr());
     else printf("published.(%s)\n",publishstr);
-    sprintf(retbuf,"{\"result\":\"published\",\"len\":%d,\"sendlen\":%d,\"content\":\"%s\"}",len,sendlen,publishstr);
+    sprintf(retbuf,"{\"result\":\"published\",\"len\":%d,\"sendlen\":%d,\"crc\":%u}",len,sendlen,_crc32(0,publishstr,(int32_t)strlen(publishstr)));
     return(clonestr(retbuf));
 }
 
