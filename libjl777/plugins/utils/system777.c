@@ -1116,7 +1116,7 @@ void serverloop(void *_args)
 {
     static struct relayargs args[8];
     struct relayargs *peerargs,*lbargs,*arg;
-    char endpoint[128],request[1024],line[1024],ipaddr[64],*retstr;
+    char endpoint[128],request[1024],ipaddr[64],*retstr;
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
     memset(args,0,sizeof(args));
     //start_devices(NN_RESPONDENT);
@@ -1161,13 +1161,15 @@ void serverloop(void *_args)
     }
     while ( 1 )
     {
-        int32_t poll_daemons();
-        poll_daemons();
-        if ( SUPERNET.APISLEEP > 0 ) msleep(SUPERNET.APISLEEP);
 #ifdef STANDALONE
+        char line[1024];
         if ( getline777(line,sizeof(line)-1) > 0 )
             process_userinput(lbargs,peerargs,line);
 #endif
+        int32_t poll_daemons();
+        poll_daemons();
+        if ( SUPERNET.APISLEEP > 0 )
+            msleep(SUPERNET.APISLEEP);
     }
 }
 

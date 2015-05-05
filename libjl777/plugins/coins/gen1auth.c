@@ -131,20 +131,7 @@ cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
         } else printf("couldnt parse.(%s)\n",retstr);
         free(retstr);
     }
-    if ( array != 0 )
-    {
-        json = cJSON_CreateObject();
-        cJSON_AddItemToObject(json,"pubkeys",array);
-        cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
-        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
-        cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(MGW.gatewayid));
-        retstr = cJSON_Print(json);
-        _stripwhite(retstr,' ');
-        nn_publish(retstr);
-        free(retstr);
-        return(json);
-    }
-    return(0);
+    return(array);
 }
 
 cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass)

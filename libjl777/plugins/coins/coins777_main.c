@@ -32,7 +32,7 @@ char *setmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 void coins_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME COINS;
-char *PLUGNAME(_methods)[] = { "addcoin", "remove", "genmultisig", "setmsigpubkey", "getmsigpubkey", "setmultisig" };
+char *PLUGNAME(_methods)[] = { "addcoin", "remove", "genmultisig", "setmsigpubkey", "getmsigpubkey", "setmultisig", "acctpubkeys" };
 
 struct coin777 *coin777_find(char *coinstr)
 {
@@ -318,6 +318,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                                         strcpy(serverport,"127.0.0.1:14632");
                                     set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,item,coinstr,serverport,userpass);
                                 }
+                                coin->acctpubkeyjson = get_msig_pubkeys(coin->name,coin->serverport,coin->userpass);
+                                MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson);
                             }
                         }
                         if ( userpass != 0 )

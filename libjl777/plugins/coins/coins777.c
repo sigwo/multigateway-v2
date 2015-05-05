@@ -82,7 +82,6 @@ struct ramchain_hashtable
 struct ramchain
 {
     char name[16];
-    cJSON *pubkeyjson;
     double lastgetinfo,startmilli;
     uint32_t startblocknum,RTblocknum,blocknum,confirmednum,huffallocsize,numupdates,numDBs,readyflag;
     struct ramchain_hashtable blocks,addrs,txids,scripts,unspents,*DBs[100];
@@ -93,7 +92,7 @@ struct ramchain
 struct coin777
 {
     char name[16],serverport[64],userpass[128],*jsonstr;
-    cJSON *argjson;
+    cJSON *argjson,*acctpubkeyjson;
     struct ramchain ramchain;
     int32_t use_addmultisig,gatewayid,multisigchar;
 };
@@ -932,7 +931,6 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr)
     struct ramchain *ram = &coin->ramchain;
     ram->startmilli = milliseconds();
     strcpy(ram->name,coinstr);
-    ram->pubkeyjson = get_msig_pubkeys(coin->name,coin->serverport,coin->userpass);
     ram->blocknum = ram->startblocknum = ensure_ramchain_DBs(ram);
     ram->huffallocsize = sizeof(struct rawblock)/10, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);
     ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coinstr,coin->serverport,coin->userpass,ram->RTblocknum);
