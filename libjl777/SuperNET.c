@@ -687,6 +687,7 @@ void SuperNET_loop(void *ipaddr)
     printf("num builtin plugin agents.%d\n",n);
     if ( MGW.gatewayid >= 0 )
         printf("MGW sock = %d\n",MGW.all.socks.both.bus);
+    sleep(3);
     void serverloop(void *_args);
     serverloop(0);
 }
