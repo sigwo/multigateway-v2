@@ -164,7 +164,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
     int32_t len,ind,flag = 0;
     uint64_t tmp,tag = 0;
     cJSON *json;
-    printf("send_to_daemon.(%s)\n",jsonstr);
+    //printf("send_to_daemon.(%s)\n",jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         tmp = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
@@ -183,10 +183,10 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
             }
         } else tag = tmp;
         free_json(json);
-        printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
+        //printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
-            printf("send_to_daemon.(%s) tag.%llu dp.%p\n",jsonstr,(long long)tag,dp);
+            //printf("send_to_daemon.(%s) tag.%llu dp.%p\n",jsonstr,(long long)tag,dp);
             if ( (len= (int32_t)strlen(jsonstr)) > 0 )
             {
                 if ( Debuglevel > 1 )
@@ -200,7 +200,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
             }
             else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);
         } else printf("cant find (%s) for.(%s)\n",name,jsonstr);
-        printf("dp.%p (%s) tag.%llu\n",dp,jsonstr,(long long)tag);
+        //printf("dp.%p (%s) tag.%llu\n",dp,jsonstr,(long long)tag);
         if ( flag != 0 )
             free(jsonstr);
         return(tag);
