@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <conio.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/select.h>
@@ -489,7 +490,9 @@ int32_t aligned_free(void *ptr)
 
 int32_t getline777(char *line,int32_t max)
 {
-    struct timeval timeout;
+    static int32_t n;
+    int32_t c,retval;
+    /*struct timeval timeout;
     fd_set fdset;
     int32_t s;
     line[0] = 0;
@@ -504,7 +507,20 @@ int32_t getline777(char *line,int32_t max)
             sprintf(line,"{\"result\":\"no messages\"}");
         else printf("gotline\n");
     }
-    return((int32_t)strlen(line));
+    return((int32_t)strlen(line));*/
+    while ( kbhit() != 0 )
+    {
+        if ( (c= getchar()) == '\n' || c == '\r' )
+        {
+            line[n++] = 0;
+            retval = n;
+            n = 0;
+            return(retval);
+        }
+        line[n++] = c;
+        fprintf(stderr,"%c",c);
+    }
+    return(0);
 }
 
 int32_t nn_oppotype(int32_t type)
