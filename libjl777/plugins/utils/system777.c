@@ -1021,7 +1021,7 @@ void serverloop(void *_args)
     {
         if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
         {
-            sprintf(request,"{\"plugin\":\"relays\",\"method\":\"newrelays\",\"hostname\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+            sprintf(request,"{\"plugin\":\"relays\",\"method\":\"newrelays\",\"hostnames\":[\"%s\"]}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
             if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
             {
                 printf("LB_RESPONSE.(%s)\n",retstr);
@@ -1040,7 +1040,6 @@ void serverloop(void *_args)
             free(retstr);
         }
         sleep(10);
-        continue;
         sprintf(request,"{\"plugin\":\"peers\",\"method\":\"getinfo\"}");
         if ( (retstr= nn_allpeers(peerargs,request,2000)) != 0 )
         {

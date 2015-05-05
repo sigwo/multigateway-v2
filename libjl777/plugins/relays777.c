@@ -187,6 +187,8 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *resultstr,*retstr,*methodstr,*hostname;
+    int32_t i,n,count;
+    cJSON *array;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -215,11 +217,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else
         {
-            if ( strcmp(methodstr,"newrelays") == 0 && (hostname= cJSON_str(cJSON_GetObjectItem(json,"hostname"))) != 0 )
+            if ( strcmp(methodstr,"newrelays") == 0 && (array= cJSON_GetObjectItem(json,"hostnames")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
-                if ( add_newrelay(hostname,jsonstr,json) > 0 )
-                    strcpy(retbuf,"{\"result\":\"relay added\"}");
-                else strcpy(retbuf,"{\"result\":\"relay already in list\"}");
+                for (i=count=0; i<n; i++)
+                    if ( add_newrelay(cJSON_str(cJSON_GetArrayItem(array,i)),jsonstr,json) > 0 )
+                        count++;
+                sprintf(retbuf,"{\"result\":\"relay added\",\"count\":%d}",count);
             }
             else if ( strcmp(methodstr,"list") == 0 )
             {
