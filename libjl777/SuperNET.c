@@ -658,7 +658,7 @@ char *SuperNET_url()
 
 void SuperNET_loop(void *ipaddr)
 {
-    char *strs[16],i,n = 0;
+    char *strs[16]; int32_t i,n = 0;
     while ( SUPERNET.readyflag == 0 )
     {
         if ( poll_daemons() > 0 )

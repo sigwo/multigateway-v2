@@ -178,7 +178,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     int32_t permflag,broadcastflag;
     uint64_t instanceid,tag = 0;
     char request[8192],**dest,*retstr,*sendstr;
-    printf("process_plugin_message.(%s)\n",str);
+    printf("HOST: process_plugin_message.(%s)\n",str);
     if ( (json= cJSON_Parse(str)) != 0 )
     {
         printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
