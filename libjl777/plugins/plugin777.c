@@ -181,8 +181,8 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
     uint64_t tag = 0;
     char name[MAX_JSON_FIELD];
     retbuf[0] = *sendflagp = 0;
-    if ( Debuglevel > 2 )
-        printf("process_plugin_json.(%s)\n",plugin->name);
+    if ( Debuglevel > 1 )
+        printf("PLUGIN.(%s) process_plugin_json.(%s)\n",plugin->name,jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 )
@@ -195,7 +195,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
             *sendflagp = 1;
             append_stdfields(retbuf,max,plugin,tag);
             return((int32_t)strlen(retbuf));
-        } else printf("(%s) -> no return.%d (%s) vs (%s)\n",jsonstr,strcmp(name,plugin->name),name,plugin->name);
+        } else printf("(%s) -> no return.%d (%s) vs (%s) len.%d\n",jsonstr,strcmp(name,plugin->name),name,plugin->name,len);
     }
     else
     {

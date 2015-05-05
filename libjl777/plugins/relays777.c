@@ -43,7 +43,7 @@ int32_t add_newrelay(char *hostname,char *jsonstr,cJSON *json)
     }
     if ( Relays == 0 )
         Relays = cJSON_CreateArray();
-    if ( in_jsonarray(Relays,hostname) == 0 )
+    /*if ( in_jsonarray(Relays,hostname) == 0 )
     {
         if ( SUPERNET.iamrelay != 0 && bussock >= 0 )//&& eligible_lbserver(hostname) != 0 )
         {
@@ -62,7 +62,7 @@ int32_t add_newrelay(char *hostname,char *jsonstr,cJSON *json)
         }
         cJSON_AddItemToArray(Relays,cJSON_CreateString(hostname));
         return(1);
-    }
+    }*/
     return(0);
 }
 

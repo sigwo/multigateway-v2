@@ -178,16 +178,16 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     int32_t permflag,broadcastflag;
     uint64_t instanceid,tag = 0;
     char request[8192],**dest,*retstr,*sendstr;
-    printf("HOST: process_plugin_message.(%s)\n",str);
     if ( (json= cJSON_Parse(str)) != 0 )
     {
-        printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
-        dp->readyflag = 1;
+        //printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
         dp->allowremote = get_API_int(cJSON_GetObjectItem(json,"allowremote"),0);
         permflag = get_API_int(cJSON_GetObjectItem(json,"permanentflag"),0);
         instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
         tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
-        //printf("PARSED TAG.%llu\n",(long long)tag);
+        if ( dp->readyflag == 0 )
+            printf("HOST: process_plugin_message.(%s) instanceid.%llu allowremote.%d\n",str,(long long)instanceid,dp->allowremote);
+        dp->readyflag = 1;
         if ( permflag == 0 && instanceid != 0 )
         {
             if ( (sendstr= add_instanceid(dp,instanceid)) != 0 )
