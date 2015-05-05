@@ -64,11 +64,11 @@ char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *user
 
 char *get_msig_pubkeys(char *coinaddr,char *coinstr,char *serverport,char *userpass)
 {
-    char addr[128],str[MAX_JSON_FIELD],*retstr;
+    char str[MAX_JSON_FIELD],*retstr;
     cJSON *json;
     int32_t i,n;
     coinaddr[0] = 0;
-    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts",addr)) != 0 )
+    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts","")) != 0 )
     {
         printf("listaccounts.(%s)\n",retstr);
         retstr[0] = '[';
