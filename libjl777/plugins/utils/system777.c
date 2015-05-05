@@ -188,9 +188,12 @@ int32_t ismyaddress(char *server);
 void set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type);
 
 char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async);
-char *nn_publish(struct relayargs *args,char *publishstr);
+char *nn_publish(char *publishstr);
 char *nn_allpeers(struct relayargs *args,char *jsonquery,int32_t timeoutmillis);
 char *nn_loadbalanced(struct relayargs *args,char *requeststr);
+char *nn_peers(struct relayargs *args,uint8_t *msg,int32_t len);
+char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len);
+char *nn_subscriptions(struct relayargs *args,uint8_t *msg,int32_t len);
 
 
 #endif
@@ -938,7 +941,14 @@ char *nn_subscriptions(struct relayargs *args,uint8_t *msg,int32_t len)
     cJSON *json; char *plugin,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
-        plugin = cJSON_str(cJSON_GetObjectItem(json,"plugin"));
+        if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 )
+        {
+            if ( strcmp(plugin,"relays") == 0 )
+                retstr = nn_relays(args,msg,len);
+            else if ( strcmp(plugin,"peers") == 0 )
+                retstr = nn_peers(args,msg,len);
+            else retstr = plugin_method("remote",plugin,(char *)args,0,0,(char *)msg,len,1000);
+        }
         retstr = plugin_method("remote",plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,len,1000);
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
@@ -995,10 +1005,16 @@ void complete_relay(struct relayargs *args,char *retstr)
     //else printf("SUCCESS complete_relay.(%s) -> sock.%d %s\n",retstr,args->sock,args->name);
 }
 
-char *nn_publish(struct relayargs *args,char *publishstr)
+char *nn_publish(char *publishstr)
 {
-    complete_relay(args,publishstr);
-    return(clonestr("{\"result\":\"published\"}"));
+    int32_t len,sendlen = -1;
+    char retbuf[1024];
+    len = (int32_t)strlen(publishstr) + 1;
+    if ( (sendlen= nn_send(RELAYS.pubsock,publishstr,len,0)) != len )
+        printf("add_connections warning: send.%d vs %d for (%s) sock.%d %s\n",sendlen,len,publishstr,RELAYS.pubsock,nn_errstr());
+    else printf("published.(%s)\n",publishstr);
+    sprintf(retbuf,"{\"result\":\"published\",\"len\":%d,\"sendlen\":%d}",len,sendlen);
+    return(clonestr(retbuf));
 }
 
 void responseloop(void *_args)
@@ -1123,7 +1139,7 @@ void serverloop(void *_args)
     {
         if ( SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0 )
         {
-            sprintf(request,"{\"plugin\":\"relays\",\"method\":\"newrelays\",\"hostnames\":[\"%s\"]}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
+            sprintf(request,"{\"plugin\":\"relays\",\"method\":\"add\",\"hostnames\":[\"%s\"]}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
             if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
             {
                 printf("LB_RESPONSE.(%s)\n",retstr);

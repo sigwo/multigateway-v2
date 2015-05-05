@@ -20,7 +20,7 @@
 void relays_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
-char *PLUGNAME(_methods)[] = { "list", "newrelays", "listpeers", "newpeers", "listpubs", "newpubs" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "list", "add", "listpeers", "newpeers", "listpubs", "newpubs" }; // list of supported methods
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -213,21 +213,35 @@ int32_t update_serverbits(struct relay_info *list,char *server,uint64_t ipbits,i
         set_endpointaddr(endpoint,server,SUPERNET.port,type);
         if ( nn_connect(list->sock,endpoint) < 0 )
             printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
-        else add_relay(list,ipbits);
+        else
+        {
+            if ( type == NN_SUB )
+                nn_setsockopt(list->sock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
+            add_relay(list,ipbits);
+        }
     }
     return(list->num);
 }
 
 int32_t add_connections(char *server,int32_t skiplb)
 {
-    uint64_t ipbits; int32_t n;
+    uint64_t ipbits; int32_t n; char publishstr[1024],*str;
+    if ( is_ipaddr(server) == 0 )
+        return(-1);
     ipbits = calc_ipbits(server);
     update_serverbits(&RELAYS.peer,server,ipbits,NN_SURVEYOR);
+    update_serverbits(&RELAYS.sub,server,ipbits,NN_PUB);
     n = RELAYS.lb.num;
     if ( skiplb == 0 )
         update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
     if ( SUPERNET.iamrelay != 0 )
         update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
+    if ( RELAYS.pubsock >= 0 )
+    {
+        sprintf(publishstr,"{\"plugin\":\"relays\",\"method\":\"add\",\"server\":\"%s\"}",server);
+        if ( (str= nn_publish(publishstr)) != 0 )
+            free(str);
+    }
     return(RELAYS.lb.num > n);
 }
 
@@ -264,7 +278,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else
         {
-            if ( strcmp(methodstr,"newrelays") == 0 && (array= cJSON_GetObjectItem(json,"hostnames")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            if ( strcmp(methodstr,"add") == 0 && (array= cJSON_GetObjectItem(json,"hostnames")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=count=0; i<n; i++)
                     if ( add_newrelay(cJSON_str(cJSON_GetArrayItem(array,i)),jsonstr,json) > 0 )
