@@ -988,6 +988,8 @@ void serverloop(void *_args)
     }
     while ( 1 )
     {
+        int32_t poll_daemons();
+        poll_daemons();
         sprintf(request,"{\"plugin\":\"relays\",\"method\":\"%s\"}",(rand() & 1) != 0 ? "list" : "listpubs");
         if ( (retstr= nn_loadbalanced(lbargs,request)) != 0 )
         {
@@ -1079,7 +1081,7 @@ int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flag
             if ( (len= nn_send(sock,(char *)retstr,len,0)) <= 0 )
                 errs++, printf("error %d sending to socket.%d send.%d len.%d (%s)\n",len,sock,i,len,nn_strerror(nn_errno()));
             else// if ( Debuglevel > 2 )
-                printf("nn_broadcast SENT.(%s) len.%d vs strlen.%ld instanceid.%llu\n",retstr,len,strlen((char *)retstr),(long long)instanceid);
+                printf("nn_broadcast SENT.(%s) len.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,strlen((char *)retstr),(long long)instanceid,sock);
         }
     }
     return(errs);

@@ -262,7 +262,7 @@ int32_t poll_daemons() // the only thread that is allowed to modify Daemoninfos[
                     {
                         str = messages[i];
                         if ( Debuglevel > 1 )
-                            printf("(%d %d) %d %.6f RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu >>>>>>>>>>>>>>\n",dp->numrecv,dp->numsent,processed,milliseconds(),n,i,Numdaemons,str,dp->cmd,(long long)dp->daemonid);
+                            printf("(%d %d) %d %.6f HOST RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu >>>>>>>>>>>>>>\n",dp->numrecv,dp->numsent,processed,milliseconds(),n,i,Numdaemons,str,dp->cmd,(long long)dp->daemonid);
                         process_plugin_message(dp,str,(int32_t)strlen(str)+1);
                         //free(str);
                     }
