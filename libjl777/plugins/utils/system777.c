@@ -672,7 +672,7 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
         for (i=0; i<num; i++)
         {
             set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
-            if ( nn_connect(sock,endpoint) >= 0 )
+            if ( ismyaddress(servers[i]) == 0 && nn_connect(sock,endpoint) >= 0 )
                 printf("+%s ",endpoint);
         }
          priority++;
