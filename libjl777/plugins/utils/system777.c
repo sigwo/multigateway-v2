@@ -1068,17 +1068,17 @@ int32_t shutdown_plugsocks(union endpoints *socks)
 int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
 {
     int32_t i,sock,errs = 0;
-    for (i=0; i<=(int32_t)(sizeof(socks->send)/sizeof(int32_t))+1; i++)
+    for (i=0; i<(int32_t)(sizeof(socks->send)/sizeof(int32_t))+2; i++)
     {
         if ( i < 2 )
             sock = (i == 0) ? socks->both.bus : socks->both.pair;
-        else sock = ((int32_t *)&socks->send)[i - 1];
+        else sock = ((int32_t *)&socks->send)[i - 2];
         if ( sock >= 0 )
         {
             if ( (len= nn_send(sock,(char *)retstr,len,0)) <= 0 )
                 errs++, printf("error %d sending to socket.%d send.%d len.%d (%s)\n",len,sock,i,len,nn_strerror(nn_errno()));
-            else if ( Debuglevel > 2 )
-                printf("SENT.(%s) len.%d vs strlen.%ld instanceid.%llu\n",retstr,len,strlen((char *)retstr),(long long)instanceid);
+            else //if ( Debuglevel > 1 )
+                printf("nn_broadcast SENT.(%s) len.%d vs strlen.%ld instanceid.%llu\n",retstr,len,strlen((char *)retstr),(long long)instanceid);
         }
     }
     return(errs);
@@ -1092,11 +1092,8 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
     memset(pfd,0,sizeof(pfd));
     for (i=0; i<(int32_t)(sizeof(socks->all)/sizeof(*socks->all)); i++)
     {
-        if ( (pfd[i].fd= socks->all[i]) >= 0 )
-        {
-            pfd[i].events = NN_POLLIN | NN_POLLOUT;
-            n++;
-        }
+        if ( (pfd[n].fd= socks->all[i]) >= 0 )
+            pfd[n++].events = NN_POLLIN | NN_POLLOUT;
     }
     if ( n > 0 )
     {
@@ -1104,14 +1101,14 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
         {
             for (i=0; i<n; i++)
             {
-                //printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,pfd[i].fd,socks->all[i],pfd[i].revents);
+               // printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,pfd[i].fd,socks->all[i],pfd[i].revents);
                 if ( (pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(pfd[i].fd,&msg,NN_MSG,0)) > 0 )
                 {
                     (*numrecvp)++;
                     str = clonestr(msg);
                     nn_freemsg(msg);
                     messages[received++] = str;
-                    if ( Debuglevel > 1 )
+                    if ( Debuglevel > 2 )
                         printf("(%d %d) %d %.6f RECEIVED.%d i.%d/%ld (%s)\n",*numrecvp,numsent,received,milliseconds(),n,i,sizeof(socks->all)/sizeof(*socks->all),str);
                 }
             }
@@ -1119,8 +1116,8 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
         else if ( rc < 0 )
             printf("%s Error.%d polling %d daemons [0] == %d\n",nn_strerror(nn_errno()),rc,n,pfd[0].fd);
     }
-    //if ( received != 0 )
-    //    printf("received.%d\n",received);
+    //if ( n != 0 || received != 0 )
+    //   printf("n.%d: received.%d\n",n,received);
     return(received);
 }
 

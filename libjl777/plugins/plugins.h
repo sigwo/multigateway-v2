@@ -178,7 +178,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     int32_t permflag,broadcastflag;
     uint64_t instanceid,tag = 0;
     char request[8192],**dest,*retstr,*sendstr;
-    //printf("process_plugin_message.(%s)\n",str);
+    printf("process_plugin_message.(%s)\n",str);
     if ( (json= cJSON_Parse(str)) != 0 )
     {
         printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
@@ -261,7 +261,7 @@ int32_t poll_daemons() // the only thread that is allowed to modify Daemoninfos[
                     for (i=0; i<n; i++,processed++)
                     {
                         str = messages[i];
-                        if ( Debuglevel > 2 )
+                        if ( Debuglevel > 1 )
                             printf("(%d %d) %d %.6f RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu >>>>>>>>>>>>>>\n",dp->numrecv,dp->numsent,processed,milliseconds(),n,i,Numdaemons,str,dp->cmd,(long long)dp->daemonid);
                         process_plugin_message(dp,str,(int32_t)strlen(str)+1);
                         //free(str);
@@ -462,7 +462,6 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
     cJSON *json;
     struct relayargs *args = 0;
     int32_t i,ind,len,override,async = (timeout == 0);
-//    retstr = plugin_method("remote",plugin==0?"relays":plugin,(char *)args,0,0,(char *)msg,len,0);
     if ( previpaddr != 0 && strcmp(previpaddr,"remote") == 0 )
     {
         len = numiters, numiters = 1;

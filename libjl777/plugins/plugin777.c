@@ -62,7 +62,7 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
     struct allendpoints *socks = &plugin->all.socks;
     if ( Debuglevel > 2 )
         printf("%s.%p <<<<<<<<<<<<< init_permpairsocks bind.(%s) connect.(%s)\n",plugin->name,plugin,bindaddr,connectaddr);
-    if ( plugin->bundledflag != 0 && (socks->both.pair= init_socket(".pair","pair",NN_PAIR,0,connectaddr,timeout)) < 0 ) errs++;
+    if ( (socks->both.pair= init_socket(".pair","pair",NN_PAIR,0,connectaddr,timeout)) < 0 ) errs++;
     //if ( plugin->bundledflag != 0 && (socks->both.bus= init_socket("","bus",NN_BUS,0,connectaddr,timeout)) < 0 ) errs++;
     //if ( (socks->send.push= init_socket(".pipeline","push",NN_PUSH,bindaddr,0,timeout)) < 0 ) errs++;
     //if ( (socks->send.rep= init_socket(".reqrep","rep",NN_REP,bindaddr,connectaddr,timeout)) < 0 ) errs++;
@@ -274,7 +274,7 @@ int32_t main
         argjson = cJSON_Parse(jsonargs);
         if ( (len= registerAPI(registerbuf,sizeof(registerbuf)-1,plugin,argjson)) > 0 )
         {
-            if ( Debuglevel > 1 )
+            //if ( Debuglevel > 1 )
                 fprintf(stderr,">>>>>>>>>>>>>>> plugin sends REGISTER SEND.(%s)\n",registerbuf);
             nn_broadcast(&plugin->all.socks,0,0,(uint8_t *)registerbuf,(int32_t)strlen(registerbuf)+1), plugin->numsent++;
             //nn_send(plugin->sock,plugin->registerbuf,len+1,0); // send the null terminator too
