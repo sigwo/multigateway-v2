@@ -24,7 +24,7 @@ struct cointx_info *createrawtransaction(char *coinstr,char *serverport,char *us
 int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,char *txbytes,int32_t gatewayid,int32_t numgateways);
 int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params);
 int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr);
-char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass);
+cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass);
 
 
 #endif
@@ -78,20 +78,20 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
             len = (int32_t)strlen(pubkey);
             free_json(json);
         }
-        printf("get_pubkey.(%s) -> (%s)\n",retstr,pubkey);
+        //printf("get_pubkey.(%s) -> (%s)\n",retstr,pubkey);
         free(retstr);
     }
     return((int32_t)len);
 }
 
-char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
+cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 {
     char str[MAX_JSON_FIELD],pubkey[512],coinaddr[512],*retstr;
     cJSON *json,*item,*array = 0;
     int32_t i,n;
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts","")) != 0 )
     {
-        printf("listaccounts.(%s)\n",retstr);
+        //printf("listaccounts.(%s)\n",retstr);
         retstr[0] = '[';
         n = (int32_t)strlen(retstr);
         retstr[n-1] = ']';
@@ -133,11 +133,18 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
     }
     if ( array != 0 )
     {
-        retstr = cJSON_Print(array);
-        free_json(array);
+        json = cJSON_CreateObject();
+        cJSON_AddItemToObject(json,"pubkeys",array);
+        cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
+        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
+        cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(MGW.gatewayid));
+        retstr = cJSON_Print(json);
         _stripwhite(retstr,' ');
-    } else retstr = 0;
-    return(retstr);
+        nn_publish(retstr);
+        free(retstr);
+        return(json);
+    }
+    return(0);
 }
 
 cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass)
