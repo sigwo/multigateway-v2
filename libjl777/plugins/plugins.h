@@ -485,9 +485,13 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
     {
         fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d (%s) ready.%d remote.%d\n",method,plugin,is_bundled_plugin(plugin),origargstr,dp->readyflag,dp->allowremote);
         if ( dp->readyflag == 0 )
+        {
+            printf("readyflag.%d\n",dp->readyflag);
             return(clonestr("{\"error\":\"plugin not ready\"}"));
+        }
         if ( dp->allowremote == 0 && is_remote_access(previpaddr) != 0 )
         {
+            printf("allowremote.%d isremote.%d\n",dp->allowremote,is_remote_access(previpaddr));
             sprintf(retbuf,"{\"error\":\"cant remote call plugin\",\"ipaddr\":\"%s\",\"plugin\":\"%s\"}",SUPERNET.myipaddr,plugin);
             return(clonestr(retbuf));
         }
