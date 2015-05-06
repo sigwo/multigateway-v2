@@ -189,7 +189,7 @@ void set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type);
 
 char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async);
 char *nn_publish(char *publishstr,int32_t nostr);
-char *nn_allpeers(int32_t peersock,char *jsonquery,int32_t timeoutmillis);
+char *nn_allpeers(int32_t peersock,char *jsonquery,int32_t timeoutmillis,char *localresult);
 char *nn_loadbalanced(struct relayargs *args,char *requeststr);
 char *nn_peers(struct relayargs *args,uint8_t *msg,int32_t len);
 char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len);
@@ -888,7 +888,7 @@ char *nn_loadbalanced(struct relayargs *args,char *_request)
     return(jsonstr);
 }
 
-char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis)
+char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis,char *localresult)
 {
     cJSON *item,*json,*array = 0;
     int32_t i,sendlen,len,n = 0;
@@ -913,6 +913,14 @@ char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis)
             break;
     len = (int32_t)strlen(request) + 1;
     startmilli = milliseconds();
+    if ( localresult != 0 && (item= cJSON_Parse(localresult)) != 0 )
+    {
+        if ( array == 0 )
+            array = cJSON_CreateArray();
+        cJSON_AddItemToObject(item,"locallag",cJSON_CreateNumber(milliseconds()-startmilli));
+        cJSON_AddItemToArray(array,item);
+        n++;
+    }
     if ( (sendlen= nn_send(peersock,request,len,0)) == len )
     {
         for (i=0; i<1000; i++)
@@ -942,7 +950,7 @@ char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis)
     cJSON_AddItemToObject(json,"n",cJSON_CreateNumber(n));
     retstr = cJSON_Print(json);
     _stripwhite(retstr,' ');
-    //printf("globalrequest(%s) returned (%s) from n.%d respondents\n",request,retstr,n);
+printf("globalrequest(%s) returned (%s) from n.%d respondents\n",request,retstr,n);
     free_json(json);
     free(request);
     return(retstr);
@@ -1058,13 +1066,12 @@ void responseloop(void *_args)
                         cJSON_DeleteItemFromObject(json,"broadcast");
                         str = cJSON_Print(json);
                         _stripwhite(str,' ');
-                        retstr = nn_allpeers(RELAYS.querypeers,str,1000);
+                        retstr = (*args->commandprocessor)(args,(uint8_t *)str,(int32_t)strlen(str)+1);
+                        retstr = nn_allpeers(RELAYS.querypeers,str,1000,retstr);
                         free(str);
                     }
                     free_json(json);
                 }
-                if ( retstr == 0 )
-                    retstr = (*args->commandprocessor)(args,(uint8_t *)msg,len);
                 if ( retstr != 0 )
                 {
                     complete_relay(args,retstr);
@@ -1138,7 +1145,7 @@ void process_userinput(struct relayargs *lbargs,char *line)
         if ( broadcastflag != 0 || strcmp(plugin,"relay") == 0 )
             retstr = nn_loadbalanced(lbargs,cmdstr);
         else if ( strcmp(plugin,"peers") == 0 )
-            retstr = nn_allpeers(RELAYS.querypeers,cmdstr,RELAYS.surveymillis);
+            retstr = nn_allpeers(RELAYS.querypeers,cmdstr,RELAYS.surveymillis,0);
         else if ( find_daemoninfo(&j,plugin,0,0) != 0 )
             retstr = plugin_method(0,plugin,method,0,0,cmdstr,(int32_t)strlen(cmdstr),1000);
         else retstr = nn_publish(pubstr,0);
