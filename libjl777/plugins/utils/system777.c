@@ -1047,7 +1047,7 @@ void responseloop(void *_args)
                     broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));
                     if ( broadcaststr != 0 && strcmp(broadcaststr,"allpeers") == 0 )
                     {
-                        cJSON_DeleteObjectItem(json,"broadcast"));
+                        cJSON_DeleteItemFromObject(json,"broadcast");
                         str = cJSON_Print(json);
                         _stripwhite(str,' ');
                         retstr = nn_allpeers(RELAYS.querypeers,(char *)msg,3000);
