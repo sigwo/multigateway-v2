@@ -20,7 +20,7 @@
 void relay_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
-char *PLUGNAME(_methods)[] = { "list", "add", "listpeers", "newpeers", "listpubs", "newpubs" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "list", "add", "join", "listpeers", "newpeers", "listpubs", "newpubs" }; // list of supported methods
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -249,7 +249,7 @@ int32_t add_connections(char *server,int32_t skiplb)
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,*retstr,*methodstr,*hostname;
+    char *resultstr,*retstr,*methodstr,*hostname,*myipaddr;
     int32_t i,n,count;
     cJSON *array;
     retbuf[0] = 0;
@@ -280,6 +280,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else
         {
+            strcpy(retbuf,"{\"result\":\"under construction\"}");
             if ( strcmp(methodstr,"add") == 0 && (array= cJSON_GetObjectItem(json,"hostnames")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=count=0; i<n; i++)
@@ -288,23 +289,24 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 sprintf(retbuf,"{\"result\":\"relay added\",\"count\":%d}",count);
             }
             else if ( strcmp(methodstr,"list") == 0 )
+                retstr = relays_jsonstr(jsonstr,json);
+            else if ( strcmp(methodstr,"join") == 0 && (myipaddr= cJSON_str(cJSON_GetObjectItem(json,"myipaddr"))) != 0 && is_ipaddr(myipaddr) != 0 )
             {
-                if ( (retstr= relays_jsonstr(jsonstr,json)) != 0 )
+                if ( add_connections(myipaddr,1) > 0 )
                 {
-                    strcpy(retbuf,retstr);
-                    free(retstr);
+                    nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                    sprintf(retbuf,"{\"result\":\"added ipaddr\"}");
                 }
-                strcpy(retbuf,"{\"result\":\"under construction\"}");
+                else sprintf(retbuf,"{\"result\":\"didnt add ipaddr, probably already there\"}");
             }
-            else if ( strcmp(methodstr,"listpubs") == 0 )
-            {
-                strcpy(retbuf,"{\"result\":\"under construction\"}");
-            }
-            else
-                strcpy(retbuf,"{\"result\":\"under construction\"}");
         }
         if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
             add_newrelay(hostname,jsonstr,json);
+        if ( retstr != 0 )
+        {
+            strcpy(retbuf,retstr);
+            free(retstr);
+        }
         printf("RELAY.(%s)\n",retbuf);
     }
     return((int32_t)strlen(retbuf));
