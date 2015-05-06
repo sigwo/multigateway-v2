@@ -492,6 +492,7 @@ int32_t aligned_free(void *ptr)
 
 int32_t getline777(char *line,int32_t max)
 {
+    static char prevline[1024];
     struct timeval timeout;
     fd_set fdset;
     int32_t s;
@@ -504,7 +505,12 @@ int32_t getline777(char *line,int32_t max)
     else
     {
         if ( FD_ISSET(STDIN_FILENO,&fdset) > 0 && fgets(line,max,stdin) == line )
+        {
             line[strlen(line)-1] = 0;
+            if ( line[0] == '.' && line[1] == 0 )
+                strcpy(line,prevline);
+            else strcpy(prevline,line);
+        }
     }
     return((int32_t)strlen(line));
 }

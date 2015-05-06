@@ -229,7 +229,7 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
 int32_t add_connections(char *server,int32_t skiplb)
 {
     uint64_t ipbits; int32_t n,m; char publishstr[1024];
-    if ( is_ipaddr(server) == 0 || ismyaddress(server) != 0 )
+    if ( server == 0 || is_ipaddr(server) == 0 || ismyaddress(server) != 0 )
         return(-1);
     ipbits = calc_ipbits(server);
     update_serverbits(&RELAYS.peer,server,ipbits,NN_SURVEYOR);
@@ -243,7 +243,7 @@ int32_t add_connections(char *server,int32_t skiplb)
         update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
         if ( RELAYS.bus.num > m && RELAYS.pubsock >= 0 )
         {
-            sprintf(publishstr,"{\"plugin\":\"relay\",\"method\":\"add\",\"server\":\"%s\"}",server);
+            sprintf(publishstr,"{\"plugin\":\"relay\",\"method\":\"add\",\"hostnames\":[\"%s\"]}",server);
             nn_publish(publishstr,1);
         }
     }
@@ -275,7 +275,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        printf("RELAYS.(%s)\n",jsonstr);
+        //printf("RELAYS.(%s)\n",jsonstr);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
@@ -287,7 +287,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             if ( strcmp(methodstr,"add") == 0 && (array= cJSON_GetObjectItem(json,"hostnames")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=count=0; i<n; i++)
-                    if ( add_newrelay(cJSON_str(cJSON_GetArrayItem(array,i)),jsonstr,json) > 0 )
+                    if ( add_connections(cJSON_str(cJSON_GetArrayItem(array,i)),1) > 0 )
                         count++;
                 sprintf(retbuf,"{\"result\":\"relay added\",\"count\":%d}",count);
             }
@@ -303,16 +303,13 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 else sprintf(retbuf,"{\"result\":\"didnt add ipaddr, probably already there\"}");
             }
         }
-        printf("RELAYS.(%s)\n",retbuf);
         if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
-            add_newrelay(hostname,jsonstr,json);
+            add_connections(hostname,0);
         if ( retstr != 0 )
         {
-            printf("RELAYS. retstr (%s)\n",retstr);
             strcpy(retbuf,retstr);
             free(retstr);
         }
-        printf("RELAY.(%s)\n",retbuf);
     }
     return((int32_t)strlen(retbuf));
 }

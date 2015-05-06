@@ -528,7 +528,7 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
                 }
                 else if ( i < numiters-1 )
                     free(retstr);
-                else printf("WAITED.(%s)\n",retstr);
+                //else printf("WAITED.(%s)\n",retstr);
             }
             if ( numiters > 1 )
             {
