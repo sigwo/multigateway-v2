@@ -535,7 +535,7 @@ int32_t parse_ipaddr(char *ipaddr,char *ip_port)
     return(port);
 }
 
-uint64_t calc_ipbits(char *ip_port)
+uint64_t _calc_ipbits(char *ip_port)
 {
     int32_t port;
     char ipaddr[64];
@@ -543,7 +543,7 @@ uint64_t calc_ipbits(char *ip_port)
     port = parse_ipaddr(ipaddr,ip_port);
     memset(&addr,0,sizeof(addr));
     portable_pton(ip_port[0] == '[' ? AF_INET6 : AF_INET,ipaddr,&addr);
-    if ( 0 )
+    if ( 1 )
     {
         int i;
         for (i=0; i<16; i++)
@@ -551,6 +551,16 @@ uint64_t calc_ipbits(char *ip_port)
         printf("<- %s %x\n",ip_port,*(uint32_t *)&addr);
     }
     return(*(uint32_t *)&addr | ((uint64_t)port << 32));
+}
+
+uint64_t calc_ipbits(char *ip_port)
+{
+    uint64_t ipbits; char ipaddr[64];
+    ipbits = _calc_ipbits(ip_port);
+    expand_ipbits(ipaddr,ipbits);
+    if ( strcmp(ipaddr,ip_port) != 0 )
+        printf("calc_ipbits error: (%s) -> %llx -> (%s)\n",ip_port,(long long)ipbits,ipaddr);
+    return(ipbits);
 }
 
 void expand_ipbits(char *ipaddr,uint64_t ipbits)

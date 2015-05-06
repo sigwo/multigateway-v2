@@ -686,7 +686,7 @@ cJSON *relay_json(struct _relay_info *list)
     array = cJSON_CreateArray();
     for (i=0; i<list->num&&i<(int32_t)(sizeof(list->servers)/sizeof(*list->servers)); i++)
     {
-        expand_nxt64bits(server,(uint32_t)list->servers[i]);
+        expand_ipbits(server,(uint32_t)list->servers[i]);
         set_endpointaddr(SUPERNET.transport,endpoint,server,SUPERNET.port,list->desttype);
         cJSON_AddItemToArray(array,cJSON_CreateString(endpoint));
     }
@@ -782,6 +782,15 @@ void process_userinput(struct relayargs *lbargs,char *line)
 {
     char plugin[512],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j,broadcastflag = 0;
     printf("[%s]\n",line);
+    if ( strcmp(line,"list") == 0 )
+    {
+        if ( (retstr= relays_jsonstr(0,0)) != 0 )
+        {
+            printf("%s\n",retstr);
+            free(retstr);
+        }
+        return;
+    }
     if ( line[0] == '!' )
         broadcastflag = 1, line++;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
