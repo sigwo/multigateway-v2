@@ -1070,8 +1070,9 @@ void responseloop(void *_args)
                         retstr = nn_allpeers(RELAYS.querypeers,str,1000,retstr);
                         free(str);
                     }
+                    else retstr = (*args->commandprocessor)(args,(uint8_t *)msg,(int32_t)strlen((char *)msg)+1);
                     free_json(json);
-                }
+                } else printf("parse error.(%s)\n",(char *)msg);
                 if ( retstr != 0 )
                 {
                     complete_relay(args,retstr);
