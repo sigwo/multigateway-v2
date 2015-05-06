@@ -562,9 +562,9 @@ int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port
 {
     //static char *tcpformat = "ps%02d.bitcoindark.ca";
     int32_t n = 0;
-    strcpy(servers[n++],"192.99.151.160");
-    strcpy(servers[n++],"167.114.96.223");
-    strcpy(servers[n++],"167.114.113.197");
+    strcpy(servers[n++],"78.46.137.178");//192.99.151.160");
+    strcpy(servers[n++],"5.9.102.210");//167.114.96.223");
+    strcpy(servers[n++],"5.9.56.103");//167.114.113.197");
     //int32_t i,n = 0;
     //for (i=0; i<=20&&n<max; i++,n++)
     //    sprintf(servers[i],tcpformat,i);
@@ -1204,11 +1204,11 @@ void serverloop(void *_args)
     }
     while ( 1 )
     {
-#ifdef __APPLE__
+//#ifdef __APPLE__
         char line[1024];
         if ( getline777(line,sizeof(line)-1) > 0 )
             process_userinput(lbargs,line);
-#endif
+//#endif
         int32_t poll_daemons();
         poll_daemons();
         if ( SUPERNET.APISLEEP > 0 )
