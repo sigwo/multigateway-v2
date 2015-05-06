@@ -79,7 +79,7 @@ int32_t nn_portoffset(int32_t type)
     int32_t i;
     for (i=0; i<(int32_t)(sizeof(nn_typelist)/sizeof(*nn_typelist)); i++)
         if ( nn_typelist[i] == type )
-            return(i+2);
+            return(i+10);
     return(-1);
 }
 
@@ -837,7 +837,7 @@ int32_t poll_direct(int32_t timeoutmillis)
     int32_t inds[(sizeof(list->servers)/sizeof(*list->servers))];
     struct nn_pollfd pfds[(sizeof(list->servers)/sizeof(*list->servers))];
     int32_t len,sock,max,received=0,rc,i,n = 0;
-    char *str,*msg;
+    char *msg;
     max = (int32_t)(sizeof(list->servers)/sizeof(*list->servers));
     memset(pfds,0xff,sizeof(*pfds) * max);
     memset(inds,0xff,sizeof(*inds) * max);
@@ -864,7 +864,7 @@ int32_t poll_direct(int32_t timeoutmillis)
                     nn_freemsg(msg);
                     received++;
                     if ( Debuglevel > 2 )
-                        printf("%d %.6f DIRECT RECEIVED.%d i.%d/%d (%s) -> origind.%d\n",received,milliseconds(),n,i,max,str,inds[i]);
+                        printf("%d %.6f DIRECT RECEIVED.%d i.%d/%d (%s) -> origind.%d\n",received,milliseconds(),n,i,max,(char *)msg,inds[i]);
                 }
             }
         }
