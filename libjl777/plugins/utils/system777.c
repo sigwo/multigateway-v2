@@ -1171,7 +1171,7 @@ void serverloop(void *_args)
     }
     while ( 1 )
     {
-#ifdef STANDALONE
+#ifdef __APPLE__
         char line[1024];
         if ( getline777(line,sizeof(line)-1) > 0 )
             process_userinput(lbargs,line);
