@@ -228,7 +228,7 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
 
 int32_t add_connections(char *server,int32_t skiplb)
 {
-    uint64_t ipbits; int32_t n; char publishstr[1024],*str;
+    uint64_t ipbits; int32_t n; char publishstr[1024];
     if ( is_ipaddr(server) == 0 )
         return(-1);
     ipbits = calc_ipbits(server);

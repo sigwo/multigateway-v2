@@ -122,7 +122,7 @@ struct _relay_info { int32_t sock,num; uint64_t servers[4096]; };
 struct relay_info
 {
     struct _relay_info lb,peer,bus,sub;
-    int32_t readyflag,pubsock,surveymillis;
+    int32_t readyflag,pubsock,querypeers,surveymillis;
 }; extern struct relay_info RELAYS;
 
 #define MAX_SERVERNAME 128
@@ -893,7 +893,7 @@ char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis)
         return(clonestr("{\"error\":\"invalid peers socket\"}"));
     if ( nn_setsockopt(peersock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
     {
-        printf("error nn_setsockopt\n");
+        printf("error nn_setsockopt %d %s\n",peersock,nn_errstr());
         return(clonestr("{\"error\":\"setting NN_SURVEYOR_DEADLINE\"}"));
     }
     request = malloc(strlen(_request) + 512);
@@ -954,7 +954,7 @@ char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len)
             else if ( strcmp(plugin,"peers") == 0 )
                 retstr = nn_peers(args,msg,len);
             else if ( broadcaststr != 0 && strcmp(broadcaststr,"allpeers") == 0 )
-                retstr = nn_allpeers(RELAYS.peer.sock,(char *)msg,3000);
+                retstr = nn_allpeers(RELAYS.querypeers,(char *)msg,3000);
             else retstr = plugin_method("remote",plugin,(char *)args,0,0,(char *)msg,len,1000);
         }
         else
@@ -1073,7 +1073,7 @@ int32_t launch_responseloop(struct relayargs *args,char *name,int32_t type,int32
     return(args->sock);
 }
 
-void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char *line)
+void process_userinput(struct relayargs *lbargs,char *line)
 {
     char plugin[512],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
@@ -1110,7 +1110,7 @@ void process_userinput(struct relayargs *lbargs,struct relayargs *peerargs,char 
         cmdstr = cJSON_Print(json);
         _stripwhite(cmdstr,' ');
         if ( strcmp(plugin,"peers") == 0 )
-            retstr = nn_allpeers(peerargs->sock,cmdstr,RELAYS.surveymillis);
+            retstr = nn_allpeers(RELAYS.querypeers,cmdstr,RELAYS.surveymillis);
         else if ( strcmp(plugin,"relay") == 0 )
             retstr = nn_loadbalanced(lbargs,cmdstr);
         else if ( find_daemoninfo(&j,plugin,0,0) != 0 )
@@ -1131,7 +1131,7 @@ void serverloop(void *_args)
     memset(args,0,sizeof(args));
     //start_devices(NN_RESPONDENT);
     sendtimeout = 10, recvtimeout = 10000;
-    peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
+    RELAYS.querypeers = peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     peerargs = &args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
@@ -1174,7 +1174,7 @@ void serverloop(void *_args)
 #ifdef STANDALONE
         char line[1024];
         if ( getline777(line,sizeof(line)-1) > 0 )
-            process_userinput(lbargs,peerargs,line);
+            process_userinput(lbargs,line);
 #endif
         int32_t poll_daemons();
         poll_daemons();
