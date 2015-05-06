@@ -121,15 +121,21 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
 
 static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin,uint64_t tag,int32_t allfields)
 {
-    char tagstr[128];
+    char tagstr[128],*NXTaddr; cJSON *json;
     //printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
-    if ( tag != 0 )
-        sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
-    else tagstr[0] = 0;
-    sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\",\"myipaddr\":\"%s\",\"allowremote\":%d%s}",plugin->NXTADDR,plugin->ipaddr,plugin->allowremote,tagstr);
-    if ( allfields != 0 )
-        sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
-    //printf("APPEND.(%s)\n",retbuf);
+    if ( (json= cJSON_Parse(retbuf)) != 0 )
+    {
+        if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
+            sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
+        else tagstr[0] = 0;
+        NXTaddr = cJSON_str(cJSON_GetObjectItem(json,"NXT"));
+        if ( NXTaddr == 0 || NXTaddr[0] == 0 )
+            sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\",\"myipaddr\":\"%s\"",plugin->NXTADDR,plugin->ipaddr);
+        sprintf(retbuf+strlen(retbuf)-1,",\"allowremote\":%d%s}",plugin->allowremote,tagstr);
+        if ( allfields != 0 )
+            sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
+        //printf("APPEND.(%s)\n",retbuf);
+    }
 }
 
 static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,cJSON *argjson)
