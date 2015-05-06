@@ -728,10 +728,10 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME
         //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-        timeout = 1000;
+        timeout = 5000;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
-        timeout = 10;
+        timeout = 100;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
         priority = nn_addservers(priority,lbsock,servers,num);
@@ -873,7 +873,7 @@ char *nn_loadbalanced(struct relayargs *args,char *_request)
         else
         {
             printf("got recvlen.%d %s\n",recvlen,nn_errstr());
-            jsonstr = clonestr("{\"error\":\"lb send error\"}");
+            jsonstr = clonestr("{\"error\":\"lb recv error, probably timeout\"}");
         }
     } else printf("got sendlen.%d instead of %d %s\n",sendlen,len,nn_errstr()), jsonstr = clonestr("{\"error\":\"lb send error\"}");
     free(request);
@@ -992,7 +992,7 @@ char *nn_peers(struct relayargs *args,uint8_t *msg,int32_t len)
         {
             if ( strcmp(plugin,"subscriptions") == 0 )
                 retstr = nn_subscriptions(args,msg,len);
-            else retstr = plugin_method("remote",plugin==0?"peers":plugin,(char *)args,0,0,(char *)msg,len,1000);
+            else retstr = plugin_method("remote",plugin==0?"peers":plugin,(char *)args,0,0,(char *)msg,len,500);
         }
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
@@ -1050,7 +1050,7 @@ void responseloop(void *_args)
                         cJSON_DeleteItemFromObject(json,"broadcast");
                         str = cJSON_Print(json);
                         _stripwhite(str,' ');
-                        retstr = nn_allpeers(RELAYS.querypeers,str,3000);
+                        retstr = nn_allpeers(RELAYS.querypeers,str,500);
                         free(str);
                     }
                     free_json(json);
@@ -1153,7 +1153,7 @@ void serverloop(void *_args)
     peerargs = &args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_peers);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&args[n++],"NN_SUB",NN_SUB,0,nn_subscriptions);
-    lbsock = loadbalanced_socket(3000,SUPERNET.port); // NN_REQ
+    lbsock = loadbalanced_socket(5000,SUPERNET.port); // NN_REQ
     lbargs = &args[n++];
     if ( SUPERNET.iamrelay != 0 )
     {
