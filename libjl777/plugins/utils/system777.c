@@ -1055,7 +1055,9 @@ void responseloop(void *_args)
                     }
                     free_json(json);
                 }
-                if ( retstr == 0 && (retstr= (*args->commandprocessor)(args,(uint8_t *)msg,len)) != 0 )
+                if ( retstr == 0 )
+                    retstr = (*args->commandprocessor)(args,(uint8_t *)msg,len);
+                if ( retstr != 0 )
                 {
                     complete_relay(args,retstr);
                     free(retstr);
