@@ -632,13 +632,14 @@ void nn_direct_processor(int32_t directind,uint8_t *msg,int32_t len)
     {
         if ( (retstr= nn_lb_processor(&RELAYS.args[0],msg,len)) != 0 )
         {
-            if ( (sock= (int32_t)(RELAYS.pair.servers[directind] >> 48)) >= 0 )
+            sock = (int32_t)(RELAYS.pair.servers[directind] >> 48);
+            if ( sock >= 0 )
             {
                 retlen = (int32_t)strlen(retstr) + 1;
                 if ( (sendlen= nn_send(sock,(char *)msg,retlen,0)) != retlen )
                     printf("sendlen.%d vs len.%d for direct response\n",sendlen,retlen);
             }
-            printf("RELAY DIRECTRETURN.(%s) from (%s) sendlen.%d\n",retstr,(char *)msg,sendlen);
+            printf("RELAY DIRECTRETURN.(%s) from (%s) illegal sock.%d\n",retstr,(char *)msg,sock);
             free(retstr);
         }
     }
@@ -822,7 +823,7 @@ void process_userinput(struct relayargs *lbargs,char *line)
         else if ( find_daemoninfo(&j,plugin,0,0) != 0 )
             retstr = plugin_method(0,0,plugin,method,0,0,cmdstr,(int32_t)strlen(cmdstr),1000);
         else if ( is_ipaddr(plugin) != 0 )
-            nn_direct(plugin,cmdstr);
+            retstr = nn_direct(plugin,cmdstr);
         else retstr = nn_publish(pubstr,0);
         printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
         free(cmdstr);
