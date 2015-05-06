@@ -896,7 +896,7 @@ char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis,char *lo
     char *request;
     char *msg,*retstr;
     if ( timeoutmillis == 0 )
-        timeoutmillis = 2500;
+        timeoutmillis = 900;
     if ( peersock < 0 )
         return(clonestr("{\"error\":\"invalid peers socket\"}"));
     if ( nn_setsockopt(peersock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
@@ -908,9 +908,6 @@ char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis,char *lo
     strcpy(request,_request);
     add_standard_fields(request);
     printf("request_allpeers.(%s)\n",request);
-    for (i=0; i<1000; i++)
-        if ( (get_socket_status(peersock,1) & NN_POLLOUT) != 0 )
-            break;
     len = (int32_t)strlen(request) + 1;
     startmilli = milliseconds();
     if ( localresult != 0 && (item= cJSON_Parse(localresult)) != 0 )
@@ -921,11 +918,14 @@ char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis,char *lo
         cJSON_AddItemToArray(array,item);
         n++;
     }
+    for (i=0; i<2; i++)
+        if ( (get_socket_status(peersock,1) & NN_POLLOUT) != 0 )
+            break;
     if ( (sendlen= nn_send(peersock,request,len,0)) == len )
     {
-        for (i=0; i<1000; i++)
-            if ( (get_socket_status(peersock,1) & NN_POLLIN) != 0 )
-                break;
+        //for (i=0; i<2; i++)
+        //    if ( (get_socket_status(peersock,1) & NN_POLLIN) != 0 )
+        //        break;
         while ( (len= nn_recv(peersock,&msg,NN_MSG,0)) > 0 )
         {
             if ( (item= cJSON_Parse(msg)) != 0 )
