@@ -1050,7 +1050,7 @@ void responseloop(void *_args)
                         cJSON_DeleteItemFromObject(json,"broadcast");
                         str = cJSON_Print(json);
                         _stripwhite(str,' ');
-                        retstr = nn_allpeers(RELAYS.querypeers,(char *)msg,3000);
+                        retstr = nn_allpeers(RELAYS.querypeers,str,3000);
                         free(str);
                     }
                     free_json(json);
