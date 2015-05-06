@@ -136,7 +136,7 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
     return(priority);
 }
 
-int32_t _loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafes[][MAX_SERVERNAME],int32_t numfailsafes)
+int32_t _lb_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafes[][MAX_SERVERNAME],int32_t numfailsafes)
 {
     int32_t lbsock,timeout,priority = 1;
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
@@ -157,7 +157,7 @@ int32_t _loadbalanced_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],
     return(lbsock);
 }
 
-int32_t nn_loadbalanced_socket(int32_t retrymillis,int32_t port)
+int32_t nn_lbsocket(int32_t retrymillis,int32_t port)
 {
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
     int32_t n,m,lbsock,numfailsafes = 0;
@@ -170,7 +170,7 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,int32_t port)
     //if ( europeflag != 0 )
     //    lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     //else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,failsafes,numfailsafes);
-    lbsock = _loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
+    lbsock = _lb_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     return(lbsock);
 }
 
@@ -572,12 +572,12 @@ char *nn_loadbalanced(char *_request)
                             free(jsonstr);
                             jsonstr = cJSON_Print(retjson);
                             _stripwhite(jsonstr,' ');
-                        }
+                        } else printf("result.(%s) != success\n",result);
                         free_json(retjson);
-                    }
-                }
+                    } else printf("cant parse retjson.(%s)\n",jsonstr);
+                } else printf("method.(%s) is not direct\n",method);
                 free_json(json);
-            }
+            } else printf("couldnt parse request (%s)\n",request);
             nn_freemsg(msg);
         }
         else
@@ -914,7 +914,7 @@ void serverloop(void *_args)
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allpeers_processor);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
-    lbsock = nn_loadbalanced_socket(10000,SUPERNET.port); // NN_REQ
+    lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
