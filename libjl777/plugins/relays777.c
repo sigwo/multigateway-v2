@@ -232,12 +232,12 @@ int32_t add_connections(char *server,int32_t skiplb)
     if ( server == 0 || is_ipaddr(server) == 0 || ismyaddress(server) != 0 )
         return(-1);
     ipbits = calc_ipbits(server);
+    n = (RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num);
     update_serverbits(&RELAYS.peer,server,ipbits,NN_SURVEYOR);
     update_serverbits(&RELAYS.sub,server,ipbits,NN_PUB);
-    n = RELAYS.lb.num;
     if ( skiplb == 0 )
         update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
-    return(RELAYS.lb.num > n);
+    return((RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num) > n);
 }
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
@@ -297,10 +297,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     sprintf(retbuf,"{\"result\":\"added ipaddr\"}");
                 }
                 else sprintf(retbuf,"{\"result\":\"didnt add ipaddr, probably already there\"}");
+                if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
+                    update_serverbits(&RELAYS.bus,hostname,calc_ipbits(hostname),NN_BUS);
             }
         }
-        if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
-            add_connections(hostname,0);
         if ( retstr != 0 )
         {
             strcpy(retbuf,retstr);

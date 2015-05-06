@@ -1132,7 +1132,11 @@ void process_userinput(struct relayargs *lbargs,char *line)
         if ( line[i+1] != 0 )
         {
             str = stringifyM(&line[i+1]);
-            cJSON_AddItemToObject(json,"content",cJSON_CreateString(pubstr));
+            cJSON_AddItemToObject(json,"content",cJSON_CreateString(str));
+            if ( cJSON_GetObjectItem(json,"myipaddr") == 0 )
+                cJSON_AddItemToObject(json,"myipaddr",cJSON_CreateString(SUPERNET.myipaddr));
+            if ( cJSON_GetObjectItem(json,"NXT") == 0 )
+                cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
             free(str);
         }
     }
