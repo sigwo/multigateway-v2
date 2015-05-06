@@ -132,17 +132,18 @@ char **get_tagstr(struct relayargs **argsp,struct daemon_info *dp,uint64_t tag)
     return(0);
 }
 
-char *wait_for_daemon(char **dest,uint64_t tag,int32_t timeout,int32_t sleepmillis)
+char *wait_for_daemon(char **destp,uint64_t tag,int32_t timeout,int32_t sleepmillis)
 {
     int32_t poll_daemons();
     static long counter,sum;
+    char retbuf[512];
     double startmilli = milliseconds();
     char *retstr;
     usleep(5);
     while ( milliseconds() < (startmilli + timeout) )
     {
         poll_daemons();
-        if ( (retstr= *dest) != 0 )
+        if ( (retstr= *destp) != 0 )
         {
             counter++;
             if ( (counter % 10000) == 0 )
@@ -152,8 +153,9 @@ char *wait_for_daemon(char **dest,uint64_t tag,int32_t timeout,int32_t sleepmill
         if ( sleepmillis != 0 )
             msleep(sleepmillis);
     }
-    printf("no tag %llu received after %.2f millis\n",(long long)tag,milliseconds() - startmilli);
-    return(0);
+    sprintf(retbuf,"{\"error\":\"timeout\",\"tag\":\"%llu\",\"elapsed\":\"%.2f\"}",(long long)tag,milliseconds() - startmilli);
+    *destp = clonestr(retbuf);
+    return(*destp);
 }
  
 uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_t daemonid,uint64_t instanceid,char *jsonstr)

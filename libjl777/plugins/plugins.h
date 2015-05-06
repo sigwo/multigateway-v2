@@ -455,14 +455,17 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
     return(clonestr("{\"error\":\"cant register inactive plugin\"}"));
 }
 
-char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t timeout)
+char *plugin_method(char **retstrp,char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t timeout)
 {
     struct daemon_info *dp;
     char retbuf[8192],methodbuf[1024],*str,*methodsstr,*retstr = 0;
     uint64_t tag;
     cJSON *json;
     struct relayargs *args = 0;
-    int32_t i,ind,len,override,async = (timeout == 0);
+    int32_t i,ind,len,override,async;
+    async = (timeout == 0 || retstrp != 0);
+    if ( retstrp == 0 )
+        retstrp = &retstr;
     if ( previpaddr != 0 && strcmp(previpaddr,"remote") == 0 )
     {
         len = numiters, numiters = 1;
@@ -511,15 +514,15 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
                 numiters = 1;
             for (i=0; i<numiters; i++)
             {
-                retstr = 0;
-                if ( (tag= send_to_daemon(args,async==0?&retstr:0,dp->name,daemonid,instanceid,origargstr)) == 0 )
+                *retstrp = 0;
+                if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,origargstr)) == 0 )
                 {
                     printf("null tag from send_to_daemon\n");
                     return(clonestr("{\"error\":\"null tag from send_to_daemon\"}"));
                 }
                 else if ( async != 0 )
-                    return(override == 0 ? clonestr("{\"error\":\"request sent to plugin async\"}") : 0);
-                if ( (retstr= wait_for_daemon(&retstr,tag,timeout,10)) == 0 || retstr[0] == 0 )
+                    return(0);//override == 0 ? clonestr("{\"error\":\"request sent to plugin async\"}") : 0);
+                if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
                 {
                     str = stringifyM(origargstr);
                     sprintf(retbuf,"{\"error\":\"\",\"args\":%s}",str);
@@ -527,8 +530,8 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
                     return(clonestr(retbuf));
                 }
                 else if ( i < numiters-1 )
-                    free(retstr);
-                //else printf("WAITED.(%s)\n",retstr);
+                    free(*retstrp), *retstrp = 0;
+                //else printf("WAITED.(%s)\n",*retstrp);
             }
             if ( numiters > 1 )
             {
@@ -536,7 +539,7 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
                 printf("elapsed %f millis for %d iterations ave [%.1f micros]\n",elapsed,i,(1000. * elapsed)/i);
             }
         }
-        return(retstr);
+        return(*retstrp);
     }
 }
 
