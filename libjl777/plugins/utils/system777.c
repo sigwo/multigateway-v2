@@ -65,7 +65,7 @@ union endpoints { int32_t all[sizeof(struct allendpoints) / sizeof(int32_t)]; st
 #define DEFAULT_APISLEEP 100
 struct SuperNET_info
 {
-    char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024];
+    char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],transport[16];
     char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512],hostname[512];
     uint64_t my64bits;
     int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,readyflag,UPNP,iamrelay;
@@ -187,7 +187,7 @@ char *ipbits_str(uint64_t ipbits);
 char *ipbits_str2(uint64_t ipbits);
 struct sockaddr_in conv_ipbits(uint64_t ipbits);
 int32_t ismyaddress(char *server);
-void set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type);
+void set_endpointaddr(char *transport,char *endpoint,char *domain,uint16_t port,int32_t type);
 int32_t nn_portoffset(int32_t type);
 
 char *plugin_method(char **retstrp,char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async);

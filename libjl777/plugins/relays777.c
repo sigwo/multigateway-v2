@@ -83,9 +83,9 @@ int32_t nn_portoffset(int32_t type)
     return(-1);
 }
 
-void set_endpointaddr(char *endpoint,char *domain,uint16_t port,int32_t type)
+void set_endpointaddr(char *transport,char *endpoint,char *domain,uint16_t port,int32_t type)
 {
-    sprintf(endpoint,"ws://%s:%d",domain,port + nn_portoffset(type));
+    sprintf(endpoint,"%s://%s:%d",transport,domain,port + nn_portoffset(type));
 }
 
 int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
@@ -122,11 +122,13 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
     {
         for (i=0; i<num; i++)
         {
-            set_endpointaddr(endpoint,servers[i],SUPERNET.port,NN_REP);
+            set_endpointaddr("tcp",endpoint,servers[i],SUPERNET.port,NN_REP);
             if ( ismyaddress(servers[i]) == 0 && nn_connect(sock,endpoint) >= 0 )
             {
                 printf("+%s ",endpoint);
                 add_relay(&RELAYS.lb,calc_ipbits(servers[i]));
+                set_endpointaddr("ws",endpoint,servers[i],SUPERNET.port,NN_REP);
+                nn_connect(sock,endpoint);
             }
         }
         priority++;
@@ -175,7 +177,7 @@ int32_t nn_loadbalanced_socket(int32_t retrymillis,int32_t port)
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout)
 {
     int32_t sock;
-    set_endpointaddr(endpoint,"*",SUPERNET.port,type);
+    set_endpointaddr(SUPERNET.transport,endpoint,"*",SUPERNET.port,type);
     if ( (sock= nn_socket(AF_SP,type)) < 0 )
         printf("error getting socket %s\n",nn_errstr());
     if ( bindflag != 0 && nn_bind(sock,endpoint) < 0 )
@@ -232,7 +234,7 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
     //printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
     if ( find_ipbits(list,(uint32_t)ipbits) < 0 )
     {
-        set_endpointaddr(endpoint,server,SUPERNET.port,type);
+        set_endpointaddr("tcp",endpoint,server,SUPERNET.port,type);
         if ( nn_connect(list->sock,endpoint) < 0 )
             printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
         else
@@ -243,6 +245,8 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
                 nn_setsockopt(list->sock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
             }
             add_relay(list,ipbits);
+            set_endpointaddr("ws",endpoint,server,SUPERNET.port,type);
+            nn_connect(list->sock,endpoint);
         }
     }
     return(list->num);
@@ -262,8 +266,11 @@ char *nn_directconnect(char *ipaddr)
             return(clonestr("{\"error\":\"socket val too big\"}"));
         ipbits |= ((uint64_t)sock << 48);
         n = RELAYS.pair.num;
+        set_endpointaddr("tcp",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
         if ( update_serverbits(&RELAYS.pair,ipaddr,ipbits,NN_PAIR) <= n )
         {
+            set_endpointaddr("ws",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
+            nn_connect(sock,endpoint);
             sprintf(retbuf,"{\"error\":\"connect failed\",\"dest\",\"%s\",\"%s\"}",endpoint,nn_errstr());
             return(clonestr(retbuf));
         }
@@ -363,7 +370,7 @@ int32_t start_devices(int32_t type)
         {
             type = (j == 0) ? devicetypes[i] : nn_oppotype(devicetypes[i]);
             portoffset = nn_portoffset(type);
-            set_endpointaddr(bindaddr,"*",SUPERNET.port,type);
+            set_endpointaddr(SUPERNET.transport,bindaddr,"*",SUPERNET.port,type);
             if ( (sock= nn_socket(AF_SP_RAW,type)) < 0 )
                 break;
             if ( (err= nn_bind(sock,bindaddr)) < 0 )
@@ -680,7 +687,7 @@ cJSON *relay_json(struct _relay_info *list)
     for (i=0; i<list->num&&i<(int32_t)(sizeof(list->servers)/sizeof(*list->servers)); i++)
     {
         expand_nxt64bits(server,(uint32_t)list->servers[i]);
-        set_endpointaddr(endpoint,server,SUPERNET.port,list->desttype);
+        set_endpointaddr(SUPERNET.transport,endpoint,server,SUPERNET.port,list->desttype);
         cJSON_AddItemToArray(array,cJSON_CreateString(endpoint));
     }
     json = cJSON_CreateObject();

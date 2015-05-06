@@ -1343,6 +1343,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
         SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);
         copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
+        copy_cJSON(SUPERNET.transport,cJSON_GetObjectItem(json,"transport"));
+        if ( SUPERNET.transport[0] == 0 )
+            strcpy(SUPERNET.transport,"ws");
         if ( strncmp(SUPERNET.myipaddr,"209.126",7) == 0 || strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
             SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),1);
         else SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),0);
