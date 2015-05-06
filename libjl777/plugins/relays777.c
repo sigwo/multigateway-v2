@@ -254,18 +254,23 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
 char *nn_directconnect(char *ipaddr)
 {
     char endpoint[512],retbuf[1024];
-    int32_t sock,n;
+    int32_t sock,n,ind;
     uint64_t ipbits;
+    if ( is_ipaddr(ipaddr) == 0 )
+        return(clonestr("{\"error\":\"illegal ipaddress\"}"));
+    ipbits = (uint32_t)calc_ipbits(ipaddr);
+    if ( (ind= find_ipbits(&RELAYS.pair,(uint32_t)ipbits)) >= 0 )
+        return(clonestr("{\"error\":\"already connected\"}"));
     if ( is_ipaddr(SUPERNET.myipaddr) == 0 && SUPERNET.iamrelay != 0 )
         return(clonestr("{\"error\":\"dont know myipaddr\"}"));
     if ( (sock= nn_createsocket(endpoint,1,"direct",NN_PAIR,SUPERNET.port,10,100)) >= 0 )
     {
-        ipbits = (uint32_t)calc_ipbits(ipaddr);
         if ( sock >= (1 << 16) )
             return(clonestr("{\"error\":\"socket val too big\"}"));
         ipbits |= ((uint64_t)sock << 48);
         n = RELAYS.pair.num;
         set_endpointaddr("tcp",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
+        printf("direct connect to (%s)\n",endpoint);
         if ( update_serverbits(&RELAYS.pair,ipaddr,ipbits,NN_PAIR) <= n )
         {
             set_endpointaddr("ws",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
