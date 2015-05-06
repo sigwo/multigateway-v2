@@ -507,7 +507,7 @@ int32_t getline777(char *line,int32_t max)
         if ( FD_ISSET(STDIN_FILENO,&fdset) > 0 && fgets(line,max,stdin) == line )
         {
             line[strlen(line)-1] = 0;
-            if ( line[0] == '.' && line[1] == 0 )
+            if ( line[0] == 0 || (line[0] == '.' && line[1] == 0) )
                 strcpy(line,prevline);
             else strcpy(prevline,line);
         }

@@ -228,7 +228,7 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
 
 int32_t add_connections(char *server,int32_t skiplb)
 {
-    uint64_t ipbits; int32_t n,m; char publishstr[1024];
+    uint64_t ipbits; int32_t n;
     if ( server == 0 || is_ipaddr(server) == 0 || ismyaddress(server) != 0 )
         return(-1);
     ipbits = calc_ipbits(server);
@@ -237,23 +237,13 @@ int32_t add_connections(char *server,int32_t skiplb)
     n = RELAYS.lb.num;
     if ( skiplb == 0 )
         update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
-    if ( SUPERNET.iamrelay != 0 )
-    {
-        m = RELAYS.bus.num;
-        update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
-        if ( RELAYS.bus.num > m && RELAYS.pubsock >= 0 )
-        {
-            sprintf(publishstr,"{\"plugin\":\"relay\",\"method\":\"add\",\"hostnames\":[\"%s\"]}",server);
-            nn_publish(publishstr,1);
-        }
-    }
     return(RELAYS.lb.num > n);
 }
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *resultstr,*retstr = 0,*methodstr,*hostname,*myipaddr;
-    int32_t i,n,count;
+    int32_t i,n,count; uint64_t ipbits;
     cJSON *array;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
@@ -297,7 +287,13 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 if ( add_connections(myipaddr,1) > 0 )
                 {
-                    nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                    if ( SUPERNET.iamrelay != 0 )
+                    {
+                        ipbits = calc_ipbits(myipaddr);
+                        update_serverbits(&RELAYS.peer,myipaddr,ipbits,NN_SURVEYOR);
+                        update_serverbits(&RELAYS.sub,myipaddr,ipbits,NN_PUB);
+                        nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                    }
                     sprintf(retbuf,"{\"result\":\"added ipaddr\"}");
                 }
                 else sprintf(retbuf,"{\"result\":\"didnt add ipaddr, probably already there\"}");
