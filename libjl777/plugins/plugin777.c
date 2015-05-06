@@ -137,6 +137,7 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
             sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
          }
     }
+    else sprintf(retbuf+strlen(retbuf)-1,",\"allowremote\":%d}",plugin->allowremote);
 }
 
 static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,cJSON *argjson)

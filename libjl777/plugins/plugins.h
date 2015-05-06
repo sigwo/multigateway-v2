@@ -181,7 +181,8 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     if ( (json= cJSON_Parse(str)) != 0 )
     {
         //printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
-        dp->allowremote = get_API_int(cJSON_GetObjectItem(json,"allowremote"),0);
+        if ( get_API_int(cJSON_GetObjectItem(json,"allowremote"),0) > 0 )
+            dp->allowremote = 1;
         permflag = get_API_int(cJSON_GetObjectItem(json,"permanentflag"),0);
         instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
         tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
