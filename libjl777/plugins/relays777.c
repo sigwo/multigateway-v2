@@ -241,7 +241,7 @@ int32_t add_connections(char *server,int32_t skiplb)
         update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
     if ( RELAYS.pubsock >= 0 )
     {
-        sprintf(publishstr,"{\"plugin\":\"relays\",\"method\":\"add\",\"server\":\"%s\"}",server);
+        sprintf(publishstr,"{\"plugin\":\"relay\",\"method\":\"add\",\"server\":\"%s\"}",server);
         nn_publish(publishstr,1);
     }
     return(RELAYS.lb.num > n);
