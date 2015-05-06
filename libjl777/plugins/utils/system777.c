@@ -1031,7 +1031,7 @@ char *nn_publish(char *publishstr,int32_t nostr)
 void responseloop(void *_args)
 {
     struct relayargs *args = _args;
-    int32_t len; char *msg,*retstr,*broadcaststr; cJSON *json;
+    int32_t len; char *str,*msg,*retstr,*broadcaststr; cJSON *json;
     if ( args->sock >= 0 )
     {
         printf("respondloop.%s %d type.%d <- (%s).%d\n",args->name,args->sock,args->type,args->endpoint,nn_oppotype(args->type));
@@ -1046,7 +1046,13 @@ void responseloop(void *_args)
                 {
                     broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));
                     if ( broadcaststr != 0 && strcmp(broadcaststr,"allpeers") == 0 )
+                    {
+                        cJSON_DeleteObjectItem(json,"broadcast"));
+                        str = cJSON_Print(json);
+                        _stripwhite(str,' ');
                         retstr = nn_allpeers(RELAYS.querypeers,(char *)msg,3000);
+                        free(str);
+                    }
                     free_json(json);
                 }
                 if ( retstr == 0 && (retstr= (*args->commandprocessor)(args,(uint8_t *)msg,len)) != 0 )
