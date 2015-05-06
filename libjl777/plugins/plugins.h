@@ -471,8 +471,8 @@ char *plugin_method(char *previpaddr,char *plugin,char *method,uint64_t daemonid
         method = methodbuf;
         override = 1;
     } else override = 0;
-    if ( Debuglevel > 2 )
-        fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d (%s)\n",method,plugin,is_bundled_plugin(plugin),origargstr);
+    //if ( Debuglevel > 2 )
+        fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d (%s) ready.%d remote.%d\n",method,plugin,is_bundled_plugin(plugin),origargstr,dp->readyflag,dp->allowremote);
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) == 0 )
     {
         if ( is_bundled_plugin(plugin) != 0 )
