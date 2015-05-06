@@ -942,19 +942,16 @@ char *nn_allpeers(int32_t peersock,char *_request,int32_t timeoutmillis)
 
 char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len)
 {
-    cJSON *json; char *jsonstr,*plugin,*broadcaststr,*retstr = 0;
+    cJSON *json; char *jsonstr,*plugin,*retstr = 0;
     jsonstr = (char *)msg;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 )
         {
-            broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));
             if ( strcmp(plugin,"subscriptions") == 0 )
                 retstr = nn_subscriptions(args,msg,len);
             else if ( strcmp(plugin,"peers") == 0 )
                 retstr = nn_peers(args,msg,len);
-            else if ( broadcaststr != 0 && strcmp(broadcaststr,"allpeers") == 0 )
-                retstr = nn_allpeers(RELAYS.querypeers,(char *)msg,3000);
             else retstr = plugin_method("remote",plugin,(char *)args,0,0,(char *)msg,len,1000);
         }
         else
@@ -1034,7 +1031,7 @@ char *nn_publish(char *publishstr,int32_t nostr)
 void responseloop(void *_args)
 {
     struct relayargs *args = _args;
-    int32_t len; char *msg,*retstr;
+    int32_t len; char *msg,*retstr,*broadcaststr; cJSON *json;
     if ( args->sock >= 0 )
     {
         printf("respondloop.%s %d type.%d <- (%s).%d\n",args->name,args->sock,args->type,args->endpoint,nn_oppotype(args->type));
@@ -1042,9 +1039,17 @@ void responseloop(void *_args)
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
+                retstr = 0;
                 //if ( Debuglevel > 1 )
                     printf("RECV.%s (%s)\n",args->name,msg);
-                if ( (retstr= (*args->commandprocessor)(args,(uint8_t *)msg,len)) != 0 )
+                if ( (json= cJSON_Parse((char *)msg)) != 0 )
+                {
+                    broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));
+                    if ( broadcaststr != 0 && strcmp(broadcaststr,"allpeers") == 0 )
+                        retstr = nn_allpeers(RELAYS.querypeers,(char *)msg,3000);
+                    free_json(json);
+                }
+                if ( retstr == 0 && (retstr= (*args->commandprocessor)(args,(uint8_t *)msg,len)) != 0 )
                 {
                     complete_relay(args,retstr);
                     free(retstr);
@@ -1075,8 +1080,10 @@ int32_t launch_responseloop(struct relayargs *args,char *name,int32_t type,int32
 
 void process_userinput(struct relayargs *lbargs,char *line)
 {
-    char plugin[512],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j;
+    char plugin[512],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j,broadcastflag = 0;
     printf("[%s]\n",line);
+    if ( line[0] == '!' )
+        broadcastflag = 1, line++;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
@@ -1108,12 +1115,14 @@ void process_userinput(struct relayargs *lbargs,char *line)
         if ( method[0] == 0 )
             strcpy(method,"help");
         cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
+        if ( broadcastflag != 0 )
+            cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("allpeers"));
         cmdstr = cJSON_Print(json);
         _stripwhite(cmdstr,' ');
-        if ( strcmp(plugin,"peers") == 0 )
-            retstr = nn_allpeers(RELAYS.querypeers,cmdstr,RELAYS.surveymillis);
-        else if ( strcmp(plugin,"relay") == 0 )
+        if ( broadcastflag != 0 || strcmp(plugin,"relay") == 0 )
             retstr = nn_loadbalanced(lbargs,cmdstr);
+        else if ( strcmp(plugin,"peers") == 0 )
+            retstr = nn_allpeers(RELAYS.querypeers,cmdstr,RELAYS.surveymillis);
         else if ( find_daemoninfo(&j,plugin,0,0) != 0 )
             retstr = plugin_method(0,plugin,method,0,0,cmdstr,(int32_t)strlen(cmdstr),1000);
         else retstr = nn_publish(pubstr,0);
