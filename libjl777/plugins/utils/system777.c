@@ -543,7 +543,7 @@ uint64_t _calc_ipbits(char *ip_port)
     port = parse_ipaddr(ipaddr,ip_port);
     memset(&addr,0,sizeof(addr));
     portable_pton(ip_port[0] == '[' ? AF_INET6 : AF_INET,ipaddr,&addr);
-    if ( 1 )
+    if ( 0 )
     {
         int i;
         for (i=0; i<16; i++)

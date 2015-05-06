@@ -230,7 +230,6 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
         printf("illegal list sock.%d\n",list->sock);
         return(-1);
     }
-    list->desttype = type, list->mytype = nn_oppotype(type);
     //printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
     if ( find_ipbits(list,(uint32_t)ipbits) < 0 )
     {
@@ -257,7 +256,7 @@ char *nn_directconnect(char *ipaddr)
     char endpoint[512],retbuf[1024];
     int32_t sock,n;
     uint64_t ipbits;
-    if ( is_ipaddr(SUPERNET.myipaddr) == 0 )
+    if ( is_ipaddr(SUPERNET.myipaddr) == 0 && SUPERNET.iamrelay != 0 )
         return(clonestr("{\"error\":\"dont know myipaddr\"}"));
     if ( (sock= nn_createsocket(endpoint,1,"direct",NN_PAIR,SUPERNET.port,10,100)) >= 0 )
     {
@@ -558,16 +557,16 @@ char *nn_loadbalanced(char *_request)
                     {
                         copy_cJSON(result,cJSON_GetObjectItem(json,"result"));
                         copy_cJSON(otheripaddr,cJSON_GetObjectItem(json,"direct"));
-                        if ( strcmp(result,"success") == 0 && is_ipaddr(otheripaddr) != 0 )
+                        if ( strcmp(result,"success") == 0 )
                         {
                             if ( (connectstr= nn_directconnect(otheripaddr)) != 0 )
                             {
                                 cJSON_AddItemToObject(retjson,"myconnect",cJSON_CreateString(connectstr));
                                 free(connectstr);
-                                free(jsonstr);
-                                jsonstr = cJSON_Print(retjson);
-                                _stripwhite(jsonstr,' ');
-                            }
+                            } else cJSON_AddItemToObject(retjson,"myconnect",cJSON_CreateString("error"));
+                            free(jsonstr);
+                            jsonstr = cJSON_Print(retjson);
+                            _stripwhite(jsonstr,' ');
                         }
                         free_json(retjson);
                     }
@@ -691,10 +690,11 @@ cJSON *relay_json(struct _relay_info *list)
         cJSON_AddItemToArray(array,cJSON_CreateString(endpoint));
     }
     json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"list",array);
     cJSON_AddItemToObject(json,"type",cJSON_CreateString(nn_typestr(list->mytype)));
     cJSON_AddItemToObject(json,"dest",cJSON_CreateString(nn_typestr(list->desttype)));
     cJSON_AddItemToObject(json,"total",cJSON_CreateNumber(list->num));
-    return(array);
+    return(json);
 }
 
 char *relays_jsonstr(char *jsonstr,cJSON *argjson)
@@ -899,6 +899,11 @@ void serverloop(void *_args)
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,peersock,n = 0;
     //start_devices(NN_RESPONDENT);
     sendtimeout = 10, recvtimeout = 10000;
+    RELAYS.lb.mytype = NN_REQ, RELAYS.lb.desttype = nn_oppotype(RELAYS.lb.mytype);
+    RELAYS.pair.mytype = NN_PAIR, RELAYS.pair.desttype = nn_oppotype(RELAYS.pair.mytype);
+    RELAYS.bus.mytype = NN_BUS, RELAYS.bus.desttype = nn_oppotype(RELAYS.bus.mytype);
+    RELAYS.peer.mytype = NN_SURVEYOR, RELAYS.peer.desttype = nn_oppotype(RELAYS.peer.mytype);
+    RELAYS.sub.mytype = NN_SUB, RELAYS.sub.desttype = nn_oppotype(RELAYS.sub.mytype);
     lbargs = &RELAYS.args[n++];
     RELAYS.querypeers = peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allpeers_processor);
