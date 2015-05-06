@@ -294,6 +294,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     strcpy(retbuf,retstr);
                     free(retstr);
                 }
+                strcpy(retbuf,"{\"result\":\"under construction\"}");
             }
             else if ( strcmp(methodstr,"listpubs") == 0 )
             {
@@ -304,6 +305,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
             add_newrelay(hostname,jsonstr,json);
+        printf("RELAY.(%s)\n",retbuf);
     }
     return((int32_t)strlen(retbuf));
 }

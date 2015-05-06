@@ -960,7 +960,7 @@ char *nn_relays(struct relayargs *args,uint8_t *msg,int32_t len)
                 retstr = nn_subscriptions(args,msg,len);
             else if ( strcmp(plugin,"peers") == 0 )
                 retstr = nn_peers(args,msg,len);
-            else retstr = plugin_method("remote",plugin,(char *)args,0,0,(char *)msg,len,5000);
+            else retstr = plugin_method("remote",plugin,(char *)args,0,0,(char *)msg,len,1000);
         }
         else
         {
