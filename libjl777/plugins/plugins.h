@@ -324,10 +324,10 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
         int32_t coins_main(int32_t,char *args[]);
         int32_t peers_main(int32_t,char *args[]);
         int32_t subscriptions_main(int32_t,char *args[]);
-        int32_t relays_main(int32_t,char *args[]);
+        int32_t relay_main(int32_t,char *args[]);
         if ( strcmp(dp->name,"coins") == 0 ) return(coins_main(n,args));
         else if ( strcmp(dp->name,"sophia") == 0 ) return(sophia_main(n,args));
-        else if ( strcmp(dp->name,"relays") == 0 ) return(relays_main(n,args));
+        else if ( strcmp(dp->name,"relay") == 0 ) return(relay_main(n,args));
         else if ( strcmp(dp->name,"peers") == 0 ) return(peers_main(n,args));
         else if ( strcmp(dp->name,"subscriptions") == 0 ) return(subscriptions_main(n,args));
         else if ( strcmp(dp->name,"ramchain") == 0 ) return(ramchain_main(n,args));
@@ -340,7 +340,7 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
 
 int32_t is_bundled_plugin(char *plugin)
 {
-    if ( strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"sophia") == 0 || strcmp(plugin,"coins") == 0  || strcmp(plugin,"ramchain") == 0  || strcmp(plugin,"MGW") == 0 || strcmp(plugin,"peers") == 0 || strcmp(plugin,"relays") == 0 || strcmp(plugin,"subscriptions") == 0 )
+    if ( strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"sophia") == 0 || strcmp(plugin,"coins") == 0  || strcmp(plugin,"ramchain") == 0  || strcmp(plugin,"MGW") == 0 || strcmp(plugin,"peers") == 0 || strcmp(plugin,"relay") == 0 || strcmp(plugin,"subscriptions") == 0 )
         return(1);
     else return(0);
 }

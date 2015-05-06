@@ -7,8 +7,8 @@
 //
 
 #define BUNDLED
-#define PLUGINSTR "relays"
-#define PLUGNAME(NAME) relays ## NAME
+#define PLUGINSTR "relay"
+#define PLUGNAME(NAME) relay ## NAME
 #define STRUCTNAME struct PLUGNAME(_info) 
 #define STRINGIFY(NAME) #NAME
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
@@ -17,7 +17,7 @@
 #include "plugin777.c"
 #undef DEFINES_ONLY
 
-void relays_idle(struct plugin_info *plugin) {}
+void relay_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
 char *PLUGNAME(_methods)[] = { "list", "add", "listpeers", "newpeers", "listpubs", "newpubs" }; // list of supported methods
@@ -119,7 +119,7 @@ char *unmatched_jsonstr(uint32_t *list,int32_t n)
     {
         json = cJSON_CreateObject();
         cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("pushrelays"));
-        cJSON_AddItemToObject(json,"relays",array);
+        cJSON_AddItemToObject(json,"relay",array);
         retstr = cJSON_Print(json);
         free_json(json);
         _stripwhite(retstr,' ');
@@ -138,11 +138,11 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
             cJSON_AddItemToArray(Relays,cJSON_CreateString(SUPERNET.myipaddr));
         }
         retjson = cJSON_CreateObject();
-        cJSON_AddItemToObject(retjson,"relays",Relays);
+        cJSON_AddItemToObject(retjson,"relay",Relays);
         cJSON_AddItemToObject(retjson,"result",cJSON_CreateString("success"));
         cJSON_AddItemToObject(retjson,"from",cJSON_CreateString(SUPERNET.myipaddr));
         retstr = cJSON_Print(retjson);
-        Relays = cJSON_DetachItemFromObject(retjson,"relays");
+        Relays = cJSON_DetachItemFromObject(retjson,"relay");
         free_json(retjson);
         return(retstr);
     }
@@ -153,7 +153,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
  {
  if ( (json= cJSON_Parse(msg)) != 0 )
  {
- if ( (array= cJSON_GetObjectItem(json,"relays")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+ if ( (array= cJSON_GetObjectItem(json,"relay")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
  {
  if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
  {
@@ -176,7 +176,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *json)
  }*/
 
 
-int32_t find_ipbits(struct relay_info *list,uint32_t ipbits)
+int32_t find_ipbits(struct _relay_info *list,uint32_t ipbits)
 {
     int32_t i;
     if ( list == 0 || list->num == 0 )
@@ -187,7 +187,7 @@ int32_t find_ipbits(struct relay_info *list,uint32_t ipbits)
     return(-1);
 }
 
-int32_t add_relay(struct relay_info *list,uint64_t ipbits)
+int32_t add_relay(struct _relay_info *list,uint64_t ipbits)
 {
     //static portable_mutex_t mutex; static int didinit;
     //if ( didinit == 0 ) didinit++, portable_mutex_init(&mutex);
@@ -199,7 +199,7 @@ int32_t add_relay(struct relay_info *list,uint64_t ipbits)
     return(list->num);
 }
 
-int32_t update_serverbits(struct relay_info *list,char *server,uint64_t ipbits,int32_t type)
+int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,int32_t type)
 {
     char endpoint[1024];
     if ( list->sock < 0 )
@@ -242,8 +242,7 @@ int32_t add_connections(char *server,int32_t skiplb)
     if ( RELAYS.pubsock >= 0 )
     {
         sprintf(publishstr,"{\"plugin\":\"relays\",\"method\":\"add\",\"server\":\"%s\"}",server);
-        if ( (str= nn_publish(publishstr)) != 0 )
-            free(str);
+        nn_publish(publishstr,1);
     }
     return(RELAYS.lb.num > n);
 }

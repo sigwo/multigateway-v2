@@ -365,6 +365,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                         email = cJSON_str(cJSON_GetObjectItem(json,"email"));
                         buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
                         str = genmultisig(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,coinstr,buf0,MGW.M,MGW.N,MGW.srv64bits,MGW.N,buf1,email,buyNXT);
+                        nn_publish(str,1);
                     }
                 }
                 else if ( strcmp(methodstr,"setmultisig") == 0 )
@@ -375,6 +376,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     copy_cJSON(buf1,cJSON_GetObjectItem(json,"myacctcoinaddr"));
                     copy_cJSON(buf2,cJSON_GetObjectItem(json,"mypubkey"));
                     str = getmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
+                    nn_publish(str,1);
                 }
                 else if ( strcmp(methodstr,"setmsigpubkey") == 0 && coinstr[0] != 0 )
                 {
@@ -382,7 +384,16 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     copy_cJSON(buf1,cJSON_GetObjectItem(json,"addr"));
                     copy_cJSON(buf2,cJSON_GetObjectItem(json,"userpubkey"));
                     str = setmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
-                } else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);
+                }
+                else if ( strcmp(methodstr,"acctpubkeys") == 0 && coinstr[0] != 0 )
+                {
+                    if ( (coin= coin777_find(coinstr)) != 0 )
+                    {
+                        if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
+                            strcpy(retbuf,"{\"result\":\"published acctpubkeys\"}");
+                    }
+                }
+                else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);
                 if ( str != 0 )
                 {
                     strcpy(retbuf,str);

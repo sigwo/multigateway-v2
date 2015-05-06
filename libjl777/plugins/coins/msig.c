@@ -900,7 +900,7 @@ char *MGW_publish_acctpubkeys(char *coinstr,cJSON *array)
         cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(MGW.gatewayid));
         retstr = cJSON_Print(json);
         _stripwhite(retstr,' ');
-        nn_publish(retstr);
+        nn_publish(retstr,1);
         free_json(json);
     }
     return(retstr);
