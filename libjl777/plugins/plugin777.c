@@ -125,19 +125,19 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
     //printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
     if ( (json= cJSON_Parse(retbuf)) != 0 )
     {
-         if ( allfields != 0 )
-         {
-             if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
-                 sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
-             else tagstr[0] = 0;
-             NXTaddr = cJSON_str(cJSON_GetObjectItem(json,"NXT"));
+        if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
+            sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
+        else tagstr[0] = 0;
+        if ( allfields != 0 )
+        {
+              NXTaddr = cJSON_str(cJSON_GetObjectItem(json,"NXT"));
              if ( NXTaddr == 0 || NXTaddr[0] == 0 )
                  sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\",\"myipaddr\":\"%s\"}",plugin->NXTADDR,plugin->ipaddr);
              sprintf(retbuf+strlen(retbuf)-1,",\"allowremote\":%d%s}",plugin->allowremote,tagstr);
             sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
          }
+         else sprintf(retbuf+strlen(retbuf)-1,",\"allowremote\":%d%s}",plugin->allowremote,tagstr);
     }
-    else sprintf(retbuf+strlen(retbuf)-1,",\"allowremote\":%d}",plugin->allowremote);
 }
 
 static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,cJSON *argjson)
@@ -193,7 +193,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
     uint64_t tag = 0;
     char name[MAX_JSON_FIELD];
     retbuf[0] = *sendflagp = 0;
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         printf("PLUGIN.(%s) process_plugin_json\n",plugin->name);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
@@ -206,6 +206,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         {
             *sendflagp = 1;
             append_stdfields(retbuf,max,plugin,tag,0);
+            printf("return.(%s)\n",retbuf);
             return((int32_t)strlen(retbuf));
         } else printf("(%s) -> no return.%d (%s) vs (%s) len.%d\n",jsonstr,strcmp(name,plugin->name),name,plugin->name,len);
     }

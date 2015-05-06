@@ -53,7 +53,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        printf("PEERS.(%s)\n",jsonstr);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
@@ -65,6 +64,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else strcpy(retbuf,"{\"error\":\"under construction\"}");
     }
+    printf("PEERS.(%s) -> (%s)\n",jsonstr,retbuf);
     return((int32_t)strlen(retbuf));
 }
 

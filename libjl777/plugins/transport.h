@@ -122,7 +122,7 @@ char **get_tagstr(struct relayargs **argsp,struct daemon_info *dp,uint64_t tag)
             dest = (char **)dp->tags[i][1];
             if ( dp->tags[i][2] != 0 )
                 *argsp = (struct relayargs *)dp->tags[i][2];
-            dp->tags[i][0] = dp->tags[i][1] = 0;
+            dp->tags[i][0] = dp->tags[i][1] = dp->tags[i][2] = 0;
             if ( Debuglevel > 2 )
                 printf("slot.%d found tag.%llu dest.%p\n",i,(long long)tag,dest);
             return(dest);
