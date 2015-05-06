@@ -1076,6 +1076,7 @@ int32_t launch_responseloop(struct relayargs *args,char *name,int32_t type,int32
 void process_userinput(struct relayargs *lbargs,char *line)
 {
     char plugin[512],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j;
+    printf("[%s]\n",line);
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
