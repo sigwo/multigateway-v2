@@ -157,18 +157,18 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
             flag = 0;
          free(coinaddr);
     }
-    if ( flag != 0 && db777_add(1,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) != 0 )
-        printf("error adding (%s)\n",newcoinaddr);
-    else updated = 1;
+    if ( flag != 0 && db777_add(1,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
+        updated = 1;
+    else printf("error adding (%s)\n",newcoinaddr);
     flag = 1;
     if ( db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,newcoinaddr) > 0 )
     {
         if ( strcmp(pubkey,newpubkey) == 0 )
             flag = 0;
     }
-    if ( flag != 0 && db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) != 0 )
-        printf("error adding (%s)\n",newpubkey);
-    else updated = 1;
+    if ( flag != 0 && db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
+        updated = 1;
+    else printf("error adding (%s)\n",newpubkey);
     return(updated);
 }
 

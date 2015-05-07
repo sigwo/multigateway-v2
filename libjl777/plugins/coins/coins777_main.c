@@ -365,6 +365,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                             printf("free\n");
                             free_json(pubkeyjson);
                         }
+                        printf("free str\n");
                         free(str), str= 0;
                     }
                 }

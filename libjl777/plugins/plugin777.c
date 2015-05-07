@@ -116,10 +116,11 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
             plugin->port = get_API_int(cJSON_GetObjectItem(obj,"port"),0);
         }
     }
-    //fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%p) %p %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
+    fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%p) %p %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
     if ( jsonstr != 0 && obj != 0 )
         retval = PLUGNAME(_process_json)(plugin,tag,retbuf,max,jsonstr,obj,initflag);
     else printf("error with JSON.(%s)\n",jsonstr), getchar();
+    fprintf(stderr,"done tag.%llu initflag.%d got jsonargs.(%p) %p %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
     if ( jsonstr != 0 )
         free(jsonstr);
     if ( json != 0 )
