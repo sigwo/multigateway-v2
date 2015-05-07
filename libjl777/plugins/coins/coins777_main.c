@@ -213,7 +213,7 @@ int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],nxtaddr[64],ipaddr[64],*coinstr,*serverport,*userpass,*str,*email,*previpaddr = 0;
+    char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],nxtaddr[64],ipaddr[64],*coinstr,*serverport,*userpass,*str,*email,*retstr,*previpaddr = 0;
     cJSON *array,*item;
     int32_t i,n,buyNXT,j = 0;
     struct coin777 *coin;
@@ -357,6 +357,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     if ( (str= get_msig_pubkeys(coin->name,coin->serverport,coin->userpass)) != 0 )
                     {
                         MGW_publish_acctpubkeys(coin->name,str);
+                        if ( (retstr= plugin_method(0,-1,"MGW",0,0,0,str,3000)) != 0 )
+                        {
+                            strcpy(retbuf,retstr);
+                            free(retstr);
+                        }
                         free(str), str= 0;
                     }
                 }
