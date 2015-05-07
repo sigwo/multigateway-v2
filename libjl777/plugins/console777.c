@@ -171,12 +171,13 @@ char *localcommand(char *line)
     return(line);
 }
 
-char *parse_expandedline(char *line,int32_t broadcastflag)
+char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,int32_t broadcastflag)
 {
-    int32_t i,j,timeout; char plugin[512],method[512],*pubstr,*str,*cmdstr = 0; cJSON *json;
+    int32_t i,j; char *pubstr,*str,*cmdstr = 0; cJSON *json;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
+    *timeoutp = 0;
     pubstr = line;
     if ( strcmp(plugin,"pub") == 0 )
         strcpy(plugin,"subscriptions"), strcpy(method,"publish"), pubstr += 4;
@@ -202,7 +203,7 @@ char *parse_expandedline(char *line,int32_t broadcastflag)
             cJSON_AddItemToObject(json,"myipaddr",cJSON_CreateString(SUPERNET.myipaddr));
         if ( cJSON_GetObjectItem(json,"NXT") == 0 )
             cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
-        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
+        *timeoutp = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
         if ( plugin[0] == 0 )
             strcpy(plugin,"relay");
         if ( cJSON_GetObjectItem(json,"plugin") == 0 )
@@ -223,7 +224,7 @@ char *parse_expandedline(char *line,int32_t broadcastflag)
 void process_userinput(char *_line)
 {
     static char *line,*line2;
-    char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr,*pubstr; int j,timeout,broadcastflag = 0;
+    char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr; int j,timeout,broadcastflag = 0;
     printf("[%s]\n",_line);
     if ( line == 0 )
         line = calloc(1,65536), line2 = calloc(1,65536);
@@ -237,7 +238,7 @@ void process_userinput(char *_line)
     if ( is_ipaddr(ipaddr) != 0 )
     {
         line += strlen(ipaddr) + 1;
-        if ( (cmdstr = parse_expandedline(line,broadcastflag)) != 0 )
+        if ( (cmdstr = parse_expandedline(plugin,method,&timeout,line,broadcastflag)) != 0 )
         {
             printf("ipaddr.(%s) (%s)\n",ipaddr,line);
             retstr = nn_direct(ipaddr,cmdstr);
@@ -246,7 +247,7 @@ void process_userinput(char *_line)
         }
         return;
     }
-    if ( (cmdstr = parse_expandedline(line,broadcastflag)) != 0 )
+    if ( (cmdstr = parse_expandedline(plugin,method,&timeout,line,broadcastflag)) != 0 )
     {
         struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
         if ( broadcastflag != 0 || strcmp(plugin,"relay") == 0 )
@@ -255,7 +256,7 @@ void process_userinput(char *_line)
             retstr = nn_allpeers(cmdstr,timeout != 0 ? timeout : RELAYS.surveymillis,0);
         else if ( find_daemoninfo(&j,plugin,0,0) != 0 )
             retstr = plugin_method(0,1,plugin,method,0,0,cmdstr,timeout != 0 ? timeout : 0);
-        else retstr = nn_publish(pubstr,0);
+        else retstr = nn_publish(cmdstr,0);
         printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
         free(cmdstr);
     }
