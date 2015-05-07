@@ -128,7 +128,7 @@ char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n
         _stripwhite(paramstr,' ');
         free_json(array);
     }
-printf("createmultisig_json_params.(%s)\n",paramstr);
+//printf("createmultisig_json_params.(%s)\n",paramstr);
     return(paramstr);
 }
 
@@ -217,7 +217,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
         msig = alloc_multisig_addr(coinstr,m,n,NXTaddr,NXTpubkey,0);
         for (i=0; i<msig->n; i++)
         {
-            printf("i.%d n.%d msig->n.%d NXT.(%s) (%s) (%s)\n",i,n,msig->n,msig->NXTaddr,coinaddrs[i],pubkeys[i]);
+            //printf("i.%d n.%d msig->n.%d NXT.(%s) (%s) (%s)\n",i,n,msig->n,msig->NXTaddr,coinaddrs[i],pubkeys[i]);
             strcpy(msig->pubkeys[i].coinaddr,coinaddrs[i]);
             strcpy(msig->pubkeys[i].pubkey,pubkeys[i]);
             msig->pubkeys[i].nxt64bits = srv64bits[i];
@@ -246,7 +246,7 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
     gatewaybits = calc_nxt64bits(gatewayNXT);
     if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
-        printf("arraysize.%d\n",n);
+        //printf("arraysize.%d\n",n);
         for (i=0; i<n; i++)
         {
             item = cJSON_GetArrayItem(array,i);
@@ -256,10 +256,7 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
             nxt64bits = calc_nxt64bits(NXTaddr);
             updated += add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
             for (g=m=0; g<MGW.N; g++)
-            {
                 m += get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
-                printf("g.%d: (%s) (%s)\n",g,coinaddrs[g],pubkeys[g]);
-            }
             if ( m == MGW.N && (msig= get_NXT_msigaddr(MGW.srv64bits,MGW.M,MGW.N,nxt64bits,coinstr,coinaddrs,pubkeys)) != 0 )
                 free(msig), count++;
         }
