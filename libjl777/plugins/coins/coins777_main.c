@@ -322,7 +322,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                                     set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,item,coinstr,serverport,userpass);
                                 }
                                 coin->acctpubkeyjson = get_msig_pubkeys(coin->name,coin->serverport,coin->userpass);
-                                MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson);
+                                if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
+                                {
+                                    nn_publish(str,1);
+                                    free(str);
+                                }
                             }
                         }
                         if ( userpass != 0 )

@@ -22,7 +22,7 @@
 void MGW_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME MGW;
-char *PLUGNAME(_methods)[] = { "stats" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "myacctpubkeys" }; // list of supported methods
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *json)
 {
@@ -31,9 +31,34 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
+int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
+{
+    int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
+    cJSON *item,*array; uint64_t gatewaybits; int32_t i,n,gatewayid,updated = 0;
+    char gatewayNXT[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
+    copy_cJSON(gatewayNXT,cJSON_GetObjectItem(item,"NXT"));
+    copy_cJSON(coinstr,cJSON_GetObjectItem(item,"coin"));
+    gatewayid = get_API_int(cJSON_GetObjectItem(item,"gatewayid"),-1);
+    gatewaybits = calc_nxt64bits(gatewayNXT);
+    if ( (array= cJSON_GetObjectItem(item,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        for (i=0; i<n; i++)
+        {
+            item = cJSON_GetArrayItem(array,i);
+            copy_cJSON(NXTaddr,cJSON_GetObjectItem(item,"NXT"));
+            copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"coinaddr"));
+            copy_cJSON(pubkey,cJSON_GetObjectItem(item,"pubkey"));
+            updated += add_NXT_coininfo(gatewaybits,calc_nxt64bits(NXTaddr),coinstr,coinaddr,pubkey);
+        }
+    }
+    sprintf(retbuf,"{\"result\":\"success\",\"gatewayid\":%d,\"gatewayNXT\":\"%s\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d}",gatewayid,gatewayNXT,coinstr,updated,n);
+    printf("(%s)\n",retbuf);
+    return(updated);
+}
+
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,*coinstr,*methodstr;
+    char *resultstr,*coinstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -63,8 +88,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             MGW.readyflag = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-        else
+        else if ( strcmp(methodstr,"myacctpubkeys") == 0 )
+            process_acctpubkeys(retbuf,jsonstr,json);
+        if ( retstr != 0 )
         {
+            strcpy(retbuf,retstr);
+            free(retstr);
         }
     }
     return((int32_t)strlen(retbuf));

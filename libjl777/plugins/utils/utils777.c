@@ -47,6 +47,7 @@ uint8_t *conv_datastr(int32_t *datalenp,uint8_t *data,char *datastr);
 int32_t is_decimalstr(char *str);
 long stripstr(char *buf,long len);
 char safechar64(int32_t x);
+uint64_t stringbits(char *str);
 
 char *_mbstr(double n);
 char *_mbstr2(double n);
@@ -370,6 +371,18 @@ int32_t is_decimalstr(char *str)
     return(i);
 }
 
+uint64_t stringbits(char *str)
+{
+    uint64_t bits = 0;
+    int32_t i,n = (int32_t)strlen(str);
+    if ( n > 8 )
+        n = 8;
+    for (i=n-1; i>=0; i--)
+        bits = (bits << 8) | (str[i] & 0xff);
+    //printf("(%s) -> %llx %llu\n",str,(long long)bits,(long long)bits);
+    return(bits);
+}
+
 double _kb(double n) { return(n / 1024.); }
 double _mb(double n) { return(n / (1024.*1024.)); }
 double _gb(double n) { return(n / (1024.*1024.*1024.)); }
@@ -573,20 +586,6 @@ double estimate_completion(double startmilli,int32_t processed,int32_t numleft)
         return(0.);
     //printf("numleft %d rate %f\n",numleft,rate);
     return(numleft * rate);
-}
-
-int32_t notlocalip(char *ipaddr)
-{
-    if ( ipaddr == 0 || ipaddr[0] == 0 || strcmp("127.0.0.1",ipaddr) == 0 || strncmp("192.168",ipaddr,7) == 0 )
-        return(0);
-    else return(1);
-}
-
-int32_t is_remote_access(char *previpaddr)
-{
-    if ( notlocalip(previpaddr) != 0 )
-        return(1);
-    else return(0);
 }
 
 void clear_alloc_space(struct alloc_space *mem,int32_t alignflag)

@@ -98,16 +98,16 @@ struct nodestats
     uint8_t BTCD_p2p,gotencrypted,modified,expired;//,isMM;
 };
 
-struct acct_coin { uint64_t *srvbits; char name[16],**acctcoinaddrs,**pubkeys; int32_t numsrvbits; };
-struct acct_coin2 { uint64_t srvbits[64]; char name[16],acctcoinaddrs[128][64],pubkeys[128][128]; int32_t numsrvbits; };
+//struct acct_coin { uint64_t *srvbits; char name[16],**acctcoinaddrs,**pubkeys; int32_t numsrvbits; };
+//struct acct_coin2 { uint64_t srvbits[64]; char name[16],acctcoinaddrs[128][64],pubkeys[128][128]; int32_t numsrvbits; };
 
 struct NXT_acct
 {
     UT_hash_handle hh;
     char NXTaddr[24];
     uint64_t nxt64bits;
-    int32_t numcoins;
-    struct acct_coin2 coins[64];
+    //int32_t numcoins;
+    //struct acct_coin2 coins[64];
     struct nodestats stats;
 };
 

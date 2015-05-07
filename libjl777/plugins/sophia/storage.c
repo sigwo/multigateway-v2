@@ -22,8 +22,8 @@
 #include "msig.c"
 
 struct nodestats *get_nodestats(uint64_t nxt64bits);
-struct acct_coin2 *get_NXT_coininfo(uint64_t srvbits,char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr);
-void add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
+int32_t get_NXT_coininfo(uint64_t srvbits,char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr);
+int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
 cJSON *http_search(char *destip,char *type,char *file);
 struct NXT_acct *get_NXTacct(int32_t *createdp,char *NXTaddr);
 void update_nodestats_data(struct nodestats *stats);
@@ -119,7 +119,7 @@ struct NXT_assettxid *find_NXT_assettxid(int32_t *createdflagp,struct NXT_asset 
     return(tp);
 }
 
-struct acct_coin2 *find_NXT_coininfo(struct NXT_acct **npp,uint64_t nxt64bits,char *coinstr)
+/*struct acct_coin2 *find_NXT_coininfo(struct NXT_acct **npp,uint64_t nxt64bits,char *coinstr)
 {
     char NXTaddr[64];
     struct NXT_acct *np;
@@ -135,88 +135,45 @@ struct acct_coin2 *find_NXT_coininfo(struct NXT_acct **npp,uint64_t nxt64bits,ch
                 return(&np->coins[i]);
     }
     return(0);
-}
+}*/
 
-struct acct_coin2 *get_NXT_coininfo(uint64_t srvbits,char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr)
+int32_t get_NXT_coininfo(uint64_t srvbits,char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr)
 {
-    struct acct_coin2 *acp = 0;
-    int32_t i;
-    acctcoinaddr[0] = pubkey[0] = 0;
-    if ( (acp= find_NXT_coininfo(0,nxt64bits,coinstr)) != 0 )
-    {
-        if ( acp->numsrvbits > 0 )
-        {
-            for (i=0; i<acp->numsrvbits; i++)
-            {
-                if ( acp->srvbits[i] == srvbits )
-                {
-                    if ( acp->pubkeys[i] != 0 )
-                        strcpy(pubkey,acp->pubkeys[i]);
-                    if ( acp->acctcoinaddrs[i] != 0 )
-                        strcpy(acctcoinaddr,acp->acctcoinaddrs[i]);
-                    return(acp);
-                }
-            }
-        }
-    }
+
     return(0);
 }
 
-void add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey)
+int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *newcoinaddr,char *newpubkey)
 {
-    int32_t i;
-    struct NXT_acct *np = 0;
-    struct acct_coin2 *acp;
-    printf("add_NXT_coininfo\n");
-    if ( (acp= find_NXT_coininfo(&np,nxt64bits,coinstr)) == 0 )
+    uint64_t key[3]; char *coinaddr,pubkey[513]; int32_t len,flag,updated = 0;
+    key[0] = stringbits(coinstr);
+    key[1] = srvbits;
+    key[2] = nxt64bits;
+    flag = 0;
+    if ( (coinaddr= db777_findM(&len,DB_NXTaccts,key,sizeof(key))) != 0 )
     {
-        //np->coins[np->numcoins++] = acp = calloc(1,sizeof(*acp));
-        //safecopy(acp->name,coinstr,sizeof(acp->name));
-        acp = &np->coins[np->numcoins];
-        memset(acp,0,sizeof(*acp));
-        strcpy(acp->name,coinstr);
-        np->numcoins++;
-    }
-    if ( acp->numsrvbits > 0 )
-    {
-        for (i=0; i<acp->numsrvbits; i++)
+        if ( strcmp(coinaddr,newcoinaddr) != 0 )
         {
-            if ( acp->srvbits[i] == srvbits )
-            {
-                /*if ( acp->pubkeys[i] != 0 )
-                {
-                    if ( strcmp(pubkey,acp->pubkeys[i]) != 0 )
-                        printf(">>>>>>>>>> WARNING ADDCOININFO.(%s -> %s) for %llu;%llu\n",acp->pubkeys[i],pubkey,(long long)srvbits,(long long)nxt64bits);
-                    //else printf("MATCHED pubkey ");
-                    free(acp->pubkeys[i]);
-                    acp->pubkeys[i] = 0;
-                }
-                if ( acp->acctcoinaddrs[i] != 0 )
-                {
-                    if ( strcmp(acctcoinaddr,acp->acctcoinaddrs[i]) != 0 )
-                        printf(">>>>>>>>>> WARNING ADDCOININFO.(%s -> %s) for %llu;%llu\n",acp->acctcoinaddrs[i],acctcoinaddr,(long long)srvbits,(long long)nxt64bits);
-                    //else printf("MATCHED acctcoinaddr ");
-                    free(acp->acctcoinaddrs[i]);
-                    acp->acctcoinaddrs[i] = 0;
-                }*/
-                break;
-            }
+            printf("%s srv.%llu ref.%llu (%s) -> (%s)\n",coinstr,(long long)srvbits,(long long)nxt64bits,coinaddr,newcoinaddr);
+            flag = updated = 1;
         }
-    } else i = acp->numsrvbits;
-    if ( i == acp->numsrvbits )
-    {
-        acp->numsrvbits++;
-        //acp->srvbits = realloc(acp->srvbits,sizeof(*acp->srvbits) * acp->numsrvbits);
-        //acp->acctcoinaddrs = realloc(acp->acctcoinaddrs,sizeof(*acp->acctcoinaddrs) * acp->numsrvbits);
-        //acp->pubkeys = realloc(acp->pubkeys,sizeof(*acp->pubkeys) * acp->numsrvbits);
+        free(coinaddr);
     }
-    //if ( (MGW_initdone == 0 && Debuglevel > 3) || (MGW_initdone != 0 && Debuglevel > 2) )
-        printf("ADDCOININFO.(%s %s) for %llu:%llu\n",acctcoinaddr,pubkey,(long long)srvbits,(long long)nxt64bits);
-    acp->srvbits[i] = srvbits;
-    strcpy(acp->pubkeys[i],pubkey);// = clonestr(pubkey);
-    strcpy(acp->acctcoinaddrs[i],acctcoinaddr);// = clonestr(acctcoinaddr);
-    if ( np != 0 )
-        db777_add(1,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
+    if ( flag != 0 && db777_add(1,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) != 0 )
+        printf("error adding (%s)\n",newcoinaddr);
+    flag = 0;
+    if ( db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,newcoinaddr) > 0 )
+    {
+        if ( strcmp(pubkey,newpubkey) != 0 )
+        {
+            printf("%s srv.%llu ref.%llu (%s) -> (%s)\n",coinstr,(long long)srvbits,(long long)nxt64bits,pubkey,newpubkey);
+            flag = updated = 1;
+        }
+        free(pubkey);
+    }
+    if ( flag != 0 && db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) != 0 )
+        printf("error adding (%s)\n",newpubkey);
+    return(updated);
 }
 
 

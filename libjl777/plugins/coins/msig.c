@@ -894,8 +894,8 @@ char *MGW_publish_acctpubkeys(char *coinstr,cJSON *array)
     if ( array != 0 )
     {
         json = cJSON_CreateObject();
-        cJSON_AddItemToObject(json,"plugin",cJSON_CreateString("MGW"));
-        cJSON_AddItemToObject(json,"method",cJSON_CreateString("acctpubkeys"));
+        cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
+        cJSON_AddItemToObject(json,"method",cJSON_CreateString("myacctpubkeys"));
         cJSON_AddItemToObject(json,"pubkeys",array);
         cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
         cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
