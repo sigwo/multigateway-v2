@@ -150,7 +150,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     key[1] = srvbits;
     key[2] = nxt64bits;
     flag = 1;
-    printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
+    //printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
     if ( (coinaddr= db777_findM(&len,DB_NXTaccts,key,sizeof(key))) != 0 )
     {
         if ( strcmp(coinaddr,newcoinaddr) == 0 )

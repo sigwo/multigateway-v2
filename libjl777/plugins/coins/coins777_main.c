@@ -214,7 +214,7 @@ int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],nxtaddr[64],ipaddr[64],*coinstr,*serverport,*userpass,*str,*email,*previpaddr = 0;
-    cJSON *array,*item,*pubkeyjson;
+    cJSON *array,*item;
     int32_t i,n,buyNXT,j = 0;
     struct coin777 *coin;
     retbuf[0] = 0;
@@ -354,18 +354,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     strcpy(retbuf,"{\"result\":\"need to specify coin\"}");
                 else if ( (coin= coin777_find(coinstr)) != 0 )
                 {
-                    printf("get pubkeys\n");
                     if ( (str= get_msig_pubkeys(coin->name,coin->serverport,coin->userpass)) != 0 )
                     {
-                        printf("parse\n");
-                        if ( (pubkeyjson= cJSON_Parse(str)) != 0 )
-                        {
-                            printf("publish\n");
-                            MGW_publish_acctpubkeys(coin->name,pubkeyjson);
-                            printf("free\n");
-                            free_json(pubkeyjson);
-                        }
-                        printf("free str\n");
+                        MGW_publish_acctpubkeys(coin->name,str);
                         free(str), str= 0;
                     }
                 }

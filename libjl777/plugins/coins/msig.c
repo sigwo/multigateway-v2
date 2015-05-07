@@ -42,7 +42,7 @@ char *setmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 char *setmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *origargstr);
 char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coinstr,char *refacct,int32_t M,int32_t N,uint64_t *srv64bits,int32_t n,char *userpubkey,char *email,uint32_t buyNXT);
 int32_t update_MGW_msig(struct multisig_addr *msig,char *sender);
-int32_t MGW_publish_acctpubkeys(char *coinstr,cJSON *array);
+int32_t MGW_publish_acctpubkeys(char *coinstr,char *str);
 
 #endif
 #else
@@ -887,11 +887,11 @@ int32_t init_public_msigs()
     return(added);
 }
 
-int32_t MGW_publish_acctpubkeys(char *coinstr,cJSON *array)
+int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
 {
     char *retstr = 0;
-    cJSON *json;
-    if ( array != 0 )
+    cJSON *json,*array;
+    if ( (array= cJSON_Parse(str)) != 0 )
     {
         json = cJSON_CreateObject();
         cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
