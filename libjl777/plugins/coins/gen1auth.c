@@ -89,7 +89,7 @@ cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
     char pubkey[512],account[512],coinaddr[512],*retstr;
     cJSON *json,*item,*array = 0;
     int32_t i,n;
-    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listreceivedbyaddress","[\"1\" \"true\"]")) != 0 )
+    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listreceivedbyaddress","1 true")) != 0 )
     {
         //printf("listaccounts.(%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
