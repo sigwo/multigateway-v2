@@ -903,9 +903,9 @@ void serverloop(void *_args)
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
         bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_busdata_processor);
-    } else bussock = -1, lbargs->commandprocessor = nn_lb_processor,
-    lbargs->sock = lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
-    RELAYS.lb.sock = lbsock, RELAYS.bus.sock = bussock, RELAYS.pubsock = pubsock;
+    } else bussock = -1, lbargs->commandprocessor = nn_lb_processor;
+    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
+    RELAYS.bus.sock = bussock, RELAYS.pubsock = pubsock;
     for (i=0; i<n; i++)
     {
         arg = &RELAYS.args[i];
