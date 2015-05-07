@@ -700,7 +700,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t datalen)
 
 uint8_t *conv_busdata(int32_t *datalenp,cJSON *json)
 {
-    char key[MAX_JSON_FIELD],hexstr[65],numstr[65],*datastr,*str; uint8_t *data,*both = 0; bits256 hash;
+    char key[MAX_JSON_FIELD],hexstr[65],numstr[65],*datastr,*str; uint8_t *data = 0,*both = 0; bits256 hash;
     uint64_t nxt64bits; uint32_t timestamp; cJSON *datajson; int32_t slen,len;
     datastr = cJSON_str(cJSON_GetObjectItem(json,"data"));
     timestamp = (uint32_t)time(NULL);
@@ -718,17 +718,21 @@ uint8_t *conv_busdata(int32_t *datalenp,cJSON *json)
         calc_sha256(hexstr,hash.bytes,data,len);
         cJSON_AddItemToObject(datajson,"s",cJSON_CreateString(hexstr));
         cJSON_AddItemToObject(datajson,"l",cJSON_CreateNumber(len));
-    }
+    } else len = 0;
     str = cJSON_Print(datajson);
     _stripwhite(str,' ');
     slen = (int32_t)strlen(str) + 1;
     *datalenp = slen + len;
-    both = malloc(*datalenp);
-    memcpy(both,str,slen);
-    memcpy(both+slen,data,len);
-    free(data), free(str);
-    return(both);
- }
+    if ( len > 0 )
+    {
+        both = malloc(*datalenp);
+        memcpy(both,str,slen);
+        memcpy(both+slen,data,len);
+        free(data), free(str);
+        return(both);
+    }
+    else return((uint8_t *)str);
+}
 
 cJSON *relay_json(struct _relay_info *list)
 {
