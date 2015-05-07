@@ -838,9 +838,11 @@ char *setmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sende
     return(clonestr(origargstr));
 }
 
+#include <curl/curl.h>
+#include <curl/easy.h>
 int32_t init_public_msigs()
 {
-    void *curl_post(void **cHandlep,char *url,char *postfields,char *hdr0,char *hdr1,char *hdr2);
+    void *curl_post(CURL **cHandlep,char *url,char *userpass,char *postfields,char *hdr0,char *hdr1,char *hdr2);
     static void *cHandle;
     char Server_NXTaddr[64],url[1024],*retstr;
     struct multisig_addr *msig;
@@ -854,7 +856,7 @@ int32_t init_public_msigs()
         expand_nxt64bits(Server_NXTaddr,MGW.srv64bits[j]);
         sprintf(url,"http://%s/MGW/msig/ALL",MGW.serverips[j]);
         printf("issue.(%s)\n",url);
-        if ( (retstr= curl_post(&cHandle,url,0,"",0,0)) != 0 )
+        if ( (retstr= curl_post(&cHandle,url,0,0,"",0,0)) != 0 )
         {
             printf("got.(%s)\n",retstr);
             if ( (json= cJSON_Parse(retstr)) != 0 )
