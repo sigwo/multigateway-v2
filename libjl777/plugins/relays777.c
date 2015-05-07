@@ -802,7 +802,7 @@ void responseloop(void *_args)
             {
                 retstr = 0;
                 //if ( Debuglevel > 1 )
-                printf("RECV.%s (%s)\n",args->name,msg);
+                printf("RECV.%s (%s)\n",args->name,strlen(msg)<1024?msg:"<big message>");
                 if ( (json= cJSON_Parse((char *)msg)) != 0 )
                 {
                     broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));

@@ -60,7 +60,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
 {
     char *resultstr,*coinstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
-    //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
         if ( DB_msigs == 0 )
@@ -68,6 +68,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( DB_NXTaccts == 0 )
             DB_NXTaccts = db777_create(0,0,"NXTacct",0);
         strcpy(retbuf,"{\"result\":\"return JSON init\"}");
+        MGW.readyflag = 1;
+        plugin->allowremote = 1;
     }
     else
     {
@@ -81,11 +83,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        printf("RAMCHAIN.(%s) for (%s)\n",methodstr,coinstr!=0?coinstr:"");
+        printf("MGW.(%s) for (%s)\n",methodstr,coinstr!=0?coinstr:"");
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
-            MGW.readyflag = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
         else if ( strcmp(methodstr,"myacctpubkeys") == 0 )
