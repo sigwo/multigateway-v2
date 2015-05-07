@@ -80,7 +80,7 @@ printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
     if ( flag != 0 )
     {
         if ( db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
-            updated = 1;
+            updated = 1, printf("added (%s)\n",newpubkey);
         else printf("error adding (%s)\n",newpubkey);
     }
     return(updated);
