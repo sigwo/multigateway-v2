@@ -282,7 +282,7 @@ char *nn_directconnect(char *ipaddr)
         ipbits |= ((uint64_t)sock << 48);
         n = RELAYS.pair.num;
         set_endpointaddr("tcp",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
-        printf("direct connect to (%s)\n",endpoint);
+        printf("direct connect to (%s) using sock.%d\n",endpoint,sock);
         if ( update_serverbits(&RELAYS.pair,ipaddr,ipbits,NN_PAIR) <= n )
         {
             set_endpointaddr("ws",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
@@ -412,12 +412,16 @@ char *nn_direct(char *ipaddr,char *request)
         {
             ipbits = RELAYS.pair.servers[ind];
             sock = (int32_t)(ipbits >> 48);
+            printf("got direct socket.%d for %s\n",sock,ipaddr);
             len = (int32_t)strlen(request)+1;
             for (i=0; i<10; i++)
                 if ( (nn_socket_status(sock,1) & NN_POLLOUT) != 0 )
                     break;
             if ( (sendlen= nn_send(sock,request,len,0)) != len )
+            {
+                printf("sendlen.%d vs len.%d\n",sendlen,len);
                 return(clonestr("{\"error\":\"error sending direct packet\"}"));
+            }
             else return(clonestr("{\"result\":\"success\",\"details\":\"direct packet send\"}"));
         } else return(clonestr("{\"error\":\"cant find direct socket\"}"));
     } else return(clonestr("{\"error\":\"illegal ipaddr for direct connect\"}"));
@@ -489,11 +493,29 @@ char *nn_allpeers(char *_request,int32_t timeoutmillis,char *localresult)
     return(retstr);
 }
 
+char *find_directconnect(cJSON *retjson)
+{
+    char result[MAX_JSON_FIELD],otheripaddr[MAX_JSON_FIELD],*connectstr,*jsonstr = 0;
+    copy_cJSON(result,cJSON_GetObjectItem(retjson,"result"));
+    copy_cJSON(otheripaddr,cJSON_GetObjectItem(retjson,"direct"));
+    if ( strcmp(result,"success") == 0 )
+    {
+        if ( (connectstr= nn_directconnect(otheripaddr)) != 0 )
+        {
+            cJSON_AddItemToObject(retjson,"myconnect",cJSON_CreateString(connectstr));
+            free(connectstr);
+        } else cJSON_AddItemToObject(retjson,"myconnect",cJSON_CreateString("error"));
+        jsonstr = cJSON_Print(retjson);
+        _stripwhite(jsonstr,' ');
+    }// else printf("result.(%s) != success\n",result);
+    return(jsonstr);
+}
+
 char *nn_loadbalanced(char *_request)
 {
-    cJSON *json,*retjson;
-    char method[MAX_JSON_FIELD],result[MAX_JSON_FIELD],otheripaddr[MAX_JSON_FIELD],*connectstr,*msg,*request,*jsonstr = 0;
-    int32_t len,sendlen,i,lbsock,recvlen = 0;
+    cJSON *json,*retjson,*array,*item;
+    char method[MAX_JSON_FIELD],*msg,*request,*connectstr,*jsonstr = 0;
+    int32_t len,sendlen,i,n,lbsock,recvlen = 0;
     if ( (lbsock= RELAYS.lb.sock) < 0 )
         return(clonestr("{\"error\":\"invalid load balanced socket\"}"));
     request = malloc(strlen(_request) + 512);
@@ -516,21 +538,24 @@ char *nn_loadbalanced(char *_request)
                 copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
                 if ( strcmp(method,"direct") == 0 )
                 {
+                    connectstr = 0;
                     if ( (retjson= cJSON_Parse(jsonstr)) != 0 )
                     {
-                        copy_cJSON(result,cJSON_GetObjectItem(retjson,"result"));
-                        copy_cJSON(otheripaddr,cJSON_GetObjectItem(retjson,"direct"));
-                        if ( strcmp(result,"success") == 0 )
+                        if ( (array= cJSON_GetObjectItem(retjson,"responses")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                         {
-                            if ( (connectstr= nn_directconnect(otheripaddr)) != 0 )
+                            for (i=0; i<n; i++)
                             {
-                                cJSON_AddItemToObject(retjson,"myconnect",cJSON_CreateString(connectstr));
-                                free(connectstr);
-                            } else cJSON_AddItemToObject(retjson,"myconnect",cJSON_CreateString("error"));
+                                item = cJSON_GetArrayItem(array,i);
+                                if ( (connectstr= find_directconnect(item)) != 0 )
+                                      break;
+                            }
+                        }
+                        else connectstr = find_directconnect(retjson);
+                        if ( connectstr != 0 )
+                        {
                             free(jsonstr);
-                            jsonstr = cJSON_Print(retjson);
-                            _stripwhite(jsonstr,' ');
-                        }// else printf("result.(%s) != success\n",result);
+                            jsonstr = connectstr;
+                        }
                         free_json(retjson);
                     } else printf("cant parse retjson.(%s)\n",jsonstr);
                 } //else printf("method.(%s) is not direct\n",method);

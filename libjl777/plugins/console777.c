@@ -216,7 +216,8 @@ void process_userinput(char *_line)
         timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
         if ( plugin[0] == 0 )
             strcpy(plugin,"relay");
-        cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(plugin));
+        if ( cJSON_GetObjectItem(json,"plugin") == 0 )
+            cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(plugin));
         if ( method[0] == 0 )
             strcpy(method,"help");
         cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
