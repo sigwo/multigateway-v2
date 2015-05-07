@@ -63,10 +63,34 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         else if ( strcmp(methodstr,"direct") == 0 )
         {
             char *nn_directconnect(char *ipaddr);
+            int32_t i,n; cJSON *item,*retjson,*array; char otheripaddr[2048],*connectstr,*str;
             if ( ipaddr != 0 && strcmp(ipaddr,SUPERNET.myipaddr) == 0 )
             {
                 if ( (retstr= nn_directconnect(myipaddr)) != 0 )
                 {
+                    if ( (retjson= cJSON_Parse(retstr)) != 0 )
+                    {
+                        if ( (array= cJSON_GetObjectItem(retjson,"responses")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+                        {
+                            for (i=0; i<n; i++)
+                            {
+                                item = cJSON_GetArrayItem(array,i);
+                                if ( (str= cJSON_str(cJSON_GetObjectItem(item,"result"))) != 0 && strcmp(str,"success") == 0 )
+                                {
+                                    copy_cJSON(otheripaddr,cJSON_GetObjectItem(item,"direct"));
+                                    if ( (connectstr= nn_directconnect(otheripaddr)) != 0 )
+                                    {
+                                        cJSON_AddItemToObject(item,"myconnect",cJSON_CreateString(connectstr));
+                                        free(connectstr);
+                                    } else cJSON_AddItemToObject(item,"myconnect",cJSON_CreateString("error"));
+                                    free(retstr);
+                                    retstr = cJSON_Print(item);
+                                    _stripwhite(retstr,' ');
+                                    break;
+                                }
+                            }
+                        } free_json(retjson);
+                    }
                     strcpy(retbuf,retstr);
                     free(retstr);
                 }

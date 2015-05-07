@@ -205,14 +205,14 @@ void process_userinput(char *_line)
             cJSON_AddItemToObject(json,"content",cJSON_CreateString(str));
             free(str);
         }
-        if ( cJSON_GetObjectItem(json,"myipaddr") == 0 )
-            cJSON_AddItemToObject(json,"myipaddr",cJSON_CreateString(SUPERNET.myipaddr));
-        if ( cJSON_GetObjectItem(json,"NXT") == 0 )
-            cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
     }
     if ( json != 0 )
     {
         struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
+        if ( cJSON_GetObjectItem(json,"myipaddr") == 0 )
+            cJSON_AddItemToObject(json,"myipaddr",cJSON_CreateString(SUPERNET.myipaddr));
+        if ( cJSON_GetObjectItem(json,"NXT") == 0 )
+            cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
         timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
         if ( plugin[0] == 0 )
             strcpy(plugin,"relay");
