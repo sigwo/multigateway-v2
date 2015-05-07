@@ -213,12 +213,11 @@ int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],nxtaddr[64],ipaddr[64],*coinstr,*serverport,*userpass,*str,*email,*previpaddr = 0;
+    char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],*coinstr,*serverport,*userpass,*str,*email,*previpaddr = 0;
     cJSON *array,*item;
     int32_t i,n,buyNXT,j = 0;
     struct coin777 *coin;
     retbuf[0] = 0;
-    printf("COINS.(%s)\n",jsonstr);
     if ( initflag > 0 )
     {
         if ( json != 0 )
@@ -236,39 +235,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             copy_cJSON(SUPERNET.userhome,cJSON_GetObjectItem(json,"userdir"));
             if ( SUPERNET.userhome[0] == 0 )
                 strcpy(SUPERNET.userhome,"/root");
-            MGW.N = get_API_int(cJSON_GetObjectItem(json,"N"),0);
-            MGW.M = get_API_int(cJSON_GetObjectItem(json,"M"),0);
-            MGW.gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
-            if ( (array= cJSON_GetObjectItem(json,"servers")) != 0 && (n= cJSON_GetArraySize(array)) > 0 && (n & 1) == 0 )
-            {
-                for (i=j=0; i<n/2&&i<MAX_MGWSERVERS; i++)
-                {
-                    copy_cJSON(ipaddr,cJSON_GetArrayItem(array,i<<1));
-                    copy_cJSON(nxtaddr,cJSON_GetArrayItem(array,(i<<1)+1));
-                    if ( strcmp(ipaddr,MGW.bridgeipaddr) != 0 )
-                    {
-                        MGW.srv64bits[j] = calc_nxt64bits(nxtaddr);//conv_rsacctstr(nxtaddr,0);
-                        strcpy(MGW.serverips[j],ipaddr);
-                        printf("%d.(%s).%llu ",j,ipaddr,(long long)MGW.srv64bits[j]);
-                        j++;
-                    }
-                }
-                printf("ipaddrs: %s %s %s\n",MGW.serverips[0],MGW.serverips[1],MGW.serverips[2]);
-                if ( MGW.gatewayid >= 0 && MGW.N )
-                {
-                    strcpy(SUPERNET.myipaddr,MGW.serverips[MGW.gatewayid]);
-                }
-                //printf("j.%d M.%d N.%d n.%d (%s).%s gateway.%d\n",j,COINS.M,COINS.N,n,COINS.myipaddr,COINS.myNXTaddr,COINS.gatewayid);
-                if ( j != MGW.N )
-                    sprintf(retbuf+1,"{\"warning\":\"mismatched servers\",\"details\":\"n.%d j.%d vs M.%d N.%d\",",n,j,MGW.M,MGW.N);
-                else if ( MGW.gatewayid >= 0 )
-                {
-                    strcpy(MGW.serverips[MGW.N],MGW.bridgeipaddr);
-                    MGW.srv64bits[MGW.N] = calc_nxt64bits(MGW.bridgeacct);
-                    MGW.all.socks.both.bus = make_MGWbus(SUPERNET.port + nn_portoffset(NN_BUS),SUPERNET.myipaddr,MGW.serverips,MGW.N+1);
-                    MGW.numgateways = MGW.N;
-                }
-            }
             if ( (array= cJSON_GetObjectItem(json,"coins")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 // { "name":"BTCD","rpc":"127.0.0.1:14631","dir":".BitcoinDark","conf":"BitcoinDark.conf","multisigchar":"b" }

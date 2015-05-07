@@ -24,6 +24,7 @@
 #include "cointx.c"
 #include "gen1auth.c"
 
+struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char *NXTaddr,char *userpubkey,char *sender);
 
 int32_t update_MGW_jsonfile(void (*setfname)(char *fname,char *NXTaddr),void *(*extract_jsondata)(cJSON *item,void *arg,void *arg2),int32_t (*jsoncmp)(void *ref,void *item),char *NXTaddr,char *jsonstr,void *arg,void *arg2);
 void set_MGW_depositfname(char *fname,char *NXTaddr);
@@ -36,11 +37,8 @@ char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 char *setmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *coinstr,char *refNXTaddr,char *acctcoinaddr,char *userpubkey);
 struct multisig_addr *find_msigaddr(int32_t *lenp,char *coinstr,char *NXTaddr,char *msigaddr);
 int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int32_t len);
+struct multisig_addr *gen_multisig_addr(char *sender,int32_t M,int32_t N,char *coinstr,char *serverport,char *userpass,int32_t use_addmultisig,char *refNXTaddr,char *userpubkey,uint64_t *srvbits);
 
-char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *coinstr,char *refNXTaddr,char *myacctcoinaddr,char *mypubkey);
-char *setmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *coinstr,char *refNXTaddr,char *acctcoinaddr,char *userpubkey);
-char *setmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *origargstr);
-char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coinstr,char *refacct,int32_t M,int32_t N,uint64_t *srv64bits,int32_t n,char *userpubkey,char *email,uint32_t buyNXT);
 int32_t update_MGW_msig(struct multisig_addr *msig,char *sender);
 int32_t MGW_publish_acctpubkeys(char *coinstr,char *str);
 
@@ -271,7 +269,8 @@ struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char
         msig->sender = calc_nxt64bits(sender);
     safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
     safecopy(msig->NXTaddr,NXTaddr,sizeof(msig->NXTaddr));
-    safecopy(msig->NXTpubkey,userpubkey,sizeof(msig->NXTpubkey));
+    if ( userpubkey != 0 && userpubkey[0] != 0 )
+        safecopy(msig->NXTpubkey,userpubkey,sizeof(msig->NXTpubkey));
     msig->m = m;
     return(msig);
 }
@@ -586,7 +585,7 @@ struct multisig_addr *finalize_msig(struct multisig_addr *msig,uint64_t *srvbits
         if ( srvbits[i] != 0 && refbits != 0 )
         {
             acctcoinaddr[0] = pubkey[0] = 0;
-            if ( get_NXT_coininfo(srvbits[i],acctcoinaddr,pubkey,refbits,msig->coinstr) != 0 && acctcoinaddr[0] != 0 && pubkey[0] != 0 )
+            if ( get_NXT_coininfo(srvbits[i],refbits,msig->coinstr,acctcoinaddr,pubkey) != 0 && acctcoinaddr[0] != 0 && pubkey[0] != 0 )
             {
                 strcpy(msig->pubkeys[i].coinaddr,acctcoinaddr);
                 strcpy(msig->pubkeys[i].pubkey,pubkey);
@@ -622,8 +621,6 @@ struct multisig_addr *gen_multisig_addr(char *sender,int32_t M,int32_t N,char *c
     struct multisig_addr *msig;
     refbits = calc_nxt64bits(refNXTaddr);
     msig = alloc_multisig_addr(coinstr,M,N,refNXTaddr,userpubkey,sender);
-    //for (i=0; i<N; i++)
-    //    srvbits[i] = contacts[i]->nxt64bits;
     if ( (msig= finalize_msig(msig,srvbits,refbits)) != 0 )
         flag = issue_createmultisig(msig->multisigaddr,msig->redeemScript,coinstr,serverport,userpass,use_addmultisig,msig);
     if ( flag == 0 )
@@ -711,7 +708,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
                 else if ( iter == 1 && my64bits != nxt64bits )
                 {
                     acctcoinaddr[0] = pubkey[0] = 0;
-                    if ( get_NXT_coininfo(nxt64bits,acctcoinaddr,pubkey,refbits,coinstr) == 0 || acctcoinaddr[0] == 0 || pubkey[0] == 0 )
+                    if ( get_NXT_coininfo(nxt64bits,refbits,coinstr,acctcoinaddr,pubkey) == 0 || acctcoinaddr[0] == 0 || pubkey[0] == 0 )
                     {
                         sprintf(buf,"{\"requestType\":\"plugin\",\"plugin\":\"coins\",\"method\":\"getmsigpubkey\",\"NXT\":\"%s\",\"coin\":\"%s\",\"refNXTaddr\":\"%s\",\"userpubkey\":\"%s\"",NXTaddr,coinstr,refNXTaddr,userpubkey);
                         if ( myacctcoinaddr[0] != 0 && mypubkey[0] != 0 )

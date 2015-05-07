@@ -22,7 +22,7 @@
 #include "msig.c"
 
 struct nodestats *get_nodestats(uint64_t nxt64bits);
-int32_t get_NXT_coininfo(uint64_t srvbits,char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr);
+int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
 int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
 cJSON *http_search(char *destip,char *type,char *file);
 struct NXT_acct *get_NXTacct(int32_t *createdp,char *NXTaddr);
@@ -136,48 +136,6 @@ struct NXT_assettxid *find_NXT_assettxid(int32_t *createdflagp,struct NXT_asset 
     }
     return(0);
 }*/
-
-int32_t get_NXT_coininfo(uint64_t srvbits,char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr)
-{
-
-    return(0);
-}
-
-int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *newcoinaddr,char *newpubkey)
-{
-    uint64_t key[3]; char *coinaddr,pubkey[513]; int32_t len,flag,updated = 0;
-    key[0] = stringbits(coinstr);
-    key[1] = srvbits;
-    key[2] = nxt64bits;
-    flag = 1;
-    //printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
-    if ( (coinaddr= db777_findM(&len,DB_NXTaccts,key,sizeof(key))) != 0 )
-    {
-        if ( strcmp(coinaddr,newcoinaddr) == 0 )
-            flag = 0;
-         free(coinaddr);
-    }
-    if ( flag != 0 )
-    {
-        if ( db777_add(1,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
-            updated = 1;
-        else printf("error adding (%s)\n",newcoinaddr);
-    }
-    flag = 1;
-    if ( db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,newcoinaddr) > 0 )
-    {
-        if ( strcmp(pubkey,newpubkey) == 0 )
-            flag = 0;
-    }
-    if ( flag != 0 )
-    {
-        if ( db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
-            updated = 1;
-        else printf("error adding (%s)\n",newpubkey);
-    }
-    return(updated);
-}
-
 
 #endif
 #endif

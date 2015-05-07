@@ -1324,13 +1324,11 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *retstr,*resultstr,NXTaddr[64];
+    char *retstr,*resultstr;
     FILE *fp;
-    int32_t i,j,n;
-    uint64_t nxt64bits;
-    cJSON *array;
+    int32_t i;
     retbuf[0] = 0;
-    printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! initflag.%d process %s (%s)\n",plugin->name,initflag,plugin->name,jsonstr);
+    printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! initflag.%d process %s\n",plugin->name,initflag,plugin->name);
     if ( initflag > 0 )
     {
         Debuglevel = 2;
@@ -1365,22 +1363,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         strcpy(SUPERNET.NXTSERVER,SUPERNET.NXTAPIURL);
         strcat(SUPERNET.NXTSERVER,"?requestType");
-        MGW.issuers[MGW.numissuers++] = calc_nxt64bits("423766016895692955");//conv_rsacctstr("NXT-JXRD-GKMR-WD9Y-83CK7",0);
-        MGW.issuers[MGW.numissuers++] = calc_nxt64bits("12240549928875772593");//conv_rsacctstr("NXT-3TKA-UH62-478B-DQU6K",0);
-        MGW.issuers[MGW.numissuers++] = calc_nxt64bits("8279528579993996036");//conv_rsacctstr("NXT-5294-T9F6-WAWK-9V7WM",0);
-        if ( (array= cJSON_GetObjectItem(json,"issuers")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-        {
-            for (i=0; i<n; i++)
-            {
-                copy_cJSON(NXTaddr,cJSON_GetArrayItem(array,i));
-                nxt64bits = calc_nxt64bits(NXTaddr);//conv_rsacctstr(NXTaddr,0);
-                for (j=0; j<MGW.numissuers; j++)
-                    if ( nxt64bits == MGW.issuers[j] )
-                        break;
-                if ( j == MGW.numissuers )
-                    MGW.issuers[MGW.numissuers++] = nxt64bits;
-            }
-        }
         copy_cJSON(SUPERNET.DATADIR,cJSON_GetObjectItem(json,"DATADIR"));
         if ( SUPERNET.DATADIR[0] == 0 )
             strcpy(SUPERNET.DATADIR,"archive");
@@ -1396,10 +1378,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             strcpy(SOPHIA.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH);
         printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay);
-        if ( DB_msigs == 0 )
-            DB_msigs = db777_create(0,0,"msigs",0);
         if ( DB_NXTaccts == 0 )
-            DB_NXTaccts = db777_create(0,0,"NXTacct",0);
+            DB_NXTaccts = db777_create(0,0,"NXTaccts",0);
         if ( DB_nodestats == 0 )
             DB_nodestats = db777_create(0,0,"nodestats",0);
         if ( DB_busdata == 0 )

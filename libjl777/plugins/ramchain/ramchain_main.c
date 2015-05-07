@@ -55,10 +55,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
-        if ( DB_msigs == 0 )
-            DB_msigs = db777_create(0,0,"msigs",0);
         if ( DB_NXTaccts == 0 )
-            DB_NXTaccts = db777_create(0,0,"NXTacct",0);
+            DB_NXTaccts = db777_create(0,0,"NXTaccts",0);
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
         RAMCHAINS.readyflag = 1;
     }
