@@ -182,8 +182,6 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
                 add_relay(&RELAYS.lb,ipbits);
                 set_endpointaddr("ws",endpoint,servers[i],SUPERNET.port,NN_REP);
                 nn_connect(sock,endpoint);
-                if ( SUPERNET.iamrelay != 0 )
-                    update_serverbits(&RELAYS.bus,servers[i],calc_ipbits(servers[i]),NN_BUS);
             }
         }
         priority++;
@@ -951,6 +949,8 @@ void serverloop(void *_args)
         int32_t poll_daemons();
         if ( poll_daemons() == 0 && poll_direct(1) == 0 && SUPERNET.APISLEEP > 0 )
             msleep(SUPERNET.APISLEEP);
+        if ( SUPERNET.iamrelay != 0 )
+            nn_send(RELAYS.bus.sock,SUPERNET.NXTADDR,strlen(SUPERNET.NXTADDR),0), sleep(3);
     }
 }
 
