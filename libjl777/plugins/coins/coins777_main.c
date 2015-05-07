@@ -32,7 +32,7 @@ char *setmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 void coins_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME COINS;
-char *PLUGNAME(_methods)[] = { "addcoin", "remove", "genmultisig", "setmsigpubkey", "getmsigpubkey", "setmultisig", "acctpubkeys" };
+char *PLUGNAME(_methods)[] = { "genmultisig", "setmsigpubkey", "getmsigpubkey", "setmultisig", "acctpubkeys" };
 
 struct coin777 *coin777_find(char *coinstr)
 {
@@ -180,12 +180,47 @@ cJSON *check_conffile(int32_t *allocflagp,cJSON *json)
     return(json);
 }
 
+int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
+{
+    struct coin777 *coin; char msigchar[128],*str;
+    if ( coinstr != 0 && coinstr[0] != 0 )
+    {
+        printf("name.(%s)\n",coinstr);
+        if ( (coin= coin777_find(coinstr)) == 0 )
+            coin = coin777_create(coinstr,serverport,userpass,item);
+        if ( coin != 0 )
+        {
+            if ( serverport != 0 && strcmp(serverport,coin->serverport) != 0 )
+                strcpy(coin->serverport,serverport);
+            if ( userpass != 0 && strcmp(userpass,coin->userpass) != 0 )
+                strcpy(coin->userpass,userpass);
+            //void foo(char *serverport,char *userpass);
+            //foo(coin->serverport,coin->userpass);
+            if ( extract_cJSON_str(msigchar,sizeof(msigchar),item,"multisigchar") > 0 )
+                coin->multisigchar = msigchar[0];
+            coin->use_addmultisig = get_API_int(cJSON_GetObjectItem(item,"useaddmultisig"),strcmp("BTC",coinstr)!=0);
+            if ( strcmp(coinstr,"BTCD") == 0 )//&& COINS.NXTACCTSECRET[0] == 0 )
+            {
+                if ( serverport[0] == 0 )
+                    strcpy(serverport,"http://127.0.0.1:14632");
+                //set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,item,coinstr,serverport,userpass);
+            }
+            if ( coin->acctpubkeyjson != 0 )
+                free_json(coin->acctpubkeyjson);
+            coin->acctpubkeyjson = get_msig_pubkeys(coin->name,coin->serverport,coin->userpass);
+            if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
+                free(str);
+            return(1);
+        }
+    }
+    return(0);
+}
+
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass);
-    char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],msigchar[64],nxtaddr[64],ipaddr[64],*coinstr,*serverport,*userpass,*arraystr,*str,*email,*previpaddr = 0;
+    char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],nxtaddr[64],ipaddr[64],*coinstr,*serverport,*userpass,*str,*email,*previpaddr = 0;
     cJSON *array,*item;
-    int32_t i,n,buyNXT,allocflag,j = 0;
+    int32_t i,n,buyNXT,j = 0;
     struct coin777 *coin;
     retbuf[0] = 0;
     if ( initflag > 0 )
@@ -194,7 +229,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         //DB_nodestats = db777_create(0,0,"nodestats",0);
         if ( json != 0 )
         {
-            json = check_conffile(&allocflag,json);
+            //json = check_conffile(&allocflag,json);
             copy_cJSON(SUPERNET.myNXTacct,cJSON_GetObjectItem(json,"myNXTacct"));
             copy_cJSON(MGW.PATH,cJSON_GetObjectItem(json,"MGWROOT"));
             if ( MGW.PATH[0] == 0 )
@@ -202,14 +237,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 strcpy(MGW.PATH,"MGW");
                 ensure_directory(MGW.PATH);
             }
-             /*if ( 1 && SUPERNET.NXTADDR[0] != 0 && SUPERNET.myNXTaddr[0] != 0 && strcmp(SUPERNET.myNXTaddr,SUPERNET.NXTADDR) != 0 )
-            {
-                sprintf(retbuf,"{\"error\":\"mismatched NXT accounts\",\"fromsecret\":\"%s\",\"myNXT\":\"%s\"}",SUPERNET.NXTADDR,SUPERNET.myNXTaddr);
-                printf("ERROR ERROR\n");
-                if ( allocflag != 0 )
-                   free_json(json);
-                return((int32_t)strlen(retbuf));
-            }*/
             COINS.argjson = cJSON_Duplicate(json,1);
             copy_cJSON(MGW.bridgeipaddr,cJSON_GetObjectItem(json,"bridgeipaddr"));
             copy_cJSON(MGW.bridgeacct,cJSON_GetObjectItem(json,"bridgeacct"));
@@ -249,11 +276,23 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     MGW.numgateways = MGW.N;
                 }
             }
+            if ( (array= cJSON_GetObjectItem(json,"coins")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                // { "name":"BTCD","rpc":"127.0.0.1:14631","dir":".BitcoinDark","conf":"BitcoinDark.conf","multisigchar":"b" }
+                for (i=j=0; i<n; i++)
+                {
+                    item = cJSON_GetArrayItem(array,i);
+                    coinstr = cJSON_str(cJSON_GetObjectItem(item,"name"));
+                    serverport = cJSON_str(cJSON_GetObjectItem(item,"rpc"));
+                    if ( extract_cJSON_str(buf0,sizeof(buf0),item,"path") > 0 && extract_cJSON_str(buf1,sizeof(buf1),item,"conf") > 0 )
+                        userpass = extract_userpass(SUPERNET.userhome,buf0,buf1);
+                    else userpass = 0;
+                    init_coinstr(coinstr,serverport,userpass,item);
+                    if ( userpass != 0 )
+                        free(userpass);
+                }
+            }
             sprintf(retbuf+strlen(retbuf),"\"M\":%d,\"N\":%d,\"bridge\":\"%s\",\"myipaddr\":\"%s\",\"port\":%d}",MGW.M,MGW.N,MGW.bridgeipaddr,SUPERNET.myipaddr,SUPERNET.port);
-            if ( allocflag != 0 )
-                free_json(json);
-            //int32_t init_public_msigs();
-            //init_public_msigs();
         } else strcpy(retbuf,"{\"result\":\"no JSON for init\"}");
         COINS.readyflag = 1;
         plugin->allowremote = 1;
@@ -279,132 +318,56 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else
         {
-            if ( json == 0 )
-                json = COINS.argjson;
-            if ( strcmp(methodstr,"addcoin") == 0 )
+            zerobuf[0] = 0;
+            str = 0;
+            printf("INSIDE COINS.(%s)\n",jsonstr);
+            copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
+            if ( coinstr == 0 )
+                coinstr = zerobuf;
+            if ( strcmp(methodstr,"genmultisig") == 0 )
             {
-                if ( (array= cJSON_GetObjectItem(json,"coins")) == 0 )
-                    array = cJSON_GetObjectItem(COINS.argjson,"coins");
-                allocflag = 0;
-                // array = check_conffile(&allocflag,array);
-                if ( array != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+                if ( coinstr[0] == 0 )
+                    strcpy(retbuf,"{\"error\":\"no coin specified\"}");
+                else
                 {
-                    // { "name":"BTCD","rpc":"127.0.0.1:14631","dir":".BitcoinDark","conf":"BitcoinDark.conf","multisigchar":"b" }
-                    for (i=j=0; i<n; i++)
-                    {
-                        item = cJSON_GetArrayItem(array,i);
-                        coinstr = cJSON_str(cJSON_GetObjectItem(item,"name"));
-                        serverport = cJSON_str(cJSON_GetObjectItem(item,"rpc"));
-                        if ( extract_cJSON_str(buf0,sizeof(buf0),item,"path") > 0 && extract_cJSON_str(buf1,sizeof(buf1),item,"conf") > 0 )
-                            userpass = extract_userpass(SUPERNET.userhome,buf0,buf1);
-                        else userpass = 0;
-                        printf("name.(%s)\n",coinstr);
-                        if ( coinstr != 0 && coinstr[0] != 0 )
-                        {
-                            if ( (coin= coin777_find(coinstr)) == 0 )
-                                coin = coin777_create(coinstr,serverport,userpass,item);
-                            if ( coin != 0 )
-                            {
-                                j++;
-                                if ( serverport != 0 && strcmp(serverport,coin->serverport) != 0 )
-                                    strcpy(coin->serverport,serverport);
-                                if ( userpass != 0 && strcmp(userpass,coin->userpass) != 0 )
-                                    strcpy(coin->userpass,userpass);
-                                //void foo(char *serverport,char *userpass);
-                                //foo(coin->serverport,coin->userpass);
-                                if ( extract_cJSON_str(msigchar,sizeof(msigchar),item,"multisigchar") > 0 )
-                                    coin->multisigchar = msigchar[0];
-                                coin->use_addmultisig = get_API_int(cJSON_GetObjectItem(item,"useaddmultisig"),strcmp("BTC",coinstr)!=0);
-                                if ( strcmp(coinstr,"BTCD") == 0 )//&& COINS.NXTACCTSECRET[0] == 0 )
-                                {
-                                    if ( serverport[0] == 0 )
-                                        strcpy(serverport,"http://127.0.0.1:14632");
-                                    set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,item,coinstr,serverport,userpass);
-                                }
-                                if ( coin->acctpubkeyjson != 0 )
-                                    free_json(coin->acctpubkeyjson);
-                                coin->acctpubkeyjson = get_msig_pubkeys(coin->name,coin->serverport,coin->userpass);
-                                if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
-                                     free(str);
-                            }
-                        }
-                        if ( userpass != 0 )
-                            free(userpass);
-                     }
-                }
-                if ( allocflag != 0 )
-                    free_json(array);
-                array = coins777_json();
-                arraystr = cJSON_Print(array);
-                sprintf(retbuf,"{\"result\":\"addcoin\",\"added\":%d,\"coins\":%s,\"NXT\":\"%s\"}",j,arraystr,SUPERNET.NXTADDR);
-                free(arraystr), free_json(array);
-            }
-            else if ( strcmp(methodstr,"remove") == 0 )
-            {
-                if ( coinstr != 0 && coinstr[0] != 0 )
-                {
-                    if ( strcmp(coinstr,"*") == 0 || strcmp(coinstr,"allcoins") == 0 )
-                        shutdown_coins();
-                    else coin777_close(coinstr);
-                    array = coins777_json();
-                    arraystr = cJSON_Print(array);
-                    sprintf(retbuf,"{\"result\":\"remove\",\"coin\":\"%s\",\"coins\":%s}",coinstr,arraystr);
-                    free(arraystr), free_json(array);
-                }
-            }
-            else
-            {
-                zerobuf[0] = 0;
-                str = 0;
-                printf("INSIDE COINS.(%s)\n",jsonstr);
-                copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
-                if ( coinstr == 0 )
-                    coinstr = zerobuf;
-                if ( strcmp(methodstr,"genmultisig") == 0 )
-                {
-                    if ( coinstr[0] == 0 )
-                        strcpy(retbuf,"{\"error\":\"no coin specified\"}");
-                    else
-                    {
-                        copy_cJSON(buf0,cJSON_GetObjectItem(json,"refcontact"));
-                        copy_cJSON(buf1,cJSON_GetObjectItem(json,"userpubkey"));
-                        email = cJSON_str(cJSON_GetObjectItem(json,"email"));
-                        buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
-                        str = genmultisig(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,coinstr,buf0,MGW.M,MGW.N,MGW.srv64bits,MGW.N,buf1,email,buyNXT);
-                        nn_publish(str,1);
-                    }
-                }
-                else if ( strcmp(methodstr,"setmultisig") == 0 )
-                    str = setmultisig(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,jsonstr);
-                else if ( strcmp(methodstr,"getmsigpubkey") == 0 && coinstr[0] != 0 )
-                {
-                    copy_cJSON(buf0,cJSON_GetObjectItem(json,"refNXTaddr"));
-                    copy_cJSON(buf1,cJSON_GetObjectItem(json,"myacctcoinaddr"));
-                    copy_cJSON(buf2,cJSON_GetObjectItem(json,"mypubkey"));
-                    str = getmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
+                    copy_cJSON(buf0,cJSON_GetObjectItem(json,"refcontact"));
+                    copy_cJSON(buf1,cJSON_GetObjectItem(json,"userpubkey"));
+                    email = cJSON_str(cJSON_GetObjectItem(json,"email"));
+                    buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
+                    str = genmultisig(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,coinstr,buf0,MGW.M,MGW.N,MGW.srv64bits,MGW.N,buf1,email,buyNXT);
                     nn_publish(str,1);
                 }
-                else if ( strcmp(methodstr,"setmsigpubkey") == 0 && coinstr[0] != 0 )
+            }
+            else if ( strcmp(methodstr,"setmultisig") == 0 )
+                str = setmultisig(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,jsonstr);
+            else if ( strcmp(methodstr,"getmsigpubkey") == 0 && coinstr[0] != 0 )
+            {
+                copy_cJSON(buf0,cJSON_GetObjectItem(json,"refNXTaddr"));
+                copy_cJSON(buf1,cJSON_GetObjectItem(json,"myacctcoinaddr"));
+                copy_cJSON(buf2,cJSON_GetObjectItem(json,"mypubkey"));
+                str = getmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
+                nn_publish(str,1);
+            }
+            else if ( strcmp(methodstr,"setmsigpubkey") == 0 && coinstr[0] != 0 )
+            {
+                copy_cJSON(buf0,cJSON_GetObjectItem(json,"refNXTaddr"));
+                copy_cJSON(buf1,cJSON_GetObjectItem(json,"addr"));
+                copy_cJSON(buf2,cJSON_GetObjectItem(json,"userpubkey"));
+                str = setmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
+            }
+            else if ( strcmp(methodstr,"acctpubkeys") == 0 && coinstr[0] != 0 )
+            {
+                if ( (coin= coin777_find(coinstr)) != 0 )
                 {
-                    copy_cJSON(buf0,cJSON_GetObjectItem(json,"refNXTaddr"));
-                    copy_cJSON(buf1,cJSON_GetObjectItem(json,"addr"));
-                    copy_cJSON(buf2,cJSON_GetObjectItem(json,"userpubkey"));
-                    str = setmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
+                    if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
+                        strcpy(retbuf,"{\"result\":\"published acctpubkeys\"}");
                 }
-                else if ( strcmp(methodstr,"acctpubkeys") == 0 && coinstr[0] != 0 )
-                {
-                    if ( (coin= coin777_find(coinstr)) != 0 )
-                    {
-                        if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
-                            strcpy(retbuf,"{\"result\":\"published acctpubkeys\"}");
-                    }
-                }
-                else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);
-                if ( str != 0 )
-                {
-                    strcpy(retbuf,str);
-                    free(str);
-                }
+            }
+            else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);
+            if ( str != 0 )
+            {
+                strcpy(retbuf,str);
+                free(str);
             }
         }
     }
