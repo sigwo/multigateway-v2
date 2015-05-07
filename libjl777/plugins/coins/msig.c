@@ -889,6 +889,7 @@ int32_t init_public_msigs()
 
 int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
 {
+    int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json);
     char retbuf[1024],*retstr = 0;
     cJSON *json,*array;
     if ( (array= cJSON_Parse(str)) != 0 )
