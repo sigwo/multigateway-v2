@@ -36,12 +36,13 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
     int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
     cJSON *item,*array; uint64_t gatewaybits; int32_t i,n=0,gatewayid,updated = 0;
     char gatewayNXT[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
-    copy_cJSON(gatewayNXT,cJSON_GetObjectItem(item,"NXT"));
-    copy_cJSON(coinstr,cJSON_GetObjectItem(item,"coin"));
-    gatewayid = get_API_int(cJSON_GetObjectItem(item,"gatewayid"),-1);
+    copy_cJSON(gatewayNXT,cJSON_GetObjectItem(json,"NXT"));
+    copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
+    gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
     gatewaybits = calc_nxt64bits(gatewayNXT);
-    if ( (array= cJSON_GetObjectItem(item,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
+        printf("arraysize.%d\n",n);
         for (i=0; i<n; i++)
         {
             item = cJSON_GetArrayItem(array,i);

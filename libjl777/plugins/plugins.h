@@ -486,7 +486,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     }
     else
     {
-        fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d (%s) ready.%d remote.%d\n",method,plugin,is_bundled_plugin(plugin),origargstr,dp->readyflag,dp->allowremote);
+        fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d remote.%d\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote);
         if ( dp->readyflag == 0 )
         {
             printf("readyflag.%d\n",dp->readyflag);
