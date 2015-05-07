@@ -701,6 +701,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t datalen)
         }
         else retstr = clonestr("{\"error\":\"datalen mismatch\"}");
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
+    printf("BUSDATA.(%s) (%x)\n",retstr,*(int32_t *)msg);
     return(retstr);
 }
 
@@ -728,7 +729,7 @@ uint8_t *conv_busdata(int32_t *datalenp,cJSON *json)
     str = cJSON_Print(datajson);
     _stripwhite(str,' ');
     slen = (int32_t)strlen(str) + 1;
-    printf("conv.(%s)\n",str);
+    printf("conv.(%s) slen.%d\n",str,slen);
     *datalenp = slen + len;
     if ( len > 0 )
     {
@@ -736,6 +737,8 @@ uint8_t *conv_busdata(int32_t *datalenp,cJSON *json)
         memcpy(both,str,slen);
         memcpy(both+slen,data,len);
         free(data), free(str);
+nn_busdata_processor(0,both,*datalenp);
+
         return(both);
     }
     else return((uint8_t *)str);
@@ -938,7 +941,7 @@ void serverloop(void *_args)
                 free(retstr);
             }
         }
-    }
+    } else conv_busdata(&i,cJSON_Parse("{\"key\":\"foo\",\"data\":\"deadbeef\"}"));
     while ( 1 )
     {
 #ifdef STANDALONE

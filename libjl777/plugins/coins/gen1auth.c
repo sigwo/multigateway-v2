@@ -86,46 +86,35 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
 
 cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 {
-    char str[MAX_JSON_FIELD],pubkey[512],coinaddr[512],*retstr;
+    char pubkey[512],account[512],coinaddr[512],*retstr;
     cJSON *json,*item,*array = 0;
     int32_t i,n;
-    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listaccounts","")) != 0 )
+    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listreceivedbyaddress","[1 true]")) != 0 )
     {
         //printf("listaccounts.(%s)\n",retstr);
-        retstr[0] = '[';
-        n = (int32_t)strlen(retstr);
-        retstr[n-1] = ']';
-        for (i=0; i<n; i++)
-            if ( retstr[i] == ':' )
-                retstr[i] = ',';
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
             {
-                for (i=0; i<n; i+=2)
+                for (i=0; i<n; i++)
                 {
-                    copy_cJSON(str,cJSON_GetArrayItem(json,i));
-                    if ( is_decimalstr(str) != 0 )
+                    item = cJSON_GetArrayItem(json,i);
+                    copy_cJSON(account,cJSON_GetObjectItem(item,"account"));
+                    copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
+                    if ( is_decimalstr(account) != 0 )
                     {
-                        if ( get_acct_coinaddr(coinaddr,coinstr,serverport,userpass,str) != 0 )
+                        if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
                         {
-                            if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
-                            {
-                                item = cJSON_CreateObject();
-                                cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(str));
-                                cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
-                                cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
-                                if ( array == 0 )
-                                    array = cJSON_CreateArray();
-                                cJSON_AddItemToArray(array,item);
-                            }
+                            item = cJSON_CreateObject();
+                            cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(account));
+                            cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
+                            cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
+                            if ( array == 0 )
+                                array = cJSON_CreateArray();
+                            cJSON_AddItemToArray(array,item);
                         }
                     }
                 }
-                //sprintf(addr,"\"%s\"",NXTaddr);
-                //strcpy(coinaddr,retstr);
-                //free(retstr);
-                //return(coinaddr);
             }
             free_json(json);
         } else printf("couldnt parse.(%s)\n",retstr);
