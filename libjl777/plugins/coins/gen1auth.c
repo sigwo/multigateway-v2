@@ -119,7 +119,7 @@ cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                                 cJSON_AddItemToArray(array,item);
                             }
                         }
-                        else printf("(%s) -> (%s)? ",account,NXTaddr);
+                        else printf("decimal.%d (%s) -> (%s)? ",is_decimalstr(account),account,NXTaddr);
                     }
                 }
             }
