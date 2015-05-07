@@ -889,7 +889,7 @@ int32_t init_public_msigs()
 
 int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
 {
-    char *retstr = 0;
+    char retbuf[1024],*retstr = 0;
     cJSON *json,*array;
     if ( (array= cJSON_Parse(str)) != 0 )
     {
@@ -903,8 +903,10 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
         retstr = cJSON_Print(json);
         _stripwhite(retstr,' ');
         nn_publish(retstr,1);
+        process_acctpubkeys(retbuf,retstr,json);
         free(retstr);
         free_json(json);
+        printf("processed.(%s)\n",retbuf);
         return(0);
     }
     return(-1);
