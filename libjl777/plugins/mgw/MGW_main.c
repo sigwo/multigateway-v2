@@ -34,7 +34,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
 {
     int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
-    cJSON *item,*array; uint64_t gatewaybits; int32_t i,n,gatewayid,updated = 0;
+    cJSON *item,*array; uint64_t gatewaybits; int32_t i,n=0,gatewayid,updated = 0;
     char gatewayNXT[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
     copy_cJSON(gatewayNXT,cJSON_GetObjectItem(item,"NXT"));
     copy_cJSON(coinstr,cJSON_GetObjectItem(item,"coin"));
