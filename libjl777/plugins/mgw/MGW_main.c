@@ -86,9 +86,122 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     return(updated);
 }
 
+struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char *NXTaddr,char *userpubkey,char *sender)
+{
+    struct multisig_addr *msig;
+    int32_t size = (int32_t)(sizeof(*msig) + n*sizeof(struct pubkey_info));
+    msig = calloc(1,size);
+    msig->size = size;
+    msig->n = n;
+    msig->created = (uint32_t)time(NULL);
+    if ( sender != 0 && sender[0] != 0 )
+        msig->sender = calc_nxt64bits(sender);
+    safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
+    safecopy(msig->NXTaddr,NXTaddr,sizeof(msig->NXTaddr));
+    if ( userpubkey != 0 && userpubkey[0] != 0 )
+        safecopy(msig->NXTpubkey,userpubkey,sizeof(msig->NXTpubkey));
+    msig->m = m;
+    return(msig);
+}
+
+char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n,char *acctparm)
+{
+    int32_t i;
+    char *paramstr = 0;
+    cJSON *array,*mobj,*keys,*key;
+    keys = cJSON_CreateArray();
+    for (i=0; i<n; i++)
+    {
+        key = cJSON_CreateString(pubkeys[i].pubkey);
+        cJSON_AddItemToArray(keys,key);
+    }
+    mobj = cJSON_CreateNumber(m);
+    array = cJSON_CreateArray();
+    if ( array != 0 )
+    {
+        cJSON_AddItemToArray(array,mobj);
+        cJSON_AddItemToArray(array,keys);
+        if ( acctparm != 0 )
+            cJSON_AddItemToArray(array,cJSON_CreateString(acctparm));
+        paramstr = cJSON_Print(array);
+        _stripwhite(paramstr,' ');
+        free_json(array);
+    }
+printf("createmultisig_json_params.(%s)\n",paramstr);
+    return(paramstr);
+}
+
+int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params)
+{
+    char addr[1024],*retstr;
+    cJSON *json,*redeemobj,*msigobj;
+    int32_t flag = 0;
+    if ( addmultisig != 0 )
+    {
+        if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"addmultisigaddress",params)) != 0 )
+        {
+            strcpy(multisigaddr,retstr);
+            free(retstr);
+            sprintf(addr,"\"%s\"",multisigaddr);
+            if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"validateaddress",addr)) != 0 )
+            {
+                json = cJSON_Parse(retstr);
+                if ( json == 0 ) printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+                else
+                {
+                    if ( (redeemobj= cJSON_GetObjectItem(json,"hex")) != 0 )
+                    {
+                        copy_cJSON(redeemScript,redeemobj);
+                        flag = 1;
+                    } else printf("missing redeemScript in (%s)\n",retstr);
+                    free_json(json);
+                }
+                free(retstr);
+            }
+        } else printf("error creating multisig address\n");
+    }
+    else
+    {
+        if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"createmultisig",params)) != 0 )
+        {
+            json = cJSON_Parse(retstr);
+            if ( json == 0 ) printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+            else
+            {
+                if ( (msigobj= cJSON_GetObjectItem(json,"address")) != 0 )
+                {
+                    if ( (redeemobj= cJSON_GetObjectItem(json,"redeemScript")) != 0 )
+                    {
+                        copy_cJSON(multisigaddr,msigobj);
+                        copy_cJSON(redeemScript,redeemobj);
+                        flag = 1;
+                    } else printf("missing redeemScript in (%s)\n",retstr);
+                } else printf("multisig missing address in (%s) params.(%s)\n",retstr,params);
+                free_json(json);
+            }
+            free(retstr);
+        } else printf("error issuing createmultisig.(%s)\n",params);
+    }
+    return(flag);
+}
+
+int32_t issue_createmultisig(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t use_addmultisig,struct multisig_addr *msig)
+{
+    int32_t flag = 0;
+    char *params;
+    params = createmultisig_json_params(msig->pubkeys,msig->m,msig->n,(use_addmultisig != 0) ? msig->NXTaddr : 0);
+    flag = 0;
+    if ( params != 0 )
+    {
+        flag = generate_multisigaddr(msig->multisigaddr,msig->redeemScript,coinstr,serverport,userpass,use_addmultisig,params);
+        free(params);
+    } else printf("error generating msig params\n");
+    return(flag);
+}
+
 struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,uint64_t nxt64bits,char *coinstr,char coinaddrs[][256],char pubkeys[][1024])
 {
-    uint64_t key[16]; char NXTpubkey[128],NXTaddr[64]; int32_t i,keylen,len; struct coin777 *coin; struct multisig_addr *msig;
+    uint64_t key[16]; char NXTpubkey[128],NXTaddr[64]; int32_t flag,i,keylen,len; struct coin777 *coin; struct multisig_addr *msig;
     key[0] = stringbits(coinstr);
     for (i=0; i<n; i++)
         key[i+1] = srv64bits[i];
@@ -100,11 +213,22 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
     {
         expand_nxt64bits(NXTaddr,nxt64bits);
         set_NXTpubkey(NXTpubkey,NXTaddr);
-        if ( (msig= gen_multisig_addr(0,m,n,coinstr,coin->serverport,coin->userpass,coin->use_addmultisig,NXTaddr,NXTpubkey,srv64bits)) != 0 )
+        msig = alloc_multisig_addr(coinstr,m,n,NXTaddr,NXTpubkey,0);
+        for (i=0; i<msig->n; i++)
         {
-            if ( db777_add(1,DB_msigs,key,keylen,msig,msig->size) != 0 )
-                printf("error saving msig.(%s)\n",msig->multisigaddr);
+            printf("i.%d n.%d msig->n.%d NXT.(%s) (%s) (%s)\n",i,n,msig->n,msig->NXTaddr,coinaddrs[i],pubkeys[i]);
+            strcpy(msig->pubkeys[i].coinaddr,coinaddrs[i]);
+            strcpy(msig->pubkeys[i].pubkey,pubkeys[i]);
+            msig->pubkeys[i].nxt64bits = srv64bits[i];
         }
+        flag = issue_createmultisig(msig->multisigaddr,msig->redeemScript,coinstr,coin->serverport,coin->userpass,coin->use_addmultisig,msig);
+        if ( flag == 0 )
+        {
+            free(msig);
+            return(0);
+        }
+        if ( db777_add(1,DB_msigs,key,keylen,msig,msig->size) != 0 )
+            printf("error saving msig.(%s)\n",msig->multisigaddr);
     }
     return(msig);
 }
@@ -119,7 +243,6 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
     copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
     gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
     gatewaybits = calc_nxt64bits(gatewayNXT);
-    printf("process acctpubkeys\n");
     if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
         printf("arraysize.%d\n",n);
@@ -137,9 +260,34 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
                 free(msig), count++;
         }
     }
-    sprintf(retbuf,"{\"result\":\"success\",\"gatewayid\":%d,\"gatewayNXT\":\"%s\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d}",gatewayid,gatewayNXT,coinstr,updated,n);
+    sprintf(retbuf,"{\"result\":\"success\",\"gatewayid\":%d,\"gatewayNXT\":\"%s\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d,\"msigs\":%d}",gatewayid,gatewayNXT,coinstr,updated,n,count);
     printf("(%s)\n",retbuf);
     return(updated);
+}
+
+int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
+{
+    char retbuf[1024],*retstr = 0;
+    cJSON *json,*array;
+    if ( (array= cJSON_Parse(str)) != 0 )
+    {
+        json = cJSON_CreateObject();
+        cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
+        cJSON_AddItemToObject(json,"method",cJSON_CreateString("myacctpubkeys"));
+        cJSON_AddItemToObject(json,"pubkeys",array);
+        cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
+        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
+        cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(MGW.gatewayid));
+        retstr = cJSON_Print(json);
+        _stripwhite(retstr,' ');
+        nn_publish(retstr,1);
+        process_acctpubkeys(retbuf,retstr,json);
+        free(retstr);
+        free_json(json);
+        printf("processed.(%s)\n",retbuf);
+        return(0);
+    }
+    return(-1);
 }
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)

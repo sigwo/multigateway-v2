@@ -250,60 +250,6 @@ struct cointx_info *createrawtransaction(char *coinstr,char *serverport,char *us
     return(rettx);
 }
 
-int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params)
-{
-    char addr[1024],*retstr;
-    cJSON *json,*redeemobj,*msigobj;
-    int32_t flag = 0;
-    if ( addmultisig != 0 )
-    {
-        if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"addmultisigaddress",params)) != 0 )
-        {
-            strcpy(multisigaddr,retstr);
-            free(retstr);
-            sprintf(addr,"\"%s\"",multisigaddr);
-            if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"validateaddress",addr)) != 0 )
-            {
-                json = cJSON_Parse(retstr);
-                if ( json == 0 ) printf("Error before: [%s]\n",cJSON_GetErrorPtr());
-                else
-                {
-                    if ( (redeemobj= cJSON_GetObjectItem(json,"hex")) != 0 )
-                    {
-                        copy_cJSON(redeemScript,redeemobj);
-                        flag = 1;
-                    } else printf("missing redeemScript in (%s)\n",retstr);
-                    free_json(json);
-                }
-                free(retstr);
-            }
-        } else printf("error creating multisig address\n");
-    }
-    else
-    {
-        if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"createmultisig",params)) != 0 )
-        {
-            json = cJSON_Parse(retstr);
-            if ( json == 0 ) printf("Error before: [%s]\n",cJSON_GetErrorPtr());
-            else
-            {
-                if ( (msigobj= cJSON_GetObjectItem(json,"address")) != 0 )
-                {
-                    if ( (redeemobj= cJSON_GetObjectItem(json,"redeemScript")) != 0 )
-                    {
-                        copy_cJSON(multisigaddr,msigobj);
-                        copy_cJSON(redeemScript,redeemobj);
-                        flag = 1;
-                    } else printf("missing redeemScript in (%s)\n",retstr);
-                } else printf("multisig missing address in (%s) params.(%s)\n",retstr,params);
-                free_json(json);
-            }
-            free(retstr);
-        } else printf("error issuing createmultisig.(%s)\n",params);
-    }
-    return(flag);
-}
-
 int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr)
 {
     cJSON *json,*array,*json2;

@@ -257,24 +257,6 @@ void set_legacy_coinid(char *coinstr,int32_t legacyid)
     }
 }
 
-struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char *NXTaddr,char *userpubkey,char *sender)
-{
-    struct multisig_addr *msig;
-    int32_t size = (int32_t)(sizeof(*msig) + n*sizeof(struct pubkey_info));
-    msig = calloc(1,size);
-    msig->size = size;
-    msig->n = n;
-    msig->created = (uint32_t)time(NULL);
-    if ( sender != 0 && sender[0] != 0 )
-        msig->sender = calc_nxt64bits(sender);
-    safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
-    safecopy(msig->NXTaddr,NXTaddr,sizeof(msig->NXTaddr));
-    if ( userpubkey != 0 && userpubkey[0] != 0 )
-        safecopy(msig->NXTpubkey,userpubkey,sizeof(msig->NXTpubkey));
-    msig->m = m;
-    return(msig);
-}
-
 struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
 {
     int32_t j,M,n;
@@ -599,24 +581,10 @@ struct multisig_addr *finalize_msig(struct multisig_addr *msig,uint64_t *srvbits
     return(msig);
 }
 
-int32_t issue_createmultisig(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t use_addmultisig,struct multisig_addr *msig)
-{
-    char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n,char *acctparm);
-    int32_t flag = 0;
-    char *params;
-    params = createmultisig_json_params(msig->pubkeys,msig->m,msig->n,(use_addmultisig != 0) ? msig->NXTaddr : 0);
-    flag = 0;
-    if ( params != 0 )
-    {
-        flag = generate_multisigaddr(msig->multisigaddr,msig->redeemScript,coinstr,serverport,userpass,use_addmultisig,params);
-        free(params);
-    } else printf("error generating msig params\n");
-    return(flag);
-}
-
 struct multisig_addr *gen_multisig_addr(char *sender,int32_t M,int32_t N,char *coinstr,char *serverport,char *userpass,int32_t use_addmultisig,char *refNXTaddr,char *userpubkey,uint64_t *srvbits)
 {
-    uint64_t refbits;//,srvbits[16];
+    int32_t issue_createmultisig(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t use_addmultisig,struct multisig_addr *msig);
+    uint64_t refbits;
     int32_t flag = 0;
     struct multisig_addr *msig;
     refbits = calc_nxt64bits(refNXTaddr);
@@ -882,32 +850,6 @@ int32_t init_public_msigs()
     }
     printf("added.%d multisig addrs\n",added);
     return(added);
-}
-
-int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
-{
-    int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json);
-    char retbuf[1024],*retstr = 0;
-    cJSON *json,*array;
-    if ( (array= cJSON_Parse(str)) != 0 )
-    {
-        json = cJSON_CreateObject();
-        cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
-        cJSON_AddItemToObject(json,"method",cJSON_CreateString("myacctpubkeys"));
-        cJSON_AddItemToObject(json,"pubkeys",array);
-        cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
-        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
-        cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(MGW.gatewayid));
-        retstr = cJSON_Print(json);
-        _stripwhite(retstr,' ');
-        nn_publish(retstr,1);
-        process_acctpubkeys(retbuf,retstr,json);
-        free(retstr);
-        free_json(json);
-        printf("processed.(%s)\n",retbuf);
-        return(0);
-    }
-    return(-1);
 }
 
 #endif
