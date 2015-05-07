@@ -164,7 +164,6 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     {
         if ( strcmp(pubkey,newpubkey) == 0 )
             flag = 0;
-        free(pubkey);
     }
     if ( flag != 0 && db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) != 0 )
         printf("error adding (%s)\n",newpubkey);
