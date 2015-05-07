@@ -174,7 +174,7 @@ char *localcommand(char *line)
 void process_userinput(char *_line)
 {
     static char *line,*line2;
-    char plugin[512],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j,timeout,broadcastflag = 0;
+    char plugin[512],ipaddr[64],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j,timeout,broadcastflag = 0;
     printf("[%s]\n",_line);
     if ( line == 0 )
         line = calloc(1,65536), line2 = calloc(1,65536);
@@ -184,6 +184,17 @@ void process_userinput(char *_line)
     printf("expands to: [%s]\n",line);
     if ( line[0] == '!' )
         broadcastflag = 1, line++;
+    if (  is_ipaddr(line) != 0 )
+    {
+        expand_ipbits(ipaddr,calc_ipbits(line));
+        line += strlen(ipaddr) + 1;
+        printf("ipaddr.(%s) (%s)\n",ipaddr,line);
+        retstr = nn_direct(plugin,cmdstr);
+        printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
+        free(cmdstr);
+        free_json(json);
+        return;
+    }
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
@@ -218,6 +229,7 @@ void process_userinput(char *_line)
             strcpy(plugin,"relay");
         if ( cJSON_GetObjectItem(json,"plugin") == 0 )
             cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(plugin));
+        else copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         if ( method[0] == 0 )
             strcpy(method,"help");
         cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
@@ -231,8 +243,6 @@ void process_userinput(char *_line)
             retstr = nn_allpeers(cmdstr,timeout != 0 ? timeout : RELAYS.surveymillis,0);
         else if ( find_daemoninfo(&j,plugin,0,0) != 0 )
             retstr = plugin_method(0,1,plugin,method,0,0,cmdstr,timeout != 0 ? timeout : 0);
-        else if ( is_ipaddr(plugin) != 0 )
-            retstr = nn_direct(plugin,cmdstr);
         else retstr = nn_publish(pubstr,0);
         printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
         free(cmdstr);

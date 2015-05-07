@@ -633,10 +633,10 @@ void nn_direct_processor(int32_t directind,uint8_t *msg,int32_t len)
             if ( sock >= 0 )
             {
                 retlen = (int32_t)strlen(retstr) + 1;
-                if ( (sendlen= nn_send(sock,(char *)msg,retlen,0)) != retlen )
+                if ( (sendlen= nn_send(sock,retstr,retlen,0)) != retlen )
                     printf("sendlen.%d vs len.%d for direct response\n",sendlen,retlen);
             }
-            printf("RELAY DIRECTRETURN.(%s) from (%s) illegal sock.%d\n",retstr,(char *)msg,sock);
+            else printf("RELAY DIRECTRETURN.(%s) from (%s) illegal sock.%d\n",retstr,(char *)msg,sock);
             free(retstr);
         }
     }
@@ -801,7 +801,7 @@ int32_t poll_direct(int32_t timeoutmillis)
                     nn_direct_processor(inds[i],(uint8_t *)msg,len);
                     nn_freemsg(msg);
                     received++;
-                    if ( Debuglevel > 2 )
+                    if ( Debuglevel > 1 )
                         printf("%d %.6f DIRECT RECEIVED.%d i.%d/%d (%s) -> origind.%d\n",received,milliseconds(),n,i,max,(char *)msg,inds[i]);
                 }
             }
