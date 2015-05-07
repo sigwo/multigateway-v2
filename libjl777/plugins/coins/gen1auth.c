@@ -86,8 +86,9 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
 
 cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 {
-    char pubkey[512],account[512],coinaddr[512],*retstr;
+    char pubkey[512],NXTaddr[64],account[512],coinaddr[512],*retstr;
     cJSON *json,*item,*array = 0;
+    uint64_t nxt64bits;
     int32_t i,n;
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listreceivedbyaddress","[1, true]")) != 0 )
     {
@@ -100,19 +101,25 @@ cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                 {
                     item = cJSON_GetArrayItem(json,i);
                     copy_cJSON(account,cJSON_GetObjectItem(item,"account"));
-                    copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
                     if ( is_decimalstr(account) != 0 )
                     {
-                        if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
+                        nxt64bits = calc_nxt64bits(account);
+                        expand_nxt64bits(NXTaddr,nxt64bits);
+                        if ( strcmp(account,NXTaddr) == 0 )
                         {
-                            item = cJSON_CreateObject();
-                            cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(account));
-                            cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
-                            cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
-                            if ( array == 0 )
-                                array = cJSON_CreateArray();
-                            cJSON_AddItemToArray(array,item);
+                            copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
+                            if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
+                            {
+                                item = cJSON_CreateObject();
+                                cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(account));
+                                cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
+                                cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
+                                if ( array == 0 )
+                                    array = cJSON_CreateArray();
+                                cJSON_AddItemToArray(array,item);
+                            }
                         }
+                        else printf("(%s) -> (%s)? ",account,NXTaddr);
                     }
                 }
             }

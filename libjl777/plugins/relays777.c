@@ -624,7 +624,7 @@ char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len)
                 retstr = nn_allpeers_processor(args,msg,len);
             else retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,1000);
         }
-        retstr = plugin_method(0,-1,plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,1000);
+        else retstr = plugin_method(0,-1,plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,1000);
         free_json(json);
     } else retstr = clonestr((char *)msg);
     return(retstr);
