@@ -20,7 +20,7 @@
 void relay_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
-char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata" }; // list of supported methods
 
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
 
@@ -273,6 +273,7 @@ char *nn_directconnect(char *ipaddr)
     ipbits = (uint32_t)calc_ipbits(ipaddr);
     if ( (ind= find_ipbits(&RELAYS.pair,(uint32_t)ipbits)) >= 0 )
     {
+        set_endpointaddr("tcp",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
         sprintf(retbuf,"{\"result\":\"success\",\"direct\":\"%s\",\"connected\":\"%s\",\"status\":\"already connected\"}",SUPERNET.myipaddr,endpoint);
         return(clonestr(retbuf));
     }
@@ -425,7 +426,7 @@ char *nn_direct(char *ipaddr,char *request)
                     break;
             if ( (sendlen= nn_send(sock,request,len,0)) != len )
             {
-                printf("sendlen.%d vs len.%d\n",sendlen,len);
+                printf("sendlen.%d vs len.%d %s\n",sendlen,len,nn_errstr());
                 return(clonestr("{\"error\":\"error sending direct packet\"}"));
             }
             else return(clonestr("{\"result\":\"success\",\"details\":\"direct packet send\"}"));
@@ -669,6 +670,66 @@ char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     return(retstr);
 }
 
+char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t datalen)
+{
+    cJSON *json; uint32_t timestamp,checklen; int32_t len; bits256 hash; char hexstr[65],sha[65],src[64],key[MAX_JSON_FIELD],*retstr = 0;
+    if ( (json= cJSON_Parse((char *)msg)) != 0 )
+    {
+        copy_cJSON(src,cJSON_GetObjectItem(json,"NXT"));
+        copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
+        copy_cJSON(sha,cJSON_GetObjectItem(json,"s"));
+        checklen = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"l"),0);
+        timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"t"),0);
+        len = (int32_t)strlen((char *)msg) + 1;
+        if ( datalen > len )
+            datalen -= len, msg += len;
+        free_json(json);
+        if ( datalen == checklen )
+        {
+            calc_sha256(hexstr,hash.bytes,msg,datalen);
+            if ( strcmp(hexstr,sha) == 0 )
+            {
+                printf("NXT.%-24s key.(%s) sha.(%s) datalen.%d\n",src,key,hexstr,datalen);
+                retstr = clonestr("{\"result\":\"updated busdata\"}");
+            } else retstr = clonestr("{\"error\":\"hashes dont match\"}");
+        }
+        else retstr = clonestr("{\"error\":\"datalen mismatch\"}");
+    } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
+    return(retstr);
+}
+
+uint8_t *conv_busdata(int32_t *datalenp,cJSON *json)
+{
+    char key[MAX_JSON_FIELD],hexstr[65],numstr[65],*datastr,*str; uint8_t *data,*both = 0; bits256 hash;
+    uint64_t nxt64bits; uint32_t timestamp; cJSON *datajson; int32_t slen,len;
+    datastr = cJSON_str(cJSON_GetObjectItem(json,"data"));
+    timestamp = (uint32_t)time(NULL);
+    copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
+    nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(json,"NXT"));
+    datajson = cJSON_CreateObject();
+    cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
+    cJSON_AddItemToObject(datajson,"t",cJSON_CreateNumber(timestamp));
+    sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
+    if ( datastr != 0 && is_hexstr(datastr) != 0 )
+    {
+        len = (int32_t)strlen(datastr) >> 1;
+        data = malloc(len);
+        decode_hex(data,len,datastr);
+        calc_sha256(hexstr,hash.bytes,data,len);
+        cJSON_AddItemToObject(datajson,"s",cJSON_CreateString(hexstr));
+        cJSON_AddItemToObject(datajson,"l",cJSON_CreateNumber(len));
+    }
+    str = cJSON_Print(datajson);
+    _stripwhite(str,' ');
+    slen = (int32_t)strlen(str) + 1;
+    *datalenp = slen + len;
+    both = malloc(*datalenp);
+    memcpy(both,str,slen);
+    memcpy(both+slen,data,len);
+    free(data), free(str);
+    return(both);
+ }
+
 cJSON *relay_json(struct _relay_info *list)
 {
     cJSON *json,*array;
@@ -838,7 +899,7 @@ void serverloop(void *_args)
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
-        bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_lb_processor);
+        bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_busdata_processor);
     } else bussock = -1, lbargs->commandprocessor = nn_lb_processor, lbargs->sock = lbsock;
     RELAYS.lb.sock = lbsock, RELAYS.bus.sock = bussock, RELAYS.pubsock = pubsock;
     for (i=0; i<n; i++)
@@ -878,6 +939,21 @@ void serverloop(void *_args)
         if ( poll_daemons() == 0 && poll_direct(1) == 0 && SUPERNET.APISLEEP > 0 )
             msleep(SUPERNET.APISLEEP);
     }
+}
+
+char *busdata_sync(char *jsonstr,cJSON *json)
+{
+    uint8_t *data; int32_t datalen;
+    if ( SUPERNET.iamrelay != 0 && RELAYS.bus.sock >= 0 )
+    {
+        if ( (data= conv_busdata(&datalen,json)) > 0 )
+        {
+            nn_send(RELAYS.bus.sock,data,datalen,0);
+            free(data);
+            return(clonestr("{\"result\":\"sent to bus\"}"));
+        }
+        return(clonestr("{\"error\":\"couldnt convert busdata\"}"));
+    } else return(clonestr("{\"error\":\"not relay or no bus sock\"}"));
 }
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
@@ -923,6 +999,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             }
             else if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
+            else if ( strcmp(methodstr,"busdata") == 0 )
+                retstr = busdata_sync(jsonstr,json);
             else if ( (myipaddr= cJSON_str(cJSON_GetObjectItem(json,"myipaddr"))) != 0 && is_ipaddr(myipaddr) != 0 )
             {
                 if ( strcmp(methodstr,"direct") == 0 )

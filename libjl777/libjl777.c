@@ -1402,6 +1402,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             DB_NXTaccts = db777_create(0,0,"NXTacct",0);
         if ( DB_nodestats == 0 )
             DB_nodestats = db777_create(0,0,"nodestats",0);
+        if ( DB_busdata == 0 )
+            DB_busdata = db777_create(0,0,"busdata",0);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {

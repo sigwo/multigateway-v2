@@ -36,7 +36,7 @@ struct db777 *db777_getDB(char *dbname);
 struct unspent_entries *db777_extract_unspents(uint32_t *nump,struct db777 *DB);
 
 extern struct sophia_info SOPHIA;
-extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats;//,*DB_NXTassettx,;
+extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
 
 #endif
 #else

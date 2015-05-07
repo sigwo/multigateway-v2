@@ -173,7 +173,7 @@ char *localcommand(char *line)
 
 char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,int32_t broadcastflag)
 {
-    int32_t i,j; char *pubstr,*str,*cmdstr = 0; cJSON *json;
+    int32_t i,j; char *pubstr,*cmdstr = 0; cJSON *json;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
@@ -188,15 +188,7 @@ char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,
         method[j] = 0;
     } else method[0] = 0;
     if ( (json= cJSON_Parse(line+i+1)) == 0 )
-    {
         json = cJSON_CreateObject();
-        if ( line[i+1] != 0 )
-        {
-            str = stringifyM(&line[i+1]);
-            cJSON_AddItemToObject(json,"content",cJSON_CreateString(str));
-            free(str);
-        }
-    }
     if ( json != 0 )
     {
         if ( cJSON_GetObjectItem(json,"myipaddr") == 0 )
@@ -241,7 +233,7 @@ void process_userinput(char *_line)
         if ( (cmdstr = parse_expandedline(plugin,method,&timeout,line,broadcastflag)) != 0 )
         {
             printf("ipaddr.(%s) (%s)\n",ipaddr,line);
-            retstr = nn_direct(ipaddr,cmdstr);
+            retstr = nn_direct(ipaddr,line);
             printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
             free(cmdstr);
         }
