@@ -32,7 +32,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,*methodstr,*ipaddr,*retstr,*myipaddr;
+    char *resultstr,*methodstr,ipaddr[2048],*retstr,myipaddr[2048];
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -48,8 +48,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             return((int32_t)strlen(retbuf));
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
-        ipaddr = cJSON_str(cJSON_GetObjectItem(json,"ipaddr"));
-        myipaddr = cJSON_str(cJSON_GetObjectItem(json,"myipaddr"));
+        copy_cJSON(ipaddr,cJSON_GetObjectItem(json,"ipaddr"));
+        copy_cJSON(myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
         if ( methodstr == 0 || methodstr[0] == 0 )
         {
             printf("(%s) has not method\n",jsonstr);
