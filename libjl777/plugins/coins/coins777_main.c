@@ -321,12 +321,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                                         strcpy(serverport,"http://127.0.0.1:14632");
                                     set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,item,coinstr,serverport,userpass);
                                 }
+                                if ( coin->acctpubkeyjson != 0 )
+                                    free_json(coin->acctpubkeyjson);
                                 coin->acctpubkeyjson = get_msig_pubkeys(coin->name,coin->serverport,coin->userpass);
                                 if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
-                                {
-                                    nn_publish(str,1);
-                                    free(str);
-                                }
+                                     free(str);
                             }
                         }
                         if ( userpass != 0 )
