@@ -899,12 +899,12 @@ void serverloop(void *_args)
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allpeers_processor);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
-    lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
         bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_busdata_processor);
-    } else bussock = -1, lbargs->commandprocessor = nn_lb_processor, lbargs->sock = lbsock;
+    } else bussock = -1, lbargs->commandprocessor = nn_lb_processor,
+    lbargs->sock = lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
     RELAYS.lb.sock = lbsock, RELAYS.bus.sock = bussock, RELAYS.pubsock = pubsock;
     for (i=0; i<n; i++)
     {
@@ -947,12 +947,17 @@ void serverloop(void *_args)
 
 char *busdata_sync(char *jsonstr,cJSON *json)
 {
-    uint8_t *data; int32_t datalen;
+    uint8_t *data; int32_t datalen,sendlen;
     if ( SUPERNET.iamrelay != 0 && RELAYS.bus.sock >= 0 )
     {
-        if ( (data= conv_busdata(&datalen,json)) > 0 )
+        if ( (data= conv_busdata(&datalen,json)) != 0 )
         {
-            nn_send(RELAYS.bus.sock,data,datalen,0);
+            if ( (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) != datalen )
+            {
+                printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
+                free(data);
+                return(clonestr("{\"error\":\"couldnt send to bus\"}"));
+            }
             free(data);
             return(clonestr("{\"result\":\"sent to bus\"}"));
         }
@@ -1015,10 +1020,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     {
                         if ( SUPERNET.iamrelay != 0 )
                         {
-                            ipbits = calc_ipbits(myipaddr);
-                            update_serverbits(&RELAYS.peer,myipaddr,ipbits,NN_SURVEYOR);
-                            update_serverbits(&RELAYS.sub,myipaddr,ipbits,NN_PUB);
-                            nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                            if ( (ipbits= calc_ipbits(myipaddr)) != 0 )
+                            {
+                                update_serverbits(&RELAYS.peer,myipaddr,ipbits,NN_SURVEYOR);
+                                update_serverbits(&RELAYS.sub,myipaddr,ipbits,NN_PUB);
+                                nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                            }
                         }
                         sprintf(retbuf,"{\"result\":\"added ipaddr\"}");
                     } else sprintf(retbuf,"{\"result\":\"didnt add ipaddr, probably already there\"}");
