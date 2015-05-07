@@ -20,7 +20,7 @@
 void peers_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME PEERS;
-char *PLUGNAME(_methods)[] = { "getinfo", "list", "newpeers", "listrelays", "newrelays" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "direct" }; // list of supported methods
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -32,7 +32,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,*methodstr;
+    char *resultstr,*methodstr,*ipaddr,*retstr,*myipaddr;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -48,6 +48,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             return((int32_t)strlen(retbuf));
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
+        ipaddr = cJSON_str(cJSON_GetObjectItem(json,"ipaddr"));
+        myipaddr = cJSON_str(cJSON_GetObjectItem(json,"myipaddr"));
         if ( methodstr == 0 || methodstr[0] == 0 )
         {
             printf("(%s) has not method\n",jsonstr);
@@ -58,9 +60,17 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-        else if ( strcmp(methodstr,"getinfo") == 0 )
+        else if ( strcmp(methodstr,"direct") == 0 )
         {
-            strcpy(retbuf,"{\"result\":\"put getinfo here\"}");
+            char *nn_directconnect(char *ipaddr);
+            if ( ipaddr != 0 && strcmp(ipaddr,SUPERNET.myipaddr) == 0 )
+            {
+                if ( (retstr= nn_directconnect(myipaddr)) != 0 )
+                {
+                    strcpy(retbuf,retstr);
+                    free(retstr);
+                }
+            }
         }
         else strcpy(retbuf,"{\"error\":\"under construction\"}");
     }

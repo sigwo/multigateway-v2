@@ -196,7 +196,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
                 if ( tag != 0 )
                     add_tagstr(dp,tag,retstrp,args);
                 dp->numsent++;
-                if ( nn_broadcast(&dp->perm.socks,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len + 1) < 0 )
+                if ( nn_local_broadcast(&dp->perm.socks,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len + 1) < 0 )
                     printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
                 else return(tag);
             }

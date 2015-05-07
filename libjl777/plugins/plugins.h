@@ -192,7 +192,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         if ( permflag == 0 && instanceid != 0 )
         {
             if ( (sendstr= add_instanceid(dp,instanceid)) != 0 )
-                nn_broadcast(&dp->perm.socks,instanceid,LOCALCAST,(uint8_t *)sendstr,(int32_t)strlen(sendstr)+1), dp->numsent++, free(sendstr);
+                nn_local_broadcast(&dp->perm.socks,instanceid,LOCALCAST,(uint8_t *)sendstr,(int32_t)strlen(sendstr)+1), dp->numsent++, free(sendstr);
         }
         copy_cJSON(request,cJSON_GetObjectItem(json,"pluginrequest"));
         if ( strcmp(request,"SuperNET") == 0 )
@@ -202,14 +202,14 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
             {
                 if ( Debuglevel > 2 )
                     fprintf(stderr,"send return from (%s) <<<<<<<<<<<<<<<<<<<<<< \n",str);
-                nn_broadcast(&dp->perm.socks,instanceid,0,(uint8_t *)retstr,(int32_t)strlen(retstr)+1), dp->numsent++;
+                nn_local_broadcast(&dp->perm.socks,instanceid,0,(uint8_t *)retstr,(int32_t)strlen(retstr)+1), dp->numsent++;
                 free(retstr);
             }
         }
         else if ( instanceid != 0 && (broadcastflag= get_API_int(cJSON_GetObjectItem(json,"broadcast"),0)) > 0 )
         {
             fprintf(stderr,"send to other <<<<<<<<<<<<<<<<<<<<< \n");
-            nn_broadcast(&dp->perm.socks,instanceid,broadcastflag,(uint8_t *)str,len), dp->numsent++;
+            nn_local_broadcast(&dp->perm.socks,instanceid,broadcastflag,(uint8_t *)str,len), dp->numsent++;
         }
         free_json(json);
     } else printf("parse error.(%s)\n",str);
@@ -219,6 +219,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
             *dest = str;
         else
         {
+            int32_t complete_relay(struct relayargs *args,char *retstr);
             if ( args != 0 )
                 complete_relay(args,str);
             else printf("TAG.%llu -> no destination for.(%s)\n",(long long)tag,str);
@@ -257,7 +258,7 @@ int32_t poll_daemons() // the only thread that is allowed to modify Daemoninfos[
         {
             if ( (dp= Daemoninfos[i]) != 0 && dp->finished == 0 )
             {
-                if ( (n= poll_endpoints(messages,&dp->numrecv,dp->numsent,(counter&1)?&dp->perm:&dp->wss,timeoutmillis)) > 0 )
+                if ( (n= poll_local_endpoints(messages,&dp->numrecv,dp->numsent,(counter&1)?&dp->perm:&dp->wss,timeoutmillis)) > 0 )
                 {
                     for (i=0; i<n; i++,processed++)
                     {
@@ -455,26 +456,25 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
     return(clonestr("{\"error\":\"cant register inactive plugin\"}"));
 }
 
-char *plugin_method(char **retstrp,char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t timeout)
+char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t timeout)
 {
     struct daemon_info *dp;
     char retbuf[8192],methodbuf[1024],*str,*methodsstr,*retstr = 0;
     uint64_t tag;
     cJSON *json;
     struct relayargs *args = 0;
-    int32_t i,ind,len,override,async;
+    int32_t ind,async;
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
-    if ( previpaddr != 0 && strcmp(previpaddr,"remote") == 0 )
+    if ( localaccess < 0 )// && strcmp(previpaddr,"remote") == 0 )
     {
-        len = numiters, numiters = 1;
+        localaccess = 0;
         args = (struct relayargs *)method, method = 0, methodbuf[0] = 0;
         if ( (json= cJSON_Parse(origargstr)) != 0 )
             copy_cJSON(methodbuf,cJSON_GetObjectItem(json,"method"));
         method = methodbuf;
-        override = 1;
-    } else override = 0;
+    }
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) == 0 )
     {
         if ( is_bundled_plugin(plugin) != 0 )
@@ -492,9 +492,9 @@ char *plugin_method(char **retstrp,char *previpaddr,char *plugin,char *method,ui
             printf("readyflag.%d\n",dp->readyflag);
             return(clonestr("{\"error\":\"plugin not ready\"}"));
         }
-        if ( dp->allowremote == 0 && is_remote_access(previpaddr) != 0 )
+        if ( localaccess != 0 && dp->allowremote == 0 )
         {
-            printf("allowremote.%d isremote.%d\n",dp->allowremote,is_remote_access(previpaddr));
+            printf("allowremote.%d isremote.%d\n",dp->allowremote,!localaccess);
             sprintf(retbuf,"{\"error\":\"cant remote call plugin\",\"ipaddr\":\"%s\",\"plugin\":\"%s\"}",SUPERNET.myipaddr,plugin);
             return(clonestr(retbuf));
         }
@@ -509,34 +509,20 @@ char *plugin_method(char **retstrp,char *previpaddr,char *plugin,char *method,ui
         }
         else
         {
-            double elapsed,startmilli = milliseconds();
-            if ( numiters <= 0 )
-                numiters = 1;
-            for (i=0; i<numiters; i++)
+            *retstrp = 0;
+            if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,origargstr)) == 0 )
             {
-                *retstrp = 0;
-                if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,origargstr)) == 0 )
-                {
-                    printf("null tag from send_to_daemon\n");
-                    return(clonestr("{\"error\":\"null tag from send_to_daemon\"}"));
-                }
-                else if ( async != 0 )
-                    return(0);//override == 0 ? clonestr("{\"error\":\"request sent to plugin async\"}") : 0);
-                if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
-                {
-                    str = stringifyM(origargstr);
-                    sprintf(retbuf,"{\"error\":\"\",\"args\":%s}",str);
-                    free(str);
-                    return(clonestr(retbuf));
-                }
-                else if ( i < numiters-1 )
-                    free(*retstrp), *retstrp = 0;
-                //else printf("WAITED.(%s)\n",*retstrp);
+                printf("null tag from send_to_daemon\n");
+                return(clonestr("{\"error\":\"null tag from send_to_daemon\"}"));
             }
-            if ( numiters > 1 )
+            else if ( async != 0 )
+                return(0);//override == 0 ? clonestr("{\"error\":\"request sent to plugin async\"}") : 0);
+            if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
             {
-                elapsed = (milliseconds() - startmilli);
-                printf("elapsed %f millis for %d iterations ave [%.1f micros]\n",elapsed,i,(1000. * elapsed)/i);
+                str = stringifyM(origargstr);
+                sprintf(retbuf,"{\"error\":\"\",\"args\":%s}",str);
+                free(str);
+                return(clonestr(retbuf));
             }
         }
         return(*retstrp);

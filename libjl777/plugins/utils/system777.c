@@ -166,18 +166,18 @@ void randombytes(unsigned char *x,long xlen);
 double milliseconds(void);
 void msleep(uint32_t milliseconds);
 #define portable_sleep(n) msleep((n) * 1000)
-int32_t complete_relay(struct relayargs *args,char *retstr);
 
 int32_t getline777(char *line,int32_t max);
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *args);
 uint16_t wait_for_myipaddr(char *ipaddr);
+void process_userinput(char *line);
 
 char *get_localtransport(int32_t bundledflag);
 int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char *_connectaddr,int32_t timeout);
 int32_t shutdown_plugsocks(union endpoints *socks);
-int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len);
-int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis);
-int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis,void (*funcp)(char *line));
+int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len);
+int32_t poll_local_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis);
+
 void ensure_directory(char *dirname);
 uint32_t is_ipaddr(char *str);
 
@@ -186,18 +186,18 @@ void expand_ipbits(char *ipaddr,uint64_t ipbits);
 char *ipbits_str(uint64_t ipbits);
 char *ipbits_str2(uint64_t ipbits);
 struct sockaddr_in conv_ipbits(uint64_t ipbits);
+uint32_t conv_domainname(char *ipaddr,char *domain);
 int32_t ismyaddress(char *server);
+
 void set_endpointaddr(char *transport,char *endpoint,char *domain,uint16_t port,int32_t type);
 int32_t nn_portoffset(int32_t type);
 
-char *plugin_method(char **retstrp,char *previpaddr,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t numiters,int32_t async);
+char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t timeout);
 char *nn_direct(char *ipaddr,char *publishstr);
 char *nn_publish(char *publishstr,int32_t nostr);
 char *nn_allpeers(char *jsonquery,int32_t timeoutmillis,char *localresult);
 char *nn_loadbalanced(char *requeststr);
-
-int32_t nn_oppotype(int32_t type);
-int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis);
+char *relays_jsonstr(char *jsonstr,cJSON *argjson);
 
 #endif
 #else
@@ -209,7 +209,6 @@ int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis);
 #include "system777.c"
 #undef DEFINES_ONLY
 #endif
-
 
 struct nn_clock
 {
@@ -239,6 +238,39 @@ struct nn_thread
 void nn_thread_init (struct nn_thread *self,portable_thread_func *routine,void *arg);
 void nn_thread_term (struct nn_thread *self);
 
+static uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (ptrval & 15); return(ptrval); }
+
+void *aligned_alloc(uint64_t allocsize)
+{
+    void *ptr,*realptr;
+    realptr = calloc(1,allocsize + 16 + sizeof(realptr));
+    ptr = (void *)_align16((uint64_t)realptr + sizeof(ptr));
+    memcpy((void *)((long)ptr - sizeof(realptr)),&realptr,sizeof(realptr));
+    printf("aligned_alloc(%llu) realptr.%p -> ptr.%p, diff.%ld\n",(long long)allocsize,realptr,ptr,((long)ptr - (long)realptr));
+    return(ptr);
+}
+
+int32_t aligned_free(void *ptr)
+{
+    void *realptr;
+    long diff;
+    if ( ((long)ptr & 0xf) != 0 )
+    {
+        printf("misaligned ptr.%p being aligned_free\n",ptr);
+        return(-1);
+    }
+    memcpy(&realptr,(void *)((long)ptr - sizeof(realptr)),sizeof(realptr));
+    diff = ((long)ptr - (long)realptr);
+    if ( diff < (long)sizeof(ptr) || diff > 32 )
+    {
+        printf("ptr %p and realptr %p too far apart %ld\n",ptr,realptr,diff);
+        return(-2);
+    }
+    printf("aligned_free: ptr %p -> realptr %p %ld\n",ptr,realptr,diff);
+    free(realptr);
+    return(0);
+}
+
 void *portable_thread_create(void *funcp,void *argp)
 {
     //void nn_thread_term(struct nn_thread *self);
@@ -256,10 +288,7 @@ struct queueitem *queueitem(char *str)
     return(item);
 }
 
-void free_queueitem(void *itemptr)
-{
-    free((void *)((long)itemptr - sizeof(struct queueitem)));
-}
+void free_queueitem(void *itemptr) { free((void *)((long)itemptr - sizeof(struct queueitem))); }
 
 void lock_queue(queue_t *queue)
 {
@@ -459,164 +488,12 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
     return 1; //ok - we are mapped:)
 }
 
-static uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (ptrval & 15); return(ptrval); }
-
-void *aligned_alloc(uint64_t allocsize)
+uint16_t wait_for_myipaddr(char *ipaddr)
 {
-    void *ptr,*realptr;
-    realptr = calloc(1,allocsize + 16 + sizeof(realptr));
-    ptr = (void *)_align16((uint64_t)realptr + sizeof(ptr));
-    memcpy((void *)((long)ptr - sizeof(realptr)),&realptr,sizeof(realptr));
-    printf("aligned_alloc(%llu) realptr.%p -> ptr.%p, diff.%ld\n",(long long)allocsize,realptr,ptr,((long)ptr - (long)realptr));
-    return(ptr);
-}
-
-int32_t aligned_free(void *ptr)
-{
-    void *realptr;
-    long diff;
-    if ( ((long)ptr & 0xf) != 0 )
-    {
-        printf("misaligned ptr.%p being aligned_free\n",ptr);
-        return(-1);
-    }
-    memcpy(&realptr,(void *)((long)ptr - sizeof(realptr)),sizeof(realptr));
-    diff = ((long)ptr - (long)realptr);
-    if ( diff < (long)sizeof(ptr) || diff > 32 )
-    {
-        printf("ptr %p and realptr %p too far apart %ld\n",ptr,realptr,diff);
-        return(-2);
-    }
-    printf("aligned_free: ptr %p -> realptr %p %ld\n",ptr,realptr,diff);
-    free(realptr);
-    return(0);
-}
-
-int32_t getline777(char *line,int32_t max)
-{
-    static char prevline[1024];
-    struct timeval timeout;
-    fd_set fdset;
-    int32_t s;
-    line[0] = 0;
-    FD_ZERO(&fdset);
-    FD_SET(STDIN_FILENO,&fdset);
-    timeout.tv_sec = 0, timeout.tv_usec = 10000;
-    if ( (s= select(1,&fdset,NULL,NULL,&timeout)) < 0 )
-        fprintf(stderr,"wait_for_input: error select s.%d\n",s);
-    else
-    {
-        if ( FD_ISSET(STDIN_FILENO,&fdset) > 0 && fgets(line,max,stdin) == line )
-        {
-            line[strlen(line)-1] = 0;
-            if ( line[0] == 0 || (line[0] == '.' && line[1] == 0) )
-                strcpy(line,prevline);
-            else strcpy(prevline,line);
-        }
-    }
-    return((int32_t)strlen(line));
-}
-
-int32_t parse_ipaddr(char *ipaddr,char *ip_port)
-{
-    int32_t j,port = 0;
-    if ( ip_port != 0 && ip_port[0] != 0 )
-    {
-		strcpy(ipaddr,ip_port);
-        for (j=0; ipaddr[j]!=0&&j<60; j++)
-            if ( ipaddr[j] == ':' )
-            {
-                port = atoi(ipaddr+j+1);
-                break;
-            }
-        ipaddr[j] = 0;
-        //printf("(%s) -> (%s:%d)\n",ip_port,ipaddr,port);
-    } else strcpy(ipaddr,"127.0.0.1");
+    uint16_t port = 0;
+    printf("need a portable way to find IP addr\n");
+    getchar();
     return(port);
-}
-
-uint64_t _calc_ipbits(char *ip_port)
-{
-    int32_t port;
-    char ipaddr[64];
-    struct sockaddr_in addr;
-    port = parse_ipaddr(ipaddr,ip_port);
-    memset(&addr,0,sizeof(addr));
-    portable_pton(ip_port[0] == '[' ? AF_INET6 : AF_INET,ipaddr,&addr);
-    if ( 0 )
-    {
-        int i;
-        for (i=0; i<16; i++)
-            printf("%02x ",((uint8_t *)&addr)[i]);
-        printf("<- %s %x\n",ip_port,*(uint32_t *)&addr);
-    }
-    return(*(uint32_t *)&addr | ((uint64_t)port << 32));
-}
-
-uint64_t calc_ipbits(char *ip_port)
-{
-    uint64_t ipbits; char ipaddr[64];
-    ipbits = _calc_ipbits(ip_port);
-    expand_ipbits(ipaddr,ipbits);
-    if ( strcmp(ipaddr,ip_port) != 0 )
-        printf("calc_ipbits error: (%s) -> %llx -> (%s)\n",ip_port,(long long)ipbits,ipaddr);
-    return(ipbits);
-}
-
-void expand_ipbits(char *ipaddr,uint64_t ipbits)
-{
-    uint16_t port;
-    struct sockaddr_in addr;
-    memset(&addr,0,sizeof(addr));
-    *(uint32_t *)&addr = (uint32_t)ipbits;
-    portable_ntop(AF_INET,&addr,ipaddr,64);
-    if ( (port= (uint16_t)(ipbits>>32)) != 0 )
-        sprintf(ipaddr + strlen(ipaddr),":%d",port);
-    //sprintf(ipaddr,"%d.%d.%d.%d",(ipbits>>24)&0xff,(ipbits>>16)&0xff,(ipbits>>8)&0xff,(ipbits&0xff));
-}
-
-char *ipbits_str(uint64_t ipbits)
-{
-    static char ipaddr[64];
-    expand_ipbits(ipaddr,ipbits);
-    return(ipaddr);
-}
-
-char *ipbits_str2(uint64_t ipbits)
-{
-    static char ipaddr[64];
-    expand_ipbits(ipaddr,ipbits);
-    return(ipaddr);
-}
-
-uint32_t is_ipaddr(char *str)
-{
-    uint64_t ipbits; char ipaddr[64];
-    if ( str != 0 && str[0] != 0 && (ipbits= calc_ipbits(str)) != 0 )
-    {
-        expand_ipbits(ipaddr,(uint32_t)ipbits);
-        if ( strncmp(ipaddr,str,strlen(ipaddr)) == 0 )
-            return((uint32_t)ipbits);
-    }
-   // printf("(%s) is not ipaddr\n",str);
-    return(0);
-}
-
-uint32_t conv_domainname(char *ipaddr,char *domain)
-{
-    int32_t conv_domain(struct sockaddr_storage *ss,const char *addr,int32_t ipv4only);
-    int32_t ipv4only = 1;
-    uint32_t ipbits;
-    struct sockaddr_in ss;
-    if ( conv_domain((struct sockaddr_storage *)&ss,(const char *)domain,ipv4only) == 0 )
-    {
-        ipbits = *(uint32_t *)&ss.sin_addr;
-        expand_ipbits(ipaddr,ipbits);
-        if ( (uint32_t)calc_ipbits(ipaddr) == ipbits )
-            return(ipbits);
-        //printf("conv_domainname (%s) -> (%s)\n",domain,ipaddr);
-    } //else printf("error conv_domain.(%s)\n",domain);
-    return(0);
 }
 
 int32_t ismyaddress(char *server)
@@ -643,42 +520,6 @@ int32_t ismyaddress(char *server)
     }
     //printf("(%s) is not me (%s)\n",server,SUPERNET.myipaddr);
     return(0);
-}
-
-int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis)
-{
-    struct nn_pollfd pfd;
-    int32_t rc;
-    pfd.fd = sock;
-    pfd.events = NN_POLLIN | NN_POLLOUT;
-    if ( (rc= nn_poll(&pfd,1,timeoutmillis)) == 0 )
-        return(pfd.revents);
-    else return(-1);
-}
-
-void MGW_loop()
-{
-    int32_t poll_daemons(); char *SuperNET_JSON(char *JSONstr);
-    int i,n,timeoutmillis = 10;
-    char *messages[100],*msg;
-    poll_daemons();
-    if ( (n= poll_endpoints(messages,&MGW.numrecv,MGW.numsent,&MGW.all,timeoutmillis)) > 0 )
-    {
-        for (i=0; i<n; i++)
-        {
-            msg = SuperNET_JSON(messages[i]);
-            printf("%d of %d: (%s)\n",i,n,msg);
-            free(messages[i]);
-        }
-    }
-}
-
-uint16_t wait_for_myipaddr(char *ipaddr)
-{
-    uint16_t port = 0;
-    printf("need a portable way to find IP addr\n");
-    getchar();
-    return(port);
 }
 
 int32_t report_err(char *typestr,int32_t err,char *nncall,int32_t type,char *bindaddr,char *connectaddr)
@@ -733,7 +574,7 @@ int32_t shutdown_plugsocks(union endpoints *socks)
     return(errs);
 }
 
-int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
+int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
 {
     int32_t i,sock,errs = 0;
     for (i=0; i<(int32_t)(sizeof(socks->send)/sizeof(int32_t))+2; i++)
@@ -746,13 +587,13 @@ int32_t nn_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flag
             if ( (len= nn_send(sock,(char *)retstr,len,0)) <= 0 )
                 errs++, printf("error %d sending to socket.%d send.%d len.%d (%s)\n",len,sock,i,len,nn_strerror(nn_errno()));
             else if ( Debuglevel > 2 )
-                printf("nn_broadcast SENT.(%s) len.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,strlen((char *)retstr),(long long)instanceid,sock);
+                printf("nn_local_broadcast SENT.(%s) len.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,strlen((char *)retstr),(long long)instanceid,sock);
         }
     }
     return(errs);
 }
 
-int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis)
+int32_t poll_local_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis)
 {
     struct nn_pollfd pfd[sizeof(struct allendpoints)/sizeof(int32_t)];
     int32_t len,received=0,rc,i,n = 0;
@@ -789,42 +630,23 @@ int32_t poll_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,unio
     return(received);
 }
 
-int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis,void (*funcp)(char *line))
+void MGW_loop()
 {
-    char line[8192];
-    int32_t len,n = 0;
-    line[0] = 0;
-    if ( (n= poll_endpoints(messages,numrecvp,numsent,socks,timeoutmillis)) <= 0 && permanentflag == 0 && getline777(line,sizeof(line)-1) > 0 )
+    int32_t poll_daemons(); char *SuperNET_JSON(char *JSONstr);
+    int i,n,timeoutmillis = 10;
+    char *messages[100],*msg;
+    poll_daemons();
+    if ( (n= poll_local_endpoints(messages,&MGW.numrecv,MGW.numsent,&MGW.all,timeoutmillis)) > 0 )
     {
-        len = (int32_t)strlen(line);
-        if ( line[len-1] == '\n' )
-            line[--len] = 0;
-        if ( len > 0 )
+        for (i=0; i<n; i++)
         {
-            if ( funcp != 0 )
-                (*funcp)(line);
-            else messages[0] = clonestr(line), n = 1;
+            msg = SuperNET_JSON(messages[i]);
+            printf("%d of %d: (%s)\n",i,n,msg);
+            free(messages[i]);
         }
     }
-    return(n);
 }
 
-/*struct sockaddr_in conv_ipbits(uint64_t ipbits)
-{
-    char ipaddr[64];
-    uint16_t port;
-    struct hostent *host;
-    struct sockaddr_in server_addr;
-    port = (uint16_t)(ipbits>>32);
-    ipbits = (uint32_t)ipbits;
-    expand_ipbits(ipaddr,ipbits);
-    host = (struct hostent *)gethostbyname(ipaddr);
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-    server_addr.sin_addr = *((struct in_addr *)host->h_addr);
-    memset(&(server_addr.sin_zero),0,8);
-    return(server_addr);
-}*/
 int32_t plugin_result(char *retbuf,cJSON *json,uint64_t tag)
 {
     char *error,*result;

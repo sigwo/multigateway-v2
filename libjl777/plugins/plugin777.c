@@ -223,6 +223,26 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
     return((int32_t)strlen(retbuf));
 }
 
+static int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,union endpoints *socks,int32_t timeoutmillis,void (*funcp)(char *line))
+{
+    char line[8192];
+    int32_t len,n = 0;
+    line[0] = 0;
+    if ( (n= poll_local_endpoints(messages,numrecvp,numsent,socks,timeoutmillis)) <= 0 && permanentflag == 0 && getline777(line,sizeof(line)-1) > 0 )
+    {
+        len = (int32_t)strlen(line);
+        if ( line[len-1] == '\n' )
+            line[--len] = 0;
+        if ( len > 0 )
+        {
+            if ( funcp != 0 )
+                (*funcp)(line);
+            else messages[0] = clonestr(line), n = 1;
+        }
+    }
+    return(n);
+}
+
 #ifdef BUNDLED
 int32_t PLUGNAME(_main)
 #else
@@ -289,7 +309,7 @@ int32_t main
         {
             //if ( Debuglevel > 1 )
                 fprintf(stderr,">>>>>>>>>>>>>>> plugin sends REGISTER SEND.(%s)\n",registerbuf);
-            nn_broadcast(&plugin->all.socks,0,0,(uint8_t *)registerbuf,(int32_t)strlen(registerbuf)+1), plugin->numsent++;
+            nn_local_broadcast(&plugin->all.socks,0,0,(uint8_t *)registerbuf,(int32_t)strlen(registerbuf)+1), plugin->numsent++;
             //nn_send(plugin->sock,plugin->registerbuf,len+1,0); // send the null terminator too
         } else printf("error register API\n");
         if ( argjson != 0 )
@@ -311,7 +331,7 @@ int32_t main
                         printf("%s\n",retbuf), fflush(stdout);
                     if ( sendflag != 0 )
                     {
-                        nn_broadcast(&plugin->all.socks,0,0,(uint8_t *)retbuf,len+1), plugin->numsent++;
+                        nn_local_broadcast(&plugin->all.socks,0,0,(uint8_t *)retbuf,len+1), plugin->numsent++;
                         if ( Debuglevel > 2 )
                             fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                         //nn_send(plugin->sock,retbuf,len+1,0); // send the null terminator too

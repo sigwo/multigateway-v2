@@ -1337,6 +1337,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             DB_msigs = db777_create(0,0,"msigs",0);
         if ( DB_NXTaccts == 0 )
             DB_NXTaccts = db777_create(0,0,"NXTacct",0);
+        if ( DB_nodestats == 0 )
+            DB_nodestats = db777_create(0,0,"nodestats",0);
         Debuglevel = 2;
         MGW.gatewayid = -1;
         set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
