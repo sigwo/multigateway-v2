@@ -24,7 +24,7 @@ struct cointx_info *createrawtransaction(char *coinstr,char *serverport,char *us
 int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,char *txbytes,int32_t gatewayid,int32_t numgateways);
 int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params);
 int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr);
-cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass);
+char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass);
 
 
 #endif
@@ -84,10 +84,10 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
     return((int32_t)len);
 }
 
-cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
+char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 {
-    char pubkey[512],NXTaddr[64],account[512],coinaddr[512],*retstr;
-    cJSON *json,*item,*array = 0;
+    char pubkey[512],NXTaddr[64],account[512],coinaddr[512],*retstr = 0;
+    cJSON *json,*item,*array = cJSON_CreateArray();
     uint64_t nxt64bits;
     int32_t i,n;
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listreceivedbyaddress","[1, true]")) != 0 )
@@ -114,8 +114,6 @@ cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                                 cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(account));
                                 cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
                                 cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
-                                if ( array == 0 )
-                                    array = cJSON_CreateArray();
                                 cJSON_AddItemToArray(array,item);
                             }
                         }
@@ -127,7 +125,9 @@ cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
         } else printf("couldnt parse.(%s)\n",retstr);
         free(retstr);
     }
-    return(array);
+    retstr = cJSON_Print(array);
+    _stripwhite(retstr,' ');
+    return(retstr);
 }
 
 cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass)

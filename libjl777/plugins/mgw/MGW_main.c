@@ -40,6 +40,7 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
     copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
     gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
     gatewaybits = calc_nxt64bits(gatewayNXT);
+    printf("process acctpubkeys\n");
     if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
         printf("arraysize.%d\n",n);

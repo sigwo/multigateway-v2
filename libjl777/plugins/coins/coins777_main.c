@@ -354,10 +354,18 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     strcpy(retbuf,"{\"result\":\"need to specify coin\"}");
                 else if ( (coin= coin777_find(coinstr)) != 0 )
                 {
-                    if ( (pubkeyjson= get_msig_pubkeys(coin->name,coin->serverport,coin->userpass)) != 0 )
+                    printf("get pubkeys\n");
+                    if ( (str= get_msig_pubkeys(coin->name,coin->serverport,coin->userpass)) != 0 )
                     {
-                        MGW_publish_acctpubkeys(coin->name,pubkeyjson);
-                        free_json(pubkeyjson);
+                        printf("parse\n");
+                        if ( (pubkeyjson= cJSON_Parse(str)) != 0 )
+                        {
+                            printf("publish\n");
+                            MGW_publish_acctpubkeys(coin->name,pubkeyjson);
+                            printf("free\n");
+                            free_json(pubkeyjson);
+                        }
+                        free(str), str= 0;
                     }
                 }
             }

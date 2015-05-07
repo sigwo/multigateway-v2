@@ -117,6 +117,7 @@ int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
             max--;
             memcpy(retbuf,val,(valuesize < max) ? valuesize : max), retbuf[max] = 0;
         } else retbuf[0] = 0;
+        printf("found str.(%s) -> (%s)\n",key,retbuf);
         sp_destroy(obj);
     }
     return(valuesize);
