@@ -255,7 +255,10 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
             nxt64bits = calc_nxt64bits(NXTaddr);
             updated += add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
             for (g=m=0; g<MGW.N; g++)
+            {
                 m += get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
+                printf("g.%d: (%s) (%s)\n",g,coinaddrs[g],pubkeys[g]);
+            }
             if ( m == MGW.N && (msig= get_NXT_msigaddr(MGW.srv64bits,MGW.M,MGW.N,nxt64bits,coinstr,coinaddrs,pubkeys)) != 0 )
                 free(msig), count++;
         }
