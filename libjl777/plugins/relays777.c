@@ -168,16 +168,18 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
 
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
-    int32_t i; char endpoint[512];
+    int32_t i; char endpoint[512]; uint64_t ipbits;
     if ( num > 0 && servers != 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDPRIO,&priority,sizeof(priority)) >= 0 )
     {
         for (i=0; i<num; i++)
         {
+            if ( (ipbits= calc_ipbits(servers[i])) == 0 )
+                continue;
             set_endpointaddr("tcp",endpoint,servers[i],SUPERNET.port,NN_REP);
             if ( ismyaddress(servers[i]) == 0 && nn_connect(sock,endpoint) >= 0 )
             {
                 printf("+%s ",endpoint);
-                add_relay(&RELAYS.lb,calc_ipbits(servers[i]));
+                add_relay(&RELAYS.lb,ipbits);
                 set_endpointaddr("ws",endpoint,servers[i],SUPERNET.port,NN_REP);
                 nn_connect(sock,endpoint);
                 if ( SUPERNET.iamrelay != 0 )
@@ -380,7 +382,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
     int32_t len,sendlen;
     _stripwhite(retstr,' ');
     len = (int32_t)strlen(retstr)+1;
-    if ( args->type != NN_SUB && (sendlen= nn_send(args->sock,retstr,len,0)) != len )
+    if ( args->type != NN_BUS && args->type != NN_SUB && (sendlen= nn_send(args->sock,retstr,len,0)) != len )
     {
         printf("complete_relay.%s warning: send.%d vs %d for (%s) sock.%d %s\n",args->name,sendlen,len,retstr,args->sock,nn_errstr());
         return(-1);
@@ -681,9 +683,11 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t datalen)
         checklen = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"l"),0);
         timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"t"),0);
         len = (int32_t)strlen((char *)msg) + 1;
-        if ( datalen > len )
+        if ( datalen >= len )
             datalen -= len, msg += len;
+        else printf("datalen.%d < len.%d\n",datalen,len);
         free_json(json);
+        printf("datalen.%d checklen.%d len.%d\n",datalen,checklen,len);
         if ( datalen == checklen )
         {
             calc_sha256(hexstr,hash.bytes,msg,datalen);
@@ -750,7 +754,7 @@ cJSON *relay_json(struct _relay_info *list)
         cJSON_AddItemToArray(array,cJSON_CreateString(endpoint));
     }
     json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"list",array);
+    cJSON_AddItemToObject(json,"endpoints",array);
     cJSON_AddItemToObject(json,"type",cJSON_CreateString(nn_typestr(list->mytype)));
     cJSON_AddItemToObject(json,"dest",cJSON_CreateString(nn_typestr(list->desttype)));
     cJSON_AddItemToObject(json,"total",cJSON_CreateNumber(list->num));
