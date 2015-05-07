@@ -666,10 +666,13 @@ void SuperNET_loop(void *ipaddr)
         msleep(10);
     }
     sleep(1);
-    sprintf(jsonargs,"{\"filename\":\"SuperNET.conf\",\"NXT\":\"%s\",\"ipaddr\":\"%s\",\"port\":%d}",SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.port);
+    sprintf(jsonargs,"{\"filename\":\"SuperNET.conf\"}");
     strs[n++] = language_func((char *)"sophia","",0,0,1,(char *)"sophia",jsonargs,call_system);
     while ( SOPHIA.readyflag == 0 || find_daemoninfo(&ind,"sophia",0,0) == 0 )
          poll_daemons();
+    strs[n++] = language_func((char *)"MGW","",0,0,1,(char *)"MGW",jsonargs,call_system);
+    while ( MGW.readyflag == 0 || find_daemoninfo(&ind,"MGW",0,0) == 0 )
+        poll_daemons();
     strs[n++] = language_func((char *)"coins","",0,0,1,(char *)"coins",jsonargs,call_system);
     strs[n++] = language_func((char *)"ramchain","",0,0,1,(char *)"ramchain",jsonargs,call_system);
     while ( COINS.readyflag == 0 || RAMCHAINS.readyflag == 0 || find_daemoninfo(&ind,"coins",0,0) == 0 || find_daemoninfo(&ind,"ramchain",0,0) == 0 )

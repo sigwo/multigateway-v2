@@ -182,7 +182,7 @@ cJSON *check_conffile(int32_t *allocflagp,cJSON *json)
 
 int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
 {
-    struct coin777 *coin; char msigchar[128],*str;
+    struct coin777 *coin; char msigchar[128];
     if ( coinstr != 0 && coinstr[0] != 0 )
     {
         printf("name.(%s)\n",coinstr);
@@ -205,11 +205,6 @@ int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
                     strcpy(serverport,"http://127.0.0.1:14632");
                 //set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,item,coinstr,serverport,userpass);
             }
-            if ( coin->acctpubkeyjson != 0 )
-                free_json(coin->acctpubkeyjson);
-            coin->acctpubkeyjson = get_msig_pubkeys(coin->name,coin->serverport,coin->userpass);
-            if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
-                free(str);
             return(1);
         }
     }
@@ -219,7 +214,7 @@ int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],nxtaddr[64],ipaddr[64],*coinstr,*serverport,*userpass,*str,*email,*previpaddr = 0;
-    cJSON *array,*item;
+    cJSON *array,*item,*pubkeyjson;
     int32_t i,n,buyNXT,j = 0;
     struct coin777 *coin;
     retbuf[0] = 0;
@@ -359,8 +354,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     strcpy(retbuf,"{\"result\":\"need to specify coin\"}");
                 else if ( (coin= coin777_find(coinstr)) != 0 )
                 {
-                    if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
-                        strcpy(retbuf,"{\"result\":\"published acctpubkeys\"}");
+                    if ( (pubkeyjson= get_msig_pubkeys(coin->name,coin->serverport,coin->userpass)) != 0 )
+                    {
+                        str = MGW_publish_acctpubkeys(coin->name,pubkeyjson);
+                        free_json(pubkeyjson);
+                    }
                 }
             }
             else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);

@@ -92,7 +92,7 @@ struct ramchain
 struct coin777
 {
     char name[16],serverport[64],userpass[128],*jsonstr;
-    cJSON *argjson,*acctpubkeyjson;
+    cJSON *argjson;
     struct ramchain ramchain;
     int32_t use_addmultisig,gatewayid,multisigchar;
 };
