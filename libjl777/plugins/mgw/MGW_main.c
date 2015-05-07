@@ -47,7 +47,7 @@ int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
         strcpy(coinaddr,keycoinaddr);
         free(keycoinaddr);
     }
-    db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,coinaddr);
+    db777_findstr(pubkey,512,DB_NXTaccts,coinaddr);
     return(coinaddr[0] != 0 && pubkey[0] != 0);
 }
 
@@ -58,7 +58,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     key[1] = srvbits;
     key[2] = nxt64bits;
     flag = 1;
-printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
+//printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
     if ( (coinaddr= db777_findM(&len,DB_NXTaccts,key,sizeof(key))) != 0 )
     {
         if ( strcmp(coinaddr,newcoinaddr) == 0 )
@@ -72,16 +72,16 @@ printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
         else printf("error adding (%s)\n",newcoinaddr);
     }
     flag = 1;
-    printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
-   if ( db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,newcoinaddr) > 0 )
+    if ( db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,newcoinaddr) > 0 )
     {
         if ( strcmp(pubkey,newpubkey) == 0 )
             flag = 0;
     }
+    //printf("oldpubkey.(%s) new.(%s)\n",pubkey,newpubkey);
     if ( flag != 0 )
     {
         if ( db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
-            updated = 1, printf("added (%s)\n",newpubkey);
+            updated = 1;//, printf("added (%s)\n",newpubkey);
         else printf("error adding (%s)\n",newpubkey);
     }
     return(updated);
