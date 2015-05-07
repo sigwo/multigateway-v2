@@ -266,7 +266,7 @@ int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis)
 char *nn_directconnect(char *ipaddr)
 {
     char endpoint[512],retbuf[1024];
-    int32_t sock,n,ind;
+    int32_t sock,ind;
     uint64_t ipbits;
     if ( is_ipaddr(ipaddr) == 0 )
         return(clonestr("{\"error\":\"illegal ipaddress\"}"));
@@ -280,21 +280,24 @@ char *nn_directconnect(char *ipaddr)
         if ( sock >= (1 << 16) )
             return(clonestr("{\"error\":\"socket val too big\"}"));
         ipbits |= ((uint64_t)sock << 48);
-        n = RELAYS.pair.num;
         set_endpointaddr("tcp",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
         printf("direct connect to (%s) using sock.%d\n",endpoint,sock);
-        if ( update_serverbits(&RELAYS.pair,ipaddr,ipbits,NN_PAIR) <= n )
-        {
-            set_endpointaddr("ws",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
-            nn_connect(sock,endpoint);
-            sprintf(retbuf,"{\"error\":\"connect failed\",\"dest\",\"%s\",\"%s\"}",endpoint,nn_errstr());
-            return(clonestr(retbuf));
-        }
+        if ( nn_connect(sock,endpoint) < 0 )
+            printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
         else
         {
-            sprintf(retbuf,"{\"result\":\"success\",\"direct\":\"%s\",\"connected\":\"%s\"}",SUPERNET.myipaddr,endpoint);
-            return(clonestr(retbuf));
+            set_endpointaddr("ws",endpoint,ipaddr,SUPERNET.port,NN_PAIR);
+            if ( nn_connect(sock,endpoint) < 0 )
+                printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
+            else
+            {
+                add_relay(&RELAYS.pair,ipbits);
+                sprintf(retbuf,"{\"result\":\"success\",\"direct\":\"%s\",\"connected\":\"%s\"}",SUPERNET.myipaddr,endpoint);
+                return(clonestr(retbuf));
+            }
         }
+        sprintf(retbuf,"{\"error\":\"connect failed\",\"dest\",\"%s\",\"%s\"}",endpoint,nn_errstr());
+        return(clonestr(retbuf));
     } else return(clonestr("{\"error\":\"couldnt create direct socket\"}"));
 }
 
