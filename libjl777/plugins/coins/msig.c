@@ -42,7 +42,7 @@ char *setmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sen
 char *setmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *origargstr);
 char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coinstr,char *refacct,int32_t M,int32_t N,uint64_t *srv64bits,int32_t n,char *userpubkey,char *email,uint32_t buyNXT);
 int32_t update_MGW_msig(struct multisig_addr *msig,char *sender);
-char *MGW_publish_acctpubkeys(char *coinstr,cJSON *array);
+int32_t MGW_publish_acctpubkeys(char *coinstr,cJSON *array);
 
 #endif
 #else
@@ -887,7 +887,7 @@ int32_t init_public_msigs()
     return(added);
 }
 
-char *MGW_publish_acctpubkeys(char *coinstr,cJSON *array)
+int32_t MGW_publish_acctpubkeys(char *coinstr,cJSON *array)
 {
     char *retstr = 0;
     cJSON *json;
@@ -903,9 +903,11 @@ char *MGW_publish_acctpubkeys(char *coinstr,cJSON *array)
         retstr = cJSON_Print(json);
         _stripwhite(retstr,' ');
         nn_publish(retstr,1);
+        free(retstr);
         free_json(json);
+        return(0);
     }
-    return(retstr);
+    return(-1);
 }
 
 #endif

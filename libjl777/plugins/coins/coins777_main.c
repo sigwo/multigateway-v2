@@ -356,8 +356,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 {
                     if ( (pubkeyjson= get_msig_pubkeys(coin->name,coin->serverport,coin->userpass)) != 0 )
                     {
-                        if ( (str= MGW_publish_acctpubkeys(coin->name,pubkeyjson)) != 0 )
-                            free(str), str = 0;
+                        MGW_publish_acctpubkeys(coin->name,pubkeyjson);
                         free_json(pubkeyjson);
                     }
                 }

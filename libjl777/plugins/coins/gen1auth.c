@@ -101,7 +101,7 @@ cJSON *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                 {
                     item = cJSON_GetArrayItem(json,i);
                     copy_cJSON(account,cJSON_GetObjectItem(item,"account"));
-                    if ( is_decimalstr(account) != 0 )
+                    if ( is_decimalstr(account) > 0 )
                     {
                         nxt64bits = calc_nxt64bits(account);
                         expand_nxt64bits(NXTaddr,nxt64bits);

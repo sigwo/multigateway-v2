@@ -367,7 +367,7 @@ int32_t is_decimalstr(char *str)
         return(0);
     for (i=0; str[i]!=0; i++)
         if ( str[i] < '0' || str[i] > '9' )
-            return(-1);
+            return(0);
     return(i);
 }
 
