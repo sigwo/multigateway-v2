@@ -949,7 +949,7 @@ void serverloop(void *_args)
         int32_t poll_daemons();
         if ( poll_daemons() == 0 && poll_direct(1) == 0 && SUPERNET.APISLEEP > 0 )
             msleep(SUPERNET.APISLEEP);
-        if ( SUPERNET.iamrelay != 0 )
+        if ( 0 && SUPERNET.iamrelay != 0 )
             nn_send(RELAYS.bus.sock,SUPERNET.NXTADDR,strlen(SUPERNET.NXTADDR),0), sleep(3);
     }
 }
