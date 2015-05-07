@@ -72,7 +72,8 @@ printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
         else printf("error adding (%s)\n",newcoinaddr);
     }
     flag = 1;
-    if ( db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,newcoinaddr) > 0 )
+    printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
+   if ( db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,newcoinaddr) > 0 )
     {
         if ( strcmp(pubkey,newpubkey) == 0 )
             flag = 0;
