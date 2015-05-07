@@ -272,7 +272,10 @@ char *nn_directconnect(char *ipaddr)
         return(clonestr("{\"error\":\"illegal ipaddress\"}"));
     ipbits = (uint32_t)calc_ipbits(ipaddr);
     if ( (ind= find_ipbits(&RELAYS.pair,(uint32_t)ipbits)) >= 0 )
-        return(clonestr("{\"error\":\"already connected\"}"));
+    {
+        sprintf(retbuf,"{\"result\":\"success\",\"direct\":\"%s\",\"connected\":\"%s\",\"status\":\"already connected\"}",SUPERNET.myipaddr,endpoint);
+        return(clonestr(retbuf));
+    }
     if ( is_ipaddr(SUPERNET.myipaddr) == 0 && SUPERNET.iamrelay != 0 )
         return(clonestr("{\"error\":\"dont know myipaddr\"}"));
     if ( (sock= nn_createsocket(endpoint,1,"direct",NN_PAIR,SUPERNET.port,10,100)) >= 0 )

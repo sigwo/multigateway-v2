@@ -171,30 +171,9 @@ char *localcommand(char *line)
     return(line);
 }
 
-void process_userinput(char *_line)
+char *parse_expandedline(char *line,int32_t broadcastflag)
 {
-    static char *line,*line2;
-    char plugin[512],ipaddr[64],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j,timeout,broadcastflag = 0;
-    printf("[%s]\n",_line);
-    if ( line == 0 )
-        line = calloc(1,65536), line2 = calloc(1,65536);
-    expand_aliases(line,line2,65536,_line);
-    if ( (line= localcommand(line)) == 0 )
-        return;
-    printf("expands to: [%s]\n",line);
-    if ( line[0] == '!' )
-        broadcastflag = 1, line++;
-    if (  is_ipaddr(line) != 0 )
-    {
-        expand_ipbits(ipaddr,calc_ipbits(line));
-        line += strlen(ipaddr) + 1;
-        printf("ipaddr.(%s) (%s)\n",ipaddr,line);
-        retstr = nn_direct(plugin,cmdstr);
-        printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
-        free(cmdstr);
-        free_json(json);
-        return;
-    }
+    int32_t i,j,timeout; char plugin[512],method[512],*pubstr,*str,*cmdstr = 0; cJSON *json;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
@@ -219,7 +198,6 @@ void process_userinput(char *_line)
     }
     if ( json != 0 )
     {
-        struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
         if ( cJSON_GetObjectItem(json,"myipaddr") == 0 )
             cJSON_AddItemToObject(json,"myipaddr",cJSON_CreateString(SUPERNET.myipaddr));
         if ( cJSON_GetObjectItem(json,"NXT") == 0 )
@@ -237,6 +215,40 @@ void process_userinput(char *_line)
             cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("allpeers"));
         cmdstr = cJSON_Print(json);
         _stripwhite(cmdstr,' ');
+        return(cmdstr);
+    }
+    else return(clonestr(pubstr));
+}
+
+void process_userinput(char *_line)
+{
+    static char *line,*line2;
+    char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr,*pubstr; int j,timeout,broadcastflag = 0;
+    printf("[%s]\n",_line);
+    if ( line == 0 )
+        line = calloc(1,65536), line2 = calloc(1,65536);
+    expand_aliases(line,line2,65536,_line);
+    if ( (line= localcommand(line)) == 0 )
+        return;
+    if ( line[0] == '!' )
+        broadcastflag = 1, line++;
+    settoken(ipaddr,line);
+    printf("expands to: %s [%s] %s\n",broadcastflag != 0 ? "broadcast": "",line,ipaddr);
+    if ( is_ipaddr(ipaddr) != 0 )
+    {
+        line += strlen(ipaddr) + 1;
+        if ( (cmdstr = parse_expandedline(line,broadcastflag)) != 0 )
+        {
+            printf("ipaddr.(%s) (%s)\n",ipaddr,line);
+            retstr = nn_direct(ipaddr,cmdstr);
+            printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
+            free(cmdstr);
+        }
+        return;
+    }
+    if ( (cmdstr = parse_expandedline(line,broadcastflag)) != 0 )
+    {
+        struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
         if ( broadcastflag != 0 || strcmp(plugin,"relay") == 0 )
             retstr = nn_loadbalanced(cmdstr);
         else if ( strcmp(plugin,"peers") == 0 )
@@ -246,8 +258,7 @@ void process_userinput(char *_line)
         else retstr = nn_publish(pubstr,0);
         printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
         free(cmdstr);
-        free_json(json);
-    } else printf("cant create json object for (%s)\n",line);
+    }
 }
 
 #endif
