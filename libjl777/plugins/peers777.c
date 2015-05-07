@@ -98,7 +98,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else strcpy(retbuf,"{\"error\":\"under construction\"}");
     }
-    printf("PEERS.(%s) -> (%s)\n",jsonstr,retbuf);
+    printf("PEERS (%s)\n",retbuf);
     return((int32_t)strlen(retbuf));
 }
 

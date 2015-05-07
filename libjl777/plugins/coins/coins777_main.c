@@ -194,8 +194,6 @@ int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
                 strcpy(coin->serverport,serverport);
             if ( userpass != 0 && strcmp(userpass,coin->userpass) != 0 )
                 strcpy(coin->userpass,userpass);
-            //void foo(char *serverport,char *userpass);
-            //foo(coin->serverport,coin->userpass);
             if ( extract_cJSON_str(msigchar,sizeof(msigchar),item,"multisigchar") > 0 )
                 coin->multisigchar = msigchar[0];
             coin->use_addmultisig = get_API_int(cJSON_GetObjectItem(item,"useaddmultisig"),strcmp("BTC",coinstr)!=0);

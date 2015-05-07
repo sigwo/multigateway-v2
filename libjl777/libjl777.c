@@ -1288,7 +1288,7 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
     char coinaddr[MAX_JSON_FIELD],*str,*privkey;
     NXTaddr[0] = 0;
     extract_cJSON_str(secret,max,argjson,"secret");
-    //printf("set_account_NXTSECRET.(%s)\n",secret);
+    printf("set_account_NXTSECRET.(%s)\n",secret);
     if ( secret[0] == 0 )
     {
         extract_cJSON_str(coinaddr,sizeof(coinaddr),argjson,"privateaddr");
@@ -1316,9 +1316,9 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
         gen_randomacct(33,NXTaddr,secret,"randvals");
     nxt64bits = conv_NXTpassword(mysecret,mypublic,(uint8_t *)secret,(int32_t)strlen(secret));
     expand_nxt64bits(NXTaddr,nxt64bits);
-    if ( 0 )
+    if ( 1 )
         conv_rsacctstr(NXTacct,nxt64bits);
-    //printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,secret);
+    printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,secret);
     return(nxt64bits);
 }
 
@@ -1333,25 +1333,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     {
         Debuglevel = 2;
         MGW.gatewayid = -1;
-        set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
-        SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
-        SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);
-        copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
-        if ( strncmp(SUPERNET.myipaddr,"209.126",7) == 0 || strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
-            SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),1);
-        else SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),0);
-        copy_cJSON(SUPERNET.hostname,cJSON_GetObjectItem(json,"hostname"));
-        SUPERNET.port = get_API_int(cJSON_GetObjectItem(json,"SUPERNET_PORT"),7777);
-        SUPERNET.usessl = get_API_int(cJSON_GetObjectItem(json,"USESSL"),0);
-#ifndef __linux__
-        SUPERNET.UPNP = 1;
-#endif
-        SUPERNET.UPNP = get_API_int(cJSON_GetObjectItem(json,"UPNP"),SUPERNET.UPNP);
-        copy_cJSON(SUPERNET.transport,cJSON_GetObjectItem(json,"transport"));
-        if ( SUPERNET.transport[0] == 0 )
-            strcpy(SUPERNET.transport,SUPERNET.UPNP == 0 ? "tcp" : "ws");
         SUPERNET.ismainnet = get_API_int(cJSON_GetObjectItem(json,"MAINNET"),1);
-        SUPERNET.APISLEEP = get_API_int(cJSON_GetObjectItem(json,"APISLEEP"),DEFAULT_APISLEEP);
+        SUPERNET.usessl = get_API_int(cJSON_GetObjectItem(json,"USESSL"),0);
         if ( SUPERNET.NXTAPIURL[0] == 0 )
         {
             if ( SUPERNET.usessl == 0 )
@@ -1363,6 +1346,23 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         strcpy(SUPERNET.NXTSERVER,SUPERNET.NXTAPIURL);
         strcat(SUPERNET.NXTSERVER,"?requestType");
+        set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
+        SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
+        SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);
+        copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
+        if ( strncmp(SUPERNET.myipaddr,"209.126",7) == 0 || strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
+            SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),1);
+        else SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),0);
+        copy_cJSON(SUPERNET.hostname,cJSON_GetObjectItem(json,"hostname"));
+        SUPERNET.port = get_API_int(cJSON_GetObjectItem(json,"SUPERNET_PORT"),7777);
+#ifndef __linux__
+        SUPERNET.UPNP = 1;
+#endif
+        SUPERNET.UPNP = get_API_int(cJSON_GetObjectItem(json,"UPNP"),SUPERNET.UPNP);
+        copy_cJSON(SUPERNET.transport,cJSON_GetObjectItem(json,"transport"));
+        if ( SUPERNET.transport[0] == 0 )
+            strcpy(SUPERNET.transport,SUPERNET.UPNP == 0 ? "tcp" : "ws");
+        SUPERNET.APISLEEP = get_API_int(cJSON_GetObjectItem(json,"APISLEEP"),DEFAULT_APISLEEP);
         copy_cJSON(SUPERNET.DATADIR,cJSON_GetObjectItem(json,"DATADIR"));
         if ( SUPERNET.DATADIR[0] == 0 )
             strcpy(SUPERNET.DATADIR,"archive");
