@@ -316,7 +316,11 @@ int32_t add_connections(char *server,int32_t skiplb)
     n = (RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num);
     update_serverbits(&RELAYS.peer,server,ipbits,NN_SURVEYOR);
     if ( SUPERNET.iamrelay != 0 )
+    {
         update_serverbits(&RELAYS.sub,server,ipbits,NN_PUB);
+        if ( skiplb == 2 )
+            update_serverbits(&RELAYS.bus,server,ipbits,NN_BUS);
+    }
     if ( skiplb == 0 )
         update_serverbits(&RELAYS.lb,server,ipbits,NN_REP);
     return((RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num) > n);
@@ -904,13 +908,13 @@ void serverloop(void *_args)
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allpeers_processor);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
+    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
         bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_busdata_processor);
     } else bussock = -1, lbargs->commandprocessor = nn_lb_processor;
     RELAYS.bus.sock = bussock, RELAYS.pubsock = pubsock;
-    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
     for (i=0; i<n; i++)
     {
         arg = &RELAYS.args[i];
@@ -923,7 +927,7 @@ void serverloop(void *_args)
     for (i=0; i<RELAYS.lb.num; i++)
     {
         expand_ipbits(ipaddr,(uint32_t)RELAYS.lb.servers[i]);
-        add_connections(ipaddr,1);
+        add_connections(ipaddr,2);
     }
     if ( SUPERNET.iamrelay != 0 )
     {
