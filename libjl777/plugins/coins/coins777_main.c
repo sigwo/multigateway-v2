@@ -223,13 +223,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     int32_t i,n,buyNXT,j = 0;
     struct coin777 *coin;
     retbuf[0] = 0;
+    printf("COINS.(%s)\n",jsonstr);
     if ( initflag > 0 )
     {
-        //DB_NXTassettx = db777_create(0,0,"NXTassettxid",0);
-        //DB_nodestats = db777_create(0,0,"nodestats",0);
         if ( json != 0 )
         {
-            //json = check_conffile(&allocflag,json);
             copy_cJSON(SUPERNET.myNXTacct,cJSON_GetObjectItem(json,"myNXTacct"));
             copy_cJSON(MGW.PATH,cJSON_GetObjectItem(json,"MGWROOT"));
             if ( MGW.PATH[0] == 0 )
@@ -355,9 +353,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 copy_cJSON(buf2,cJSON_GetObjectItem(json,"userpubkey"));
                 str = setmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
             }
-            else if ( strcmp(methodstr,"acctpubkeys") == 0 && coinstr[0] != 0 )
+            else if ( strcmp(methodstr,"acctpubkeys") == 0 )
             {
-                if ( (coin= coin777_find(coinstr)) != 0 )
+                if ( coinstr[0] == 0 )
+                    strcpy(retbuf,"{\"result\":\"need to specify coin\"}");
+                else if ( (coin= coin777_find(coinstr)) != 0 )
                 {
                     if ( (str= MGW_publish_acctpubkeys(coin->name,coin->acctpubkeyjson)) != 0 )
                         strcpy(retbuf,"{\"result\":\"published acctpubkeys\"}");

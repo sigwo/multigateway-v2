@@ -77,9 +77,10 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
 
 static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,char *jsonargs,int32_t initflag)
 {
-    char *myipaddr,*jsonstr = 0;
-    cJSON *obj=0,*json = 0;
-    uint64_t nxt64bits,tag = 0;
+    void *loadfile(uint64_t *allocsizep,char *fname);
+    char filename[1024],*myipaddr,*jsonstr = 0;
+    cJSON *obj=0,*tmp,*json = 0;
+    uint64_t allocsize,nxt64bits,tag = 0;
     int32_t retval = 0;
     if ( jsonargs != 0 )
     {
@@ -87,7 +88,15 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
             obj = cJSON_GetArrayItem(json,0);
         else obj = json;
-        jsonstr = cJSON_Print(obj);
+        copy_cJSON(filename,cJSON_GetObjectItem(obj,"filename"));
+        if ( filename[0] != 0 && (jsonstr= loadfile(&allocsize,filename)) != 0 )
+        {
+            if ( (tmp= cJSON_Parse(jsonstr)) != 0 )
+                obj = tmp;
+            else free(jsonstr), jsonstr = 0;
+        }
+        if ( jsonstr == 0 )
+            jsonstr = cJSON_Print(obj);
         _stripwhite(jsonstr,' ');
     }
     if ( obj != 0 )
@@ -309,7 +318,7 @@ int32_t main
         argjson = cJSON_Parse(jsonargs);
         if ( (len= registerAPI(registerbuf,sizeof(registerbuf)-1,plugin,argjson)) > 0 )
         {
-            //if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 fprintf(stderr,">>>>>>>>>>>>>>> plugin sends REGISTER SEND.(%s)\n",registerbuf);
             nn_local_broadcast(&plugin->all.socks,0,0,(uint8_t *)registerbuf,(int32_t)strlen(registerbuf)+1), plugin->numsent++;
             //nn_send(plugin->sock,plugin->registerbuf,len+1,0); // send the null terminator too

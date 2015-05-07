@@ -560,7 +560,7 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
         else if ( type == NN_SUB && (err= nn_setsockopt(sock,NN_SUB,NN_SUB_SUBSCRIBE,"",0)) < 0 )
             return(report_err(typestr,err,"nn_setsockopt subscribe",type,bindaddr,connectaddr));
     }
-    //if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         printf("%s.%s socket.%d bind.(%s) connect.(%s)\n",typestr,suffix,sock,bindaddr,connectaddr);
     return(sock);
 }

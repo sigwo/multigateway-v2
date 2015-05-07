@@ -1330,7 +1330,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     uint64_t nxt64bits;
     cJSON *array;
     retbuf[0] = 0;
-    printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! initflag.%d process %s\n",plugin->name,initflag,plugin->name);
+    printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! initflag.%d process %s (%s)\n",plugin->name,initflag,plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         Debuglevel = 2;
