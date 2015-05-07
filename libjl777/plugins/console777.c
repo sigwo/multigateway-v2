@@ -64,39 +64,37 @@ int32_t settoken(char *token,char *line)
             break;
         token[i] = line[i];
     }
-    if ( line[i] == 0 )
-    {
-        printf("invalid alias assignment\n");
-        return(-1);
-    }
     token[i] = 0;
     return(i);
 }
 
 void update_alias(char *line)
 {
-    char retbuf[8192],alias[1024],*value; int32_t i;
+    char retbuf[8192],alias[1024],*value; int32_t i,err;
     if ( (i= settoken(&alias[1],line)) < 0 )
         return;
+    if ( line[i] == 0 )
+        value = &line[i];
+    else value = &line[i+1];
+    line[i] = 0;
     alias[0] = '#';
-    value = &line[i+1];
+    printf("i.%d alias.(%s) value.(%s)\n",i,alias,value);
     if ( value[0] == 0 )
         printf("warning value for %s is null\n",alias);
-    if ( db777_findstr(retbuf,sizeof(retbuf),DB_nodestats,alias) == 0 )
-    {
-        if ( strcmp(retbuf,value) == 0 )
-            printf("UNCHANGED ");
-        else printf("%s ",retbuf[0] == 0 ? "CREATE" : "UPDATE");
-        printf(" (%s) -> (%s)\n",alias,value);
-        if ( db777_addstr(DB_nodestats,alias,value) != 0 )
-            printf("error updating alias database\n");
-    } else printf("alias database error to add alias (%s -> %s)\n",alias,value);
+    db777_findstr(retbuf,sizeof(retbuf),DB_nodestats,alias);
+    if ( strcmp(retbuf,value) == 0 )
+        printf("UNCHANGED ");
+    else printf("%s ",retbuf[0] == 0 ? "CREATE" : "UPDATE");
+    printf(" (%s) -> (%s)\n",alias,value);
+    if ( (err= db777_addstr(DB_nodestats,alias,value)) != 0 )
+        printf("error.%d updating alias database\n",err);
 }
 
-void expand_aliases(char *expanded,int32_t max,char *line)
+char *expand_aliases(char *_expanded,char *_expanded2,int32_t max,char *line)
 {
-    char alias[64],value[8192];
-    int32_t i,j,k,len,flag = 1;
+    char alias[64],value[8192],*expanded,*otherbuf;
+    int32_t i,j,k,len=0,flag = 1;
+    expanded = _expanded, otherbuf = _expanded2;
     while ( len < max-8192 && flag != 0 )
     {
         flag = 0;
@@ -105,21 +103,33 @@ void expand_aliases(char *expanded,int32_t max,char *line)
         {
             if ( line[i] == '#' )
             {
-                if ( (k= settoken(&alias[1],&line[i+1])) < 0 )
-                    return;
+                if ( (k= settoken(&alias[1],&line[i+1])) <= 0 )
+                    continue;
+                i += k;
                 alias[0] = '#';
-                if ( db777_findstr(value,sizeof(value),DB_nodestats,alias) == 0 && value[0] != 0 )
-                    for (k=0; value[k]!=0; k++)
-                        expanded[j++] = value[k];
-                flag++;
+                if ( db777_findstr(value,sizeof(value),DB_nodestats,alias) > 0 )
+                {
+                    if ( value[0] != 0 )
+                        for (k=0; value[k]!=0; k++)
+                            expanded[j++] = value[k];
+                    expanded[j] = 0;
+                    //printf("found (%s) -> (%s) [%s]\n",alias,value,expanded);
+                    flag++;
+                }
             } else expanded[j++] = line[i];
         }
+        expanded[j] = 0;
+        line = expanded;
+        if ( expanded == _expanded2 )
+            expanded = _expanded, otherbuf = _expanded2;
+        else expanded = _expanded2, otherbuf = _expanded;
     }
+    //printf("(%s) -> (%s) len.%d flag.%d\n",line,expanded,len,flag);
+    return(line);
 }
 
 char *localcommand(char *line)
 {
-    static char *expanded;
     char *retstr;
     if ( strcmp(line,"list") == 0 )
     {
@@ -138,15 +148,17 @@ char *localcommand(char *line)
     else if ( strcmp(line,"help") == 0 )
     {
         printf("local commands:\nhelp, list, alias <name> <any string> then #name is expanded to <any string>\n");
+        printf("alias expansions are iterated, so be careful with recursive macros!\n\n");
+        
         printf("<plugin name> <method> {json args} -> invokes plugin with method and args, \"myipaddr\" and \"NXT\" are default attached\n\n");
         printf("network commands: default timeout is used if not specified\n");
         printf("relay <plugin name> <method> {json args} -> will send to random relay\n");
         printf("peers <plugin name> <method> {json args} -> will send all peers\n");
-        printf("!<plugin name> <method> {json args} -> sends to random relay which will send to all peers and collate results.\n\n");
+        printf("!<plugin name> <method> {json args} -> sends to random relay which will send to all its peers and combine results.\n\n");
         
-        printf("publish shortcut: pub <any string> -> invokes the subscriptions plugin with publish method\n\n");
+        printf("publish shortcut: pub <any string> -> invokes the subscriptions plugin with publish method and all subscribers will be sent <any string>\n\n");
         
-        printf("direct to specific relay need to have a direct connection established first:\nrelay direct or peers direct <ipaddr>\n");
+        printf("direct to specific relay needs to have a direct connection established first:\nrelay direct or peers direct <ipaddr>\n");
         printf("in case you cant directly reach a specific relay with \"peers direct <ipaddr>\" you can add \"!\" and let a relay broadcast\n");
         printf("without an <ipaddr> it will connect to a random relay. Once directly connected, commands are sent by:\n");
         printf("<ipaddress> {\"plugin\":\"<name>\",\"method\":\"<methodname>\",...}\n");
@@ -156,19 +168,20 @@ char *localcommand(char *line)
         //printf("\"relay mailbox <64bit number> <name>\" creates synchronized storage in all relays\n");
         return(0);
     }
-    if ( expanded == 0 )
-        expanded = calloc(1,65536);
-    expand_aliases(expanded,65536,line);
-    return(expanded);
+    return(line);
 }
 
 void process_userinput(char *_line)
 {
-    char plugin[512],method[512],*line,*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j,timeout,broadcastflag = 0;
+    static char *line,*line2;
+    char plugin[512],method[512],*str,*cmdstr,*retstr,*pubstr; cJSON *json; int i,j,timeout,broadcastflag = 0;
     printf("[%s]\n",_line);
-    if ( (line= localcommand(_line)) == 0 )
+    if ( line == 0 )
+        line = calloc(1,65536), line2 = calloc(1,65536);
+    expand_aliases(line,line2,65536,_line);
+    if ( (line= localcommand(line)) == 0 )
         return;
-    printf("expands to: %s\n",line);
+    printf("expands to: [%s]\n",line);
     if ( line[0] == '!' )
         broadcastflag = 1, line++;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
@@ -190,8 +203,8 @@ void process_userinput(char *_line)
         {
             str = stringifyM(&line[i+1]);
             cJSON_AddItemToObject(json,"content",cJSON_CreateString(str));
+            free(str);
         }
-        free(str);
         if ( cJSON_GetObjectItem(json,"myipaddr") == 0 )
             cJSON_AddItemToObject(json,"myipaddr",cJSON_CreateString(SUPERNET.myipaddr));
         if ( cJSON_GetObjectItem(json,"NXT") == 0 )

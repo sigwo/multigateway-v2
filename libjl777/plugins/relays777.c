@@ -530,10 +530,10 @@ char *nn_loadbalanced(char *_request)
                             free(jsonstr);
                             jsonstr = cJSON_Print(retjson);
                             _stripwhite(jsonstr,' ');
-                        } else printf("result.(%s) != success\n",result);
+                        }// else printf("result.(%s) != success\n",result);
                         free_json(retjson);
                     } else printf("cant parse retjson.(%s)\n",jsonstr);
-                } else printf("method.(%s) is not direct\n",method);
+                } //else printf("method.(%s) is not direct\n",method);
                 free_json(json);
             } else printf("couldnt parse request (%s)\n",request);
             nn_freemsg(msg);

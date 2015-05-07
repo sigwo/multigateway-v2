@@ -1333,21 +1333,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! initflag.%d process %s\n",plugin->name,initflag,plugin->name);
     if ( initflag > 0 )
     {
-        if ( DB_msigs == 0 )
-            DB_msigs = db777_create(0,0,"msigs",0);
-        if ( DB_NXTaccts == 0 )
-            DB_NXTaccts = db777_create(0,0,"NXTacct",0);
-        if ( DB_nodestats == 0 )
-            DB_nodestats = db777_create(0,0,"nodestats",0);
         Debuglevel = 2;
         MGW.gatewayid = -1;
         set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
         SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
         SUPERNET.europeflag = get_API_int(cJSON_GetObjectItem(json,"EUROPE"),1);
         copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
-        copy_cJSON(SUPERNET.transport,cJSON_GetObjectItem(json,"transport"));
-        if ( SUPERNET.transport[0] == 0 )
-            strcpy(SUPERNET.transport,"tcp");
         if ( strncmp(SUPERNET.myipaddr,"209.126",7) == 0 || strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
             SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),1);
         else SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),0);
@@ -1358,6 +1349,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         SUPERNET.UPNP = 1;
 #endif
         SUPERNET.UPNP = get_API_int(cJSON_GetObjectItem(json,"UPNP"),SUPERNET.UPNP);
+        copy_cJSON(SUPERNET.transport,cJSON_GetObjectItem(json,"transport"));
+        if ( SUPERNET.transport[0] == 0 )
+            strcpy(SUPERNET.transport,SUPERNET.UPNP == 0 ? "tcp" : "ws");
         SUPERNET.ismainnet = get_API_int(cJSON_GetObjectItem(json,"MAINNET"),1);
         SUPERNET.APISLEEP = get_API_int(cJSON_GetObjectItem(json,"APISLEEP"),DEFAULT_APISLEEP);
         if ( SUPERNET.NXTAPIURL[0] == 0 )
@@ -1402,6 +1396,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             strcpy(SOPHIA.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH);
         printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay);
+        if ( DB_msigs == 0 )
+            DB_msigs = db777_create(0,0,"msigs",0);
+        if ( DB_NXTaccts == 0 )
+            DB_NXTaccts = db777_create(0,0,"NXTacct",0);
+        if ( DB_nodestats == 0 )
+            DB_nodestats = db777_create(0,0,"nodestats",0);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {
