@@ -22,7 +22,7 @@
 #undef DEFINES_ONLY
 
 void MGW_idle(struct plugin_info *plugin) {}
-//{"coin":"BTC","userNXT":"343434","userpubkey":"<userpubkey>","buyNXT":99,"NXT":"15382101741829220030","plugin":"peers","method":"devMGW"}
+//{"coin":"BTC","userNXT":"3434333333443334","userpubkey":"<userpubkey>","buyNXT":99,"NXT":"15382101741829220030","plugin":"peers","method":"devMGW","broadcast":"allpeers"}
 
 STRUCTNAME MGW;
 char *PLUGNAME(_methods)[] = { "myacctpubkeys" }; // list of supported methods
@@ -88,49 +88,95 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     return(updated);
 }
 
-struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char *NXTaddr,char *userpubkey,char *sender)
+void multisig_keystr(char *keystr,char *coinstr,char *NXTaddr,char *msigaddr)
 {
-    struct multisig_addr *msig;
-    int32_t size = (int32_t)(sizeof(*msig) + n*sizeof(struct pubkey_info));
-    msig = calloc(1,size);
-    msig->size = size;
-    msig->n = n;
-    msig->created = (uint32_t)time(NULL);
-    if ( sender != 0 && sender[0] != 0 )
-        msig->sender = calc_nxt64bits(sender);
-    safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
-    safecopy(msig->NXTaddr,NXTaddr,sizeof(msig->NXTaddr));
-    if ( userpubkey != 0 && userpubkey[0] != 0 )
-        safecopy(msig->NXTpubkey,userpubkey,sizeof(msig->NXTpubkey));
-    msig->m = m;
-    return(msig);
+    if ( msigaddr == 0 || msigaddr[0] == 0 )
+        sprintf(keystr,"%s.%s",coinstr,NXTaddr);
+    else sprintf(keystr,"%s.%s",coinstr,msigaddr);
 }
 
-char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n,char *acctparm)
+struct multisig_addr *find_msigaddr(int32_t *lenp,char *coinstr,char *NXTaddr,char *msigaddr)
 {
-    int32_t i;
-    char *paramstr = 0;
-    cJSON *array,*mobj,*keys,*key;
-    keys = cJSON_CreateArray();
-    for (i=0; i<n; i++)
+    char keystr[1024];
+    multisig_keystr(keystr,coinstr,NXTaddr,msigaddr);
+    printf("search_msig.(%s)\n",keystr);
+    return(db777_findM(lenp,DB_msigs,keystr,(int32_t)strlen(keystr)+1));
+}
+
+int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int32_t len)
+{
+    char keystr[1024];
+    multisig_keystr(keystr,coinstr,NXTaddr,msig->multisigaddr);
+    printf("save_msig.(%s)\n",keystr);
+    return(db777_add(0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,len));
+}
+
+int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr)
+{
+    cJSON *json,*array,*json2;
+    char args[1024],addr[1024],*retstr,*retstr2;
+    int32_t i,n,ismine = 0;
+    redeemScript[0] = normaladdr[0] = 0;
+    sprintf(args,"\"%s\"",multisigaddr);
+    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"validateaddress",args)) != 0 )
     {
-        key = cJSON_CreateString(pubkeys[i].pubkey);
-        cJSON_AddItemToArray(keys,key);
+        printf("get_redeemscript retstr.(%s)\n",retstr);
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            if ( (array= cJSON_GetObjectItem(json,"addresses")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    ismine = 0;
+                    copy_cJSON(addr,cJSON_GetArrayItem(array,i));
+                    if ( addr[0] != 0 )
+                    {
+                        sprintf(args,"\"%s\"",addr);
+                        retstr2 = bitcoind_passthru(coinstr,serverport,userpass,"validateaddress",args);
+                        if ( retstr2 != 0 )
+                        {
+                            if ( (json2= cJSON_Parse(retstr2)) != 0 )
+                                ismine = is_cJSON_True(cJSON_GetObjectItem(json2,"ismine")), free_json(json2);
+                            free(retstr2);
+                        }
+                    }
+                    if ( ismine != 0 )
+                    {
+                        //printf("(%s) ismine.%d\n",addr,ismine);
+                        strcpy(normaladdr,addr);
+                        copy_cJSON(redeemScript,cJSON_GetObjectItem(json,"hex"));
+                        break;
+                    }
+                }
+            } free_json(json);
+        } free(retstr);
     }
-    mobj = cJSON_CreateNumber(m);
-    array = cJSON_CreateArray();
-    if ( array != 0 )
+    return(ismine);
+}
+
+int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *userpass,char *normaladdr,char *msigaddr,int32_t gatewayid,int32_t numgateways) //could map to rawind, but this is rarely called
+{
+    int32_t ismine,len;
+    struct multisig_addr *msig;
+    redeemScript[0] = normaladdr[0] = 0;
+    if ( (msig= find_msigaddr(&len,coinstr,0,msigaddr)) == 0 )
     {
-        cJSON_AddItemToArray(array,mobj);
-        cJSON_AddItemToArray(array,keys);
-        if ( acctparm != 0 )
-            cJSON_AddItemToArray(array,cJSON_CreateString(acctparm));
-        paramstr = cJSON_Print(array);
-        _stripwhite(paramstr,' ');
-        free_json(array);
+        strcpy(normaladdr,msigaddr);
+        printf("cant find_msigaddr.(%s)\n",msigaddr);
+        return(0);
     }
-//printf("createmultisig_json_params.(%s)\n",paramstr);
-    return(paramstr);
+    if ( msig->redeemScript[0] != 0 && gatewayid >= 0 && gatewayid < numgateways )
+    {
+        strcpy(normaladdr,msig->pubkeys[gatewayid].coinaddr);
+        strcpy(redeemScript,msig->redeemScript);
+        printf("_map_msigaddr.(%s) -> return (%s) redeem.(%s)\n",msigaddr,normaladdr,redeemScript);
+        return(1);
+    }
+    ismine = get_redeemscript(redeemScript,normaladdr,coinstr,serverport,userpass,msig->multisigaddr);
+    if ( normaladdr[0] != 0 )
+        return(1);
+    strcpy(normaladdr,msigaddr);
+    return(-1);
 }
 
 int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params)
@@ -187,6 +233,33 @@ int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinst
     return(flag);
 }
 
+char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n,char *acctparm)
+{
+    int32_t i;
+    char *paramstr = 0;
+    cJSON *array,*mobj,*keys,*key;
+    keys = cJSON_CreateArray();
+    for (i=0; i<n; i++)
+    {
+        key = cJSON_CreateString(pubkeys[i].pubkey);
+        cJSON_AddItemToArray(keys,key);
+    }
+    mobj = cJSON_CreateNumber(m);
+    array = cJSON_CreateArray();
+    if ( array != 0 )
+    {
+        cJSON_AddItemToArray(array,mobj);
+        cJSON_AddItemToArray(array,keys);
+        if ( acctparm != 0 )
+            cJSON_AddItemToArray(array,cJSON_CreateString(acctparm));
+        paramstr = cJSON_Print(array);
+        _stripwhite(paramstr,' ');
+        free_json(array);
+    }
+    //printf("createmultisig_json_params.(%s)\n",paramstr);
+    return(paramstr);
+}
+
 int32_t issue_createmultisig(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t use_addmultisig,struct multisig_addr *msig)
 {
     int32_t flag = 0;
@@ -199,6 +272,24 @@ int32_t issue_createmultisig(char *multisigaddr,char *redeemScript,char *coinstr
         free(params);
     } else printf("error generating msig params\n");
     return(flag);
+}
+
+struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char *NXTaddr,char *userpubkey,char *sender)
+{
+    struct multisig_addr *msig;
+    int32_t size = (int32_t)(sizeof(*msig) + n*sizeof(struct pubkey_info));
+    msig = calloc(1,size);
+    msig->size = size;
+    msig->n = n;
+    msig->created = (uint32_t)time(NULL);
+    if ( sender != 0 && sender[0] != 0 )
+        msig->sender = calc_nxt64bits(sender);
+    safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
+    safecopy(msig->NXTaddr,NXTaddr,sizeof(msig->NXTaddr));
+    if ( userpubkey != 0 && userpubkey[0] != 0 )
+        safecopy(msig->NXTpubkey,userpubkey,sizeof(msig->NXTpubkey));
+    msig->m = m;
+    return(msig);
 }
 
 struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,uint64_t nxt64bits,char *coinstr,char coinaddrs[][256],char pubkeys[][1024],char *userNXTpubkey,int32_t buyNXT)
@@ -234,6 +325,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
             free(msig);
             return(0);
         }
+        save_msigaddr(coinstr,NXTaddr,msig,msig->size);
         if ( db777_add(1,DB_msigs,key,keylen,msig,msig->size) != 0 )
             printf("error saving msig.(%s)\n",msig->multisigaddr);
     }

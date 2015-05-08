@@ -58,29 +58,6 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str);
 #define DOGE_COINID 4
 #define BTCD_COINID 8
  
-void multisig_keystr(char *keystr,char *coinstr,char *NXTaddr,char *msigaddr)
-{
-    if ( msigaddr == 0 || msigaddr[0] == 0 )
-        sprintf(keystr,"%s.%s",coinstr,NXTaddr);
-    else sprintf(keystr,"%s.%s",coinstr,msigaddr);
-}
-
-struct multisig_addr *find_msigaddr(int32_t *lenp,char *coinstr,char *NXTaddr,char *msigaddr)
-{
-    char keystr[1024];
-    multisig_keystr(keystr,coinstr,NXTaddr,msigaddr);
-    printf("search_msig.(%s)\n",keystr);
-    return(db777_findM(lenp,DB_msigs,keystr,(int32_t)strlen(keystr)+1));
-}
-
-int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int32_t len)
-{
-    char keystr[1024];
-    multisig_keystr(keystr,coinstr,NXTaddr,msig->multisigaddr);
-    printf("save_msig.(%s)\n",keystr);
-    return(db777_add(0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,len));
-}
-
 int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender)
 {
     int32_t i,ret = 0;
@@ -143,31 +120,6 @@ struct multisig_addr *find_NXT_msig(char *NXTaddr,char *coinstr,uint64_t *srv64b
         free(msigs);
     }
     return(retmsig);
-}
-
-int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *userpass,char *normaladdr,char *msigaddr,int32_t gatewayid,int32_t numgateways) //could map to rawind, but this is rarely called
-{
-    int32_t ismine,len;
-    struct multisig_addr *msig;
-    redeemScript[0] = normaladdr[0] = 0;
-    if ( (msig= find_msigaddr(&len,coinstr,0,msigaddr)) == 0 )
-    {
-        strcpy(normaladdr,msigaddr);
-        printf("cant find_msigaddr.(%s)\n",msigaddr);
-        return(0);
-    }
-    if ( msig->redeemScript[0] != 0 && gatewayid >= 0 && gatewayid < numgateways )
-    {
-        strcpy(normaladdr,msig->pubkeys[gatewayid].coinaddr);
-        strcpy(redeemScript,msig->redeemScript);
-        printf("_map_msigaddr.(%s) -> return (%s) redeem.(%s)\n",msigaddr,normaladdr,redeemScript);
-        return(1);
-    }
-    ismine = get_redeemscript(redeemScript,normaladdr,coinstr,serverport,userpass,msig->multisigaddr);
-    if ( normaladdr[0] != 0 )
-        return(1);
-    strcpy(normaladdr,msigaddr);
-    return(-1);
 }
 
 void *extract_jsonkey(cJSON *item,void *arg,void *arg2)

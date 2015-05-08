@@ -23,16 +23,10 @@
 #include "msig.c"
 #undef DEFINES_ONLY
 
-
-char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coinstr,char *refacct,int32_t M,int32_t N,uint64_t *srv64bits,int32_t n,char *userpubkey,char *email,uint32_t buyNXT);
-char *setmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *origargstr);
-char *getmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *coinstr,char *refNXTaddr,char *myacctcoinaddr,char *mypubkey);
-char *setmsigpubkey(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,char *coinstr,char *refNXTaddr,char *acctcoinaddr,char *userpubkey);
-
 void coins_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME COINS;
-char *PLUGNAME(_methods)[] = { "genmultisig", "setmsigpubkey", "getmsigpubkey", "setmultisig", "acctpubkeys" };
+char *PLUGNAME(_methods)[] = { "acctpubkeys" };
 
 struct coin777 *coin777_find(char *coinstr)
 {
@@ -211,9 +205,9 @@ int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],buf2[MAX_JSON_FIELD],*coinstr,*serverport,*userpass,*str,*email,*previpaddr = 0;
+    char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],buf0[MAX_JSON_FIELD],buf1[MAX_JSON_FIELD],*coinstr,*serverport,*userpass,*str = 0;
     cJSON *array,*item;
-    int32_t i,n,buyNXT,j = 0;
+    int32_t i,n,j = 0;
     struct coin777 *coin;
     retbuf[0] = 0;
     if ( initflag > 0 )
@@ -281,38 +275,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
             if ( coinstr == 0 )
                 coinstr = zerobuf;
-            if ( strcmp(methodstr,"genmultisig") == 0 )
-            {
-                if ( coinstr[0] == 0 )
-                    strcpy(retbuf,"{\"error\":\"no coin specified\"}");
-                else
-                {
-                    copy_cJSON(buf0,cJSON_GetObjectItem(json,"refcontact"));
-                    copy_cJSON(buf1,cJSON_GetObjectItem(json,"userpubkey"));
-                    email = cJSON_str(cJSON_GetObjectItem(json,"email"));
-                    buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
-                    str = genmultisig(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,coinstr,buf0,MGW.M,MGW.N,MGW.srv64bits,MGW.N,buf1,email,buyNXT);
-                    nn_publish(str,1);
-                }
-            }
-            else if ( strcmp(methodstr,"setmultisig") == 0 )
-                str = setmultisig(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,jsonstr);
-            else if ( strcmp(methodstr,"getmsigpubkey") == 0 && coinstr[0] != 0 )
-            {
-                copy_cJSON(buf0,cJSON_GetObjectItem(json,"refNXTaddr"));
-                copy_cJSON(buf1,cJSON_GetObjectItem(json,"myacctcoinaddr"));
-                copy_cJSON(buf2,cJSON_GetObjectItem(json,"mypubkey"));
-                str = getmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
-                nn_publish(str,1);
-            }
-            else if ( strcmp(methodstr,"setmsigpubkey") == 0 && coinstr[0] != 0 )
-            {
-                copy_cJSON(buf0,cJSON_GetObjectItem(json,"refNXTaddr"));
-                copy_cJSON(buf1,cJSON_GetObjectItem(json,"addr"));
-                copy_cJSON(buf2,cJSON_GetObjectItem(json,"userpubkey"));
-                str = setmsigpubkey(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,previpaddr,sender,coinstr,buf0,buf1,buf2);
-            }
-            else if ( strcmp(methodstr,"acctpubkeys") == 0 )
+            if ( strcmp(methodstr,"acctpubkeys") == 0 )
             {
                 if ( MGW.gatewayid >= 0 )
                 {

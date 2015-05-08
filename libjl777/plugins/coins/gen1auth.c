@@ -258,49 +258,5 @@ struct cointx_info *createrawtransaction(char *coinstr,char *serverport,char *us
     return(rettx);
 }
 
-int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr)
-{
-    cJSON *json,*array,*json2;
-    char args[1024],addr[1024],*retstr,*retstr2;
-    int32_t i,n,ismine = 0;
-    redeemScript[0] = normaladdr[0] = 0;
-    sprintf(args,"\"%s\"",multisigaddr);
-    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"validateaddress",args)) != 0 )
-    {
-        printf("get_redeemscript retstr.(%s)\n",retstr);
-        if ( (json= cJSON_Parse(retstr)) != 0 )
-        {
-            if ( (array= cJSON_GetObjectItem(json,"addresses")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    ismine = 0;
-                    copy_cJSON(addr,cJSON_GetArrayItem(array,i));
-                    if ( addr[0] != 0 )
-                    {
-                        sprintf(args,"\"%s\"",addr);
-                        retstr2 = bitcoind_passthru(coinstr,serverport,userpass,"validateaddress",args);
-                        if ( retstr2 != 0 )
-                        {
-                            if ( (json2= cJSON_Parse(retstr2)) != 0 )
-                                ismine = is_cJSON_True(cJSON_GetObjectItem(json2,"ismine")), free_json(json2);
-                            free(retstr2);
-                        }
-                    }
-                    if ( ismine != 0 )
-                    {
-                        //printf("(%s) ismine.%d\n",addr,ismine);
-                        strcpy(normaladdr,addr);
-                        copy_cJSON(redeemScript,cJSON_GetObjectItem(json,"hex"));
-                        break;
-                    }
-                }
-            } free_json(json);
-        } free(retstr);
-    }
-    return(ismine);
-}
-
-
 #endif
 #endif
