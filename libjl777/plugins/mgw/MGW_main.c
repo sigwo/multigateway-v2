@@ -271,6 +271,8 @@ cJSON *acctpubkey_json(char *coinstr)
     cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("myacctpubkeys"));
     cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
+    cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(SUPERNET.NXTADDR));
+    cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(MGW.gatewayid));
     return(json);
 }
 
@@ -319,12 +321,12 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr)
 
 int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
 {
-    cJSON *item,*array; uint64_t gatewaybits,nxt64bits; int32_t i,n=0,gatewayid,count = 0,updated = 0;
+    cJSON *item,*array; uint64_t gatewaybits,gbits,nxt64bits; int32_t i,n=0,g,gatewayid,count = 0,updated = 0;
     char msigjsonstr[MAX_JSON_FIELD],gatewayNXT[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
     struct coin777 *coin;
-    copy_cJSON(gatewayNXT,cJSON_GetObjectItem(json,"NXT"));
     copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
     gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
+    copy_cJSON(gatewayNXT,cJSON_GetObjectItem(json,"gatewayNXT"));
     gatewaybits = calc_nxt64bits(gatewayNXT);
     coin = coin777_find(coinstr);
     if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -336,6 +338,16 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
             copy_cJSON(NXTaddr,cJSON_GetObjectItem(item,"userNXT"));
             copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"coinaddr"));
             copy_cJSON(pubkey,cJSON_GetObjectItem(item,"pubkey"));
+            g = get_API_int(cJSON_GetObjectItem(item,"gatewayid"),-1);
+            gbits = get_API_nxt64bits(cJSON_GetObjectItem(item,"gatewayNXT"));
+            if ( g >= 0 )
+            {
+                if ( g != gatewayid || (gbits != 0 && gbits != gatewaybits) )
+                {
+                    printf("SKIP: g.%d vs gatewayid.%d gbits.%llu vs %llu\n",g,gatewayid,(long long)gbits,(long long)gatewaybits);
+                    continue;
+                }
+            }
             nxt64bits = calc_nxt64bits(NXTaddr);
             updated += add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
             count += ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr);
@@ -360,23 +372,26 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
     char msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr; struct coin777 *coin;
-    copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
-    coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
-    if ( NXTaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr)) != 0 )
+    if ( MGW.gatewayid >= 0 )
     {
-        if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
-            fix_msigaddr(coin,NXTaddr);
-        else return(clonestr(msigjsonstr));
-    }
-    sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",NXTaddr);
-    return(clonestr(msigjsonstr));
+        copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
+        coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
+        if ( NXTaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr)) != 0 )
+        {
+            if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
+                fix_msigaddr(coin,NXTaddr);
+            else return(clonestr(msigjsonstr));
+        }
+        sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",NXTaddr);
+        return(clonestr(msigjsonstr));
+    } else return(0);
 }
 
 int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
 {
     char retbuf[1024];
     cJSON *json,*array;
-    if ( (array= cJSON_Parse(str)) != 0 )
+    if ( MGW.gatewayid >= 0 && (array= cJSON_Parse(str)) != 0 )
     {
         if ( (json= acctpubkey_json(coinstr)) != 0 )
         {

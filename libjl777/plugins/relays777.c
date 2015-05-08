@@ -1019,7 +1019,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             else if ( strcmp(methodstr,"devMGW") == 0 )
             {
                 char *devMGW_command(char *jsonstr,cJSON *json);
-                retstr = devMGW_command(jsonstr,json);
+                if ( MGW.gatewayid >= 0 )
+                    retstr = devMGW_command(jsonstr,json);
             }
             else if ( strcmp(methodstr,"busdata") == 0 )
                 retstr = busdata_sync(jsonstr,json);
