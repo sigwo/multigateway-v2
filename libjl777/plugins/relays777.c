@@ -275,7 +275,7 @@ char *nn_directconnect(char *ipaddr)
     }
     if ( is_ipaddr(SUPERNET.myipaddr) == 0 && SUPERNET.iamrelay != 0 )
         return(clonestr("{\"error\":\"dont know myipaddr\"}"));
-    if ( (sock= nn_createsocket(endpoint,1,"direct",NN_PAIR,SUPERNET.port,10,100)) >= 0 )
+    if ( (sock= nn_createsocket(endpoint,1,"direct",NN_PAIR,SUPERNET.port,10,1000)) >= 0 )
     {
         if ( sock >= (1 << 16) )
             return(clonestr("{\"error\":\"socket val too big\"}"));
@@ -442,7 +442,7 @@ char *nn_allpeers(char *_request,int32_t timeoutmillis,char *localresult)
     char *request;
     char *msg,*retstr;
     if ( timeoutmillis == 0 )
-        timeoutmillis = 900;
+        timeoutmillis = 2000;
     if ( (peersock= RELAYS.querypeers) < 0 )
         return(clonestr("{\"error\":\"invalid peers socket\"}"));
     if ( nn_setsockopt(peersock,NN_SURVEYOR,NN_SURVEYOR_DEADLINE,&timeoutmillis,sizeof(timeoutmillis)) < 0 )
