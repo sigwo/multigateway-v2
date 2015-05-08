@@ -1016,7 +1016,7 @@ uint32_t ensure_ramchain_DBs(struct ramchain *ram)
     }
     printf("minblocknums -> %d\n",minblocknum);
     numpurged = ramchain_setblocknums(ram,minblocknum,0);
-    if ( numpurged > 10 )
+    if ( 0 && numpurged > 10 )
     {
         printf("will purge %d DB entrys. 'y' to proceed\n",numpurged);
         if ( getchar() == 'y' )
