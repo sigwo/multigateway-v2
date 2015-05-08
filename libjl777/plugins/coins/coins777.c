@@ -726,7 +726,7 @@ int32_t ramchain_pipeline0(struct coin777 *coin,uint32_t blocknum)
     struct address_entry B; struct alloc_space MEM;
     struct block_output *block;
     char transmit[1024];
-    int32_t err; uint32_t RTblocknum;
+    int32_t err;
     memset(&B,0,sizeof(B)), B.blocknum = blocknum;
     memset(&MEM,0,sizeof(MEM)); MEM.ptr = ram->huffbits; MEM.size = ram->huffallocsize;
     memset(&ram->EMIT,0,sizeof(ram->EMIT)), memset(&ram->DECODE,0,sizeof(ram->DECODE));
@@ -741,7 +741,7 @@ int32_t ramchain_pipeline0(struct coin777 *coin,uint32_t blocknum)
                 printf("err.%d adding blocknum.%u\n",err,blocknum);
             nn_send(RELAYS.pushsock,transmit,(int32_t)strlen(transmit)+1,0);
             printf("%s\n",transmit);
-            printf("%-4s [lag %-5d]    RTblock.%-6u    blocknum.%-6u  len.%-5d   minutes %.2f\n",coin->name,RTblocknum-blocknum,RTblocknum,blocknum,block->allocsize,estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000);
+            printf("%-4s [lag %-5d]    RTblock.%-6u    blocknum.%-6u  len.%-5d   minutes %.2f\n",coin->name,ram->RTblocknum-blocknum,ram->RTblocknum,blocknum,block->allocsize,estimate_completion(ram->startmilli,blocknum-ram->startblocknum,ram->RTblocknum-blocknum)/60000);
             return(block->allocsize);
         }
     }
