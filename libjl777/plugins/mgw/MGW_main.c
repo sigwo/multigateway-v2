@@ -22,12 +22,12 @@
 #undef DEFINES_ONLY
 
 void MGW_idle(struct plugin_info *plugin) {}
-//{"coin":"BTC","userNXT":"3434333333443334","userpubkey":"<userpubkey>","buyNXT":99,"NXT":"15382101741829220030","plugin":"peers","method":"devMGW","broadcast":"allpeers"}
+//{"coin":"BTCD","userNXT":"34343233333443334","userpubkey":"<userpubkey>","buyNXT":99,"NXT":"15382101741829220030","plugin":"peers","method":"devMGW","broadcast":"allpeers"}
 
 STRUCTNAME MGW;
 char *PLUGNAME(_methods)[] = { "myacctpubkeys" }; // list of supported methods
 
-uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *json)
+uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
     uint64_t disableflags = 0;
     printf("init %s size.%ld\n",plugin->name,sizeof(struct MGW_info));
@@ -493,7 +493,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
                 else return(clonestr(msigjsonstr));
             }
         }
-        sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\",\"ipaddr\":\"%s\"}",coinstr!=0?coinstr:"",NXTaddr,SUPERNET.myipaddr);
+        sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",NXTaddr);
         return(clonestr(msigjsonstr));
     } else return(0);
 }

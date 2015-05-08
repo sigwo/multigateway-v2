@@ -58,6 +58,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( DB_NXTaccts == 0 )
             DB_NXTaccts = db777_create(0,0,"NXTaccts",0);
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
+        plugin->allowremote = 1;
+        copy_cJSON(RAMCHAINS.pullnode,cJSON_GetObjectItem(json,"pullnode"));
         RAMCHAINS.readyflag = 1;
     }
     else

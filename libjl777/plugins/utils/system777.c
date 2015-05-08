@@ -100,7 +100,7 @@ struct MGW_info
 #define MAX_RAMCHAINS 128
 struct ramchain_info
 {
-    char PATH[1024],coins[MAX_RAMCHAINS][16];
+    char PATH[1024],coins[MAX_RAMCHAINS][16],pullnode[64];
     double lastupdate[MAX_RAMCHAINS];
     union endpoints all;
     int32_t num,readyflag;
@@ -124,7 +124,7 @@ struct relayargs
 {
     char *(*commandprocessor)(struct relayargs *args,uint8_t *msg,int32_t len);
     char name[16],endpoint[MAX_SERVERNAME];
-    int32_t lbsock,bussock,pubsock,subsock,peersock,sock,type,bindflag,sendtimeout,recvtimeout;
+    int32_t lbsock,bussock,pubsock,subsock,peersock,pushsock,sock,type,bindflag,sendtimeout,recvtimeout;
 };
 
 struct _relay_info { int32_t sock,num,mytype,desttype; uint64_t servers[4096]; };
@@ -132,7 +132,7 @@ struct relay_info
 {
     struct relayargs args[8];
     struct _relay_info lb,peer,bus,sub,pair;
-    int32_t readyflag,pubsock,querypeers,surveymillis;
+    int32_t readyflag,pubsock,querypeers,surveymillis,pushsock,pullsock;
 }; extern struct relay_info RELAYS;
 
 // only OS portable functions in this file

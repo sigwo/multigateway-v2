@@ -581,7 +581,7 @@ int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { retur
 #include "plugins/plugins.h"
 #undef DEFINES_ONLY
 
-int32_t got_newpeer(const char *ip_port) { printf("got_newpeer.(%s)\n",ip_port); return(0); }
+int32_t got_newpeer(const char *ip_port) { if ( Debuglevel > 2 ) printf("got_newpeer.(%s)\n",ip_port); return(0); }
 
 char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 {

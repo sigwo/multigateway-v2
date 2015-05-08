@@ -57,18 +57,6 @@ struct cointx_info
     char signedtx[];
 };
 
-#define value_coders8 (&coders[0])
-//#define minted_coders8 (&coders[8])
-#define txidind_coders4 (&coders[8])
-#define scriptind_coders4 (&coders[12])
-#define addrind_coders4 (&coders[16])
-#define blocknum_coders4 (&coders[20])
-#define vout_coders2 (&coders[24])
-#define numvin_coders2 (&coders[26])
-#define numvout_coders2 (&coders[28])
-#define numtx_coders2 (&coders[30])
-#define TOTAL_CODERS (32)
-
 struct address_entry { uint32_t rawind:31,spent:1,blocknum,txind:15,vinflag:1,v:14,isinternal:1; };
 
 struct ramchain_hashtable
@@ -726,9 +714,34 @@ int32_t ramchain_decode(struct ramchain *ram,struct alloc_space *mem,struct bloc
     return(block->numtx);
 }
 
+
+int32_t ramchain_pipeline0(struct coin777 *coin,uint32_t blocknum)
+{
+    struct ramchain *ram = &coin->ramchain;
+    struct rawblock *emit = &ram->EMIT;
+    struct address_entry B; struct alloc_space MEM;
+    struct block_output *block;
+    char transmit[1024];
+    int32_t err;
+    memset(&B,0,sizeof(B)), B.blocknum = blocknum;
+    memset(&MEM,0,sizeof(MEM)); MEM.ptr = ram->huffbits; MEM.size = ram->huffallocsize;
+    memset(&ram->EMIT,0,sizeof(ram->EMIT)), memset(&ram->DECODE,0,sizeof(ram->DECODE));
+    if ( rawblock_load(emit,coin->name,coin->serverport,coin->userpass,blocknum) > 0 )
+    {
+        if ( (block= ramchain_emit(ram,&MEM,emit->txspace,emit->numtx,emit->vinspace,emit->voutspace,&B)) != 0 )
+        {
+            sprintf(transmit,"{\"block\":%u,\"crc\":%u,\"size\":%u,\"inds\":[%u, %u, %u, %u]}",blocknum,_crc32(0,block,block->allocsize),block->allocsize,ram->addrs.ind,ram->scripts.ind,ram->txids.ind,ram->unspents.ind);
+            if ( (err= db777_add(0,ram->blocks.DB,&blocknum,(int32_t)sizeof(blocknum),(void *)block,block->allocsize)) != 0 )
+                printf("err.%d adding blocknum.%u\n",err,blocknum);
+            return(block->allocsize);
+        }
+    }
+    return(-1);
+}
+
 int32_t ramchain_rawblock(struct ramchain *ram,struct rawblock *raw,uint32_t blocknum,int32_t emitflag)
 {
-    struct address_entry B; struct alloc_space MEM;
+    struct address_entry B; struct alloc_space MEM; char transmit[1024];
     struct block_output *block,*checkblock;
     int32_t allocsize,err;
     memset(&B,0,sizeof(B)), B.blocknum = blocknum;
@@ -737,6 +750,11 @@ int32_t ramchain_rawblock(struct ramchain *ram,struct rawblock *raw,uint32_t blo
         memset(&MEM,0,sizeof(MEM)); MEM.ptr = ram->huffbits; MEM.size = ram->huffallocsize;
         if ( (block= ramchain_emit(ram,&MEM,raw->txspace,raw->numtx,raw->vinspace,raw->voutspace,&B)) != 0 )
         {
+            if ( RELAYS.pushsock >= 0 )
+            {
+                sprintf(transmit,"{\"NXT\":\"%s\",\"block\":%u,\"crc\":%u,\"size\":%u,\"inds\":[%u, %u, %u, %u]}",SUPERNET.NXTADDR,blocknum,_crc32(0,block,block->allocsize),block->allocsize,ram->addrs.ind,ram->scripts.ind,ram->txids.ind,ram->unspents.ind);
+                nn_send(RELAYS.pushsock,transmit,(int32_t)strlen(transmit)+1,0);
+            }
             db777_delete(ram->blocks.DB,&blocknum,(int32_t)sizeof(blocknum));
             if ( (err= db777_add(0,ram->blocks.DB,&blocknum,(int32_t)sizeof(blocknum),(void *)block,block->allocsize)) != 0 )
                 printf("err.%d adding blocknum.%u\n",err,blocknum);
@@ -1000,17 +1018,6 @@ char *extract_userpass(char *userhome,char *coindir,char *confname)
         return(clonestr(userpass));
     return(0);
 }
-
-#undef value_coders8
-#undef minted_coders8
-#undef txidind_coders6
-#undef scriptind_coders6
-#undef addrind_coders6
-#undef blocknum_coders4
-#undef vout_coders2
-#undef numvin_coders2
-#undef numvout_coders2
-#undef numtx_coders2
 
 #endif
 #endif
