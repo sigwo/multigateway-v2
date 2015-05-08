@@ -387,7 +387,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
             for (i=0; i<3; i++)
             {
                 if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
-                    fix_msigaddr(coin,NXTaddr), msleep(1000);
+                    fix_msigaddr(coin,NXTaddr), msleep(250);
                 else return(clonestr(msigjsonstr));
             }
         }
