@@ -936,6 +936,7 @@ void ramchain_update(struct coin777 *coin)
         if ( RELAYS.pushsock >= 0 )
         {
             ramchain_pipeline0(coin,blocknum);
+            coin->ramchain.blocknum++;
         }
         else
         {
