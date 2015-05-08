@@ -84,6 +84,15 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
     return((int32_t)len);
 }
 
+cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey)
+{
+    cJSON *item = cJSON_CreateObject();
+    cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(account));
+    cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
+    cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
+    return(item);
+}
+
 char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 {
     char pubkey[512],NXTaddr[64],account[512],coinaddr[512],*retstr = 0;
@@ -109,13 +118,7 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                         {
                             copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
                             if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
-                            {
-                                item = cJSON_CreateObject();
-                                cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(account));
-                                cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
-                                cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
-                                cJSON_AddItemToArray(array,item);
-                            }
+                                cJSON_AddItemToArray(array,msig_itemjson(account,coinaddr,pubkey));
                         }
                         else printf("decimal.%d (%s) -> (%s)? ",is_decimalstr(account),account,NXTaddr);
                     }
