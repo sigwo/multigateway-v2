@@ -726,7 +726,6 @@ int32_t ramchain_pipeline0(struct coin777 *coin,uint32_t blocknum)
     struct address_entry B; struct alloc_space MEM;
     struct block_output *block;
     char transmit[1024];
-    int32_t err;
     memset(&B,0,sizeof(B)), B.blocknum = blocknum;
     memset(&MEM,0,sizeof(MEM)); MEM.ptr = ram->huffbits; MEM.size = ram->huffallocsize;
     memset(&ram->EMIT,0,sizeof(ram->EMIT)), memset(&ram->DECODE,0,sizeof(ram->DECODE));
@@ -734,9 +733,11 @@ int32_t ramchain_pipeline0(struct coin777 *coin,uint32_t blocknum)
     {
         if ( (block= ramchain_emit(ram,&MEM,emit->txspace,emit->numtx,emit->vinspace,emit->voutspace,&B)) != 0 )
         {
-            sprintf(transmit,"{\"block\":%u,\"crc\":%u,\"size\":%u,\"inds\":[%u, %u, %u, %u]}",blocknum,_crc32(0,block,block->allocsize),block->allocsize,ram->addrs.ind,ram->scripts.ind,ram->txids.ind,ram->unspents.ind);
+            sprintf(transmit,"{\"block\":%u,\"crc\":%u,\"size\":%u,\"inds\":[%u, %u, %u, %u]}",blocknum,_crc32(0,block,block->allocsize),block->allocsize,ram->addrs.maxind,ram->scripts.maxind,ram->txids.maxind,ram->unspents.maxind);
             //if ( (err= db777_add(0,ram->blocks.DB,&blocknum,(int32_t)sizeof(blocknum),(void *)block,block->allocsize)) != 0 )
             //    printf("err.%d adding blocknum.%u\n",err,blocknum);
+            nn_send(RELAYS.pushsock,transmit,(int32_t)strlen(transmit)+1,0);
+            printf("%s\n",transmit);
             return(block->allocsize);
         }
     }
