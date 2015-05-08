@@ -84,12 +84,17 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
     return((int32_t)len);
 }
 
-cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey)
+cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey,int32_t allfields)
 {
     cJSON *item = cJSON_CreateObject();
     cJSON_AddItemToObject(item,"userNXT",cJSON_CreateString(account));
     cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
     cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
+    if ( allfields != 0 )
+    {
+        cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
+        cJSON_AddItemToObject(item,"gatewayid",cJSON_CreateNumber(MGW.gatewayid));
+    }
     return(item);
 }
 
@@ -118,7 +123,7 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                         {
                             copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
                             if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
-                                cJSON_AddItemToArray(array,msig_itemjson(account,coinaddr,pubkey));
+                                cJSON_AddItemToArray(array,msig_itemjson(account,coinaddr,pubkey,0));
                         }
                         else printf("decimal.%d (%s) -> (%s)? ",is_decimalstr(account),account,NXTaddr);
                     }

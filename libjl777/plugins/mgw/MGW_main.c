@@ -271,15 +271,13 @@ cJSON *acctpubkey_json(char *coinstr)
     cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("myacctpubkeys"));
     cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
-    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
-    cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(MGW.gatewayid));
     return(json);
 }
 
 void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
 {
     int32_t MGW_publishjson(char *retbuf,cJSON *json);
-    cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey);
+    cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey,int32_t allfields);
     cJSON *msigjson,*array; char retbuf[1024],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD];
     get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
     get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
@@ -287,7 +285,7 @@ void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
     if ( (msigjson= acctpubkey_json(coin->name)) != 0 )
     {
         array = cJSON_CreateArray();
-        cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey));
+        cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey,1));
         cJSON_AddItemToObject(msigjson,"pubkeys",array);
         MGW_publishjson(retbuf,msigjson);
         free_json(msigjson);
@@ -309,6 +307,8 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr)
         if ( (str= create_multisig_jsonstr(msig,0)) != 0 )
         {
             strcpy(msigjsonstr,str);
+            _stripwhite(msigjsonstr,' ');
+            printf("ENSURE.(%s)\n",msigjsonstr);
             retval = 1;
             free(str);
         }
@@ -359,15 +359,16 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
 
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
-    char msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr = ""; struct coin777 *coin;
+    char msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr; struct coin777 *coin;
     copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
-    if ( NXTaddr[0] != 0 && (coinstr= cJSON_str(cJSON_GetObjectItem(json,"coin"))) != 0 && (coin= coin777_find(coinstr)) != 0 )
+    coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
+    if ( NXTaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr)) != 0 )
     {
         if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
             fix_msigaddr(coin,NXTaddr);
         else return(clonestr(msigjsonstr));
     }
-    sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr,NXTaddr);
+    sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",NXTaddr);
     return(clonestr(msigjsonstr));
 }
 
