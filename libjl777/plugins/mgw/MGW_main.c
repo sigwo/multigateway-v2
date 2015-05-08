@@ -22,7 +22,7 @@
 #undef DEFINES_ONLY
 
 void MGW_idle(struct plugin_info *plugin) {}
-//{"coin":"BTCD","userNXT":"34343233333443334","userpubkey":"<userpubkey>","buyNXT":99,"NXT":"15382101741829220030","plugin":"peers","method":"devMGW","broadcast":"allpeers"}
+//{"coin":"BTCD","userNXT":"343233432443334","userpubkey":"<userpubkey>","buyNXT":99,"NXT":"15382101741829220030","plugin":"peers","method":"devMGW","broadcast":"allpeers"}
 
 STRUCTNAME MGW;
 char *PLUGNAME(_methods)[] = { "myacctpubkeys" }; // list of supported methods
