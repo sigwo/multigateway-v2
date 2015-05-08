@@ -333,7 +333,7 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
         for (i=0; i<n; i++)
         {
             item = cJSON_GetArrayItem(array,i);
-            copy_cJSON(NXTaddr,cJSON_GetObjectItem(item,"NXT"));
+            copy_cJSON(NXTaddr,cJSON_GetObjectItem(item,"userNXT"));
             copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"coinaddr"));
             copy_cJSON(pubkey,cJSON_GetObjectItem(item,"pubkey"));
             nxt64bits = calc_nxt64bits(NXTaddr);
@@ -360,14 +360,14 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
     char msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr = ""; struct coin777 *coin;
-    copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"NXT"));
+    copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
     if ( NXTaddr[0] != 0 && (coinstr= cJSON_str(cJSON_GetObjectItem(json,"coin"))) != 0 && (coin= coin777_find(coinstr)) != 0 )
     {
         if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
             fix_msigaddr(coin,NXTaddr);
         else return(clonestr(msigjsonstr));
     }
-    sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"NXT\":\"%s\"}",coinstr,NXTaddr);
+    sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr,NXTaddr);
     return(clonestr(msigjsonstr));
 }
 

@@ -87,7 +87,7 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
 cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey)
 {
     cJSON *item = cJSON_CreateObject();
-    cJSON_AddItemToObject(item,"NXT",cJSON_CreateString(account));
+    cJSON_AddItemToObject(item,"userNXT",cJSON_CreateString(account));
     cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
     cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
     return(item);
