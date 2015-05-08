@@ -276,6 +276,24 @@ cJSON *acctpubkey_json(char *coinstr)
     return(json);
 }
 
+void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
+{
+    int32_t MGW_publishjson(char *retbuf,cJSON *json);
+    cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey);
+    cJSON *msigjson,*array; char retbuf[1024],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD];
+    get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
+    get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
+    printf("new address.(%s) -> (%s) (%s)\n",NXTaddr,coinaddr,pubkey);
+    if ( (msigjson= acctpubkey_json(coin->name)) != 0 )
+    {
+        array = cJSON_CreateArray();
+        cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey));
+        cJSON_AddItemToObject(msigjson,"pubkeys",array);
+        MGW_publishjson(retbuf,msigjson);
+        free_json(msigjson);
+    }
+}
+
 int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr)
 {
     char coinaddrs[16][256],pubkeys[16][1024],*str;
@@ -320,7 +338,12 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
             copy_cJSON(pubkey,cJSON_GetObjectItem(item,"pubkey"));
             nxt64bits = calc_nxt64bits(NXTaddr);
             updated += add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
-            count += ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr);
+            if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
+            {
+                fix_msigaddr(coin,NXTaddr);
+                count += ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr);
+            }
+            else count++;
         }
     }
     sprintf(retbuf,"{\"result\":\"success\",\"gatewayid\":%d,\"gatewayNXT\":\"%s\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d,\"msigs\":%d}",gatewayid,gatewayNXT,coinstr,updated,n,count);
@@ -341,28 +364,16 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
 
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
-    cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey);
-    char retbuf[1024],msigjsonstr[MAX_JSON_FIELD],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr = "";
-    int32_t i; cJSON *msigjson,*array; struct coin777 *coin;
+    char msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr = "";
+    int32_t i; struct coin777 *coin;
     copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"NXT"));
     if ( NXTaddr[0] != 0 && (coinstr= cJSON_str(cJSON_GetObjectItem(json,"coin"))) != 0 && (coin= coin777_find(coinstr)) != 0 )
     {
         for (i=0; i<10; i++)
         {
             if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
-            {
-                get_acct_coinaddr(coinaddr,coinstr,coin->serverport,coin->userpass,NXTaddr);
-                get_pubkey(pubkey,coinstr,coin->serverport,coin->userpass,coinaddr);
-                printf("new address.(%s) -> (%s) (%s)\n",NXTaddr,coinaddr,pubkey);
-                if ( (msigjson= acctpubkey_json(coinstr)) != 0 )
-                {
-                    array = cJSON_CreateArray();
-                    cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey));
-                    cJSON_AddItemToObject(msigjson,"pubkeys",array);
-                    MGW_publishjson(retbuf,msigjson);
-                    free_json(msigjson);
-                }
-            } else return(clonestr(msigjsonstr));
+                fix_msigaddr(coin,NXTaddr);
+            else return(clonestr(msigjsonstr));
             sleep(1);
         }
     }
