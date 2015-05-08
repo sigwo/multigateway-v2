@@ -302,8 +302,9 @@ int32_t unspent_add(struct ramchain *ram,struct ramchain_hashtable *unspents,str
         free(ptr);
         return(0);
     }
-    err = db777_add(0,unspents->DB,&rawind,sizeof(rawind),U,sizeof(*U));
-    err2 = db777_add(0,unspents->DB,&U->B,sizeof(U->B),&rawind,sizeof(rawind));
+    err2 = err = db777_add(0,unspents->DB,&rawind,sizeof(rawind),U,sizeof(*U));
+    if ( RELAYS.pushsock < 0 )
+        err2 = db777_add(0,unspents->DB,&U->B,sizeof(U->B),&rawind,sizeof(rawind));
     coinaddr_update(ram,U);
     if ( err != 0 || err2 != 0 )
     {
@@ -324,7 +325,7 @@ int32_t txid_add(struct ramchain_hashtable *txids,struct txid_output *txid,int32
     if ( rawind > txids->maxind )
         txids->maxind = rawind;
     err = db777_add(0,txids->DB,key,keylen,&txid->B,sizeof(txid->B));
-    if ( txids->needreverse > 0 )
+    if ( txids->needreverse > 0 && RELAYS.pushsock < 0 )
     {
         err2 = db777_add(0,txids->DB,&rawind,sizeof(rawind),txid,allocsize);
         err3 = db777_add(0,txids->DB,&txid->B,sizeof(txid->B),&rawind,sizeof(rawind));
@@ -345,7 +346,7 @@ int32_t ramchain_setitem(struct ramchain_hashtable *hash,void *key,int32_t keyle
     if ( 0 && strcmp(hash->name,"rawaddrs") == 0 )
         printf("CREATE[%d] <- (%s)\n",rawind,key);
     err = db777_add(0,hash->DB,key,keylen,B,sizeof(*B));
-    if ( hash->needreverse > 0 )
+    if ( hash->needreverse > 0 && RELAYS.pushsock < 0 )
     {
         err2 = db777_add(0,hash->DB,&rawind,sizeof(rawind),key,keylen);
         err3 = db777_add(0,hash->DB,B,sizeof(*B),&rawind,sizeof(rawind));
@@ -593,7 +594,10 @@ uint32_t unspent_spend(struct ramchain *ram,uint32_t txidind,uint16_t vout,uint3
             else
             {
                 if ( unspent_find(&U,&ram->unspents,unspentind) == 0 )
-                    printf("after spend %u: spent.%d txidind.%u v%d %.8f -> addrind.%u | spend_txidind.%u v%d\n",U.B.rawind,U.B.spent,U.spend_txidind,U.spend_vout,dstr(U.value),U.addrind,spend_txidind,B->v);
+                {
+                    if ( Debuglevel > 2 )
+                        printf("after spend %u: spent.%d txidind.%u v%d %.8f -> addrind.%u | spend_txidind.%u v%d\n",U.B.rawind,U.B.spent,U.spend_txidind,U.spend_vout,dstr(U.value),U.addrind,spend_txidind,B->v);
+                }
             }
         } else printf("cant find unspendind.%d\n",unspentind);
         free(txid);
@@ -731,8 +735,8 @@ int32_t ramchain_pipeline0(struct coin777 *coin,uint32_t blocknum)
         if ( (block= ramchain_emit(ram,&MEM,emit->txspace,emit->numtx,emit->vinspace,emit->voutspace,&B)) != 0 )
         {
             sprintf(transmit,"{\"block\":%u,\"crc\":%u,\"size\":%u,\"inds\":[%u, %u, %u, %u]}",blocknum,_crc32(0,block,block->allocsize),block->allocsize,ram->addrs.ind,ram->scripts.ind,ram->txids.ind,ram->unspents.ind);
-            if ( (err= db777_add(0,ram->blocks.DB,&blocknum,(int32_t)sizeof(blocknum),(void *)block,block->allocsize)) != 0 )
-                printf("err.%d adding blocknum.%u\n",err,blocknum);
+            //if ( (err= db777_add(0,ram->blocks.DB,&blocknum,(int32_t)sizeof(blocknum),(void *)block,block->allocsize)) != 0 )
+            //    printf("err.%d adding blocknum.%u\n",err,blocknum);
             return(block->allocsize);
         }
     }
@@ -928,19 +932,26 @@ void ramchain_update(struct coin777 *coin)
             blocknum = 1;
         memset(&B,0,sizeof(B));
         B.blocknum = blocknum;
-        if ( 0 && ramchain_checkblock(coin,blocknum) == 0 )
-            coin->ramchain.blocknum++;
-        else if ( ramchain_processblock(coin,blocknum,coin->ramchain.RTblocknum) == 0 )
+        if ( RELAYS.pushsock >= 0 )
         {
-            coin->ramchain.blocknum++;
-            if ( 0 && coin->ramchain.numupdates++ > 10000 )
-            {
-                ramchain_syncDBs(&coin->ramchain);
-                printf("Start backups\n");// getchar();
-                coin->ramchain.numupdates = 0;
-            }
+            ramchain_pipeline0(coin,blocknum);
         }
-        else printf("%s error processing block.%d\n",coin->name,B.blocknum);
+        else
+        {
+            if ( 0 && ramchain_checkblock(coin,blocknum) == 0 )
+                coin->ramchain.blocknum++;
+            else if ( ramchain_processblock(coin,blocknum,coin->ramchain.RTblocknum) == 0 )
+            {
+                coin->ramchain.blocknum++;
+                if ( 0 && coin->ramchain.numupdates++ > 10000 )
+                {
+                    ramchain_syncDBs(&coin->ramchain);
+                    printf("Start backups\n");// getchar();
+                    coin->ramchain.numupdates = 0;
+                }
+            }
+            else printf("%s error processing block.%d\n",coin->name,B.blocknum);
+        }
     }
 }
 
