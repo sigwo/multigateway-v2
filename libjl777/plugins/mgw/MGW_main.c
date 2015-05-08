@@ -306,16 +306,19 @@ void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
     int32_t MGW_publishjson(char *retbuf,cJSON *json);
     cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey,int32_t allfields);
     cJSON *msigjson,*array; char retbuf[1024],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD];
-    get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
-    get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
-    printf("new address.(%s) -> (%s) (%s)\n",NXTaddr,coinaddr,pubkey);
-    if ( (msigjson= acctpubkey_json(coin->name)) != 0 )
+    if ( MGW.gatewayid >= 0 )
     {
-        array = cJSON_CreateArray();
-        cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey,1));
-        cJSON_AddItemToObject(msigjson,"pubkeys",array);
-        MGW_publishjson(retbuf,msigjson);
-        free_json(msigjson);
+        get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
+        get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
+        printf("new address.(%s) -> (%s) (%s)\n",NXTaddr,coinaddr,pubkey);
+        if ( (msigjson= acctpubkey_json(coin->name)) != 0 )
+        {
+            array = cJSON_CreateArray();
+            cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey,1));
+            cJSON_AddItemToObject(msigjson,"pubkeys",array);
+            MGW_publishjson(retbuf,msigjson);
+            free_json(msigjson);
+        }
     }
 }
 
@@ -324,37 +327,40 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
     cJSON *item,*array; uint64_t gatewaybits,gbits,nxt64bits; int32_t i,n=0,g,gatewayid,count = 0,updated = 0;
     char msigjsonstr[MAX_JSON_FIELD],gatewayNXT[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
     struct coin777 *coin;
-    copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
-    gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
-    copy_cJSON(gatewayNXT,cJSON_GetObjectItem(json,"gatewayNXT"));
-    gatewaybits = calc_nxt64bits(gatewayNXT);
-    coin = coin777_find(coinstr);
-    if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    if ( MGW.gatewayid >= 0 )
     {
-        //printf("arraysize.%d\n",n);
-        for (i=0; i<n; i++)
+        copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
+        gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
+        copy_cJSON(gatewayNXT,cJSON_GetObjectItem(json,"gatewayNXT"));
+        gatewaybits = calc_nxt64bits(gatewayNXT);
+        coin = coin777_find(coinstr);
+        if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
         {
-            item = cJSON_GetArrayItem(array,i);
-            copy_cJSON(NXTaddr,cJSON_GetObjectItem(item,"userNXT"));
-            copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"coinaddr"));
-            copy_cJSON(pubkey,cJSON_GetObjectItem(item,"pubkey"));
-            g = get_API_int(cJSON_GetObjectItem(item,"gatewayid"),-1);
-            gbits = get_API_nxt64bits(cJSON_GetObjectItem(item,"gatewayNXT"));
-            if ( g >= 0 )
+            //printf("arraysize.%d\n",n);
+            for (i=0; i<n; i++)
             {
-                if ( g != gatewayid || (gbits != 0 && gbits != gatewaybits) )
+                item = cJSON_GetArrayItem(array,i);
+                copy_cJSON(NXTaddr,cJSON_GetObjectItem(item,"userNXT"));
+                copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"coinaddr"));
+                copy_cJSON(pubkey,cJSON_GetObjectItem(item,"pubkey"));
+                g = get_API_int(cJSON_GetObjectItem(item,"gatewayid"),-1);
+                gbits = get_API_nxt64bits(cJSON_GetObjectItem(item,"gatewayNXT"));
+                if ( g >= 0 )
                 {
-                    printf("SKIP: g.%d vs gatewayid.%d gbits.%llu vs %llu\n",g,gatewayid,(long long)gbits,(long long)gatewaybits);
-                    continue;
+                    if ( g != gatewayid || (gbits != 0 && gbits != gatewaybits) )
+                    {
+                        printf("SKIP: g.%d vs gatewayid.%d gbits.%llu vs %llu\n",g,gatewayid,(long long)gbits,(long long)gatewaybits);
+                        continue;
+                    }
                 }
+                nxt64bits = calc_nxt64bits(NXTaddr);
+                updated += add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
+                count += ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr);
             }
-            nxt64bits = calc_nxt64bits(NXTaddr);
-            updated += add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
-            count += ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr);
         }
+        sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d,\"msigs\":%d}",coinstr,updated,n,count);
+        printf("(%s)\n",retbuf);
     }
-    sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d,\"msigs\":%d}",coinstr,updated,n,count);
-    printf("(%s)\n",retbuf);
     return(updated);
 }
 

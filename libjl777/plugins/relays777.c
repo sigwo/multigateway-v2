@@ -20,7 +20,7 @@
 void relay_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
-char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata" }; // list of supported methods
 
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
 
@@ -1016,12 +1016,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             }
             else if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
-            else if ( strcmp(methodstr,"devMGW") == 0 )
-            {
-                char *devMGW_command(char *jsonstr,cJSON *json);
-                if ( MGW.gatewayid >= 0 )
-                    retstr = devMGW_command(jsonstr,json);
-            }
             else if ( strcmp(methodstr,"busdata") == 0 )
                 retstr = busdata_sync(jsonstr,json);
             else if ( (myipaddr= cJSON_str(cJSON_GetObjectItem(json,"myipaddr"))) != 0 && is_ipaddr(myipaddr) != 0 )
