@@ -265,6 +265,31 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
     else return(0);
 }
 
+int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr)
+{
+    char coinaddrs[16][256],pubkeys[16][1024],*str;
+    int32_t g,m,retval = 0;
+    uint64_t nxt64bits;
+    struct multisig_addr *msig;
+    msigjsonstr[0] = 0;
+    nxt64bits = calc_nxt64bits(NXTaddr);
+    for (g=m=0; g<MGW.N; g++)
+        m += get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
+    if ( m == MGW.N && (msig= get_NXT_msigaddr(MGW.srv64bits,MGW.M,MGW.N,nxt64bits,coinstr,coinaddrs,pubkeys)) != 0 )
+    {
+        if ( (str= create_multisig_jsonstr(msig,0)) != 0 )
+        {
+            strcpy(msigjsonstr,str);
+            _stripwhite(msigjsonstr,' ');
+            printf("ENSURE.(%s)\n",msigjsonstr);
+            retval = 1;
+            free(str);
+        }
+        free(msig);
+    }
+    return(retval);
+}
+
 cJSON *acctpubkey_json(char *coinstr)
 {
     cJSON *json = cJSON_CreateObject();
@@ -292,31 +317,6 @@ void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
         MGW_publishjson(retbuf,msigjson);
         free_json(msigjson);
     }
-}
-
-int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr)
-{
-    char coinaddrs[16][256],pubkeys[16][1024],*str;
-    int32_t g,m,retval = 0;
-    uint64_t nxt64bits;
-    struct multisig_addr *msig;
-    msigjsonstr[0] = 0;
-    nxt64bits = calc_nxt64bits(NXTaddr);
-    for (g=m=0; g<MGW.N; g++)
-        m += get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
-    if ( m == MGW.N && (msig= get_NXT_msigaddr(MGW.srv64bits,MGW.M,MGW.N,nxt64bits,coinstr,coinaddrs,pubkeys)) != 0 )
-    {
-        if ( (str= create_multisig_jsonstr(msig,0)) != 0 )
-        {
-            strcpy(msigjsonstr,str);
-            _stripwhite(msigjsonstr,' ');
-            printf("ENSURE.(%s)\n",msigjsonstr);
-            retval = 1;
-            free(str);
-        }
-        free(msig);
-    }
-    return(retval);
 }
 
 int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
@@ -353,7 +353,7 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
             count += ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr);
         }
     }
-    sprintf(retbuf,"{\"result\":\"success\",\"gatewayid\":%d,\"gatewayNXT\":\"%s\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d,\"msigs\":%d}",gatewayid,gatewayNXT,coinstr,updated,n,count);
+    sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d,\"msigs\":%d}",coinstr,updated,n,count);
     printf("(%s)\n",retbuf);
     return(updated);
 }

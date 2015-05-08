@@ -123,7 +123,7 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                         {
                             copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
                             if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
-                                cJSON_AddItemToArray(array,msig_itemjson(account,coinaddr,pubkey,0));
+                                cJSON_AddItemToArray(array,msig_itemjson(account,coinaddr,pubkey,1));
                         }
                         else printf("decimal.%d (%s) -> (%s)? ",is_decimalstr(account),account,NXTaddr);
                     }
