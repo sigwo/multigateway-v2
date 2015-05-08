@@ -377,18 +377,21 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
 
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
-    char msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr; struct coin777 *coin;
+    int32_t i; char msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr; struct coin777 *coin;
     if ( MGW.gatewayid >= 0 )
     {
         copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
         coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
         if ( NXTaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr)) != 0 )
         {
-            if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
-                fix_msigaddr(coin,NXTaddr);
-            else return(clonestr(msigjsonstr));
+            for (i=0; i<3; i++)
+            {
+                if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr) == 0 )
+                    fix_msigaddr(coin,NXTaddr), msleep(1000);
+                else return(clonestr(msigjsonstr));
+            }
         }
-        sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",NXTaddr);
+        sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\",\"ipaddr\":\"%s\"}",coinstr!=0?coinstr:"",NXTaddr,SUPERNET.myipaddr);
         return(clonestr(msigjsonstr));
     } else return(0);
 }
