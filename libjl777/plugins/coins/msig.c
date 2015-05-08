@@ -504,39 +504,9 @@ int32_t update_MGW_jsonfile(void (*setfname)(char *fname,char *NXTaddr),void *(*
     return(appendflag);
 }
 
-long calc_pubkey_jsontxt(int32_t truncated,char *jsontxt,struct pubkey_info *ptr,char *postfix)
-{
-    if ( truncated != 0 )
-        sprintf(jsontxt,"{\"address\":\"%s\"}%s",ptr->coinaddr,postfix);
-    else sprintf(jsontxt,"{\"address\":\"%s\",\"pubkey\":\"%s\",\"srv\":\"%llu\"}%s",ptr->coinaddr,ptr->pubkey,(long long)ptr->nxt64bits,postfix);
-    return(strlen(jsontxt));
-}
-
-char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
-{
-    long i,len = 0;
-    struct coin777 *coin;
-    int32_t gatewayid = -1;
-    char jsontxt[65536],pubkeyjsontxt[65536],rsacct[64];
-    if ( msig != 0 )
-    {
-        if ( (coin= coin777_find(msig->coinstr)) != 0 )
-            gatewayid = coin->gatewayid;
-        rsacct[0] = 0;
-        conv_rsacctstr(rsacct,calc_nxt64bits(msig->NXTaddr));
-        pubkeyjsontxt[0] = 0;
-        for (i=0; i<msig->n; i++)
-            len += calc_pubkey_jsontxt(truncated,pubkeyjsontxt+strlen(pubkeyjsontxt),&msig->pubkeys[i],(i<(msig->n - 1)) ? ", " : "");
-        sprintf(jsontxt,"{%s\"sender\":\"%llu\",\"buyNXT\":%u,\"created\":%u,\"M\":%d,\"N\":%d,\"NXTaddr\":\"%s\",\"NXTpubkey\":\"%s\",\"RS\":\"%s\",\"address\":\"%s\",\"redeemScript\":\"%s\",\"coin\":\"%s\",\"gatewayid\":\"%d\",\"pubkey\":[%s]}",truncated==0?"\"requestType\":\"plugin\",\"plugin\":\"coins\",\"method\":\"setmultisig\",":"",(long long)msig->sender,msig->buyNXT,msig->created,msig->m,msig->n,msig->NXTaddr,msig->NXTpubkey,rsacct,msig->multisigaddr,msig->redeemScript,msig->coinstr,gatewayid,pubkeyjsontxt);
-        //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
-        //    printf("(%s) pubkeys len.%ld msigjsonlen.%ld\n",jsontxt,len,strlen(jsontxt));
-        return(clonestr(jsontxt));
-    }
-    else return(0);
-}
-
 int32_t update_MGW_msig(struct multisig_addr *msig,char *sender)
 {
+    char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated);
     char *jsonstr;
     int32_t appendflag = 0;
     if ( msig != 0 )
@@ -719,6 +689,7 @@ char *genmultisig(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *coins
     } else valid = N;
     if ( valid == N && msig != 0 )
     {
+        char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated);
         if ( (retstr= create_multisig_jsonstr(msig,0)) != 0 )
         {
             if ( retstr != 0 )//&& previpaddr != 0 && previpaddr[0] != 0 )

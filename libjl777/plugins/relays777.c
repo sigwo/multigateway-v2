@@ -20,7 +20,7 @@
 void relay_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
-char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
 
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
 
@@ -88,32 +88,6 @@ void set_endpointaddr(char *transport,char *endpoint,char *domain,uint16_t port,
     sprintf(endpoint,"%s://%s:%d",transport,domain,port + nn_portoffset(type));
 }
 
-int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
-{
-    int32_t n = 0;
-    strcpy(servers[n++],"89.248.160.237");
-    strcpy(servers[n++],"89.248.160.238");
-    strcpy(servers[n++],"89.248.160.239");
-    strcpy(servers[n++],"89.248.160.240");
-    strcpy(servers[n++],"89.248.160.241");
-    strcpy(servers[n++],"89.248.160.242");
-    strcpy(servers[n++],"89.248.160.243");
-    return(n);
-}
-
-int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
-{
-    //static char *tcpformat = "ps%02d.bitcoindark.ca";
-    int32_t n = 0;
-    strcpy(servers[n++],"192.99.151.160"); //"78.46.137.178");//
-    strcpy(servers[n++],"167.114.96.223"); //"5.9.102.210");//
-    strcpy(servers[n++],"167.114.113.197"); //"5.9.56.103");
-    //int32_t i,n = 0;
-    //for (i=0; i<=20&&n<max; i++,n++)
-    //    sprintf(servers[i],tcpformat,i);
-    return(n);
-}
-
 int32_t add_relay(struct _relay_info *list,uint64_t ipbits)
 {
     //static portable_mutex_t mutex; static int didinit;
@@ -164,6 +138,28 @@ int32_t update_serverbits(struct _relay_info *list,char *server,uint64_t ipbits,
         }
     }
     return(list->num);
+}
+
+int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
+{
+    int32_t n = 0;
+    strcpy(servers[n++],"89.248.160.237");
+    strcpy(servers[n++],"89.248.160.238");
+    strcpy(servers[n++],"89.248.160.239");
+    strcpy(servers[n++],"89.248.160.240");
+    strcpy(servers[n++],"89.248.160.241");
+    strcpy(servers[n++],"89.248.160.242");
+    strcpy(servers[n++],"89.248.160.243");
+    return(n);
+}
+
+int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
+{
+    int32_t n = 0;
+    strcpy(servers[n++],"192.99.151.160"); //"78.46.137.178");//
+    strcpy(servers[n++],"167.114.96.223"); //"5.9.102.210");//
+    strcpy(servers[n++],"167.114.113.197"); //"5.9.56.103");
+    return(n);
 }
 
 int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
@@ -1020,6 +1016,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             }
             else if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
+            else if ( strcmp(methodstr,"devMGW") == 0 )
+            {
+                char *devMGW_command(char *jsonstr,cJSON *json);
+                retstr = devMGW_command(jsonstr,json);
+            }
             else if ( strcmp(methodstr,"busdata") == 0 )
                 retstr = busdata_sync(jsonstr,json);
             else if ( (myipaddr= cJSON_str(cJSON_GetObjectItem(json,"myipaddr"))) != 0 && is_ipaddr(myipaddr) != 0 )
