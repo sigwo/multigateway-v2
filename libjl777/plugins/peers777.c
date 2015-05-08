@@ -104,7 +104,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             strcpy(retbuf,retstr);
             free(retstr);
-        } else strcpy(retbuf,"{\"error\":\"under construction\"}");
+        }// else strcpy(retbuf,"{\"error\":\"under construction\"}");
     }
     printf("PEERS (%s)\n",retbuf);
     return((int32_t)strlen(retbuf));

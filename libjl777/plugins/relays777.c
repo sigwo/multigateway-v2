@@ -20,7 +20,7 @@
 void relay_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
-char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
 
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
 
@@ -979,7 +979,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     int32_t i,n,count; uint64_t ipbits;
     cJSON *array;
     retbuf[0] = 0;
-    //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
@@ -1004,9 +1004,15 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
+        else if ( strcmp(methodstr,"devMGW") == 0 )
+        {
+            char *devMGW_command(char *jsonstr,cJSON *json);
+            if ( MGW.gatewayid >= 0 )
+                retstr = devMGW_command(jsonstr,json);
+        }
         else
         {
-            strcpy(retbuf,"{\"result\":\"under construction\"}");
+            strcpy(retbuf,"{\"result\":\"relay command under construction\"}");
             if ( strcmp(methodstr,"add") == 0 && (array= cJSON_GetObjectItem(json,"hostnames")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=count=0; i<n; i++)
