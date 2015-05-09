@@ -79,7 +79,7 @@ struct ledgerinds
 {
     struct sha256_state shastates[6];
     unsigned char hashes[6][256 >> 3];
-    uint64_t voutsum,spendsum;
+    uint64_t voutsum,spendsum,addrsum;
     uint32_t numtxoffsets,numaddrinfos,numspentbits,blocknum,totalvouts,totalspends,txidind,addrind,scriptind;
 };
 
@@ -349,6 +349,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
             ledger->addrinfos[vout.addrind] = addrinfo = calloc(1,sizeof(*addrinfo) + sizeof(*addrinfo->unspentinds));
             addrinfo->allocated = addrinfo->count = 1;
             addrinfo->unspentinds[0] = unspentind;
+            addrinfo->balance += value;
             update_sha256(ledger->addrinfos_hash,&ledger->addrinfos_state,(uint8_t *)&vout,sizeof(vout));
             return(ledger_packvout(&vout));
         }
@@ -457,7 +458,7 @@ void *ledger_tx(struct ledger_info *ledger,uint32_t txidind,char *txidstr,uint32
         offsets = &ledger->txoffsets[txidind << 1];
         offsets[0] = totalvouts, offsets[1] = totalspends;
         offsets[2] = totalvouts + numvouts, offsets[3] = totalspends + numvins;
-        update_sha256(ledger->txoffsets_hash,&ledger->txoffsets_state,(uint8_t *)offsets,sizeof(offsets[0]) * 4);
+        update_sha256(ledger->txoffsets_hash,&ledger->txoffsets_state,(uint8_t *)&offsets[2],sizeof(offsets[0]) * 2);
         //printf("offsets txind.%d (%d %d), next (%d %d)\n",txidind,offsets[0],offsets[1],offsets[2],offsets[3]);
         return(ledger_packtx(&tx));
     } else printf("ledger_tx: mismatched txidind, expected %u got %u\n",txidind,checkind), getchar();
@@ -535,6 +536,7 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; uint32_t **ptrs; int32_t allocsize = 0;
     uint32_t i,numtx,txind,numspends,numvouts,n,m = 0;
+    struct ledger_addrinfo *addrinfo;
     struct ledgerinds *lp = &ledger->L;
     //printf("ledgerupdate block.%u txidind.%u/%u addrind.%u/%u scriptind.%u/%u unspentind.%u/%u\n",blocknum,lp->txidind,ledger->txids.ind,lp->addrind,ledger->addrs.ind,lp->scriptind,ledger->scripts.ind,lp->totalvouts,ledger->unspentmap.ind);
     if ( blocknum == 1 )
@@ -572,6 +574,10 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
             }
             //else printf("error ledger_setinds %s %u\n",coin->name,blocknum);
         }
+        ledger->L.addrsum = 0;
+        for (i=1; i<=ledger->addrs.ind; i++)
+            if ( (addrinfo= ledger->addrinfos[i]) != 0 )
+                ledger->L.addrsum += addrinfo->balance;
         if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,lp,ledger->unsaved > 10000000)) < 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
@@ -627,7 +633,7 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
 {
     struct ramchain *ram = &coin->ramchain;
     int32_t len; double estimate,elapsed;
-    uint64_t oldsupply = ram->ledger.L.voutsum - ram->ledger.L.spendsum;
+    uint64_t supply,oldsupply = ram->ledger.L.voutsum - ram->ledger.L.spendsum;
     if ( (ram->RTblocknum % 1000) == 0 )
         ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coin->name,coin->serverport,coin->userpass,ram->RTblocknum);
     len = ramchain_ledgerupdate(&ram->ledger,coin,&ram->EMIT,blocknum);
@@ -636,7 +642,8 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     //ramchain_rawblock(ram,&ram->DECODE,blocknum,0);
     estimate = estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000;
     elapsed = (milliseconds()-ram->startmilli)/60000.;
-    printf("%-4s [lag %-5d] block.%-6u supply %.8f [%.8f] seconds %.2f %.2f %.2f | len.%-5d %s %.1f per block\n",coin->name,RTblocknum-blocknum,blocknum,dstr(ram->ledger.L.voutsum - ram->ledger.L.spendsum),dstr(ram->ledger.L.voutsum - ram->ledger.L.spendsum)-dstr(oldsupply),elapsed,estimate,elapsed+estimate,len,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
+    supply = ram->ledger.L.voutsum - ram->ledger.L.spendsum;
+    printf("%-4s [lag %-5d] block.%-6u supply %.8f %.8f (%.8f) [%.8f] seconds %.2f %.2f %.2f | len.%-5d %s %.1f per block\n",coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ram->ledger.L.addrsum),dstr(supply)-dstr(ram->ledger.L.addrsum),dstr(supply)-dstr(oldsupply),elapsed,estimate,elapsed+estimate,len,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
     return(0);
     rawblock_patch(&ram->EMIT), rawblock_patch(&ram->DECODE);
     ram->DECODE.minted = ram->EMIT.minted = 0;
