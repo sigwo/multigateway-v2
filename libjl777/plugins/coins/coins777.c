@@ -276,7 +276,7 @@ uint32_t ledger_rawind(struct ramchain_hashtable *hash,void *key,int32_t keylen)
     }
     rawind = ++hash->ind;
     printf("add rawind.%d keylen.%d\n",rawind,keylen);
-    if ( db777_add(1,hash->DB,key,keylen,&rawind,sizeof(rawind)) != 0 )
+    if ( 0 && db777_add(1,hash->DB,key,keylen,&rawind,sizeof(rawind)) != 0 )
         printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
     else
     {
@@ -317,7 +317,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
     }
     vout.newscript = (vout.scriptind == ledger->scripts.ind);
     vout.addrlen = (int32_t)strlen(coinaddr);
-    printf("scriptind.%u addrind.%u addrlen.%d\n",vout.scriptind,vout.addrind,vout.addrlen);
+    fprintf(stderr,"scriptind.%u addrind.%u addrlen.%d\n",vout.scriptind,vout.addrind,vout.addrlen);
     if ( (vout.addrind= ledger_rawind(&ledger->addrs,coinaddr,vout.addrlen)) != 0 )
     {
         printf("vout.addrind.%d vs ledger->addrs.ind %d\n",vout.addrind,ledger->addrs.ind);
