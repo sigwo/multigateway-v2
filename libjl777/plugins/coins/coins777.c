@@ -236,7 +236,10 @@ int32_t ledger_save(struct ledger_info *ledger,int32_t blocknum)
 int32_t ledger_setinds(struct ledger_info *ledger,struct ledgerinds *lp,uint32_t blocknum)
 {
     if ( blocknum == 0 )
+    {
         memset(lp,0,sizeof(*lp));
+        lp->txidind = lp->addrind = lp->scriptind = 1;
+    }
     else if ( blocknum == ledger->blocknum )
         *lp = ledger->L;
     else
