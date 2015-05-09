@@ -492,7 +492,7 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
 
 int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,struct rawblock *emit,uint32_t blocknum)
 {
-    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledgerinds L; uint32_t **ptrs; int32_t allocsize;
+    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledgerinds L; uint32_t **ptrs; int32_t allocsize = 0;
     uint32_t i,numtx,txind,numspends,numvouts,n,m = 0;
     if ( blocknum == 1 )
     {
@@ -534,7 +534,7 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
         }
         ledger->unsaved += allocsize;
     } else printf("error loading %s block.%u\n",coin->name,blocknum);
-    return(0);
+    return(allocsize);
 }
 
 /*int32_t ramchain_decode(struct ramchain *ram,struct alloc_space *mem,struct block_output *block,struct rawtx *tx,struct rawvin *vi,struct rawvout *vo,struct address_entry *bp)
@@ -585,7 +585,7 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     if ( rawblock_load(&ram->EMIT,coin->name,coin->serverport,coin->userpass,blocknum) > 0 )
     {
         ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coin->name,coin->serverport,coin->userpass,ram->RTblocknum);
-        ramchain_ledgerupdate(&ram->ledger,coin,&ram->EMIT,blocknum);
+        len = ramchain_ledgerupdate(&ram->ledger,coin,&ram->EMIT,blocknum);
         //len = ramchain_rawblock(ram,&ram->EMIT,blocknum,1), memset(ram->huffbits,0,ram->huffallocsize);
         //ramchain_rawblock(ram,&ram->DECODE,blocknum,0);
         printf("%-4s [lag %-5d]    RTblock.%-6u    blocknum.%-6u  len.%-5d   minutes %.2f\n",coin->name,RTblocknum-blocknum,RTblocknum,blocknum,len,estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000);
