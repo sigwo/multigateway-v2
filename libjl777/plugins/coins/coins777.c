@@ -313,6 +313,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
             vout.newaddr = 1, strcpy(vout.coinaddr,coinaddr);
             if ( vout.addrind > ledger->numaddrinfos )
             {
+                printf("allocate addrinfos n.%d width.%d %p\n",n,width,ledger->addrinfos);
                 n = (vout.addrind + 1 + width);
                 if ( ledger->addrinfos != 0 )
                 {
@@ -324,6 +325,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
         }
         if ( (addrinfo= ledger->addrinfos[vout.addrind]) == 0 )
         {
+            printf("alloc 1 addrinfo\n");
             ledger->addrinfos[vout.addrind] = addrinfo = calloc(1,sizeof(*addrinfo) + sizeof(*addrinfo->unspentinds));
             addrinfo->allocated = addrinfo->count = 1;
             addrinfo->unspentinds[0] = unspentind;
@@ -336,6 +338,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
             if ( width > 256 )
                 width = 256;
             n = (addrinfo->count + width);
+            printf("realloc width.%d n.%d addrinfo unspentinds\n",width,n);
             ledger->addrinfos[vout.addrind] = addrinfo = realloc(addrinfo,sizeof(*addrinfo) + (sizeof(*addrinfo->unspentinds) * n));
             memset(&addrinfo->unspentinds[addrinfo->count],0,sizeof(*addrinfo->unspentinds) * width);
             addrinfo->allocated = (addrinfo->count + width);
@@ -451,6 +454,7 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
         printf("ledger_commitblock: error mismatched parameter pending.%d (%d %d) (%d %d)\n",ledger->blockpending,ledger->blocknum,blocknum,ledger->numptrs,numptrs);
         return(-1);
     }
+    printf("commit numptrs.%d\n",numptrs);
     for (i=0; i<numptrs; i++)
         if ( ptrs[i] != 0 )
             allocsize += ptrs[i][0];
