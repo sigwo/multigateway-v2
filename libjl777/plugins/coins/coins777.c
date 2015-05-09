@@ -227,7 +227,7 @@ int32_t ledger_save(struct ledger_info *ledger,int32_t blocknum)
         fclose(fp);
         if ( (block= loadfile(&allocsize,ledgername)) != 0 && allocsize == fpos )
         {
-            if ( db777_add(1,ledger->ledgers.DB,&blocknum,sizeof(blocknum),block,(int32_t)fpos) != 0 )
+            if ( 0 && db777_add(1,ledger->ledgers.DB,&blocknum,sizeof(blocknum),block,(int32_t)fpos) != 0 )
                 printf("error saving (%s) %ld\n",ledgername,fpos);
             else printf("saved (%s) %ld\n",ledgername,fpos);
             free(block);
@@ -321,7 +321,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
     if ( (vout.addrind= ledger_rawind(&ledger->addrs,coinaddr,vout.addrlen)) != 0 )
     {
         printf("vout.addrind.%d vs ledger->addrs.ind %d\n",vout.addrind,ledger->addrs.ind);
-        if ( db777_add(1,ledger->unspentmap.DB,&unspentind,sizeof(unspentind),&vout,sizeof(vout.value)+sizeof(vout.addrind)) != 0 )
+        if ( 0 && db777_add(1,ledger->unspentmap.DB,&unspentind,sizeof(unspentind),&vout,sizeof(vout.value)+sizeof(vout.addrind)) != 0 )
             printf("error saving unspentmap (%s) %u -> %u\n",ledger->coinstr,unspentind,vout.addrind);
         if ( vout.addrind == ledger->addrs.ind )
         {
@@ -491,7 +491,7 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
             } else errs++;
         }
         free(ptrs);
-        if ( errs != 0 || db777_add(1,ledger->blocks.DB,blocks,allocsize,&blocknum,sizeof(blocknum)) != 0 )
+        if ( 0 )//errs != 0 || db777_add(1,ledger->blocks.DB,blocks,allocsize,&blocknum,sizeof(blocknum)) != 0 )
         {
             printf("error saving blocks %s %u\n",ledger->coinstr,blocknum);
             free(blocks);
