@@ -179,7 +179,8 @@ uint32_t *ledger_packvout(struct ledger_voutdata *vout)
     data = memalloc(&mem,sizeof(vout->value)), memcpy(data,&vout->value,sizeof(vout->value));
     ledger_packvoutstr(data,&mem,vout->addrind,vout->newaddr,(uint8_t *)vout->coinaddr,vout->addrlen);
     ledger_packvoutstr(data,&mem,vout->scriptind,vout->newscript,vout->script,vout->scriptlen);
-    ptr[0] = (uint32_t)mem.size;
+    printf("packed vout used.%ld size.%ld\n",mem.used,mem.size);
+    ptr[0] = (uint32_t)mem.used;
     return(ptr);
 }
 
@@ -315,8 +316,8 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
             vout.newaddr = 1, strcpy(vout.coinaddr,coinaddr);
             if ( vout.addrind > ledger->numaddrinfos )
             {
-                n = (vout.addrind + 1 + width);
-                printf("allocate addrinfos n.%d width.%d %p\n",n,width,ledger->addrinfos);
+                n = (ledger->numaddrinfos + width);
+                printf("allocate addrinfos n.%d width.%d %p ledger->numaddrinfos.%d\n",n,width,ledger->addrinfos,ledger->numaddrinfos);
                 if ( ledger->addrinfos != 0 )
                 {
                     ledger->addrinfos = realloc(ledger->addrinfos,sizeof(*ledger->addrinfos) * n);
@@ -331,7 +332,9 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
             ledger->addrinfos[vout.addrind] = addrinfo = calloc(1,sizeof(*addrinfo) + sizeof(*addrinfo->unspentinds));
             addrinfo->allocated = addrinfo->count = 1;
             addrinfo->unspentinds[0] = unspentind;
+            printf("about to update sha256\n");
             update_sha256(ledger->addrinfos_hash,&ledger->addrinfos_state,(uint8_t *)&vout,sizeof(vout));
+            printf("done update sha256\n");
             return(ledger_packvout(&vout));
         }
         if ( (n= addrinfo->count) >= addrinfo->allocated )
