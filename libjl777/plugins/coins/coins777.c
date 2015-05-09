@@ -465,7 +465,8 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
     printf("commit numptrs.%d\n",numptrs);
     for (i=0; i<numptrs; i++)
         if ( ptrs[i] != 0 )
-            allocsize += ptrs[i][0];
+            allocsize += ptrs[i][0], printf("%d ",ptrs[i][0]);
+    printf("allocsize.%d\n",allocsize);
     if ( allocsize > 0 )
     {
         blocks = malloc(allocsize);
@@ -476,6 +477,7 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
                 len = ptrs[i][0];
                 memcpy(&blocks[n],&ptrs[i][1],len);
                 n += len;
+                printf("i.%d len.%d n.%d\n",i,len,n);
                 free(ptrs[i]);
             } else errs++;
         }
@@ -488,6 +490,7 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
         }
         free(blocks);
     }
+    printf("set L\n");
     lp->blocknum = blocknum;
     lp->supply = ledger->supply, lp->totalvouts = ledger->totalvouts, lp->totalspends = ledger->totalspends;
     lp->numtxoffsets = ledger->numtxoffsets, lp->numspentbits = ledger->numspentbits, lp->numaddrinfos = ledger->numaddrinfos;
