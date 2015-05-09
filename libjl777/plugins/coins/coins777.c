@@ -304,8 +304,10 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
     }
     vout.newscript = (vout.scriptind == ledger->scripts.ind);
     vout.addrlen = (int32_t)strlen(coinaddr);
+    printf("scriptind.%u addrind.%u addrlen.%d\n",vout.scriptind,vout.addrind,vout.addrlen);
     if ( (vout.addrind= ledger_rawind(&ledger->addrs,coinaddr,vout.addrlen)) != 0 )
     {
+        printf("vout.addrind.%d vs ledger->addrs.ind %d\n",vout.addrind,ledger->addrs.ind);
         if ( db777_add(1,ledger->unspentmap.DB,&unspentind,sizeof(unspentind),&vout,sizeof(vout.value)+sizeof(vout.addrind)) != 0 )
             printf("error saving unspentmap (%s) %u -> %u\n",ledger->coinstr,unspentind,vout.addrind);
         if ( vout.addrind == ledger->addrs.ind )
@@ -313,8 +315,8 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
             vout.newaddr = 1, strcpy(vout.coinaddr,coinaddr);
             if ( vout.addrind > ledger->numaddrinfos )
             {
-                printf("allocate addrinfos n.%d width.%d %p\n",n,width,ledger->addrinfos);
                 n = (vout.addrind + 1 + width);
+                printf("allocate addrinfos n.%d width.%d %p\n",n,width,ledger->addrinfos);
                 if ( ledger->addrinfos != 0 )
                 {
                     ledger->addrinfos = realloc(ledger->addrinfos,sizeof(*ledger->addrinfos) * n);
@@ -526,13 +528,13 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
             {
                 for (txind=0; txind<numtx; txind++,tx++,L.txidind++)
                 {
-                    ptrs[m++] = ledger_tx(ledger,L.txidind,tx->txidstr,L.totalvouts,tx->numvouts,L.totalspends,tx->numvins);
+                    ptrs[m++] = ledger_tx(ledger,L.txidind,tx->txidstr,L.totalvouts+1,tx->numvouts,L.totalspends,tx->numvins);
                     if ( (n= tx->numvouts) > 0 )
                         for (i=0; i<n; i++,vo++)
-                            ptrs[m++] = ledger_unspent(ledger,L.txidind,L.totalvouts++,vo->coinaddr,vo->script,vo->value);
+                            ptrs[m++] = ledger_unspent(ledger,L.txidind,++L.totalvouts,vo->coinaddr,vo->script,vo->value);
                     if ( (n= tx->numvins) > 0 )
                         for (i=0; i<n; i++,vi++)
-                            ptrs[m++] = ledger_spend(ledger,L.txidind,L.totalspends++,vi->txidstr,vi->vout);
+                            ptrs[m++] = ledger_spend(ledger,L.txidind,++L.totalspends,vi->txidstr,vi->vout);
                 }
             }
             else printf("error ledger_setinds %s %u\n",coin->name,blocknum);
