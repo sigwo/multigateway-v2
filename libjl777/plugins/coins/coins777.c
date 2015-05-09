@@ -275,9 +275,9 @@ uint32_t ledger_rawind(struct ramchain_hashtable *hash,void *key,int32_t keylen)
         else printf("error unexpected size.%d for (%s) keylen.%d\n",size,hash->name,keylen);
     }
     rawind = ++hash->ind;
-                   printf("add rawind.%d\n",rawind);
+    printf("add rawind.%d keylen.%d\n",rawind,keylen);
     if ( db777_add(1,hash->DB,key,keylen,&rawind,sizeof(rawind)) != 0 )
-       printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
+        printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
     else
     {
         printf("update sha ledger_rawind\n");
@@ -291,6 +291,7 @@ uint32_t ledger_hexind(struct ramchain_hashtable *hash,uint8_t *data,int32_t *he
 {
     int32_t hexlen;
     hexlen = (int32_t)strlen(hexstr) >> 1;
+    printf("hexlen.%d (%s)\n",hexlen,hexstr);
     if ( hexlen < 255 )
     {
         decode_hex(data,hexlen,hexstr);
@@ -299,11 +300,8 @@ uint32_t ledger_hexind(struct ramchain_hashtable *hash,uint8_t *data,int32_t *he
     }
     else
     {
-        if ( hexlen >= 255 )
-        {
-            printf("hexlen overflow (%s) -> %d\n",hexstr,hexlen);
-            return(0);
-        }
+        printf("hexlen overflow (%s) -> %d\n",hexstr,hexlen);
+        return(0);
     }
 }
 
