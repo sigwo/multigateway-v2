@@ -296,6 +296,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
 {
     int32_t n,width = 1024; struct ledger_addrinfo *addrinfo; struct ledger_voutdata vout;
     memset(&vout,0,sizeof(vout));
+    printf("unspent.%d (%s) (%s) %.8f\n",unspentind,coinaddr,scriptstr,dstr(value));
     if ( (vout.scriptind= ledger_hexind(&ledger->scripts,vout.script,&vout.scriptlen,scriptstr)) == 0 )
     {
         printf("ledger_unspent: error getting scriptind.(%s)\n",scriptstr);
@@ -352,6 +353,7 @@ void *ledger_spend(struct ledger_info *ledger,uint32_t spend_txidind,uint32_t to
 {
     int32_t i,n,size,txidlen,addrind; uint64_t value; uint32_t txidind,*ptr; uint8_t txid[256];
     struct ledger_spendinfo spend; struct ledger_addrinfo *addrinfo;
+    printf("spend_txidind.%d totalspends.%d (%s).v%d\n",spend_txidind,totalspends,spent_txidstr,vout);
     if ( (txidind= ledger_hexind(&ledger->txids,txid,&txidlen,spent_txidstr)) != 0 )
     {
         memset(&spend,0,sizeof(spend));
@@ -395,6 +397,7 @@ void *ledger_spend(struct ledger_info *ledger,uint32_t spend_txidind,uint32_t to
 void *ledger_tx(struct ledger_info *ledger,uint32_t txidind,char *txidstr,uint32_t totalvouts,uint16_t numvouts,uint32_t totalspends,uint16_t numvins)
 {
     uint32_t checkind,*offsets; uint8_t txid[256]; struct ledger_txinfo tx; int32_t i,txidlen,n,width = 4096;
+    printf("ledger_tx txidind.%d %s vouts.%d vins.%d\n",txidind,txidstr,totalvouts,totalspends);
     if ( (checkind= ledger_hexind(&ledger->txids,txid,&txidlen,txidstr)) == txidind )
     {
         memset(&tx,0,sizeof(tx));
