@@ -174,13 +174,16 @@ void ledger_packvoutstr(void *data,struct alloc_space *mem,uint32_t rawind,int32
 uint32_t *ledger_packvout(struct ledger_voutdata *vout)
 {
     uint32_t *ptr; void *data; struct alloc_space mem;
-    ptr = calloc(1,sizeof(*vout) + sizeof(*ptr));
+    ptr = calloc(1,sizeof(*vout) + sizeof(ptr[0]));
+    memcpy(&ptr[1],vout,sizeof(*vout));
+    ptr[0] = (uint32_t)sizeof(*vout);
+    /*ptr = calloc(1,sizeof(*vout) + sizeof(*ptr));
     memset(&mem,0,sizeof(mem)); mem.ptr = &ptr[1]; mem.size = sizeof(*vout);
     data = memalloc(&mem,sizeof(vout->value)), memcpy(data,&vout->value,sizeof(vout->value));
     ledger_packvoutstr(data,&mem,vout->addrind,vout->newaddr,(uint8_t *)vout->coinaddr,vout->addrlen);
     ledger_packvoutstr(data,&mem,vout->scriptind,vout->newscript,vout->script,vout->scriptlen);
     printf("packed vout used.%ld size.%ld\n",mem.used,mem.size);
-    ptr[0] = (uint32_t)mem.used;
+    ptr[0] = (uint32_t)mem.used;*/
     return(ptr);
 }
 
