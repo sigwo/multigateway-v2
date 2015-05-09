@@ -227,7 +227,7 @@ int32_t ledger_save(struct ledger_info *ledger,int32_t blocknum)
         fclose(fp);
         if ( (block= loadfile(&allocsize,ledgername)) != 0 && allocsize == fpos )
         {
-            if ( 0 && db777_add(1,ledger->ledgers.DB,&blocknum,sizeof(blocknum),block,(int32_t)fpos) != 0 )
+            if ( db777_add(1,ledger->ledgers.DB,&blocknum,sizeof(blocknum),block,(int32_t)fpos) != 0 )
                 printf("error saving (%s) %ld\n",ledgername,fpos);
             else printf("saved (%s) %ld\n",ledgername,fpos);
             free(block);
@@ -276,7 +276,7 @@ uint32_t ledger_rawind(struct ramchain_hashtable *hash,void *key,int32_t keylen)
     }
     rawind = ++hash->ind;
     printf("add rawind.%d keylen.%d\n",rawind,keylen);
-    if ( 0 && db777_add(1,hash->DB,key,keylen,&rawind,sizeof(rawind)) != 0 )
+    if ( db777_add(1,hash->DB,key,keylen,&rawind,sizeof(rawind)) != 0 )
         printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
     else
     {
@@ -321,7 +321,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
     if ( (vout.addrind= ledger_rawind(&ledger->addrs,coinaddr,vout.addrlen)) != 0 )
     {
         printf("vout.addrind.%d vs ledger->addrs.ind %d\n",vout.addrind,ledger->addrs.ind);
-        if ( 0 && db777_add(1,ledger->unspentmap.DB,&unspentind,sizeof(unspentind),&vout,sizeof(vout.value)+sizeof(vout.addrind)) != 0 )
+        if ( db777_add(1,ledger->unspentmap.DB,&unspentind,sizeof(unspentind),&vout,sizeof(vout.value)+sizeof(vout.addrind)) != 0 )
             printf("error saving unspentmap (%s) %u -> %u\n",ledger->coinstr,unspentind,vout.addrind);
         if ( vout.addrind == ledger->addrs.ind )
         {
@@ -347,7 +347,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
             printf("about to update sha256\n");
             update_sha256(ledger->addrinfos_hash,&ledger->addrinfos_state,(uint8_t *)&vout,sizeof(vout));
             printf("done update sha256\n");
-            return(ledger_packvout(&vout));
+            return(0);//ledger_packvout(&vout));
         }
         if ( (n= addrinfo->count) >= addrinfo->allocated )
         {
@@ -364,7 +364,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
         addrinfo->balance += value;
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
         update_sha256(ledger->addrinfos_hash,&ledger->addrinfos_state,(uint8_t *)&vout,sizeof(vout));
-        return(ledger_packvout(&vout));
+        return(0);//ledger_packvout(&vout));
     } else printf("ledger_unspent: cant find addrind.(%s)\n",coinaddr);
     return(0);
 }
@@ -409,7 +409,7 @@ void *ledger_spend(struct ledger_info *ledger,uint32_t spend_txidind,uint32_t to
                 return(0);
             }
         }
-        return(ledger_packspend(&spend));
+        return(0);//ledger_packspend(&spend));
     } else printf("ledger_spend: cant find txidind for (%s).v%d\n",spent_txidstr,vout);
     return(0);
 }
@@ -443,7 +443,7 @@ void *ledger_tx(struct ledger_info *ledger,uint32_t txidind,char *txidstr,uint32
         offsets = &ledger->txoffsets[(txidind + 1) << 1];
         offsets[0] = totalvouts + numvouts, offsets[1] = totalspends + numvins;
         update_sha256(ledger->txoffsets_hash,&ledger->txoffsets_state,(uint8_t *)offsets,sizeof(offsets[0]) * 2);
-        return(ledger_packtx(&tx));
+        return(0);//ledger_packtx(&tx));
     } else printf("ledger_tx: mismatched txidind, expected %u got %u\n",txidind,checkind);
     return(0);
 }
@@ -488,10 +488,10 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
                 n += len;
                 printf("i.%d len.%d n.%d\n",i,len,n);
                 free(ptrs[i]);
-            } else errs++;
+            } //else errs++;
         }
         free(ptrs);
-        if ( 0 )//errs != 0 || db777_add(1,ledger->blocks.DB,blocks,allocsize,&blocknum,sizeof(blocknum)) != 0 )
+        if ( errs != 0 || db777_add(1,ledger->blocks.DB,blocks,allocsize,&blocknum,sizeof(blocknum)) != 0 )
         {
             printf("error saving blocks %s %u\n",ledger->coinstr,blocknum);
             free(blocks);
