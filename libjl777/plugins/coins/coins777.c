@@ -265,7 +265,7 @@ uint32_t ledger_rawind(struct ramchain_hashtable *hash,void *key,int32_t keylen)
         {
             rawind = *ptr;
             free(ptr);
-            return(*ptr);
+            return(rawind);
         }
         else printf("error unexpected size.%d for (%s) keylen.%d\n",size,hash->name,keylen);
     }
