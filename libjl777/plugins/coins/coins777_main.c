@@ -215,12 +215,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( json != 0 )
         {
             copy_cJSON(SUPERNET.myNXTacct,cJSON_GetObjectItem(json,"myNXTacct"));
-            copy_cJSON(MGW.PATH,cJSON_GetObjectItem(json,"MGWROOT"));
+            /*copy_cJSON(MGW.PATH,cJSON_GetObjectItem(json,"MGWROOT"));
             if ( MGW.PATH[0] == 0 )
             {
                 strcpy(MGW.PATH,"MGW");
                 ensure_directory(MGW.PATH);
-            }
+            }*/
             COINS.argjson = cJSON_Duplicate(json,1);
             copy_cJSON(MGW.bridgeipaddr,cJSON_GetObjectItem(json,"bridgeipaddr"));
             copy_cJSON(MGW.bridgeacct,cJSON_GetObjectItem(json,"bridgeacct"));
