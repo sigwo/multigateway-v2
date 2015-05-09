@@ -629,7 +629,7 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     ram->totalsize += len;
     //len = ramchain_rawblock(ram,&ram->EMIT,blocknum,1), memset(ram->huffbits,0,ram->huffallocsize);
     //ramchain_rawblock(ram,&ram->DECODE,blocknum,0);
-    printf("%-4s [lag %-5d]    RTblock.%-6u    blocknum.%-6u  len.%-5d   minutes %.2f | %s %.1f per block\n",coin->name,RTblocknum-blocknum,RTblocknum,blocknum,len,estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
+    printf("%-4s [lag %-5d]    RTblock.%-6u    blocknum.%-6u  len.%-5d   elapsed %.2f estimated %.2f | %s %.1f per block\n",coin->name,RTblocknum-blocknum,RTblocknum,blocknum,len,(milliseconds()-ram->startmilli)/60000.,estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
     return(0);
     rawblock_patch(&ram->EMIT), rawblock_patch(&ram->DECODE);
     ram->DECODE.minted = ram->EMIT.minted = 0;
