@@ -75,22 +75,15 @@ struct ramchain_hashtable
     struct sha256_state state;
 };
 
-struct ledgerinds
-{
-    struct sha256_state shastates[6];
-    unsigned char hashes[6][256 >> 3];
-    uint64_t voutsum,spendsum,addrsum;
-    uint32_t numtxoffsets,numaddrinfos,numspentbits,blocknum,totalvouts,totalspends,txidind,addrind,scriptind;
-};
-
 struct ledger_addrinfo { int32_t count,allocated; int64_t balance; uint32_t unspentinds[]; };
 struct ledger_info
 {
+    char coinstr[16];
     struct sha256_state txoffsets_state,spentbits_state,addrinfos_state;
     unsigned char txoffsets_hash[256 >> 3],spentbits_hash[256 >> 3],addrinfos_hash[256 >> 3];
-    char coinstr[16]; long unsaved; struct ledgerinds L;
-    struct ramchain_hashtable ledgers,addrs,txids,scripts,blocks,unspentmap,*DBs[10];
-    uint32_t blockpending,numptrs,numDBs,needbackup;
+    struct ramchain_hashtable ledgers,addrs,txids,scripts,blocks,unspentmap;
+    uint64_t voutsum,spendsum,addrsum;
+    uint32_t needbackup,numtxoffsets,numaddrinfos,numspentbits,blocknum,blockpending,numptrs,totalvouts,totalspends,addrind,txidind,scriptind;
     uint32_t *txoffsets; uint8_t *spentbits; struct ledger_addrinfo **addrinfos;
 };
 
@@ -98,13 +91,12 @@ struct ramchain
 {
     char name[16];
     double lastgetinfo,startmilli;
-    struct ledger_info ledger;
-    //struct unspent_entry **addr_unspents;
+    struct ramchain_hashtable *DBs[10];
     uint64_t totalsize;
-    uint32_t startblocknum,RTblocknum,blocknum,confirmednum,huffallocsize,numupdates,readyflag;
-    //struct ramchain_hashtable blocks,addrs,txids,scripts,unspents;
-    uint8_t *huffbits,*huffbits2;
+    uint32_t startblocknum,RTblocknum,confirmednum,numDBs,numupdates,readyflag;
+    //uint8_t *huffbits,*huffbits2;
     struct rawblock EMIT,DECODE;
+    struct ledger_info L;
 };
 
 struct coin777
