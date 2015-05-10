@@ -455,6 +455,7 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
 
 void ledger_recalc_addrinfos(struct ledger_info *ledger)
 {
+    char coinaddr[256];
     struct ledger_addrinfo *addrinfo;
     uint32_t i,n,addrind; float *sortbuf; uint64_t balance;
     ledger->addrsum = n = 0;
@@ -470,10 +471,15 @@ void ledger_recalc_addrinfos(struct ledger_info *ledger)
     if ( n > 0 )
     {
         revsortfs(sortbuf,n,sizeof(*sortbuf) * 2);
-        for (i=0; i<10; i++)
+        for (i=0; i<10&&i<n; i++)
         {
             memcpy(&addrind,&sortbuf[(i << 1) + 1],sizeof(addrind));
+            addrinfo = ledger->addrinfos[addrind];
+            memcpy(coinaddr,addrinfo->space,addrinfo->addrlen);
+            coinaddr[addrinfo->addrlen] = 0;
+            printf("(%s %.8f) ",coinaddr,sortbuf[i << 1]);
         }
+        printf("top.%d of %d\n",i,n);
     }
     free(sortbuf);
 }
