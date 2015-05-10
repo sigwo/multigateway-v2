@@ -18,7 +18,6 @@
 #include "storage.c"
 #include "system777.c"
 #include "NXT777.c"
-#include "msig.c"
 #undef DEFINES_ONLY
 
 void MGW_idle(struct plugin_info *plugin) {}

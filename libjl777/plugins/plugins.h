@@ -492,7 +492,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
             printf("readyflag.%d\n",dp->readyflag);
             return(clonestr("{\"error\":\"plugin not ready\"}"));
         }
-        if ( localaccess != 0 && dp->allowremote == 0 )
+        if ( localaccess == 0 && dp->allowremote == 0 )
         {
             printf("allowremote.%d isremote.%d\n",dp->allowremote,!localaccess);
             sprintf(retbuf,"{\"error\":\"cant remote call plugin\",\"ipaddr\":\"%s\",\"plugin\":\"%s\"}",SUPERNET.myipaddr,plugin);
