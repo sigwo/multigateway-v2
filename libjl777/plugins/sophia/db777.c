@@ -83,7 +83,7 @@ int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,vo
         {
             if ( allocsize == len && memcmp(val,value,len) == 0 )
             {
-                if ( len > 12 )
+                if ( 0 && len > 12 )
                     printf("found duplicate len.%d\n",len);
                 sp_destroy(obj);
                 return(0);
