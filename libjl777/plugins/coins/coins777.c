@@ -230,7 +230,12 @@ int32_t ledger_save(struct ledger_info *ledger,int32_t blocknum)
         {
             if ( db777_add(0,ledger->ledgers.DB,&blocknum,sizeof(blocknum),block,(int32_t)fpos) != 0 )
                 printf("error saving (%s) %ld\n",ledgername,fpos);
-            else printf("saved (%s) %ld %s\n",ledgername,fpos,_mbstr(fpos));
+            else
+            {
+                if ( db777_add(0,ledger->ledgers.DB,"latest",strlen("latest"),&blocknum,sizeof(blocknum)) != 0 )
+                    printf("error saving (%s)\n",ledgername);
+                printf("saved (%s) %ld %s\n",ledgername,fpos,_mbstr(fpos));
+            }
             free(block);
             return(0);
         } else printf("error loading (%s) allocsize.%llu vs %ld\n",ledgername,(long long)allocsize,fpos);
@@ -465,9 +470,8 @@ void *ledger_tx(struct ledger_info *ledger,uint32_t txidind,char *txidstr,uint32
     return(0);
 }
 
-uint32_t **ledger_startblock(void *_ledger,uint32_t blocknum,int32_t numevents)
+uint32_t **ledger_startblock(struct ledger_info *ledger,uint32_t blocknum,int32_t numevents)
 {
-    struct ledger_info *ledger = _ledger;
     uint32_t **ptrs = calloc(numevents,sizeof(*ptrs));
     if ( ledger->blockpending != 0 )
     {
@@ -475,7 +479,7 @@ uint32_t **ledger_startblock(void *_ledger,uint32_t blocknum,int32_t numevents)
         return(0);
     }
     ledger->blockpending = 1, ledger->L.blocknum = blocknum, ledger->numptrs = numevents;
-    // start DB transactions
+    //void *transaction = sp_begin(env);
     return(ptrs);
 }
 
@@ -514,7 +518,6 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
         }
         free(blocks);
     }
-    lp->blocknum = blocknum;
     lp->txidind = ledger->txids.ind, lp->scriptind = ledger->scripts.ind, lp->addrind = ledger->addrs.ind;
     lp->shastates[0] = ledger->txids.state, lp->shastates[1] = ledger->scripts.state, lp->shastates[2] = ledger->addrs.state;
     lp->shastates[3] = ledger->txoffsets_state, lp->shastates[4] = ledger->spentbits_state, lp->shastates[5] = ledger->addrinfos_state;
@@ -525,7 +528,8 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
     memcpy(lp->hashes[4],ledger->spentbits_hash,sizeof(ledger->spentbits_hash));
     memcpy(lp->hashes[5],ledger->addrinfos_hash,sizeof(ledger->addrinfos_hash));
     ledger->L = *lp;
-    // commit all events to DB's
+    if ( (blocknum % 100) == 0 && db777_add(1,ledger->blocks.DB,"latest",strlen("latest"),lp,sizeof(*lp)) != 0 )
+        printf("error saving latest (%u)\n",blocknum);
     if ( sync != 0 && ledger_save(ledger,blocknum + 1) == 0 )
         ledger->unsaved = 0;
     ledger->numptrs = ledger->blockpending = 0;
@@ -578,7 +582,7 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
         for (i=1; i<=ledger->addrs.ind; i++)
             if ( (addrinfo= ledger->addrinfos[i]) != 0 )
                 ledger->L.addrsum += addrinfo->balance;
-        if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,lp,ledger->unsaved > 10000000)) < 0 )
+        if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,lp,(blocknum % 10000) == 0)) < 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
             return(-1);
@@ -634,16 +638,14 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     struct ramchain *ram = &coin->ramchain;
     int32_t len; double estimate,elapsed;
     uint64_t supply,oldsupply = ram->ledger.L.voutsum - ram->ledger.L.spendsum;
-    if ( (ram->RTblocknum % 1000) == 0 )
+    if ( (ram->RTblocknum % 1000) == 0 || (ram->RTblocknum - blocknum) < 1000 )
         ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coin->name,coin->serverport,coin->userpass,ram->RTblocknum);
     len = ramchain_ledgerupdate(&ram->ledger,coin,&ram->EMIT,blocknum);
     ram->totalsize += len;
-    //len = ramchain_rawblock(ram,&ram->EMIT,blocknum,1), memset(ram->huffbits,0,ram->huffallocsize);
-    //ramchain_rawblock(ram,&ram->DECODE,blocknum,0);
     estimate = estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000;
     elapsed = (milliseconds()-ram->startmilli)/60000.;
     supply = ram->ledger.L.voutsum - ram->ledger.L.spendsum;
-    printf("%-4s [lag %-5d] block.%-6u supply %.8f %.8f (%.8f) [%.8f] seconds %.2f %.2f %.2f | len.%-5d %s %.1f per block\n",coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ram->ledger.L.addrsum),dstr(supply)-dstr(ram->ledger.L.addrsum),dstr(supply)-dstr(oldsupply),elapsed,estimate,elapsed+estimate,len,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
+    printf("%-5s [lag %-5d] block.%-6u supply %.8f %.8f (%.8f) [%.8f] minutes %.2f %.2f %.2f | len.%-5d %s %.1f per block\n",coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ram->ledger.L.addrsum),dstr(supply)-dstr(ram->ledger.L.addrsum),dstr(supply)-dstr(oldsupply),elapsed,estimate,elapsed+estimate,len,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
     return(0);
     rawblock_patch(&ram->EMIT), rawblock_patch(&ram->DECODE);
     ram->DECODE.minted = ram->EMIT.minted = 0;
