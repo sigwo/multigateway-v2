@@ -94,7 +94,7 @@ int32_t ledger_saveaddrinfo(FILE *fp,struct ledger_addrinfo *addrinfo)
 
 void *ledger_latest(struct db777 *ledgerDB)
 {
-    uint32_t *ptr,blocknum; int32_t i,iter,count,allocsize,len; void *blockledger,*srcL,*srcT,*srcS;
+    uint32_t *ptr,blocknum; int32_t i,iter,allocsize,len; void *blockledger,*srcL,*srcT,*srcS;
     struct alloc_space MEM;
     struct ledger_addrinfo *addrinfo;
     struct ledger_info *ledger = 0;
@@ -121,7 +121,7 @@ void *ledger_latest(struct db777 *ledgerDB)
                     addrinfo = memalloc(&MEM,sizeof(uint32_t));
                     if ( addrinfo->count != 0 )
                     {
-                        allocsize = addrinfo_size(addrinfo,count), memalloc(&MEM,allocsize - sizeof(uint32_t));
+                        allocsize = addrinfo_size(addrinfo,addrinfo->count), memalloc(&MEM,allocsize - sizeof(uint32_t));
                         if ( iter == 1 )
                             ledger->addrinfos[i] = calloc(1,allocsize), memcpy(ledger->addrinfos[i],addrinfo,allocsize);
                     } ledger->addrinfos[i] = 0;
@@ -505,7 +505,7 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
             {
                 if ( blocknum == 91842 && strcmp(ledger->coinstr,"BTC") == 0 && strcmp(tx->txidstr,"d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599") == 0 )
                     txidind = ledger_hexind(&ledger->txids,data,&hexlen,"d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599");
-                else txidind = ledger->txidind++;
+                else txidind = ++ledger->txidind;
                 ptrs[m++] = ledger_tx(ledger,txidind,tx->txidstr,ledger->totalvouts+1,tx->numvouts,ledger->totalspends+1,tx->numvins);
                 if ( (n= tx->numvouts) > 0 )
                     for (i=0; i<n; i++,vo++)
