@@ -88,6 +88,7 @@ int32_t ledger_saveaddrinfo(FILE *fp,struct ledger_addrinfo *addrinfo)
     else
     {
         allocsize = addrinfo_size(addrinfo,addrinfo->count);
+        printf("%d ",allocsize);
         return(fwrite(addrinfo,1,allocsize,fp) == allocsize);
     }
 }
@@ -116,9 +117,13 @@ struct ledger_info *ledger_latest(struct db777 *ledgerDB)
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = blockledger, MEM.size = len;
             for (iter=0; iter<2; iter++)
             {
-                allocsize = sizeof(*ledger), srcL = memalloc(&MEM,allocsize);
+                allocsize = sizeof(*ledger), srcL = ledger = memalloc(&MEM,allocsize);
+                printf("ledger->numtxoffsets.%d ledger->numspentbits.%d ledger->numaddrinfos.%d\n",ledger->numtxoffsets,ledger->numspentbits,ledger->numaddrinfos);
+                printf("%ld ",MEM.used);
                 allocsize = ledger->numtxoffsets * 2 * sizeof(*ledger->txoffsets), srcT = memalloc(&MEM,allocsize);
+                printf("%ld ",MEM.used);
                 allocsize = (ledger->numspentbits >> 3) + 1, srcS = memalloc(&MEM,allocsize);
+                printf("%ld ",MEM.used);
                 if ( iter == 1 )
                 {
                     ledger = calloc(1,allocsize), memcpy(ledger,srcL,allocsize);
@@ -132,6 +137,7 @@ struct ledger_info *ledger_latest(struct db777 *ledgerDB)
                     if ( addrinfo->count != 0 )
                     {
                         allocsize = addrinfo_size(addrinfo,addrinfo->count), memalloc(&MEM,allocsize - sizeof(uint32_t));
+                        printf("%ld ",MEM.used);
                         if ( iter == 1 )
                             ledger->addrinfos[i] = calloc(1,allocsize), memcpy(ledger->addrinfos[i],addrinfo,allocsize);
                     } ledger->addrinfos[i] = 0;
@@ -169,6 +175,7 @@ int32_t ledger_save(struct ledger_info *ledger,int32_t blocknum)
             err++, printf("error saving (%s) spentbits.%d\n",ledgername,ledger->numspentbits);
         else
         {
+            printf("nutxoffsets.%d numspentbits.%d numaddrinfos.%d before addrinfos %ld\n",ledger->numtxoffsets,ledger->numspentbits,ledger->numaddrinfos,ftell(fp));
             for (i=0; i<ledger->numaddrinfos; i++)
                 if ( ledger_saveaddrinfo(fp,ledger->addrinfos[i]) <= 0 )
                 {
@@ -512,9 +519,30 @@ void ledger_recalc_addrinfos(struct ledger_info *ledger,int32_t richlist)
     free(sortbuf);
 }
 
+uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t blocknum,char *txidstr)
+{
+    int32_t hexlen,size; uint8_t data[256]; uint32_t *ptr;
+    if ( strcmp(coinstr,"BTC") == 0 && blocknum < 200000 )
+    {
+        hexlen = (int32_t)strlen(txidstr) >> 1;
+        if ( hexlen < 255 )
+        {
+            decode_hex(data,hexlen,txidstr);
+            //if ( (blocknum == 91842 && strcmp(txidstr,"d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599") == 0) || (blocknum == 91880 && strcmp(txidstr,"e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468") == 0) )
+            if ( (ptr= db777_findM(&size,ledger->txids.DB,data,hexlen)) != 0 )
+            {
+                printf("block.%u (%s) already exists.%u\n",blocknum,txidstr,*ptr);
+                if ( size == sizeof(uint32_t) )
+                    return(*ptr);
+            }
+        }
+    }
+    return(0);
+}
+
 int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,struct rawblock *emit,uint32_t blocknum)
 {
-    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; uint32_t **ptrs; uint8_t data[256]; int32_t hexlen,allocsize = 0;
+    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; uint32_t **ptrs; int32_t allocsize = 0;
     uint32_t i,numtx,txidind,txind,numspends,numvouts,n,m = 0;
     //printf("ledgerupdate block.%u txidind.%u/%u addrind.%u/%u scriptind.%u/%u unspentind.%u/%u\n",blocknum,lp->txidind,ledger->txids.ind,lp->addrind,ledger->addrs.ind,lp->scriptind,ledger->scripts.ind,lp->totalvouts,ledger->unspentmap.ind);
     if ( blocknum == 1 )
@@ -537,9 +565,8 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
         {
             for (txind=0; txind<numtx; txind++,tx++)
             {
-                if ( blocknum == 91842 && strcmp(ledger->coinstr,"BTC") == 0 && strcmp(tx->txidstr,"d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599") == 0 )
-                    txidind = ledger_hexind(&ledger->txids,data,&hexlen,"d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599");
-                else txidind = ++ledger->txidind;
+                if ( (txidind= has_duplicate_txid(ledger,ledger->coinstr,blocknum,tx->txidstr)) == 0 )
+                    txidind = ++ledger->txidind;
                 ptrs[m++] = ledger_tx(ledger,txidind,tx->txidstr,ledger->totalvouts+1,tx->numvouts,ledger->totalspends+1,tx->numvins);
                 if ( (n= tx->numvouts) > 0 )
                     for (i=0; i<n; i++,vo++)
@@ -549,7 +576,7 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
                         ptrs[m++] = ledger_spend(ledger,txidind,++ledger->totalspends,vi->txidstr,vi->vout);
             }
         }
-        ledger_recalc_addrinfos(ledger,(blocknum % 10) == 0);
+        ledger_recalc_addrinfos(ledger,(blocknum % 100) == 0);
         if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,blocknum == 91800 || ledger->needbackup != 0)) < 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
@@ -571,7 +598,8 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     estimate = estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000;
     elapsed = (milliseconds()-ram->startmilli)/60000.;
     supply = ram->L.voutsum - ram->L.spendsum;
-    printf("%-5s [lag %-5d] block.%-6u supply %.8f %.8f (%.8f) [%.8f] minutes %.2f %.2f %.2f | len.%-5d %s %.1f per block\n",coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ram->L.addrsum),dstr(supply)-dstr(ram->L.addrsum),dstr(supply)-dstr(oldsupply),elapsed,estimate,elapsed+estimate,len,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
+    if ( (blocknum % 100) == 0 )
+        printf("%-5s [lag %-5d] block.%-6u supply %.8f %.8f (%.8f) [%.8f] minutes %.2f %.2f %.2f | len.%-5d %s %.1f per block\n",coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ram->L.addrsum),dstr(supply)-dstr(ram->L.addrsum),dstr(supply)-dstr(oldsupply),elapsed,estimate,elapsed+estimate,len,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
     return(0);
     rawblock_patch(&ram->EMIT), rawblock_patch(&ram->DECODE);
     ram->DECODE.minted = ram->EMIT.minted = 0;

@@ -78,12 +78,12 @@ struct ramchain_hashtable
 struct ledger_addrinfo { int32_t count,allocated; int64_t balance; uint8_t addrlen,space[]; };
 struct ledger_info
 {
+    uint32_t numtxoffsets,numspentbits,numaddrinfos,needbackup,blocknum,blockpending,numptrs,totalvouts,totalspends,addrind,txidind,scriptind;
     char coinstr[16];
     struct sha256_state txoffsets_state,spentbits_state,addrinfos_state;
     unsigned char txoffsets_hash[256 >> 3],spentbits_hash[256 >> 3],addrinfos_hash[256 >> 3];
     struct ramchain_hashtable ledgers,addrs,txids,scripts,blocks,unspentmap;
     uint64_t voutsum,spendsum,addrsum;
-    uint32_t needbackup,numtxoffsets,numaddrinfos,numspentbits,blocknum,blockpending,numptrs,totalvouts,totalspends,addrind,txidind,scriptind;
     uint32_t *txoffsets; uint8_t *spentbits; struct ledger_addrinfo **addrinfos;
 };
 
