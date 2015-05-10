@@ -585,16 +585,6 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; uint32_t **ptrs; int32_t allocsize = 0;
     uint32_t i,numtx,txidind,txind,numspends,numvouts,n,m = 0;
     //printf("ledgerupdate block.%u txidind.%u/%u addrind.%u/%u scriptind.%u/%u unspentind.%u/%u\n",blocknum,lp->txidind,ledger->txids.ind,lp->addrind,ledger->addrs.ind,lp->scriptind,ledger->scripts.ind,lp->totalvouts,ledger->unspentmap.ind);
-    if ( blocknum == 1 )
-    {
-        uint8_t hash[256 >> 3];
-        update_sha256(hash,&ledger->ledgers.state,0,0);
-        update_sha256(hash,&ledger->unspentmap.state,0,0);
-        update_sha256(hash,&ledger->blocks.state,0,0);
-        update_sha256(hash,&ledger->addrs.state,0,0);
-        update_sha256(hash,&ledger->txids.state,0,0);
-        update_sha256(hash,&ledger->scripts.state,0,0);
-    }
     if ( rawblock_load(emit,coin->name,coin->serverport,coin->userpass,blocknum) > 0 )
     {
         tx = emit->txspace, numtx = emit->numtx, vi = emit->vinspace, vo = emit->voutspace;
@@ -656,6 +646,7 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
 
 uint32_t init_hashDBs(struct ramchain *ram,char *coinstr,struct ramchain_hashtable *hash,char *name,char *compression)
 {
+    uint8_t tmp[256 >> 3];
     if ( hash->DB == 0 )
     {
         hash->DB = db777_create("ramchains",coinstr,name,compression);
@@ -664,17 +655,18 @@ uint32_t init_hashDBs(struct ramchain *ram,char *coinstr,struct ramchain_hashtab
         printf("need to make ramchain_inithash\n");
         //hash->minblocknum = ramchain_inithash(hash);
         ram->DBs[ram->numDBs++] = hash;
+        update_sha256(tmp,&hash->state,0,0);
     }
     return(0);
 }
 
-uint32_t ensure_ramchain_DBs(struct ramchain *ram)
+uint32_t ensure_ramchain_DBs(struct ramchain *ram,int32_t firstblock)
 {
     /* uint32_t i,j,numpurged,minblocknum,nonz,numerrs;
      struct unspent_entry *unspents;
      uint64_t sum,total;
      int64_t errtotal,balance;*/
-    ram->L.blocknum = 1;
+    ram->L.blocknum = firstblock;
     strcpy(ram->L.coinstr,ram->name);
     init_hashDBs(ram,ram->name,&ram->L.ledgers,"ledgers","lz4");
     init_hashDBs(ram,ram->name,&ram->L.unspentmap,"unspentmap","lz4");
@@ -727,7 +719,7 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr)
     struct ramchain *ram = &coin->ramchain;
     ram->startmilli = milliseconds();
     strcpy(ram->name,coinstr);
-    ram->L.blocknum = ram->startblocknum = ensure_ramchain_DBs(ram);
+    ram->L.blocknum = ram->startblocknum = ensure_ramchain_DBs(ram,128600);
     //ram->huffallocsize = sizeof(struct rawblock)/10, ram->huffbits = calloc(1,ram->huffallocsize), ram->huffbits2 = calloc(1,ram->huffallocsize);
     ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coinstr,coin->serverport,coin->userpass,ram->RTblocknum);
     coin->ramchain.readyflag = 1;
