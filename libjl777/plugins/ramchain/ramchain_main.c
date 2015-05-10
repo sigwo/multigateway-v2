@@ -19,7 +19,7 @@
 #include "coins777.c"
 #undef DEFINES_ONLY
 
-int32_t Verifymode = 1;
+int32_t Verifymode = 0;
 
 STRUCTNAME RAMCHAINS;
 char *PLUGNAME(_methods)[] = { "create", "backup" }; // list of supported methods
