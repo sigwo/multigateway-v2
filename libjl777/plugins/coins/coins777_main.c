@@ -238,6 +238,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     if ( extract_cJSON_str(buf0,sizeof(buf0),item,"path") > 0 && extract_cJSON_str(buf1,sizeof(buf1),item,"conf") > 0 )
                         userpass = extract_userpass(SUPERNET.userhome,buf0,buf1);
                     else userpass = 0;
+                    printf("%s.%s (%s)\n",coinstr,serverport,userpass);
                     init_coinstr(coinstr,serverport,userpass,item);
                     if ( userpass != 0 )
                         free(userpass);
