@@ -75,7 +75,7 @@ struct ramchain_hashtable
     struct sha256_state state;
 };
 
-struct ledger_addrinfo { int32_t count,allocated; int64_t balance; uint32_t unspentinds[]; };
+struct ledger_addrinfo { int32_t count,allocated; int64_t balance; uint8_t addrlen,space[]; };
 struct ledger_info
 {
     char coinstr[16];
