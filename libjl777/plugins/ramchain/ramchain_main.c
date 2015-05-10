@@ -580,7 +580,7 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
     return(0);
 }
 
-int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,struct rawblock *emit,uint32_t blocknum)
+int32_t ramchain_ledgerupdate(int32_t dispflag,struct ledger_info *ledger,struct coin777 *coin,struct rawblock *emit,uint32_t blocknum)
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; uint32_t **ptrs; int32_t allocsize = 0;
     uint32_t i,numtx,txidind,txind,numspends,numvouts,n,m = 0;
@@ -606,7 +606,7 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
                         ptrs[m++] = ledger_spend(ledger,txidind,++ledger->totalspends,vi->txidstr,vi->vout);
             }
         }
-        ledger_recalc_addrinfos(ledger,(blocknum % 100) == 0);
+        ledger_recalc_addrinfos(ledger,dispflag);
         if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,ledger->needbackup != 0)) < 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
@@ -619,16 +619,16 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
 int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RTblocknum)
 {
     struct ramchain *ram = &coin->ramchain;
-    int32_t len; double estimate,elapsed;
+    double estimate,elapsed; int32_t len,dispflag = (blocknum % 100) == 0 || (blocknum > ram->RTblocknum - 1000);
     uint64_t supply,oldsupply = ram->L.voutsum - ram->L.spendsum;
     if ( (ram->RTblocknum % 1000) == 0 || (ram->RTblocknum - blocknum) < 1000 )
         ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coin->name,coin->serverport,coin->userpass,ram->RTblocknum);
-    len = ramchain_ledgerupdate(&ram->L,coin,&ram->EMIT,blocknum);
+    len = ramchain_ledgerupdate(dispflag,&ram->L,coin,&ram->EMIT,blocknum);
     ram->totalsize += len;
     estimate = estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000;
     elapsed = (milliseconds()-ram->startmilli)/60000.;
     supply = ram->L.voutsum - ram->L.spendsum;
-    if ( (blocknum % 100) == 0 )
+    if ( dispflag )
         printf("%-5s [lag %-5d] block.%-6u supply %.8f %.8f (%.8f) [%.8f] minutes %.2f %.2f %.2f | len.%-5d %s %.1f per block\n",coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ram->L.addrsum),dstr(supply)-dstr(ram->L.addrsum),dstr(supply)-dstr(oldsupply),elapsed,estimate,elapsed+estimate,len,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
     return(0);
     rawblock_patch(&ram->EMIT), rawblock_patch(&ram->DECODE);
