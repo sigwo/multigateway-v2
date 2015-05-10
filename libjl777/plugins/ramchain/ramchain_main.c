@@ -290,7 +290,7 @@ uint32_t ledger_hexind(struct ramchain_hashtable *hash,uint8_t *data,int32_t *he
 
 void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspentind,char *coinaddr,char *scriptstr,uint64_t value)
 {
-    int32_t n,addrlen,width = 1024; struct ledger_addrinfo *addrinfo; struct ledger_voutdata vout;
+    int32_t n,addrlen,width = 65536; struct ledger_addrinfo *addrinfo; struct ledger_voutdata vout;
     memset(&vout,0,sizeof(vout));
     vout.value = value;
     //printf("unspent.%d (%s) (%s) %.8f\n",unspentind,coinaddr,scriptstr,dstr(value));
@@ -314,7 +314,7 @@ void *ledger_unspent(struct ledger_info *ledger,uint32_t txidind,uint32_t unspen
             vout.newaddr = 1, strcpy(vout.coinaddr,coinaddr);
         //printf("script (%d %d) addr (%d %d)\n",vout.scriptind,ledger->scripts.ind,vout.addrind,ledger->addrs.ind);
         if ( vout.addrind >= ledger->numaddrinfos )
-        {width = 1;
+        {
             n = (ledger->numaddrinfos + width);
             if ( ledger->addrinfos != 0 )
             {
@@ -418,7 +418,7 @@ void *ledger_spend(struct ledger_info *ledger,uint32_t spend_txidind,uint32_t to
 
 void *ledger_tx(struct ledger_info *ledger,uint32_t txidind,char *txidstr,uint32_t totalvouts,uint16_t numvouts,uint32_t totalspends,uint16_t numvins)
 {
-    uint32_t checkind,*offsets; uint8_t txid[256]; struct ledger_txinfo tx; int32_t i,txidlen,n,width = 4096;
+    uint32_t checkind,*offsets; uint8_t txid[256]; struct ledger_txinfo tx; int32_t i,txidlen,n,width = 65536;
     //printf("ledger_tx txidind.%d %s vouts.%d vins.%d | ledger->numtxoffsets %d\n",txidind,txidstr,totalvouts,totalspends,ledger->numtxoffsets);
     if ( (checkind= ledger_hexind(&ledger->txids,txid,&txidlen,txidstr)) == txidind )
     {
@@ -428,14 +428,14 @@ void *ledger_tx(struct ledger_info *ledger,uint32_t txidind,char *txidstr,uint32
         tx.txidlen = txidlen;
         memcpy(tx.txid,txid,txidlen);
         if ( (txidind + 1) >= ledger->numtxoffsets )
-        {width = 1;
+        {
             n = ledger->numtxoffsets + width;
             ledger->txoffsets = realloc(ledger->txoffsets,sizeof(uint32_t) * 2 * n);
             memset(&ledger->txoffsets[ledger->numtxoffsets << 1],0,width * 2 * sizeof(uint32_t));
             ledger->numtxoffsets += width;
         }
         if ( (totalvouts + numvouts) >= ledger->numspentbits )
-        {width = 8;
+        {
             n = ledger->numspentbits + width;
             ledger->spentbits = realloc(ledger->spentbits,(n >> 3) + 1);
             for (i=0; i<width; i++)
