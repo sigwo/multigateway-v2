@@ -644,6 +644,23 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     return(0);
 }
 
+void ramchain_update(struct coin777 *coin)
+{
+    uint32_t blocknum;
+    //printf("%s ramchain_update: ready.%d\n",coin->name,coin->ramchain.readyflag);
+    if ( coin->ramchain.readyflag == 0 )
+        return;
+    if ( (blocknum= coin->ramchain.L.blocknum) < coin->ramchain.RTblocknum )
+    {
+        if ( blocknum == 0 )
+            coin->ramchain.L.blocknum = blocknum = 1;
+        if ( ramchain_processblock(coin,blocknum,coin->ramchain.RTblocknum) == 0 )
+            coin->ramchain.L.blocknum++;
+        else printf("%s error processing block.%d\n",coin->name,blocknum);
+    }
+}
+
+
 uint32_t init_hashDBs(struct ramchain *ram,char *coinstr,struct ramchain_hashtable *hash,char *name,char *compression)
 {
     uint8_t tmp[256 >> 3];
@@ -695,23 +712,7 @@ uint32_t ensure_ramchain_DBs(struct ramchain *ram,int32_t firstblock)
      printf("finished setblocknums\n");
      getchar();
      return(minblocknum);*/
-    return(0);
-}
-
-void ramchain_update(struct coin777 *coin)
-{
-    uint32_t blocknum;
-    //printf("%s ramchain_update: ready.%d\n",coin->name,coin->ramchain.readyflag);
-    if ( coin->ramchain.readyflag == 0 )
-        return;
-    if ( (blocknum= coin->ramchain.L.blocknum) < coin->ramchain.RTblocknum )
-    {
-        if ( blocknum == 0 )
-            coin->ramchain.L.blocknum = blocknum = 1;
-        if ( ramchain_processblock(coin,blocknum,coin->ramchain.RTblocknum) == 0 )
-            coin->ramchain.L.blocknum++;
-        else printf("%s error processing block.%d\n",coin->name,blocknum);
-    }
+    return(firstblock);
 }
 
 int32_t init_ramchain(struct coin777 *coin,char *coinstr)
