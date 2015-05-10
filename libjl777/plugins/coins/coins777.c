@@ -205,14 +205,19 @@ int32_t ledger_save(struct ledger_info *ledger,int32_t blocknum)
 {
     FILE *fp; long fpos; void *block; int32_t i,err = 0; uint64_t allocsize = 0;
     char ledgername[512];
+    if ( ledger->txoffsets == 0 || ledger->txoffsets == 0 || ledger->txoffsets == 0 )
+    {
+        printf("uninitialzed pointer %p %p %p\n",ledger->txoffsets,ledger->txoffsets,ledger->txoffsets);
+        return(-1);
+    }
     sprintf(ledgername,"/tmp/%s.%u",ledger->coinstr,blocknum);
     if ( (fp= fopen(ledgername,"wb")) != 0 )
     {
         if ( fwrite(&ledger->L,1,sizeof(ledger->L),fp) != sizeof(ledger->L) )
             err++, printf("error saving (%s) L\n",ledgername);
-        else if ( fwrite(&ledger->txoffsets,ledger->L.numtxoffsets,2*sizeof(*ledger->txoffsets),fp) != (2 * sizeof(*ledger->txoffsets)) )
+        else if ( fwrite(ledger->txoffsets,ledger->L.numtxoffsets,2*sizeof(*ledger->txoffsets),fp) != (2 * sizeof(*ledger->txoffsets)) )
             err++, printf("error saving (%s) numtxoffsets.%d\n",ledgername,ledger->L.numtxoffsets);
-        else if ( fwrite(&ledger->spentbits,1,(ledger->L.numspentbits>>3)+1,fp) != ((ledger->L.numspentbits >> 3) + 1) )
+        else if ( fwrite(ledger->spentbits,1,(ledger->L.numspentbits>>3)+1,fp) != ((ledger->L.numspentbits >> 3) + 1) )
             err++, printf("error saving (%s) spentbits.%d\n",ledgername,ledger->L.numspentbits);
         else
         {
