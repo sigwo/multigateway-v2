@@ -355,7 +355,7 @@ void *ledger_tx(struct ledger_info *ledger,uint32_t txidind,char *txidstr,uint32
         update_sha256(ledger->txoffsets_hash,&ledger->txoffsets_state,(uint8_t *)&offsets[2],sizeof(offsets[0]) * 2);
         //printf("offsets txind.%d (%d %d), next (%d %d)\n",txidind,offsets[0],offsets[1],offsets[2],offsets[3]);
         return(ledger_packtx(&tx));
-    } else printf("ledger_tx: mismatched txidind, expected %u got %u\n",txidind,checkind), while ( 1 ) sleep(1);
+    } else printf("ledger_tx: mismatched txidind, expected %u got %u\n",txidind,checkind); while ( 1 ) sleep(1);
     return(0);
 }
 
