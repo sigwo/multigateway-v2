@@ -55,11 +55,11 @@ void ledger_packvoutstr(void *data,struct alloc_space *mem,uint32_t rawind,int32
     if ( newitem != 0 )
     {
         rawind |= (1 << 31);
-        data = memalloc(mem,sizeof(rawind)), memcpy(data,&rawind,sizeof(rawind));
-        data = memalloc(mem,sizeof(len)), memcpy(data,&len,sizeof(len));
-        data = memalloc(mem,len), memcpy(data,str,len);
+        data = memalloc(mem,sizeof(rawind),0), memcpy(data,&rawind,sizeof(rawind));
+        data = memalloc(mem,sizeof(len),0), memcpy(data,&len,sizeof(len));
+        data = memalloc(mem,len,0), memcpy(data,str,len);
     }
-    else data = memalloc(mem,sizeof(rawind)), memcpy(data,&rawind,sizeof(rawind));
+    else data = memalloc(mem,sizeof(rawind),0), memcpy(data,&rawind,sizeof(rawind));
 }
 
 uint32_t *ledger_packvout(struct ledger_voutdata *vout)
@@ -68,7 +68,7 @@ uint32_t *ledger_packvout(struct ledger_voutdata *vout)
     ptr = calloc(1,sizeof(*vout) + sizeof(*ptr));
     //printf("packvout %ld %p\n",sizeof(*vout) + sizeof(*ptr),ptr);
     memset(&mem,0,sizeof(mem)); mem.ptr = &ptr[1]; mem.size = sizeof(*vout);
-    data = memalloc(&mem,sizeof(vout->value)), memcpy(data,&vout->value,sizeof(vout->value));
+    data = memalloc(&mem,sizeof(vout->value),0), memcpy(data,&vout->value,sizeof(vout->value));
     ledger_packvoutstr(data,&mem,vout->addrind,vout->newaddr,(uint8_t *)vout->coinaddr,vout->addrlen);
     ledger_packvoutstr(data,&mem,vout->scriptind,vout->newscript,vout->script,vout->scriptlen);
     //printf("packed vout used.%ld size.%ld\n",mem.used,mem.size);
@@ -105,24 +105,30 @@ void ledger_free(struct ledger_info *ledger)
 
 struct ledger_info *ledger_latest(struct db777 *ledgerDB)
 {
-    uint32_t *ptr,blocknum; int32_t i,iter,allocsize,len; void *blockledger,*srcL,*srcT,*srcS;
+    int32_t i,iter,allocsize,len; void *blockledger,*srcL,*srcT,*srcS; //uint32_t *ptr,blocknum;
     struct alloc_space MEM;
     struct ledger_addrinfo *addrinfo;
     struct ledger_info *ledger = 0;
-    if ( (ptr= db777_findM(&len,ledgerDB,"latest",strlen("latest"))) != 0 && len == sizeof(blocknum) )
+    if ( (blockledger= db777_findM(&len,ledgerDB,"latest",strlen("latest"))) != 0 )//&& len == sizeof(blocknum) )
     {
-        blocknum = *ptr, free(ptr);
-        if ( (blockledger= db777_findM(&len,ledgerDB,&blocknum,sizeof(blocknum))) != 0 )
+        for (i=0; i<32; i++)
+            printf("%02x ",((uint8_t *)blockledger)[i]);
+        printf(" | %p\n",blockledger);
+       // blocknum = *ptr, free(ptr);
+       // if ( (blockledger= db777_findM(&len,ledgerDB,&blocknum,sizeof(blocknum))) != 0 )
         {
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = blockledger, MEM.size = len;
             for (iter=0; iter<2; iter++)
             {
-                allocsize = sizeof(*ledger), srcL = ledger = memalloc(&MEM,allocsize);
-                printf("ledger->numtxoffsets.%d ledger->numspentbits.%d ledger->numaddrinfos.%d\n",ledger->numtxoffsets,ledger->numspentbits,ledger->numaddrinfos);
+                allocsize = sizeof(*ledger), srcL = ledger = memalloc(&MEM,allocsize,0);
+                for (i=0; i<32; i++)
+                    printf("%02x ",((uint8_t *)ledger)[i]);
+                printf(" | %p\n",ledger);
+                printf("ledger->numtxoffsets.%d ledger->numspentbits.%d ledger->numaddrinfos.%d len.%d crc.%u\n",ledger->numtxoffsets,ledger->numspentbits,ledger->numaddrinfos,len,_crc32(0,blockledger,len));
                 printf("%ld ",MEM.used);
-                allocsize = ledger->numtxoffsets * 2 * sizeof(*ledger->txoffsets), srcT = memalloc(&MEM,allocsize);
+                allocsize = ledger->numtxoffsets * 2 * sizeof(*ledger->txoffsets), srcT = memalloc(&MEM,allocsize,0);
                 printf("%ld ",MEM.used);
-                allocsize = (ledger->numspentbits >> 3) + 1, srcS = memalloc(&MEM,allocsize);
+                allocsize = (ledger->numspentbits >> 3) + 1, srcS = memalloc(&MEM,allocsize,0);
                 printf("%ld ",MEM.used);
                 if ( iter == 1 )
                 {
@@ -133,10 +139,10 @@ struct ledger_info *ledger_latest(struct db777 *ledgerDB)
                 }
                 for (i=0; i<ledger->numaddrinfos; i++)
                 {
-                    addrinfo = memalloc(&MEM,sizeof(uint32_t));
+                    addrinfo = memalloc(&MEM,sizeof(uint32_t),0);
                     if ( addrinfo->count != 0 )
                     {
-                        allocsize = addrinfo_size(addrinfo,addrinfo->count), memalloc(&MEM,allocsize - sizeof(uint32_t));
+                        allocsize = addrinfo_size(addrinfo,addrinfo->count), memalloc(&MEM,allocsize - sizeof(uint32_t),0);
                         printf("%ld ",MEM.used);
                         if ( iter == 1 )
                             ledger->addrinfos[i] = calloc(1,allocsize), memcpy(ledger->addrinfos[i],addrinfo,allocsize);
@@ -149,7 +155,7 @@ struct ledger_info *ledger_latest(struct db777 *ledgerDB)
                 }
             }
             free(blockledger);
-        } else printf("error loading latest (%s) ledger.%u\n",ledger->coinstr,blocknum);
+        }// else printf("error loading latest (%s) ledger.%u\n",ledger->coinstr,blocknum);
     }
     else printf("error loading latest (%s)\n",ledger->coinstr);
     return(ledger);
@@ -188,13 +194,16 @@ int32_t ledger_save(struct ledger_info *ledger,int32_t blocknum)
         fclose(fp);
         if ( (blockledger= loadfile(&allocsize,ledgername)) != 0 && (allocsize == fpos || allocsize == fpos+1) )
         {
-            if ( db777_add(0,ledger->ledgers.DB,&blocknum,sizeof(blocknum),blockledger,(int32_t)fpos) != 0 )
+            for (i=0; i<32; i++)
+                printf("%02x ",((uint8_t *)blockledger)[i]);
+            printf("\n");
+            if ( db777_add(0,ledger->ledgers.DB,"latest",strlen("latest"),blockledger,(int32_t)fpos) != 0 )
                 printf("error saving (%s) %ld\n",ledgername,fpos);
             else
             {
-                if ( db777_add(0,ledger->ledgers.DB,"latest",strlen("latest"),&blocknum,sizeof(blocknum)) != 0 )
-                    printf("error saving (%s)\n",ledgername);
-                printf("saved (%s) %ld %s\n",ledgername,fpos,_mbstr(fpos));
+                //if ( db777_add(0,ledger->ledgers.DB,"latest",strlen("latest"),&blocknum,sizeof(blocknum)) != 0 )
+                //    printf("error saving (%s)\n",ledgername);
+                printf("saved (%s) %ld %s | crc.%u\n",ledgername,fpos,_mbstr(fpos),_crc32(0,blockledger,fpos));
             }
             free(blockledger);
             return(0);
@@ -577,7 +586,7 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
             }
         }
         ledger_recalc_addrinfos(ledger,(blocknum % 100) == 0);
-        if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,blocknum == 91800 || ledger->needbackup != 0)) < 0 )
+        if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,ledger->needbackup != 0)) < 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
             return(-1);

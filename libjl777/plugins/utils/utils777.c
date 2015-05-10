@@ -61,7 +61,7 @@ int32_t revsort64s(uint64_t *buf,uint32_t num,int32_t size);
 double estimate_completion(double startmilli,int32_t processed,int32_t numleft);
 
 void clear_alloc_space(struct alloc_space *mem,int32_t alignflag);
-void *memalloc(struct alloc_space *mem,long size);
+void *memalloc(struct alloc_space *mem,long size,int32_t clearflag);
 
 int32_t notlocalip(char *ipaddr);
 int32_t is_remote_access(char *previpaddr);
@@ -595,7 +595,7 @@ void clear_alloc_space(struct alloc_space *mem,int32_t alignflag)
     mem->alignflag = alignflag;
 }
 
-void *memalloc(struct alloc_space *mem,long size)
+void *memalloc(struct alloc_space *mem,long size,int32_t clearflag)
 {
     void *ptr = 0;
     if ( (mem->used + size) > mem->size )
@@ -606,7 +606,8 @@ void *memalloc(struct alloc_space *mem,long size)
     }
     ptr = (void *)((long)mem->ptr + mem->used);
     mem->used += size;
-    memset(ptr,0,size);
+    if ( clearflag != 0 )
+        memset(ptr,0,size);
     if ( mem->alignflag != 0 && (mem->used & 0xf) != 0 )
         mem->used += 0x10 - (mem->used & 0xf);
     return(ptr);
