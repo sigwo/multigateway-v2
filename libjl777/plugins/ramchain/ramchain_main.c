@@ -92,7 +92,17 @@ int32_t ledger_saveaddrinfo(FILE *fp,struct ledger_addrinfo *addrinfo)
     }
 }
 
-void *ledger_latest(struct db777 *ledgerDB)
+int32_t ledger_compare(struct ledger_info *ledgerA,struct ledger_info *ledgerB)
+{
+    return(0);
+}
+
+void ledger_free(struct ledger_info *ledger)
+{
+    
+}
+
+struct ledger_info *ledger_latest(struct db777 *ledgerDB)
 {
     uint32_t *ptr,blocknum; int32_t i,iter,allocsize,len; void *blockledger,*srcL,*srcT,*srcS;
     struct alloc_space MEM;
@@ -412,6 +422,7 @@ uint32_t **ledger_startblock(struct ledger_info *ledger,uint32_t blocknum,int32_
 int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t numptrs,uint32_t blocknum,int32_t sync)
 {
     int32_t i,len,n,errs,allocsize = 0;
+    struct ledger_info *backup;
     uint8_t *blocks;
     if ( ledger->blockpending == 0 || ledger->blocknum != blocknum || ledger->numptrs != numptrs )
     {
@@ -446,19 +457,36 @@ int32_t ledger_commitblock(struct ledger_info *ledger,uint32_t **ptrs,int32_t nu
         free(blocks);
     }
     if ( sync != 0 && ledger_save(ledger,blocknum + 1) == 0 )
+    {
+        if ( (backup= ledger_latest(ledger->ledgers.DB)) != 0 )
+        {
+            backup->ledgers.DB = ledger->ledgers.DB, backup->addrs.DB = ledger->addrs.DB, backup->txids.DB = ledger->txids.DB;
+            backup->scripts.DB = ledger->scripts.DB, backup->blocks.DB = ledger->blocks.DB, backup->unspentmap.DB = ledger->unspentmap.DB;
+            if ( ledger_compare(ledger,backup) < 0 )
+                printf("ledgers miscompared backup %s %d\n",backup->coinstr,backup->blocknum);
+            ledger_free(backup);
+        }
         ledger->needbackup = 0;
+    }
     if ( (blocknum % 100) == 0 && db777_add(1,ledger->blocks.DB,"latest",strlen("latest"),ledger,sizeof(*ledger)) != 0 )
         printf("error saving latest (%u)\n",blocknum);
     ledger->numptrs = ledger->blockpending = 0;
     return(allocsize);
 }
 
-void ledger_recalc_addrinfos(struct ledger_info *ledger)
+void ledger_recalc_addrinfos(struct ledger_info *ledger,int32_t richlist)
 {
     char coinaddr[256];
     struct ledger_addrinfo *addrinfo;
     uint32_t i,n,addrind; float *sortbuf; uint64_t balance;
     ledger->addrsum = n = 0;
+    if ( richlist == 0 )
+    {
+        for (i=1; i<=ledger->addrs.ind; i++)
+            if ( (addrinfo= ledger->addrinfos[i]) != 0 && (balance= addrinfo->balance) != 0 )
+                ledger->addrsum += balance;
+        return;
+    }
     sortbuf = calloc(ledger->addrs.ind,sizeof(float)+sizeof(uint32_t));
     for (i=1; i<=ledger->addrs.ind; i++)
         if ( (addrinfo= ledger->addrinfos[i]) != 0 && (balance= addrinfo->balance) != 0 )
@@ -521,8 +549,8 @@ int32_t ramchain_ledgerupdate(struct ledger_info *ledger,struct coin777 *coin,st
                         ptrs[m++] = ledger_spend(ledger,txidind,++ledger->totalspends,vi->txidstr,vi->vout);
             }
         }
-        ledger_recalc_addrinfos(ledger);
-        if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,ledger->needbackup != 0)) < 0 )
+        ledger_recalc_addrinfos(ledger,(blocknum % 10) == 0);
+        if ( (allocsize= ledger_commitblock(ledger,ptrs,m,blocknum,blocknum == 91800 || ledger->needbackup != 0)) < 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
             return(-1);
