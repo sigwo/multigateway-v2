@@ -523,9 +523,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     if ( initflag > 0 )
     {
         if ( DB_msigs == 0 )
-            DB_msigs = db777_create(0,0,"msigs",0);
+            DB_msigs = db777_create(0,0,"msigs",0,0);
         if ( DB_NXTaccts == 0 )
-            DB_NXTaccts = db777_create(0,0,"NXTaccts",0);
+            DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
         strcpy(retbuf,"{\"result\":\"return JSON init\"}");
         MGW.issuers[MGW.numissuers++] = calc_nxt64bits("423766016895692955");//conv_rsacctstr("NXT-JXRD-GKMR-WD9Y-83CK7",0);
         MGW.issuers[MGW.numissuers++] = calc_nxt64bits("12240549928875772593");//conv_rsacctstr("NXT-3TKA-UH62-478B-DQU6K",0);

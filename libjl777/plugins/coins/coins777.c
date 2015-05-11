@@ -71,7 +71,7 @@ struct ramchain_hashtable
     struct db777 *DB;
     char name[32];
     unsigned char hash[256 >> 3];
-    uint32_t ind,maxind,type,minblocknum;
+    uint32_t ind,maxind,type,minblocknum,restoreflag;
     struct sha256_state state;
 };
 
@@ -92,12 +92,12 @@ struct ramchain
 {
     char name[16];
     double lastgetinfo,startmilli;
-    struct ramchain_hashtable *DBs[10];
+    struct ramchain_hashtable *DBs[10],*restoreDBs[10];
     uint64_t totalsize;
-    uint32_t startblocknum,RTblocknum,confirmednum,numDBs,numupdates,readyflag,backupfreq;
+    uint32_t startblocknum,RTblocknum,confirmednum,numDBs,numupdates,readyflag,backupfreq,restoreflag;
     //uint8_t *huffbits,*huffbits2;
     struct rawblock EMIT,DECODE;
-    struct ledger_info L;
+    struct ledger_info L,restoreL;
 };
 
 struct coin777
@@ -114,7 +114,7 @@ struct coin777 *coin777_create(char *coinstr,char *serverport,char *userpass,cJS
 int32_t coin777_close(char *coinstr);
 struct coin777 *coin777_find(char *coinstr);
 char *extract_userpass(char *userhome,char *coindir,char *confname);
-void ramchain_update(struct coin777 *coin);
+void ramchain_update(struct coin777 *coin,struct ledger_info *ledger);
 int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *userpass,uint32_t blocknum);
 void rawblock_patch(struct rawblock *raw);
 

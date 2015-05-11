@@ -1379,11 +1379,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         os_compatible_path(SOPHIA.PATH);
         printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay);
         if ( DB_NXTaccts == 0 )
-            DB_NXTaccts = db777_create(0,0,"NXTaccts",0);
+            DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
         if ( DB_nodestats == 0 )
-            DB_nodestats = db777_create(0,0,"nodestats",0);
+            DB_nodestats = db777_create(0,0,"nodestats",0,0);
         if ( DB_busdata == 0 )
-            DB_busdata = db777_create(0,0,"busdata",0);
+            DB_busdata = db777_create(0,0,"busdata",0,0);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {

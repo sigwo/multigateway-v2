@@ -18,10 +18,15 @@
 #include "system777.c"
 #include "storage.c"
 
-struct db777 { void *env,*ctl,*db,*asyncdb; char dbname[512],name[512],backupdir[512]; };
+struct db777
+{
+    void *env,*ctl,*db,*asyncdb;
+    char dbname[512],name[512],namestr[512],backupdir[1024],restorelogdir[1024],restoredir[1024];
+    char argspecialpath[512],argsubdir[512],argname[512],argcompression[512];
+};
 
 #define SOPHIA_USERDIR "/user"
-struct db777 *db777_create(char *path,char *subdir,char *name,char *compression);
+struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compression,int32_t restoreflag);
 uint64_t db777_ctlinfo64(struct db777 *DB,char *field);
 //void *db777_find(struct db777 *DB,void *key,int32_t keylen);
 int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len);
@@ -35,6 +40,7 @@ void **db777_copy_all(int32_t *nump,struct db777 *DB,char *field,int32_t size);
 struct db777 *db777_getDB(char *dbname);
 int32_t db777_backup(struct db777 *DB);
 void *db777_transaction(struct db777 *DB,void *transactions,void *key,int32_t keylen,void *value,int32_t len);
+struct db777 *db777_restorebackup(struct db777 *DB,int32_t backupind);
 
 extern struct sophia_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
@@ -103,7 +109,7 @@ void *db777_transaction(struct db777 *DB,void *transactions,void *key,int32_t ke
 int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len)
 {
     static uint32_t duplicate,mismatch;
-    void *obj,*val;
+    void *obj = 0,*val = 0;
     int32_t allocsize = 0;
     if ( DB == 0 || DB->db == 0 )
         return(-1);
@@ -123,10 +129,23 @@ int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,vo
                 return(0);
             }
         }
-        sp_destroy(obj);
     }
     if ( forceflag < 0 && allocsize != 0 )
+    {
+        int i;
+        for (i=0; i<16; i++)
+            printf("%02x ",((char *)value)[i]);
+        printf("value len.%d\n",len);
+        if ( val != 0 )
+        {
+            for (i=0; i<16; i++)
+                printf("%02x ",((char *)value)[i]);
+            printf("saved %d\n",allocsize);
+        }
         mismatch++, printf("duplicate.%d mismatch.%d | keylen.%d len.%d -> allocsize.%d\n",duplicate,mismatch,keylen,len,allocsize);
+    }
+    if ( obj != 0 )
+        sp_destroy(obj);
     if ( (obj= sp_object(DB->db)) == 0 )
         return(-3);
     if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,len) != 0 )

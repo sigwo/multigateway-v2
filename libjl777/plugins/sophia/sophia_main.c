@@ -366,12 +366,57 @@ int32_t db777_close(struct db777 *DB)
     return(-errs);
 }
 
-struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compression)
+struct db777 *_db777_restorebackup(char *specialpath,char *subdir,char *name,char *compression,char *namestr,char *backupdir,char *restoredir,char *restorelogdir,int32_t backupind)
+{
+    char fname[1024],_name[64],restorefname[1024],numstr[16]; int32_t iter,i,counter; FILE *fp; long fsize;
+    for (iter=0; iter<2; iter++)
+    for (i=1,counter=0; i<10000&&counter<100; i++,counter++)
+    {
+        sprintf(numstr,"%.10f",(double)i/10000000000.);
+        if ( iter == 0 )
+        {
+            sprintf(_name,"log/%s.log",numstr+2);
+            sprintf(fname,"%s/%d/%s",backupdir,backupind,_name);
+            sprintf(restorefname,"%s/%s.log",restorelogdir,numstr+2);
+        }
+        else
+        {
+            sprintf(_name,"%s/%s.db",namestr,numstr+2);
+            sprintf(fname,"%s/%d/%s",backupdir,backupind,_name);
+            sprintf(restorefname,"%s/%s.db",restoredir,numstr+2);
+        }
+        if ( (fp= fopen(fname,"rb")) != 0 )
+        {
+            fclose(fp);
+            counter = 0;
+            fsize = copy_file(fname,restorefname);
+            printf("FOUND.(%s) -> (%s) copied %s\n",fname,restorefname,_mbstr(fsize));
+        } //else printf("skip %s (%s)\n",fname,numstr);
+    }
+    return(db777_create(specialpath,subdir,name,compression,1));
+}
+
+struct db777 *db777_restorebackup(struct db777 *DB,int32_t backupind)
+{
+    struct db777 *rDB;
+    rDB = _db777_restorebackup(DB->argspecialpath,DB->argsubdir,DB->argname,DB->argcompression,DB->namestr,DB->backupdir,DB->restoredir,DB->restorelogdir,backupind);
+    printf("%s backupind.%d %p\n",rDB->name,backupind,rDB);
+    return(rDB);
+}
+
+struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compression,int32_t restoreflag)
 {
     struct db777 *DB = calloc(1,sizeof(*DB));
-    char path[1024],dbname[1024],*str;
+    char path[1024],restorepath[1024],dbname[1024],*str,*namestr;
     int32_t err;
     cJSON *json;
+    strcpy(DB->argname,name);
+    if ( specialpath != 0 )
+        strcpy(DB->argspecialpath,specialpath);
+    if ( subdir != 0 )
+        strcpy(DB->argsubdir,subdir);
+    if ( compression != 0 )
+        strcpy(DB->argcompression,compression);
     strcpy(dbname,name);
     if ( strlen(dbname) >= sizeof(DB->name)-1 )
         dbname[sizeof(DB->name)-1] = 0;
@@ -388,22 +433,17 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
         sprintf(path + strlen(path),"/%s",specialpath), ensure_directory(path);
         if ( subdir != 0 && subdir[0] != 0 )
             sprintf(path + strlen(path),"/%s",subdir), ensure_directory(path);
-        /*if ( strcmp(specialpath,"RAMCHAINS") == 0 )
-        {
-            strcat(path,"/"), strcat(path,subdir);
-            ensure_directory(path);
-            printf("path.(%s)\n",path);
-        }
-        else if ( strcmp(specialpath,"MGW") == 0 )
-            strcat(path,"/"), strcmp(path,MGW.PATH);
-        else if ( strcmp(specialpath,"DATADIR") == 0 )
-            strcat(path,"/"), strcmp(path,SUPERNET.DATADIR);*/
     }
+    namestr = (compression != 0 && compression[0] != 0 ? compression : name), strcpy(DB->namestr,namestr);
+    strcpy(restorepath,path), strcat(restorepath,"/restore"), os_compatible_path(restorepath), ensure_directory(restorepath);
+    strcat(restorepath,"/"), strcat(restorepath,name), os_compatible_path(restorepath), ensure_directory(restorepath);
+    strcpy(DB->restorelogdir,restorepath), strcat(DB->restorelogdir,"/log"), os_compatible_path(DB->restorelogdir), ensure_directory(DB->restorelogdir);
+    strcpy(DB->restoredir,restorepath), strcat(DB->restoredir,"/"), strcat(DB->restoredir,namestr), os_compatible_path(DB->restoredir), ensure_directory(DB->restoredir);
     strcat(path,"/"), strcat(path,name), os_compatible_path(path), ensure_directory(path);
-    strcpy(DB->backupdir,path), strcat(DB->backupdir,"/backups");
-    strcpy(dbname,compression != 0 && compression[0] != 0 ? compression : name);
-    printf("SOPHIA.(%s) MGW.(%s) create path.(%s).(%s) -> [%s %s].%s\n",SOPHIA.PATH,MGW.PATH,name,compression,path,dbname,compression);
-    if ( (err= sp_set(DB->ctl,"sophia.path",path)) != 0 )
+    strcpy(DB->backupdir,path), strcat(DB->backupdir,"/backups"), os_compatible_path(DB->backupdir);
+    strcpy(dbname,namestr);
+    printf("SOPHIA.(%s) MGW.(%s) create path.(%s).(%s) -> [%s %s].%s restore.(%s)\n",SOPHIA.PATH,MGW.PATH,name,compression,path,dbname,compression,restorepath);
+    if ( (err= sp_set(DB->ctl,"sophia.path",restoreflag == 0 ? path : restorepath)) != 0 )
     {
         printf("err.%d setting path\n",err);
         return(db777_abort(DB));
@@ -419,7 +459,7 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
         printf("err.%d setting name\n",err);
         return(db777_abort(DB));
     }
-    if ( (err= sp_set(DB->ctl,"backup.path",DB->backupdir)) != 0 )
+    if ( restoreflag == 0 && (err= sp_set(DB->ctl,"backup.path",DB->backupdir)) != 0 )
         printf("error.%d setting backup.path (%s)\n",err,DB->backupdir);
     if ( compression != 0 )
     {
@@ -455,13 +495,14 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
         DB->asyncdb = sp_async(DB->db);
         printf("opened.(%s) env.%p ctl.%p db.%p asyncdb.%p\n",DB->dbname,DB->env,DB->ctl,DB->db,DB->asyncdb);
     }
-    if ( 0 && (json= db777_json(DB)) != 0 )
+    if ( restoreflag != 0 && (json= db777_json(DB)) != 0 )
     {
         str = cJSON_Print(json);
         printf("%s\n",str);
         free(str);
         free_json(json);
     }
+    //else db777_restorebackup(specialpath,subdir,name,compression,DB->namestr,DB->backupdir,DB->restoredir,DB->restorelogdir,1);
     //SOPHIA.DBS = realloc(SOPHIA.DBS,(SOPHIA.numdbs+1) * sizeof(*DB));
     if ( SOPHIA.numdbs < sizeof(SOPHIA.DBS)/sizeof(*SOPHIA.DBS) )
         SOPHIA.DBS[SOPHIA.numdbs] = DB, SOPHIA.numdbs++;
@@ -510,7 +551,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             else
             {
                 compression = cJSON_str(cJSON_GetObjectItem(json,"compression"));
-                if ( (DB= db777_create(path,subdir,name,compression)) != 0 )
+                if ( (DB= db777_create(path,subdir,name,compression,0)) != 0 )
                 {
                     strcpy(retbuf,"{\"result\":\"opened database\"}");
                 }
