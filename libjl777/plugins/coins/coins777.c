@@ -94,7 +94,7 @@ struct ramchain
     double lastgetinfo,startmilli;
     struct ramchain_hashtable *DBs[10];
     uint64_t totalsize;
-    uint32_t startblocknum,RTblocknum,confirmednum,numDBs,numupdates,readyflag;
+    uint32_t startblocknum,RTblocknum,confirmednum,numDBs,numupdates,readyflag,backupfreq;
     //uint8_t *huffbits,*huffbits2;
     struct rawblock EMIT,DECODE;
     struct ledger_info L;

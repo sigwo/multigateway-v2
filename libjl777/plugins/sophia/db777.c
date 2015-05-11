@@ -114,7 +114,11 @@ int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,vo
             if ( allocsize == len && memcmp(val,value,len) == 0 )
             {
                 if ( forceflag < 0 )
-                    duplicate++, printf("found duplicate len.%d\n",len);
+                {
+                    duplicate++;
+                    if ( (rand() % 1000) == 0 )
+                        printf("found duplicate len.%d | duplicate.%d mismatch.%d\n",len,duplicate,mismatch);
+                }
                 sp_destroy(obj);
                 return(0);
             }
