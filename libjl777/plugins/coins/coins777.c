@@ -76,7 +76,7 @@ struct ramchain_hashtable
 };
 
 struct upair32 { uint32_t firstvout,firstvin; };
-struct ledger_addrinfo { uint32_t count,max:31,dirty:1; int64_t balance; uint8_t addrlen,space[]; };
+struct ledger_addrinfo { int64_t balance; uint32_t count,max:31,dirty:1; char coinaddr[36]; uint32_t unspentinds[]; };
 struct ledger_info
 {
     uint32_t numtxoffsets,numspentbits,numaddrinfos,needbackup,blocknum,blockpending,numptrs,totalvouts,totalspends,addrind,txidind,scriptind;
