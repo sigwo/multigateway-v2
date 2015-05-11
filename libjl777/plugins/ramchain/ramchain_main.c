@@ -547,12 +547,13 @@ int32_t ledger_backup(struct ledger_info *ledger)
     return(retval);
 }
 
-int32_t ledger_commitblock(struct ledger_info *ledger,struct alloc_space *mem,struct ledger_blockinfo *block,int32_t sync)
+int32_t ledger_commitblock(struct ramchain *ram,struct ledger_info *ledger,struct alloc_space *mem,struct ledger_blockinfo *block,int32_t sync)
 {
+    int32_t i;
     if ( ledger->blockpending == 0 || ledger->blocknum != block->blocknum )
     {
         printf("ledger_commitblock: mismatched parameter pending.%d (%d %d)\n",ledger->blockpending,ledger->blocknum,block->blocknum);
-        return(-1);
+        return(0);
     }
     block->allocsize = (uint32_t)mem->used;
     block->crc16 = block_crc16(block);
@@ -561,14 +562,17 @@ int32_t ledger_commitblock(struct ledger_info *ledger,struct alloc_space *mem,st
     if ( db777_add(-1,ledger->blocks.DB,&block->blocknum,sizeof(block->blocknum),block,block->allocsize) != 0 )
     {
         printf("error saving blocks %s %u\n",ledger->coinstr,block->blocknum);
-        return(-1);
+        return(0);
     }
     if ( sync != 0 )
     {
         if ( ledger_save(ledger) > 0 )
         {
             if ( sync > 1 )
-                db777_backup(ledger->ledger.DB);
+            {
+                for (i=0; i<ram->numDBs; i++)
+                    db777_backup(ram->DBs[i]->DB);
+            }
         } else printf("error with ledger save\n");
         ledger->needbackup = 0;
     }
@@ -592,10 +596,11 @@ struct ledger_blockinfo *ledger_startblock(struct ledger_info *ledger,struct all
     return(block);
 }
 
-struct ledger_blockinfo *ramchain_ledgerupdate(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,struct coin777 *coin,struct rawblock *emit,uint32_t blocknum,int32_t syncflag)
+struct ledger_blockinfo *ramchain_ledgerupdate(int32_t dispflag,struct ramchain *ram,struct alloc_space *mem,struct coin777 *coin,struct rawblock *emit,uint32_t blocknum,int32_t syncflag)
 {
-    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledger_blockinfo *block = 0; int32_t allocsize = 0;
-    uint32_t i,txidind,txind,n;
+    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledger_blockinfo *block = 0;
+    struct ledger_info *ledger = &ram->L;
+    uint32_t i,txidind,txind,n,allocsize = 0;
     //printf("ledgerupdate block.%u txidind.%u/%u addrind.%u/%u scriptind.%u/%u unspentind.%u/%u\n",blocknum,lp->txidind,ledger->txids.ind,lp->addrind,ledger->addrs.ind,lp->scriptind,ledger->scripts.ind,lp->totalvouts,ledger->unspentmap.ind);
     if ( rawblock_load(emit,coin->name,coin->serverport,coin->userpass,blocknum) > 0 )
     {
@@ -618,7 +623,7 @@ struct ledger_blockinfo *ramchain_ledgerupdate(int32_t dispflag,struct ledger_in
             }
         }
         ledger_recalc_addrinfos(ledger,dispflag - 1);
-        if ( (allocsize= ledger_commitblock(ledger,mem,block,syncflag)) < 0 )
+        if ( (allocsize= ledger_commitblock(ram,ledger,mem,block,syncflag)) == 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
             return(0);
@@ -639,8 +644,8 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     dispflag = 1 || (blocknum > ram->RTblocknum - 1000);
     dispflag += ((blocknum % 100) == 0);
     memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ram->DECODE, MEM.size = sizeof(ram->DECODE);
-    syncflag = 2 * (((blocknum % ram->backupfreq) == 999) || (ram->L.needbackup != 0));
-    block = ramchain_ledgerupdate(dispflag,&ram->L,&MEM,coin,&ram->EMIT,blocknum,syncflag);
+    syncflag = 2 * (((blocknum % ram->backupfreq) == (ram->backupfreq-1)) || (ram->L.needbackup != 0));
+    block = ramchain_ledgerupdate(dispflag,ram,&MEM,coin,&ram->EMIT,blocknum,syncflag);
     ram->totalsize += block->allocsize;
     estimate = estimate_completion(ram->startmilli,blocknum-ram->startblocknum,RTblocknum-blocknum)/60000;
     elapsed = (milliseconds()-ram->startmilli)/60000.;
@@ -710,7 +715,7 @@ int32_t init_ramchain(struct coin777 *coin,char *coinstr,int32_t backupfreq)
 {
     struct ramchain *ram = &coin->ramchain;
     if ( backupfreq <= 0 )
-        backupfreq = 1000;
+        backupfreq = 10000;
     ram->backupfreq = backupfreq;
     ram->startmilli = milliseconds();
     strcpy(ram->name,coinstr);
