@@ -33,6 +33,8 @@ int32_t db777_close(struct db777 *DB);
 int32_t db777_free(struct db777 *DB);
 void **db777_copy_all(int32_t *nump,struct db777 *DB,char *field,int32_t size);
 struct db777 *db777_getDB(char *dbname);
+int32_t db777_backup(struct db777 *DB);
+void *db777_transaction(struct db777 *DB,void *transactions,void *key,int32_t keylen,void *value,int32_t len);
 
 extern struct sophia_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
@@ -71,26 +73,56 @@ int32_t db777_delete(struct db777 *DB,void *key,int32_t keylen)
     return(-1);
 }
 
+void *db777_transaction(struct db777 *DB,void *transactions,void *key,int32_t keylen,void *value,int32_t len)
+{
+    void *obj;
+    if ( transactions == 0 )
+        return(sp_begin(DB->env));
+    else if ( key != 0 )
+    {
+        if ( (obj= sp_object(DB->db)) == 0 )
+            return(0);
+        if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,len) != 0 )
+        {
+            sp_destroy(obj);
+            sp_destroy(transactions);
+            return(0);
+        }
+        if ( sp_set(transactions,obj) != 0 )
+        {
+            sp_destroy(transactions);
+            return(0);
+        }
+        return(transactions);
+    }
+    if ( sp_commit(transactions) != 0 )
+        printf("error commiting transaction\n");
+    return(0);
+}
+
 int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len)
 {
+    static uint32_t duplicate,mismatch;
     void *obj,*val;
-    int32_t allocsize;
+    int32_t allocsize = 0;
     if ( DB == 0 || DB->db == 0 )
         return(-1);
-    if ( forceflag == 0 && (obj= db777_find(DB,key,keylen)) != 0 )
+    if ( forceflag <= 0 && (obj= db777_find(DB,key,keylen)) != 0 )
     {
         if ( (val= sp_get(obj,"value",&allocsize)) != 0 )
         {
             if ( allocsize == len && memcmp(val,value,len) == 0 )
             {
-                if ( 0 && len > 12 )
-                    printf("found duplicate len.%d\n",len);
+                if ( forceflag < 0 )
+                    duplicate++, printf("found duplicate len.%d\n",len);
                 sp_destroy(obj);
                 return(0);
             }
         }
         sp_destroy(obj);
     }
+    if ( forceflag < 0 && allocsize != 0 )
+        mismatch++, printf("duplicate.%d mismatch.%d | keylen.%d len.%d -> allocsize.%d\n",duplicate,mismatch,keylen,len,allocsize);
     if ( (obj= sp_object(DB->db)) == 0 )
         return(-3);
     if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,len) != 0 )
@@ -140,6 +172,11 @@ void *db777_findM(int32_t *lenp,struct db777 *DB,void *key,int32_t keylen)
         sp_destroy(obj);
     }
     return(ptr);
+}
+
+int32_t db777_backup(struct db777 *DB)
+{
+    return(sp_set(DB->ctl,"backup.run"));
 }
 
 uint64_t db777_ctlinfo64(struct db777 *DB,char *field)

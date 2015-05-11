@@ -450,59 +450,44 @@ void *ledger_loadptr(int32_t iter,struct alloc_space *mem,long allocsize)
     return(ptr);
 }
 
-int32_t ledger_saveaddrinfo(FILE *fp,struct ledger_addrinfo *addrinfo)
+int32_t ledger_save(struct ledger_info *ledger)
 {
-    int32_t allocsize,zero = 0;
-    if ( addrinfo == 0 )
-        return(fwrite(&zero,1,sizeof(zero),fp) == sizeof(zero));
-    else
-    {
-        allocsize = addrinfo_size(addrinfo->count);
-        printf("%d ",allocsize);
-        return(fwrite(addrinfo,1,allocsize,fp) == allocsize);
-    }
-}
-
-int32_t ledger_save(struct ledger_info *ledger,int32_t blocknum)
-{
-    FILE *fp; long fpos; void *blockledger; int32_t i,err = 0; uint64_t allocsize = 0;
-    char ledgername[512];
+    uint32_t addrind,allocsize,dirty = 0; struct ledger_addrinfo *addrinfo; void *transactions;
     if ( ledger->txoffsets == 0 || ledger->spentbits == 0 || ledger->addrinfos == 0 )
     {
         printf("uninitialzed pointer %p %p %p\n",ledger->txoffsets,ledger->spentbits,ledger->addrinfos);
         return(-1);
     }
-    sprintf(ledgername,"/tmp/%s.%u",ledger->coinstr,blocknum);
-    if ( (fp= fopen(ledgername,"wb")) != 0 )
+    if ( (transactions= db777_transaction(ledger->ledger.DB,0,0,0,0,0)) == 0 )
+        printf("error creating transactions set\n");
+    else if ( db777_transaction(ledger->ledger.DB,transactions,"ledger",strlen("ledger"),ledger,sizeof(*ledger)) == 0 )
+        printf("error saving ledger\n");
+    else if ( db777_transaction(ledger->ledger.DB,transactions,"txoffsets",strlen("txoffsets"),ledger->txoffsets,(int32_t)(ledger->numtxoffsets * sizeof(*ledger->txoffsets))) == 0 )
+        printf("error saving txoffsets\n");
+    else if ( db777_transaction(ledger->ledger.DB,transactions,"spentbits",strlen("spentbits"),ledger->spentbits,(ledger->numspentbits >> 3) + 1) == 0 )
+        printf("error saving spentbits\n");
+    else
     {
-        if ( fwrite(ledger,1,sizeof(*ledger),fp) != sizeof(*ledger) )
-            err++, printf("error saving (%s) L\n",ledgername);
-        else if ( fwrite(ledger->txoffsets,ledger->numtxoffsets,sizeof(*ledger->txoffsets),fp) != sizeof(*ledger->txoffsets) )
-            err++, printf("error saving (%s) numtxoffsets.%d\n",ledgername,ledger->numtxoffsets);
-        else if ( fwrite(ledger->spentbits,1,(ledger->numspentbits>>3)+1,fp) != ((ledger->numspentbits >> 3) + 1) )
-            err++, printf("error saving (%s) spentbits.%d\n",ledgername,ledger->numspentbits);
-        else
+        allocsize = (uint32_t)(sizeof(*ledger) + (ledger->numtxoffsets * sizeof(*ledger->txoffsets)) + ((ledger->numspentbits >> 3) + 1));
+        for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
         {
-            printf("nutxoffsets.%d numspentbits.%d numaddrinfos.%d before addrinfos %ld\n",ledger->numtxoffsets,ledger->numspentbits,ledger->numaddrinfos,ftell(fp));
-            for (i=0; i<ledger->numaddrinfos; i++)
-                if ( ledger_saveaddrinfo(fp,ledger->addrinfos[i]) <= 0 )
+            if ( (addrinfo= ledger->addrinfos[addrind]) != 0 && addrinfo->dirty != 0 )
+            {
+                dirty++;
+                if ( db777_transaction(ledger->ledger.DB,transactions,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count)) == 0 )
                 {
-                    err++, printf("error saving addrinfo.%d (%s)\n",i,ledgername);
-                    break;
+                    printf("error saving addrinfo[%u]\n",addrind);
+                    return(-1);
                 }
+                else addrinfo->dirty = 0, allocsize += addrinfo_size(addrinfo->count);
+            }
         }
-        fpos = ftell(fp);
-        rewind(fp);
-        fclose(fp);
-        if ( (blockledger= loadfile(&allocsize,ledgername)) != 0 && (allocsize == fpos || allocsize == fpos+1) )
-        {
-            if ( db777_add(0,ledger->ledger.DB,"ledger",strlen("ledger"),blockledger,(int32_t)fpos) != 0 )
-                printf("error saving (%s) %ld\n",ledgername,fpos);
-            else printf("saved (%s) %ld %s | crc.%u\n",ledgername,fpos,_mbstr(fpos),_crc32(0,blockledger,fpos));
-            free(blockledger);
-            return(0);
-        } else printf("error loading (%s) allocsize.%llu vs %ld\n",ledgername,(long long)allocsize,fpos);
+        db777_transaction(ledger->ledger.DB,transactions,0,0,0,0);
+        printf("sync'ed %d addrinfos, saved %d\n",dirty,allocsize);
+        return(dirty);
     }
+    if ( transactions != 0 )
+        printf("should destroy pending transaction\n");
     return(-1);
 }
 
@@ -547,7 +532,7 @@ struct ledger_info *ledger_latest(struct db777 *ledgerDB)
     return(ledger);
 }
 
-int32_t ledger_backup(struct ledger_info *ledger,uint32_t forblocknum)
+int32_t ledger_backup(struct ledger_info *ledger)
 {
     struct ledger_info *backup; int32_t retval = -100;
     if ( (backup= ledger_latest(ledger->ledger.DB)) != 0 )
@@ -559,7 +544,6 @@ int32_t ledger_backup(struct ledger_info *ledger,uint32_t forblocknum)
         else printf("ledger compared!\n");
         ledger_free(backup);
     }
-    ledger->needbackup = 0;
     return(retval);
 }
 
@@ -574,13 +558,20 @@ int32_t ledger_commitblock(struct ledger_info *ledger,struct alloc_space *mem,st
     block->crc16 = block_crc16(block);
     if ( Debuglevel > 2 )
         printf("block.%u mem.%p size.%d crc.%u\n",block->blocknum,mem,block->allocsize,block->crc16);
-    if ( db777_add(0,ledger->blocks.DB,&block->blocknum,sizeof(block->blocknum),block,block->allocsize) != 0 )
+    if ( db777_add(-1,ledger->blocks.DB,&block->blocknum,sizeof(block->blocknum),block,block->allocsize) != 0 )
     {
         printf("error saving blocks %s %u\n",ledger->coinstr,block->blocknum);
         return(-1);
     }
     if ( sync != 0 )
-        ledger_backup(ledger,block->blocknum);
+    {
+        ledger_save(ledger);
+        if ( sync > 1 )
+        {
+            db777_backup(ledger->ledger.DB);
+            ledger->needbackup = 0;
+        }
+    }
     ledger->numptrs = ledger->blockpending = 0;
     return(block->allocsize);
 }
@@ -627,7 +618,7 @@ struct ledger_blockinfo *ramchain_ledgerupdate(int32_t dispflag,struct ledger_in
             }
         }
         ledger_recalc_addrinfos(ledger,dispflag - 1);
-        if ( (allocsize= ledger_commitblock(ledger,mem,block,ledger->needbackup != 0)) < 0 )
+        if ( (allocsize= ledger_commitblock(ledger,mem,block,((blocknum % 1000) == 999) + (ledger->needbackup != 0))) < 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
             return(0);
@@ -703,10 +694,6 @@ uint32_t init_hashDBs(struct ramchain *ram,char *coinstr,struct ramchain_hashtab
 
 uint32_t ensure_ramchain_DBs(struct ramchain *ram,int32_t firstblock)
 {
-    /* uint32_t i,j,numpurged,minblocknum,nonz,numerrs;
-     struct unspent_entry *unspents;
-     uint64_t sum,total;
-     int64_t errtotal,balance;*/
     ram->L.blocknum = firstblock;
     strcpy(ram->L.coinstr,ram->name);
     init_hashDBs(ram,ram->name,&ram->L.ledger,"ledger","lz4");
@@ -715,27 +702,6 @@ uint32_t ensure_ramchain_DBs(struct ramchain *ram,int32_t firstblock)
     init_hashDBs(ram,ram->name,&ram->L.addrs,"addresses","lz4");
     init_hashDBs(ram,ram->name,&ram->L.txids,"txids",0);
     init_hashDBs(ram,ram->name,&ram->L.scripts,"scripts","lz4");
-    /*minblocknum = 0xffffffff;
-     for (i=0; i<ram->L.numDBs; i++)
-     {
-     if ( ram->L.DBs[i]->minblocknum < minblocknum )
-     minblocknum = ram-ledger.DBs[i]->minblocknum;
-     printf("%u ",ram->L.DBs[i]->minblocknum);
-     }
-     printf("minblocknums -> %d\n",minblocknum);
-     numpurged = ramchain_setblocknums(ram,minblocknum,0);
-     if ( 0 && numpurged > 10 )
-     {
-     printf("will purge %d DB entrys. 'y' to proceed\n",numpurged);
-     if ( getchar() == 'y' )
-     {
-     numpurged = ramchain_setblocknums(ram,minblocknum,1);
-     printf("purged.%d\n",numpurged);
-     } else exit(-1);
-     }
-     printf("finished setblocknums\n");
-     getchar();
-     return(minblocknum);*/
     return(firstblock);
 }
 
