@@ -364,6 +364,11 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
                     addrinfo->dirty = 1;
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
+                    if ( (addrinfo->count == 0 && addrinfo->balance != 0) || addrinfo->count < 0 )
+                    {
+                        printf("ILLEGAL: addrind.%u count.%d max.%d %.8f\n",addrind,addrinfo->count,addrinfo->max,dstr(addrinfo->balance));
+                        getchar();
+                    }
                     if ( Debuglevel > 2 )
                         printf("addrind.%u count.%d max.%d %.8f\n",addrind,addrinfo->count,addrinfo->max,dstr(addrinfo->balance));
                     break;
@@ -621,7 +626,7 @@ struct ledger_blockinfo *ramchain_ledgerupdate(int32_t dispflag,struct ledger_in
                         ledger_addspend(ledger,mem,txidind,++ledger->totalspends,vi->txidstr,vi->vout);
             }
         }
-        ledger_recalc_addrinfos(ledger,dispflag);
+        ledger_recalc_addrinfos(ledger,dispflag - 1);
         if ( (allocsize= ledger_commitblock(ledger,mem,block,ledger->needbackup != 0)) < 0 )
         {
             printf("error updating %s block.%u\n",coin->name,blocknum);
@@ -640,7 +645,8 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     uint64_t supply,oldsupply = ram->L.voutsum - ram->L.spendsum;
     if ( (ram->RTblocknum % 1000) == 0 || (ram->RTblocknum - blocknum) < 1000 )
         ram->RTblocknum = _get_RTheight(&ram->lastgetinfo,coin->name,coin->serverport,coin->userpass,ram->RTblocknum);
-    dispflag = 1 || (blocknum % 100) == 0 || (blocknum > ram->RTblocknum - 1000);
+    dispflag = 1 || (blocknum > ram->RTblocknum - 1000);
+    dispflag += ((blocknum % 100) == 0);
     memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ram->DECODE, MEM.size = sizeof(ram->DECODE);
     block = ramchain_ledgerupdate(dispflag,&ram->L,&MEM,coin,&ram->EMIT,blocknum);
     ram->totalsize += block->allocsize;
@@ -648,7 +654,7 @@ int32_t ramchain_processblock(struct coin777 *coin,uint32_t blocknum,uint32_t RT
     elapsed = (milliseconds()-ram->startmilli)/60000.;
     supply = ram->L.voutsum - ram->L.spendsum;
     if ( dispflag != 0 )
-        printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f ave\n",coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ram->L.addrsum),dstr(supply)-dstr(ram->L.addrsum),dstr(supply)-dstr(oldsupply),dstr(ram->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum);
+        printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f ave %ld\n",coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ram->L.addrsum),dstr(supply)-dstr(ram->L.addrsum),dstr(supply)-dstr(oldsupply),dstr(ram->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ram->totalsize),(double)ram->totalsize/blocknum,sizeof(struct ledger_addrinfo));
     return(0);
     /*rawblock_patch(&ram->EMIT), rawblock_patch(&ram->DECODE);
     ram->DECODE.minted = ram->EMIT.minted = 0;
