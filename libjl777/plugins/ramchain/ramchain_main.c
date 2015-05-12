@@ -213,7 +213,7 @@ uint64_t ledger_recalc_addrinfos(struct ledger_info *ledger,int32_t richlist)
 uint32_t ledger_rawind(void *transactions,struct ledger_state *hash,void *key,int32_t keylen)
 {
     int32_t size; uint32_t *ptr,rawind = 0;
-    if ( (ptr= db777_findM(&size,hash->D.DB,key,keylen)) != 0 )
+    if ( (ptr= db777_findM(&size,transactions,hash->D.DB,key,keylen)) != 0 )
     {
         if ( size == sizeof(uint32_t) )
         {
@@ -265,7 +265,7 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
         {
             decode_hex(data,hexlen,txidstr);
             //if ( (blocknum == 91842 && strcmp(txidstr,"d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599") == 0) || (blocknum == 91880 && strcmp(txidstr,"e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468") == 0) )
-            if ( (ptr= db777_findM(&size,ledger->txids.D.DB,data,hexlen)) != 0 )
+            if ( (ptr= db777_findM(&size,ledger->DBs.transactions,ledger->txids.D.DB,data,hexlen)) != 0 )
             {
                 printf("block.%u (%s) already exists.%u\n",blocknum,txidstr,*ptr);
                 if ( size == sizeof(uint32_t) )
@@ -339,7 +339,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
         spend.spent_txidind = spent_txidind, spend.spent_vout = vout;
         spend.unspentind = ledger->txoffsets.D.upairs[spent_txidind].firstvout + vout;
         SETBIT(ledger->spentbits.D.bits,spend.unspentind);
-        if ( (U= db777_findM(&size,ledger->unspentmap.D.DB,&spend.unspentind,sizeof(spend.unspentind))) == 0 || size != sizeof(*U) )
+        if ( (U= db777_findM(&size,ledger->DBs.transactions,ledger->unspentmap.D.DB,&spend.unspentind,sizeof(spend.unspentind))) == 0 || size != sizeof(*U) )
         {
             if ( U != 0 )
                 free(U);
@@ -649,14 +649,14 @@ void _ledger_clearDBs(struct ledger_info *ledger)
     ledger->ledger.D.DB = ledger->addrs.D.DB = ledger->txids.D.DB = ledger->scripts.D.DB = ledger->unspentmap.D.DB = ledger->blocks.D.DB = 0;
 }
 
-struct ledger_info *_ledger_load(struct db777 *ledgerDB)
+struct ledger_info *_ledger_load(void *transactions,struct db777 *ledgerDB)
 {
     int32_t len; uint32_t addrind,allocsize; struct ledger_info *ledger;
-    if ( (ledger= db777_findM(&len,ledgerDB,"ledger",strlen("ledger"))) == 0 || len != sizeof(*ledger) )
+    if ( (ledger= db777_findM(&len,transactions,ledgerDB,"ledger",strlen("ledger"))) == 0 || len != sizeof(*ledger) )
         printf("error loading ledger len.%d vs %ld\n",len,sizeof(ledger));
-    else if ( (ledger->txoffsets.D.upairs= db777_findM(&len,ledgerDB,"txoffsets",strlen("txoffsets"))) == 0 || len != (ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs)) )
+    else if ( (ledger->txoffsets.D.upairs= db777_findM(&len,transactions,ledgerDB,"txoffsets",strlen("txoffsets"))) == 0 || len != (ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs)) )
         printf("error loading txoffsets len.%d vs %ld\n",len,(ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs)));
-    else if ( (ledger->spentbits.D.bits=db777_findM(&len,ledgerDB,"spentbits",strlen("spentbits"))) == 0 || len != ((ledger->spentbits.ind >> 3) + 1) )
+    else if ( (ledger->spentbits.D.bits=db777_findM(&len,transactions,ledgerDB,"spentbits",strlen("spentbits"))) == 0 || len != ((ledger->spentbits.ind >> 3) + 1) )
         printf("error loading spentbits len.%d vs %d\n",len,((ledger->spentbits.ind >> 3) + 1));
     else
     {
@@ -664,7 +664,7 @@ struct ledger_info *_ledger_load(struct db777 *ledgerDB)
         ledger->addrinfos.D.table = calloc(ledger->addrinfos.ind,sizeof(*ledger->addrinfos.D.table));
         for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
         {
-            if ( (ledger->addrinfos.D.table[addrind]= db777_findM(&len,ledgerDB,&addrind,sizeof(addrind))) == 0 || len != addrinfo_size(ledger->addrinfos.D.table[addrind]->count) )
+            if ( (ledger->addrinfos.D.table[addrind]= db777_findM(&len,transactions,ledgerDB,&addrind,sizeof(addrind))) == 0 || len != addrinfo_size(ledger->addrinfos.D.table[addrind]->count) )
             {
                 printf("error loading addrinfo[%u] len.%d vs %d\n",addrind,len,addrinfo_size(ledger->addrinfos.D.table[addrind]->count));
                 ledger_free(ledger,0);

@@ -42,7 +42,7 @@ int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     flag = 0;
     coinaddr[0] = pubkey[0] = 0;
     //printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
-    if ( (keycoinaddr= db777_findM(&len,DB_NXTaccts,key,sizeof(key))) != 0 )
+    if ( (keycoinaddr= db777_findM(&len,0,DB_NXTaccts,key,sizeof(key))) != 0 )
     {
         strcpy(coinaddr,keycoinaddr);
         free(keycoinaddr);
@@ -59,7 +59,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     key[2] = nxt64bits;
     flag = 1;
 //printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
-    if ( (coinaddr= db777_findM(&len,DB_NXTaccts,key,sizeof(key))) != 0 )
+    if ( (coinaddr= db777_findM(&len,0,DB_NXTaccts,key,sizeof(key))) != 0 )
     {
         if ( strcmp(coinaddr,newcoinaddr) == 0 )
             flag = 0;
@@ -99,7 +99,7 @@ struct multisig_addr *find_msigaddr(int32_t *lenp,char *coinstr,char *NXTaddr,ch
     char keystr[1024];
     multisig_keystr(keystr,coinstr,NXTaddr,msigaddr);
     printf("search_msig.(%s)\n",keystr);
-    return(db777_findM(lenp,DB_msigs,keystr,(int32_t)strlen(keystr)+1));
+    return(db777_findM(lenp,0,DB_msigs,keystr,(int32_t)strlen(keystr)+1));
 }
 
 int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int32_t len)
@@ -299,7 +299,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
         key[i+1] = srv64bits[i];
     key[i+1] = nxt64bits;
     keylen = (int32_t)(sizeof(*key) * (i+2));
-    if ( (msig= db777_findM(&len,DB_msigs,key,keylen)) != 0 )
+    if ( (msig= db777_findM(&len,0,DB_msigs,key,keylen)) != 0 )
         return(msig);
     if ( (coin= coin777_find(coinstr)) != 0 )
     {

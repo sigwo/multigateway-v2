@@ -26,7 +26,7 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
 int32_t db777_addstr(struct db777 *DB,char *key,char *value);
 int32_t db777_delete(struct db777 *DB,void *key,int32_t keylen);
 int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key);
-void *db777_findM(int32_t *lenp,struct db777 *DB,void *key,int32_t keylen);
+void *db777_findM(int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen);
 int32_t db777_close(struct db777 *DB);
 int32_t db777_free(struct db777 *DB);
 void **db777_copy_all(int32_t *nump,struct db777 *DB,char *field,int32_t size);
@@ -50,14 +50,14 @@ extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTa
 #undef DEFINES_ONLY
 #endif
 
-void *db777_find(struct db777 *DB,void *key,int32_t keylen)
+void *db777_find(void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
     void *obj,*result = 0;
     int32_t len;
     if ( DB == 0 || DB->db == 0 || (obj= sp_object(DB->db)) == 0 )
         return(0);
     if ( sp_set(obj,"key",key,keylen) == 0 )
-        result = sp_get(DB->db,obj,&len);
+        result = sp_get(transactions != 0 ? transactions : DB->db,obj,&len);
     else sp_destroy(obj);
     return(result);
 }
@@ -107,7 +107,7 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     int32_t allocsize = 0;
     if ( DB == 0 || DB->db == 0 )
         return(-1);
-    if ( forceflag <= 0 && (obj= db777_find(DB,key,keylen)) != 0 )
+    if ( forceflag <= 0 && (obj= db777_find(transactions,DB,key,keylen)) != 0 )
     {
         if ( (val= sp_get(obj,"value",&allocsize)) != 0 )
         {
@@ -140,7 +140,7 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     }
     if ( obj != 0 )
         sp_destroy(obj);
-    if ( (obj= sp_object(DB->db)) == 0 )
+    if ( (obj= sp_object(DB->asyncdb != 0 ? DB->asyncdb : DB->db)) == 0 )
         return(-3);
     if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,len) != 0 )
     {
@@ -160,7 +160,7 @@ int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
 {
     void *obj,*val;
     int32_t valuesize = -1;
-    if ( (obj= db777_find(DB,key,(int32_t)strlen(key)+1)) != 0 )
+    if ( (obj= db777_find(0,DB,key,(int32_t)strlen(key)+1)) != 0 )
     {
         if ( (val= sp_get(obj,"value",&valuesize)) != 0 )
         {
@@ -173,11 +173,11 @@ int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
     return(valuesize);
 }
 
-void *db777_findM(int32_t *lenp,struct db777 *DB,void *key,int32_t keylen)
+void *db777_findM(int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
     void *obj,*val,*ptr = 0;
     int32_t valuesize = -1;
-    if ( (obj= db777_find(DB,key,keylen)) != 0 )
+    if ( (obj= db777_find(transactions,DB,key,keylen)) != 0 )
     {
        // printf("found keylen.%d\n",keylen);
         if ( (val= sp_get(obj,"value",&valuesize)) != 0 )
@@ -251,7 +251,7 @@ int32_t eligible_lbserver(char *server)
     if ( server == 0 || server[0] == 0 || ismyaddress(server) != 0 || is_remote_access(server) == 0 )
         return(0);
     keylen = (int32_t)strlen(server)+1;
-    if ( (jsonstr= db777_findM(&len,DB_NXTaccts,(uint8_t *)server,keylen)) != 0 )
+    if ( (jsonstr= db777_findM(&len,0,DB_NXTaccts,(uint8_t *)server,keylen)) != 0 )
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
