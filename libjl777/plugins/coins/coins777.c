@@ -80,7 +80,7 @@ struct sha256_state
 #endif
 struct upair32 { uint32_t firstvout,firstvin; };
 struct ledger_addrinfo { int64_t balance; int32_t count; uint32_t max:31,dirty:1; char coinaddr[COINADDR_LEN]; uint32_t unspentinds[]; };
-union ledger_data { struct db777 *DB; struct upair32 *upairs; uint8_t *bits; struct ledger_addrinfo **table; };
+union ledger_data { struct db777 *DB; struct ledger_addrinfo **table; }; //struct upair32 *upairs; uint8_t *bits; 
 
 struct ledger_state
 {
