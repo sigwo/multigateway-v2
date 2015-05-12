@@ -696,6 +696,8 @@ void ramchain_update(struct coin777 *coin)
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ram->DECODE, MEM.size = sizeof(ram->DECODE);
         if ( (block= ledger_update(dispflag,ledger,&MEM,coin,&ram->EMIT,blocknum)) != 0 )
         {
+            if ( (blocknum % 100) == 0 || syncflag != 0 )
+                ledger_sync(ledger);
             if ( syncflag != 0 )
             {
                 db777_backup(ledger->DBs.ctl);
@@ -708,8 +710,6 @@ void ramchain_update(struct coin777 *coin)
                 else if ( strcmp(coin->name,"BTC") == 0 && lag < 10 && ram->backupfreq > 100 )
                     ram->backupfreq = 100;
             }
-            if ( (blocknum % 100) == 0 )
-                ledger_sync(ledger);
             if ( (allocsize= ledger_commitblock(ledger,&MEM,block)) <= 0 )
                 printf("error updating %s block.%u\n",coin->name,blocknum);
             ram->addrsum = ledger_recalc_addrinfos(ledger,dispflag - 1);
