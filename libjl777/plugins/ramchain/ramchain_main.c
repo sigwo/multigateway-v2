@@ -267,7 +267,8 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
             //if ( (blocknum == 91842 && strcmp(txidstr,"d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599") == 0) || (blocknum == 91880 && strcmp(txidstr,"e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468") == 0) )
             if ( (ptr= db777_findM(&size,ledger->DBs.transactions,ledger->txids.D.DB,data,hexlen)) != 0 )
             {
-                printf("block.%u (%s) already exists.%u\n",blocknum,txidstr,*ptr);
+                if ( Debuglevel > 2 )
+                    printf("block.%u (%s) already exists.%u\n",blocknum,txidstr,*ptr);
                 if ( size == sizeof(uint32_t) )
                     return(*ptr);
             }
