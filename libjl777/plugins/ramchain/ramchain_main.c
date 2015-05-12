@@ -86,9 +86,9 @@ uint32_t ledger_packvout(uint8_t *hash,struct sha256_state *state,struct alloc_s
 
 int32_t addrinfo_size(int32_t n) { return(sizeof(struct ledger_addrinfo) + (sizeof(uint32_t) * n)); }
 
-struct ledger_addrinfo *addrinfo_update(struct ledger_addrinfo *addrinfo,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind)
+struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger_addrinfo *addrinfo,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind)
 {
-    int32_t width;
+    int32_t width; //uint32_t addrtx[2];
     if ( addrinfo == 0 )
     {
         addrinfo = calloc(1,addrinfo_size(1));
@@ -109,6 +109,9 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_addrinfo *addrinfo,char *c
     addrinfo->balance += value;
     addrinfo->dirty = 1;
     addrinfo->unspentinds[addrinfo->count++] = unspentind;
+    //addrtx[0] = addrind, addrtx[1] = ++addrinfo->txindex;
+    //if ( 0 && db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),&unspentind,sizeof(unspentind)) != 0 )
+    //    printf("error updating addrtx addrind.%u index.%d: unspentind %x\n",addrind,addrinfo->txindex,unspentind);
     return(addrinfo);
 }
 
@@ -352,7 +355,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
         if ( Debuglevel > 2 )
             printf("txidind.%u v.%d unspent.%d (%s).%u (%s).%u %.8f | %ld\n",txidind,v,unspentind,coinaddr,vout.U.addrind,scriptstr,vout.scriptind,dstr(value),sizeof(vout.U));
         ledger_ensureaddrinfos(ledger,vout.U.addrind);
-        ledger->addrinfos.D.table[vout.U.addrind] = addrinfo_update(ledger->addrinfos.D.table[vout.U.addrind],coinaddr,vout.addrlen,value,unspentind);
+        ledger->addrinfos.D.table[vout.U.addrind] = addrinfo_update(ledger,ledger->addrinfos.D.table[vout.U.addrind],coinaddr,vout.addrlen,value,unspentind,vout.U.addrind);
          return(ledger_packvout(ledger->addrinfos.sha256,&ledger->addrinfos.state,mem,&vout));
     } else printf("ledger_unspent: cant find addrind.(%s)\n",coinaddr);
     return(0);
@@ -361,7 +364,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
 uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint32_t spend_txidind,uint32_t totalspends,char *spent_txidstr,uint16_t vout)
 {
     struct ledger_spendinfo spend;
-    int32_t i,n,size,txidlen,addrind; uint64_t value; uint32_t spent_txidind; uint8_t txid[256];
+    int32_t i,n,size,txidlen,addrind; uint64_t value; uint8_t txid[256]; uint32_t spent_txidind;//,addrtx[2],spentind;
     struct ledger_addrinfo *addrinfo; struct unspentmap *U;
     //printf("spend_txidind.%d totalspends.%d (%s).v%d\n",spend_txidind,totalspends,spent_txidstr,vout);
     if ( (spent_txidind= ledger_hexind(ledger->DBs.transactions,&ledger->txids,txid,&txidlen,spent_txidstr)) != 0 )
@@ -402,7 +405,10 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
                     addrinfo->dirty = 1;
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
-                    //addrinfo->unspentinds[addrinfo->count++] = (spend.unspentind | (1 << 31));
+                    //spentind = (spend.unspentind | (1 << 31));
+                    //addrtx[0] = addrind, addrtx[1] = ++addrinfo->txindex;
+                    //if ( db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),&spentind,sizeof(spentind)) != 0 )
+                    //    printf("error updating addrtx addrind.%u index.%d: spentind %x\n",addrind,addrinfo->txindex,spentind);
                     if ( (addrinfo->count == 0 && addrinfo->balance != 0) || addrinfo->count < 0 )
                     {
                         printf("ILLEGAL: addrind.%u count.%d max.%d %.8f\n",addrind,addrinfo->count,addrinfo->max,dstr(addrinfo->balance));
@@ -415,7 +421,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
             }
             if ( i == n )
             {
-                printf("addrind.%u cant find unspentind.%u for (%s).%u v%d\n",addrind,spend.unspentind,spent_txidstr,spend_txidind,vout);
+                printf("ERROR: addrind.%u cant find unspentind.%u for (%s).%u v%d\n",addrind,spend.unspentind,spent_txidstr,spend_txidind,vout);
                 getchar();
                 return(0);
             }
@@ -644,7 +650,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir)
     return(ledger);
 }
 
-int32_t ledger_save(struct ledger_info *ledger)
+int32_t ledger_sync(struct ledger_info *ledger)
 {
     uint32_t addrind,allocsize,dirty = 0; struct ledger_addrinfo *addrinfo;
     if ( ledger->addrinfos.D.table == 0 ) //ledger->txoffsets.D.upairs == 0 || ledger->spentbits.D.bits == 0 ||
@@ -652,124 +658,23 @@ int32_t ledger_save(struct ledger_info *ledger)
         printf("uninitialized pointer %p\n",ledger->addrinfos.D.table); // ledger->txoffsets.D.upairs,ledger->spentbits.D.bits,
         return(-1);
     }
-    /*if ( db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,"ledger",strlen("ledger"),ledger,sizeof(*ledger)) == 0 )
-        printf("error saving ledger\n");
-    else if ( db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,"txoffsets",strlen("txoffsets"),ledger->txoffsets.D.upairs,(int32_t)(ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs))) == 0 )
-        printf("error saving txoffsets\n");
-    else if ( db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,"spentbits",strlen("spentbits"),ledger->spentbits.D.bits,(ledger->spentbits.ind >> 3) + 1) == 0 )
-        printf("error saving spentbits\n");
-    else*/
+    allocsize = 0;//(uint32_t)(sizeof(*ledger) + (ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs)) + ((ledger->spentbits.ind >> 3) + 1));
+    for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
     {
-        allocsize = 0;//(uint32_t)(sizeof(*ledger) + (ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs)) + ((ledger->spentbits.ind >> 3) + 1));
-        for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
+        if ( (addrinfo= ledger->addrinfos.D.table[addrind]) != 0 && addrinfo->dirty != 0 )
         {
-            if ( (addrinfo= ledger->addrinfos.D.table[addrind]) != 0 && addrinfo->dirty != 0 )
+            dirty++;
+            addrinfo->dirty = 0;
+            if ( db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count)) != 0 )
             {
-                dirty++;
-                addrinfo->dirty = 0;
-                if ( db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count)) != 0 )
-                {
-                    printf("error saving addrinfo[%u]\n",addrind);
-                    return(-1);
-                }
-                else allocsize += addrinfo_size(addrinfo->count);
+                printf("error saving addrinfo[%u]\n",addrind);
+                return(-1);
             }
-        }
-        printf("[%-3d addrs %8s] ",dirty,_mbstr(allocsize));
-        //ledger_DBopcodes(&ledger->DBs,LEDGER_DB_BACKUP);
-        return(dirty);
-    }
-    return(-1);
-}
-
-void _ledger_clearDBs(struct ledger_info *ledger)
-{
-    ledger->txoffsets.D.DB = ledger->spentbits.D.DB = ledger->ledger.D.DB = ledger->addrs.D.DB = ledger->txids.D.DB = ledger->scripts.D.DB = ledger->unspentmap.D.DB = ledger->blocks.D.DB = 0;
-}
-
-struct ledger_info *_ledger_load(void *transactions,struct db777 *ledgerDB)
-{
-   /* int32_t len; uint32_t addrind,allocsize; struct ledger_info *ledger;
-    if ( (ledger= db777_findM(&len,transactions,ledgerDB,"ledger",strlen("ledger"))) == 0 || len != sizeof(*ledger) )
-        printf("error loading ledger len.%d vs %ld\n",len,sizeof(ledger));
-    else if ( (ledger->txoffsets.D.upairs= db777_findM(&len,transactions,ledgerDB,"txoffsets",strlen("txoffsets"))) == 0 || len != (ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs)) )
-        printf("error loading txoffsets len.%d vs %ld\n",len,(ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs)));
-    else if ( (ledger->spentbits.D.bits=db777_findM(&len,transactions,ledgerDB,"spentbits",strlen("spentbits"))) == 0 || len != ((ledger->spentbits.ind >> 3) + 1) )
-        printf("error loading spentbits len.%d vs %d\n",len,((ledger->spentbits.ind >> 3) + 1));
-    else
-    {
-        allocsize = (uint32_t)(sizeof(*ledger) + (ledger->txoffsets.ind * sizeof(*ledger->txoffsets.D.upairs)) + ((ledger->spentbits.ind >> 3) + 1));
-        ledger->addrinfos.D.table = calloc(ledger->addrinfos.ind,sizeof(*ledger->addrinfos.D.table));
-        for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
-        {
-            if ( (ledger->addrinfos.D.table[addrind]= db777_findM(&len,transactions,ledgerDB,&addrind,sizeof(addrind))) == 0 || len != addrinfo_size(ledger->addrinfos.D.table[addrind]->count) )
-            {
-                printf("error loading addrinfo[%u] len.%d vs %d\n",addrind,len,addrinfo_size(ledger->addrinfos.D.table[addrind]->count));
-                ledger_free(ledger,0);
-                return(0);
-            }
-            allocsize += addrinfo_size(ledger->addrinfos.D.table[addrind]->count);
-        }
-        printf("  [loaded %d bytes %s] ",allocsize,_mbstr(allocsize));
-        _ledger_clearDBs(ledger);
-        ledger->ledger.D.DB = ledgerDB;
-        return(ledger);
-    }*/
-    return(0);
-}
-
-struct ledger_info *ledger_load(struct ramchain *ram,int32_t backupind)
-{
-  /*  int32_t n = 0; struct ledger_info *restore,*ledger = &ram->restoreL;
-    if ( (ledger->ledger.D.DB= db777_restorebackup(ram->L.ledger.D.DB,backupind)) != 0 )
-    {
-        if ( (restore= _ledger_load(ledger->ledger.D.DB)) != 0 )
-        {
-            n++;
-            if ( (ledger->addrs.D.DB= db777_restorebackup(ram->L.addrs.D.DB,backupind)) != 0 )
-                n++, ledger->addrs.ind = ledger->addrind;
-            if ( (ledger->txids.D.DB = db777_restorebackup(ram->L.txids.D.DB,backupind)) != 0 )
-                n++, ledger->txids.ind = ledger->txidind;
-            if ( (ledger->scripts.D.DB = db777_restorebackup(ram->L.scripts.D.DB,backupind)) != 0 )
-                n++, ledger->scripts.ind = ledger->scriptind;
-            if ( (ledger->unspentmap.D.DB = db777_restorebackup(ram->L.unspentmap.D.DB,backupind)) != 0 )
-                n++;
-            if ( (ledger->blocks.D.DB = db777_restorebackup(ram->L.blocks.D.DB,backupind)) != 0 )
-                n++;
-            printf("restoreL %p: restored blocknum.%u txidind.%u addrind.%u scriptind.%u uspentind.%u totalspends.%u\n",ledger,ledger->blocknum + 1,ledger->txidind,ledger->addrind,ledger->scriptind,ledger->totalvouts,ledger->spentbits.ind);
-            if ( n != 6 )
-                ledger_free(ledger,1), ledger = 0;
-            else
-            {
-                ledger->blocknum++;
-            }
+            else allocsize += addrinfo_size(addrinfo->count);
         }
     }
-    return(ledger);*/
-    if ( backupind == 0 )
-    {
-        
-    }
-    return(0);
-}
-
-int32_t ledger_backup(struct ramchain *ram,struct ledger_info *ledger)
-{
-    struct ledger_info *backup; int32_t retval = -100;
-    if ( (retval= ledger_save(ledger)) > 0 )
-    {
-        if ( (backup= ledger_load(ram,0)) != 0 )
-        {
-            if ( (retval= ledger_compare(ledger,backup)) < 0 )
-                printf("ledger miscompared.%d backup %s %d\n",retval,backup->DBs.coinstr,backup->blocknum);
-            else
-            {
-                printf("ledger compared!\n");
-            }
-            ledger_free(backup,0);
-        }
-    }
-    return(retval);
+    printf("[%-3d addrs %8s] ",dirty,_mbstr(allocsize));
+    return(dirty);
 }
 
 void ramchain_update(struct coin777 *coin)
@@ -791,10 +696,9 @@ void ramchain_update(struct coin777 *coin)
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ram->DECODE, MEM.size = sizeof(ram->DECODE);
         if ( (block= ledger_update(dispflag,ledger,&MEM,coin,&ram->EMIT,blocknum)) != 0 )
         {
-            /*if ( syncflag != 0 )
+            if ( syncflag != 0 )
             {
-                if ( (lastbackup= ledger_backup(ram,ledger)) >= 0 )
-                    ram->needbackup = 0, ram->lastbackup = lastbackup;
+                db777_backup(ledger->DBs.ctl);
                 if ( lag < 100000 && ram->backupfreq > 50000 )
                     ram->backupfreq = 50000;
                 else if ( lag < 50000 && ram->backupfreq > 10000 )
@@ -803,13 +707,13 @@ void ramchain_update(struct coin777 *coin)
                     ram->backupfreq = 1000;
                 else if ( strcmp(coin->name,"BTC") == 0 && lag < 10 && ram->backupfreq > 100 )
                     ram->backupfreq = 100;
-            }*/
-            ledger_save(ledger);
+            }
+            if ( (blocknum % 100) == 0 )
+                ledger_sync(ledger);
             if ( (allocsize= ledger_commitblock(ledger,&MEM,block)) <= 0 )
                 printf("error updating %s block.%u\n",coin->name,blocknum);
             ram->addrsum = ledger_recalc_addrinfos(ledger,dispflag - 1);
             ram->totalsize += block->allocsize;
-            //ledger_DBopcodes(&ledger->DBs,LEDGER_DB_UPDATE);
             estimate = estimate_completion(ram->startmilli,blocknum-ram->startblocknum,ram->RTblocknum-blocknum)/60000;
             elapsed = (milliseconds()-ram->startmilli)/60000.;
             supply = ledger->voutsum - ledger->spendsum;
@@ -897,8 +801,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
 {
     char *coinstr,*resultstr,*methodstr;
     struct coin777 *coin;
-    struct ramchain *ram;
-    int32_t backupind;
+    //struct ramchain *ram;
+    //int32_t backupind;
     retbuf[0] = 0;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
@@ -940,7 +844,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 }
                 else strcpy(retbuf,"{\"error\":\"cant find coin\"}");
             }
-            else if ( strcmp(methodstr,"restore") == 0 )
+            /*else if ( strcmp(methodstr,"restore") == 0 )
             {
                 if ( coinstr != 0 && (coin= coin777_find(coinstr)) != 0 && ramchain_create(retbuf,coinstr) != 0 )
                 {
@@ -952,13 +856,13 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                         else strcpy(retbuf,"{\"error\":\"error loading backup\"}");
                     } else strcpy(retbuf,"{\"error\":\"illegal backupind\"}");
                 } else strcpy(retbuf,"{\"error\":\"cant restore ramchain when coin not ready\"}");
-            }
+            }*/
             else if ( strcmp(methodstr,"create") == 0 )
             {
                 if ( RAMCHAINS.num >= MAX_RAMCHAINS )
                     strcpy(retbuf,"{\"error\":\"cant create any more ramchains\"}");
                 else if ( (coin= ramchain_create(retbuf,coinstr)) != 0 )
-                    init_ramchain(coin,coin->name,get_API_int(cJSON_GetObjectItem(json,"backupfreq"),100000));
+                    init_ramchain(coin,coin->name,get_API_int(cJSON_GetObjectItem(json,"backupfreq"),0));
             }
         }
     }
