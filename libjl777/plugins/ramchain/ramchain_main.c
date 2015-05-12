@@ -506,7 +506,6 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
                         ledger_addspend(ledger,mem,txidind,++ledger->spentbits.ind,vi->txidstr,vi->vout);
             }
         }
-        db777_add(1,ledger->DBs.transactions,ledger->blocks.D.DB,"latest",strlen("latest"),&ledger->blocknum,sizeof(ledger->blocknum));
     } else printf("error loading %s block.%u\n",coin->name,blocknum);
     return(block);
 }
@@ -697,7 +696,10 @@ void ramchain_update(struct coin777 *coin)
         if ( (block= ledger_update(dispflag,ledger,&MEM,coin,&ram->EMIT,blocknum)) != 0 )
         {
             if ( (blocknum % 100) == 0 || syncflag != 0 )
+            {
                 ledger_sync(ledger);
+                db777_add(1,ledger->DBs.transactions,ledger->blocks.D.DB,"latest",strlen("latest"),&ledger->blocknum,sizeof(ledger->blocknum));
+            }
             if ( syncflag != 0 )
             {
                 db777_backup(ledger->DBs.ctl);
