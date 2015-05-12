@@ -53,7 +53,7 @@ struct NXT_acct *get_nxt64bits(int32_t *createdp,uint64_t nxt64bits)
     {
         np = calloc(1,sizeof(*np));
         np->nxt64bits = nxt64bits, expand_nxt64bits(np->NXTaddr,nxt64bits);
-        db777_add(1,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
+        db777_add(1,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
         *createdp = 1;
     } else *createdp = 0;
     return(np);
@@ -89,7 +89,7 @@ void update_nodestats_data(struct nodestats *stats)
     np->stats = *stats;
     if ( Debuglevel > 2 )
         printf("Update nodestats.%llu (%s) lastcontact %u\n",(long long)stats->nxt64bits,ipaddr,stats->lastcontact);
-    db777_add(1,DB_NXTaccts,&stats->nxt64bits,sizeof(stats->nxt64bits),np,sizeof(*np));
+    db777_add(1,0,DB_NXTaccts,&stats->nxt64bits,sizeof(stats->nxt64bits),np,sizeof(*np));
 }
 
 struct NXT_assettxid *find_NXT_assettxid(int32_t *createdflagp,struct NXT_asset *ap,char *txid)

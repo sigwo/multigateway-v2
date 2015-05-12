@@ -62,6 +62,21 @@ struct biendpoints { int32_t bus,pair; };
 struct allendpoints { struct sendendpoints send; struct recvendpoints recv; struct biendpoints both; };
 union endpoints { int32_t all[sizeof(struct allendpoints) / sizeof(int32_t)]; struct allendpoints socks; };
 
+struct db777
+{
+    void *db,*asyncdb;
+    char compression[8],dbname[32],name[16];
+    void *ctl,*env; char namestr[32],restoredir[512],argspecialpath[512],argsubdir[512],restorelogdir[512],argname[512],argcompression[512],backupdir[512];
+};
+
+struct env777
+{
+    char coinstr[16],subdir[64];
+    void *ctl,*env,*transactions;
+    struct db777 dbs[16];
+    int32_t numdbs,needbackup,lastbackup,currentbackup;
+};
+
 #define DEFAULT_APISLEEP 100
 struct SuperNET_info
 {
@@ -70,6 +85,7 @@ struct SuperNET_info
     uint64_t my64bits;
     int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,europeflag,readyflag,UPNP,iamrelay;
     uint16_t port;
+    struct env777 DBs;
 }; extern struct SuperNET_info SUPERNET;
 
 struct coins_info

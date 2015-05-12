@@ -16,20 +16,13 @@
 #include "sophia.h"
 #include "cJSON.h"
 #include "system777.c"
+#include "coins777.c"
 #include "storage.c"
 
-struct db777
-{
-    void *env,*ctl,*db,*asyncdb;
-    char dbname[512],name[512],namestr[512],backupdir[1024],restorelogdir[1024],restoredir[1024];
-    char argspecialpath[512],argsubdir[512],argname[512],argcompression[512];
-};
 
 #define SOPHIA_USERDIR "/user"
-struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compression,int32_t restoreflag);
-uint64_t db777_ctlinfo64(struct db777 *DB,char *field);
-//void *db777_find(struct db777 *DB,void *key,int32_t keylen);
-int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len);
+uint64_t db777_ctlinfo64(void *ctl,char *field);
+int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len);
 int32_t db777_addstr(struct db777 *DB,char *key,char *value);
 int32_t db777_delete(struct db777 *DB,void *key,int32_t keylen);
 int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key);
@@ -38,9 +31,10 @@ int32_t db777_close(struct db777 *DB);
 int32_t db777_free(struct db777 *DB);
 void **db777_copy_all(int32_t *nump,struct db777 *DB,char *field,int32_t size);
 struct db777 *db777_getDB(char *dbname);
-int32_t db777_backup(struct db777 *DB);
-void *db777_transaction(struct db777 *DB,void *transactions,void *key,int32_t keylen,void *value,int32_t len);
-struct db777 *db777_restorebackup(struct db777 *DB,int32_t backupind);
+int32_t db777_backup(void *ctl);
+void *db777_transaction(void *env,struct db777 *DB,void *transactions,void *key,int32_t keylen,void *value,int32_t len);
+struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compression,int32_t restoreflag);
+int32_t env777_start(int32_t dispflag,struct env777 *DBs);
 
 extern struct sophia_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
@@ -79,11 +73,11 @@ int32_t db777_delete(struct db777 *DB,void *key,int32_t keylen)
     return(-1);
 }
 
-void *db777_transaction(struct db777 *DB,void *transactions,void *key,int32_t keylen,void *value,int32_t len)
+void *db777_transaction(void *env,struct db777 *DB,void *transactions,void *key,int32_t keylen,void *value,int32_t len)
 {
     void *obj;
     if ( transactions == 0 )
-        return(sp_begin(DB->env));
+        return(sp_begin(env));
     else if ( key != 0 )
     {
         if ( (obj= sp_object(DB->db)) == 0 )
@@ -106,7 +100,7 @@ void *db777_transaction(struct db777 *DB,void *transactions,void *key,int32_t ke
     return(0);
 }
 
-int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len)
+int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len)
 {
     static uint32_t duplicate,mismatch;
     void *obj = 0,*val = 0;
@@ -154,12 +148,12 @@ int32_t db777_add(int32_t forceflag,struct db777 *DB,void *key,int32_t keylen,vo
         return(-4);
     }
     //printf("DB.%p add.[%p %d] val.%p %d [crcs %u %u]\n",DB,key,keylen,value,len,_crc32(0,key,keylen),_crc32(0,value,len));
-    return(sp_set(DB->db,obj));
+    return(sp_set(transactions != 0 ? transactions : (DB->asyncdb != 0 ? DB->asyncdb : DB->db),obj));
 }
 
 int32_t db777_addstr(struct db777 *DB,char *key,char *value)
 {
-    return(db777_add(1,DB,key,(int32_t)strlen(key)+1,value,(int32_t)strlen(value)+1));
+    return(db777_add(1,0,DB,key,(int32_t)strlen(key)+1,value,(int32_t)strlen(value)+1));
 }
 
 int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
@@ -197,16 +191,15 @@ void *db777_findM(int32_t *lenp,struct db777 *DB,void *key,int32_t keylen)
     return(ptr);
 }
 
-int32_t db777_backup(struct db777 *DB)
+int32_t db777_backup(void *ctl)
 {
-    return(sp_set(DB->ctl,"backup.run"));
+    return(sp_set(ctl,"backup.run"));
 }
 
-uint64_t db777_ctlinfo64(struct db777 *DB,char *field)
+uint64_t db777_ctlinfo64(void *ctl,char *field)
 {
 	void *obj,*ptr; uint64_t val = 0;
-    
-    if ( (obj= sp_get(DB->ctl,field)) != 0 )
+    if ( (obj= sp_get(ctl,field)) != 0 )
     {
         if ( (ptr= sp_get(obj,"value",NULL)) != 0 )
             val = calc_nxt64bits(ptr);
@@ -272,7 +265,7 @@ int32_t eligible_lbserver(char *server)
         }
         free(jsonstr);
     }
-    else db777_add(1,DB_NXTaccts,server,keylen,valstr,(int32_t)strlen(valstr)+1);
+    else db777_add(1,0,DB_NXTaccts,server,keylen,valstr,(int32_t)strlen(valstr)+1);
     return(retval);
 }
 

@@ -67,7 +67,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     }
     if ( flag != 0 )
     {
-        if ( db777_add(1,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
+        if ( db777_add(1,0,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
             updated = 1;
         else printf("error adding (%s)\n",newcoinaddr);
     }
@@ -107,7 +107,7 @@ int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int
     char keystr[1024];
     multisig_keystr(keystr,coinstr,NXTaddr,msig->multisigaddr);
     printf("save_msig.(%s)\n",keystr);
-    return(db777_add(0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,len));
+    return(db777_add(0,0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,len));
 }
 
 int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr)
@@ -325,7 +325,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
             return(0);
         }
         save_msigaddr(coinstr,NXTaddr,msig,msig->size);
-        if ( db777_add(1,DB_msigs,key,keylen,msig,msig->size) != 0 )
+        if ( db777_add(1,0,DB_msigs,key,keylen,msig,msig->size) != 0 )
             printf("error saving msig.(%s)\n",msig->multisigaddr);
     }
     return(msig);
@@ -522,10 +522,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
-        if ( DB_msigs == 0 )
-            DB_msigs = db777_create(0,0,"msigs",0,0);
-        if ( DB_NXTaccts == 0 )
-            DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
+        //if ( DB_msigs == 0 )
+        //    DB_msigs = db777_create(0,0,"msigs",0,0);
+        //if ( DB_NXTaccts == 0 )
+        //    DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
         strcpy(retbuf,"{\"result\":\"return JSON init\"}");
         MGW.issuers[MGW.numissuers++] = calc_nxt64bits("423766016895692955");//conv_rsacctstr("NXT-JXRD-GKMR-WD9Y-83CK7",0);
         MGW.issuers[MGW.numissuers++] = calc_nxt64bits("12240549928875772593");//conv_rsacctstr("NXT-3TKA-UH62-478B-DQU6K",0);

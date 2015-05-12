@@ -176,7 +176,7 @@ cJSON *check_conffile(int32_t *allocflagp,cJSON *json)
 
 int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
 {
-    struct coin777 *coin; char msigchar[128];
+    struct coin777 *coin; //char msigchar[128];
     if ( coinstr != 0 && coinstr[0] != 0 )
     {
         printf("name.(%s)\n",coinstr);
@@ -188,8 +188,8 @@ int32_t init_coinstr(char *coinstr,char *serverport,char *userpass,cJSON *item)
                 strcpy(coin->serverport,serverport);
             if ( userpass != 0 && strcmp(userpass,coin->userpass) != 0 )
                 strcpy(coin->userpass,userpass);
-            if ( extract_cJSON_str(msigchar,sizeof(msigchar),item,"multisigchar") > 0 )
-                coin->multisigchar = msigchar[0];
+            //if ( extract_cJSON_str(msigchar,sizeof(msigchar),item,"multisigchar") > 0 )
+             //   coin->multisigchar = msigchar[0];
             coin->use_addmultisig = get_API_int(cJSON_GetObjectItem(item,"useaddmultisig"),strcmp("BTC",coinstr)!=0);
             if ( strcmp(coinstr,"BTCD") == 0 )//&& COINS.NXTACCTSECRET[0] == 0 )
             {

@@ -22,7 +22,7 @@
 struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,
 
 STRUCTNAME SOPHIA;
-char *PLUGNAME(_methods)[] = { "create", "close", "add", "find",
+char *PLUGNAME(_methods)[] = { // "create", "close", "add", "find",
 #ifdef BUNDLED
     "get", "set", "object", "env", "ctl","open", "destroy", "error", "delete", "async", "drop", "cursor", "begin", "commit", "type",
 #endif
@@ -308,9 +308,9 @@ struct db777 *db777_getDB(char *name)
     return(0);
 }
 
-cJSON *db777_json(struct db777 *DB)
+cJSON *db777_json(void *env,struct db777 *DB)
 {
-    void *cursor,*ptr,*ctl = sp_ctl(DB->env);
+    void *cursor,*ptr,*ctl = sp_ctl(env);
     char *key,*value;
     cJSON *json = cJSON_CreateObject();
     cursor = sp_cursor(ctl);
@@ -323,76 +323,33 @@ cJSON *db777_json(struct db777 *DB)
     return(json);
 }
 
-int32_t db777_free(struct db777 *DB)
-{
-    int32_t errs = 0;
-    //if ( DB->asyncdb != 0 && sp_destroy(DB->asyncdb) != 0 )
-    //    errs |= 2;
-    if ( DB->db != 0 && sp_destroy(DB->db) != 0 )
-        errs |= 1;
-    if ( DB->env != 0 && sp_destroy(DB->env) != 0 )
-        errs |= 8;
-    free(DB);
-    return(errs);
-}
-
-void *db777_abort(struct db777 *DB)
-{
-    db777_free(DB);
-    return(0);
-}
-
-int32_t db777_close(struct db777 *DB)
-{
-    int32_t i,errs = 0;
-    if ( DB != 0 && SOPHIA.numdbs > 0 )
-    {
-        for (i=0; i<SOPHIA.numdbs; i++)
-        {
-            if ( DB == SOPHIA.DBS[i] )
-            {
-                SOPHIA.DBS[i] = SOPHIA.DBS[--SOPHIA.numdbs], SOPHIA.DBS[SOPHIA.numdbs] = 0;
-                if ( (errs= db777_free(DB)) != 0 )
-                {
-                    printf("sp_close DB.%p errs.%d\n",DB,errs);
-                    return(-errs);
-                }
-                return(0);
-            }
-        }
-    }
-    errs |= 4;
-    printf("couldnt find DB.%p errs.%d\n",DB,errs);
-    return(-errs);
-}
-
 struct db777 *_db777_restorebackup(char *specialpath,char *subdir,char *name,char *compression,char *namestr,char *backupdir,char *restoredir,char *restorelogdir,int32_t backupind)
 {
     char fname[1024],_name[64],restorefname[1024],numstr[16]; int32_t iter,i,counter; FILE *fp; long fsize;
     for (iter=0; iter<2; iter++)
-    for (i=1,counter=0; i<10000&&counter<100; i++,counter++)
-    {
-        sprintf(numstr,"%.10f",(double)i/10000000000.);
-        if ( iter == 0 )
+        for (i=1,counter=0; i<10000&&counter<100; i++,counter++)
         {
-            sprintf(_name,"log/%s.log",numstr+2);
-            sprintf(fname,"%s/%d/%s",backupdir,backupind,_name);
-            sprintf(restorefname,"%s/%s.log",restorelogdir,numstr+2);
+            sprintf(numstr,"%.10f",(double)i/10000000000.);
+            if ( iter == 0 )
+            {
+                sprintf(_name,"log/%s.log",numstr+2);
+                sprintf(fname,"%s/%d/%s",backupdir,backupind,_name);
+                sprintf(restorefname,"%s/%s.log",restorelogdir,numstr+2);
+            }
+            else
+            {
+                sprintf(_name,"%s/%s.db",namestr,numstr+2);
+                sprintf(fname,"%s/%d/%s",backupdir,backupind,_name);
+                sprintf(restorefname,"%s/%s.db",restoredir,numstr+2);
+            }
+            if ( (fp= fopen(fname,"rb")) != 0 )
+            {
+                fclose(fp);
+                counter = 0;
+                fsize = copy_file(fname,restorefname);
+                printf("FOUND.(%s) -> (%s) copied %s\n",fname,restorefname,_mbstr(fsize));
+            } //else printf("skip %s (%s)\n",fname,numstr);
         }
-        else
-        {
-            sprintf(_name,"%s/%s.db",namestr,numstr+2);
-            sprintf(fname,"%s/%d/%s",backupdir,backupind,_name);
-            sprintf(restorefname,"%s/%s.db",restoredir,numstr+2);
-        }
-        if ( (fp= fopen(fname,"rb")) != 0 )
-        {
-            fclose(fp);
-            counter = 0;
-            fsize = copy_file(fname,restorefname);
-            printf("FOUND.(%s) -> (%s) copied %s\n",fname,restorefname,_mbstr(fsize));
-        } //else printf("skip %s (%s)\n",fname,numstr);
-    }
     return(db777_create(specialpath,subdir,name,compression,1));
 }
 
@@ -402,6 +359,13 @@ struct db777 *db777_restorebackup(struct db777 *DB,int32_t backupind)
     rDB = _db777_restorebackup(DB->argspecialpath,DB->argsubdir,DB->argname,DB->argcompression,DB->namestr,DB->backupdir,DB->restoredir,DB->restorelogdir,backupind);
     printf("%s backupind.%d %p\n",rDB->name,backupind,rDB);
     return(rDB);
+}
+
+void *db777_abort(struct db777 *DB)
+{
+    if ( DB->db != 0 )
+        sp_destroy(DB->db);
+    return(0);
 }
 
 struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compression,int32_t restoreflag)
@@ -459,7 +423,7 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
         printf("err.%d setting name\n",err);
         return(db777_abort(DB));
     }
-    if ( restoreflag == 0 && (err= sp_set(DB->ctl,"backup.path",DB->backupdir)) != 0 )
+    if ( (err= sp_set(DB->ctl,"backup.path",DB->backupdir)) != 0 )
         printf("error.%d setting backup.path (%s)\n",err,DB->backupdir);
     if ( compression != 0 )
     {
@@ -495,7 +459,7 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
         DB->asyncdb = sp_async(DB->db);
         printf("opened.(%s) env.%p ctl.%p db.%p asyncdb.%p\n",DB->dbname,DB->env,DB->ctl,DB->db,DB->asyncdb);
     }
-    if ( restoreflag != 0 && (json= db777_json(DB)) != 0 )
+    if ( restoreflag != 0 && (json= db777_json(DB->env,DB)) != 0 )
     {
         str = cJSON_Print(json);
         printf("%s\n",str);
@@ -509,18 +473,138 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
     return(DB);
 }
 
+void db777_path(char *path,char *coinstr,char *subdir)
+{
+    if ( SOPHIA.PATH[0] == '.' && SOPHIA.PATH[1] == '/' )
+        strcpy(path,SOPHIA.PATH+2);
+    else strcpy(path,SOPHIA.PATH);
+    ensure_directory(path);
+    if ( coinstr[0] != 0 )
+        strcat(path,"/"), strcat(path,coinstr), ensure_directory(path);
+    if ( subdir[0] != 0 )
+        strcat(path,"/"), strcat(path,subdir), ensure_directory(path);
+    printf("db777_path.(%s)\n",path);
+}
+
+struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression)
+{
+    char path[1024],bdir[1024],compname[512]; int32_t err; struct db777 *DB = 0;
+    if ( DBs->env == 0 )
+    {
+        DBs->env = sp_env();
+        DBs->ctl = sp_ctl(DBs->env);
+        db777_path(path,DBs->coinstr,DBs->subdir);
+        if ( (err= sp_set(DBs->ctl,"sophia.path",path)) != 0 )
+            printf("err.%d setting path (%s)\n",err,path);
+        if ( (err= sp_set(DBs->ctl,"scheduler.threads","1")) != 0 )
+            printf("err.%d setting scheduler.threads\n",err);
+        strcpy(bdir,path), strcat(bdir,"/backups"), ensure_directory(bdir);
+        if ( (err= sp_set(DBs->ctl,"backup.path",bdir)) != 0 )
+            printf("error.%d settingB backup.path (%s)\n",err,bdir);
+    }
+    if ( DBs->env != 0 && DBs->numdbs < (int32_t)(sizeof(DBs->dbs)/sizeof(*DBs->dbs)) )
+    {
+        DB = &DBs->dbs[DBs->numdbs];
+        memset(DB,0,sizeof(*DB));
+        safecopy(DB->name,name,sizeof(DB->name));
+        if ( compression != 0 )
+            safecopy(DB->compression,compression,sizeof(DB->compression));
+        sprintf(DB->dbname,"db.%s",name);
+        if ( (err= sp_set(DBs->ctl,"db",name)) != 0 )
+            printf("err.%d setting name\n",err);
+        else
+        {
+            printf("path.(%s) name.(%s)\n",path,name);
+            if ( compression != 0 )
+            {
+                sprintf(compname,"db.%s.compression",name);
+                if ( sp_set(DBs->ctl,compname,compression) != 0 )
+                    printf("error setting (%s).%s\n",compname,compression);
+            }
+            DBs->numdbs++;
+            return(DB);
+        }
+    }
+    return(0);
+}
+
+int32_t db777_dbopen(void *ctl,struct db777 *DB)
+{
+    int32_t err = -1;
+    if ( (DB->db= sp_get(ctl,DB->dbname)) != 0 )
+    {
+        if ( (err= sp_open(DB->db)) != 0 )
+            printf("err.%d sp_open will error if already exists\n",err);
+        DB->asyncdb = sp_async(DB->db);
+        printf("DB->db.%p for %s\n",DB->db,DB->dbname);
+        return(0);
+    }
+    return(err);
+}
+
+int32_t env777_start(int32_t dispflag,struct env777 *DBs)
+{
+    int32_t err,i; struct db777 *DB; cJSON *json; char *str;
+    if ( (err= sp_open(DBs->env)) != 0 )
+        printf("err.%d setting sp_open for DBs->env %p\n",err,DBs->env);
+    for (i=0; i<DBs->numdbs; i++)
+    {
+        DB = &DBs->dbs[i];
+        if ( db777_dbopen(DBs->ctl,DB) == 0 )
+        {
+            if ( dispflag != 0 && (json= db777_json(DBs->env,DB)) != 0 )
+            {
+                str = cJSON_Print(json);
+                printf("%s\n",str);
+                free(str);
+                free_json(json);
+            }
+            printf("opened %s.(%s/%s) env.%p ctl.%p db.%p asyncdb.%p\n",DBs->coinstr,DBs->subdir,DB->name,DBs->env,DBs->ctl,DB->db,DB->asyncdb);
+        }
+        else
+        {
+            printf("error opening (%s)\n",DB->dbname);
+            if ( DB->db != 0 )
+                sp_destroy(DB->db), DB->db = DB->asyncdb = 0;
+        }
+    }
+    return(0);
+}
+
+int32_t env777_close(struct env777 *DBs,int32_t reopenflag)
+{
+    int32_t i,errs = 0;
+    if ( DBs->env != 0 )
+    {
+        for (i=0; i<DBs->numdbs; i++)
+            if ( DBs->dbs[i].db != 0 )
+                errs += (sp_destroy(DBs->dbs[i].db) != 0), DBs->dbs[i].db = DBs->dbs[i].asyncdb = 0;
+        errs += (sp_destroy(DBs->env) != 0 );
+        if ( errs == 0 && reopenflag != 0 )
+        {
+            for (i=0; i<DBs->numdbs; i++)
+                errs += (db777_dbopen(DBs->ctl,&DBs->dbs[i]) != 0);
+        }
+        if ( errs != 0 )
+            printf("env777_close reopenflag.%d errs.%d env (%s/%s)\n",reopenflag,errs,DBs->coinstr,DBs->subdir);
+    }
+    return(errs);
+}
+
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *method,*name,*key,*value,*compression,*resultstr,*path,*subdir;
-    struct db777 *DB;
-    int32_t len,offset;
+    char *method,*name,*resultstr,*path,*subdir; //*key,*value,
+    //struct db777 *DB;
+    //int32_t len,offset;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
+        ensure_directory(SOPHIA.PATH);
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
         SOPHIA.readyflag = 1;
+        //Debuglevel = 3;
     }
     else
     {
@@ -542,7 +626,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-        else if ( strcmp(method,"create") == 0 )
+        /*else if ( strcmp(method,"create") == 0 )
         {
             if ( strstr("../",name) != 0 || strstr("..\\",name) != 0 || name[0] == '/' || name[0] == '\\' || strcmp(name,"..") == 0  || strcmp(name,"*") == 0 )
                 strcpy(retbuf,"{\"error\":\"no funny filenames\"}");
@@ -583,7 +667,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             if ( (DB= db777_getDB(name)) != 0 )
                 sophia_retintstr(retbuf,"close",db777_close(DB));
             else strcpy(retbuf,"{\"error\":\"couldnt find dbname\"}");
-        }
+        }*/
 #ifdef BUNDLED
         else if ( strcmp(method,"object") == 0 )
             sophia_object(retbuf,maxlen,json);
@@ -625,9 +709,7 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     if ( retcode == 0 )  // this means parent process died, otherwise _process_json returned negative value
     {
     }
-    while ( SOPHIA.numdbs > 0 )
-        if ( db777_close(SOPHIA.DBS[0]) != 0 )
-            break;
+    env777_close(&SUPERNET.DBs,0);
     return(retcode);
 }
 
@@ -635,7 +717,6 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 {
     uint64_t disableflags = 0;
     // runtime specific state can be created and put into *data
-    ensure_directory(SOPHIA.PATH);
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
