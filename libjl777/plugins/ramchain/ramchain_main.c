@@ -675,7 +675,7 @@ int32_t ledger_save(struct ledger_info *ledger)
                 else allocsize += addrinfo_size(addrinfo->count);
             }
         }
-        printf("[%-3d addrs %s] ",dirty,_mbstr(allocsize));
+        printf("[%-3d addrs %8s] ",dirty,_mbstr(allocsize));
         //ledger_DBopcodes(&ledger->DBs,LEDGER_DB_BACKUP);
         return(dirty);
     }
