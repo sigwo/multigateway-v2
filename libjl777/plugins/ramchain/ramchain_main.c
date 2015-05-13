@@ -667,7 +667,7 @@ void ledger_ensurecoinaddrs(struct ledger_info *ledger)
 
 struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,struct alloc_space *mem,uint32_t addrind,struct ledger_addrinfo *addrinfo,uint32_t startblocknum)
 {
-    uint32_t *ptr,addrtx[2],unspentind,checkind,blocknum,*unspents; int32_t i,n = 0,addrlen,len; uint64_t value,balance; char *coinaddr;
+    uint32_t *ptr,addrtx[2],unspentind,checkind,blocknum,*unspents; int32_t strange,i,n = 0,addrlen,len; uint64_t value,balance; char *coinaddr;
     addrtx[0] = addrind, addrtx[1] = 0;
     if ( addrinfo->count > 0 )
     {
@@ -683,6 +683,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
         free(coinaddr);
     } else printf("missing txindex.0 for addrind.%u\n",addrind);
     addrlen = (int32_t)strlen(addrinfo->coinaddr);
+    strange = 0;
     for (addrtx[1]=1; addrtx[1]<=ledger->unspentmap.ind; addrtx[1]++)
     {
         if ( (ptr= db777_findM(&len,0,ledger->ledger.D.DB,addrtx,sizeof(addrtx))) != 0 && len == sizeof(addrtx) )
@@ -707,7 +708,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
                         }
                     } else i = 0;
                     if ( i == n )
-                        printf("addrind.%d txindex.%d couldnt find unspentind.%d out of %d unspents\n",addrind,addrtx[1],unspentind,n);
+                        strange++;//, printf("addrind.%d txindex.%d couldnt find unspentind.%d out of %d unspents\n",addrind,addrtx[1],unspentind,n);
                 }
                 else  unspents[n++] = unspentind;//, printf("+%u ",unspentind);
                 //printf("addrind.%u %s txindex.%d unspentind.%d %s %.8f blocknum.%u\n",addrind,addrinfo->coinaddr,addrtx[1],unspentind & ~(1<<31),(unspentind & (1<<31))!=0?"SPEND":"",dstr(value),blocknum);
@@ -736,6 +737,8 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
     }
     addrinfo->balance = balance;
     addrinfo->count = n;
+    if ( strange != 0 )
+        printf("%d ",strange);
     //printf("-> balance %.8f for %s\n",dstr(balance),addrinfo->coinaddr);
     return(addrinfo);
 }
@@ -774,7 +777,7 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
             for (; addrind<ledger->addrinfos.ind; addrind++)
                 if ( ledger->addrinfos.D.table[addrind] != 0 )
                     free(ledger->addrinfos.D.table[addrind]), ledger->addrinfos.D.table[addrind] = 0, extra++;
-            printf("addrinds empty.%d and extra.%d\n",empty,extra);
+            printf(" <- strange unspents. addrinds empty.%d and extra.%d\n",empty,extra);
             printf("balance %.8f endmilli %.0f\n",dstr(balance),milliseconds());
         } else printf("mismatched block: %u %u, crc16 %u %u\n",block->allocsize,allocsize,block_crc16(block),block->crc16);
     } else printf("couldnt load block.%u\n",startblocknum);
@@ -783,12 +786,14 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
 
 int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblocknum,uint32_t endblocknum)
 {
+    extern uint32_t Duplicate,Mismatch,Added;
     struct ledger_info *ledger; struct ledger_blockinfo *block; struct alloc_space MEM; uint64_t balance;
     if ( (ledger= ramchain->activeledger) == 0 )
     {
         sprintf(retbuf,"{\"error\":\"no active ledger\"}");
         return(-1);
     }
+    Duplicate = Mismatch = Added = 0;
     ramchain->startmilli = milliseconds();
     ramchain->totalsize = 0;
     ramchain->startblocknum = (startblocknum != 0) ? startblocknum : ledger_getlast(ledger);
