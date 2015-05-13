@@ -33,7 +33,7 @@ char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop", "n
 struct ledger_blockinfo
 {
     uint16_t crc16,numtx,numaddrs,numscripts,numvouts,numvins;
-    uint32_t blocknum,txidind,addrind,scriptind,unspentind,totalspends,allocsize,numsyncs;
+    uint32_t blocknum,allocsize;//,txidind,addrind,scriptind,unspentind,totalspends,allocsize,numsyncs;
     uint64_t minted;//,voutsum,spendsum;
     uint8_t transactions[];
 };
@@ -292,36 +292,58 @@ int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t 
     return(db777_add(-1,ledger->DBs.transactions,ledger->spentbits.D.DB,&unspentind,sizeof(unspentind),&state,sizeof(state)));
 }
 
+struct ledger_inds
+{
+    uint64_t voutsum,spendsum;
+    uint32_t blocknum,numsyncs,addrind,txidind,scriptind,unspentind,numspents,numaddrinfos,txoffsets;
+};
+
 int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t numsyncs)
 {
-    uint64_t vals[3]; uint16_t key = numsyncs;
-    vals[0] = ((uint64_t)numsyncs << 32) | blocknum, vals[1] = ledger->voutsum, vals[2] = ledger->spendsum;
+    struct ledger_inds L;
+    memset(&L,0,sizeof(L));
+    uint16_t key = numsyncs;
+    L.blocknum = ledger->blocknum, L.numsyncs = ledger->numsyncs;
+    L.voutsum = ledger->voutsum, L.spendsum = ledger->spendsum;
+    L.addrind = ledger->addrs.ind, L.txidind = ledger->txids.ind, L.scriptind = ledger->scripts.ind;
+    L.unspentind = ledger->unspentmap.ind, L.numspents = ledger->spentbits.ind;
+    L.numaddrinfos = ledger->addrinfos.ind, L.txoffsets = ledger->txoffsets.ind;
     if ( numsyncs > 0 )
     {
-        printf("SYNCNUM.%d -> %d supply %.8f\n",numsyncs,blocknum,dstr(vals[1])-dstr(vals[2]));
-        db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,&key,sizeof(key),vals,sizeof(vals));
+        printf("SYNCNUM.%d -> %d supply %.8f\n",numsyncs,blocknum,dstr(L.voutsum)-dstr(L.spendsum));
+        db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,&key,sizeof(key),&L,sizeof(L));
     }
-    return(db777_add(2,ledger->DBs.transactions,ledger->ledger.D.DB,"last",strlen("last"),vals,sizeof(vals)));
+    return(db777_add(2,ledger->DBs.transactions,ledger->ledger.D.DB,"last",strlen("last"),&L,sizeof(L)));
 }
 
-int32_t ledger_getnearest(uint64_t *voutsump,uint64_t *spendsump,struct ledger_info *ledger,uint32_t startblocknum)
+int32_t ledger_getnearest(struct ledger_info *ledger,uint32_t startblocknum)
 {
-    int32_t dist,size; uint16_t key; uint64_t *ptr; uint32_t best,closest,numsyncs=0,blocknum = 1;
-    if ( (ptr= db777_findM(&size,ledger->DBs.transactions,ledger->ledger.D.DB,"last",strlen("last"))) != 0 && size == sizeof(uint64_t)*3 )
+    struct ledger_inds *lp;
+    int32_t dist,size; uint16_t key; uint64_t *ptr; uint32_t best,closest,blocknum = 1;
+    if ( (lp= db777_findM(&size,ledger->DBs.transactions,ledger->ledger.D.DB,"last",strlen("last"))) != 0 )
     {
-        blocknum = (uint32_t)ptr[0], numsyncs = (uint32_t)(ptr[0] >> 32), *voutsump = ptr[1], *spendsump = ptr[2];
+        if ( size == sizeof(*lp) )
+        {
+            ledger->blocknum = blocknum = lp->blocknum, ledger->numsyncs = lp->numsyncs;
+            ledger->voutsum = lp->voutsum, ledger->spendsum = lp->spendsum;
+            ledger->addrs.ind = lp->addrind, ledger->txids.ind = lp->txidind, ledger->scripts.ind = lp->scriptind;
+            ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
+            ledger->txoffsets.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->numaddrinfos;
+        } else printf("size mismatch %d vs %ld\n",size,sizeof(*lp));
         free(ptr);
-    }
+    } else printf("ledger_getnearest error getting last\n");
     printf("nearest.%d\n",blocknum);
     if ( startblocknum == 0 )
         return(blocknum);
 #ifdef LEDGER_SYNC
+    if ( lp == 0 )
+        return(1);
     best = 1, closest = 1000000000;
     dist = (startblocknum - blocknum);
     if ( dist >= 0 && dist < closest )
         best = blocknum, closest = dist;
     //printf("blocknum.%d > %d | dist.%d closest.%d best.%d\n",blocknum,startblocknum,dist,closest,best);
-    for (key=numsyncs; key>0; key--)
+    for (key=lp->numsyncs; key>0; key--)
     {
         if ( (ptr= db777_findM(&size,ledger->DBs.transactions,ledger->ledger.D.DB,&key,sizeof(key))) != 0 && size == sizeof(blocknum) )
         {
@@ -490,7 +512,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
 
 void ledger_copyinds(struct ledger_blockinfo *block,struct ledger_info *ledger,int32_t toblock)
 {
-    if ( toblock != 0 )
+    /*if ( toblock != 0 )
     {
         block->blocknum = ledger->blocknum, block->numsyncs = ledger->numsyncs;
         block->txidind = ledger->txids.ind + 1, block->addrind = ledger->addrs.ind + 1, block->scriptind = ledger->scripts.ind + 1;
@@ -502,7 +524,7 @@ void ledger_copyinds(struct ledger_blockinfo *block,struct ledger_info *ledger,i
         //ledger->spendsum = block->spendsum, ledger->voutsum = block->voutsum;
         ledger->txids.ind = block->txidind - 1, ledger->addrs.ind = block->addrind - 1, ledger->scripts.ind = block->scriptind - 1;
         ledger->unspentmap.ind = block->unspentind - 1, ledger->spentbits.ind = block->totalspends - 1;
-    }
+    }*/
 }
 
 struct ledger_blockinfo *ledger_startblock(struct ledger_info *ledger,struct alloc_space *mem,uint32_t blocknum,uint64_t minted,int32_t numtx)
@@ -515,8 +537,8 @@ struct ledger_blockinfo *ledger_startblock(struct ledger_info *ledger,struct all
     }
     ledger->blockpending = 1, ledger->blocknum = blocknum;
     block = memalloc(mem,sizeof(*block),1);
-    block->minted = minted, block->numtx = numtx;
-    ledger_copyinds(block,ledger,1);
+    block->minted = minted, block->numtx = numtx, block->blocknum = blocknum;
+    //ledger_copyinds(block,ledger,1);
     return(block);
 }
 
@@ -639,7 +661,6 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
             if ( syncflag != 0 )
             {
                 ledger_setlast(ledger,ledger->blocknum,++ledger->numsyncs);
-                ledger_commit(ledger,1);
                 ledger_sync(ledger);
                 ledger_commit(ledger,syncflag == 1);
             }
@@ -777,13 +798,13 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
         printf("maxblocknum is %d, cant startblocknum.%u, clipping\n",lastblocknum,startblocknum);
         startblocknum = lastblocknum;
     }*/
-    startblocknum = ledger_getnearest(&ledger->voutsum,&ledger->spendsum,ledger,0);
+    startblocknum = ledger_getnearest(ledger,0);
     if ( (block= db777_findM(&allocsize,0,ledger->blocks.D.DB,&startblocknum,sizeof(startblocknum))) != 0 )
     {
         if ( block->allocsize == allocsize && block_crc16(block) == block->crc16 )
         {
-            ledger_copyinds(block,ledger,0);
-            printf("%.8f startmilli %.0f start.%u block.%u ledger block.%u, addrind.(block %u ledger %u) numvouts.(%d %d) numvins.(%d %d)\n",dstr(ledger->voutsum)-dstr(ledger->spendsum),milliseconds(),startblocknum,block->blocknum,ledger->blocknum,block->addrind,ledger->addrs.ind,block->unspentind,ledger->unspentmap.ind,block->totalspends,ledger->spentbits.ind);
+            //ledger_copyinds(block,ledger,0);
+            printf("%.8f startmilli %.0f start.%u block.%u ledger block.%u, inds.(txid %d addrs %d scripts %d vouts %d vins %d)\n",dstr(ledger->voutsum)-dstr(ledger->spendsum),milliseconds(),startblocknum,block->blocknum,ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,ledger->spentbits.ind);
             ledger_ensureaddrinfos(ledger,ledger->addrs.ind);
 #ifndef LEDGER_SYNC
             if ( ensure_coinaddrs != 0 )
@@ -830,7 +851,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblo
     Duplicate = Mismatch = Added = 0;
     ramchain->startmilli = milliseconds();
     ramchain->totalsize = 0;
-    ramchain->startblocknum = ledger_getnearest(&ledger->voutsum,&ledger->spendsum,ledger,0);//0*startblocknum == 0 ? 1000000000 : startblocknum);
+    ramchain->startblocknum = ledger_getnearest(ledger,0);//0*startblocknum == 0 ? 1000000000 : startblocknum);
     memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
     if ( ramchain->startblocknum > 0 && (block= ledger_setblocknum(ledger,&MEM,ramchain->startblocknum,0)) != 0 )
         free(block);
@@ -929,7 +950,7 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
 #ifdef __APPLE__
     ramchain->syncfreq = 100;
 #else
-    ramchain->syncfreq = 100000;
+    ramchain->syncfreq = 10000;
 #endif
     strcpy(ramchain->name,coinstr);
     ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coinstr,coin->serverport,coin->userpass,ramchain->RTblocknum);
