@@ -730,8 +730,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
         }
     }
     addrinfo = realloc(addrinfo,addrinfo_size(n));
-    addrinfo->txindex = addrtx[1] - 1;
-    for (balance=i=0; i<n; i++)
+    for (i=0; i<n; i++)
     {
         addrinfo->unspentinds[i] = unspents[i];
         /*value = ledger_unspentvalue(&checkind,ledger,unspents[i]);
@@ -739,6 +738,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
             balance += value;//, printf("%.8f ",dstr(value));
         else printf("checkind.%d mismatch to addrind.%d with %.8f\n",checkind,addrind,dstr(value));*/
     }
+    addrinfo->txindex = addrtx[1] - 1;
     addrinfo->balance = balance;
     addrinfo->count = n;
     if ( strange != 0 )
@@ -807,7 +807,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblo
     else ramchain->startblocknum = 1;
     ledger->blocknum = ramchain->startblocknum;
     ramchain->endblocknum = endblocknum;
-    balance = ledger_recalc_addrinfos(ledger,1);
+    balance = ledger_recalc_addrinfos(ledger,0);
     ledger_upairset(ledger,1,1,1);
     sprintf(retbuf,"{\"result\":\"resumed\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.);
     ramchain->paused = 0;
