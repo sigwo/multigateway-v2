@@ -185,7 +185,7 @@ void *db777_findM(int32_t *lenp,void *transactions,struct db777 *DB,void *key,in
        //printf("found keylen.%d\n",keylen);
         if ( (val= sp_get(obj,"value",&valuesize)) != 0 )
         {
-            ptr = calloc(1,valuesize);
+            ptr = calloc(1,valuesize+1);
             memcpy(ptr,val,valuesize);
             *lenp = valuesize;
         }

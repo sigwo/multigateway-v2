@@ -20,7 +20,7 @@
 #undef DEFINES_ONLY
 
 STRUCTNAME RAMCHAINS;
-char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop", "notify" }; // list of supported methods
 
 struct ledger_blockinfo
 {
@@ -88,7 +88,9 @@ int32_t addrinfo_size(int32_t n) { return(sizeof(struct ledger_addrinfo) + (size
 
 struct ledger_addrinfo *addrinfo_alloc(struct ledger_info *ledger,uint32_t addrind,char *coinaddr)
 {
-    uint32_t addrtx[2]; int32_t addrlen; struct ledger_addrinfo *addrinfo = calloc(1,addrinfo_size(0));
+    struct ledger_addrinfo *addrinfo = calloc(1,addrinfo_size(0));
+#ifndef LEDGER_SYNC
+    uint32_t addrtx[2]; int32_t addrlen;
     if ( coinaddr != 0 && coinaddr[0] != 0 )
     {
         if ( (addrlen= (int32_t)strlen(coinaddr)) > sizeof(addrinfo->coinaddr) - 1 )
@@ -98,13 +100,13 @@ struct ledger_addrinfo *addrinfo_alloc(struct ledger_info *ledger,uint32_t addri
         if ( db777_add(0,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),coinaddr,addrlen) != 0 )
             printf("error updating addrtx addrind.%u index.%d\n",addrind,addrinfo->txindex);
     } else printf("unexpected null coinaddr for addrind.%u\n",addrind);
+#endif
     return(addrinfo);
 }
 
 struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger_addrinfo *addrinfo,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum)
 {
-    uint32_t addrtx[2],values[4]; int32_t i,n;
-    addrtx[0] = addrind;
+    int32_t i,n;
     if ( addrinfo == 0 )
         addrinfo = addrinfo_alloc(ledger,addrind,coinaddr);
     if ( (unspentind & (1 << 31)) != 0 )
@@ -149,9 +151,12 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger
         addrinfo->dirty = 1;
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
     }
-    addrtx[1] = ++addrinfo->txindex, values[0] = unspentind, values[1] = blocknum, memcpy(&values[2],&value,sizeof(value));
+#ifndef LEDGER_SYNC
+    uint32_t addrtx[2],values[4];
+    addrtx[0] = addrind, addrtx[1] = ++addrinfo->txindex, values[0] = unspentind, values[1] = blocknum, memcpy(&values[2],&value,sizeof(value));
     if ( db777_add(-1,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),values,sizeof(values)) != 0 )
         printf("error updating addrtx addrind.%u index.%d: unspentind %x\n",addrind,addrinfo->txindex,unspentind);
+#endif
     return(addrinfo);
 }
 
@@ -172,46 +177,6 @@ struct ledger_addrinfo *ledger_ensureaddrinfos(struct ledger_info *ledger,uint32
         ledger->addrinfos.ind = n;
     }
     return(ledger->addrinfos.D.table[addrind]);
-}
-
-uint64_t ledger_recalc_addrinfos(struct ledger_info *ledger,int32_t richlist)
-{
-    struct ledger_addrinfo *addrinfo;
-    uint32_t i,n,addrind; float *sortbuf; uint64_t balance,addrsum;
-    addrsum = n = 0;
-    if ( ledger->addrinfos.D.table == 0 )
-        return(0);
-    if ( richlist == 0 )
-    {
-        for (i=1; i<=ledger->addrs.ind; i++)
-            if ( (addrinfo= ledger->addrinfos.D.table[i]) != 0 && (balance= addrinfo->balance) != 0 )
-                addrsum += balance;
-    }
-    else
-    {
-        sortbuf = calloc(ledger->addrs.ind,sizeof(float)+sizeof(uint32_t));
-        for (i=1; i<=ledger->addrs.ind; i++)
-            if ( (addrinfo= ledger->addrinfos.D.table[i]) != 0 && (balance= addrinfo->balance) != 0 )
-            {
-                addrsum += balance;
-                sortbuf[n << 1] = dstr(balance);
-                memcpy(&sortbuf[(n << 1) + 1],&i,sizeof(i));
-                n++;
-            }
-        if ( n > 0 )
-        {
-            revsortfs(sortbuf,n,sizeof(*sortbuf) * 2);
-            for (i=0; i<10&&i<n; i++)
-            {
-                memcpy(&addrind,&sortbuf[(i << 1) + 1],sizeof(addrind));
-                addrinfo = ledger->addrinfos.D.table[addrind];
-                printf("(%s %.8f) ",addrinfo->coinaddr,sortbuf[i << 1]);
-            }
-            printf("top.%d of %d\n",i,n);
-        }
-        free(sortbuf);
-    }
-    return(addrsum);
 }
 
 uint32_t ledger_rawind(void *transactions,struct ledger_state *hash,void *key,int32_t keylen)
@@ -278,6 +243,19 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
     return(rawind);
 }
 
+int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,uint32_t addrind)
+{
+    char *ptr; int32_t size,retval = -1;
+    if ( (ptr= db777_findM(&size,ledger->DBs.transactions,ledger->addrs.D.DB,&addrind,sizeof(addrind))) != 0 )
+    {
+        if ( size < max )
+            strcpy(coinaddr,ptr), retval = 0;
+        else printf("coinaddr.(%s) too long for %d\n",ptr,max);
+        free(ptr);
+    }
+    return(retval);
+}
+
 uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 {
     int32_t size = -1; uint32_t firstvout = 0; struct upair32 *firstinds;
@@ -338,7 +316,48 @@ uint64_t ledger_unspentvalue(uint32_t *addrindp,struct ledger_info *ledger,uint3
     } else printf("error loading unspentmap (%s) unspentind.%u\n",ledger->DBs.coinstr,unspentind);
     return(value);
 }
+uint64_t ledger_recalc_addrinfos(struct ledger_info *ledger,int32_t richlist)
+{
+    struct ledger_addrinfo *addrinfo;
+    uint32_t i,n,addrind; float *sortbuf; uint64_t balance,addrsum; char coinaddr[128];
+    addrsum = n = 0;
+    if ( ledger->addrinfos.D.table == 0 )
+        return(0);
+    if ( richlist == 0 )
+    {
+        for (i=1; i<=ledger->addrs.ind; i++)
+            if ( (addrinfo= ledger->addrinfos.D.table[i]) != 0 && (balance= addrinfo->balance) != 0 )
+                addrsum += balance;
+    }
+    else
+    {
+        sortbuf = calloc(ledger->addrs.ind,sizeof(float)+sizeof(uint32_t));
+        for (i=1; i<=ledger->addrs.ind; i++)
+            if ( (addrinfo= ledger->addrinfos.D.table[i]) != 0 && (balance= addrinfo->balance) != 0 )
+            {
+                addrsum += balance;
+                sortbuf[n << 1] = dstr(balance);
+                memcpy(&sortbuf[(n << 1) + 1],&i,sizeof(i));
+                n++;
+            }
+        if ( n > 0 )
+        {
+            revsortfs(sortbuf,n,sizeof(*sortbuf) * 2);
+            for (i=0; i<10&&i<n; i++)
+            {
+                memcpy(&addrind,&sortbuf[(i << 1) + 1],sizeof(addrind));
+                addrinfo = ledger->addrinfos.D.table[addrind];
+                ledger_coinaddr(ledger,coinaddr,sizeof(coinaddr),addrind);
+                printf("(%s %.8f) ",coinaddr,sortbuf[i << 1]);
+            }
+            printf("top.%d of %d\n",i,n);
+        }
+        free(sortbuf);
+    }
+    return(addrsum);
+}
 
+// block iterators
 uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_t txidind,char *txidstr,uint32_t totalvouts,uint16_t numvouts,uint32_t totalspends,uint16_t numvins)
 {
     uint32_t checkind; uint8_t txid[256]; struct ledger_txinfo tx; int32_t txidlen;
@@ -376,6 +395,10 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
         ledger->unspentmap.ind = unspentind;
         if ( db777_add(-1,ledger->DBs.transactions,ledger->unspentmap.D.DB,&unspentind,sizeof(unspentind),&vout.U,sizeof(vout.U)) != 0 )
             printf("error saving unspentmap (%s) %u -> %u %.8f\n",ledger->DBs.coinstr,unspentind,vout.U.addrind,dstr(value));
+#ifdef LEDGER_SYNC
+        else if ( db777_add(-1,ledger->DBs.transactions,ledger->addrs.D.DB,&vout.U.addrind,sizeof(vout.U.addrind),coinaddr,vout.addrlen) != 0 )
+            printf("error saving unspentmap (%s) %u -> %u %.8f\n",ledger->DBs.coinstr,unspentind,vout.U.addrind,dstr(value));
+#endif
         if ( vout.U.addrind == ledger->addrs.ind )
             vout.newaddr = 1, strcpy(vout.coinaddr,coinaddr), (*numaddrsp)++;
         if ( Debuglevel > 2 )
@@ -510,6 +533,7 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
     return(block);
 }
 
+// env funcs
 #define LEDGER_DB_CLOSE 1
 #define LEDGER_DB_BACKUP 2
 #define LEDGER_DB_UPDATE 3
@@ -589,40 +613,67 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir)
     return(ledger);
 }
 
+int32_t ledger_sync(struct ledger_info *ledger)
+{
+    uint32_t addrind,allocsize,dirty = 0; struct ledger_addrinfo *addrinfo;
+    if ( ledger->addrinfos.D.table == 0 )
+    {
+        printf("uninitialized pointer %p\n",ledger->addrinfos.D.table);
+        return(-1);
+    }
+    allocsize = 0;
+    for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
+    {
+        if ( (addrinfo= ledger->addrinfos.D.table[addrind]) != 0 && addrinfo->dirty != 0 )
+        {
+            dirty++;
+            addrinfo->dirty = 0;
+            if ( db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count)) != 0 )
+            {
+                printf("error saving addrinfo[%u]\n",addrind);
+                return(-1);
+            }
+            else allocsize += addrinfo_size(addrinfo->count);
+        }
+    }
+    printf("[%-3d addrs %8s] ",dirty,_mbstr(allocsize));
+    return(dirty);
+}
+
 void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass)
 {
     struct alloc_space MEM; struct ledger_info *ledger; struct ledger_blockinfo *block;
     int32_t allocsize,lag; uint32_t blocknum,syncflag,dispflag; uint64_t supply,oldsupply; double estimate,elapsed;
     if ( ramchain->readyflag == 0 || ramchain->paused != 0 || (ledger= ramchain->activeledger) == 0 )
         return;
+    if ( (lag= (ramchain->RTblocknum - blocknum)) < 1000 || (blocknum % 1000) == 0 )
+        ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,serverport,userpass,ramchain->RTblocknum);
     if ( (blocknum= ledger->blocknum) < ramchain->RTblocknum )
     {
         if ( blocknum == 0 )
             ledger->blocknum = blocknum = 1;
-        syncflag = 2 * (((blocknum % ramchain->backupfreq) == (ramchain->backupfreq-1)) || (ramchain->needbackup != 0));
+        syncflag = 2 * (((blocknum % ramchain->syncfreq) == (ramchain->syncfreq-1)) || (ramchain->needbackup != 0));
         dispflag = 1 || (blocknum > ramchain->RTblocknum - 1000);
         dispflag += ((blocknum % 100) == 0);
         oldsupply = ledger->voutsum - ledger->spendsum;
-        if ( (lag= (ramchain->RTblocknum - blocknum)) < 1000 || (blocknum % 1000) == 0 )
-            ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,serverport,userpass,ramchain->RTblocknum);
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
         if ( (block= ledger_update(dispflag,ledger,&MEM,ramchain->name,serverport,userpass,&ramchain->EMIT,blocknum)) != 0 )
         {
-#ifdef LEDGER_SYNC
-            if ( (blocknum % 1000) == 0 || syncflag != 0 )
-                ledger_sync(ledger);
-#endif
             if ( syncflag != 0 )
             {
-                db777_backup(ledger->DBs.ctl);
-                if ( lag < 100000 && ramchain->backupfreq > 50000 )
-                    ramchain->backupfreq = 50000;
-                else if ( lag < 50000 && ramchain->backupfreq > 10000 )
-                    ramchain->backupfreq = 10000;
-                else if ( lag < 10000 && ramchain->backupfreq > 1000 )
-                    ramchain->backupfreq = 1000;
-                else if ( strcmp(ramchain->name,"BTC") == 0 && lag < 10 && ramchain->backupfreq > 100 )
-                    ramchain->backupfreq = 100;
+                ledger_sync(ledger);
+                if ( ramchain->needbackup != 0 || ramchain->syncfreq >= 50000 )
+                    db777_backup(ledger->DBs.ctl);
+                if ( lag < 100000 && ramchain->syncfreq > 50000 )
+                    ramchain->syncfreq = 50000;
+                else if ( lag < 50000 && ramchain->syncfreq > 10000 )
+                    ramchain->syncfreq = 10000;
+                else if ( lag < 10000 && ramchain->syncfreq > 1000 )
+                    ramchain->syncfreq = 1000;
+                else if ( lag < 1000 && ramchain->syncfreq > 100 )
+                    ramchain->syncfreq = 100;
+                else if ( strcmp(ramchain->name,"BTC") == 0 && lag < 10 && ramchain->syncfreq > 10 )
+                    ramchain->syncfreq = 10;
             }
             if ( (allocsize= ledger_commitblock(ledger,&MEM,block)) <= 0 )
                 printf("error updating %s block.%u\n",ramchain->name,blocknum);
@@ -647,6 +698,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass)
     }
 }
 
+#ifndef LEDGER_SYNC
 void ledger_ensurecoinaddrs(struct ledger_info *ledger)
 {
     char **coinaddrs; int32_t i,num; uint32_t addrind; struct ledger_addrinfo *addrinfo;
@@ -667,7 +719,7 @@ void ledger_ensurecoinaddrs(struct ledger_info *ledger)
 
 struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,struct alloc_space *mem,uint32_t addrind,struct ledger_addrinfo *addrinfo,uint32_t startblocknum)
 {
-    uint32_t *ptr,addrtx[2],unspentind,blocknum,*unspents; char *coinaddr;
+     char *coinaddr; uint32_t *ptr,addrtx[2],unspentind,blocknum,*unspents; //checkind
     int32_t strange,i,n = 0,addrlen,len; uint64_t value; int64_t balance;
     addrtx[0] = addrind, addrtx[1] = 0;
     if ( addrinfo->count > 0 )
@@ -730,6 +782,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
         }
     }
     addrinfo = realloc(addrinfo,addrinfo_size(n));
+    //balance = 0;
     for (i=0; i<n; i++)
     {
         addrinfo->unspentinds[i] = unspents[i];
@@ -742,10 +795,11 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
     addrinfo->balance = balance;
     addrinfo->count = n;
     if ( strange != 0 )
-        printf("%d ",strange);
+        fprintf(stderr,"%d ",strange);
     //printf("-> balance %.8f for %s\n",dstr(balance),addrinfo->coinaddr);
     return(addrinfo);
 }
+#endif
 
 struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum,int32_t ensure_coinaddrs)
 {
@@ -765,8 +819,10 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
             ledger_copyinds(block,ledger,0);
             printf("%.8f startmilli %.0f start.%u block.%u ledger block.%u, addrind.(block %u ledger %u) numvouts.(%d %d) numvins.(%d %d)\n",dstr(ledger->voutsum)-dstr(ledger->spendsum),milliseconds(),startblocknum,block->blocknum,ledger->blocknum,block->addrind,ledger->addrs.ind,block->unspentind,ledger->unspentmap.ind,block->totalspends,ledger->spentbits.ind);
             ledger_ensureaddrinfos(ledger,ledger->addrs.ind);
+#ifndef LEDGER_SYNC
             if ( ensure_coinaddrs != 0 )
                 ledger_ensurecoinaddrs(ledger);
+#endif
             extra = empty = 0;
             lastmodval = -1;
             for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
@@ -774,13 +830,17 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
                 modval = ((100. * addrind) / (ledger->addrs.ind + 1));
                 if ( modval != lastmodval )
                     fprintf(stderr,"%d%% ",modval), lastmodval = modval;
-                if ( (addrinfo= ledger->addrinfos.D.table[addrind]) == 0 )
-                    printf("%d ",addrind), empty++;
-                else
+#ifdef LEDGER_SYNC
+                addrinfo = db777_findM(&allocsize,0,ledger->ledger.D.DB,&addrind,sizeof(addrind));
+#else
+                addrinfo = ledger_reconstruct_addrinfo(ledger,mem,addrind,ledger->addrinfos.D.table[addrind],startblocknum);
+#endif
+                if ( addrinfo != 0 )
                 {
-                    ledger->addrinfos.D.table[addrind] = ledger_reconstruct_addrinfo(ledger,mem,addrind,addrinfo,startblocknum);
-                    balance += ledger->addrinfos.D.table[addrind]->balance;
+                    ledger->addrinfos.D.table[addrind] = addrinfo;
+                    balance += addrinfo->balance;
                 }
+                else printf("error loading addrind.%u addrinfo\n",addrind);
             }
             for (; addrind<ledger->addrinfos.ind; addrind++)
                 if ( ledger->addrinfos.D.table[addrind] != 0 )
@@ -821,7 +881,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblo
 int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t startblocknum,uint32_t endblocknum)
 {
     struct ramchain *ramchain = &coin->ramchain;
-    ramchain->backupfreq = 100000;
+    ramchain->syncfreq = 1000;
     strcpy(ramchain->name,coinstr);
     ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coinstr,coin->serverport,coin->userpass,ramchain->RTblocknum);
     ramchain->readyflag = 1;

@@ -84,13 +84,18 @@ struct sha256_state
  struct ramchain_hashtable ledger,addrs,txids,scripts,blocks,unspentmap;
  struct upair32 *txoffsets; uint8_t *spentbits; struct ledger_addrinfo **addrinfos;
  };*/
+struct upair32 { uint32_t firstvout,firstvin; };
+union ledger_data { struct db777 *DB; struct ledger_addrinfo **table; }; //struct upair32 *upairs; uint8_t *bits;
+#define LEDGER_SYNC
 
+#ifdef LEDGER_SYNC
+struct ledger_addrinfo { int64_t balance; uint32_t count:31,dirty:1; uint32_t unspentinds[]; };
+#else
 #ifndef COINADDR_LEN
 #define COINADDR_LEN 36
 #endif
-struct upair32 { uint32_t firstvout,firstvin; };
-struct ledger_addrinfo { int64_t balance; int32_t txindex:31,dirty:1; char coinaddr[COINADDR_LEN]; uint32_t count,unspentinds[]; };
-union ledger_data { struct db777 *DB; struct ledger_addrinfo **table; }; //struct upair32 *upairs; uint8_t *bits; 
+struct ledger_addrinfo { int64_t balance; int32_t txindex:31,dirty:1; uint32_t count,unspentinds[]; };
+#endif
 
 struct ledger_state
 {
@@ -115,7 +120,7 @@ struct ramchain
     double lastgetinfo,startmilli;
     //struct ramchain_hashtable *DBs[10],*restoreDBs[10];
     uint64_t addrsum,totalsize;
-    uint32_t startblocknum,endblocknum,RTblocknum,readyflag,backupfreq,paused,needbackup;
+    uint32_t startblocknum,endblocknum,RTblocknum,readyflag,syncfreq,paused,needbackup,syncflag;
     //uint8_t *huffbits,*huffbits2;
     struct rawblock EMIT,DECODE;
     struct ledger_info *activeledger;
