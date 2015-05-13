@@ -749,7 +749,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
 
 struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum,int32_t ensure_coinaddrs)
 {
-    uint32_t addrind,lastblocknum; int32_t allocsize,empty,extra; uint64_t balance = 0;
+    uint32_t addrind,lastblocknum; int32_t allocsize,empty,modval,lastmodval,extra; uint64_t balance = 0;
     struct ledger_blockinfo *block; struct ledger_addrinfo *addrinfo;
     if ( startblocknum < 1 )
         startblocknum = 1;
@@ -768,8 +768,12 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
             if ( ensure_coinaddrs != 0 )
                 ledger_ensurecoinaddrs(ledger);
             extra = empty = 0;
+            lastmodval = -1;
             for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
             {
+                modval = ((100. * addrind) / (ledger->addrs.ind + 1));
+                if ( modval != lastmodval )
+                    fprintf(stderr,"%d%% ",modval), lastmodval = modval;
                 if ( (addrinfo= ledger->addrinfos.D.table[addrind]) == 0 )
                     printf("%d ",addrind), empty++;
                 else
