@@ -646,9 +646,10 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass)
     int32_t allocsize,lag; uint32_t blocknum,syncflag,dispflag; uint64_t supply,oldsupply; double estimate,elapsed;
     if ( ramchain->readyflag == 0 || ramchain->paused != 0 || (ledger= ramchain->activeledger) == 0 )
         return;
+    blocknum = ledger->blocknum;
     if ( (lag= (ramchain->RTblocknum - blocknum)) < 1000 || (blocknum % 1000) == 0 )
         ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,serverport,userpass,ramchain->RTblocknum);
-    if ( (blocknum= ledger->blocknum) < ramchain->RTblocknum )
+    if ( blocknum < ramchain->RTblocknum )
     {
         if ( blocknum == 0 )
             ledger->blocknum = blocknum = 1;
