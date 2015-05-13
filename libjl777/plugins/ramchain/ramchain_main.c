@@ -20,7 +20,7 @@
 #undef DEFINES_ONLY
 
 STRUCTNAME RAMCHAINS;
-char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop" }; // list of supported methods
 
 struct ledger_blockinfo
 {
