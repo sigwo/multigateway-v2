@@ -94,10 +94,10 @@ struct ledger_addrinfo *addrinfo_alloc(struct ledger_info *ledger,uint32_t addri
         if ( (addrlen= (int32_t)strlen(coinaddr)) > sizeof(addrinfo->coinaddr) - 1 )
             printf("unexpected addrlen.%d (%s)\n",addrlen,coinaddr);
         strcpy(addrinfo->coinaddr,coinaddr);
+        addrtx[0] = addrind, addrtx[1] = 0;
+        if ( db777_add(0,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),coinaddr,addrlen) != 0 )
+            printf("error updating addrtx addrind.%u index.%d\n",addrind,addrinfo->txindex);
     } else printf("unexpected null coinaddr for addrind.%u\n",addrind);
-    addrtx[0] = addrind, addrtx[1] = 0;
-    if ( db777_add(0,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),coinaddr,addrlen) != 0 )
-        printf("error updating addrtx addrind.%u index.%d\n",addrind,addrinfo->txindex);
     return(addrinfo);
 }
 
