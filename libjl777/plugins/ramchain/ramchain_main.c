@@ -707,7 +707,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
                             }
                         }
                     } else i = 0;
-                    if ( i == n )
+                    if ( i == n && n > 2 )
                         strange++;//, printf("addrind.%d txindex.%d couldnt find unspentind.%d out of %d unspents\n",addrind,addrtx[1],unspentind,n);
                 }
                 else  unspents[n++] = unspentind;//, printf("+%u ",unspentind);
