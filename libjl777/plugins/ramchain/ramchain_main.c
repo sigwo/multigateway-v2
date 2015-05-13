@@ -319,7 +319,7 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
 int32_t ledger_getnearest(struct ledger_info *ledger,uint32_t startblocknum)
 {
     struct ledger_inds *lp;
-    int32_t dist,size; uint16_t key; uint64_t *ptr; uint32_t best,closest,blocknum = 1;
+    int32_t size; uint32_t best,blocknum = 1;
     if ( (lp= db777_findM(&size,ledger->DBs.transactions,ledger->ledger.D.DB,"last",strlen("last"))) != 0 )
     {
         if ( size == sizeof(*lp) )
@@ -330,13 +330,15 @@ int32_t ledger_getnearest(struct ledger_info *ledger,uint32_t startblocknum)
             ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
             ledger->txoffsets.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->numaddrinfos;
         } else printf("size mismatch %d vs %ld\n",size,sizeof(*lp));
-        free(ptr);
+        free(lp);
     } else printf("ledger_getnearest error getting last\n");
     printf("nearest.%d\n",blocknum);
     if ( startblocknum == 0 )
         return(blocknum);
 #ifdef LEDGER_SYNC
-    if ( lp == 0 )
+    /*
+     int32_t dist,size; uint16_t key; uint32_t best,closest,blocknum = 1;
+     if ( lp == 0 )
         return(1);
     best = 1, closest = 1000000000;
     dist = (startblocknum - blocknum);
@@ -354,7 +356,7 @@ int32_t ledger_getnearest(struct ledger_info *ledger,uint32_t startblocknum)
                 best = blocknum, closest = dist;
         }
         printf("syncnum.%d ptr.%p size.%d blocknum.%d > %d | dist.%d closest.%d best.%d\n",key,ptr,size,blocknum,startblocknum,dist,closest,best);
-    }
+    }*/
     return(best);
 #endif
 }
