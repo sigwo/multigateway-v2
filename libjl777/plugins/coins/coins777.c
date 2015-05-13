@@ -89,7 +89,7 @@ union ledger_data { struct db777 *DB; struct ledger_addrinfo **table; }; //struc
 #define LEDGER_SYNC
 
 #ifdef LEDGER_SYNC
-struct ledger_addrinfo { int64_t balance; uint32_t count:31,dirty:1; uint32_t unspentinds[]; };
+struct ledger_addrinfo { uint32_t balance[2],count:31,dirty:1; uint32_t unspentinds[]; };
 #else
 #ifndef COINADDR_LEN
 #define COINADDR_LEN 36
@@ -110,7 +110,7 @@ struct ledger_info
 {
     struct env777 DBs;
     uint64_t voutsum,spendsum;
-    uint32_t blocknum,blockpending;
+    uint32_t blocknum,blockpending,numsyncs;
     struct ledger_state ledger,addrs,txids,scripts,blocks,unspentmap,txoffsets,spentbits,addrinfos;
 };
 

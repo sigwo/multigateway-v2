@@ -36,6 +36,7 @@ void *db777_transaction(void *env,struct db777 *DB,void *transactions,void *key,
 struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compression,int32_t restoreflag);
 int32_t env777_start(int32_t dispflag,struct env777 *DBs);
 char **db777_index(int32_t *nump,struct db777 *DB,int32_t max);
+int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue);
 
 extern struct sophia_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
@@ -274,6 +275,32 @@ void **db777_copy_all(int32_t *nump,struct db777 *DB,char *field,int32_t size)
     *nump = n;
     printf("ptrs.%p [0] %p numdb.%d\n",ptrs,ptrs[0],n);
     return(ptrs);
+}
+
+int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue)
+{
+    void *obj,*cursor,*value,*key; char keyhex[8192],valuehex[8192];
+    int32_t keylen,len,max,n = 0;
+    max = 100;
+    if ( DB == 0 || DB->db == 0 )
+        return(0);
+    obj = sp_object(DB->db);
+    if ( (cursor= sp_cursor(DB->db,obj)) != 0 )
+    {
+        while ( (obj= sp_get(cursor,obj)) != 0 )
+        {
+            value = sp_get(obj,"value",&len);
+            key = sp_get(obj,"key",&keylen);
+            if ( binarykey != 0 )
+                init_hexbytes_noT(keyhex,key,keylen), key = keyhex;
+            if ( binaryvalue != 0 )
+                init_hexbytes_noT(valuehex,value,len), value = valuehex;
+            printf("%-5d: %100s | %s\n",n,key,value);
+            n++;
+        }
+        sp_destroy(cursor);
+    }
+    return(n);
 }
 
 int32_t eligible_lbserver(char *server)
