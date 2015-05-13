@@ -677,7 +677,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
             if ( dispflag != 0 )
             {
                 extern uint32_t Duplicate,Mismatch,Added;
-                printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added);
+                printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %5.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added);
             }
             ledger->blocknum++;
         }
@@ -949,11 +949,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir)
 int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t startblocknum,uint32_t endblocknum)
 {
     struct ramchain *ramchain = &coin->ramchain;
-#ifdef __APPLE__
-    ramchain->syncfreq = 100;
-#else
     ramchain->syncfreq = 10000;
-#endif
     strcpy(ramchain->name,coinstr);
     ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coinstr,coin->serverport,coin->userpass,ramchain->RTblocknum);
     ramchain->readyflag = 1;
@@ -1134,7 +1130,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 if ( coin != 0 )
                 {
-                    ramchain_create(retbuf,coinstr);
+                    //ramchain_create(retbuf,coinstr);
                     if ( coin->ramchain.activeledger == 0 )
                         ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
                     else
@@ -1151,7 +1147,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     strcpy(retbuf,"{\"error\":\"cant create any more ramchains\"}");
                 else
                 {
-                    ramchain_create(retbuf,coinstr);
+                    //ramchain_create(retbuf,coinstr);
                     ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
                 }
             }
