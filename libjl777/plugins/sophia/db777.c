@@ -101,9 +101,9 @@ void *db777_transaction(void *env,struct db777 *DB,void *transactions,void *key,
     return(0);
 }
 
+uint32_t Duplicate,Mismatch,Added;
 int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len)
 {
-    static uint32_t duplicate,mismatch;
     void *obj = 0,*val = 0;
     int32_t allocsize = 0;
     if ( DB == 0 || DB->db == 0 )
@@ -116,9 +116,9 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
             {
                 if ( forceflag < 0 )
                 {
-                    duplicate++;
-                    if ( (rand() % 1000) == 0 )
-                        printf("found duplicate len.%d | duplicate.%d mismatch.%d\n",len,duplicate,mismatch);
+                    Duplicate++;
+                    //if ( (rand() % 1000) == 0 )
+                    //    printf("found duplicate len.%d | duplicate.%d mismatch.%d\n",len,Duplicate,Mismatch);
                 }
                 sp_destroy(obj);
                 return(0);
@@ -137,7 +137,7 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
                 printf("%02x ",((char *)value)[i]);
             printf("saved %d\n",allocsize);
         }
-        mismatch++, printf("duplicate.%d mismatch.%d | keylen.%d len.%d -> allocsize.%d\n",duplicate,mismatch,keylen,len,allocsize);
+        Mismatch++, printf("duplicate.%d mismatch.%d | keylen.%d len.%d -> allocsize.%d\n",Duplicate,Mismatch,keylen,len,allocsize);
     }
     if ( obj != 0 )
         sp_destroy(obj);
@@ -148,6 +148,8 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
         sp_destroy(obj);
         return(-4);
     }
+    if ( forceflag < 1 )
+        Added++;
     //printf("DB.%p add.[%p %d] val.%p %d [crcs %u %u]\n",DB,key,keylen,value,len,_crc32(0,key,keylen),_crc32(0,value,len));
     return(sp_set(transactions != 0 ? transactions : (DB->asyncdb != 0 ? DB->asyncdb : DB->db),obj));
 }
@@ -229,7 +231,7 @@ char **db777_index(int32_t *nump,struct db777 *DB,int32_t max)
                 coinaddrs[*addrindp] = calloc(1,addrlen + 1);
                 memcpy(coinaddrs[*addrindp],coinaddr,addrlen);
                 n++;
-             } else printf("n.%d wrong len.%d or overflow %d vs %d\n",n,len,*addrindp,max);
+             } //else printf("n.%d wrong len.%d or overflow %d vs %d\n",n,len,*addrindp,max);
         }
         sp_destroy(cursor);
     }
