@@ -1006,58 +1006,47 @@ struct coin777 *ramchain_create(char *retbuf,char *coinstr)
 
 void ramchain_idle(struct plugin_info *plugin)
 {
-    int32_t i,lag,syncflag,idlei = -1;
-    struct coin777 *coin,*best = 0;
-    double now,age,maxage = 0.;
+    int32_t i,lag,syncflag;
+    struct coin777 *coin;
     struct ramchain *ramchain;
     struct ledger_info *ledger;
-    if ( RAMCHAINS.num <= 0 )
-        return;
-    now = milliseconds();
-    for (i=0; i<RAMCHAINS.num; i++)
+    for (i=0; i<COINS.num; i++)
     {
-        if ( (age= (now - RAMCHAINS.lastupdate[i])) > maxage && (coin= coin777_find(RAMCHAINS.coins[i])) != 0 && coin->ramchain.readyflag != 0 && coin->ramchain.paused < 10 && coin->ramchain.activeledger != 0 )
+        if ( (coin= COINS.LIST[i]) != 0  && (ledger= coin->ramchain.activeledger) != 0 )
         {
-            best = coin;
-            idlei = i;
-            maxage = age;
+            ramchain = &coin->ramchain;
+            if ( (lag= (ramchain->RTblocknum - ledger->blocknum)) < 1000 || (ledger->blocknum % 1000) == 0 )
+                ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
+            if ( ramchain->needbackup != 0 || ramchain->syncfreq >= 50000 )
+                db777_backup(ledger->DBs.ctl);
+            if ( lag < 100000 && ramchain->syncfreq > 50000 )
+                ramchain->syncfreq = 50000;
+            else if ( lag < 50000 && ramchain->syncfreq > 10000 )
+                ramchain->syncfreq = 10000;
+            else if ( lag < 10000 && ramchain->syncfreq > 1000 )
+                ramchain->syncfreq = 1000;
+            else if ( lag < 1000 && ramchain->syncfreq > 100 )
+                ramchain->syncfreq = 100;
+            else if ( strcmp(ramchain->name,"BTC") == 0 && lag < 10 && ramchain->syncfreq > 10 )
+                ramchain->syncfreq = 10;
+            syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0));
+            if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
+            {
+                if ( ledger->blocknum >= ramchain->endblocknum )
+                    ramchain->paused = 3;
+                syncflag = 2;
+                printf("ramchain.%s blocknum.%d <<< PAUSING |  endblocknum.%u\n",ramchain->name,ledger->blocknum,ramchain->endblocknum);
+            }
+            ramchain_update(ramchain,coin->serverport,coin->userpass,syncflag);
+            if ( ramchain->paused > 2 )
+            {
+                ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
+                printf("STOPPED\n");
+                ramchain->paused = 10;
+            }
+            else if ( syncflag == 2 )
+                ramchain->paused = 10;
         }
-    }
-    if ( best != 0 && (ledger= best->ramchain.activeledger) != 0 )
-    {
-        ramchain = &best->ramchain;
-        if ( (lag= (ramchain->RTblocknum - ledger->blocknum)) < 1000 || (ledger->blocknum % 1000) == 0 )
-            ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,best->serverport,best->userpass,ramchain->RTblocknum);
-        if ( ramchain->needbackup != 0 || ramchain->syncfreq >= 50000 )
-            db777_backup(ledger->DBs.ctl);
-        if ( lag < 100000 && ramchain->syncfreq > 50000 )
-            ramchain->syncfreq = 50000;
-        else if ( lag < 50000 && ramchain->syncfreq > 10000 )
-            ramchain->syncfreq = 10000;
-        else if ( lag < 10000 && ramchain->syncfreq > 1000 )
-            ramchain->syncfreq = 1000;
-        else if ( lag < 1000 && ramchain->syncfreq > 100 )
-            ramchain->syncfreq = 100;
-        else if ( strcmp(ramchain->name,"BTC") == 0 && lag < 10 && ramchain->syncfreq > 10 )
-            ramchain->syncfreq = 10;
-        syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0));
-        if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
-        {
-            if ( ledger->blocknum >= ramchain->endblocknum )
-                ramchain->paused = 3;
-            syncflag = 2;
-            printf("ramchain.%s blocknum.%d <<< PAUSING |  endblocknum.%u\n",ramchain->name,ledger->blocknum,ramchain->endblocknum);
-        }
-        ramchain_update(&best->ramchain,best->serverport,best->userpass,syncflag);
-        if ( ramchain->paused > 2 )
-        {
-            ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
-            printf("STOPPED\n");
-            ramchain->paused = 10;
-        }
-        else if ( syncflag == 2 )
-            ramchain->paused = 10;
-        RAMCHAINS.lastupdate[idlei] = milliseconds();
     }
 }
 
@@ -1103,7 +1092,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             if ( strcmp(methodstr,"backup") == 0 )
             {
-                if ( coinstr != 0 && (coin= coin777_find(coinstr)) != 0 )
+                if ( coin != 0 )
                 {
                     if ( coin->ramchain.readyflag != 0 && coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
                     {
@@ -1130,7 +1119,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 if ( coin != 0 )
                 {
-                    //ramchain_create(retbuf,coinstr);
                     if ( coin->ramchain.activeledger == 0 )
                         ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
                     else
@@ -1142,15 +1130,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 }
             }
             else if ( strcmp(methodstr,"create") == 0 )
-            {
-                if ( RAMCHAINS.num >= MAX_RAMCHAINS )
-                    strcpy(retbuf,"{\"error\":\"cant create any more ramchains\"}");
-                else
-                {
-                    //ramchain_create(retbuf,coinstr);
-                    ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-                }
-            }
+                ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
         }
     }
     return((int32_t)strlen(retbuf));

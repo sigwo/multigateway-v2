@@ -65,25 +65,6 @@ struct sha256_state
     uint8_t buf[64];
 };
 
-//struct address_entry { uint32_t rawind:31,spent:1,blocknum,txind:15,vinflag:1,v:14,isinternal:1; };
-/*struct ramchain_hashtable
-{
-    struct db777 *DB;
-    char name[32];
-    unsigned char hash[256 >> 3];
-    uint32_t ind,maxind,tbd,tbd2,tbd3;
-    struct sha256_state state;
-};*/
-
-/*struct ledger_info
- {
- uint32_t numtxoffsets,numspentbits,numaddrinfos,needbackup,blocknum,blockpending,totalvouts,totalspends,addrind,txidind,scriptind;
- char coinstr[16];
- struct sha256_state txoffsets_state,spentbits_state,addrinfos_state;
- unsigned char txoffsets_hash[256 >> 3],spentbits_hash[256 >> 3],addrinfos_hash[256 >> 3];
- struct ramchain_hashtable ledger,addrs,txids,scripts,blocks,unspentmap;
- struct upair32 *txoffsets; uint8_t *spentbits; struct ledger_addrinfo **addrinfos;
- };*/
 struct upair32 { uint32_t firstvout,firstvin; };
 union ledger_data { struct db777 *DB; struct ledger_addrinfo **table; }; //struct upair32 *upairs; uint8_t *bits;
 #define LEDGER_SYNC
@@ -118,10 +99,8 @@ struct ramchain
 {
     char name[16];
     double lastgetinfo,startmilli;
-    //struct ramchain_hashtable *DBs[10],*restoreDBs[10];
     uint64_t addrsum,totalsize;
     uint32_t startblocknum,endblocknum,RTblocknum,readyflag,syncfreq,paused,needbackup,syncflag;
-    //uint8_t *huffbits,*huffbits2;
     struct rawblock EMIT,DECODE;
     struct ledger_info *activeledger;
 };
@@ -131,7 +110,7 @@ struct coin777
     char name[16],serverport[64],userpass[128],*jsonstr;
     cJSON *argjson;
     struct ramchain ramchain;
-    int32_t use_addmultisig,gatewayid;//,multisigchar;
+    int32_t use_addmultisig,gatewayid;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
