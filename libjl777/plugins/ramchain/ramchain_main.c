@@ -703,6 +703,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
                             {
                                 //printf("-%u ",unspentind);
                                 unspents[i] = unspents[--n];
+                                unspents[n] = 0;
                                 break;
                             }
                         }
