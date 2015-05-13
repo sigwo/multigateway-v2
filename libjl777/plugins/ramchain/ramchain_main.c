@@ -1047,6 +1047,8 @@ void ramchain_idle(struct plugin_info *plugin)
         syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0));
         if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
         {
+            if ( ledger->blocknum >= ramchain->endblocknum )
+                ramchain->paused = 3;
             syncflag = 2;
             printf("ramchain.%s blocknum.%d <<< PAUSING |  endblocknum.%u\n",ramchain->name,ledger->blocknum,ramchain->endblocknum);
         }
