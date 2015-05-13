@@ -103,7 +103,7 @@ struct ledger_addrinfo *addrinfo_alloc(struct ledger_info *ledger,uint32_t addri
 
 struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger_addrinfo *addrinfo,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum)
 {
-    uint32_t addrtx[2],values[2]; int32_t i,n;
+    uint32_t addrtx[2],values[4]; int32_t i,n;
     addrtx[0] = addrind;
     if ( addrinfo == 0 )
         addrinfo = addrinfo_alloc(ledger,addrind,coinaddr);
@@ -149,7 +149,7 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger
         addrinfo->dirty = 1;
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
     }
-    addrtx[1] = ++addrinfo->txindex, values[0] = unspentind, values[1] = blocknum;
+    addrtx[1] = ++addrinfo->txindex, values[0] = unspentind, values[1] = blocknum, memcpy(&values[2],&value,sizeof(value));
     if ( db777_add(-1,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),values,sizeof(values)) != 0 )
         printf("error updating addrtx addrind.%u index.%d: unspentind %x\n",addrind,addrinfo->txindex,unspentind);
     return(addrinfo);
@@ -667,7 +667,8 @@ void ledger_ensurecoinaddrs(struct ledger_info *ledger)
 
 struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,struct alloc_space *mem,uint32_t addrind,struct ledger_addrinfo *addrinfo,uint32_t startblocknum)
 {
-    uint32_t *ptr,addrtx[2],unspentind,checkind,blocknum,*unspents; int32_t strange,i,n = 0,addrlen,len; uint64_t value,balance; char *coinaddr;
+    uint32_t *ptr,addrtx[2],unspentind,blocknum,*unspents; char *coinaddr;
+    int32_t strange,i,n = 0,addrlen,len; uint64_t value; int64_t balance;
     addrtx[0] = addrind, addrtx[1] = 0;
     if ( addrinfo->count > 0 )
     {
@@ -684,11 +685,12 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
     } else printf("missing txindex.0 for addrind.%u\n",addrind);
     addrlen = (int32_t)strlen(addrinfo->coinaddr);
     strange = 0;
+    balance = 0;
     for (addrtx[1]=1; addrtx[1]<=ledger->unspentmap.ind; addrtx[1]++)
     {
-        if ( (ptr= db777_findM(&len,0,ledger->ledger.D.DB,addrtx,sizeof(addrtx))) != 0 && len == sizeof(addrtx) )
+        if ( (ptr= db777_findM(&len,0,ledger->ledger.D.DB,addrtx,sizeof(addrtx))) != 0 && len == sizeof(uint32_t)*4 )
         {
-            unspentind = ptr[0], blocknum = ptr[1];
+            unspentind = ptr[0], blocknum = ptr[1], memcpy(&value,&ptr[2],sizeof(value));
             free(ptr);
             if ( blocknum < startblocknum )
             {
@@ -704,6 +706,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
                                 //printf("-%u ",unspentind);
                                 unspents[i] = unspents[--n];
                                 unspents[n] = 0;
+                                balance -= value;
                                 break;
                             }
                         }
@@ -711,7 +714,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
                     if ( i == n && n > 2 )
                         strange++;//, printf("addrind.%d txindex.%d couldnt find unspentind.%d out of %d unspents\n",addrind,addrtx[1],unspentind,n);
                 }
-                else  unspents[n++] = unspentind;//, printf("+%u ",unspentind);
+                else  unspents[n++] = unspentind, balance += value;//, printf("+%u ",unspentind);
                 //printf("addrind.%u %s txindex.%d unspentind.%d %s %.8f blocknum.%u\n",addrind,addrinfo->coinaddr,addrtx[1],unspentind & ~(1<<31),(unspentind & (1<<31))!=0?"SPEND":"",dstr(value),blocknum);
             }
             else
@@ -731,10 +734,10 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
     for (balance=i=0; i<n; i++)
     {
         addrinfo->unspentinds[i] = unspents[i];
-        value = ledger_unspentvalue(&checkind,ledger,unspents[i]);
+        /*value = ledger_unspentvalue(&checkind,ledger,unspents[i]);
         if ( checkind == addrind )
             balance += value;//, printf("%.8f ",dstr(value));
-        else printf("checkind.%d mismatch to addrind.%d with %.8f\n",checkind,addrind,dstr(value));
+        else printf("checkind.%d mismatch to addrind.%d with %.8f\n",checkind,addrind,dstr(value));*/
     }
     addrinfo->balance = balance;
     addrinfo->count = n;
