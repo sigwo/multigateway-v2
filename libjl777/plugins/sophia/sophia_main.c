@@ -393,7 +393,7 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
     ensure_directory(path);
     if ( specialpath != 0 )
     {
-        printf("path.(%s) special.(%s) subdir.(%s) name.(%s)\n",path,specialpath,subdir,name);
+        //printf("path.(%s) special.(%s) subdir.(%s) name.(%s)\n",path,specialpath,subdir,name);
         sprintf(path + strlen(path),"/%s",specialpath), ensure_directory(path);
         if ( subdir != 0 && subdir[0] != 0 )
             sprintf(path + strlen(path),"/%s",subdir), ensure_directory(path);

@@ -129,13 +129,13 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     if ( forceflag < 0 && allocsize != 0 )
     {
         int i;
-        for (i=0; i<16; i++)
-            printf("%02x ",((char *)value)[i]);
+        for (i=0; i<60&&i<len; i++)
+            printf("%02x ",((uint8_t *)value)[i]);
         printf("value len.%d\n",len);
         if ( val != 0 )
         {
-            for (i=0; i<16; i++)
-                printf("%02x ",((char *)value)[i]);
+            for (i=0; i<60&&i<allocsize; i++)
+                printf("%02x ",((uint8_t *)val)[i]);
             printf("saved %d\n",allocsize);
         }
         Mismatch++, printf("duplicate.%d mismatch.%d | keylen.%d len.%d -> allocsize.%d\n",Duplicate,Mismatch,keylen,len,allocsize);
