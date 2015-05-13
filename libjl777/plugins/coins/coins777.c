@@ -89,7 +89,7 @@ struct sha256_state
 #define COINADDR_LEN 36
 #endif
 struct upair32 { uint32_t firstvout,firstvin; };
-struct ledger_addrinfo { int64_t balance; int32_t count,txindex; uint32_t max:31,dirty:1; char coinaddr[COINADDR_LEN]; uint32_t unspentinds[]; };
+struct ledger_addrinfo { int64_t balance; int32_t txindex:31,dirty:1; char coinaddr[COINADDR_LEN]; uint32_t count,unspentinds[]; };
 union ledger_data { struct db777 *DB; struct ledger_addrinfo **table; }; //struct upair32 *upairs; uint8_t *bits; 
 
 struct ledger_state
@@ -115,7 +115,7 @@ struct ramchain
     double lastgetinfo,startmilli;
     //struct ramchain_hashtable *DBs[10],*restoreDBs[10];
     uint64_t addrsum,totalsize;
-    uint32_t needbackup,lastbackup,startblocknum,RTblocknum,confirmednum,numupdates,readyflag,backupfreq,restoreflag;
+    uint32_t startblocknum,endblocknum,RTblocknum,readyflag,backupfreq,paused,needbackup;
     //uint8_t *huffbits,*huffbits2;
     struct rawblock EMIT,DECODE;
     struct ledger_info *activeledger;
@@ -135,7 +135,6 @@ struct coin777 *coin777_create(char *coinstr,char *serverport,char *userpass,cJS
 int32_t coin777_close(char *coinstr);
 struct coin777 *coin777_find(char *coinstr);
 char *extract_userpass(char *userhome,char *coindir,char *confname);
-void ramchain_update(struct coin777 *coin);
 int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *userpass,uint32_t blocknum);
 void rawblock_patch(struct rawblock *raw);
 

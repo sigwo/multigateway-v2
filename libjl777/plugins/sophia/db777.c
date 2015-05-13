@@ -35,6 +35,7 @@ int32_t db777_backup(void *ctl);
 void *db777_transaction(void *env,struct db777 *DB,void *transactions,void *key,int32_t keylen,void *value,int32_t len);
 struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compression,int32_t restoreflag);
 int32_t env777_start(int32_t dispflag,struct env777 *DBs);
+char **db777_index(int32_t *nump,struct db777 *DB,int32_t max);
 
 extern struct sophia_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
@@ -206,6 +207,34 @@ uint64_t db777_ctlinfo64(void *ctl,char *field)
         sp_destroy(obj);
     }
     return(val);
+}
+
+char **db777_index(int32_t *nump,struct db777 *DB,int32_t max)
+{
+    void *obj,*cursor; uint32_t *addrindp; char *coinaddr,**coinaddrs = 0;
+    int32_t addrlen,len,n = 0;
+    *nump = 0;
+    if ( DB == 0 || DB->db == 0 )
+        return(0);
+    obj = sp_object(DB->db);
+    if ( (cursor= sp_cursor(DB->db,obj)) != 0 )
+    {
+        coinaddrs = (char **)calloc(sizeof(char *),max+1);
+        while ( (obj= sp_get(cursor,obj)) != 0 )
+        {
+            addrindp = sp_get(obj,"value",&len);
+            coinaddr = sp_get(obj,"key",&addrlen);
+            if ( len == sizeof(*addrindp) && *addrindp <= max )
+            {
+                coinaddrs[*addrindp] = calloc(1,addrlen + 1);
+                memcpy(coinaddrs[*addrindp],coinaddr,addrlen);
+                n++;
+             } else printf("n.%d wrong len.%d or overflow %d vs %d\n",n,len,*addrindp,max);
+        }
+        sp_destroy(cursor);
+    }
+    *nump = n;
+    return(coinaddrs);
 }
 
 void **db777_copy_all(int32_t *nump,struct db777 *DB,char *field,int32_t size)
