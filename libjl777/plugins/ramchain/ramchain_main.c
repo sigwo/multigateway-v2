@@ -627,6 +627,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
             if ( syncflag != 0 )
             {
                 ledger_setlast(ledger,ledger->blocknum,++ledger->numsyncs);
+                ledger_commit(ledger,0);
                 ledger_sync(ledger);
                 ledger_commit(ledger,syncflag == 1);
             }
@@ -795,7 +796,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir)
 int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t startblocknum,uint32_t endblocknum)
 {
     struct ramchain *ramchain = &coin->ramchain;
-    ramchain->syncfreq = 10000;
+    ramchain->syncfreq = 1000;
     strcpy(ramchain->name,coinstr);
     ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coinstr,coin->serverport,coin->userpass,ramchain->RTblocknum);
     ramchain->readyflag = 1;
@@ -910,7 +911,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     struct coin777 *coin = 0;
     uint32_t startblocknum,endblocknum;
     retbuf[0] = 0;
-    Debuglevel = 3;
+   //Debuglevel = 3;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
