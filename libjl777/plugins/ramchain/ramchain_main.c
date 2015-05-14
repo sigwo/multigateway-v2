@@ -310,9 +310,11 @@ int32_t ledger_ensurespentbits(struct ledger_info *ledger,uint32_t totalvouts)
 
 int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t firstvout,uint32_t firstvin)
 {
-    struct upair32 firstinds;
+    struct upair32 firstinds; int32_t i;
     ledger_ensuretxoffsets(ledger,txidind);
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
+    for (i=0; i<txidind+10; i++)
+        printf("%d ",ledger->txoffsets.D.upairs[txidind].firstvout);
     printf("[txidind.%d] <- firstvout.%d\n",txidind,firstvout);
     if ( firstvout == 0 )
         printf("illegal firstvout.0 for txidind.%d\n",txidind), debugstop();
