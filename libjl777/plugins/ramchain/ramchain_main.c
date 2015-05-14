@@ -330,7 +330,7 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
             ledger->voutsum = lp->voutsum, ledger->spendsum = lp->spendsum;
             ledger->addrs.ind = lp->addrind, ledger->txids.ind = lp->txidind, ledger->scripts.ind = lp->scriptind;
             ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
-            ledger->txoffsets.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->numaddrinfos;
+            ledger->addrinfos.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->txoffsets;
         } else printf("size mismatch %d vs %ld\n",size,sizeof(*lp));
         free(lp);
     } else printf("ledger_getnearest error getting last\n");
@@ -951,7 +951,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 {
                     if ( coin->ramchain.activeledger == 0 )
                         ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-                    if ( coin->ramchain.readyflag != 0 && coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
+                    if ( coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
                     {
                         db777_backup(coin->ramchain.activeledger->DBs.ctl);
                         strcpy(retbuf,"{\"result\":\"started backup\"}");
