@@ -508,7 +508,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
         ledger->addrinfos.D.table[vout.U.addrind] = addrinfo_update(ledger,ledger->addrinfos.D.table[vout.U.addrind],coinaddr,vout.addrlen,value,unspentind,vout.U.addrind,blocknum,txidstr,v,scriptstr,txind);
         //ledger->addrinfos.D.table[vout.U.addrind]->notify = 1;
         return(ledger_packvout(ledger->addrinfos.sha256,&ledger->addrinfos.state,mem,&vout));
-    } else printf("ledger_unspent: cant find addrind.(%s)\n",coinaddr);
+    } else printf("ledger_unspent: cant find addrind.(%s)\n",coinaddr), debugstop();
     return(0);
 }
 
@@ -536,7 +536,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
                 printf("addrind.%u count.%d %.8f\n",addrind,addrinfo->count,dstr(*(int64_t *)addrinfo->balance));
             return(ledger_packspend(ledger->spentbits.sha256,&ledger->spentbits.state,mem,&spend));
         } else printf("error getting unspentmap for unspentind.%u (%s).v%d\n",spend.unspentind,spent_txidstr,spent_vout);
-    } else printf("ledger_spend: cant find txidind for (%s).v%d\n",spent_txidstr,spent_vout);
+    } else printf("ledger_spend: cant find txidind for (%s).v%d\n",spent_txidstr,spent_vout), debugstop();
     return(0);
 }
 
@@ -952,7 +952,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     struct coin777 *coin = 0;
     uint32_t startblocknum,endblocknum;
     retbuf[0] = 0;
-// Debuglevel = 3;
+ Debuglevel = 3;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
