@@ -85,3 +85,7 @@ foo
 libjl777/plugins/echo.perm
 
 libjl777/plugins/stockfish/stockfish
+
+libjl777/plugins/coins/coins777 copy.c
+
+libjl777/plugins/ramchain/ramchain_main copy.c
