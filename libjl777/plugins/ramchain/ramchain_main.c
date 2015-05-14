@@ -310,13 +310,10 @@ int32_t ledger_ensurespentbits(struct ledger_info *ledger,uint32_t totalvouts)
 
 int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t firstvout,uint32_t firstvin)
 {
-    struct upair32 firstinds; int32_t i;
+    struct upair32 firstinds; 
     ledger_ensuretxoffsets(ledger,txidind);
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
     ledger->txoffsets.D.upairs[txidind] = firstinds;
-    for (i=0; i<txidind+10; i++)
-        printf("%d ",ledger->txoffsets.D.upairs[i].firstvout);
-    printf("[txidind.%d] <- firstvout.%d\n",txidind,firstvout);
     if ( firstvout == 0 )
         printf("illegal firstvout.0 for txidind.%d\n",txidind), debugstop();
     if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
@@ -327,14 +324,11 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
 
 uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 {
-    int32_t i,size = -1; uint32_t firstvout = 0; struct upair32 *firstinds;
+    int32_t size = -1; uint32_t firstvout = 0; struct upair32 *firstinds;
     if ( txidind == 1 )
         return(1);
     if ( ledger->txoffsets.D.upairs[txidind].firstvout == 0 )
         printf("zero firstvout[txidind.%d]???\n",txidind), debugstop();
-    for (i=0; i<txidind+10; i++)
-        printf("%d ",ledger->txoffsets.D.upairs[i].firstvout);
-    printf(" firstvout[txidind.%d] -> %d\n",txidind,ledger->txoffsets.D.upairs[txidind].firstvout);
     return(ledger->txoffsets.D.upairs[txidind].firstvout);
     if ( (firstinds= db777_findM(&size,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(*firstinds) )
     {
