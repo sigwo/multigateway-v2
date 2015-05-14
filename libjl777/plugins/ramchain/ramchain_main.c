@@ -27,7 +27,7 @@ void debugstop ()
 }
 
 STRUCTNAME RAMCHAINS;
-char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop", "notify" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop", "notify", "richlist" }; // list of supported methods
 
 struct ledger_inds
 {
@@ -356,14 +356,14 @@ uint64_t ledger_unspentvalue(uint32_t *addrindp,struct ledger_info *ledger,uint3
     return(value);
 }
 
-uint64_t ledger_recalc_addrinfos(struct ledger_info *ledger,int32_t richlist)
+uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info *ledger,int32_t numrichlist)
 {
     struct ledger_addrinfo *addrinfo;
-    uint32_t i,n,addrind; float *sortbuf; uint64_t balance,addrsum; char coinaddr[128];
+    uint32_t i,n,addrind,itemlen,len; float *sortbuf; uint64_t balance,addrsum; char coinaddr[128],itembuf[128];
     addrsum = n = 0;
     if ( ledger->addrinfos.D.table == 0 )
         return(0);
-    if ( richlist == 0 )
+    if ( numrichlist == 0 || retbuf == 0 || maxlen == 0 )
     {
         for (i=1; i<=ledger->addrs.ind; i++)
             if ( (addrinfo= ledger->addrinfos.D.table[i]) != 0 && (balance= *(int64_t *)addrinfo->balance) != 0 )
@@ -383,14 +383,22 @@ uint64_t ledger_recalc_addrinfos(struct ledger_info *ledger,int32_t richlist)
         if ( n > 0 )
         {
             revsortfs(sortbuf,n,sizeof(*sortbuf) * 2);
-            for (i=0; i<10&&i<n; i++)
+            strcpy(retbuf,"{\"richlist\":["), len = (int32_t)strlen(retbuf);
+            for (i=0; i<numrichlist&&i<n; i++)
             {
                 memcpy(&addrind,&sortbuf[(i << 1) + 1],sizeof(addrind));
                 addrinfo = ledger->addrinfos.D.table[addrind];
                 ledger_coinaddr(ledger,coinaddr,sizeof(coinaddr),addrind);
-                printf("(%s %.8f) ",coinaddr,sortbuf[i << 1]);
+                sprintf(itembuf,"%s[\"%s\", \"%.8f\"],",i==0?"":" ",coinaddr,sortbuf[i << 1]);
+                itemlen = (int32_t)strlen(itembuf);
+                if ( len+itemlen < maxlen-32 )
+                {
+                    memcpy(retbuf+len,itembuf,itemlen+1);
+                    len += itemlen;
+                }
             }
-            printf("top.%d of %d\n",i,n);
+            sprintf(retbuf + len - 1,"],\"supply\":%.8f}",dstr(addrsum));
+            printf("(%s) top.%d of %d\n",retbuf,i,n);
         }
         free(sortbuf);
     }
@@ -617,7 +625,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
                 ledger_sync(ledger);
                 ledger_commit(ledger,syncflag == 1);
             }
-            ramchain->addrsum = ledger_recalc_addrinfos(ledger,0);//dispflag - 1);
+            ramchain->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);//dispflag - 1);
             ramchain->totalsize += block->allocsize;
             estimate = estimate_completion(ramchain->startmilli,blocknum - ramchain->startblocknum,ramchain->RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ramchain->startmilli)/60000.;
@@ -692,7 +700,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblo
     else ramchain->startblocknum = 0;
     ledger->blocknum = ramchain->startblocknum + 1;
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
-    balance = ledger_recalc_addrinfos(ledger,0);
+    balance = ledger_recalc_addrinfos(0,0,ledger,0);
     sprintf(retbuf,"{\"result\":\"resumed\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.);
     ramchain->startmilli = milliseconds();
     ramchain->paused = 0;
@@ -803,6 +811,19 @@ int32_t ramchain_stop(char *retbuf,struct ramchain *ramchain)
     return(0);
 }
 
+int32_t ramchain_richlist(char *retbuf,int32_t maxlen,struct ramchain *ramchain,int32_t num)
+{
+    cJSON *json;
+    if ( ramchain->activeledger != 0 )
+    {
+        ledger_recalc_addrinfos(retbuf,maxlen,ramchain->activeledger,num);
+        if ( (json= cJSON_Parse(retbuf)) == 0 )
+            printf("PARSE ERROR!\n");
+        else free_json(json);
+    }
+    return(0);
+}
+
 void ramchain_idle(struct plugin_info *plugin)
 {
     int32_t i,lag,syncflag;
@@ -826,23 +847,24 @@ void ramchain_idle(struct plugin_info *plugin)
                 ramchain->syncfreq = 100;
             else if ( strcmp(ramchain->name,"BTC") == 0 && lag < 10 && ramchain->syncfreq > 10 )
                 ramchain->syncfreq = 10;
-            syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0));
-            if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
+            if ( ramchain->paused < 10 )
             {
-                if ( ledger->blocknum >= ramchain->endblocknum )
-                    ramchain->paused = 3;
-                syncflag = 2;
-                printf("ramchain.%s blocknum.%d <<< PAUSING |  endblocknum.%u\n",ramchain->name,ledger->blocknum,ramchain->endblocknum);
+                syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0));
+                if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
+                {
+                    if ( ledger->blocknum >= ramchain->endblocknum )
+                        ramchain->paused = 3, syncflag = 2;
+                    printf("ramchain.%s blocknum.%d <<< PAUSING paused.%d |  endblocknum.%u\n",ramchain->name,ledger->blocknum,ramchain->paused,ramchain->endblocknum);
+                }
+                ramchain_update(ramchain,coin->serverport,coin->userpass,syncflag);
+                if ( ramchain->paused == 3 )
+                {
+                    ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
+                    printf("STOPPED\n");
+                }
+                if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
+                    ramchain->paused = 10;
             }
-            ramchain_update(ramchain,coin->serverport,coin->userpass,syncflag);
-            if ( ramchain->paused > 2 )
-            {
-                ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
-                printf("STOPPED\n");
-                ramchain->paused = 10;
-            }
-            else if ( syncflag == 2 )
-                ramchain->paused = 10;
         }
     }
 }
@@ -934,12 +956,28 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 if ( coin != 0 )
                     coin->ramchain.paused = 1;
             }
+            else if ( strcmp(methodstr,"richlist") == 0 )
+            {
+                if ( coin != 0 )
+                {
+                    if ( coin->ramchain.activeledger == 0 )
+                    {
+                        ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
+                        coin->ramchain.paused = 1;
+                    }
+                    if ( coin->ramchain.activeledger != 0 )
+                        ramchain_richlist(retbuf,maxlen,&coin->ramchain,get_API_int(cJSON_GetObjectItem(json,"num"),25));
+                }
+            }
             else if ( strcmp(methodstr,"notify") == 0 )
             {
                 if ( coin != 0 )
                 {
                     if ( coin->ramchain.activeledger == 0 )
+                    {
                         ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
+                        coin->ramchain.paused = 1;
+                    }
                     if ( coin->ramchain.activeledger != 0 )
                         ramchain_notify(retbuf,&coin->ramchain,cJSON_str(cJSON_GetObjectItem(json,"endpoint")),cJSON_GetObjectItem(json,"list"));
                 }
