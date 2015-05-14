@@ -333,6 +333,8 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
     if ( (firstinds= db777_findM(&size,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(*firstinds) )
     {
         firstvout = firstinds->firstvout;
+        if ( memcmp(&firstvout,&ledger->txoffsets.D.upairs[txidind],sizeof(firstvout)) != 0 )
+            printf("ERROR: mismatch txoffset.(%d %d) vs DB.(%d %d)\n",ledger->txoffsets.D.upairs[txidind].firstvout,ledger->txoffsets.D.upairs[txidind].firstvin,firstinds->firstvout,firstinds->firstvin), debugstop();
         free(firstinds);
     } else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(*firstinds));
     return(firstvout);
@@ -950,7 +952,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     struct coin777 *coin = 0;
     uint32_t startblocknum,endblocknum;
     retbuf[0] = 0;
-   Debuglevel = 3;
+// Debuglevel = 3;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
