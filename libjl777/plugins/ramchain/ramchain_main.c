@@ -313,6 +313,7 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
     struct upair32 firstinds;
     ledger_ensuretxoffsets(ledger,txidind);
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
+    printf("[txidind.%d] <- firstvout.%d\n",txidind,firstvout);
     if ( firstvout == 0 )
         printf("illegal firstvout.0 for txidind.%d\n",txidind), debugstop();
     if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
