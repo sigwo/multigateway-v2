@@ -115,7 +115,7 @@ uint32_t ledger_rawind(int32_t writeflag,void *transactions,struct ledger_state 
     if ( writeflag != 0 )
     {
         rawind = ++hash->ind;
-        printf("add rawind.%d keylen.%d: %llx\n",rawind,keylen,*(long long *)key);
+        printf("%p add rawind.%d keylen.%d: %llx\n",hash->D.DB,rawind,keylen,*(long long *)key);
         if ( db777_add(-1,transactions,hash->D.DB,key,keylen,&rawind,sizeof(rawind)) != 0 )
             printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
         else
@@ -124,7 +124,7 @@ uint32_t ledger_rawind(int32_t writeflag,void *transactions,struct ledger_state 
             return(rawind);
         }
     }
-    else printf("couldnt find expected %llx keylen.%d\n",*(long long *)key,keylen), db777_dump(hash->D.DB,1,1), debugstop();
+    else printf("%p couldnt find expected %llx keylen.%d\n",hash->D.DB,*(long long *)key,keylen), db777_dump(hash->D.DB,1,1), debugstop();
     return(0);
 }
 
