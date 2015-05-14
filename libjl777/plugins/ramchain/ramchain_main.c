@@ -277,13 +277,13 @@ int32_t ledger_ensuretxoffsets(struct ledger_info *ledger,uint32_t numtxidinds)
     int32_t n,width = 4096;
     if ( numtxidinds >= ledger->txoffsets.ind )
     {
-        n = ledger->txoffsets.ind + width;
+        n = numtxidinds + width;
         //if ( Debuglevel > 2 )
             printf("realloc ledger->txoffsets.D.upairs %p %d -> %d\n",ledger->txoffsets.D.upairs,ledger->txoffsets.ind,n);
         ledger->txoffsets.D.upairs = realloc(ledger->txoffsets.D.upairs,sizeof(*ledger->txoffsets.D.upairs) * n);
-        memset(&ledger->txoffsets.D.upairs[ledger->txoffsets.ind],0,width * sizeof(*ledger->txoffsets.D.upairs));
-        ledger->txoffsets.ind += width;
-        return(width);
+        memset(&ledger->txoffsets.D.upairs[ledger->txoffsets.ind],0,(n - ledger->txoffsets.ind) * sizeof(*ledger->txoffsets.D.upairs));
+        ledger->txoffsets.ind = n;
+        return(n - ledger->txoffsets.ind);
     }
     return(0);
 }
