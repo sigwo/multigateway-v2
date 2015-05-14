@@ -21,9 +21,9 @@
 
 void debugstop ()
 {
-#ifdef __APPLE__
+//#ifdef __APPLE__
     getchar();
-#endif
+//#endif
 }
 
 STRUCTNAME RAMCHAINS;
@@ -313,6 +313,8 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
     struct upair32 firstinds;
     ledger_ensuretxoffsets(ledger,txidind);
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
+    if ( firstvout == 0 )
+        printf("illegal firstvout.0 for txidind.%d\n",txidind), debugstop();
     if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
         return(0);
     printf("error db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
@@ -324,6 +326,8 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
     int32_t size = -1; uint32_t firstvout = 0; struct upair32 *firstinds;
     if ( txidind == 1 )
         return(1);
+    if ( ledger->txoffsets.D.upairs[txidind].firstvout == 0 )
+        printf("zero firstvout[txidind.%d]???\n",txidind), debugstop();
     return(ledger->txoffsets.D.upairs[txidind].firstvout);
     if ( (firstinds= db777_findM(&size,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(*firstinds) )
     {
@@ -377,26 +381,6 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
         free(lp);
     } else printf("ledger_getnearest error getting last\n");
     return(blocknum);
-}
-
-uint64_t ledger_unspentvalue(uint32_t *addrindp,struct ledger_info *ledger,uint32_t unspentind)
-{
-    struct unspentmap *U; int32_t size; uint64_t value = 0;
-    *addrindp = 0;
-    if ( (U= db777_findM(&size,ledger->DBs.transactions,ledger->unspentmap.D.DB,&unspentind,sizeof(unspentind))) != 0 )
-    {
-        if ( size != sizeof(*U) )
-            printf("unspentmap unexpectsize %d vs %ld\n",size,sizeof(*U));
-        else
-        {
-            memcpy(&value,U->value,sizeof(value));
-            *addrindp = U->addrind;
-            //printf("unspentmap.%u %.8f -> addrind.%u\n",unspentind,dstr(value),U->addrind);
-        }
-        free(U);
-    }
-    else printf("error loading unspentmap (%s) unspentind.%u\n",ledger->DBs.coinstr,unspentind), debugstop();
-    return(value);
 }
 
 uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info *ledger,int32_t numrichlist)
@@ -467,6 +451,26 @@ uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_
         return(ledger_packtx(ledger->txoffsets.sha256,&ledger->txoffsets.state,mem,&tx));
     } else printf("ledger_tx: mismatched txidind, expected %u got %u\n",txidind,checkind), debugstop();
     return(0);
+}
+
+uint64_t ledger_unspentvalue(uint32_t *addrindp,struct ledger_info *ledger,uint32_t unspentind)
+{
+    struct unspentmap *U; int32_t size; uint64_t value = 0;
+    *addrindp = 0;
+    if ( (U= db777_findM(&size,ledger->DBs.transactions,ledger->unspentmap.D.DB,&unspentind,sizeof(unspentind))) != 0 )
+    {
+        if ( size != sizeof(*U) )
+            printf("unspentmap unexpectsize %d vs %ld\n",size,sizeof(*U));
+        else
+        {
+            memcpy(&value,U->value,sizeof(value));
+            *addrindp = U->addrind;
+            //printf("unspentmap.%u %.8f -> addrind.%u\n",unspentind,dstr(value),U->addrind);
+        }
+        free(U);
+    }
+    else printf("error loading unspentmap (%s) unspentind.%u\n",ledger->DBs.coinstr,unspentind), debugstop();
+    return(value);
 }
 
 uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledger_info *ledger,struct alloc_space *mem,uint32_t txidind,uint16_t v,uint32_t unspentind,char *coinaddr,char *scriptstr,uint64_t value,uint32_t blocknum,char *txidstr,int32_t txind)
