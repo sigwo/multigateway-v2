@@ -627,7 +627,6 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
             if ( syncflag != 0 )
             {
                 ledger_setlast(ledger,ledger->blocknum,++ledger->numsyncs);
-                ledger_commit(ledger,0);
                 ledger_sync(ledger);
                 ledger_commit(ledger,syncflag == 1);
             }
