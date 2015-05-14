@@ -867,7 +867,7 @@ void ramchain_idle(struct plugin_info *plugin)
                     ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
                     printf("STOPPED\n");
                 }
-                if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
+                if ( ledger->blocknum > ramchain->endblocknum || ramchain->paused != 0 )
                     ramchain->paused = 10;
             }
         }
@@ -910,6 +910,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     struct coin777 *coin = 0;
     uint32_t startblocknum,endblocknum;
     retbuf[0] = 0;
+    Debuglevel = 3;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
