@@ -515,7 +515,7 @@ struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *co
             printf("err.%d setting name\n",err);
         else
         {
-            printf("path.(%s) name.(%s)\n",path,name);
+            //printf("path.(%s) name.(%s)\n",path,name);
             if ( compression != 0 )
             {
                 sprintf(compname,"db.%s.compression",name);

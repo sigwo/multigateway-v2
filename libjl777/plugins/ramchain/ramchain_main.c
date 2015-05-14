@@ -332,7 +332,7 @@ int32_t ledger_getnearest(struct ledger_info *ledger,uint32_t startblocknum)
         } else printf("size mismatch %d vs %ld\n",size,sizeof(*lp));
         free(lp);
     } else printf("ledger_getnearest error getting last\n");
-    printf("nearest.%d\n",blocknum);
+    //printf("nearest.%d\n",blocknum);
     if ( startblocknum == 0 )
         return(blocknum);
 #ifdef LEDGER_SYNC
@@ -862,6 +862,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblo
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(ledger,0);
     sprintf(retbuf,"{\"result\":\"resumed\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.);
+    ramchain->startmilli = milliseconds();
     ramchain->paused = 0;
     return(0);
 }
@@ -1096,6 +1097,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 if ( coin != 0 )
                 {
+                    if ( coin->ramchain.activeledger == 0 )
+                        ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
                     if ( coin->ramchain.readyflag != 0 && coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
                     {
                         db777_backup(coin->ramchain.activeledger->DBs.ctl);
