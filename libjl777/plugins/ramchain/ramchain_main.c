@@ -331,7 +331,7 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
         printf("zero firstvout[txidind.%d]???\n",txidind), debugstop();
     for (i=0; i<txidind+10; i++)
         printf("%d ",ledger->txoffsets.D.upairs[txidind].firstvout);
-    printf("firstvout[txidind.%d] -> %d\n",txidind,ledger->txoffsets.D.upairs[txidind].firstvout);
+    printf(" firstvout[txidind.%d] -> %d\n",txidind,ledger->txoffsets.D.upairs[txidind].firstvout);
     return(ledger->txoffsets.D.upairs[txidind].firstvout);
     if ( (firstinds= db777_findM(&size,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(*firstinds) )
     {
