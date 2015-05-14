@@ -272,27 +272,45 @@ struct ledger_addrinfo *ledger_ensureaddrinfos(struct ledger_info *ledger,uint32
     return(ledger->addrinfos.D.table[addrind]);
 }
 
+int32_t ledger_ensuretxoffsets(struct ledger_info *ledger,uint32_t numtxidinds)
+{
+    int32_t n,width = 4096;
+    if ( numtxidinds >= ledger->txoffsets.ind )
+    {
+        n = ledger->txoffsets.ind + width;
+        //if ( Debuglevel > 2 )
+            printf("realloc ledger->txoffsets.D.upairs %p %d -> %d\n",ledger->txoffsets.D.upairs,ledger->txoffsets.ind,n);
+        ledger->txoffsets.D.upairs = realloc(ledger->txoffsets.D.upairs,sizeof(*ledger->txoffsets.D.upairs) * n);
+        memset(&ledger->txoffsets.D.upairs[ledger->txoffsets.ind],0,width * sizeof(*ledger->txoffsets.D.upairs));
+        ledger->txoffsets.ind += width;
+        return(width);
+    }
+    return(0);
+}
+
+int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t firstvout,uint32_t firstvin)
+{
+    struct upair32 firstinds;
+    ledger_ensuretxoffsets(ledger,txidind);
+    firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
+    if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
+        return(0);
+    printf("error db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
+    return(-1);
+}
+
 uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 {
     int32_t size = -1; uint32_t firstvout = 0; struct upair32 *firstinds;
     if ( txidind == 1 )
         return(1);
+    return(ledger->txoffsets.D.upairs[txidind].firstvout);
     if ( (firstinds= db777_findM(&size,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(*firstinds) )
     {
         firstvout = firstinds->firstvout;
         free(firstinds);
     } else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(*firstinds));
     return(firstvout);
-}
-
-int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t firstvout,uint32_t firstvin)
-{
-    struct upair32 firstinds;
-    firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
-    if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
-        return(0);
-    printf("error db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
-    return(-1);
 }
 
 int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t state)
@@ -740,9 +758,9 @@ void ledger_free(struct ledger_info *ledger,int32_t closeDBflag)
 {
     if ( ledger != 0 )
     {
-#ifdef USEMEM
         if ( ledger->txoffsets.D.upairs != 0 )
             free(ledger->txoffsets.D.upairs);
+#ifdef USEMEM
         if ( ledger->spentbits.D.bits != 0 )
             free(ledger->spentbits.D.bits);
 #endif
