@@ -124,7 +124,7 @@ uint32_t ledger_rawind(int32_t writeflag,void *transactions,struct ledger_state 
             return(rawind);
         }
     }
-    else printf("couldnt find expected %llx keylen.%d\n",*(long long *)key,keylen), debugstop();
+    else printf("couldnt find expected %llx keylen.%d\n",*(long long *)key,keylen), db777_dump(hash->D.DB,1,1), debugstop();
     return(0);
 }
 
