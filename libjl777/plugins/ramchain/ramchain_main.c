@@ -335,10 +335,10 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 
 int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t state)
 {
-    ledger_ensurespentbits(ledger,unspentind);
-    if ( state == 0 )
-        CLEARBIT(ledger->spentbits.D.bits,unspentind);
-    else SETBIT(ledger->spentbits.D.bits,unspentind);
+    //ledger_ensurespentbits(ledger,unspentind);
+    //if ( state == 0 )
+    //    CLEARBIT(ledger->spentbits.D.bits,unspentind);
+    //else SETBIT(ledger->spentbits.D.bits,unspentind);
     return(db777_add(-1,ledger->DBs.transactions,ledger->spentbits.D.DB,&unspentind,sizeof(unspentind),&state,sizeof(state)));
 }
 
