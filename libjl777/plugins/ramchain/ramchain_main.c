@@ -124,7 +124,7 @@ uint32_t ledger_rawind(int32_t writeflag,void *transactions,struct ledger_state 
             return(rawind);
         }
     }
-    else printf("%p couldnt find expected %llx keylen.%d\n",hash->D.DB,*(long long *)key,keylen), db777_dump(hash->D.DB,1,1), debugstop();
+    else printf("%p couldnt find expected %llx keylen.%d\n",hash->D.DB,*(long long *)key,keylen), debugstop(); // db777_dump(hash->D.DB,1,1),
     return(0);
 }
 
@@ -642,7 +642,7 @@ int32_t ledger_commit(struct ledger_info *ledger,int32_t continueflag)
             break;
         msleep(1000);
     }
-    ledger->DBs.transactions = 0;//(continueflag != 0) ? sp_begin(ledger->DBs.env) : 0;
+    ledger->DBs.transactions = (continueflag != 0) ? sp_begin(ledger->DBs.env) : 0;
     return(err);
 }
 
@@ -663,7 +663,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
         oldsupply = ledger->voutsum - ledger->spendsum;
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
         if ( ledger->DBs.transactions == 0 )
-            ledger->DBs.transactions = 0;//sp_begin(ledger->DBs.env);
+            ledger->DBs.transactions = sp_begin(ledger->DBs.env);
         if ( (block= ledger_update(dispflag,ledger,&MEM,ramchain->name,serverport,userpass,&ramchain->EMIT,blocknum)) != 0 )
         {
             if ( (allocsize= ledger_finishblock(ledger,&MEM,block)) <= 0 )
