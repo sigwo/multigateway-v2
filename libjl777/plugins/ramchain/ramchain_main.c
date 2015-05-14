@@ -99,29 +99,13 @@ uint32_t ledger_packvout(uint8_t *hash,struct sha256_state *state,struct alloc_s
 
 int32_t addrinfo_size(int32_t n) { return(sizeof(struct ledger_addrinfo) + (sizeof(uint32_t) * n)); }
 
-struct ledger_addrinfo *addrinfo_alloc(struct ledger_info *ledger,uint32_t addrind,char *coinaddr)
-{
-    struct ledger_addrinfo *addrinfo = calloc(1,addrinfo_size(0));
-#ifndef LEDGER_SYNC
-    uint32_t addrtx[2]; int32_t addrlen;
-    if ( coinaddr != 0 && coinaddr[0] != 0 )
-    {
-        if ( (addrlen= (int32_t)strlen(coinaddr)) > sizeof(addrinfo->coinaddr) - 1 )
-            printf("unexpected addrlen.%d (%s)\n",addrlen,coinaddr);
-        strcpy(addrinfo->coinaddr,coinaddr);
-        addrtx[0] = addrind, addrtx[1] = 0;
-        if ( db777_add(0,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),coinaddr,addrlen) != 0 )
-            printf("error updating addrtx addrind.%u index.%d\n",addrind,addrinfo->txindex);
-    } else printf("unexpected null coinaddr for addrind.%u\n",addrind);
-#endif
-    return(addrinfo);
-}
+struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(0))); }
 
 struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger_addrinfo *addrinfo,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum)
 {
     int32_t i,n;
     if ( addrinfo == 0 )
-        addrinfo = addrinfo_alloc(ledger,addrind,coinaddr);
+        addrinfo = addrinfo_alloc();
     if ( (unspentind & (1 << 31)) != 0 )
     {
         unspentind &= ~(1 << 31);
@@ -156,12 +140,6 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger
         addrinfo->dirty = 1;
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
     }
-#ifndef LEDGER_SYNC
-    uint32_t addrtx[2],values[4];
-    addrtx[0] = addrind, addrtx[1] = ++addrinfo->txindex, values[0] = unspentind, values[1] = blocknum, memcpy(&values[2],&value,sizeof(value));
-    if ( db777_add(-1,ledger->DBs.transactions,ledger->ledger.D.DB,addrtx,sizeof(addrtx),values,sizeof(values)) != 0 )
-        printf("error updating addrtx addrind.%u index.%d: unspentind %x\n",addrind,addrinfo->txindex,unspentind);
-#endif
     return(addrinfo);
 }
 
@@ -399,14 +377,11 @@ uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_
         printf("ledger_tx txidind.%d %s vouts.%d vins.%d | ledger->txoffsets.ind %d\n",txidind,txidstr,totalvouts,totalspends,ledger->txoffsets.ind);
     if ( (checkind= ledger_hexind(1,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr)) == txidind )
     {
-        if ( (checkind= ledger_hexind(0,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr)) == txidind )
-        {
-            memset(&tx,0,sizeof(tx));
-            tx.firstvout = totalvouts, tx.firstvin = totalspends, tx.numvouts = numvouts, tx.numvins = numvins;
-            tx.txidlen = txidlen, memcpy(tx.txid,txid,txidlen);
-            ledger_upairset(ledger,txidind+1,totalvouts + numvouts,totalspends + numvins);
-            return(ledger_packtx(ledger->txoffsets.sha256,&ledger->txoffsets.state,mem,&tx));
-        } else printf("ledger_tx: cant find just added.(%s) txidind.%u\n",txidstr,txidind), debugstop();
+        memset(&tx,0,sizeof(tx));
+        tx.firstvout = totalvouts, tx.firstvin = totalspends, tx.numvouts = numvouts, tx.numvins = numvins;
+        tx.txidlen = txidlen, memcpy(tx.txid,txid,txidlen);
+        ledger_upairset(ledger,txidind+1,totalvouts + numvouts,totalspends + numvins);
+        return(ledger_packtx(ledger->txoffsets.sha256,&ledger->txoffsets.state,mem,&tx));
     } else printf("ledger_tx: mismatched txidind, expected %u got %u\n",txidind,checkind), debugstop();
     return(0);
 }
@@ -582,7 +557,7 @@ int32_t ledger_commit(struct ledger_info *ledger,int32_t continueflag)
             break;
         msleep(1000);
     }
-    ledger->DBs.transactions = (continueflag != 0 ) ? sp_begin(ledger->DBs.env) : 0;
+    ledger->DBs.transactions = (continueflag != 0) ? sp_begin(ledger->DBs.env) : 0;
     return(err);
 }
 
@@ -614,7 +589,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
                 ledger_sync(ledger);
                 ledger_commit(ledger,syncflag == 1);
             }
-            ramchain->addrsum = ledger_recalc_addrinfos(ledger,dispflag - 1);
+            ramchain->addrsum = ledger_recalc_addrinfos(ledger,0);//dispflag - 1);
             ramchain->totalsize += block->allocsize;
             estimate = estimate_completion(ramchain->startmilli,blocknum - ramchain->startblocknum,ramchain->RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ramchain->startmilli)/60000.;
@@ -846,13 +821,29 @@ void ramchain_idle(struct plugin_info *plugin)
     }
 }
 
+int32_t ramchain_notify(char *retbuf,struct ramchain *ramchain,char *endpoint,cJSON *list)
+{
+    int32_t i,n; cJSON *item;
+    if ( endpoint != 0 )
+    {
+        if ( list == 0 || (n= cJSON_GetArraySize(list)) <= 0 )
+            sprintf(retbuf,"{\"error\":\"no notification list\"}");
+        else
+        {
+            for (i=0; i<n; i++)
+            {
+                item = cJSON_GetArrayItem(list,i);
+            }
+        }
+    } else sprintf(retbuf,"{\"error\":\"no endpoint specified\"}");
+    return(0);
+}
+
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *coinstr,*resultstr,*methodstr;
     struct coin777 *coin = 0;
     uint32_t startblocknum,endblocknum;
-    //struct ramchain *ram;
-    //int32_t backupind;
     retbuf[0] = 0;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
@@ -914,9 +905,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     if ( coin->ramchain.activeledger == 0 )
                         ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
                     if ( coin->ramchain.activeledger != 0 )
-                    {
-                        
-                    }
+                        ramchain_notify(retbuf,&coin->ramchain,cJSON_str(cJSON_GetObjectItem(json,"endpoint")),cJSON_GetObjectItem(json,"list"));
                 }
             }
             else if ( strcmp(methodstr,"stop") == 0 )
