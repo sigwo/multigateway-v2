@@ -312,7 +312,7 @@ int32_t ledger_ensurespentbits(struct ledger_info *ledger,uint32_t totalvouts)
 int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t firstvout,uint32_t firstvin)
 {
     struct upair32 firstinds; 
-    ledger_ensuretxoffsets(ledger,txidind);
+    //ledger_ensuretxoffsets(ledger,txidind);
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
    // ledger->txoffsets.D.upairs[txidind] = firstinds;
     if ( firstvout == 0 )
@@ -785,10 +785,10 @@ void ledger_free(struct ledger_info *ledger,int32_t closeDBflag)
 {
     if ( ledger != 0 )
     {
-        if ( ledger->txoffsets.D.upairs != 0 )
-            free(ledger->txoffsets.D.upairs);
-        if ( ledger->spentbits.D.bits != 0 )
-            free(ledger->spentbits.D.bits);
+        //if ( ledger->txoffsets.D.upairs != 0 )
+        //    free(ledger->txoffsets.D.upairs);
+        //if ( ledger->spentbits.D.bits != 0 )
+        //    free(ledger->spentbits.D.bits);
         if ( ledger->addrinfos.D.table != 0 )
         {
             int32_t i;
