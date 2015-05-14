@@ -816,8 +816,6 @@ void ramchain_idle(struct plugin_info *plugin)
             ramchain = &coin->ramchain;
             if ( (lag= (ramchain->RTblocknum - ledger->blocknum)) < 1000 || (ledger->blocknum % 1000) == 0 )
                 ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
-            if ( ramchain->needbackup != 0 || ramchain->syncfreq >= 50000 )
-                db777_backup(ledger->DBs.ctl);
             if ( lag < 100000 && ramchain->syncfreq > 50000 )
                 ramchain->syncfreq = 50000;
             else if ( lag < 50000 && ramchain->syncfreq > 10000 )
