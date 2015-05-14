@@ -288,6 +288,26 @@ int32_t ledger_ensuretxoffsets(struct ledger_info *ledger,uint32_t numtxidinds)
     return(0);
 }
 
+int32_t ledger_ensurespentbits(struct ledger_info *ledger,uint32_t totalvouts)
+{
+    int32_t i,n,width = 4096;
+    if ( totalvouts >= ledger->spentbits.ind )
+    {
+        n = ledger->spentbits.ind + (width << 3);
+        if ( Debuglevel > 2 )
+            printf("realloc spentbits.%p %d -> %d\n",ledger->spentbits.D.bits,ledger->spentbits.ind,n);
+        ledger->spentbits.D.bits = realloc(ledger->spentbits.D.bits,n + 1);
+        if ( (ledger->spentbits.ind & 7) != 0 )
+        {
+            for (i=0; i<(width << 3); i++) // horribly inefficient, but we shouldnt have this case
+                CLEARBIT(ledger->spentbits.D.bits,ledger->spentbits.ind + i);
+        } else memset(&ledger->spentbits.D.bits[ledger->spentbits.ind >> 3],0,width);
+        ledger->spentbits.ind = n;
+        return(width);
+    }
+    return(0);
+}
+
 int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t firstvout,uint32_t firstvin)
 {
     struct upair32 firstinds;
@@ -315,6 +335,10 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 
 int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t state)
 {
+    ledger_ensurespentbits(ledger,unspentind);
+    if ( state == 0 )
+        CLEARBIT(ledger->spentbits.D.bits,unspentind);
+    else SETBIT(ledger->spentbits.D.bits,unspentind);
     return(db777_add(-1,ledger->DBs.transactions,ledger->spentbits.D.DB,&unspentind,sizeof(unspentind),&state,sizeof(state)));
 }
 
@@ -491,13 +515,8 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
     {
         memset(&spend,0,sizeof(spend));
         spend.spent_txidind = spent_txidind, spend.spent_vout = spent_vout;
-#ifdef USEMEM
-        spend.unspentind = ledger->txoffsets.D.upairs[spent_txidind].firstvout + spent_vout;
-        SETBIT(ledger->spentbits.D.bits,spend.unspentind);
-#else
         spend.unspentind = ledger_firstvout(ledger,spent_txidind) + spent_vout;
         ledger_spentbits(ledger,spend.unspentind,1);
-#endif
         if ( Debuglevel > 2 )
             printf("spent_txidstr.(%s) -> spent_txidind.%u firstvout.%d\n",spent_txidstr,spent_txidind,spend.unspentind-spent_vout);
         if ( (value= ledger_unspentvalue(&addrind,ledger,spend.unspentind)) != 0 && addrind > 0 )
@@ -616,7 +635,7 @@ int32_t ledger_commit(struct ledger_info *ledger,int32_t continueflag)
             break;
         msleep(1000);
     }
-    ledger->DBs.transactions = (continueflag != 0) ? sp_begin(ledger->DBs.env) : 0;
+    ledger->DBs.transactions = 0;//(continueflag != 0) ? sp_begin(ledger->DBs.env) : 0;
     return(err);
 }
 
@@ -637,7 +656,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
         oldsupply = ledger->voutsum - ledger->spendsum;
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
         if ( ledger->DBs.transactions == 0 )
-            ledger->DBs.transactions = sp_begin(ledger->DBs.env);
+            ledger->DBs.transactions = 0;//sp_begin(ledger->DBs.env);
         if ( (block= ledger_update(dispflag,ledger,&MEM,ramchain->name,serverport,userpass,&ramchain->EMIT,blocknum)) != 0 )
         {
             if ( (allocsize= ledger_finishblock(ledger,&MEM,block)) <= 0 )
@@ -760,10 +779,8 @@ void ledger_free(struct ledger_info *ledger,int32_t closeDBflag)
     {
         if ( ledger->txoffsets.D.upairs != 0 )
             free(ledger->txoffsets.D.upairs);
-#ifdef USEMEM
         if ( ledger->spentbits.D.bits != 0 )
             free(ledger->spentbits.D.bits);
-#endif
         if ( ledger->addrinfos.D.table != 0 )
         {
             int32_t i;
