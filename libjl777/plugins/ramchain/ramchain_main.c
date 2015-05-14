@@ -173,7 +173,8 @@ uint32_t ledger_addrind(struct ledger_info *ledger,char *coinaddr)
 struct ledger_addrinfo *ledger_addrinfo(struct ledger_info *ledger,char *coinaddr)
 {
     uint32_t addrind;
-    if ( (addrind= ledger_addrind(ledger,coinaddr)) > 0 )
+    printf("ledger_addrinfo.%p %s\n",ledger,coinaddr);
+    if ( ledger != 0 && (addrind= ledger_addrind(ledger,coinaddr)) > 0 )
         return(ledger->addrinfos.D.table[addrind]);
     else return(0);
 }
@@ -197,7 +198,7 @@ struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(0))); }
 
 struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger_addrinfo *addrinfo,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum,char *txidstr,int32_t vout,char *extra,int32_t v)
 {
-    int32_t i,n; char itembuf[512],pubstr[1024],addr[128];
+    int32_t i,n; char itembuf[8192],pubstr[8192],addr[128];
     if ( addrinfo == 0 )
         addrinfo = addrinfo_alloc();
     if ( (unspentind & (1 << 31)) != 0 )
@@ -214,14 +215,14 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
                     ledger->addrinfos.D.table[addrind] = addrinfo = realloc(addrinfo,addrinfo_size(addrinfo->count));
-                    if ( addrinfo->notify != 0 )
+                    /*if ( addrinfo->notify != 0 )
                     {
                         // T balance, b blocknum, a -value, t this txidstr, v this vin, st spent_txidstr, sv spent_vout
                         sprintf(itembuf,"{\"T\":%.8f,\"b\":%u,\"a\":%.8f,\"t\":\"%s\",\"v\":%d,\"st\":\"%s\",\"sv\":%d}",dstr(*(uint64_t *)addrinfo->balance),blocknum,-dstr(value),extra,v,txidstr,vout);
                         ledger_coinaddr(ledger,addr,sizeof(addr),addrind);
-                        sprintf(pubstr,"{\"%s\":%s}",addr,itembuf);
-                        nn_publish(pubstr,1);
-                    }
+                        sprintf(pubstr,"{\"%s\":%s}","notify",itembuf);
+                        //nn_publish(pubstr,1);
+                    }*/
                     unspentind |= (1 << 31);
                     if ( addrinfo->count == 0 && *(int64_t *)addrinfo->balance != 0 )
                         printf("ILLEGAL: addrind.%u count.%d %.8f\n",addrind,addrinfo->count,dstr(*(int64_t *)addrinfo->balance)), debugstop();
@@ -241,13 +242,13 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,struct ledger
         *(int64_t *)addrinfo->balance += value;
         addrinfo->dirty = 1;
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
-        if ( addrinfo->notify != 0 )
+        /*if ( addrinfo->notify != 0 )
         {
             // T balance, b blocknum, a value, t txidstr, v vout, s scriptstr, ti txind
             sprintf(itembuf,"{\"T\":%.8f,\"b\":%u,\"a\":%.8f,\"t\":\"%s\",\"v\":%d,\"s\":\"%s\",\"ti\":%d}",dstr(*(uint64_t *)addrinfo->balance),blocknum,dstr(value),txidstr,vout,extra,v);
             sprintf(pubstr,"{\"%s\":%s}",coinaddr,itembuf);
-            nn_publish(pubstr,1);
-        }
+            //nn_publish(pubstr,1);
+        }*/
     }
     return(addrinfo);
 }
@@ -367,7 +368,11 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
     {
         for (i=1; i<=ledger->addrs.ind; i++)
             if ( (addrinfo= ledger->addrinfos.D.table[i]) != 0 && (balance= *(int64_t *)addrinfo->balance) != 0 )
+            {
+                //if ( addrinfo->notify != 0 )
+                //    printf("notification active addind.%d count.%d size.%d\n",addrind,addrinfo->count,addrinfo_size(addrinfo->count)), getchar();
                 addrsum += balance;
+            }
     }
     else
     {
@@ -398,7 +403,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
                 }
             }
             sprintf(retbuf + len - 1,"],\"supply\":%.8f}",dstr(addrsum));
-            printf("(%s) top.%d of %d\n",retbuf,i,n);
+            //printf("(%s) top.%d of %d\n",retbuf,i,n);
         }
         free(sortbuf);
     }
@@ -452,7 +457,8 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
             printf("txidind.%u v.%d unspent.%d (%s).%u (%s).%u %.8f | %ld\n",txidind,v,unspentind,coinaddr,vout.U.addrind,scriptstr,vout.scriptind,dstr(value),sizeof(vout.U));
         ledger_ensureaddrinfos(ledger,vout.U.addrind);
         ledger->addrinfos.D.table[vout.U.addrind] = addrinfo_update(ledger,ledger->addrinfos.D.table[vout.U.addrind],coinaddr,vout.addrlen,value,unspentind,vout.U.addrind,blocknum,txidstr,v,scriptstr,txind);
-         return(ledger_packvout(ledger->addrinfos.sha256,&ledger->addrinfos.state,mem,&vout));
+        //ledger->addrinfos.D.table[vout.U.addrind]->notify = 1;
+        return(ledger_packvout(ledger->addrinfos.sha256,&ledger->addrinfos.state,mem,&vout));
     } else printf("ledger_unspent: cant find addrind.(%s)\n",coinaddr);
     return(0);
 }
@@ -570,7 +576,6 @@ int32_t ledger_sync(struct ledger_info *ledger)
         {
             dirty++;
             addrinfo->dirty = 0;
-            //printf("sync addind.%d count.%d size.%d\n",addrind,addrinfo->count,addrinfo_size(addrinfo->count));
             if ( db777_add(1,ledger->DBs.transactions,ledger->ledger.D.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count)) != 0 )
             {
                 printf("error saving addrinfo[%u]\n",addrind);
@@ -887,9 +892,11 @@ int32_t ramchain_notify(char *retbuf,struct ramchain *ramchain,char *endpoint,cJ
             {
                 if ( (coinaddr= cJSON_str(cJSON_GetArrayItem(list,i))) != 0 && (addrinfo= ledger_addrinfo(ledger,coinaddr)) != 0 )
                 {
-                    addrinfo->notify = 1;
+                    m++;
+                    //addrinfo->notify = 1;
                     printf("NOTIFY.(%s)\n",coinaddr);
-                }
+                    sprintf(retbuf,"{\"result\":\"added to notification list\",\"coinaddr\":\"%s\"}",coinaddr);
+                } else sprintf(retbuf,"{\"error\":\"cant find address\",\"coinaddr\":\"%s\"}",coinaddr);
             }
             sprintf(retbuf,"{\"result\":\"added to notification list\",\"num\":%d,\"from\":%d}",m,n);
         }
