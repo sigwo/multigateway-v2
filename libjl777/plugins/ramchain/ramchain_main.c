@@ -314,7 +314,7 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
     struct upair32 firstinds; 
     ledger_ensuretxoffsets(ledger,txidind);
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
-    ledger->txoffsets.D.upairs[txidind] = firstinds;
+   // ledger->txoffsets.D.upairs[txidind] = firstinds;
     if ( firstvout == 0 )
         printf("illegal firstvout.0 for txidind.%d\n",txidind), debugstop();
     if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
@@ -328,14 +328,14 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
     int32_t size = -1; uint32_t firstvout = 0; struct upair32 *firstinds;
     if ( txidind == 1 )
         return(1);
-    if ( ledger->txoffsets.D.upairs[txidind].firstvout == 0 )
-        printf("zero firstvout[txidind.%d]???\n",txidind), debugstop();
-    return(ledger->txoffsets.D.upairs[txidind].firstvout);
+    //if ( ledger->txoffsets.D.upairs[txidind].firstvout == 0 )
+    //    printf("zero firstvout[txidind.%d]???\n",txidind), debugstop();
+    //return(ledger->txoffsets.D.upairs[txidind].firstvout);
     if ( (firstinds= db777_findM(&size,ledger->DBs.transactions,ledger->txoffsets.D.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(*firstinds) )
     {
         firstvout = firstinds->firstvout;
-        if ( memcmp(&firstvout,&ledger->txoffsets.D.upairs[txidind],sizeof(firstvout)) != 0 )
-            printf("ERROR: mismatch txoffset.(%d %d) vs DB.(%d %d)\n",ledger->txoffsets.D.upairs[txidind].firstvout,ledger->txoffsets.D.upairs[txidind].firstvin,firstinds->firstvout,firstinds->firstvin), debugstop();
+        //if ( memcmp(&firstvout,&ledger->txoffsets.D.upairs[txidind],sizeof(firstvout)) != 0 )
+        //    printf("ERROR: mismatch txoffset.(%d %d) vs DB.(%d %d)\n",ledger->txoffsets.D.upairs[txidind].firstvout,ledger->txoffsets.D.upairs[txidind].firstvin,firstinds->firstvout,firstinds->firstvin), debugstop();
         free(firstinds);
     } else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(*firstinds));
     return(firstvout);
