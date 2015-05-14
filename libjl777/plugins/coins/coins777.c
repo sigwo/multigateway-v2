@@ -96,7 +96,7 @@ struct ramchain
     struct rawblock EMIT,DECODE;
     struct ledger_info *activeledger;
 };
-
+ 
 struct coin777
 {
     char name[16],serverport[64],userpass[128],*jsonstr;
