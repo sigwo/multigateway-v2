@@ -210,7 +210,6 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             retval = -4;
         }
         else retval = sp_set((transactions != 0 ? transactions : db),obj);
-        printf("HDD ret %d\n",retval);
     }
     if ( ((DB->flags & flags) & DB777_RAM) != 0 )
     {

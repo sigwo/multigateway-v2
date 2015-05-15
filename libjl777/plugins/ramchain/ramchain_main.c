@@ -169,7 +169,7 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
 
 uint32_t ledger_addrind(struct ledger_info *ledger,char *coinaddr)
 {
-    return(ledger_rawind(0,ledger->DBs.transactions,&ledger->addrs,coinaddr,(int32_t)strlen(coinaddr)));
+    return(ledger_rawind(0,ledger->DBs.transactions,&ledger->addrs,coinaddr,(int32_t)strlen(coinaddr) + 1));
 }
 
 struct ledger_addrinfo *ledger_addrinfo(struct ledger_info *ledger,char *coinaddr)
