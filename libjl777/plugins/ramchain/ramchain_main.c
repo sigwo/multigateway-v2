@@ -820,7 +820,7 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
     struct ramchain *ramchain = &coin->ramchain;
     if ( coin != 0 )
     {
-        ramchain->syncfreq = 10000;
+        ramchain->syncfreq = 100;
         strcpy(ramchain->name,coinstr);
         ramchain->readyflag = 1;
         if ( (ramchain->activeledger= ledger_alloc(coinstr,"",0)) != 0 )
