@@ -93,7 +93,8 @@ void *db777_get(struct db777_entry **entryp,int32_t *lenp,void *transactions,str
             if ( entry->valuesize == 0 )
                 memcpy(&value,entry->value,sizeof(value));
             else value = entry->value;
-                return(value);
+            printf("RAM found %p %s [%x] keylen.%d -> [%x] valuelen.%d\n",value,DB->name,*(int *)key,keylen,*(int *)value,entry->valuelen);
+            return(value);
         }
     }
     if ( (DB->flags & DB777_HDD) != 0 )
@@ -352,7 +353,7 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     {
         printf(">>>>>>>>>>>>>>>>>>>>> %s: val.%p allocsize.%d vs valuelen.%d\n",DB->name,val,allocsize,valuelen);
         return(-5);
-    }
+    } else printf("COMPARED! %p\n",val);
     return(retval);
 }
 
