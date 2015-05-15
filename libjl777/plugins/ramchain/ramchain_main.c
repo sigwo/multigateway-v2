@@ -175,7 +175,7 @@ uint32_t ledger_addrind(struct ledger_info *ledger,char *coinaddr)
 struct ledger_addrinfo *ledger_addrinfo(struct ledger_info *ledger,char *coinaddr)
 {
     uint32_t addrind; int32_t len;
-    printf("ledger_addrinfo.%p %s\n",ledger,coinaddr);
+    // printf("ledger_addrinfo.%p %s\n",ledger,coinaddr);
     if ( ledger != 0 && (addrind= ledger_addrind(ledger,coinaddr)) > 0 )
         return(db777_get(0,&len,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind)));
     else return(0);
@@ -798,7 +798,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
         ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_KEY32,0);
-        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flagsB | DB777_KEY32,35);
+        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flags | DB777_KEY32,35);
         ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | DB777_KEY32,sizeof(struct upair32));
         ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | DB777_KEY32,sizeof(struct unspentmap));
         ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | DB777_KEY32,1);
