@@ -688,7 +688,7 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
                     //ledger->addrinfos.D.table[addrind] = addrinfo;
                     balance += *(int64_t *)addrinfo->balance;
                 }
-                else printf("error loading addrind.%u addrinfo\n",addrind);
+                else printf("error loading addrind.%u of %u addrinfo\n",addrind,ledger->addrs.ind);
             }
             //for (; addrind<ledger->addrinfos.ind; addrind++)
             //    if ( ledger->addrinfos.D.table[addrind] != 0 )
