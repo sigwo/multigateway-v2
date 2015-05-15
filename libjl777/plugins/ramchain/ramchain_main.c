@@ -266,7 +266,7 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
             //nn_publish(pubstr,1);
         }*/
     }
-    printf("addrinfo.%p, entry.%p\n",addrinfo,entry);
+    //printf("addrinfo.%p, entry.%p\n",addrinfo,entry);
     return(addrinfo);
 }
 
