@@ -798,7 +798,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
         ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_KEY32,0);
-        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flagsB | DB777_KEY32,34);
+        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flagsB | DB777_KEY32,35);
         ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | DB777_KEY32,sizeof(struct upair32));
         ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | DB777_KEY32,sizeof(struct unspentmap));
         ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | DB777_KEY32,1);
