@@ -206,14 +206,8 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
     {
         addrinfo = addrinfo_alloc();
         db777_set(-1,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(0));
-        if ( (addrinfo= db777_get(&entry,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) == 0 )
-        {
-            printf("cant find just added addrinfo addrind.%d size %d\n",addrind,addrinfo_size(0)), debugstop();
-            return(0);
-        }
         if ( entry != 0 )
             memcpy(entry->value,&addrinfo,sizeof(addrinfo));
-        else printf("no entry after addrinfo\n");
     }
     if ( (unspentind & (1 << 31)) != 0 )
     {
@@ -804,7 +798,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         else flagsB = flags;
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
-        ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_KEY32,0);
+        ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_RAM | DB777_KEY32,0);
         ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flags | DB777_KEY32,35);
         ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | DB777_KEY32,sizeof(struct upair32));
         ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | DB777_KEY32,sizeof(struct unspentmap));
