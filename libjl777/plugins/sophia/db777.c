@@ -198,7 +198,7 @@ void db777_free(struct db777 *DB)
 
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
-    struct db777_entry *entry = 0; void *db,*obj = 0; int32_t retval = -1;
+    struct db777_entry *entry = 0; void *db,*obj = 0; int32_t retval = 0;
     if ( ((DB->flags & flags) & DB777_HDD) != 0 )
     {
         db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
@@ -248,7 +248,6 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             memcpy(obj,value,valuelen);
             HASH_ADD_KEYPTR(hh,DB->table,key,keylen,entry);
             db777_unlock(DB);
-            retval |= 1;
         }
         else
         {
@@ -274,7 +273,6 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                     }
                     entry->valuelen = valuelen;
                 } else entry->dirty = 0;
-                retval++;
             }
             else if ( entry->valuesize != valuelen || valuelen != DB->valuesize )
                 printf("entry->valuesize.%d DB->valuesize.%d vs valuesize.%d??\n",entry->valuesize,DB->valuesize,valuelen);
@@ -283,7 +281,6 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                 if ( memcmp(entry->value,value,valuelen) == 0 )
                     entry->dirty = 0;
                 else memcpy(entry->value,value,valuelen);
-                retval |= 1;
             }
         }
     }
