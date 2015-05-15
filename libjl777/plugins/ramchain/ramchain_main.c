@@ -713,8 +713,8 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblo
     ramchain->totalsize = 0;
     ramchain->startblocknum = ledger_startblocknum(ledger,0);
     memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
-    if ( ramchain->startblocknum > 0 && (block= ledger_setblocknum(ledger,&MEM,ramchain->startblocknum)) != 0 )
-        free(block);
+    if ( ramchain->startblocknum > 0 )
+        ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
     else ramchain->startblocknum = 0;
     ledger->blocknum = ++ramchain->startblocknum;
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
@@ -797,7 +797,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
         ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_KEY32,0);
-        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flagsB | DB777_KEY32,36);
+        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flagsB | DB777_KEY32,34);
         ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | DB777_KEY32,sizeof(struct upair32));
         ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | DB777_KEY32,sizeof(struct unspentmap));
         ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | DB777_KEY32,1);
@@ -974,7 +974,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     struct coin777 *coin = 0;
     uint32_t startblocknum,endblocknum;
     retbuf[0] = 0;
- //Debuglevel = 3;
+ Debuglevel = 3;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
