@@ -219,6 +219,7 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
                     addrinfo->dirty = 1;
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
+                    entry->valuelen = addrinfo_size(addrinfo->count);
                     //ledger->addrinfos.D.table[addrind] = addrinfo = realloc(addrinfo,addrinfo_size(addrinfo->count));
                     /*if ( addrinfo->notify != 0 )
                     {
@@ -248,6 +249,7 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
         *(int64_t *)addrinfo->balance += value;
         addrinfo->dirty = 1;
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
+        memcpy(entry->value,&addrinfo,sizeof(addrinfo));
         /*if ( addrinfo->notify != 0 )
         {
             // T balance, b blocknum, a value, t txidstr, v vout, s scriptstr, ti txind
@@ -256,7 +258,6 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
             //nn_publish(pubstr,1);
         }*/
     }
-    memcpy(entry->value,&addrinfo,sizeof(addrinfo));
     return(addrinfo);
 }
 
@@ -440,7 +441,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
             //if ( (addrinfo= ledger_ensureaddrinfos(ledger,addrind)) != 0 )
             //    ledger->addrinfos.D.table[addrind] = addrinfo_update(ledger,addrinfo,0,0,value,spend.unspentind | (1 << 31),addrind,blocknum,spent_txidstr,spent_vout,txidstr,v);
             //else printf("null addrinfo for addrind.%d max.%d, unspentind.%d %.8f\n",addrind,ledger->addrs.ind,spend.unspentind,dstr(value));
-            addrinfo_update(ledger,0,0,value,spend.unspentind | (1 << 31),addrind,blocknum,spent_txidstr,spent_vout,txidstr,v);
+            addrinfo = addrinfo_update(ledger,0,0,value,spend.unspentind | (1 << 31),addrind,blocknum,spent_txidstr,spent_vout,txidstr,v);
             if ( Debuglevel > 2 )
                 printf("addrind.%u count.%d %.8f\n",addrind,addrinfo->count,dstr(*(int64_t *)addrinfo->balance));
             return(ledger_packspend(ledger->spentbits.sha256,&ledger->spentbits.state,mem,&spend));

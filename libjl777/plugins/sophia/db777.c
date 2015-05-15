@@ -290,17 +290,27 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
 
 int32_t db777_flush(void *transactions,struct db777 *DB)
 {
-    struct db777_entry *entry,*tmp; int32_t numerrs = 0;
-    if ( (DB->flags & (DB777_RAM | DB777_HDD)) == (DB777_RAM | DB777_HDD) )
+    struct db777_entry *entry,*tmp; void *obj; int32_t numerrs = 0;
+    if ( (DB->flags & DB777_RAM) != 0 )
     {
         db777_lock(DB);
         HASH_ITER(hh,DB->table,entry,tmp)
         {
+            if ( entry->valuesize == 0 && entry->valuelen < entry->valuesize )
+            {
+                memcpy(&obj,entry->value,sizeof(obj));
+                entry->allocsize = entry->valuelen;
+                obj = realloc(obj,entry->valuelen);
+                memcpy(entry->value,&obj,sizeof(obj));
+            }
             if ( entry->dirty != 0 )
             {
-                db777_delete(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen);
-                entry->dirty = (db777_set(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen,entry->value,entry->valuelen) != 0);
-                numerrs += entry->dirty;
+                if ( (DB->flags & DB777_HDD) != 0 )
+                {
+                    db777_delete(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen);
+                    entry->dirty = (db777_set(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen,entry->value,entry->valuelen) != 0);
+                    numerrs += entry->dirty;
+                }
             }
         }
         db777_unlock(DB);
