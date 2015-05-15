@@ -243,7 +243,9 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             entry->allocsize = entry->valuelen = valuelen;
             entry->keylen = keylen;
             entry->dirty = 1;
-            memcpy(obj,value,valuelen);
+            printf("%s ADD_KEYPTR[%x] <- %p entry.%p\n",DB->name,*(int *)key,obj,entry);
+            if ( obj != 0 )
+                memcpy(obj,value,valuelen);
             HASH_ADD_KEYPTR(hh,DB->table,key,keylen,entry);
             db777_unlock(DB);
         }
@@ -271,6 +273,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                     }
                     entry->valuelen = valuelen;
                 } else entry->dirty = 0;
+                printf("%s ADD_KEYPTR[%x] <- %p entry.%p REALLOC\n",DB->name,*(int *)key,obj,entry);
             }
             else if ( entry->valuesize != valuelen || valuelen != DB->valuesize )
                 printf("entry->valuesize.%d DB->valuesize.%d vs valuesize.%d??\n",entry->valuesize,DB->valuesize,valuelen);
