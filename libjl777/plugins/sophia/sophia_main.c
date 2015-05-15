@@ -374,6 +374,7 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
     char path[1024],restorepath[1024],dbname[1024],*str,*namestr;
     int32_t err;
     cJSON *json;
+    DB->flags = DB777_HDD;
     strcpy(DB->argname,name);
     if ( specialpath != 0 )
         strcpy(DB->argspecialpath,specialpath);
@@ -520,7 +521,7 @@ struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *co
             printf("err.%d setting name\n",err);
         else
         {
-            //printf("path.(%s) name.(%s)\n",path,name);
+            printf("path.(%s) name.(%s)\n",path,name);
             if ( compression != 0 )
             {
                 sprintf(compname,"db.%s.compression",name);

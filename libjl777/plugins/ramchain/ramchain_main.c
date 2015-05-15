@@ -204,6 +204,12 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
     if ( (addrinfo= db777_get(&entry,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) == 0 )
     {
         addrinfo = addrinfo_alloc();
+        db777_set(-1,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(0));
+        if ( (addrinfo= db777_get(&entry,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) == 0 )
+        {
+            printf("cant find just added addrinfo\n"), debugstop();
+            return(0);
+        }
         memcpy(entry->value,&addrinfo,sizeof(addrinfo));
     }
     if ( (unspentind & (1 << 31)) != 0 )
@@ -258,6 +264,7 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
             //nn_publish(pubstr,1);
         }*/
     }
+    printf("addrinfo.%p, entry.%p\n",addrinfo,entry);
     return(addrinfo);
 }
 
@@ -785,7 +792,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
         if ( flags == 0 )
-            flags |= (DB777_FLUSH | DB777_RAM | DB777_HDD), flagsB = flags | DB777_NANO;
+            flags = (DB777_FLUSH | DB777_RAM | DB777_HDD), flagsB = flags | DB777_NANO;
         else flagsB = flags;
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
@@ -800,6 +807,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flagsB,sizeof(uint32_t));
         ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flagsB,sizeof(uint32_t));
         ledger->blocknum = 1;
+
     }
     return(ledger);
 }
@@ -811,13 +819,13 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
     {
         ramchain->syncfreq = 1000;
         strcpy(ramchain->name,coinstr);
-        ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coinstr,coin->serverport,coin->userpass,ramchain->RTblocknum);
         ramchain->readyflag = 1;
         if ( (ramchain->activeledger= ledger_alloc(coinstr,"",0)) != 0 )
         {
             env777_start(0,&ramchain->activeledger->DBs);
             if ( endblocknum == 0 )
                 endblocknum = 1000000000;
+            //addrinfo_update(ramchain->activeledger,"REsAF17mNLqPgeeUN8oRkvPmSfSkKzRwPt",(int32_t)strlen("REsAF17mNLqPgeeUN8oRkvPmSfSkKzRwPt"),1000,1,1,1,"27fc2d262a0384a4864e654afe8abdac0ed389355228e1b1c4c37e511bc9e780",0,"ffff",0);
             return(ramchain_resume(retbuf,ramchain,startblocknum,endblocknum));
         }
     }

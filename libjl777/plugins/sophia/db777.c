@@ -198,7 +198,7 @@ void db777_free(struct db777 *DB)
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     struct db777_entry *entry = 0; void *db,*obj = 0; int32_t retval = -1;
-    if ( (flags & DB777_HDD) != 0 )
+    if ( ((DB->flags & flags) & DB777_HDD) != 0 )
     {
         db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
         if ( (obj= sp_object(db)) == 0 )
@@ -210,7 +210,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
         }
         else retval = sp_set((transactions != 0 ? transactions : db),obj);
     }
-    if ( (flags & DB777_RAM) != 0 )
+    if ( ((DB->flags & flags) & DB777_RAM) != 0 )
     {
         db777_lock(DB);
         HASH_FIND(hh,DB->table,key,keylen,entry);
