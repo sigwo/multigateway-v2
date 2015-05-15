@@ -122,6 +122,36 @@ cJSON *_get_blockjson(uint32_t *heightp,char *coinstr,char *serverport,char *use
     return(json);
 }
 
+void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag)
+{
+    //struct rawvin { char txidstr[128]; uint16_t vout; };
+    //struct rawvout { char coinaddr[128],script[1024]; uint64_t value; };
+    //struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; };
+    int32_t i; long len; struct rawtx *tx;
+    if ( totalflag != 0 )
+    {
+        uint8_t *ptr = (uint8_t *)raw;
+        len = sizeof(*raw);
+        while ( len > 0 )
+        {
+            memset(ptr,0,len < 1024*1024 ? len : 1024*1024);
+            len -= 1024 * 1024;
+            ptr += 1024 * 1024;
+        }
+    }
+    else
+    {
+        raw->blocknum = raw->minted = raw->numtx = raw->numrawvins = raw->numrawvouts = 0;
+        tx = raw->txspace;
+        for (i=0; i<MAX_BLOCKTX; i++,tx++)
+        {
+            tx->txidstr[0] = tx->numvins = tx->numvouts = tx->firstvout = tx->firstvin = 0;
+            raw->vinspace[i].txidstr[0] = 0, raw->vinspace[i].vout = 0xffff;
+            raw->voutspace[i].coinaddr[0] = raw->voutspace[i].script[0] = 0, raw->voutspace[i].value = 0;
+        }
+    }
+}
+
 void _set_string(char type,char *dest,char *src,long max)
 {
     if ( src == 0 || src[0] == 0 )
@@ -219,36 +249,6 @@ cJSON *rawblock_txarray(uint32_t *blockidp,int32_t *numtxp,cJSON *blockjson)
         *numtxp = cJSON_GetArraySize(txarray);
     }
     return(txarray);
-}
-
-void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag)
-{
-    //struct rawvin { char txidstr[128]; uint16_t vout; };
-    //struct rawvout { char coinaddr[128],script[1024]; uint64_t value; };
-    //struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; };
-    int32_t i; long len; struct rawtx *tx;
-    if ( totalflag != 0 )
-    {
-        uint8_t *ptr = (uint8_t *)raw;
-        len = sizeof(*raw);
-        while ( len > 0 )
-        {
-            memset(ptr,0,len < 1024*1024 ? len : 1024*1024);
-            len -= 1024 * 1024;
-            ptr += 1024 * 1024;
-        }
-    }
-    else
-    {
-        raw->blocknum = raw->minted = raw->numtx = raw->numrawvins = raw->numrawvouts = 0;
-        tx = raw->txspace;
-        for (i=0; i<MAX_BLOCKTX; i++,tx++)
-        {
-            tx->txidstr[0] = tx->numvins = tx->numvouts = tx->firstvout = tx->firstvin = 0;
-            raw->vinspace[i].txidstr[0] = 0, raw->vinspace[i].vout = 0xffff;
-            raw->voutspace[i].coinaddr[0] = raw->voutspace[i].script[0] = 0, raw->voutspace[i].value = 0;
-        }
-    }
 }
 
 void rawblock_patch(struct rawblock *raw)

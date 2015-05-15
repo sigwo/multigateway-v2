@@ -30,7 +30,7 @@ struct rawtx { uint16_t firstvin,numvins,firstvout,numvouts; char txidstr[128]; 
 
 struct rawblock
 {
-    uint32_t blocknum;//,allocsize;format,
+    uint32_t blocknum;
     uint16_t numtx,numrawvins,numrawvouts;
     uint64_t minted;
     struct rawtx txspace[MAX_BLOCKTX];
@@ -66,7 +66,7 @@ struct sha256_state
 };
 
 struct upair32 { uint32_t firstvout,firstvin; };
-struct ledger_data { struct db777 *DB; struct ledger_addrinfo **table; struct upair32 *upairs; uint8_t *bits; }; //
+//struct ledger_data { struct db777 *DB; struct ledger_addrinfo **table; struct upair32 *upairs; uint8_t *bits; }; //
 
 struct ledger_addrinfo { uint32_t balance[2],count:31,dirty:1; uint32_t unspentinds[]; };
 
@@ -75,7 +75,7 @@ struct ledger_state
     char name[16];
     uint8_t sha256[256 >> 3];
     struct sha256_state state;
-    struct ledger_data D;
+    struct db777 *DB;
     int32_t ind,allocsize;
 };
 
@@ -83,8 +83,8 @@ struct ledger_info
 {
     struct env777 DBs;
     uint64_t voutsum,spendsum;
-    uint32_t blocknum,blockpending,numsyncs;
-    struct ledger_state ledger,addrs,txids,scripts,blocks,unspentmap,txoffsets,spentbits,addrinfos;
+    uint32_t blocknum,blockpending,numsyncs,sessionid,counter;
+    struct ledger_state ledger,revaddrs,addrs,txids,scripts,blocks,unspentmap,txoffsets,spentbits,addrinfos;
 };
 
 struct ramchain
@@ -94,7 +94,7 @@ struct ramchain
     uint64_t addrsum,totalsize;
     uint32_t startblocknum,endblocknum,RTblocknum,readyflag,syncfreq,paused,needbackup,syncflag;
     struct rawblock EMIT,DECODE;
-    struct ledger_info *activeledger;
+    struct ledger_info *activeledger,*session_ledgers[1 << CONNECTION_NUMBITS];
 };
  
 struct coin777
@@ -102,20 +102,19 @@ struct coin777
     char name[16],serverport[64],userpass[128],*jsonstr;
     cJSON *argjson;
     struct ramchain ramchain;
-    int32_t use_addmultisig,gatewayid;
+    int32_t use_addmultisig;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
 char *bitcoind_passthru(char *coinstr,char *serverport,char *userpass,char *method,char *params);
-struct coin777 *coin777_create(char *coinstr,char *serverport,char *userpass,cJSON *argjson);
+struct coin777 *coin777_create(char *coinstr,cJSON *argjson);
 int32_t coin777_close(char *coinstr);
-struct coin777 *coin777_find(char *coinstr);
-char *extract_userpass(char *userhome,char *coindir,char *confname);
+struct coin777 *coin777_find(char *coinstr,int32_t autocreate);
 int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *userpass,uint32_t blocknum);
 void rawblock_patch(struct rawblock *raw);
 
 void update_sha256(unsigned char hash[256 >> 3],struct sha256_state *state,unsigned char *src,int32_t len);
-struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression);
+struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize);
 
 #endif
 #else
