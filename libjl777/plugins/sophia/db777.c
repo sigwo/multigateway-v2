@@ -199,6 +199,7 @@ void db777_free(struct db777 *DB)
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     struct db777_entry *entry = 0; void *db,*obj = 0; int32_t retval = 0;
+    printf("SET.%08x keylen.%d | value %x len.%d\n",*(int *)key,keylen,*(int *)value,valuelen);
     if ( ((DB->flags & flags) & DB777_HDD) != 0 )
     {
         db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
@@ -334,12 +335,12 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
         int i;
         for (i=0; i<60&&i<valuelen; i++)
             printf("%02x ",((uint8_t *)value)[i]);
-        printf("value len.%d\n",valuelen);
+        printf("value len.%d %s | key %x keylen.%d\n",valuelen,DB->name,*(int *)key,keylen);
         if ( val != 0 )
         {
             for (i=0; i<60&&i<allocsize; i++)
                 printf("%02x ",((uint8_t *)val)[i]);
-            printf("saved %d\n",allocsize);
+            printf("save len %d %s\n",allocsize,DB->name);
         }
         Mismatch++, printf("duplicate.%d mismatch.%d | keylen.%d valuelen.%d -> allocsize.%d\n",Duplicate,Mismatch,keylen,valuelen,allocsize);
     }
