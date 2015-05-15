@@ -22,7 +22,8 @@
 void debugstop ()
 {
 //#ifdef __APPLE__
-    getchar();
+   while ( 1 )
+       sleep(60);
 //#endif
 }
 
