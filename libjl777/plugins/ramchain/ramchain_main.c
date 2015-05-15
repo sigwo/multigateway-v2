@@ -406,7 +406,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
     }
     vout.newscript = (vout.scriptind == ledger->scripts.ind);
     (*numscriptsp) += vout.newscript;
-    vout.addrlen = (int32_t)strlen(coinaddr);
+    vout.addrlen = (int32_t)strlen(coinaddr) + 1;
     if ( (vout.U.addrind= ledger_rawind(1,ledger->DBs.transactions,&ledger->addrs,coinaddr,vout.addrlen)) != 0 )
     {
         ledger->unspentmap.ind = unspentind;
@@ -703,7 +703,7 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
 int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblocknum,uint32_t endblocknum)
 {
     extern uint32_t Duplicate,Mismatch,Added;
-    struct ledger_info *ledger; struct ledger_blockinfo *block; struct alloc_space MEM; uint64_t balance;
+    struct ledger_info *ledger; struct alloc_space MEM; uint64_t balance;
     if ( (ledger= ramchain->activeledger) == 0 )
     {
         sprintf(retbuf,"{\"error\":\"no active ledger\"}");
@@ -804,9 +804,9 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | DB777_KEY32,1);
         ledger_stateinit(&ledger->DBs,&ledger->blocks,coinstr,subdir,"blocks","zstd",flags | DB777_KEY32,0);
         ledger_stateinit(&ledger->DBs,&ledger->ledger,coinstr,subdir,"ledger","zstd",flags,sizeof(struct ledger_inds));
-        ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flagsB,sizeof(uint32_t));
-        ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flagsB,sizeof(uint32_t));
-        ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flagsB,sizeof(uint32_t));
+        ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flags,sizeof(uint32_t));
+        ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flags,sizeof(uint32_t));
+        ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags,sizeof(uint32_t));
         ledger->blocknum = 1;
 
     }
