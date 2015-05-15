@@ -224,6 +224,6 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
             free(jsonstr);
         return(tag);
     }
-    else printf("send_to_daemon: cant parse jsonstr.(%s)\n",jsonstr);
+    else printf("send_to_daemon: cant parse jsonstr.(%s)\n",origjsonstr);
     return(0);
 }

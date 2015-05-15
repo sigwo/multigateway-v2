@@ -903,7 +903,7 @@ struct ledger_info *ramchain_session_ledger(struct ramchain *ramchain,int32_t di
 
 int32_t ramchain_rawblock(char *retbuf,int32_t maxlen,struct ramchain *ramchain,char *serverport,char *userpass,char *transport,char *ipaddr,uint16_t port,uint32_t blocknum)
 {
-    struct alloc_space MEM; struct endpoint epbits; int32_t retval;
+    struct alloc_space MEM; struct endpoint epbits; int32_t retval = -1;
     struct ledger_blockinfo *block; struct ledger_info *ledger; struct rawblock *emit;
     epbits = nn_directepbits(retbuf,transport,ipaddr,port);
     if ( epbits.ipbits == 0 )
