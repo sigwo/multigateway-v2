@@ -349,7 +349,10 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     retval = db777_set(DB->flags,transactions,DB,key,keylen,value,valuelen);
     val = db777_get(0,&allocsize,transactions,DB,key,keylen);
     if ( val == 0 || allocsize != valuelen || memcmp(value,val,valuelen) != 0 )
+    {
+        printf("%s: val.%p allocsize.%d vs valuelen.%d\n",DB->name,val,allocsize,valuelen);
         return(-5);
+    }
     return(retval);
 }
 

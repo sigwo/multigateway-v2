@@ -211,7 +211,9 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
             printf("cant find just added addrinfo addrind.%d size %d\n",addrind,addrinfo_size(0)), debugstop();
             return(0);
         }
-        memcpy(entry->value,&addrinfo,sizeof(addrinfo));
+        if ( entry != 0 )
+            memcpy(entry->value,&addrinfo,sizeof(addrinfo));
+        else printf("no entry after addrinfo\n");
     }
     if ( (unspentind & (1 << 31)) != 0 )
     {
@@ -226,7 +228,8 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
                     addrinfo->dirty = 1;
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
-                    entry->valuelen = addrinfo_size(addrinfo->count);
+                    if ( entry != 0 )
+                        entry->valuelen = addrinfo_size(addrinfo->count);
                     //ledger->addrinfos.D.table[addrind] = addrinfo = realloc(addrinfo,addrinfo_size(addrinfo->count));
                     /*if ( addrinfo->notify != 0 )
                     {
@@ -251,12 +254,16 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
     }
     else
     {
-        entry->allocsize = entry->valuelen = addrinfo_size(addrinfo->count + 1);
-        addrinfo = realloc(addrinfo,entry->allocsize);
+        allocsize = addrinfo_size(addrinfo->count + 1);
+        addrinfo = realloc(addrinfo,allocsize);
         *(int64_t *)addrinfo->balance += value;
         addrinfo->dirty = 1;
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
-        memcpy(entry->value,&addrinfo,sizeof(addrinfo));
+        if ( entry != 0 )
+        {
+            entry->allocsize = entry->valuelen = allocsize;
+            memcpy(entry->value,&addrinfo,sizeof(addrinfo));
+        }
         /*if ( addrinfo->notify != 0 )
         {
             // T balance, b blocknum, a value, t txidstr, v vout, s scriptstr, ti txind
