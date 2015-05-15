@@ -77,7 +77,7 @@ void db777_unlock(struct db777 *DB)
 
 void *db777_get(struct db777_entry **entryp,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
-    int32_t i,c; struct db777_entry *entry = 0; void *obj,*result,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
+    int32_t i,c; struct db777_entry *entry = 0; void *obj,*result = 0,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
     if ( entryp != 0 )
         (*entryp = 0);
     if ( (DB->flags & DB777_RAM) != 0 )
@@ -105,7 +105,8 @@ void *db777_get(struct db777_entry **entryp,int32_t *lenp,void *transactions,str
                 if ( (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
                     value = sp_get(result,"value",lenp);
             }
-            sp_destroy(obj);
+            if ( result != 0 )
+                sp_destroy(result);
         }
         if ( value != 0 )
             return(value);
@@ -364,11 +365,15 @@ int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
 {
     void *val;
     int32_t valuesize = -1;
+    retbuf[0] = 0;
+    if ( key == 0 || key[0] == 0 )
+        return(-1);
     if ( (val= db777_get(0,&valuesize,0,DB,key,(int32_t)strlen(key)+1)) != 0 )
     {
         max--;
-        memcpy(retbuf,val,(valuesize < max) ? valuesize : max), retbuf[max] = 0;
-    } else retbuf[0] = 0;
+        if ( valuesize > 0 )
+            memcpy(retbuf,val,(valuesize < max) ? valuesize : max), retbuf[max] = 0;
+    }
     // printf("found str.(%s) -> (%s)\n",key,retbuf);
     return(valuesize);
 }
