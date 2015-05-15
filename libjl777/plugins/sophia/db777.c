@@ -97,7 +97,7 @@ void *db777_get(struct db777_entry **entryp,int32_t *lenp,void *transactions,str
             return(value);
         }
     }
-    if ( 0 && (DB->flags & DB777_HDD) != 0 )
+    if ( 1 && (DB->flags & DB777_HDD) != 0 )
     {
         if ( (obj= sp_object(DB->db)) != 0 )
         {
@@ -201,7 +201,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
 {
     struct db777_entry *entry = 0; void *db,*obj = 0; int32_t retval = 0;
     printf("%s SET.%08x keylen.%d | value %x len.%d value.%p\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value);
-    if ( 0 && ((DB->flags & flags) & DB777_HDD) != 0 )
+    if ( 1 && ((DB->flags & flags) & DB777_HDD) != 0 )
     {
         db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
         if ( (obj= sp_object(db)) == 0 )

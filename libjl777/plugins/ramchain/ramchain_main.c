@@ -794,7 +794,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
         if ( flags == 0 )
-            flags = (DB777_FLUSH | DB777_RAM | DB777_HDD), flagsB = flags | DB777_NANO;
+            flags = (DB777_FLUSH | 0*DB777_RAM | DB777_HDD), flagsB = flags | DB777_NANO;
         else flagsB = flags;
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
@@ -976,7 +976,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     struct coin777 *coin = 0;
     uint32_t startblocknum,endblocknum;
     retbuf[0] = 0;
- Debuglevel = 3;
+ //Debuglevel = 3;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
