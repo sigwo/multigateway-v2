@@ -208,7 +208,7 @@ struct ledger_addrinfo *addrinfo_update(struct ledger_info *ledger,char *coinadd
         db777_set(-1,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(0));
         if ( (addrinfo= db777_get(&entry,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) == 0 )
         {
-            printf("cant find just added addrinfo\n"), debugstop();
+            printf("cant find just added addrinfo addrind.%d size %d\n",addrind,addrinfo_size(0)), debugstop();
             return(0);
         }
         memcpy(entry->value,&addrinfo,sizeof(addrinfo));
