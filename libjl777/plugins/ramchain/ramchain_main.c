@@ -657,9 +657,9 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
 {
     uint32_t addrind; int32_t allocsize,empty,modval,lastmodval,extra; uint64_t balance = 0;
     struct ledger_blockinfo *block; struct ledger_addrinfo *addrinfo;
-    if ( startblocknum < 1 )
-        startblocknum = 1;
     startblocknum = ledger_startblocknum(ledger,0);
+    if ( startblocknum < 1 )
+        return(0);
     if ( (block= db777_get(0,&allocsize,0,ledger->blocks.DB,&startblocknum,sizeof(startblocknum))) != 0 )
     {
         if ( block->allocsize == allocsize && block_crc16(block) == block->crc16 )
@@ -709,7 +709,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblo
     if ( ramchain->startblocknum > 0 && (block= ledger_setblocknum(ledger,&MEM,ramchain->startblocknum)) != 0 )
         free(block);
     else ramchain->startblocknum = 0;
-    ledger->blocknum = ramchain->startblocknum + 1;
+    ledger->blocknum = ++ramchain->startblocknum;
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(0,0,ledger,0);
     sprintf(retbuf,"{\"result\":\"resumed\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.);
