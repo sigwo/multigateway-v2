@@ -210,6 +210,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             retval = -4;
         }
         else retval = sp_set((transactions != 0 ? transactions : db),obj);
+        printf("HDD ret %d\n",retval);
     }
     if ( ((DB->flags & flags) & DB777_RAM) != 0 )
     {
@@ -247,7 +248,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             memcpy(obj,value,valuelen);
             HASH_ADD_KEYPTR(hh,DB->table,key,keylen,entry);
             db777_unlock(DB);
-            retval++;
+            retval |= 1;
         }
         else
         {
@@ -282,7 +283,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                 if ( memcmp(entry->value,value,valuelen) == 0 )
                     entry->dirty = 0;
                 else memcpy(entry->value,value,valuelen);
-                retval++;
+                retval |= 1;
             }
         }
     }

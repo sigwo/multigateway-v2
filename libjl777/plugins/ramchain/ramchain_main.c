@@ -484,12 +484,12 @@ int32_t ledger_finishblock(struct ledger_info *ledger,struct alloc_space *mem,st
     if ( Debuglevel > 2 )
         printf("block.%u mem.%p size.%d crc.%u\n",block->blocknum,mem,block->allocsize,block->crc16);
     tmp = block->blocknum + 1;
+    ledger->blockpending = 0;
     if ( db777_add(-1,ledger->DBs.transactions,ledger->blocks.DB,&tmp,sizeof(tmp),block,block->allocsize) != 0 )
     {
         printf("error saving blocks %s %u\n",ledger->DBs.coinstr,block->blocknum);
         return(0);
     }
-    ledger->blockpending = 0;
     return(block->allocsize);
 }
 
