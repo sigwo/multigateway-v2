@@ -318,7 +318,7 @@ uint32_t Duplicate,Mismatch,Added;
 int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     void *val = 0;
-    int32_t allocsize = 0;
+    int32_t retval,allocsize = 0;
     if ( DB == 0 )
         return(-1);
     if ( forceflag <= 0 && (val= db777_get(0,&allocsize,transactions,DB,key,keylen)) != 0 )
@@ -346,7 +346,11 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     }
     if ( forceflag < 1 )
         Added++;
-    return(db777_set(DB->flags,transactions,DB,key,keylen,value,valuelen));
+    retval = db777_set(DB->flags,transactions,DB,key,keylen,value,valuelen);
+    val = db777_get(0,&allocsize,transactions,DB,key,keylen);
+    if ( val == 0 || allocsize != valuelen || memcmp(value,val,valuelen) != 0 )
+        return(-5);
+    return(retval);
 }
 
 void *db777_findM(int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen) { return(db777_get(0,lenp,transactions,DB,key,keylen)); }
