@@ -701,7 +701,7 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
     return(block);
 }
 
-int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblocknum,uint32_t endblocknum)
+int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum)
 {
     extern uint32_t Duplicate,Mismatch,Added;
     struct ledger_info *ledger; struct alloc_space MEM; uint64_t balance;
@@ -722,6 +722,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,uint32_t startblo
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(0,0,ledger,0);
     sprintf(retbuf,"{\"result\":\"resumed\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.);
+    ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,serverport,userpass,ramchain->RTblocknum);
     ramchain->startmilli = milliseconds();
     ramchain->paused = 0;
     return(0);
@@ -819,7 +820,7 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
     struct ramchain *ramchain = &coin->ramchain;
     if ( coin != 0 )
     {
-        ramchain->syncfreq = 1000;
+        ramchain->syncfreq = 10000;
         strcpy(ramchain->name,coinstr);
         ramchain->readyflag = 1;
         if ( (ramchain->activeledger= ledger_alloc(coinstr,"",0)) != 0 )
@@ -828,7 +829,7 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
             if ( endblocknum == 0 )
                 endblocknum = 1000000000;
             //addrinfo_update(ramchain->activeledger,"REsAF17mNLqPgeeUN8oRkvPmSfSkKzRwPt",(int32_t)strlen("REsAF17mNLqPgeeUN8oRkvPmSfSkKzRwPt"),1000,1,1,1,"27fc2d262a0384a4864e654afe8abdac0ed389355228e1b1c4c37e511bc9e780",0,"ffff",0);
-            return(ramchain_resume(retbuf,ramchain,startblocknum,endblocknum));
+            return(ramchain_resume(retbuf,ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum));
         }
     }
     sprintf(retbuf,"{\"error\":\"no coin777\"}");
@@ -1081,7 +1082,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     {
                         ramchain_stop(retbuf,&coin->ramchain);
                         ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-                        ramchain_resume(retbuf,&coin->ramchain,startblocknum,endblocknum);
+                        ramchain_resume(retbuf,&coin->ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum);
                     }
                 }
             }
