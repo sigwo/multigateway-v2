@@ -235,9 +235,6 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             else
             {
                 printf("mismatched valuelen.%d vs DB->valuesize.%d\n",valuelen,DB->valuesize);
-                if ( obj != 0 && obj != entry->value )
-                    free(obj);
-                free(entry);
                 db777_unlock(DB);
                 return(-1);
             }
