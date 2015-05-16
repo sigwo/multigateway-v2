@@ -93,7 +93,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
         if ( flags == 0 )
-            flags = (DB777_FLUSH | DB777_HDD | 0*DB777_MULTITHREAD), flagsB = flags | DB777_NANO;
+            flags = (DB777_FLUSH | DB777_HDD | DB777_MULTITHREAD), flagsB = flags | DB777_NANO;
         else flagsB = flags;
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
@@ -104,9 +104,9 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | DB777_KEY32,sizeof(struct unspentmap));
         ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | DB777_KEY32,1);
         ledger_stateinit(&ledger->DBs,&ledger->ledger,coinstr,subdir,"ledger","zstd",flags,sizeof(struct ledger_inds));
-        ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flags,sizeof(uint32_t));
-        ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flags,sizeof(uint32_t));
-        ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags,sizeof(uint32_t));
+        ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flags | DB777_RAM,sizeof(uint32_t));
+        ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flags | DB777_RAM,sizeof(uint32_t));
+        ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags | DB777_RAM,sizeof(uint32_t));
         ledger_stateinit(&ledger->DBs,&ledger->addrtx,coinstr,subdir,"addrtx","zstd",flags,sizeof(uint32_t) * 2);
         ledger->blocknum = 0;
         
