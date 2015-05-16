@@ -109,6 +109,8 @@ int32_t ramchain_rawblock(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
     return(retval);
 }
 
+//ramchain notify {"coin":"BTCD","list":["RFKYx6N8ENFiSrC7w8BJXzwkwg8XkyWYHy"]}
+
 int32_t ramchain_notify(char *retbuf,struct ramchain *ramchain,char *endpoint,cJSON *list)
 {
     int32_t i,n,m=0; char *coinaddr; struct ledger_addrinfo *addrinfo; struct ledger_info *ledger = ramchain->activeledger;
