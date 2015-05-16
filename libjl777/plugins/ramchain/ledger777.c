@@ -144,7 +144,7 @@ uint32_t ledger_rawind(int32_t writeflag,void *transactions,struct ledger_state 
     {
         char hexstr[512];
         init_hexbytes_noT(hexstr,key,keylen);
-        printf("%p couldnt find expected %s keylen.%d\n",hash->DB,hexstr,keylen), debugstop(); // db777_dump(hash->DB,1,1),
+        printf("%s %p couldnt find expected %s keylen.%d\n",hash->DB->name,hash->DB,hexstr,keylen), debugstop(); // db777_dump(hash->DB,1,1),
     }
     return(0);
 }
