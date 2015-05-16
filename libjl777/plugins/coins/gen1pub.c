@@ -284,6 +284,8 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
     {
         raw->blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0);
         copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"mint"));
+        if ( mintedstr[0] == 0 )
+            copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"newmint"));
         if ( mintedstr[0] != 0 )
             raw->minted = (uint64_t)(atof(mintedstr) * SATOSHIDEN);
         if ( (txobj= rawblock_txarray(&blockid,&n,json)) != 0 && blockid == blocknum && n < MAX_BLOCKTX )
