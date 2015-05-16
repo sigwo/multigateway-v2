@@ -133,11 +133,15 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
         {
             if ( syncflag != 0 )
             {
+                printf("start sync\n");
                 ledger_setlast(ledger,ledger->blocknum,++ledger->numsyncs);
                 db777_sync(ledger->DBs.transactions,&ledger->DBs,DB777_FLUSH);
                 ledger->DBs.transactions = 0;
+                printf("done sync\n");
             }
+            printf("start ledger_recalc_addrinfos\n");
             ramchain->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);
+            printf("done ledger_recalc_addrinfos\n");
             ramchain->totalsize += block->allocsize;
             estimate = estimate_completion(ramchain->startmilli,blocknum - ramchain->startblocknum,ramchain->RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ramchain->startmilli)/60000.;

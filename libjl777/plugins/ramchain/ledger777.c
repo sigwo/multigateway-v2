@@ -460,7 +460,6 @@ int32_t ledger_finishblock(struct ledger_info *ledger,struct alloc_space *mem,st
         printf("error saving blocks %s %u\n",ledger->DBs.coinstr,block->blocknum);
         return(0);
     }
-    printf("finished adding block.%d\n",tmp);
     return(block->allocsize);
 }
 
@@ -468,13 +467,10 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledger_blockinfo *block = 0;
     uint32_t i,txidind,txind,n;
-    printf("start rawblock_load.%u\n",blocknum);
     if ( rawblock_load(emit,name,serverport,userpass,blocknum) > 0 )
     {
-        printf("finished rawblock_load.%u\n",blocknum);
         tx = emit->txspace, vi = emit->vinspace, vo = emit->voutspace;
         block = ledger_startblock(ledger,mem,blocknum,emit->minted,emit->numtx);
-        printf("ledger_startblock.%u done\n",blocknum);
         if ( block->numtx > 0 )
         {
             for (txind=0; txind<block->numtx; txind++,tx++)
