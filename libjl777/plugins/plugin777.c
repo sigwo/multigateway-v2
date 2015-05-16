@@ -217,6 +217,8 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         if ( strcmp(name,plugin->name) == 0 && (len= PLUGNAME(_process_json)(plugin,tag,retbuf,max,jsonstr,obj,0)) > 0 )
         {
             *sendflagp = 1;
+            if ( retbuf[0] != 0 )
+                sprintf(retbuf,"{\"result\":\"no response\"}");
             append_stdfields(retbuf,max,plugin,tag,0);
             printf("return.(%s)\n",retbuf);
             return((int32_t)strlen(retbuf));

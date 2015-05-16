@@ -151,12 +151,13 @@ int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbi
         printf("illegal list sock.%d\n",list->sock);
         return(-1);
     }
-    //printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
+printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
     epbits = find_epbits(list,ipbits,port,type);
     if ( epbits.ipbits == 0 )
     {
         epbits = calc_epbits(transport,ipbits,port,type);
         expand_epbits(endpoint,epbits);
+        printf("endpoint.(%s) ",endpoint);
         if ( nn_connect(list->sock,endpoint) < 0 )
             printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
         else
@@ -392,6 +393,7 @@ char *nn_directconnect(char *transport,char *ipaddr,uint16_t port,char *handler)
 int32_t add_relay_connections(char *domain,int32_t skiplb)
 {
     uint32_t ipbits; int32_t n;
+    printf("add_relay_connections.(%s)\n",domain);
     if ( domain == 0 || is_ipaddr(domain) == 0 || ismyaddress(domain) != 0 )
         return(-1);
     ipbits = (uint32_t)calc_ipbits(domain);
@@ -685,6 +687,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     cJSON *json; char *jsonstr,*plugin,*retstr = 0;
     jsonstr = (char *)msg;
+    printf("LB PROCESSOR.(%s)\n",msg);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 )

@@ -107,6 +107,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flags,sizeof(uint32_t));
         ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flags,sizeof(uint32_t));
         ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags,sizeof(uint32_t));
+        ledger_stateinit(&ledger->DBs,&ledger->addrtx,coinstr,subdir,"addrtx","zstd",flags,sizeof(uint32_t) * 2);
         ledger->blocknum = 0;
         
     }

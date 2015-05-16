@@ -20,7 +20,7 @@ struct ledger_inds
 {
     uint64_t voutsum,spendsum;
     uint32_t blocknum,numsyncs,addrind,txidind,scriptind,unspentind,numspents,numaddrinfos,txoffsets;
-    struct sha256_state hashstates[10]; uint8_t hashes[10][256 >> 3];
+    struct sha256_state hashstates[16]; uint8_t hashes[16][256 >> 3];
 };
 
 struct ledger_blockinfo
@@ -219,7 +219,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
         update_sha256(ledger->addrinfos.sha256,&ledger->addrinfos.state,(void *)addrinfo,addrinfo_size(addrinfo->count));
     }
     addrtx[0] = addrind, addrtx[1] = ++addrinfo->txindex, pair[0] = unspentind, pair[1] = blocknum;
-    db777_add(-1,ledger->DBs.transactions,ledger->ledger.DB,addrtx,sizeof(addrtx),pair,sizeof(pair)); // skip sha on this one to save time
+    db777_add(-1,ledger->DBs.transactions,ledger->addrtx.DB,addrtx,sizeof(addrtx),pair,sizeof(pair)); // skip sha on this one to save time
     if ( (unspentind & (1 << 31)) != 0 )
     {
         unspentind &= ~(1 << 31);
@@ -519,6 +519,8 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
         {
             revsortfs(sortbuf,n,sizeof(*sortbuf) * 2);
             strcpy(retbuf,"{\"richlist\":["), len = (int32_t)strlen(retbuf);
+            if ( numrichlist > 0 && n > 0 )
+            {
             for (i=0; i<numrichlist&&i<n; i++)
             {
                 memcpy(&addrind,&sortbuf[(i << 1) + 1],sizeof(addrind));
@@ -533,6 +535,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
                     len += itemlen;
                 }
             }
+            } else strcat(retbuf,"]}");
             sprintf(retbuf + len - 1,"],\"supply\":%.8f}",dstr(addrsum));
             //printf("(%s) top.%d of %d\n",retbuf,i,n);
         }
@@ -559,8 +562,6 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
     states[n++] = &ledger->addrs, states[n++] = &ledger->revaddrs, states[n++] = &ledger->addrinfos;
     states[n++] = &ledger->txids, states[n++] = &ledger->txoffsets, states[n++] = &ledger->unspentmap;
     states[n++] = &ledger->scripts, states[n++] = &ledger->spentbits, states[n++] = &ledger->blocks;
-    if ( n > (int32_t)(sizeof(lp->hashes)/sizeof(lp->hashes)) )
-        printf("Too many hashes to save them %d vs %ld\n",n,(sizeof(lp->hashes)/sizeof(lp->hashes)));
     if ( restoreflag == 0 )
     {
         for (i=0; i<n; i++)
@@ -574,6 +575,8 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
             ledger_restorehash(lp,i,states[i]);
         ledger_restorehash(lp,n++,&ledger->ledger);
     }
+    if ( n > (int32_t)(sizeof(lp->hashes)/sizeof(*lp->hashes)) )
+        printf("Too many hashes to save them %d vs %ld\n",n,(sizeof(lp->hashes)/sizeof(lp->hashes)));
     return(n);
 }
 
@@ -666,7 +669,6 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
             break;
         }
     }
-    addrinfo = realloc(addrinfo,addrinfo_size(n));
     balance = 0;
     for (i=0; i<n; i++)
     {
