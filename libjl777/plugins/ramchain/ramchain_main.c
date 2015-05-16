@@ -551,7 +551,7 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
     }
     printf("[%-3d addrs %8s] ",dirty,_mbstr(allocsize));
     return(dirty);
-}
+}*/
 
 int32_t ledger_commit(struct ledger_info *ledger,int32_t continueflag)
 {
@@ -565,7 +565,7 @@ int32_t ledger_commit(struct ledger_info *ledger,int32_t continueflag)
     }
     ledger->DBs.transactions = (continueflag != 0) ? sp_begin(ledger->DBs.env) : 0;
     return(err);
-}*/
+}
 
 uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info *ledger,int32_t numrichlist)
 {
@@ -636,14 +636,15 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
         dispflag += ((blocknum % 100) == 0);
         oldsupply = ledger->voutsum - ledger->spendsum;
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
-        //if ( ledger->DBs.transactions == 0 )
-        //    ledger->DBs.transactions = sp_begin(ledger->DBs.env);
+        if ( ledger->DBs.transactions == 0 )
+            ledger->DBs.transactions = sp_begin(ledger->DBs.env);
         if ( (block= ledger_update(dispflag,ledger,&MEM,ramchain->name,serverport,userpass,&ramchain->EMIT,blocknum)) != 0 )
         {
             if ( syncflag != 0 )
             {
                 ledger_setlast(ledger,ledger->blocknum,++ledger->numsyncs);
-                db777_sync(&ledger->DBs,DB777_FLUSH);
+                db777_sync(ledger->DBs.transactions,&ledger->DBs,DB777_FLUSH);
+                ledger->DBs.transactions = 0;
             }
             ramchain->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);//dispflag - 1);
             ramchain->totalsize += block->allocsize;
@@ -1020,7 +1021,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                         ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
                     if ( coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
                     {
-                        db777_sync(&coin->ramchain.activeledger->DBs,ENV777_BACKUP);
+                        db777_sync(0,&coin->ramchain.activeledger->DBs,ENV777_BACKUP);
                         strcpy(retbuf,"{\"result\":\"started backup\"}");
                     } else strcpy(retbuf,"{\"error\":\"cant create ramchain when coin not ready\"}");
                 }

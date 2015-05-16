@@ -35,7 +35,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
 uint64_t db777_ctlinfo64(void *ctl,char *field);
 int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len);
 int32_t db777_delete(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen);
-int32_t db777_sync(struct env777 *DBs,int32_t fullbackup);
+int32_t db777_sync(void *transactions,struct env777 *DBs,int32_t fullbackup);
 void db777_free(struct db777 *DB);
 
 int32_t db777_addstr(struct db777 *DB,char *key,char *value);
@@ -388,16 +388,16 @@ int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
     return(valuesize);
 }
 
-int32_t db777_sync(struct env777 *DBs,int32_t flags)
+int32_t db777_sync(void *transactions,struct env777 *DBs,int32_t flags)
 {
-    int32_t i,err = 0; void *transactions;
+    int32_t i,err = 0;
     if ( (flags & DB777_FLUSH) != 0 )
     {
-        transactions = sp_begin(DBs->env);
+        //transactions = sp_begin(DBs->env);
         for (i=0; i<DBs->numdbs; i++)
             if ( (DBs->dbs[i].flags & DB777_FLUSH) != 0 )
                 db777_flush(transactions,&DBs->dbs[i]);
-        if ( (err= sp_commit(transactions)) != 0 )
+        if ( transactions != 0 && (err= sp_commit(transactions)) != 0 )
             printf("db777_sync err.%d\n",err);
     }
     if ( (flags & ENV777_BACKUP) != 0 )
