@@ -698,7 +698,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
     if ( ramchain->startblocknum > 0 )
         ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
     else ramchain->startblocknum = 0;
-    ledger->blocknum = ramchain->startblocknum;
+    ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum != 0);
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(0,0,ledger,0);
     sprintf(retbuf,"{\"result\":\"resumed\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.);
