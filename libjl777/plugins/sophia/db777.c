@@ -106,7 +106,11 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
             {
                 value = sp_get(result,"value",lenp);
                 if ( *lenp <= max )
+                {
                     memcpy(dest,value,*lenp);
+                    if ( (DB->flags & DB777_RAM) != 0 )
+                        db777_set(DB777_RAM,transactions,DB,key,keylen,value,*lenp);
+                }
                 else dest = 0;
             }
             if ( result != 0 )
