@@ -85,6 +85,7 @@ struct ledger_info
     uint64_t voutsum,spendsum;
     uint32_t blocknum,blockpending,numsyncs,sessionid,counter;
     struct ledger_state ledger,revaddrs,addrs,txids,scripts,blocks,unspentmap,txoffsets,spentbits,addrinfos;
+    uint8_t getbuf[1000000];
 };
 
 struct ramchain

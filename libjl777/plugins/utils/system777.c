@@ -87,6 +87,7 @@ struct db777
     int32_t reqsock,valuesize;
     char compression[8],dbname[32],name[16],coinstr[16],flags;
     void *ctl,*env; char namestr[32],restoredir[512],argspecialpath[512],argsubdir[512],restorelogdir[512],argname[512],argcompression[512],backupdir[512];
+    uint8_t checkbuf[1000000];
 };
 
 struct env777

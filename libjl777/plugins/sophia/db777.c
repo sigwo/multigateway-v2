@@ -29,7 +29,7 @@
 
 
 #define SOPHIA_USERDIR "/user"
-void *db777_get(struct db777_entry **entryp,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen);
+void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen);
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen);
 
 uint64_t db777_ctlinfo64(void *ctl,char *field);
@@ -75,11 +75,10 @@ void db777_unlock(struct db777 *DB)
         portable_mutex_unlock(&DB->mutex);
 }
 
-void *db777_get(struct db777_entry **entryp,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
+void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
-    int32_t i,c; struct db777_entry *entry = 0; void *obj,*result = 0,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
-    if ( entryp != 0 )
-        (*entryp = 0);
+    int32_t i,c,max; struct db777_entry *entry = 0; void *obj,*result = 0,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
+    max = *lenp, *lenp = 0;
     if ( (DB->flags & DB777_RAM) != 0 )
     {
         db777_lock(DB);
@@ -87,30 +86,33 @@ void *db777_get(struct db777_entry **entryp,int32_t *lenp,void *transactions,str
         db777_unlock(DB);
         if ( entry != 0 )
         {
-            if ( entryp != 0 )
-                (*entryp) = entry;
             *lenp = entry->valuelen;
             if ( entry->valuesize == 0 )
                 memcpy(&value,entry->value,sizeof(value));
             else value = entry->value;
+            if ( entry->valuelen <= max )
+                memcpy(dest,value,entry->valuelen);
+            else return(0);
             //printf("RAM found %p %s [%x] keylen.%d -> [%x] valuelen.%d | value.%p entry.%p\n",value,DB->name,*(int *)key,keylen,*(int *)value,entry->valuelen,value,entry);
-            return(value);
+            return(dest);
         }
     }
     if ( 1 && (DB->flags & DB777_HDD) != 0 )
     {
         if ( (obj= sp_object(DB->db)) != 0 )
         {
-            if ( sp_set(obj,"key",key,keylen) == 0 )
+            if ( sp_set(obj,"key",key,keylen) == 0 && (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
             {
-                if ( (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
-                    value = sp_get(result,"value",lenp);
+                value = sp_get(result,"value",lenp);
+                if ( *lenp <= max )
+                    memcpy(dest,value,*lenp);
+                else dest = 0;
             }
             if ( result != 0 )
                 sp_destroy(result);
         }
         if ( value != 0 )
-            return(value);
+            return(dest);
     }
     if ( 0 && (DB->flags & DB777_NANO) != 0 && DB->reqsock != 0 )
     {
@@ -326,10 +328,10 @@ uint32_t Duplicate,Mismatch,Added;
 int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     void *val = 0;
-    int32_t retval,allocsize = 0;
+    int32_t retval,allocsize = sizeof(DB->checkbuf);
     if ( DB == 0 )
         return(-1);
-    if ( forceflag <= 0 && (val= db777_get(0,&allocsize,transactions,DB,key,keylen)) != 0 )
+    if ( forceflag <= 0 && (val= db777_get(DB->checkbuf,&allocsize,transactions,DB,key,keylen)) != 0 )
     {
         if ( allocsize == valuelen && memcmp(val,value,valuelen) == 0 )
         {
@@ -364,8 +366,6 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     return(retval);
 }
 
-void *db777_findM(int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen) { return(db777_get(0,lenp,transactions,DB,key,keylen)); }
-
 int32_t db777_addstr(struct db777 *DB,char *key,char *value)
 {
     return(db777_add(1,0,DB,key,(int32_t)strlen(key)+1,value,(int32_t)strlen(value)+1));
@@ -374,15 +374,15 @@ int32_t db777_addstr(struct db777 *DB,char *key,char *value)
 int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
 {
     void *val;
-    int32_t valuesize = -1;
+    int32_t valuesize = max;
     retbuf[0] = 0;
     if ( key == 0 || key[0] == 0 )
         return(-1);
-    if ( (val= db777_get(0,&valuesize,0,DB,key,(int32_t)strlen(key)+1)) != 0 )
+    if ( (val= db777_get(retbuf,&valuesize,0,DB,key,(int32_t)strlen(key)+1)) != 0 )
     {
-        max--;
-        if ( valuesize > 0 )
-            memcpy(retbuf,val,(valuesize < max) ? valuesize : max), retbuf[max] = 0;
+        //max--;
+        //if ( valuesize > 0 )
+        //    memcpy(retbuf,val,(valuesize < max) ? valuesize : max), retbuf[max] = 0;
     }
     // printf("found str.(%s) -> (%s)\n",key,retbuf);
     return(valuesize);
@@ -508,7 +508,7 @@ int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue)
     return(n);
 }
 
-int32_t eligible_lbserver(char *server)
+/*int32_t eligible_lbserver(char *server)
 {
     cJSON *json; int32_t len,keylen,retval = 1; char *jsonstr,*status,*valstr = "{\"status\":\"enabled\"}";
     if ( server == 0 || server[0] == 0 || ismyaddress(server) != 0 || is_remote_access(server) == 0 )
@@ -530,7 +530,7 @@ int32_t eligible_lbserver(char *server)
     }
     else db777_add(1,0,DB_NXTaccts,server,keylen,valstr,(int32_t)strlen(valstr)+1);
     return(retval);
-}
+}*/
 
 #endif
 #endif
