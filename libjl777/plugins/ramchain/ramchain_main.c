@@ -265,7 +265,7 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
     printf(" db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
     if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
         return(0);
-    printf("error db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
+    printf("error db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout), debugstop();
     return(-1);
 }
 
@@ -276,7 +276,7 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
         return(1);
     if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
         firstvout = ptr->firstvout;
-    else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds));
+    else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), debugstop();
     printf("search txidind.%u GET -> firstvout.%d\n",txidind,firstvout);
     return(firstvout);
 }
