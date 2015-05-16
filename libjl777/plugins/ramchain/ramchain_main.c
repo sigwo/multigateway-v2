@@ -323,7 +323,7 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
 
 int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
 {
-    struct ledger_inds *lp,L; int32_t size = sizeof(L); uint32_t blocknum = 1;
+    struct ledger_inds *lp,L; int32_t size = sizeof(L); uint32_t blocknum = 0;
     if ( (lp= db777_get(&L,&size,ledger->DBs.transactions,ledger->ledger.DB,"last",strlen("last"))) != 0 )
     {
         if ( size == sizeof(*lp) )
@@ -617,8 +617,8 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
     blocknum = ledger->blocknum;
     if ( blocknum < ramchain->RTblocknum )
     {
-        if ( blocknum == 0 )
-            ledger->blocknum = blocknum = 1;
+        //if ( blocknum == 0 )
+        //    ledger->blocknum = blocknum = 1;
         dispflag = 1 || (blocknum > ramchain->RTblocknum - 1000);
         dispflag += ((blocknum % 100) == 0);
         oldsupply = ledger->voutsum - ledger->spendsum;
@@ -696,7 +696,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
     if ( ramchain->startblocknum > 0 )
         ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
     else ramchain->startblocknum = 0;
-    ledger->blocknum = ++ramchain->startblocknum;
+    ledger->blocknum = ramchain->startblocknum;
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(0,0,ledger,0);
     sprintf(retbuf,"{\"result\":\"resumed\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.);
@@ -787,7 +787,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flags,sizeof(uint32_t));
         ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flags,sizeof(uint32_t));
         ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags,sizeof(uint32_t));
-        ledger->blocknum = 1;
+        ledger->blocknum = 0;
 
     }
     return(ledger);
