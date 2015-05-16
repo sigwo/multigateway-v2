@@ -240,7 +240,6 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
     else
     {
         allocsize = addrinfo_size(addrinfo->count + 1);
-        addrinfo = realloc(addrinfo,allocsize);
         *(int64_t *)addrinfo->balance += value, balance = *(int64_t *)addrinfo->balance;
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
         addrinfo->dirty = 1;
