@@ -203,8 +203,8 @@ void db777_free(struct db777 *DB)
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     struct db777_entry *entry = 0; void *db,*newkey,*obj = 0; int32_t retval = 0;
-    if ( strcmp(DB->name,"revaddrs") == 0 )
-        printf("%s SET.%08x keylen.%d | value %x len.%d value.%p (%s)\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value,value);
+    //if ( strcmp(DB->name,"revaddrs") == 0 )
+    //    printf("%s SET.%08x keylen.%d | value %x len.%d value.%p (%s)\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value,value);
     if ( 1 && ((DB->flags & flags) & DB777_HDD) != 0 )
     {
         db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
@@ -320,8 +320,8 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
                     db777_delete(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen);
                     obj = (DB->valuesize == 0) ? *(void **)entry->value : entry->value;
                     entry->dirty = (db777_set(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen,obj,entry->valuelen) != 0);
-                    if ( strcmp(DB->name,"revaddrs") == 0 )
-                        printf("%d: (%s).%d\n",*(int32_t *)entry->hh.key,obj,entry->valuelen);
+                    //if ( strcmp(DB->name,"revaddrs") == 0 )
+                    //    printf("%d: (%s).%d\n",*(int32_t *)entry->hh.key,obj,entry->valuelen);
                     numerrs += entry->dirty;
                     n++, flushed += entry->valuelen;
                 }
