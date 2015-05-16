@@ -559,8 +559,6 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
     blocknum = ledger->blocknum;
     if ( blocknum < ramchain->RTblocknum )
     {
-        //if ( blocknum == 0 )
-        //    ledger->blocknum = blocknum = 1;
         dispflag = 1 || (blocknum > ramchain->RTblocknum - 1000);
         dispflag += ((blocknum % 100) == 0);
         oldsupply = ledger->voutsum - ledger->spendsum;
@@ -575,7 +573,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
                 db777_sync(ledger->DBs.transactions,&ledger->DBs,DB777_FLUSH);
                 ledger->DBs.transactions = 0;
             }
-            ramchain->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);//dispflag - 1);
+            ramchain->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);
             ramchain->totalsize += block->allocsize;
             estimate = estimate_completion(ramchain->startmilli,blocknum - ramchain->startblocknum,ramchain->RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ramchain->startmilli)/60000.;
@@ -583,7 +581,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
             if ( dispflag != 0 )
             {
                 extern uint32_t Duplicate,Mismatch,Added;
-                printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added);
+                printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d %ld\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added,sizeof(struct db777_entry));
             }
             ledger->blocknum++;
         }
@@ -677,18 +675,6 @@ void ledger_free(struct ledger_info *ledger,int32_t closeDBflag)
     int32_t i;
     if ( ledger != 0 )
     {
-        /*if ( ledger->txoffsets.D.upairs != 0 )
-            free(ledger->txoffsets.D.upairs);
-        if ( ledger->spentbits.D.bits != 0 )
-            free(ledger->spentbits.D.bits);
-        if ( ledger->addrinfos.D.table != 0 )
-        {
-            int32_t i;
-            for (i=0; i<ledger->addrinfos.ind; i++)
-                if ( ledger->addrinfos.D.table[i] != 0 )
-                    free(ledger->addrinfos.D.table[i]);
-            free(ledger->addrinfos.D.table);
-        }*/
         for (i=0; i<ledger->DBs.numdbs; i++)
             if ( (ledger->DBs.dbs[i].flags & DB777_RAM) != 0 )
                 db777_free(&ledger->DBs.dbs[i]);
@@ -715,7 +701,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
         if ( flags == 0 )
-            flags = (DB777_FLUSH | DB777_RAM | DB777_HDD | DB777_MULTITHREAD), flagsB = flags | DB777_NANO;
+            flags = (DB777_FLUSH | DB777_RAM | DB777_HDD | 0*DB777_MULTITHREAD), flagsB = flags | DB777_NANO;
         else flagsB = flags;
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
@@ -748,7 +734,6 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
             env777_start(0,&ramchain->activeledger->DBs);
             if ( endblocknum == 0 )
                 endblocknum = 1000000000;
-            //addrinfo_update(ramchain->activeledger,"REsAF17mNLqPgeeUN8oRkvPmSfSkKzRwPt",(int32_t)strlen("REsAF17mNLqPgeeUN8oRkvPmSfSkKzRwPt"),1000,1,1,1,"27fc2d262a0384a4864e654afe8abdac0ed389355228e1b1c4c37e511bc9e780",0,"ffff",0);
             return(ramchain_resume(retbuf,ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum));
         }
     }
