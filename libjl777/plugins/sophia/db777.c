@@ -252,9 +252,9 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             if ( obj != 0 )
                 memcpy(obj,value,valuelen);
             else printf("%s keylen.%d unexpected null obj\n",DB->name,keylen);
-            //if ( 0 && (DB->flags & DB777_KEY32) != 0 ) causes some misses?
-            //    HASH_ADD(hh,DB->table,key32,keylen,entry);
-            //else
+            if ( (DB->flags & DB777_KEY32) != 0 )
+                HASH_ADD(hh,DB->table,key32,keylen,entry);
+            else
             {
                 newkey = malloc(keylen);
                 memcpy(newkey,key,keylen);
