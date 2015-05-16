@@ -50,8 +50,8 @@ void ramchain_idle(struct plugin_info *plugin)
             if ( ramchain->paused < 10 )
             {
                 syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0));
-                if ( syncflag != 0 )
-                    printf("sync.%d (%d  %d) || %d\n",syncflag,ledger->blocknum,ramchain->syncfreq,ramchain->needbackup);
+                //if ( syncflag != 0 )
+                //    printf("sync.%d (%d  %d) || %d\n",syncflag,ledger->blocknum,ramchain->syncfreq,ramchain->needbackup);
                 if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
                 {
                     if ( ledger->blocknum >= ramchain->endblocknum )
