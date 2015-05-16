@@ -100,6 +100,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_RAM | DB777_KEY32,0);
         ledger_stateinit(&ledger->DBs,&ledger->blocks,coinstr,subdir,"blocks","zstd",flags | DB777_KEY32,0);
         ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flags | DB777_KEY32,0);
+        ledger_stateinit(&ledger->DBs,&ledger->revtxids,coinstr,subdir,"revtxids","zstd",flags | DB777_KEY32,32);
         ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | DB777_KEY32,sizeof(struct upair32));
         ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | DB777_KEY32,sizeof(struct unspentmap));
         ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | DB777_KEY32,1);
@@ -109,7 +110,6 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags | DB777_RAM,sizeof(uint32_t));
         ledger_stateinit(&ledger->DBs,&ledger->addrtx,coinstr,subdir,"addrtx","zstd",flags,sizeof(uint32_t) * 2);
         ledger->blocknum = 0;
-        
     }
     return(ledger);
 }

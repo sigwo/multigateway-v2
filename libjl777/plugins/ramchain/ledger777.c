@@ -318,10 +318,12 @@ int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t 
 uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_t txidind,char *txidstr,uint32_t totalvouts,uint16_t numvouts,uint32_t totalspends,uint16_t numvins)
 {
     uint32_t checkind; uint8_t txid[256]; struct ledger_txinfo tx; int32_t txidlen;
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 || strcmp(txidstr,"efd9cf795917c178a8fdcc21ec668c17b66958d6cfdba9468561927abe0aaf9d") == 0 )
         printf("ledger_tx txidind.%d %s vouts.%d vins.%d | ledger->txoffsets.ind %d\n",txidind,txidstr,totalvouts,totalspends,ledger->txoffsets.ind);
     if ( (checkind= ledger_hexind(1,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr)) == txidind )
     {
+        if ( db777_add(-1,ledger->DBs.transactions,ledger->revtxids.DB,&txidind,sizeof(txidind),txid,txidlen) != 0 )
+            printf("error saving txid.(%s) addrind.%u\n",txidstr,txidind);
         memset(&tx,0,sizeof(tx));
         tx.firstvout = totalvouts, tx.firstvin = totalspends, tx.numvouts = numvouts, tx.numvins = numvins;
         tx.txidlen = txidlen, memcpy(tx.txid,txid,txidlen);
@@ -447,6 +449,12 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledger_blockinfo *block = 0;
     uint32_t i,txidind,txind,n;
+    if ( blocknum > 99807 )
+    {
+        uint32_t checkind; uint8_t buf[100]; int32_t txidlen;
+        checkind = ledger_hexind(0,ledger->DBs.transactions,&ledger->txids,buf,&txidlen,"efd9cf795917c178a8fdcc21ec668c17b66958d6cfdba9468561927abe0aaf9d");
+        printf("checkind.%d\n",checkind);
+    }
     if ( rawblock_load(emit,name,serverport,userpass,blocknum) > 0 )
     {
         tx = emit->txspace, vi = emit->vinspace, vo = emit->voutspace;

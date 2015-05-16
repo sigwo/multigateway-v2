@@ -143,13 +143,15 @@ int32_t ramchain_notify(char *retbuf,struct ramchain *ramchain,char *endpoint,cJ
     return(0);
 }
 
+//"8131ffb0a2c945ecaf9b9063e59558784f9c3a74741ce6ae2a18d0571dac15bb",
+
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *coinstr,*resultstr,*methodstr;
     struct coin777 *coin = 0;
     uint32_t startblocknum,endblocknum;
     retbuf[0] = 0;
- Debuglevel = 3;
+// Debuglevel = 3;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s\n",plugin->name);
     if ( initflag > 0 )
     {
