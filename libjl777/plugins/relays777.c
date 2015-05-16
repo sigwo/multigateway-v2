@@ -30,7 +30,7 @@ char *nn_transports[] = { "tcp", "ws", "ipc", "inproc", "tcpmux", "tbd1", "tbd2"
 void expand_epbits(char *endpoint,struct endpoint epbits)
 {
     char ipaddr[64];
-    if ( epbits.ipbits == 0 )
+    if ( epbits.ipbits != 0 )
         expand_ipbits(ipaddr,epbits.ipbits);
     else strcpy(ipaddr,"*");
     sprintf(endpoint,"%s://%s:%d",nn_transports[epbits.transport],ipaddr,epbits.port);
@@ -151,7 +151,7 @@ int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbi
         printf("illegal list sock.%d\n",list->sock);
         return(-1);
     }
-printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
+//printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
     epbits = find_epbits(list,ipbits,port,type);
     if ( epbits.ipbits == 0 )
     {
@@ -203,9 +203,13 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
         for (i=0; i<num; i++)
         {
             if ( (ipbits= (uint32_t)calc_ipbits(servers[i])) == 0 )
+            {
+                printf("null ipbits.(%s)\n",servers[i]);
                 continue;
+            }
             epbits = calc_epbits("tcp",ipbits,SUPERNET.port + nn_portoffset(NN_REP),NN_REP);
             expand_epbits(endpoint,epbits);
+            //printf("epbits.%llx ipbits.%x %s\n",*(long long *)&epbits,(uint32_t)ipbits,endpoint);
             if ( ismyaddress(servers[i]) == 0 && nn_connect(sock,endpoint) >= 0 )
             {
                 printf("+%s ",endpoint);
@@ -224,7 +228,7 @@ int32_t _lb_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t nu
     int32_t lbsock,timeout,priority = 1;
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
-        //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
+        printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         timeout = 10000;
@@ -237,6 +241,7 @@ int32_t _lb_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t nu
         priority = nn_addservers(priority,lbsock,backups,numbacks);
         priority = nn_addservers(priority,lbsock,failsafes,numfailsafes);
     } else printf("error getting req socket %s\n",nn_errstr());
+    //printf("RELAYS.lb.num %d\n",RELAYS.lb.num);
     return(lbsock);
 }
 
@@ -257,7 +262,7 @@ int32_t nn_lbsocket(int32_t retrymillis,int32_t port)
 int32_t nn_directsocket(struct endpoint epbits)
 {
     int32_t sock;
-    if ( epbits.directind > 0 && (sock= RELAYS.direct[epbits.directind].sock) > 0 )
+    if ( epbits.directind > 0 && (sock= RELAYS.directlinks[epbits.directind].sock) > 0 )
         return(sock);
     return(-1);
 }
@@ -265,14 +270,14 @@ int32_t nn_directsocket(struct endpoint epbits)
 int32_t nn_directind()
 {
     int32_t i;
-    for (i=0; i<(int32_t)(sizeof(RELAYS.direct)/sizeof(*RELAYS.direct)); i++)
-        if ( RELAYS.direct[i].sock == 0 )
+    for (i=0; i<(int32_t)(sizeof(RELAYS.directlinks)/sizeof(*RELAYS.directlinks)); i++)
+        if ( RELAYS.directlinks[i].sock == 0 )
         {
-            RELAYS.direct[i].sock = -1;
+            RELAYS.directlinks[i].sock = -1;
             return(i);
         }
-    for (i=0; i<(int32_t)(sizeof(RELAYS.direct)/sizeof(*RELAYS.direct)); i++)
-        if ( RELAYS.direct[i].sock == -1 )
+    for (i=0; i<(int32_t)(sizeof(RELAYS.directlinks)/sizeof(*RELAYS.directlinks)); i++)
+        if ( RELAYS.directlinks[i].sock == -1 )
             return(i);
     return(0);
 }
@@ -294,7 +299,7 @@ struct endpoint nn_directepbits(char *retbuf,char *transport,char *ipaddr,uint16
 void nn_startdirect(struct endpoint epbits,int32_t sock,char *handler)
 {
     struct direct_connection *dc;
-    dc = &RELAYS.direct[epbits.directind];
+    dc = &RELAYS.directlinks[epbits.directind];
     if ( handler != 0 && handler[0] != 0 )
         safecopy(dc->handler,handler,sizeof(dc->handler));
     dc->sock = sock;
@@ -359,7 +364,7 @@ char *nn_directconnect(char *transport,char *ipaddr,uint16_t port,char *handler)
     myport = SUPERNET.port + nn_portoffset(NN_PAIR) + epbits.directind - 1;
     if ( epbits.ipbits != 0 && epbits.directind != 0 )
     {
-        dc = &RELAYS.direct[epbits.directind];
+        dc = &RELAYS.directlinks[epbits.directind];
         if ( handler == 0 || strcmp(dc->handler,handler) == 0 )
         {
             expand_epbits(endpoint,epbits);
@@ -393,7 +398,7 @@ char *nn_directconnect(char *transport,char *ipaddr,uint16_t port,char *handler)
 int32_t add_relay_connections(char *domain,int32_t skiplb)
 {
     uint32_t ipbits; int32_t n;
-    printf("add_relay_connections.(%s)\n",domain);
+    //printf("add_relay_connections.(%s)\n",domain);
     if ( domain == 0 || is_ipaddr(domain) == 0 || ismyaddress(domain) != 0 )
         return(-1);
     ipbits = (uint32_t)calc_ipbits(domain);
@@ -974,7 +979,7 @@ int32_t poll_direct(int32_t timeoutmillis)
                 // printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,pfd[i].fd,socks->all[i],pfd[i].revents);
                 if ( (pfds[i].revents & NN_POLLIN) != 0 && (len= nn_recv(pfds[i].fd,&msg,NN_MSG,0)) > 0 )
                 {
-                    dc = &RELAYS.direct[list->connections[i].directind];
+                    dc = &RELAYS.directlinks[list->connections[i].directind];
                     if ( dc->handler[0] == 0 || find_daemoninfo(&tmp,dc->handler,0,0) == 0 )
                         nn_direct_processor(inds[i],(uint8_t *)msg,len);
                     else
