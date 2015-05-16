@@ -247,16 +247,19 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             entry->allocsize = entry->valuelen = valuelen;
             entry->keylen = keylen;
             entry->dirty = 1;
-            newkey = malloc(keylen);
-            memcpy(newkey,key,keylen);
             //if ( strcmp(DB->name,"addrinfos") == 0 )
             //    printf("%s ADD_KEYPTR[%x] <- value.%p entry.%p newkey.%p\n",DB->name,*(int *)key,obj,entry,newkey);
             if ( obj != 0 )
                 memcpy(obj,value,valuelen);
             else printf("%s keylen.%d unexpected null obj\n",DB->name,keylen);
-            if ( (DB->flags & DB777_KEY32) != 0 )
+            if ( 0 && (DB->flags & DB777_KEY32) != 0 )
                 HASH_ADD(hh,DB->table,key32,keylen,entry);
-            else HASH_ADD_KEYPTR(hh,DB->table,newkey,keylen,entry);
+            else
+            {
+                newkey = malloc(keylen);
+                memcpy(newkey,key,keylen);
+                HASH_ADD_KEYPTR(hh,DB->table,newkey,keylen,entry);
+            }
             db777_unlock(DB);
         }
         else
