@@ -214,7 +214,6 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
                     //printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
-                    //ledger->addrinfos.D.table[addrind] = addrinfo = realloc(addrinfo,addrinfo_size(addrinfo->count));
                     /*if ( addrinfo->notify != 0 )
                     {
                         // T balance, b blocknum, a -value, t this txidstr, v this vin, st spent_txidstr, sv spent_vout
@@ -262,7 +261,8 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
     if ( firstvout == 0 )
         printf("illegal firstvout.0 for txidind.%d\n",txidind), debugstop();
-    printf(" db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
+    if ( Debuglevel > 2 )
+        printf(" db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
     if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
         return(0);
     printf("error db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout), debugstop();
@@ -277,7 +277,8 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
     if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
         firstvout = ptr->firstvout;
     else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), debugstop();
-    printf("search txidind.%u GET -> firstvout.%d\n",txidind,firstvout);
+    if ( Debuglevel > 2 )
+        printf("search txidind.%u GET -> firstvout.%d\n",txidind,firstvout);
     return(firstvout);
 }
 
@@ -583,7 +584,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
             if ( dispflag != 0 )
             {
                 extern uint32_t Duplicate,Mismatch,Added;
-                printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added);
+                printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d %ld\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added,sizeof(db777_entry));
             }
             ledger->blocknum++;
         }
@@ -703,7 +704,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
         if ( flags == 0 )
-            flags = (DB777_FLUSH | DB777_RAM | DB777_HDD | 0*DB777_MULTITHREAD), flagsB = flags | DB777_NANO;
+            flags = (DB777_FLUSH | DB777_RAM | DB777_HDD | DB777_MULTITHREAD), flagsB = flags | DB777_NANO;
         else flagsB = flags;
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
