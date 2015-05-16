@@ -66,9 +66,7 @@ struct sha256_state
 };
 
 struct upair32 { uint32_t firstvout,firstvin; };
-//struct ledger_data { struct db777 *DB; struct ledger_addrinfo **table; struct upair32 *upairs; uint8_t *bits; }; //
-
-struct ledger_addrinfo { uint32_t balance[2],count:31,dirty:1; uint32_t unspentinds[]; };
+struct ledger_addrinfo { uint32_t balance[2],count:28,notify:1,pending:1,MGW:1,dirty:1; uint32_t unspentinds[]; };
 
 struct ledger_state
 {
