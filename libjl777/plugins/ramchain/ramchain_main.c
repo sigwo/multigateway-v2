@@ -704,7 +704,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
         if ( flags == 0 )
-            flags = (DB777_FLUSH | DB777_HDD | DB777_MULTITHREAD), flagsB = flags | DB777_NANO;
+            flags = (DB777_FLUSH | DB777_HDD | 0*DB777_MULTITHREAD), flagsB = flags | DB777_NANO;
         else flagsB = flags;
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
