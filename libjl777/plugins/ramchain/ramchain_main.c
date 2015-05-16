@@ -213,7 +213,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
                 {
                     *(int64_t *)addrinfo->balance -= value, balance = *(int64_t *)addrinfo->balance;
                     addrinfo->dirty = 1;
-                    printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
+                    //printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
                     //ledger->addrinfos.D.table[addrind] = addrinfo = realloc(addrinfo,addrinfo_size(addrinfo->count));
@@ -242,7 +242,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
     {
         allocsize = addrinfo_size(addrinfo->count + 1);
         *(int64_t *)addrinfo->balance += value, balance = *(int64_t *)addrinfo->balance;
-        printf("addrind.%u: add count.%d remove %u +%.8f -> balace %.8f\n",addrind,addrinfo->count,unspentind,dstr(value),dstr(balance));
+        //printf("addrind.%u: add count.%d remove %u +%.8f -> balace %.8f\n",addrind,addrinfo->count,unspentind,dstr(value),dstr(balance));
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
         addrinfo->dirty = 1;
         /*if ( addrinfo->notify != 0 )
@@ -344,7 +344,7 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
 uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_t txidind,char *txidstr,uint32_t totalvouts,uint16_t numvouts,uint32_t totalspends,uint16_t numvins)
 {
     uint32_t checkind; uint8_t txid[256]; struct ledger_txinfo tx; int32_t txidlen;
-    //if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         printf("ledger_tx txidind.%d %s vouts.%d vins.%d | ledger->txoffsets.ind %d\n",txidind,txidstr,totalvouts,totalspends,ledger->txoffsets.ind);
     if ( (checkind= ledger_hexind(1,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr)) == txidind )
     {
@@ -402,7 +402,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
             if ( db777_add(-1,ledger->DBs.transactions,ledger->revaddrs.DB,&vout.U.addrind,sizeof(vout.U.addrind),coinaddr,vout.addrlen) != 0 )
                 printf("error saving coinaddr.(%s) addrind.%u\n",coinaddr,vout.U.addrind);
         }
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("txidind.%u v.%d unspent.%d (%s).%u (%s).%u %.8f | %ld\n",txidind,v,unspentind,coinaddr,vout.U.addrind,scriptstr,vout.scriptind,dstr(value),sizeof(vout.U));
         //ledger_ensureaddrinfos(ledger,vout.U.addrind);
         //ledger->addrinfos.D.table[vout.U.addrind] = addrinfo_update(ledger,ledger->addrinfos.D.table[vout.U.addrind],coinaddr,vout.addrlen,value,unspentind,vout.U.addrind,blocknum,txidstr,v,scriptstr,txind);
@@ -417,7 +417,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
 {
     struct ledger_spendinfo spend;
     int32_t txidlen; uint64_t value,balance; uint8_t txid[256]; uint32_t spent_txidind,addrind;
-    //if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         printf("txidind.%d totalspends.%d (%s).v%d\n",txidind,totalspends,spent_txidstr,spent_vout);
     if ( (spent_txidind= ledger_hexind(0,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,spent_txidstr)) != 0 )
     {

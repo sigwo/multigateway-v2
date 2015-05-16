@@ -93,8 +93,8 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
             if ( entry->valuelen <= max )
                 memcpy(dest,value,entry->valuelen);
             else return(0);
-            if ( strcmp(DB->name,"addrinfos") == 0 )
-                printf("RAM found %p %s [%x] keylen.%d -> [%x] valuelen.%d | value.%p entry.%p\n",dest,DB->name,*(int *)key,keylen,*(int *)value,entry->valuelen,value,entry);
+            //if ( strcmp(DB->name,"addrinfos") == 0 )
+            //    printf("RAM found %p %s [%x] keylen.%d -> [%x] valuelen.%d | value.%p entry.%p\n",dest,DB->name,*(int *)key,keylen,*(int *)value,entry->valuelen,value,entry);
             return(dest);
         }
     }
@@ -203,8 +203,8 @@ void db777_free(struct db777 *DB)
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     struct db777_entry *entry = 0; void *db,*newkey,*obj = 0; int32_t retval = 0;
-    if ( strcmp(DB->name,"addrinfos") == 0 )
-        printf("%s SET.%08x keylen.%d | value %x len.%d value.%p\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value);
+    //if ( strcmp(DB->name,"addrinfos") == 0 )
+    //    printf("%s SET.%08x keylen.%d | value %x len.%d value.%p\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value);
     if ( 1 && ((DB->flags & flags) & DB777_HDD) != 0 )
     {
         db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
@@ -249,8 +249,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             entry->dirty = 1;
             newkey = malloc(keylen);
             memcpy(newkey,key,keylen);
-            if ( strcmp(DB->name,"addrinfos") == 0 )
-                printf("%s ADD_KEYPTR[%x] <- value.%p entry.%p newkey.%p\n",DB->name,*(int *)key,obj,entry,newkey);
+            //if ( strcmp(DB->name,"addrinfos") == 0 )
+            //    printf("%s ADD_KEYPTR[%x] <- value.%p entry.%p newkey.%p\n",DB->name,*(int *)key,obj,entry,newkey);
             if ( obj != 0 )
                 memcpy(obj,value,valuelen);
             else printf("%s keylen.%d unexpected null obj\n",DB->name,keylen);
@@ -281,8 +281,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                     }
                     entry->valuelen = valuelen;
                 } else entry->dirty = 0;
-                if ( strcmp(DB->name,"addrinfos") == 0 )
-                    printf("%s ADD_KEYPTR[%x] <- value %p entry.%p REALLOC\n",DB->name,*(int *)key,obj,entry);
+                //if ( strcmp(DB->name,"addrinfos") == 0 )
+                //    printf("%s ADD_KEYPTR[%x] <- value %p entry.%p REALLOC\n",DB->name,*(int *)key,obj,entry);
             }
             else if ( entry->valuesize != valuelen || valuelen != DB->valuesize )
                 printf("entry->valuesize.%d DB->valuesize.%d vs valuesize.%d??\n",entry->valuesize,DB->valuesize,valuelen);
@@ -292,8 +292,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                     entry->dirty = 0;
                 else
                 {
-                    if ( strcmp(DB->name,"addrinfos") == 0 )
-                        printf("%s ADD_KEYPTR[%x] <- value %p entry.%p FIXED\n",DB->name,*(int *)key,obj,entry);
+                    //if ( strcmp(DB->name,"addrinfos") == 0 )
+                    //    printf("%s ADD_KEYPTR[%x] <- value %p entry.%p FIXED\n",DB->name,*(int *)key,obj,entry);
                     memcpy(entry->value,value,valuelen);
                 }
             }
@@ -304,7 +304,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
 
 int32_t db777_flush(void *transactions,struct db777 *DB)
 {
-    struct db777_entry *entry,*tmp; void *obj; int32_t numerrs = 0;
+    struct db777_entry *entry,*tmp; void *obj; int32_t flushed = 0,n = 0,numerrs = 0;
     if ( (DB->flags & DB777_RAM) != 0 )
     {
         db777_lock(DB);
@@ -324,11 +324,13 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
                     db777_delete(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen);
                     entry->dirty = (db777_set(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen,entry->value,entry->valuelen) != 0);
                     numerrs += entry->dirty;
+                    n++, flushed += entry->valuelen;
                 }
             }
         }
         db777_unlock(DB);
     }
+    printf("(%s %d).%d ",DB->name,flushed,n);
     return(-numerrs);
 }
 
