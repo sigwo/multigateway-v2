@@ -651,7 +651,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
                     if ( i == n && n > 2 )
                         strange++;//, printf("addrind.%d txindex.%d couldnt find unspentind.%d out of %d unspents\n",addrind,addrtx[1],unspentind,n);
                 }
-                else mem->used += sizeof(unspentind), addrinfo->unspentinds[n++] = unspentind, balance += value;//, printf("+%u ",unspentind);
+                else mem->used += sizeof(unspentind), addrinfo->unspentinds[n++] = unspentind;
                 //printf("addrind.%u %s txindex.%d unspentind.%d %s %.8f blocknum.%u\n",addrind,addrinfo->coinaddr,addrtx[1],unspentind & ~(1<<31),(unspentind & (1<<31))!=0?"SPEND":"",dstr(value),blocknum);
             }
             else
