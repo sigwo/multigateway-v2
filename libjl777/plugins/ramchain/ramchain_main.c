@@ -213,6 +213,8 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
                 {
                     *(int64_t *)addrinfo->balance -= value, balance = *(int64_t *)addrinfo->balance;
                     addrinfo->dirty = 1;
+                    if ( addrind == 21 )
+                    printf("remove %u\n",unspentind);
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
                     //ledger->addrinfos.D.table[addrind] = addrinfo = realloc(addrinfo,addrinfo_size(addrinfo->count));
@@ -400,7 +402,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
             if ( db777_add(-1,ledger->DBs.transactions,ledger->revaddrs.DB,&vout.U.addrind,sizeof(vout.U.addrind),coinaddr,vout.addrlen) != 0 )
                 printf("error saving coinaddr.(%s) addrind.%u\n",coinaddr,vout.U.addrind);
         }
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("txidind.%u v.%d unspent.%d (%s).%u (%s).%u %.8f | %ld\n",txidind,v,unspentind,coinaddr,vout.U.addrind,scriptstr,vout.scriptind,dstr(value),sizeof(vout.U));
         //ledger_ensureaddrinfos(ledger,vout.U.addrind);
         //ledger->addrinfos.D.table[vout.U.addrind] = addrinfo_update(ledger,ledger->addrinfos.D.table[vout.U.addrind],coinaddr,vout.addrlen,value,unspentind,vout.U.addrind,blocknum,txidstr,v,scriptstr,txind);

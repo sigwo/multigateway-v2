@@ -79,8 +79,6 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
 {
     int32_t i,c,max; struct db777_entry *entry = 0; void *obj,*result = 0,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
     max = *lenp, *lenp = 0;
-    if ( keylen == 32 )
-        printf("search for %x\n",*(int *)key);
     if ( (DB->flags & DB777_RAM) != 0 )
     {
         db777_lock(DB);
