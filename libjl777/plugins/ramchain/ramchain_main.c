@@ -123,7 +123,7 @@ uint32_t ledger_rawind(int32_t writeflag,void *transactions,struct ledger_state 
             //update_sha256(hash->sha256,&hash->state,key,keylen);
             return(rawind);
         }
-    } else printf("%p couldnt find expected %llx keylen.%d\n",hash->DB,*(long long *)key,keylen), debugstop(); // db777_dump(hash->DB,1,1),
+    } else printf("%p couldnt find expected %x keylen.%d\n",hash->DB,*(int *)key,keylen), debugstop(); // db777_dump(hash->DB,1,1),
     return(0);
 }
 
