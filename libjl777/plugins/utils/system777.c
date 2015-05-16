@@ -84,7 +84,7 @@ struct db777
     void *db,*asyncdb;
     portable_mutex_t mutex;
     struct db777_entry *table;
-    int32_t reqsock,valuesize;
+    int32_t reqsock,valuesize,numgets,numramgets,numhddgets,numsets,numramsets,numhddsets;
     char compression[8],dbname[32],name[16],coinstr[16],flags;
     void *ctl,*env; char namestr[32],restoredir[512],argspecialpath[512],argsubdir[512],restorelogdir[512],argname[512],argcompression[512],backupdir[512];
     uint8_t checkbuf[1000000];

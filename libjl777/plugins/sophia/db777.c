@@ -63,6 +63,8 @@ extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTa
 #undef DEFINES_ONLY
 #endif
 
+uint32_t Duplicate,Mismatch,Added,Numgets,Numramgets,Numhddgets,Numsets,Numramsets,Numhddsets;
+
 void db777_lock(struct db777 *DB)
 {
     if ( (DB->flags & DB777_MULTITHREAD) != 0 )
@@ -79,8 +81,10 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
 {
     int32_t i,c,max; struct db777_entry *entry = 0; void *obj,*result = 0,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
     max = *lenp, *lenp = 0;
+    DB->numgets++, Numgets++;
     if ( (DB->flags & DB777_RAM) != 0 )
     {
+        DB->numramgets++, Numramgets++;
         db777_lock(DB);
         HASH_FIND(hh,DB->table,key,keylen,entry);
         db777_unlock(DB);
@@ -100,6 +104,7 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
     }
     if ( (DB->flags & DB777_HDD) != 0 )
     {
+        DB->numhddgets++, Numhddgets++;
         if ( (obj= sp_object(DB->db)) != 0 )
         {
             if ( sp_set(obj,"key",key,keylen) == 0 && (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
@@ -207,10 +212,12 @@ void db777_free(struct db777 *DB)
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     struct db777_entry *entry = 0; void *db,*newkey,*obj = 0; int32_t retval = 0;
+    DB->numsets++, Numsets++;
     //if ( strcmp(DB->name,"revaddrs") == 0 )
     //    printf("%s SET.%08x keylen.%d | value %x len.%d value.%p (%s)\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value,value);
     if ( ((DB->flags & flags) & DB777_HDD) != 0 )
     {
+        DB->numramsets++, Numramsets++;
         db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
         if ( (obj= sp_object(db)) == 0 )
             retval = -3;
@@ -223,6 +230,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
     }
     if ( ((DB->flags & flags) & DB777_RAM) != 0 )
     {
+        DB->numhddsets++, Numhddsets++;
         db777_lock(DB);
         HASH_FIND(hh,DB->table,key,keylen,entry);
         if ( entry == 0 )
@@ -340,7 +348,6 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
     return(-numerrs);
 }
 
-uint32_t Duplicate,Mismatch,Added;
 int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     void *val = 0;

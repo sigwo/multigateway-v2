@@ -117,12 +117,13 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
 {
     void ledger_free(struct ledger_info *ledger,int32_t closeDBflag);
     struct alloc_space MEM; struct ledger_info *ledger; struct ledger_blockinfo *block;
-    uint32_t blocknum,dispflag; uint64_t supply,oldsupply; double estimate,elapsed;
+    uint32_t blocknum,dispflag; uint64_t supply,oldsupply; double estimate,elapsed,startmilli,diff;
     if ( ramchain->readyflag == 0 || (ledger= ramchain->activeledger) == 0 )
         return;
     blocknum = ledger->blocknum;
     if ( blocknum < ramchain->RTblocknum )
     {
+        startmilli = milliseconds();
         dispflag = 1 || (blocknum > ramchain->RTblocknum - 1000);
         dispflag += ((blocknum % 100) == 0);
         oldsupply = ledger->voutsum - ledger->spendsum;
@@ -138,14 +139,16 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
                 ledger->DBs.transactions = 0;
             }
             ramchain->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);
+            diff = (startmilli - milliseconds());
             ramchain->totalsize += block->allocsize;
             estimate = estimate_completion(ramchain->startmilli,blocknum - ramchain->startblocknum,ramchain->RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ramchain->startmilli)/60000.;
             supply = ledger->voutsum - ledger->spendsum;
             if ( dispflag != 0 )
             {
-                extern uint32_t Duplicate,Mismatch,Added;
-                printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d %ld\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,estimate,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added,sizeof(struct db777_entry));
+                extern uint32_t Duplicate,Mismatch,Added,Numgets,Numramgets,Numhddgets,Numsets,Numramsets,Numhddsets;
+                printf("%-5s [lag %-5d] %-6u supply %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,estimate+(ramchain->RTblocknum-blocknum)*diff/60000,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added);
+                printf("Gets %d ram.%d hdd.%d, Sets %d ram.%d hdd.%d\n",Numgets,Numramgets,Numhddgets,Numsets,Numramsets,Numhddsets);
             }
             ledger->blocknum++;
         }
