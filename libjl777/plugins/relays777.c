@@ -157,7 +157,6 @@ int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbi
     {
         epbits = calc_epbits(transport,ipbits,port,type);
         expand_epbits(endpoint,epbits);
-        printf("endpoint.(%s) ",endpoint);
         if ( nn_connect(list->sock,endpoint) < 0 )
             printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
         else
@@ -228,7 +227,7 @@ int32_t _lb_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t nu
     int32_t lbsock,timeout,priority = 1;
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
-        printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
+        //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         timeout = 10000;
@@ -310,28 +309,30 @@ int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,
 {
     int32_t sock,typeind = 0; struct endpoint epbits;
     if ( (sock= nn_socket(AF_SP,type)) < 0 )
-        printf("error getting socket %s\n",nn_errstr());
+        fprintf(stderr,"error getting socket %s\n",nn_errstr());
     if ( bindflag != 0 )
     {
         //set_endpointaddr(SUPERNET.transport,endpoint,"*",SUPERNET.port,type);
         epbits = calc_epbits(SUPERNET.transport,0,SUPERNET.port + nn_portoffset(type) + typeind,type);
         expand_epbits(endpoint,epbits);
         if ( nn_bind(sock,endpoint) < 0 )
-            printf("error binding to relaypoint sock.%d type.%d to (%s) (%s) %s\n",sock,type,name,endpoint,nn_errstr());
+            fprintf(stderr,"error binding to relaypoint sock.%d type.%d to (%s) (%s) %s\n",sock,type,name,endpoint,nn_errstr());
+        else fprintf(stderr,"BIND.(%s) <- %s\n",endpoint,name);
     }
-    //else if ( bindflag == 0 && nn_connect(sock,endpoint) < 0 )
-    //    printf("error connecting to relaypoint sock.%d type.%d to (%s) (%s) %s\n",sock,type,name,endpoint,nn_errstr());
+    else if ( bindflag == 0 && endpoint[0] != 0 )
+    {
+        if ( nn_connect(sock,endpoint) < 0 )
+            fprintf(stderr,"error connecting to relaypoint sock.%d type.%d to (%s) (%s) %s\n",sock,type,name,endpoint,nn_errstr());
+        else fprintf(stderr,"%s -> CONNECT.(%s)\n",name,endpoint);
+    }
+    if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+    else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
     else
     {
-        if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
-            printf("error setting sendtimeout %s\n",nn_errstr());
-        else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
-            printf("error setting sendtimeout %s\n",nn_errstr());
-        else
-        {
-            printf("nn_createsocket.(%s) %d\n",name,sock);
-            return(sock);
-        }
+        fprintf(stderr,"nn_createsocket.(%s) %d\n",name,sock);
+        return(sock);
     }
     return(-1);
 }
@@ -897,7 +898,7 @@ void responseloop(void *_args)
     int32_t len; char *str,*msg,*retstr,*broadcaststr; cJSON *json;
     if ( args->sock >= 0 )
     {
-        printf("respondloop.%s %d type.%d <- (%s).%d\n",args->name,args->sock,args->type,args->endpoint,nn_oppotype(args->type));
+        fprintf(stderr,"respondloop.%s %d type.%d <- (%s).%d\n",args->name,args->sock,args->type,args->endpoint,nn_oppotype(args->type));
         while ( 1 )
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
