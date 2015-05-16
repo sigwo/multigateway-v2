@@ -213,8 +213,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
                 {
                     *(int64_t *)addrinfo->balance -= value, balance = *(int64_t *)addrinfo->balance;
                     addrinfo->dirty = 1;
-                    if ( addrind == 21 )
-                    printf("remove %u\n",unspentind);
+                    printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
                     addrinfo->unspentinds[i] = addrinfo->unspentinds[--addrinfo->count];
                     addrinfo->unspentinds[addrinfo->count] = 0;
                     //ledger->addrinfos.D.table[addrind] = addrinfo = realloc(addrinfo,addrinfo_size(addrinfo->count));
@@ -243,6 +242,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
     {
         allocsize = addrinfo_size(addrinfo->count + 1);
         *(int64_t *)addrinfo->balance += value, balance = *(int64_t *)addrinfo->balance;
+        printf("addrind.%u: add count.%d remove %u +%.8f -> balace %.8f\n",addrind,addrinfo->count,unspentind,dstr(value),dstr(balance));
         addrinfo->unspentinds[addrinfo->count++] = unspentind;
         addrinfo->dirty = 1;
         /*if ( addrinfo->notify != 0 )
