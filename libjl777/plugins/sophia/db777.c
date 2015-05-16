@@ -260,7 +260,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
         else
         {
             db777_unlock(DB);
-            entry->dirty = (retval != 0);
+            entry->dirty = 1;
             if ( entry->valuesize == 0 )
             {
                 memcpy(&obj,entry->value,sizeof(obj));
@@ -280,7 +280,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                         memcpy(entry->value,&obj,sizeof(obj));
                     }
                     entry->valuelen = valuelen;
-                } else entry->dirty = 0;
+                }
                 //if ( strcmp(DB->name,"addrinfos") == 0 )
                 //    printf("%s ADD_KEYPTR[%x] <- value %p entry.%p REALLOC\n",DB->name,*(int *)key,obj,entry);
             }
@@ -288,14 +288,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                 printf("entry->valuesize.%d DB->valuesize.%d vs valuesize.%d??\n",entry->valuesize,DB->valuesize,valuelen);
             else
             {
-                if ( memcmp(entry->value,value,valuelen) == 0 )
-                    entry->dirty = 0;
-                else
-                {
-                    //if ( strcmp(DB->name,"addrinfos") == 0 )
-                    //    printf("%s ADD_KEYPTR[%x] <- value %p entry.%p FIXED\n",DB->name,*(int *)key,obj,entry);
+                if ( memcmp(entry->value,value,valuelen) != 0 )
                     memcpy(entry->value,value,valuelen);
-                }
             }
         }
     }
