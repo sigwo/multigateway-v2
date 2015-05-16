@@ -460,6 +460,7 @@ int32_t ledger_finishblock(struct ledger_info *ledger,struct alloc_space *mem,st
         printf("error saving blocks %s %u\n",ledger->DBs.coinstr,block->blocknum);
         return(0);
     }
+    printf("finished adding block.%d\n",tmp);
     return(block->allocsize);
 }
 
