@@ -139,7 +139,7 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
                 ledger->DBs.transactions = 0;
             }
             ramchain->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);
-            diff = (startmilli - milliseconds());
+            diff = (milliseconds() - startmilli);
             ramchain->totalsize += block->allocsize;
             estimate = estimate_completion(ramchain->startmilli,blocknum - ramchain->startblocknum,ramchain->RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ramchain->startmilli)/60000.;
