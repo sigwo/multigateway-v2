@@ -209,8 +209,8 @@ struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(0))); }
 
 uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum,char *txidstr,int32_t vout,char *extra,int32_t v)
 {
-    uint32_t addrtx[2],pair[2]; uint64_t balance = 0; int32_t i,n,allocsize = sizeof(ledger->getbuf);
-    char itembuf[8192],pubstr[8192],addr[128];
+    uint64_t balance = 0; int32_t i,n,allocsize = sizeof(ledger->getbuf);
+    char itembuf[8192],pubstr[8192],addr[128]; // uint32_t addrtx[2],pair[2];
     struct ledger_addrinfo *addrinfo;
     if ( (addrinfo= db777_get(ledger->getbuf,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) == 0 )
     {
@@ -218,8 +218,8 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
         db777_set(DB777_RAM,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count));
         update_sha256(ledger->addrinfos.sha256,&ledger->addrinfos.state,(void *)addrinfo,addrinfo_size(addrinfo->count));
     }
-    addrtx[0] = addrind, addrtx[1] = ++addrinfo->txindex, pair[0] = unspentind, pair[1] = blocknum;
-    db777_add(-1,ledger->DBs.transactions,ledger->addrtx.DB,addrtx,sizeof(addrtx),pair,sizeof(pair)); // skip sha on this one to save time
+    //addrtx[0] = addrind, addrtx[1] = ++addrinfo->txindex, pair[0] = unspentind, pair[1] = blocknum;
+    //db777_add(-1,ledger->DBs.transactions,ledger->addrtx.DB,addrtx,sizeof(addrtx),pair,sizeof(pair)); // skip sha on this one to save time
     if ( (unspentind & (1 << 31)) != 0 )
     {
         unspentind &= ~(1 << 31);
@@ -617,6 +617,7 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
     return(blocknum);
 }
 
+#ifdef ENABLE_RECONSTRUCTION
 struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,struct alloc_space *mem,uint32_t addrind,uint32_t startblocknum)
 {
     uint32_t *ptr,addrtx[2],pair[2],unspentind,blocknum,checkind; struct ledger_addrinfo *addrinfo;
@@ -685,6 +686,7 @@ struct ledger_addrinfo *ledger_reconstruct_addrinfo(struct ledger_info *ledger,s
     //printf("-> balance %.8f for %s\n",dstr(balance),addrinfo->coinaddr);
     return(addrinfo);
 }
+#endif
 
 struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum)
 {
