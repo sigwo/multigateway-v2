@@ -93,7 +93,7 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
             if ( entry->valuelen <= max )
                 memcpy(dest,value,entry->valuelen);
             else return(0);
-            if ( keylen == 32 )
+            if ( strcmp(DB->name,"addrinfos") == 0 )
                 printf("RAM found %p %s [%x] keylen.%d -> [%x] valuelen.%d | value.%p entry.%p\n",dest,DB->name,*(int *)key,keylen,*(int *)value,entry->valuelen,value,entry);
             return(dest);
         }
@@ -203,7 +203,7 @@ void db777_free(struct db777 *DB)
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     struct db777_entry *entry = 0; void *db,*obj = 0; int32_t retval = 0;
-    if ( keylen == 32 )
+    if ( strcmp(DB->name,"addrinfos") == 0 )
         printf("%s SET.%08x keylen.%d | value %x len.%d value.%p\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value);
     if ( 1 && ((DB->flags & flags) & DB777_HDD) != 0 )
     {
@@ -247,10 +247,11 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             entry->allocsize = entry->valuelen = valuelen;
             entry->keylen = keylen;
             entry->dirty = 1;
-            if ( keylen == 32 )
+            if ( strcmp(DB->name,"addrinfos") == 0 )
                 printf("%s ADD_KEYPTR[%x] <- value.%p entry.%p\n",DB->name,*(int *)key,obj,entry);
             if ( obj != 0 )
                 memcpy(obj,value,valuelen);
+            else printf("%s keylen.%d unexpected null obj\n",DB->name,keylen);
             HASH_ADD_KEYPTR(hh,DB->table,key,keylen,entry);
             db777_unlock(DB);
         }
@@ -271,14 +272,14 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                     }
                     else
                     {
-                        obj = realloc(obj,valuelen);
-                        memcpy(obj,value,valuelen);
-                        memcpy(entry->value,&obj,sizeof(obj));
                         entry->allocsize = valuelen;
+                        obj = realloc(obj,entry->allocsize);
+                        memcpy(obj,value,entry->allocsize);
+                        memcpy(entry->value,&obj,sizeof(obj));
                     }
                     entry->valuelen = valuelen;
                 } else entry->dirty = 0;
-                if ( keylen == 32 )
+                if ( strcmp(DB->name,"addrinfos") == 0 )
                     printf("%s ADD_KEYPTR[%x] <- value %p entry.%p REALLOC\n",DB->name,*(int *)key,obj,entry);
             }
             else if ( entry->valuesize != valuelen || valuelen != DB->valuesize )
@@ -289,7 +290,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                     entry->dirty = 0;
                 else
                 {
-                    if ( keylen == 32 )
+                    if ( strcmp(DB->name,"addrinfos") == 0 )
                         printf("%s ADD_KEYPTR[%x] <- value %p entry.%p FIXED\n",DB->name,*(int *)key,obj,entry);
                     memcpy(entry->value,value,valuelen);
                 }
