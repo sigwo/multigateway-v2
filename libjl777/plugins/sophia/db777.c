@@ -366,7 +366,7 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     }
     if ( forceflag < 1 )
         Added++;
-    retval = db777_set(DB->flags,transactions,DB,key,keylen,value,valuelen);
+    retval = db777_set((DB->flags & DB777_RAM) == 0 ? DB777_HDD : DB777_RAM,transactions,DB,key,keylen,value,valuelen);
     return(retval);
 }
 

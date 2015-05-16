@@ -200,7 +200,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
     if ( (addrinfo= db777_get(ledger->getbuf,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) == 0 )
     {
         addrinfo = addrinfo_alloc();
-        db777_set(-1,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count));
+        db777_set(DB777_RAM,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count));
     }
     if ( (unspentind & (1 << 31)) != 0 )
     {
@@ -253,7 +253,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
             //nn_publish(pubstr,1);
         }*/
     }
-    db777_set(-1,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count));
+    db777_set(DB777_RAM,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count));
     //printf("addrinfo.%p, entry.%p\n",addrinfo,entry);
     return(balance);
 }
