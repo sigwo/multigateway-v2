@@ -620,11 +620,11 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
 
 struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t blocknum)
 {
-    struct ledger_inds *lp; int32_t allocsize = sizeof(*L);
+    struct ledger_inds *lp; void *key; int32_t keylen,allocsize = sizeof(*L);
     if ( blocknum == 0 )
-        memcpy(&blocknum,"last",4);
-    printf("call get blocknum.%d\n",blocknum);
-    if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&blocknum,sizeof(blocknum))) == L )
+        key = "last", keylen = (int32_t)strlen(key);
+    else key = &blocknum, keylen = sizeof(blocknum);
+    if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,key,keylen)) == L )
         return(lp);
     else memset(L,0,sizeof(*L));
     return(0);
@@ -637,7 +637,9 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
     {
         ledger->blocknum = blocknum = lp->blocknum, ledger->numsyncs = lp->numsyncs;
         ledger->voutsum = lp->voutsum, ledger->spendsum = lp->spendsum;
-        ledger->addrs.ind = lp->addrind, ledger->txids.ind = lp->txidind, ledger->scripts.ind = lp->scriptind;
+        ledger->addrs.ind = ledger->revaddrs.ind = lp->addrind;
+        ledger->txids.ind = ledger->revtxids.ind = lp->txidind;
+        ledger->scripts.ind = lp->scriptind;
         ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
         ledger->addrinfos.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->txoffsets;
         ledger_copyhashes(&L,ledger,1);
