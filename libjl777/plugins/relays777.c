@@ -575,7 +575,7 @@ char *nn_allpeers(char *_request,int32_t timeoutmillis,char *localresult)
             if ( (item= cJSON_Parse(msg)) != 0 )
             {
                 copy_cJSON(error,cJSON_GetObjectItem(item,"error"));
-                if ( error[0] == 0 || strcmp(error,"timeout") != 0 )
+                if ( error[0] == 0 )//|| strcmp(error,"timeout") != 0 )
                 {
                     if ( array == 0 )
                         array = cJSON_CreateArray();
