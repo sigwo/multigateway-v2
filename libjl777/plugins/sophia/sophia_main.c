@@ -563,6 +563,7 @@ int32_t db777_dbopen(void *ctl,struct db777 *DB)
 int32_t env777_start(int32_t dispflag,struct env777 *DBs)
 {
     int32_t err,i; struct db777 *DB; cJSON *json; char *str;
+    printf("Open environment\n");
     if ( (err= sp_open(DBs->env)) != 0 )
         printf("err.%d setting sp_open for DBs->env %p\n",err,DBs->env);
     for (i=0; i<DBs->numdbs; i++)
