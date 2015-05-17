@@ -226,9 +226,14 @@ int32_t ramchain_richlist(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
 
 int32_t ramchain_ledgerhash(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
 {
-    struct ledger_inds L[32]; int32_t i,n; char ledgerhash[65],*jsonstr; struct ledger_info *ledger;
-    cJSON *item,*array,*json = cJSON_CreateObject();
-    ledgerhash[0] = 0;
+    struct ledger_inds L[32]; int32_t i,n; char ledgerhash[65],*jsonstr; struct ledger_info *ledger = ramchain->activeledger;
+    cJSON *item,*array,*json;
+    if ( ledger == 0 )
+    {
+        sprintf(retbuf,"{\"error\":\"no active ledger\",\"coin\":\"%s\"}",ramchain->name);
+        return(-1);
+    }
+    json = cJSON_CreateObject();
     if ( (n= ledger_syncblocks(L,(int32_t)(sizeof(L)/sizeof(*L)),ledger)) > 0 )
     {
         array = cJSON_CreateArray();
