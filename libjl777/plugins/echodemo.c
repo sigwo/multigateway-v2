@@ -17,7 +17,7 @@
 #include "plugin777.c"
 #undef DEFINES_ONLY
 
-void echo_idle(struct plugin_info *plugin) {}
+int32_t echo_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME
 {

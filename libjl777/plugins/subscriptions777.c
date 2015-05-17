@@ -17,7 +17,7 @@
 #include "plugin777.c"
 #undef DEFINES_ONLY
 
-void subscriptions_idle(struct plugin_info *plugin) {}
+int32_t subscriptions_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME SUBSCRIPTIONS;
 char *PLUGNAME(_methods)[] = { "publish", "category", "subscribe", "unsubscribe", "list" };

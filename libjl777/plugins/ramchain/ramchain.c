@@ -23,7 +23,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags);
 int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t startblocknum,uint32_t endblocknum);
 int32_t ramchain_stop(char *retbuf,struct ramchain *ramchain);
 int32_t ramchain_richlist(char *retbuf,int32_t maxlen,struct ramchain *ramchain,int32_t num);
-void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,int32_t syncflag);
+int32_t ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,int32_t syncflag);
 int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum);
 int32_t ramchain_ledgerhash(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson);
 
@@ -115,13 +115,13 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     return(ledger);
 }
 
-void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,int32_t syncflag)
+int32_t ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,int32_t syncflag)
 {
     void ledger_free(struct ledger_info *ledger,int32_t closeDBflag);
     struct alloc_space MEM; struct ledger_info *ledger; struct ledger_blockinfo *block;
     uint32_t blocknum,dispflag; uint64_t supply,oldsupply; double estimate,elapsed,startmilli,diff;
     if ( ramchain->readyflag == 0 || (ledger= ramchain->activeledger) == 0 )
-        return;
+        return(0);
     blocknum = ledger->blocknum;
     if ( blocknum < ramchain->RTblocknum )
     {
@@ -152,9 +152,11 @@ void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,i
                 printf("%-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d %08x\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,elapsed+(ramchain->RTblocknum-blocknum)*diff/60000,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added,*(uint32_t *)ledger->ledger.sha256);
             }
             ledger->blocknum++;
+            return(1);
         }
         else printf("%s error processing block.%d\n",ramchain->name,blocknum);
     }
+    return(0);
 }
 
 int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum)

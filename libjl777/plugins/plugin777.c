@@ -380,10 +380,12 @@ int32_t main
             if ( plugin->sleepmillis != 0 )
             {
                 startmilli = milliseconds();
-                PLUGNAME(_idle)(plugin);
-                sleeptime = plugin->sleepmillis - (milliseconds() - startmilli);
-                if ( sleeptime > 0 )
-                    msleep(sleeptime);
+                if ( PLUGNAME(_idle)(plugin) == 0 )
+                {
+                    sleeptime = plugin->sleepmillis - (milliseconds() - startmilli);
+                    if ( sleeptime > 0 )
+                        msleep(sleeptime);
+                }
             }
         }
     } fprintf(stderr,"ppid.%d changed to %d\n",plugin->ppid,OS_getppid());

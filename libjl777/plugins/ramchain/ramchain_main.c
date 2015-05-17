@@ -26,9 +26,9 @@ char *PLUGNAME(_pubmethods)[] = { "ledgerhash", "richlist", "rawblock" }; // lis
 char *PLUGNAME(_methods)[] = { "ledgerhash", "richlist", "rawblock", "create", "backup", "pause", "resume", "stop", "notify" }; // list of supported methods
 char *PLUGNAME(_authmethods)[] = { "signrawtransaction", "dumpprivkey" }; // list of authentication methods
 
-void ramchain_idle(struct plugin_info *plugin)
+int32_t ramchain_idle(struct plugin_info *plugin)
 {
-    int32_t i,lag,syncflag;
+    int32_t i,lag,syncflag,flag = 0;
     struct coin777 *coin;
     struct ramchain *ramchain;
     struct ledger_info *ledger;
@@ -58,7 +58,7 @@ void ramchain_idle(struct plugin_info *plugin)
                         ramchain->paused = 3, syncflag = 2;
                     printf("ramchain.%s blocknum.%d <<< PAUSING paused.%d |  endblocknum.%u\n",ramchain->name,ledger->blocknum,ramchain->paused,ramchain->endblocknum);
                 }
-                ramchain_update(ramchain,coin->serverport,coin->userpass,syncflag);
+                flag = ramchain_update(ramchain,coin->serverport,coin->userpass,syncflag);
                 if ( ramchain->paused == 3 )
                 {
                     ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
@@ -69,6 +69,7 @@ void ramchain_idle(struct plugin_info *plugin)
             }
         }
     }
+    return(flag);
 }
 
 struct ledger_info *ramchain_session_ledger(struct ramchain *ramchain,int32_t directind)
@@ -242,7 +243,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
     uint64_t disableflags = 0;
-    plugin->sleepmillis = 1;
+    //plugin->sleepmillis = 1;
     printf("init %s size.%ld\n",plugin->name,sizeof(struct ramchain_info));
     return(disableflags); // set bits corresponding to array position in _methods[]
 }

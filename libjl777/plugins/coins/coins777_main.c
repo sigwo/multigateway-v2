@@ -23,7 +23,7 @@
 #include "msig.c"
 #undef DEFINES_ONLY
 
-void coins_idle(struct plugin_info *plugin) {}
+int32_t coins_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME COINS;
 char *PLUGNAME(_methods)[] = { "acctpubkeys" };

@@ -30,7 +30,7 @@ char *PLUGNAME(_authmethods)[] = { "stats", "create", "close", "add", "find",
 #endif
 };
 
-void db777_idle(struct plugin_info *plugin) {}
+int32_t db777_idle(struct plugin_info *plugin) { return(0); }
 
 // env = sp_env(void);
 // ctl = sp_ctl(env): get an environment control object.
@@ -478,7 +478,7 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
 
 void db777_path(char *path,char *coinstr,char *subdir,int32_t useramdisk)
 {
-    if ( useramdisk != 0 && SOPHIA.RAMDISK[0] == 0 )
+    if ( useramdisk == 0 || SOPHIA.RAMDISK[0] == 0 )
     {
         if ( SOPHIA.PATH[0] == '.' && SOPHIA.PATH[1] == '/' )
             strcpy(path,SOPHIA.PATH+2);

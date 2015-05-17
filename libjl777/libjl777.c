@@ -1274,7 +1274,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
 #include "plugins/utils/files777.c"
 #undef DEFINES_ONLY
 
-void SuperNET_idle(struct plugin_info *plugin) {}
+int32_t SuperNET_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME SUPERNET;
 int32_t Debuglevel;

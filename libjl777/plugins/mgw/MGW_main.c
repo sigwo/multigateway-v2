@@ -21,7 +21,7 @@
 #include "NXT777.c"
 #undef DEFINES_ONLY
 
-void MGW_idle(struct plugin_info *plugin) {}
+int32_t MGW_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME MGW;
 char *PLUGNAME(_methods)[] = { "myacctpubkeys" };

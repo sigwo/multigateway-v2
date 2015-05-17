@@ -17,7 +17,7 @@
 #include "plugin777.c"
 #undef DEFINES_ONLY
 
-void peers_idle(struct plugin_info *plugin) {}
+int32_t peers_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME PEERS;
 char *PLUGNAME(_methods)[] = { "direct", "devMGW" };

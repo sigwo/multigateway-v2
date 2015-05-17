@@ -19,7 +19,7 @@
 #undef DEFINES_ONLY
 #define NN_WS -4
 
-void relay_idle(struct plugin_info *plugin) {}
+int32_t relay_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME RELAYS;
 char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
