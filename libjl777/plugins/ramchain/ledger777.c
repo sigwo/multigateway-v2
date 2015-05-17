@@ -624,7 +624,7 @@ struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info 
     if ( blocknum == 0 )
         key = "last", keylen = (int32_t)strlen(key);
     else key = &blocknum, keylen = sizeof(blocknum);
-    if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,key,keylen)) == L )
+    if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,key,keylen)) != 0 )
         return(lp);
     else memset(L,0,sizeof(*L));
     return(0);

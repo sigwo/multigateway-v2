@@ -176,7 +176,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
     if ( ramchain->startblocknum > 0 )
         ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
     else ramchain->startblocknum = 0;
-    ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum != 0);
+    ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum > 1);
     printf("set %u to %u\n",ramchain->startblocknum,endblocknum);
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(richlist,sizeof(richlist),ledger,25);

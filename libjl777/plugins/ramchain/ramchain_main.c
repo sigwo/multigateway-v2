@@ -247,6 +247,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             else sprintf(retbuf,"{\"result\":\"no active ramchain\"}");
         }
     }
+    printf("RAMCHAIN RETURNS.(%s)\n",retbuf);
     return((int32_t)strlen(retbuf));
 }
 
