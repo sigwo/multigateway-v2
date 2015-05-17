@@ -623,6 +623,7 @@ struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info 
     struct ledger_inds *lp; int32_t allocsize = sizeof(*L);
     if ( blocknum == 0 )
         memcpy(&blocknum,"last",4);
+    printf("call get blocknum.%d\n",blocknum);
     if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&blocknum,sizeof(blocknum))) == L )
         return(lp);
     else memset(L,0,sizeof(*L));
@@ -632,7 +633,7 @@ struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info 
 int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
 {
     struct ledger_inds *lp,L; uint32_t blocknum = 0;
-    if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,0)) == &L )
+    if ( (lp= ledger_getsyncdata(&L,ledger,0)) == &L )
     {
         ledger->blocknum = blocknum = lp->blocknum, ledger->numsyncs = lp->numsyncs;
         ledger->voutsum = lp->voutsum, ledger->spendsum = lp->spendsum;
