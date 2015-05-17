@@ -620,17 +620,14 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
 
 struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t syncind)
 {
-    struct ledger_inds *lp; void *key; int32_t keylen,allocsize = sizeof(*L);
+    struct ledger_inds *lp; void *key; uint16_t skey; int32_t keylen,allocsize = sizeof(*L);
     if ( syncind == 0 )
         key = "last", keylen = (int32_t)strlen(key);
-    else key = &syncind, keylen = sizeof(syncind);
+    else key = &skey, skey = syncind, keylen = sizeof(skey);
     if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,key,keylen)) != 0 )
-    {
-        printf("found %d bytes\n",allocsize);
         return(lp);
-    }
     else memset(L,0,sizeof(*L));
-    printf("couldnt find\n");
+    printf("couldnt find syncind.%d keylen.%d\n",syncind,keylen);
     return(0);
 }
 
