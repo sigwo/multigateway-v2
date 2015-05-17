@@ -22,9 +22,11 @@
 struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,
 
 STRUCTNAME SOPHIA;
-char *PLUGNAME(_methods)[] = { "stats" // "create", "close", "add", "find",
+char *PLUGNAME(_methods)[] = { "stats" };
+char *PLUGNAME(_pubmethods)[] = { "stats" };
+char *PLUGNAME(_authmethods)[] = { "stats", "create", "close", "add", "find",
 #ifdef BUNDLED
-    //"get", "set", "object", "env", "ctl","open", "destroy", "error", "delete", "async", "drop", "cursor", "begin", "commit", "type",
+    "get", "set", "object", "env", "ctl","open", "destroy", "error", "delete", "async", "drop", "cursor", "begin", "commit", "type",
 #endif
 };
 

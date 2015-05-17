@@ -23,6 +23,8 @@ void relay_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME RELAYS;
 char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
+char *PLUGNAME(_pubmethods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
+char *PLUGNAME(_authmethods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
 
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
 char *nn_transports[] = { "tcp", "ws", "ipc", "inproc", "tcpmux", "tbd1", "tbd2", "tbd3" };
@@ -189,8 +191,8 @@ int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port
 {
     int32_t n = 0;
     strcpy(servers[n++],"192.99.151.160"); //"78.46.137.178");//
-    strcpy(servers[n++],"167.114.96.223"); //"5.9.102.210");//
-    strcpy(servers[n++],"167.114.113.197"); //"5.9.56.103");
+    strcpy(servers[n++],"167.114.96.223"); //"");//
+    strcpy(servers[n++],"167.114.113.197"); //"");
     return(n);
 }
 
@@ -596,7 +598,7 @@ char *nn_allpeers(char *_request,int32_t timeoutmillis,char *localresult)
     json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"responses",array);
     cJSON_AddItemToObject(json,"n",cJSON_CreateNumber(n));
-    cJSON_AddItemToObject(json,"timeouts",cJSON_CreateNumber(errs));
+    cJSON_AddItemToObject(json,"err responses",cJSON_CreateNumber(errs));
     retstr = cJSON_Print(json);
     _stripwhite(retstr,' ');
     printf("globalrequest(%s) returned (%s) from n.%d respondents\n",request,retstr,n);

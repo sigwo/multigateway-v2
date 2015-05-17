@@ -27,6 +27,8 @@ void coins_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME COINS;
 char *PLUGNAME(_methods)[] = { "acctpubkeys" };
+char *PLUGNAME(_pubmethods)[] = { "acctpubkeys" };
+char *PLUGNAME(_authmethods)[] = { "acctpubkeys" };
 
 cJSON *coins777_json()
 {
@@ -266,16 +268,16 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 {
                     if ( coinstr[0] == 0 )
                         strcpy(retbuf,"{\"result\":\"need to specify coin\"}");
-                    else if ( (coin= coin777_find(coinstr,0)) != 0 )
+                    else if ( (coin= coin777_find(coinstr,1)) != 0 )
                     {
                         if ( (str= get_msig_pubkeys(coin->name,coin->serverport,coin->userpass)) != 0 )
                         {
                             MGW_publish_acctpubkeys(coin->name,str);
                             strcpy(retbuf,"{\"result\":\"published and processed acctpubkeys\"}");
                             free(str), str= 0;
-                        }
-                    }
-                }
+                        } else sprintf(retbuf,"{\"error\":\"no get_msig_pubkeys result\",\"method\":\"%s\"}",methodstr);
+                    } else sprintf(retbuf,"{\"error\":\"no coin777\",\"method\":\"%s\"}",methodstr);
+                } else sprintf(retbuf,"{\"error\":\"gateway only method\",\"method\":\"%s\"}",methodstr);
             }
             else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);
             if ( str != 0 )

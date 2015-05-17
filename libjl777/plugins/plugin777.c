@@ -140,7 +140,8 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
         else tagstr[0] = 0;
         NXTaddr = cJSON_str(cJSON_GetObjectItem(json,"NXT"));
         if ( NXTaddr == 0 || NXTaddr[0] == 0 )
-            sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\"}",plugin->NXTADDR);
+            NXTaddr = plugin->NXTADDR;
+        sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\"}",plugin->NXTADDR);
         if ( allfields != 0 )
         {
              if ( SUPERNET.iamrelay != 0 )
@@ -159,9 +160,9 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
     int32_t i;
     uint64_t disableflags = 0;
     json = cJSON_CreateObject();
-    array = cJSON_CreateArray();
     retbuf[0] = 0;
     disableflags = PLUGNAME(_register)(plugin,(void *)plugin->pluginspace,argjson);
+    array = cJSON_CreateArray();
     for (i=0; i<(sizeof(PLUGNAME(_methods))/sizeof(*PLUGNAME(_methods))); i++)
     {
         if ( PLUGNAME(_methods)[i] == 0 || PLUGNAME(_methods)[i][0] == 0 )
@@ -169,12 +170,30 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
         if ( ((1LL << i) & disableflags) == 0 )
             cJSON_AddItemToArray(array,cJSON_CreateString(PLUGNAME(_methods)[i]));
     }
+    cJSON_AddItemToObject(json,"methods",array);
+    array = cJSON_CreateArray();
+    for (i=0; i<(sizeof(PLUGNAME(_pubmethods))/sizeof(*PLUGNAME(_pubmethods))); i++)
+    {
+        if ( PLUGNAME(_pubmethods)[i] == 0 || PLUGNAME(_pubmethods)[i][0] == 0 )
+            break;
+        if ( ((1LL << i) & disableflags) == 0 )
+            cJSON_AddItemToArray(array,cJSON_CreateString(PLUGNAME(_pubmethods)[i]));
+    }
+    cJSON_AddItemToObject(json,"pubmethods",array);
+    array = cJSON_CreateArray();
+    for (i=0; i<(sizeof(PLUGNAME(_authmethods))/sizeof(*PLUGNAME(_authmethods))); i++)
+    {
+        if ( PLUGNAME(_authmethods)[i] == 0 || PLUGNAME(_authmethods)[i][0] == 0 )
+            break;
+        if ( ((1LL << i) & disableflags) == 0 )
+            cJSON_AddItemToArray(array,cJSON_CreateString(PLUGNAME(_authmethods)[i]));
+    }
+    cJSON_AddItemToObject(json,"authmethods",array);
     cJSON_AddItemToObject(json,"pluginrequest",cJSON_CreateString("SuperNET"));
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("register"));
     if ( plugin->sleepmillis == 0 )
         plugin->sleepmillis = get_API_int(cJSON_GetObjectItem(json,"sleepmillis"),SUPERNET.APISLEEP);
     cJSON_AddItemToObject(json,"sleepmillis",cJSON_CreateNumber(plugin->sleepmillis));
-    cJSON_AddItemToObject(json,"methods",array);
     jsonstr = cJSON_Print(json), free_json(json);
     _stripwhite(jsonstr,' ');
     strcpy(retbuf,jsonstr), free(jsonstr);

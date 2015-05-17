@@ -20,7 +20,9 @@
 void subscriptions_idle(struct plugin_info *plugin) {}
 
 STRUCTNAME SUBSCRIPTIONS;
-char *PLUGNAME(_methods)[] = { "publish", "category", "subscribe", "unsubscribe", "list" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "publish", "category", "subscribe", "unsubscribe", "list" };
+char *PLUGNAME(_pubmethods)[] = { "publish", "category", "subscribe", "unsubscribe", "list" };
+char *PLUGNAME(_authmethods)[] = { "publish", }; 
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {

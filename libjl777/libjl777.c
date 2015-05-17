@@ -1280,6 +1280,8 @@ STRUCTNAME SUPERNET;
 int32_t Debuglevel;
 
 char *PLUGNAME(_methods)[] = { "install", "plugin" }; // list of supported methods
+char *PLUGNAME(_pubmethods)[] = { "ping", "pong" }; // list of supported methods
+char *PLUGNAME(_authmethods)[] = { "setpass" }; // list of supported methods
 
 uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass)
 {

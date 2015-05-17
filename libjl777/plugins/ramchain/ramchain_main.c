@@ -22,7 +22,9 @@
 #undef DEFINES_ONLY
 
 STRUCTNAME RAMCHAINS;
-char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop", "notify", "richlist", "rawblock", "ledgerhash" }; // list of supported methods
+char *PLUGNAME(_pubmethods)[] = { "ledgerhash", "richlist", "rawblock" }; // list of public methods
+char *PLUGNAME(_methods)[] = { "ledgerhash", "richlist", "rawblock", "create", "backup", "pause", "resume", "stop", "notify" }; // list of supported methods
+char *PLUGNAME(_authmethods)[] = { "signrawtransaction", "dumpprivkey" }; // list of authentication methods
 
 void ramchain_idle(struct plugin_info *plugin)
 {
@@ -182,44 +184,32 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-        else
+        else if ( coin != 0 )
         {
             if ( strcmp(methodstr,"backup") == 0 )
             {
-                if ( coin != 0 )
+                if ( coin->ramchain.activeledger == 0 )
+                    ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
+                if ( coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
                 {
-                    if ( coin->ramchain.activeledger == 0 )
-                        ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-                    if ( coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
-                    {
-                        db777_sync(0,&coin->ramchain.activeledger->DBs,ENV777_BACKUP);
-                        strcpy(retbuf,"{\"result\":\"started backup\"}");
-                    } else strcpy(retbuf,"{\"error\":\"cant create ramchain when coin not ready\"}");
-                }
-                else strcpy(retbuf,"{\"error\":\"cant find coin\"}");
+                    db777_sync(0,&coin->ramchain.activeledger->DBs,ENV777_BACKUP);
+                    strcpy(retbuf,"{\"result\":\"started backup\"}");
+                } else strcpy(retbuf,"{\"error\":\"cant create ramchain when coin not ready\"}");
             }
             else if ( strcmp(methodstr,"resume") == 0 )
             {
-                if ( coin != 0 )
+                if ( coin->ramchain.activeledger == 0 )
+                    ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
+                else
                 {
-                    if ( coin->ramchain.activeledger == 0 )
-                        ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-                    else
-                    {
-                        ramchain_stop(retbuf,&coin->ramchain);
-                        ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-                        ramchain_resume(retbuf,&coin->ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum);
-                    }
+                    ramchain_stop(retbuf,&coin->ramchain);
+                    ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
+                    ramchain_resume(retbuf,&coin->ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum);
                 }
             }
             else if ( strcmp(methodstr,"create") == 0 )
-            {
-                if ( coin == 0 )
-                    coin777_find(coinstr,1);
-                if ( coin != 0 )
-                    ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-            }
-            else if ( coin != 0 && coin->ramchain.activeledger != 0 )
+                ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
+            else if ( coin->ramchain.activeledger != 0 )
             {
                 if ( strcmp(methodstr,"pause") == 0 )
                 {
@@ -243,9 +233,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 }
             }
             else sprintf(retbuf,"{\"result\":\"no active ramchain\"}");
+            printf("RAMCHAIN RETURNS.(%s)\n",retbuf);
         }
     }
-    printf("RAMCHAIN RETURNS.(%s)\n",retbuf);
     return((int32_t)strlen(retbuf));
 }
 

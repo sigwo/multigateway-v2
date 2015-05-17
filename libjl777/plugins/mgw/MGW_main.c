@@ -25,7 +25,9 @@ void MGW_idle(struct plugin_info *plugin) {}
 //{"coin":"BTCD","userNXT":"343233432443334","userpubkey":"<userpubkey>","buyNXT":99,"NXT":"15382101741829220030","plugin":"peers","method":"devMGW","broadcast":"allpeers"}
 
 STRUCTNAME MGW;
-char *PLUGNAME(_methods)[] = { "myacctpubkeys" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "myacctpubkeys" };
+char *PLUGNAME(_pubmethods)[] = { "myacctpubkeys" };
+char *PLUGNAME(_authmethods)[] = { "myacctpubkeys" };
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
