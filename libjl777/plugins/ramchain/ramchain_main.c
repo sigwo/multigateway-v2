@@ -22,7 +22,7 @@
 #undef DEFINES_ONLY
 
 STRUCTNAME RAMCHAINS;
-char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop", "notify", "richlist", "rawblock" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop", "notify", "richlist", "rawblock", "ledgerhash" }; // list of supported methods
 
 void ramchain_idle(struct plugin_info *plugin)
 {
@@ -49,7 +49,7 @@ void ramchain_idle(struct plugin_info *plugin)
                 ramchain->syncfreq = 10;
             if ( ramchain->paused < 10 )
             {
-                syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0));
+                syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0) || (ledger->blocknum % 10000) == 0);
                 //if ( syncflag != 0 )
                 //    printf("sync.%d (%d  %d) || %d\n",syncflag,ledger->blocknum,ramchain->syncfreq,ramchain->needbackup);
                 if ( ledger->blocknum >= ramchain->endblocknum || ramchain->paused != 0 )
@@ -200,52 +200,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 }
                 else strcpy(retbuf,"{\"error\":\"cant find coin\"}");
             }
-            else if ( strcmp(methodstr,"pause") == 0 )
-            {
-                if ( coin != 0 )
-                    coin->ramchain.paused = 1;
-            }
-            else if ( strcmp(methodstr,"rawblock") == 0 )
-            {
-                if ( coin != 0 )
-                {
-                    ramchain_rawblock(retbuf,maxlen,&coin->ramchain,coin->serverport,coin->userpass,cJSON_str(cJSON_GetObjectItem(json,"mytransport")),cJSON_str(cJSON_GetObjectItem(json,"myipaddr")),get_API_int(cJSON_GetObjectItem(json,"myport"),0),get_API_int(cJSON_GetObjectItem(json,"blocknum"),0));
-                }
-            }
-            else if ( strcmp(methodstr,"richlist") == 0 )
-            {
-                if ( coin != 0 )
-                {
-                    if ( coin->ramchain.activeledger == 0 )
-                    {
-                        ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-                        coin->ramchain.paused = 1;
-                    }
-                    if ( coin->ramchain.activeledger != 0 )
-                        ramchain_richlist(retbuf,maxlen,&coin->ramchain,get_API_int(cJSON_GetObjectItem(json,"num"),25));
-                }
-            }
-            else if ( strcmp(methodstr,"notify") == 0 )
-            {
-                if ( coin != 0 )
-                {
-                    if ( coin->ramchain.activeledger == 0 )
-                    {
-                        ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
-                        coin->ramchain.paused = 1;
-                    }
-                    if ( coin->ramchain.activeledger != 0 )
-                        ramchain_notify(retbuf,&coin->ramchain,cJSON_str(cJSON_GetObjectItem(json,"endpoint")),cJSON_GetObjectItem(json,"list"));
-                }
-            }
-            else if ( strcmp(methodstr,"stop") == 0 )
-            {
-                if ( coin != 0 && coin->ramchain.activeledger != 0 )
-                {
-                    coin->ramchain.paused = 3;
-                    sprintf(retbuf,"{\"result\":\"pausing and stopping ramchain\"}");
-                } else sprintf(retbuf,"{\"result\":\"no active ramchain to stop\"}");
-            }
             else if ( strcmp(methodstr,"resume") == 0 )
             {
                 if ( coin != 0 )
@@ -267,6 +221,30 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 if ( coin != 0 )
                     ramchain_init(retbuf,coin,coinstr,startblocknum,endblocknum);
             }
+            else if ( coin != 0 && coin->ramchain.activeledger != 0 )
+            {
+                if ( strcmp(methodstr,"pause") == 0 )
+                {
+                    coin->ramchain.paused = 1;
+                    sprintf(retbuf,"{\"result\":\"started pause sequence\"}");
+                }
+                else if ( strcmp(methodstr,"rawblock") == 0 )
+                {
+                    ramchain_rawblock(retbuf,maxlen,&coin->ramchain,coin->serverport,coin->userpass,cJSON_str(cJSON_GetObjectItem(json,"mytransport")),cJSON_str(cJSON_GetObjectItem(json,"myipaddr")),get_API_int(cJSON_GetObjectItem(json,"myport"),0),get_API_int(cJSON_GetObjectItem(json,"blocknum"),0));
+                }
+                else if ( strcmp(methodstr,"ledgerhash") == 0 )
+                    ramchain_ledgerhash(retbuf,maxlen,&coin->ramchain,json);
+                else if ( strcmp(methodstr,"richlist") == 0 )
+                    ramchain_richlist(retbuf,maxlen,&coin->ramchain,get_API_int(cJSON_GetObjectItem(json,"num"),25));
+                else if ( strcmp(methodstr,"notify") == 0 )
+                    ramchain_notify(retbuf,&coin->ramchain,cJSON_str(cJSON_GetObjectItem(json,"endpoint")),cJSON_GetObjectItem(json,"list"));
+                else if ( strcmp(methodstr,"stop") == 0 )
+                {
+                    coin->ramchain.paused = 3;
+                    sprintf(retbuf,"{\"result\":\"pausing then stopping ramchain\"}");
+                }
+            }
+            else sprintf(retbuf,"{\"result\":\"no active ramchain\"}");
         }
     }
     return((int32_t)strlen(retbuf));

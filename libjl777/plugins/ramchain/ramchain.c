@@ -25,6 +25,7 @@ int32_t ramchain_stop(char *retbuf,struct ramchain *ramchain);
 int32_t ramchain_richlist(char *retbuf,int32_t maxlen,struct ramchain *ramchain,int32_t num);
 void ramchain_update(struct ramchain *ramchain,char *serverport,char *userpass,int32_t syncflag);
 int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum);
+int32_t ramchain_ledgerhash(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson);
 
 #endif
 #else
@@ -221,6 +222,38 @@ int32_t ramchain_richlist(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
         else free_json(json);
     }
     return(0);
+}
+
+int32_t ramchain_ledgerhash(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    struct ledger_inds L[32]; int32_t i,n; char ledgerhash[65],*jsonstr; struct ledger_info *ledger;
+    cJSON *item,*array,*json = cJSON_CreateObject();
+    ledgerhash[0] = 0;
+    if ( (n= ledger_syncblocks(L,(int32_t)(sizeof(L)/sizeof(*L)),ledger)) > 0 )
+    {
+        array = cJSON_CreateArray();
+        for (i=0; i<n; i++)
+        {
+            if ( ledger_ledgerhash(ledgerhash,&L[i]) == 0 )
+            {
+                item = cJSON_CreateArray();
+                cJSON_AddItemToArray(item,cJSON_CreateNumber(L[i].blocknum));
+                cJSON_AddItemToArray(item,cJSON_CreateString(ledgerhash));
+                cJSON_AddItemToArray(array,item);
+            }
+        }
+        cJSON_AddItemToObject(json,"result",cJSON_CreateString("success"));
+        cJSON_AddItemToObject(json,"coin",cJSON_CreateString(ramchain->name));
+        cJSON_AddItemToObject(json,"latest",cJSON_CreateNumber(ledger->blocknum));
+        cJSON_AddItemToObject(json,"hashes",array);
+        jsonstr = cJSON_Print(json), free_json(json);
+        _stripwhite(jsonstr,' ');
+        strncpy(retbuf,jsonstr,maxlen-1), retbuf[maxlen-1] = 0;
+        free(jsonstr);
+        return(0);
+    }
+    sprintf(retbuf,"{\"error\":\"no sync data\",\"coin\":\"%s\"}",ramchain->name);
+    return(-1);
 }
 
 #endif

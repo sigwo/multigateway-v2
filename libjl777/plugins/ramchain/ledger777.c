@@ -44,6 +44,8 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum);
 
 struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,char *name,char *serverport,char *userpass,struct rawblock *emit,uint32_t blocknum);
 struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum);
+int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp);
+int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_info *ledger);
 
 #endif
 #else
@@ -318,7 +320,7 @@ int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t 
 uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_t txidind,char *txidstr,uint32_t totalvouts,uint16_t numvouts,uint32_t totalspends,uint16_t numvins)
 {
     uint32_t checkind; uint8_t txid[256]; struct ledger_txinfo tx; int32_t txidlen;
-    if ( Debuglevel > 2 || strcmp(txidstr,"efd9cf795917c178a8fdcc21ec668c17b66958d6cfdba9468561927abe0aaf9d") == 0 )
+    if ( Debuglevel > 2 )//|| strcmp(txidstr,"efd9cf795917c178a8fdcc21ec668c17b66958d6cfdba9468561927abe0aaf9d") == 0 )
         printf("ledger_tx txidind.%d %s vouts.%d vins.%d | ledger->txoffsets.ind %d\n",txidind,txidstr,totalvouts,totalspends,ledger->txoffsets.ind);
     if ( (checkind= ledger_hexind(1,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr)) == txidind )
     {
@@ -449,12 +451,12 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledger_blockinfo *block = 0;
     uint32_t i,txidind,txind,n;
-    if ( 0 && blocknum > 99807 )
+    /*if ( 0 && blocknum > 99807 )
     {
         uint32_t checkind; uint8_t buf[100]; int32_t txidlen;
         checkind = ledger_hexind(0,ledger->DBs.transactions,&ledger->txids,buf,&txidlen,"efd9cf795917c178a8fdcc21ec668c17b66958d6cfdba9468561927abe0aaf9d");
         printf("checkind.%d\n",checkind);
-    }
+    }*/
     if ( rawblock_load(emit,name,serverport,userpass,blocknum) > 0 )
     {
         tx = emit->txspace, vi = emit->vinspace, vo = emit->voutspace;
@@ -589,6 +591,9 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
             ledger_restorehash(lp,i,states[i]);
         ledger_restorehash(lp,n++,&ledger->ledger);
     }
+#define LEDGER_NUMHASHES 10
+    if ( n != LEDGER_NUMHASHES )
+        printf("mismatched LEDGER_NUMHASHES %d != %d\n",n,LEDGER_NUMHASHES);
     if ( n > (int32_t)(sizeof(lp->hashes)/sizeof(*lp->hashes)) )
         printf("Too many hashes to save them %d vs %ld\n",n,(sizeof(lp->hashes)/sizeof(lp->hashes)));
     return(n);
@@ -613,22 +618,73 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
     return(db777_add(2,ledger->DBs.transactions,ledger->ledger.DB,"last",strlen("last"),&L,sizeof(L)));
 }
 
+struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t blocknum)
+{
+    struct ledger_inds *lp; int32_t allocsize = sizeof(*L);
+    if ( blocknum == 0 )
+        memcpy(&blocknum,"last",4);
+    if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&blocknum,sizeof(blocknum))) == L )
+        return(lp);
+    else memset(L,0,sizeof(*L));
+    return(0);
+}
+
 int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
 {
-    struct ledger_inds *lp,L; int32_t size = sizeof(L); uint32_t blocknum = 0;
-    if ( (lp= db777_get(&L,&size,ledger->DBs.transactions,ledger->ledger.DB,"last",strlen("last"))) != 0 )
+    struct ledger_inds *lp,L; uint32_t blocknum = 0;
+    if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,0)) == &L )
     {
-        if ( size == sizeof(*lp) )
-        {
-            ledger->blocknum = blocknum = lp->blocknum, ledger->numsyncs = lp->numsyncs;
-            ledger->voutsum = lp->voutsum, ledger->spendsum = lp->spendsum;
-            ledger->addrs.ind = lp->addrind, ledger->txids.ind = lp->txidind, ledger->scripts.ind = lp->scriptind;
-            ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
-            ledger->addrinfos.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->txoffsets;
-            ledger_copyhashes(&L,ledger,1);
-        } else printf("size mismatch %d vs %ld\n",size,sizeof(*lp));
+        ledger->blocknum = blocknum = lp->blocknum, ledger->numsyncs = lp->numsyncs;
+        ledger->voutsum = lp->voutsum, ledger->spendsum = lp->spendsum;
+        ledger->addrs.ind = lp->addrind, ledger->txids.ind = lp->txidind, ledger->scripts.ind = lp->scriptind;
+        ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
+        ledger->addrinfos.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->txoffsets;
+        ledger_copyhashes(&L,ledger,1);
     } else printf("ledger_getnearest error getting last\n");
     return(blocknum);
+}
+
+int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp)
+{
+    ledgerhash[0] = 0;
+    if ( lp != 0 )
+        init_hexbytes_noT(ledgerhash,lp->hashes[LEDGER_NUMHASHES - 1],256 >> 3);
+    else return(-1);
+    return(0);
+}
+
+int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_info *ledger)
+{
+    struct ledger_inds L,*lp; uint32_t blocknum,checkblock,modsize,n = 0;
+    if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,0)) == &L )
+    {
+        inds[n++] = *lp;
+        modsize = 10, blocknum = lp->blocknum;
+        printf("latest.%u: ",blocknum);
+        while ( n < max && blocknum > 0 )
+        {
+            checkblock = (blocknum / modsize) * modsize;
+            if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,checkblock)) == &L )
+            {
+                if ( lp->blocknum != checkblock )
+                    printf("unexpected ledger_inds blocknum.%u in syncblock.%u\n",lp->blocknum,checkblock);
+                else
+                {
+                    inds[n++] = *lp;
+                    blocknum = (checkblock - 1);
+                    printf("+%u ",checkblock);
+                    continue;
+                }
+            }
+            if ( modsize < 100 )
+                modsize = 100;
+            else if ( modsize < 1000 )
+                modsize = 1000;
+            else if ( modsize < 10000 )
+                modsize = 10000;
+        }
+    }
+    return(n);
 }
 
 #ifdef ENABLE_RECONSTRUCTION
