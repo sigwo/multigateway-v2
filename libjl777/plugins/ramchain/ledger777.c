@@ -618,12 +618,12 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
     return(db777_add(2,ledger->DBs.transactions,ledger->ledger.DB,"last",strlen("last"),&L,sizeof(L)));
 }
 
-struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t blocknum)
+struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t syncind)
 {
     struct ledger_inds *lp; void *key; int32_t keylen,allocsize = sizeof(*L);
-    if ( blocknum == 0 )
+    if ( syncind == 0 )
         key = "last", keylen = (int32_t)strlen(key);
-    else key = &blocknum, keylen = sizeof(blocknum);
+    else key = &syncind, keylen = sizeof(syncind);
     if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,key,keylen)) != 0 )
         return(lp);
     else memset(L,0,sizeof(*L));
@@ -658,11 +658,17 @@ int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp)
 
 int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_info *ledger)
 {
-    struct ledger_inds L,*lp; uint32_t blocknum,checkblock,modsize,n = 0;
-    if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,0)) == &L )
+    struct ledger_inds L,*lp; uint32_t numsyncs,i,n = 0;
+    if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,0)) != 0 )
     {
         inds[n++] = *lp;
-        modsize = 10, blocknum = lp->blocknum;
+        for (i=numsyncs-1; i>0; i--)
+        {
+            if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,i)) != 0 )
+                inds[n++] = *lp;
+        }
+        printf("numsyncs.%d vs n.%d\n",numsyncs,n);
+        /*modsize = 10, blocknum = lp->blocknum;
         printf("latest.%u: ",blocknum);
         while ( n < max && blocknum > 0 )
         {
@@ -685,8 +691,8 @@ int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_inf
                 modsize = 1000;
             else if ( modsize < 10000 )
                 modsize = 10000;
-        }
-    }
+        }*/
+    } else printf("null return from ledger_getsyncdata\n");
     return(n);
 }
 
