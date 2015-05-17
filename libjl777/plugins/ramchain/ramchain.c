@@ -169,14 +169,18 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
     Duplicate = Mismatch = Added = 0;
     ramchain->startmilli = milliseconds();
     ramchain->totalsize = 0;
+    printf("resuming %u to %u\n",startblocknum,endblocknum);
     ramchain->startblocknum = ledger_startblocknum(ledger,0);
+    printf("updated %u to %u\n",ramchain->startblocknum,endblocknum);
     memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
     if ( ramchain->startblocknum > 0 )
         ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
     else ramchain->startblocknum = 0;
     ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum != 0);
+    printf("set %u to %u\n",ramchain->startblocknum,endblocknum);
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(richlist,sizeof(richlist),ledger,25);
+    printf("balance recalculated %.8f\n",dstr(balance));
     sprintf(retbuf,"[{\"result\":\"resumed\",\"ledgerhash\":\"%llx\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f},%s]",*(long long *)ledger->ledger.sha256,ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.,richlist);
     ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,serverport,userpass,ramchain->RTblocknum);
     ramchain->startmilli = milliseconds();
