@@ -128,7 +128,7 @@ uint16_t extract_userpass(char *serverport,char *userpass,char *coinstr,char *us
     char fname[2048],line[1024],*rpcuser,*rpcpassword,*rpcport,*str;
     serverport[0] = userpass[0] = 0;
     set_coinconfname(fname,coinstr,userhome,coindir,confname);
-    printf("userpass.(%s)\n",fname);
+    printf("set_coinconfname.(%s)\n",fname);
     if ( (fp= fopen(os_compatible_path(fname),"r")) != 0 )
     {
         if ( Debuglevel > 1 )
@@ -184,7 +184,6 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         path = cJSON_str(cJSON_GetObjectItem(argjson,"path"));
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
     }
-    printf("extract userpass\n");
     extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
     COINS.LIST[COINS.num] = coin, COINS.num++;

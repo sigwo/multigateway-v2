@@ -1290,7 +1290,8 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
     char coinaddr[MAX_JSON_FIELD],*str,*privkey;
     NXTaddr[0] = 0;
     extract_cJSON_str(secret,max,argjson,"secret");
-    printf("set_account_NXTSECRET.(%s)\n",secret);
+    if ( Debuglevel > 2 )
+        printf("set_account_NXTSECRET.(%s)\n",secret);
     if ( secret[0] == 0 )
     {
         extract_cJSON_str(coinaddr,sizeof(coinaddr),argjson,"privateaddr");
@@ -1320,7 +1321,7 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
     expand_nxt64bits(NXTaddr,nxt64bits);
     if ( 1 )
         conv_rsacctstr(NXTacct,nxt64bits);
-    printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,secret);
+    printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>");
     return(nxt64bits);
 }
 
