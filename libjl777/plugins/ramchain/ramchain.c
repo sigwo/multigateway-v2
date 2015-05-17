@@ -180,7 +180,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
         ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
     else ramchain->startblocknum = 0;
     ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum > 1);
-    printf("set %u to %u\n",ramchain->startblocknum,endblocknum);
+    printf("set %u to %u | sizes: addrinfo.%ld unspentmap.%ld txoffset.%ld\n",ramchain->startblocknum,endblocknum,sizeof(struct addrinfo),sizeof(struct unspentmap),sizeof(struct upair32));
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(richlist,sizeof(richlist),ledger,25);
     printf("balance recalculated %.8f\n",dstr(balance));

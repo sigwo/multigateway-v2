@@ -32,7 +32,7 @@ struct ledger_blockinfo
 };
 struct ledger_txinfo { uint32_t firstvout,firstvin; uint16_t numvouts,numvins; uint8_t txidlen,txid[255]; };
 struct ledger_spendinfo { uint32_t unspentind,spent_txidind; uint16_t spent_vout; };
-struct unspentmap { uint32_t addrind; uint32_t value[2]; };
+struct unspentmap { uint64_t value; uint32_t addrind,scriptind; };
 struct ledger_voutdata { struct unspentmap U; uint32_t scriptind; int32_t addrlen,scriptlen,newscript,newaddr; char coinaddr[256]; uint8_t script[256]; };
 
 uint16_t block_crc16(struct ledger_blockinfo *block);
@@ -355,7 +355,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
     memcpy(vout.U.value,&value,sizeof(vout.U.value));
     ledger->voutsum += value;
     //printf("%.8f ",dstr(value));
-    if ( (vout.scriptind= ledger_hexind(1,ledger->DBs.transactions,&ledger->scripts,vout.script,&vout.scriptlen,scriptstr)) == 0 )
+    if ( (vout.U.scriptind= ledger_hexind(1,ledger->DBs.transactions,&ledger->scripts,vout.script,&vout.scriptlen,scriptstr)) == 0 )
     {
         printf("ledger_unspent: error getting scriptind.(%s)\n",scriptstr);
         return(0);
