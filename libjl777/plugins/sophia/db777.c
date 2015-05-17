@@ -26,6 +26,7 @@
 #define DB777_KEY32 0x20
 #define ENV777_BACKUP 0x40
 #define DB777_MULTITHREAD 0x80
+#define DB777_RAMDISK 0x100
 
 
 #define SOPHIA_USERDIR "/user"

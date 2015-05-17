@@ -119,7 +119,7 @@ struct coins_info
 
 struct db777_info
 {
-    char PATH[1024];
+    char PATH[1024],RAMDISK[1024];
     int32_t numdbs,readyflag;
     struct db777 *DBS[1024];
 }; extern struct db777_info SOPHIA;

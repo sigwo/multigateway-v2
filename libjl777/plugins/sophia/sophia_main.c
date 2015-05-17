@@ -476,11 +476,14 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
     return(DB);
 }
 
-void db777_path(char *path,char *coinstr,char *subdir)
+void db777_path(char *path,char *coinstr,char *subdir,int32_t useramdisk)
 {
-    if ( SOPHIA.PATH[0] == '.' && SOPHIA.PATH[1] == '/' )
-        strcpy(path,SOPHIA.PATH+2);
-    else strcpy(path,SOPHIA.PATH);
+    if ( useramdisk != 0 && SOPHIA.RAMDISK[0] == 0 )
+    {
+        if ( SOPHIA.PATH[0] == '.' && SOPHIA.PATH[1] == '/' )
+            strcpy(path,SOPHIA.PATH+2);
+        else strcpy(path,SOPHIA.PATH);
+    } else strcpy(path,SOPHIA.RAMDISK);
     ensure_directory(path);
     if ( coinstr[0] != 0 )
         strcat(path,"/"), strcat(path,coinstr), ensure_directory(path);
@@ -496,11 +499,15 @@ struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *co
     {
         DBs->env = sp_env();
         DBs->ctl = sp_ctl(DBs->env);
-        db777_path(path,DBs->coinstr,DBs->subdir);
+        db777_path(path,DBs->coinstr,DBs->subdir,flags & DB777_RAMDISK);
         if ( (err= sp_set(DBs->ctl,"sophia.path",path)) != 0 )
             printf("err.%d setting path (%s)\n",err,path);
-        if ( (err= sp_set(DBs->ctl,"scheduler.threads","1")) != 0 )
-            printf("err.%d setting scheduler.threads\n",err);
+        if ( SOPHIA.RAMDISK[0] != 0 )
+        {
+            if ( (err= sp_set(DBs->ctl,"scheduler.threads","1")) != 0 )
+                printf("err.%d setting scheduler.threads\n",err);
+            db777_path(path,DBs->coinstr,DBs->subdir,0);
+        }
         strcpy(bdir,path), strcat(bdir,"/backups"), ensure_directory(bdir);
         if ( (err= sp_set(DBs->ctl,"backup.path",bdir)) != 0 )
             printf("error.%d settingB backup.path (%s)\n",err,bdir);
