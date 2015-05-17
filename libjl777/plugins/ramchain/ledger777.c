@@ -662,6 +662,7 @@ int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_inf
     if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,0)) != 0 )
     {
         inds[n++] = *lp;
+        numsyncs = lp->numsyncs;
         for (i=numsyncs-1; i>0; i--)
         {
             if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,i)) != 0 )
