@@ -140,8 +140,8 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
         else tagstr[0] = 0;
         NXTaddr = cJSON_str(cJSON_GetObjectItem(json,"NXT"));
         if ( NXTaddr == 0 || NXTaddr[0] == 0 )
-            NXTaddr = plugin->NXTADDR;
-        sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\"}",plugin->NXTADDR);
+            NXTaddr = SUPERNET.NXTADDR;
+        sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\"}",SUPERNET.NXTADDR);
         if ( allfields != 0 )
         {
              if ( SUPERNET.iamrelay != 0 )
