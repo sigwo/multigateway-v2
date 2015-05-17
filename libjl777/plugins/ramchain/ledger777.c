@@ -449,7 +449,7 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledger_blockinfo *block = 0;
     uint32_t i,txidind,txind,n;
-    if ( blocknum > 99807 )
+    if ( 0 && blocknum > 99807 )
     {
         uint32_t checkind; uint8_t buf[100]; int32_t txidlen;
         checkind = ledger_hexind(0,ledger->DBs.transactions,&ledger->txids,buf,&txidlen,"efd9cf795917c178a8fdcc21ec668c17b66958d6cfdba9468561927abe0aaf9d");
