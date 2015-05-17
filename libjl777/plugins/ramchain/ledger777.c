@@ -624,9 +624,14 @@ struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info 
     if ( syncind == 0 )
         key = "last", keylen = (int32_t)strlen(key);
     else key = &syncind, keylen = sizeof(syncind);
+    printf("inside ledger ledger_getsyncdata.%d\n",syncind);
     if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,key,keylen)) != 0 )
+    {
+        printf("found %d bytes\n",allocsize);
         return(lp);
+    }
     else memset(L,0,sizeof(*L));
+    printf("couldnt find\n");
     return(0);
 }
 
@@ -659,6 +664,7 @@ int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp)
 int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_info *ledger)
 {
     struct ledger_inds L,*lp; uint32_t numsyncs,i,n = 0;
+    printf("inside ledger syncblocks\n");
     if ( (lp= ledger_getsyncdata(&L,ledger->DBs.transactions,0)) != 0 )
     {
         inds[n++] = *lp;
