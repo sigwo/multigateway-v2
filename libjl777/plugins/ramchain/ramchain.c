@@ -232,6 +232,7 @@ int32_t ramchain_ledgerhash(char *retbuf,int32_t maxlen,struct ramchain *ramchai
 {
     struct ledger_inds L[32]; int32_t i,n; char ledgerhash[65],*jsonstr; struct ledger_info *ledger = ramchain->activeledger;
     cJSON *item,*array,*json;
+    printf("inside ledgerhash\n");
     if ( ledger == 0 )
     {
         sprintf(retbuf,"{\"error\":\"no active ledger\",\"coin\":\"%s\"}",ramchain->name);
