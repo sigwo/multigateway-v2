@@ -129,7 +129,7 @@ struct MGW_info
 {
     char PATH[1024],serverips[MAX_MGWSERVERS][64],bridgeipaddr[64],bridgeacct[64];
     uint64_t srv64bits[MAX_MGWSERVERS],issuers[64];
-    int32_t M,numissuers,readyflag;
+    int32_t M,numissuers,readyflag,port;
     union endpoints all;
     uint32_t numrecv,numsent;
 }; extern struct MGW_info MGW;

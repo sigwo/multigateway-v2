@@ -22,7 +22,6 @@
 #undef DEFINES_ONLY
 
 void MGW_idle(struct plugin_info *plugin) {}
-//{"coin":"BTCD","userNXT":"343233432443334","userpubkey":"<userpubkey>","buyNXT":99,"NXT":"15382101741829220030","plugin":"peers","method":"devMGW","broadcast":"allpeers"}
 
 STRUCTNAME MGW;
 char *PLUGNAME(_methods)[] = { "myacctpubkeys" };
@@ -66,7 +65,6 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     {
         if ( strcmp(coinaddr,newcoinaddr) == 0 )
             flag = 0;
-        //free(coinaddr);
     }
     if ( flag != 0 )
     {
@@ -587,6 +585,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     MGW.issuers[MGW.numissuers++] = nxt64bits;
             }
         }
+        MGW.port = get_API_int(cJSON_GetObjectItem(json,"MGWport"),7643);
         MGW.M = get_API_int(cJSON_GetObjectItem(json,"M"),2);
         if ( (array= cJSON_GetObjectItem(json,"MGWservers")) != 0 && (n= cJSON_GetArraySize(array)) > 0 && (n & 1) == 0 )
         {
@@ -614,7 +613,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 strcpy(MGW.serverips[SUPERNET.numgateways],MGW.bridgeipaddr);
                 MGW.srv64bits[SUPERNET.numgateways] = calc_nxt64bits(MGW.bridgeacct);
-                //MGW.all.socks.both.bus = make_MGWbus(SUPERNET.port + nn_portoffset(NN_BUS),SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1);
+                MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1);
             }
         }
         MGW.readyflag = 1;
