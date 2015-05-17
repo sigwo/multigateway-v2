@@ -669,7 +669,6 @@ int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_inf
             if ( (lp= ledger_getsyncdata(&L,ledger,i)) != 0 )
                 inds[n++] = *lp;
         }
-        printf("numsyncs.%d vs n.%d\n",numsyncs,n);
     } else printf("null return from ledger_getsyncdata\n");
     return(n);
 }

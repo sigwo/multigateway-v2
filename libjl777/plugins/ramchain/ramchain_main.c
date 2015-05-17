@@ -177,7 +177,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         if ( coin != 0 && coinstr == 0 )
             coinstr = coin->name;
-        printf("%s\n",coinstr);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
@@ -185,7 +184,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else
         {
-            printf("check method.(%s) active.%p\n",methodstr,coin->ramchain.activeledger);
             if ( strcmp(methodstr,"backup") == 0 )
             {
                 if ( coin != 0 )
@@ -223,7 +221,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             }
             else if ( coin != 0 && coin->ramchain.activeledger != 0 )
             {
-                printf("check activeledger methods\n");
                 if ( strcmp(methodstr,"pause") == 0 )
                 {
                     coin->ramchain.paused = 1;
