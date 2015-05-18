@@ -208,7 +208,7 @@ int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind)
 
 int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t startblocknum,uint32_t endblocknum)
 {
-    struct ramchain *ramchain = &coin->ramchain; struct ledger_info *ledger; int32_t numlinks,numlinks2;
+    struct ramchain *ramchain = &coin->ramchain; struct ledger_info *ledger; //int32_t numlinks,numlinks2;
     if ( coin != 0 )
     {
         ramchain->syncfreq = DB777_MATRIXROW;
