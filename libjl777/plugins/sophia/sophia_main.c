@@ -563,7 +563,7 @@ int32_t db777_dbopen(void *ctl,struct db777 *DB)
 int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
 {
     uint32_t matrixkey; int32_t allocsize,err,i,j; struct db777 *DB; cJSON *json; char *str; void *ptr;
-    printf("Open environment\n");
+    fprintf(stderr,"Open environment\n");
     if ( (err= sp_open(DBs->env)) != 0 )
         printf("err.%d setting sp_open for DBs->env %p\n",err,DBs->env);
     DBs->start_RTblocknum = RTblocknum;
@@ -585,6 +585,7 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
                     matrixkey = (j * DB777_MATRIXROW);
                     DB->matrix[j] = calloc(DB->valuesize,DB777_MATRIXROW);
                     allocsize = DB->valuesize * DB777_MATRIXROW;
+                    fprintf(stderr,"%s allocsize.%d read\n",DB->name,allocsize);
                     if ( (ptr= db777_read(DB->matrix[j],&allocsize,0,DB,&matrixkey,sizeof(matrixkey),1)) == 0 && allocsize == DB->valuesize * DB777_MATRIXROW )
                         fprintf(stderr,"+[%d] ",matrixkey);
                     else
