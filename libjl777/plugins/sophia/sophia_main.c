@@ -503,15 +503,13 @@ struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *co
         if ( (err= sp_set(DBs->ctl,"sophia.path",path)) != 0 )
             printf("err.%d setting path (%s)\n",err,path);
         if ( SOPHIA.RAMDISK[0] != 0 )
-        {
-            if ( (err= sp_set(DBs->ctl,"scheduler.threads","1")) != 0 )
-                printf("err.%d setting scheduler.threads\n",err);
-            db777_path(path,DBs->coinstr,DBs->subdir,0);
-        }
+             db777_path(path,DBs->coinstr,DBs->subdir,0);
         strcpy(bdir,path), strcat(bdir,"/backups"), ensure_directory(bdir);
         if ( (err= sp_set(DBs->ctl,"backup.path",bdir)) != 0 )
             printf("error.%d settingB backup.path (%s)\n",err,bdir);
         else printf("set backup path to.(%s)\n",bdir);
+        if ( (err= sp_set(DBs->ctl,"scheduler.threads","1")) != 0 )
+            printf("err.%d setting scheduler.threads\n",err);
     }
     if ( DBs->env != 0 && DBs->numdbs < (int32_t)(sizeof(DBs->dbs)/sizeof(*DBs->dbs)) )
     {
@@ -553,7 +551,7 @@ int32_t db777_dbopen(void *ctl,struct db777 *DB)
         {
             //printf("err.%d sp_open will error if already exists\n",err);
         }
-        DB->asyncdb = sp_async(DB->db);
+        DB->asyncdb = 0;//sp_async(DB->db);
         //printf("DB->db.%p for %s\n",DB->db,DB->dbname);
         return(0);
     }

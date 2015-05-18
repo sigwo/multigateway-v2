@@ -627,9 +627,8 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
 
 int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t numsyncs)
 {
-    struct ledger_inds L;
+    struct ledger_inds L; uint16_t key = numsyncs;
     memset(&L,0,sizeof(L));
-    uint16_t key = numsyncs;
     L.blocknum = ledger->blocknum, L.numsyncs = ledger->numsyncs;
     L.voutsum = ledger->voutsum, L.spendsum = ledger->spendsum;
     L.addrind = ledger->addrs.ind, L.txidind = ledger->txids.ind, L.scriptind = ledger->scripts.ind;
