@@ -161,7 +161,7 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
     printf("search value.%x len.%d link.%d -> entry.%p\n",*(int *)value,valuelen,ind,entry);
     if ( entry != 0 )
     {
-        if ( entry->valuesize == 0 )
+        if ( entry->valuesize == sizeof(uint32_t)*2 )
         {
             memcpy(&obj,entry->value,sizeof(obj));
             if ( entry->valuelen == valuelen && memcmp(obj,value,valuelen) == 0 && valuelen == revDB->valuesize )
