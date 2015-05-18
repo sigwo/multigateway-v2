@@ -52,6 +52,7 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t start_RTblockn
 char **db777_index(int32_t *nump,struct db777 *DB,int32_t max);
 int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue);
 void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen,int32_t fillcache);
+void *db777_matrixptr(int32_t *matrixindp,void *transactions,struct db777 *DB,void *key,int32_t keylen);
 
 extern struct db777_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
@@ -170,11 +171,12 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
                     memcpy(entry->value,revptr,valuelen);
                     entry->linked = 1;
                     Linked++;
+                    return(0);
                 } else printf("miscompared %s vs %s\n",DB->name,revDB->name);
             } else printf("miscompared %s ind.%d vs arg\n",DB->name,ind);
         } else printf("unexpected nonzero valuesize.%d for %s\n",entry->valuesize,DB->name);
     } else printf("couldnt find entry for %s ind.%d\n",DB->name,ind);
-    return(0);
+    return(-1);
 }
 
 void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen,int32_t fillcache)
