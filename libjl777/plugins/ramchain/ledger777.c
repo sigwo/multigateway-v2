@@ -526,7 +526,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
             {
                 if ( addrinfo->notify != 0 )
                     printf("notification active addind.%d count.%d size.%d\n",addrind,addrinfo->count,addrinfo_size(addrinfo->count));//, getchar();
-                addrsum += *(int64_t *)addrinfo->balance;
+                addrsum += addrinfo->balance;
             }
         }
     }
@@ -538,7 +538,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
             len = sizeof(ledger->getbuf);
             if ( (addrinfo= db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) != 0 )
             {
-                balance= *(int64_t *)addrinfo->balance;
+                balance = addrinfo->balance;
                 addrsum += balance;
                 sortbuf[n << 1] = dstr(balance);
                 memcpy(&sortbuf[(n << 1) + 1],&addrind,sizeof(addrind));
@@ -779,7 +779,7 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
                     fprintf(stderr,"%d%% ",modval), lastmodval = modval;
                 allocsize = sizeof(ledger->getbuf);
                 if ( (addrinfo= db777_get(ledger->getbuf,&allocsize,0,ledger->addrinfos.DB,&addrind,sizeof(addrind))) != 0 )
-                    balance += *(int64_t *)addrinfo->balance;
+                    balance += addrinfo->balance;
             }
             printf("balance %.8f endmilli %.0f\n",dstr(balance),milliseconds());
         } else printf("mismatched block: %u %u, crc16 %u %u\n",block->allocsize,allocsize,block_crc16(block),block->crc16);
