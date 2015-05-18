@@ -292,7 +292,7 @@ int32_t main
     int32_t i,n,bundledflag,max,sendflag,sleeptime=1,len = 0;
     char *messages[16],*line,*jsonargs,*transportstr;
     milliseconds();
-    max = 65536;
+    max = 1000000;
     retbuf = malloc(max+1);
     plugin = calloc(1,sizeof(*plugin) + PLUGIN_EXTRASIZE);
     plugin->extrasize = PLUGIN_EXTRASIZE;

@@ -195,12 +195,13 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
     struct ramchain *ramchain = &coin->ramchain;
     if ( coin != 0 )
     {
-        ramchain->syncfreq = 10000;
+        ramchain->syncfreq = DB777_MATRIXROW;
         strcpy(ramchain->name,coinstr);
         ramchain->readyflag = 1;
         if ( (ramchain->activeledger= ledger_alloc(coinstr,"",0)) != 0 )
         {
-            env777_start(0,&ramchain->activeledger->DBs);
+            ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
+            env777_start(0,&ramchain->activeledger->DBs,ramchain->RTblocknum);
             if ( endblocknum == 0 )
                 endblocknum = 1000000000;
             return(ramchain_resume(retbuf,ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum));

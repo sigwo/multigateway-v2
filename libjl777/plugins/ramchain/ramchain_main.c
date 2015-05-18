@@ -37,16 +37,16 @@ int32_t ramchain_idle(struct plugin_info *plugin)
         if ( (coin= COINS.LIST[i]) != 0  && (ledger= coin->ramchain.activeledger) != 0 )
         {
             ramchain = &coin->ramchain;
-            if ( (lag= (ramchain->RTblocknum - ledger->blocknum)) < 1000 || (ledger->blocknum % 1000) == 0 )
+            if ( (lag= (ramchain->RTblocknum - ledger->blocknum)) < 1000 || (ledger->blocknum % 100) == 0 )
                 ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
-            if ( lag < 100000 && ramchain->syncfreq > 10000 )
-                ramchain->syncfreq = 10000;
-            else if ( lag < 10000 && ramchain->syncfreq > 1000 )
-                ramchain->syncfreq = 1000;
-            else if ( lag < 1000 && ramchain->syncfreq > 100 )
-                ramchain->syncfreq = 100;
-            else if ( strcmp(ramchain->name,"BTC") == 0 && lag < 10 && ramchain->syncfreq > 10 )
-                ramchain->syncfreq = 10;
+            if ( lag < DB777_MATRIXROW*10 && ramchain->syncfreq > DB777_MATRIXROW )
+                ramchain->syncfreq = DB777_MATRIXROW;
+            else if ( lag < DB777_MATRIXROW && ramchain->syncfreq > DB777_MATRIXROW/10 )
+                ramchain->syncfreq = DB777_MATRIXROW/10;
+            else if ( lag < DB777_MATRIXROW/10 && ramchain->syncfreq > DB777_MATRIXROW/100 )
+                ramchain->syncfreq = DB777_MATRIXROW/100;
+            else if ( strcmp(ramchain->name,"BTC") == 0 && lag < DB777_MATRIXROW/100 && ramchain->syncfreq > DB777_MATRIXROW/1000 )
+                ramchain->syncfreq = DB777_MATRIXROW/1000;
             if ( ramchain->paused < 10 )
             {
                 syncflag = (((ledger->blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0) || (ledger->blocknum % 10000) == 0);

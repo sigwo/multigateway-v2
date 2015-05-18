@@ -201,7 +201,7 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
 
 uint32_t ledger_addrind(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr)
 {
-    return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->addrs,coinaddr,(int32_t)strlen(coinaddr) + 1,0));
+    return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->addrs,coinaddr,(int32_t)strlen(coinaddr),0));
 }
 
 struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr)
@@ -218,6 +218,7 @@ int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,ui
     char *ptr; int32_t size = max,retval = -1;
     if ( (ptr= db777_get(coinaddr,&size,ledger->DBs.transactions,ledger->revaddrs.DB,&addrind,sizeof(addrind))) != 0 )
     {
+        ptr[size] = 0;
         if ( size < max )
             strcpy(coinaddr,ptr), retval = 0;
         else printf("coinaddr.(%s) too long for %d\n",ptr,max);
@@ -385,7 +386,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
     }
     vout.newscript = (vout.scriptind == ledger->scripts.ind);
     (*numscriptsp) += vout.newscript;
-    vout.addrlen = (int32_t)strlen(coinaddr) + 1;
+    vout.addrlen = (int32_t)strlen(coinaddr);
     if ( (vout.U.ind= ledger_rawind(&firstblocknum,1,ledger->DBs.transactions,&ledger->addrs,coinaddr,vout.addrlen,blocknum)) != 0 )
     {
         ledger->unspentmap.ind = unspentind;

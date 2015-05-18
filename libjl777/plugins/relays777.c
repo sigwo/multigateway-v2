@@ -539,9 +539,9 @@ char *nn_direct(char *ipaddr,char *request)
 char *nn_allpeers(char *_request,int32_t timeoutmillis,char *localresult)
 {
     cJSON *item,*json,*array = 0;
-    int32_t i,errs,sendlen,peersock,len,n = 0;
+    int32_t i,errs,numsuccess,sendlen,peersock,len,n = 0;
     double startmilli;
-    char error[MAX_JSON_FIELD],*request,*msg,*retstr;
+    char error[MAX_JSON_FIELD],result[MAX_JSON_FIELD],*request,*msg,*retstr;
     if ( timeoutmillis == 0 )
         timeoutmillis = 2000;
     if ( (peersock= RELAYS.querypeers) < 0 )
@@ -570,22 +570,27 @@ char *nn_allpeers(char *_request,int32_t timeoutmillis,char *localresult)
     for (i=0; i<10; i++)
         if ( (nn_socket_status(peersock,1) & NN_POLLOUT) != 0 )
             break;
+    numsuccess = n = 0;
     if ( (sendlen= nn_send(peersock,request,len,0)) == len )
     {
         while ( (len= nn_recv(peersock,&msg,NN_MSG,0)) > 0 )
         {
+            n++;
             if ( (item= cJSON_Parse(msg)) != 0 )
             {
                 copy_cJSON(error,cJSON_GetObjectItem(item,"error"));
+                copy_cJSON(result,cJSON_GetObjectItem(item,"result"));
                 if ( error[0] == 0 )//|| strcmp(error,"timeout") != 0 )
                 {
                     if ( array == 0 )
                         array = cJSON_CreateArray();
                     cJSON_AddItemToObject(item,"lag",cJSON_CreateNumber(milliseconds()-startmilli));
                     cJSON_AddItemToArray(array,item);
-                    n++;
-                } else errs++;
-            }
+                }
+                else if ( strcmp(result,"success") == 0 )
+                    numsuccess++;
+                else errs++;
+            } else errs++;
             nn_freemsg(msg);
         }
     } else printf("nn_allpeers: sendlen.%d vs len.%d\n",sendlen,len);
@@ -597,8 +602,9 @@ char *nn_allpeers(char *_request,int32_t timeoutmillis,char *localresult)
     }
     json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"responses",array);
-    cJSON_AddItemToObject(json,"n",cJSON_CreateNumber(n));
+    cJSON_AddItemToObject(json,"success",cJSON_CreateNumber(numsuccess));
     cJSON_AddItemToObject(json,"err responses",cJSON_CreateNumber(errs));
+    cJSON_AddItemToObject(json,"total",cJSON_CreateNumber(n));
     retstr = cJSON_Print(json);
     _stripwhite(retstr,' ');
     printf("globalrequest(%s) returned (%s) from n.%d respondents\n",request,retstr,n);

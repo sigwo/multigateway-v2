@@ -553,25 +553,34 @@ int32_t db777_dbopen(void *ctl,struct db777 *DB)
         {
             //printf("err.%d sp_open will error if already exists\n",err);
         }
-        DB->asyncdb = 0;//sp_async(DB->db);
+        DB->asyncdb = sp_async(DB->db);
         //printf("DB->db.%p for %s\n",DB->db,DB->dbname);
         return(0);
     }
     return(err);
 }
 
-int32_t env777_start(int32_t dispflag,struct env777 *DBs)
+int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
 {
     int32_t err,i; struct db777 *DB; cJSON *json; char *str;
     printf("Open environment\n");
     if ( (err= sp_open(DBs->env)) != 0 )
         printf("err.%d setting sp_open for DBs->env %p\n",err,DBs->env);
+    DBs->start_RTblocknum = RTblocknum;
+    DBs->matrixentries = ((RTblocknum * 1.1) / DB777_MATRIXROW) + 16;
     for (i=0; i<DBs->numdbs; i++)
     {
         DB = &DBs->dbs[i];
+        DB->start_RTblocknum = RTblocknum;
         DB->reqsock = RELAYS.lb.sock;
         if ( db777_dbopen(DBs->ctl,DB) == 0 )
         {
+            if ( db777_matrixalloc(DB) != 0 )
+            {
+                DB->dirty = calloc(DBs->matrixentries,sizeof(*DB->dirty));
+                DB->matrix = calloc(DBs->matrixentries,sizeof(*DB->matrix));
+                DB->matrixentries = DBs->matrixentries;
+            }
             if ( dispflag != 0 && (json= db777_json(DBs->env,DB)) != 0 )
             {
                 str = cJSON_Print(json);
