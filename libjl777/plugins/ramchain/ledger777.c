@@ -90,7 +90,7 @@ uint32_t ledger_packspend(uint8_t *hash,struct sha256_state *state,struct alloc_
 
 uint32_t ledger_packvoutstr(struct alloc_space *mem,uint32_t rawind,int32_t newitem,uint8_t *str,uint16_t len)
 {
-    uint8_t blen;
+    uint8_t blen,extra = 1;
     if ( newitem != 0 )
     {
         rawind |= (1 << 31);
@@ -105,10 +105,10 @@ uint32_t ledger_packvoutstr(struct alloc_space *mem,uint32_t rawind,int32_t newi
             blen = 0xfd;
             printf("long string len.%d %llx\n",len,*(long long *)str);
             memcpy(memalloc(mem,1,0),&blen,1);
-            memcpy(memalloc(mem,2,0),&len,2);
+            memcpy(memalloc(mem,2,0),&len,2), extra += 2;
         }
         memcpy(memalloc(mem,len,0),str,len);
-        return(sizeof(rawind) + sizeof(len) + len);
+        return(sizeof(rawind) + extra + len);
     }
     else
     {
@@ -180,7 +180,7 @@ uint32_t ledger_hexind(uint32_t *firstblocknump,int32_t writeflag,void *transact
 
 uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t blocknum,char *txidstr)
 {
-    uint8_t data[256]; uint32_t *ptr,rawind = 0; int32_t hexlen,size = sizeof(rawind);
+    uint8_t data[256]; uint32_t *ptr,pair[2],rawind = 0; int32_t hexlen,size = sizeof(pair);
     if ( strcmp(coinstr,"BTC") == 0 && blocknum < 200000 )
     {
         hexlen = (int32_t)strlen(txidstr) >> 1;
@@ -188,8 +188,9 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
         {
             decode_hex(data,hexlen,txidstr);
             //if ( (blocknum == 91842 && strcmp(txidstr,"d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599") == 0) || (blocknum == 91880 && strcmp(txidstr,"e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468") == 0) )
-            if ( (ptr= db777_get(&rawind,&size,ledger->DBs.transactions,ledger->txids.DB,data,hexlen)) != 0 )
+            if ( (ptr= db777_get(&pair,&size,ledger->DBs.transactions,ledger->txids.DB,data,hexlen)) != 0 )
             {
+                rawind = pair[0];
                 if ( Debuglevel > 2 )
                     printf("block.%u (%s) already exists.%u\n",blocknum,txidstr,*ptr);
             }
@@ -215,7 +216,7 @@ struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_i
 int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,uint32_t addrind)
 {
     char *ptr; int32_t size = max,retval = -1;
-    if ( (ptr= db777_get(coinaddr,&size,ledger->DBs.transactions,ledger->addrs.DB,&addrind,sizeof(addrind))) != 0 )
+    if ( (ptr= db777_get(coinaddr,&size,ledger->DBs.transactions,ledger->revaddrs.DB,&addrind,sizeof(addrind))) != 0 )
     {
         if ( size < max )
             strcpy(coinaddr,ptr), retval = 0;
@@ -224,14 +225,14 @@ int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,ui
     return(retval);
 }
 
-int32_t addrinfo_size(int32_t n) { return(sizeof(struct ledger_addrinfo) + (sizeof(uint32_t) * n)); }
+int32_t addrinfo_size(int32_t n) { return(sizeof(struct ledger_addrinfo) + (sizeof(struct unspentmap) * n)); }
 
 struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(0))); }
 
 uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum,char *txidstr,int32_t vout,char *extra,int32_t v,uint32_t scriptind)
 {
     uint64_t balance = 0; int32_t i,n,allocsize = sizeof(ledger->getbuf);
-    char itembuf[8192],pubstr[8192],addr[128]; // uint32_t addrtx[2],pair[2];
+    char itembuf[8192],pubstr[8192],spendaddr[128]; // uint32_t addrtx[2],pair[2];
     struct ledger_addrinfo *addrinfo; struct unspentmap U;
     if ( (addrinfo= db777_get(ledger->getbuf,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) == 0 )
     {
@@ -253,16 +254,16 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
                     addrinfo->balance -= value, balance = addrinfo->balance;
                     addrinfo->dirty = 1;
                     //printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
-                    addrinfo->unspents[i] = addrinfo->unspents[--addrinfo->count];
-                    memset(&addrinfo->unspents[addrinfo->count],0,sizeof(addrinfo->unspents[addrinfo->count]));
                     if ( addrinfo->notify != 0 )
                     {
                         // T balance, b blocknum, a -value, t this txidstr, v this vin, st spent_txidstr, sv spent_vout
-                        sprintf(itembuf,"{\"T\":%.8f,\"b\":%u,\"a\":%.8f,\"t\":\"%s\",\"v\":%d,\"st\":\"%s\",\"sv\":%d}",dstr(*(uint64_t *)addrinfo->balance),blocknum,-dstr(value),extra,v,txidstr,vout);
-                        ledger_coinaddr(ledger,addr,sizeof(addr),addrind);
+                        ledger_coinaddr(ledger,spendaddr,sizeof(spendaddr),addrind);
+                        sprintf(itembuf,"{\"%s\":\"%s\",\"T\":%.8f,\"b\":%u,\"a\":%.8f,\"t\":\"%s\",\"v\":%d,\"st\":\"%s\",\"sv\":%d,\"si\":%d}",ledger->DBs.coinstr,spendaddr,dstr(addrinfo->balance),blocknum,-dstr(value),extra,v,txidstr,vout,addrinfo->unspents[i].scriptind);
                         sprintf(pubstr,"{\"%s\":%s}","notify",itembuf);
                         //nn_publish(pubstr,1);
                     }
+                    addrinfo->unspents[i] = addrinfo->unspents[--addrinfo->count];
+                    memset(&addrinfo->unspents[addrinfo->count],0,sizeof(addrinfo->unspents[addrinfo->count]));
                     unspentind |= (1 << 31);
                     if ( addrinfo->count == 0 && balance != 0 )
                         printf("ILLEGAL: addrind.%u count.%d %.8f\n",addrind,addrinfo->count,dstr(balance)), debugstop();
