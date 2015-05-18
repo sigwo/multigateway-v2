@@ -209,8 +209,6 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
                 if ( entry->valuelen <= max )
                     memcpy(dest,value,entry->valuelen);
                 else return(0);
-                //if ( strcmp(DB->name,"addrinfos") == 0 )
-                //    printf("RAM found %p %s [%x] keylen.%d -> [%x] valuelen.%d | value.%p entry.%p\n",dest,DB->name,*(int *)key,keylen,*(int *)value,entry->valuelen,value,entry);
                 return(dest);
             }
         }
@@ -218,24 +216,6 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
         {
             if ( (dest= db777_read(dest,lenp,transactions,DB,key,keylen,DB->flags & DB777_RAM)) != 0 )
                 return(dest);
-            /*if ( (obj= sp_object(DB->db)) != 0 )
-            {
-                if ( sp_set(obj,"key",key,keylen) == 0 && (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
-                {
-                    value = sp_get(result,"value",lenp);
-                    if ( *lenp <= max )
-                    {
-                        memcpy(dest,value,*lenp);
-                        if ( (DB->flags & DB777_RAM) != 0 )
-                            db777_set(DB777_RAM,transactions,DB,key,keylen,value,*lenp);
-                    }
-                    else dest = 0;
-                }
-                if ( result != 0 )
-                    sp_destroy(result);
-            }
-            if ( value != 0 )
-                return(dest);*/
         }
     }
     if ( 0 && (DB->flags & DB777_NANO) != 0 && DB->reqsock != 0 )

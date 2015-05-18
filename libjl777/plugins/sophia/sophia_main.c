@@ -586,7 +586,7 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
                     DB->matrix[j] = calloc(DB->valuesize,DB777_MATRIXROW);
                     allocsize = DB->valuesize * DB777_MATRIXROW;
                     fprintf(stderr,"%s allocsize.%d read\n",DB->name,allocsize);
-                    if ( (ptr= db777_read(DB->matrix[j],&allocsize,0,DB,&matrixkey,sizeof(matrixkey),1)) == 0 && allocsize == DB->valuesize * DB777_MATRIXROW )
+                    if ( (ptr= db777_read(DB->matrix[j],&allocsize,0,DB,&matrixkey,sizeof(matrixkey),1)) != 0 && allocsize == DB->valuesize * DB777_MATRIXROW )
                         fprintf(stderr,"+[%d] ",matrixkey);
                     else
                     {
