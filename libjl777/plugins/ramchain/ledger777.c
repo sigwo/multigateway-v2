@@ -439,7 +439,7 @@ struct ledger_blockinfo *ledger_startblock(struct ledger_info *ledger,struct all
     block = memalloc(mem,sizeof(*block),1);
     block->minted = minted, block->numtx = numtx, block->blocknum = blocknum, block->timestamp = timestamp;
     if ( strlen(blockhashstr) == 64 )
-        decode_hex(block->blockhash,32,blockhashstr), printf("blockhash.(%s)\n",blockhashstr);
+        decode_hex(block->blockhash,32,blockhashstr), printf("blockhash.(%s) %x\n",blockhashstr,*(int *)block->blockhash);
     else printf("warning blockhash len.%ld\n",strlen(blockhashstr));
     return(block);
 }
@@ -474,7 +474,7 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
     printf("rawblock_load\n");
     if ( rawblock_load(emit,name,serverport,userpass,blocknum) > 0 )
     {
-        printf("ledger_startblock\n");
+        printf("ledger_startblock numtx.%d\n",emit->numtx);
         tx = emit->txspace, vi = emit->vinspace, vo = emit->voutspace;
         block = ledger_startblock(ledger,mem,blocknum,emit->minted,emit->numtx,emit->timestamp,emit->blockhash);
         if ( block->numtx > 0 )
@@ -483,7 +483,6 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
             {
                 if ( (txidind= has_duplicate_txid(ledger,ledger->DBs.coinstr,blocknum,tx->txidstr)) == 0 )
                     txidind = ledger->txids.ind + 1;
-                //printf("expect txidind.%d unspentind.%d totalspends.%d\n",txidind,block->unspentind+1,block->totalspends);
                 ledger_addtx(ledger,mem,txidind,tx->txidstr,ledger->unspentmap.ind+1,tx->numvouts,ledger->spentbits.ind+1,tx->numvins,blocknum);
                 if ( (n= tx->numvouts) > 0 )
                     for (i=0; i<n; i++,vo++,block->numvouts++)
