@@ -117,14 +117,23 @@ void db777_free(struct db777 *DB)
 void *db777_matrixptr(int32_t *matrixindp,struct db777 *DB,void *key,int32_t keylen)
 {
     uint32_t rawind;
+    *matrixindp = 0;
     if ( keylen == sizeof(uint32_t) )
     {
         rawind = *(uint32_t *)key;
         *matrixindp = (rawind / DB777_MATRIXROW);
-        if ( *matrixindp < DB->matrixentries && DB->matrix[*matrixindp] != 0 )
+        if ( *matrixindp < DB->matrixentries )
+        {
+            db777_lock(DB);
+            if ( DB->matrix[*matrixindp] == 0 )
+            {
+                printf("alloc.%d -> %s[%d]\n",DB777_MATRIXROW*DB->valuesize,DB->name,*matrixindp);
+                DB->matrix[*matrixindp] = calloc(DB777_MATRIXROW,DB->valuesize);
+            }
+            db777_unlock(DB);
             return((void *)((long)DB->matrix[*matrixindp] + ((rawind % DB777_MATRIXROW) * DB->valuesize)));
+        } else printf("invalid matrixi.%d for %s max.%d\n",*matrixindp,DB->name,DB->matrixentries);
     } else printf("invalid keylen.%d for %s\n",keylen,DB->name);
-    *matrixindp = 0;
     return(0);
 }
 
@@ -139,13 +148,6 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
     max = *lenp, *lenp = 0;
     if ( db777_matrixalloc(DB) != 0 )
     {
-        db777_lock(DB);
-        if ( (src= db777_matrixptr(&matrixi,DB,key,keylen)) == 0 )
-        {
-            printf("alloc.%d -> %s[%d]\n",DB777_MATRIXROW*DB->valuesize,DB->name,matrixi);
-            DB->matrix[matrixi] = calloc(DB777_MATRIXROW,DB->valuesize);
-        }
-        db777_unlock(DB);
         if ( (src= db777_matrixptr(&matrixi,DB,key,keylen)) != 0 )
         {
             *lenp = DB->valuesize;
