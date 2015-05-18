@@ -42,6 +42,7 @@ int32_t db777_matrixalloc(struct db777 *DB);
 
 int32_t db777_addstr(struct db777 *DB,char *key,char *value);
 int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key);
+int32_t db777_link(struct db777 *DB,struct db777 *revDB,uint32_t ind,void *value,int32_t valuelen);
 
 int32_t db777_close(struct db777 *DB);
 void **db777_copy_all(int32_t *nump,struct db777 *DB,char *field,int32_t size);
@@ -142,6 +143,11 @@ int32_t db777_matrixalloc(struct db777 *DB)
     return((DB->flags & (DB777_RAM | DB777_KEY32)) == (DB777_RAM | DB777_KEY32) && DB->valuesize != 0);
 }
 
+int32_t db777_link(struct db777 *DB,struct db777 *revDB,uint32_t ind,void *value,int32_t valuelen)
+{
+    return(0);
+}
+
 void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
     int32_t i,c,max,matrixi; struct db777_entry *entry = 0; void *obj,*src,*result = 0,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
@@ -228,40 +234,6 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
         } else printf("db777_get: keylen.%d too big for buf\n",keylen);
     }
     return(0);
-}
-
-int32_t db777_delete(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen)
-{
-    struct db777_entry *entry; void *obj; int32_t retval = -1;
-    if ( DB != 0 )
-    {
-        if ( db777_matrixalloc(DB) != 0 )
-            printf("db777_delete %s %u: unexpected delete\n",DB->name,*(int *)key);
-        else
-        {
-            if ( ((flags & DB->flags) & DB777_HDD) != 0 )
-            {
-                if ( (obj= sp_object(DB->db)) == 0 )
-                {
-                    if ( sp_set(obj,"key",key,keylen) == 0 )
-                        retval = sp_delete((transactions != 0) ? transactions : DB->db,obj);
-                    else sp_destroy(obj);
-                }
-            }
-            if ( ((flags & DB->flags) & DB777_RAM) != 0 )
-            {
-                db777_lock(DB);
-                HASH_FIND(hh,DB->table,key,keylen,entry);
-                if ( entry != 0 )
-                {
-                    HASH_DEL(DB->table,entry);
-                    db777_free_entry(entry);
-                }
-                db777_unlock(DB);
-            }
-        }
-    }
-    return(retval);
 }
 
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
@@ -386,60 +358,6 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
     return(retval);
 }
 
-int32_t db777_flush(void *transactions,struct db777 *DB)
-{
-    struct db777_entry *entry,*tmp; void *obj; uint32_t key; int32_t valuelen,flushed = 0,i,n = 0,numerrs = 0;
-    if ( (DB->flags & DB777_RAM) != 0 )
-    {
-        db777_lock(DB);
-        if ( db777_matrixalloc(DB) != 0 )
-        {
-            for (i=0; i<DB->matrixentries; i++)
-            {
-                if ( DB->dirty[i] != 0 )
-                {
-                    if ( DB->matrix[i] != 0 )
-                    {
-                        key = (i * DB777_MATRIXROW);
-                        valuelen = DB->valuesize * DB777_MATRIXROW;
-                        DB->dirty[i] = (db777_set(DB777_HDD,transactions,DB,&key,sizeof(key),DB->matrix[i],valuelen) != 0);
-                        n++, flushed += valuelen;
-                    } else printf("db777_flush: %s missing matrix row[%d]??\n",DB->name,i);
-                }
-            }
-        }
-        else
-        {
-            HASH_ITER(hh,DB->table,entry,tmp)
-            {
-                if ( entry->valuesize == 0 && entry->valuelen < entry->valuesize )
-                {
-                    memcpy(&obj,entry->value,sizeof(obj));
-                    entry->allocsize = entry->valuelen;
-                    obj = realloc(obj,entry->valuelen);
-                    memcpy(entry->value,&obj,sizeof(obj));
-                }
-                if ( entry->dirty != 0 )
-                {
-                    if ( (DB->flags & DB777_HDD) != 0 )
-                    {
-                        db777_delete(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen);
-                        obj = (DB->valuesize == 0) ? *(void **)entry->value : entry->value;
-                        entry->dirty = (db777_set(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen,obj,entry->valuelen) != 0);
-                        //if ( strcmp(DB->name,"revaddrs") == 0 )
-                        //    printf("%d: (%s).%d\n",*(int32_t *)entry->hh.key,obj,entry->valuelen);
-                        numerrs += entry->dirty;
-                        n++, flushed += entry->valuelen;
-                    }
-                }
-            }
-        }
-        db777_unlock(DB);
-    }
-    printf("(%s %d).%d ",DB->name,flushed,n);
-    return(-numerrs);
-}
-
 int32_t zcmp(uint8_t *buf,int32_t len)
 {
     int32_t i;
@@ -505,6 +423,94 @@ int32_t db777_findstr(char *retbuf,int32_t max,struct db777 *DB,char *key)
     }
     // printf("found str.(%s) -> (%s)\n",key,retbuf);
     return(valuesize);
+}
+
+int32_t db777_delete(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen)
+{
+    struct db777_entry *entry; void *obj; int32_t retval = -1;
+    if ( DB != 0 )
+    {
+        if ( db777_matrixalloc(DB) != 0 )
+            printf("db777_delete %s %u: unexpected delete\n",DB->name,*(int *)key);
+        else
+        {
+            if ( ((flags & DB->flags) & DB777_HDD) != 0 )
+            {
+                if ( (obj= sp_object(DB->db)) == 0 )
+                {
+                    if ( sp_set(obj,"key",key,keylen) == 0 )
+                        retval = sp_delete((transactions != 0) ? transactions : DB->db,obj);
+                    else sp_destroy(obj);
+                }
+            }
+            if ( ((flags & DB->flags) & DB777_RAM) != 0 )
+            {
+                db777_lock(DB);
+                HASH_FIND(hh,DB->table,key,keylen,entry);
+                if ( entry != 0 )
+                {
+                    HASH_DEL(DB->table,entry);
+                    db777_free_entry(entry);
+                }
+                db777_unlock(DB);
+            }
+        }
+    }
+    return(retval);
+}
+
+int32_t db777_flush(void *transactions,struct db777 *DB)
+{
+    struct db777_entry *entry,*tmp; void *obj; uint32_t key; int32_t valuelen,flushed = 0,i,n = 0,numerrs = 0;
+    if ( (DB->flags & DB777_RAM) != 0 )
+    {
+        db777_lock(DB);
+        if ( db777_matrixalloc(DB) != 0 )
+        {
+            for (i=0; i<DB->matrixentries; i++)
+            {
+                if ( DB->dirty[i] != 0 )
+                {
+                    if ( DB->matrix[i] != 0 )
+                    {
+                        key = (i * DB777_MATRIXROW);
+                        valuelen = DB->valuesize * DB777_MATRIXROW;
+                        DB->dirty[i] = (db777_set(DB777_HDD,transactions,DB,&key,sizeof(key),DB->matrix[i],valuelen) != 0);
+                        n++, flushed += valuelen;
+                    } else printf("db777_flush: %s missing matrix row[%d]??\n",DB->name,i);
+                }
+            }
+        }
+        else
+        {
+            HASH_ITER(hh,DB->table,entry,tmp)
+            {
+                if ( entry->valuesize == 0 && entry->valuelen < entry->valuesize )
+                {
+                    memcpy(&obj,entry->value,sizeof(obj));
+                    entry->allocsize = entry->valuelen;
+                    obj = realloc(obj,entry->valuelen);
+                    memcpy(entry->value,&obj,sizeof(obj));
+                }
+                if ( entry->dirty != 0 )
+                {
+                    if ( (DB->flags & DB777_HDD) != 0 )
+                    {
+                        db777_delete(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen);
+                        obj = (DB->valuesize == 0) ? *(void **)entry->value : entry->value;
+                        entry->dirty = (db777_set(DB777_HDD,transactions,DB,entry->hh.key,entry->keylen,obj,entry->valuelen) != 0);
+                        //if ( strcmp(DB->name,"revaddrs") == 0 )
+                        //    printf("%d: (%s).%d\n",*(int32_t *)entry->hh.key,obj,entry->valuelen);
+                        numerrs += entry->dirty;
+                        n++, flushed += entry->valuelen;
+                    }
+                }
+            }
+        }
+        db777_unlock(DB);
+    }
+    printf("(%s %d).%d ",DB->name,flushed,n);
+    return(-numerrs);
 }
 
 int32_t db777_sync(void *transactions,struct env777 *DBs,int32_t flags)

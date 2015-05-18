@@ -313,7 +313,7 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
     if ( firstvout == 0 )
         printf("illegal firstvout.0 for txidind.%d\n",txidind), debugstop();
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         printf(" db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
     if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
         return(0);
@@ -329,7 +329,7 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
     if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
         firstvout = ptr->firstvout;
     else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), debugstop();
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         printf("search txidind.%u GET -> firstvout.%d\n",txidind,firstvout);
     return(firstvout);
 }
@@ -349,6 +349,7 @@ uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_
     {
         if ( db777_add(-1,ledger->DBs.transactions,ledger->revtxids.DB,&txidind,sizeof(txidind),txid,txidlen) != 0 )
             printf("error saving txid.(%s) addrind.%u\n",txidstr,txidind);
+        else db777_link(ledger->txids.DB,ledger->revtxids.DB,txidind,txid,txidlen);
         memset(&tx,0,sizeof(tx));
         tx.firstvout = totalvouts, tx.firstvin = totalspends, tx.numvouts = numvouts, tx.numvins = numvins;
         tx.txidlen = txidlen, memcpy(tx.txid,txid,txidlen);
@@ -398,6 +399,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
             vout.newaddr = 1, strcpy(vout.coinaddr,coinaddr), (*numaddrsp)++;
             if ( db777_add(-1,ledger->DBs.transactions,ledger->revaddrs.DB,&vout.U.ind,sizeof(vout.U.ind),coinaddr,vout.addrlen) != 0 )
                 printf("error saving coinaddr.(%s) addrind.%u\n",coinaddr,vout.U.ind);
+            else db777_link(ledger->addrs.DB,ledger->revaddrs.DB,vout.U.ind,coinaddr,vout.addrlen);
             update_sha256(ledger->revaddrs.sha256,&ledger->revaddrs.state,(void *)coinaddr,vout.addrlen);
         }
         if ( Debuglevel > 2 )
@@ -420,7 +422,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
         spend.spent_txidind = spent_txidind, spend.spent_vout = spent_vout;
         spend.unspentind = ledger_firstvout(ledger,spent_txidind) + spent_vout;
         ledger_spentbits(ledger,spend.unspentind,1);
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("spent_txidstr.(%s) -> spent_txidind.%u firstvout.%d\n",spent_txidstr,spent_txidind,spend.unspentind-spent_vout);
         if ( (value= ledger_unspentvalue(&addrind,&scriptind,ledger,spend.unspentind)) != 0 && addrind > 0 )
         {
@@ -531,8 +533,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
             if ( (addrinfo= db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) != 0 )
             {
                 if ( addrinfo->notify != 0 )
-                    printf("notification active addind.%d count.%d size.%d\n",addrind,addrinfo->count,addrinfo_size(addrinfo->count));//, getchar();
-                addrsum += addrinfo->balance;
+                    printf("notification active addind.%d count.%d size.%d\n",addrind,addrinfo->count,addrinfo_size(addrinfo->count));                addrsum += addrinfo->balance;
             }
         }
     }
