@@ -475,8 +475,8 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
     if ( rawblock_load(emit,name,serverport,userpass,blocknum) > 0 )
     {
         printf("ledger_startblock numtx.%d\n",emit->numtx);
-        ledger->blocknum++;
-        return(0);
+        //ledger->blocknum++;
+        //return(0);
         tx = emit->txspace, vi = emit->vinspace, vo = emit->voutspace;
         block = ledger_startblock(ledger,mem,blocknum,emit->minted,emit->numtx,emit->timestamp,emit->blockhash);
         if ( block->numtx > 0 )
@@ -485,11 +485,11 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
             {
                 if ( (txidind= has_duplicate_txid(ledger,ledger->DBs.coinstr,blocknum,tx->txidstr)) == 0 )
                     txidind = ledger->txids.ind + 1;
-                ledger_addtx(ledger,mem,txidind,tx->txidstr,ledger->unspentmap.ind+1,tx->numvouts,ledger->spentbits.ind+1,tx->numvins,blocknum);
-                if ( (n= tx->numvouts) > 0 )
+                //ledger_addtx(ledger,mem,txidind,tx->txidstr,ledger->unspentmap.ind+1,tx->numvouts,ledger->spentbits.ind+1,tx->numvins,blocknum);
+                if ( 0 && (n= tx->numvouts) > 0 )
                     for (i=0; i<n; i++,vo++,block->numvouts++)
                         ledger_addunspent(&block->numaddrs,&block->numscripts,ledger,mem,txidind,i,++ledger->unspentmap.ind,vo->coinaddr,vo->script,vo->value,blocknum,tx->txidstr,txind);
-                if ( (n= tx->numvins) > 0 )
+                if ( 0 && (n= tx->numvins) > 0 )
                     for (i=0; i<n; i++,vi++,block->numvins++)
                         ledger_addspend(ledger,mem,txidind,++ledger->spentbits.ind,vi->txidstr,vi->vout,blocknum,tx->txidstr,i);
             }
