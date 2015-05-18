@@ -149,8 +149,8 @@ int32_t ramchain_update(struct ramchain *ramchain,char *serverport,char *userpas
             supply = ledger->voutsum - ledger->spendsum;
             if ( dispflag != 0 )
             {
-                extern uint32_t Duplicate,Mismatch,Added;
-                printf("%-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d ?.%d %d %08x\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,elapsed+(ramchain->RTblocknum-blocknum)*diff/60000,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added,*(uint32_t *)ledger->ledger.sha256);
+                extern uint32_t Duplicate,Mismatch,Added,Linked;
+                printf("%-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d %d %d %d %08x\n",ramchain->name,ramchain->RTblocknum-blocknum,blocknum,dstr(supply),dstr(ramchain->addrsum),dstr(supply)-dstr(ramchain->addrsum),dstr(supply)-dstr(oldsupply),dstr(ramchain->EMIT.minted),elapsed,elapsed+(ramchain->RTblocknum-blocknum)*diff/60000,elapsed+estimate,block->allocsize,_mbstr(ramchain->totalsize),(double)ramchain->totalsize/blocknum,Duplicate,Mismatch,Added,Linked,*(uint32_t *)ledger->ledger.sha256);
             }
             ledger->blocknum++;
             return(1);
