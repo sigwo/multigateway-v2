@@ -51,6 +51,7 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
 int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t start_RTblocknum);
 char **db777_index(int32_t *nump,struct db777 *DB,int32_t max);
 int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue);
+void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen,int32_t fillcache);
 
 extern struct db777_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
@@ -153,9 +154,33 @@ int32_t db777_link(struct db777 *DB,struct db777 *revDB,uint32_t ind,void *value
     return(0);
 }
 
+void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen,int32_t fillcache)
+{
+    void *obj,*value,*result = 0; int32_t flag,max = *lenp;
+    flag = 0;
+    if ( (obj= sp_object(DB->db)) != 0 )
+    {
+        if ( sp_set(obj,"key",key,keylen) == 0 && (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
+        {
+            value = sp_get(result,"value",lenp);
+            if ( *lenp <= max )
+            {
+                memcpy(dest,value,*lenp);
+                flag = 1;
+                if ( fillcache != 0 )//(DB->flags & DB777_RAM) != 0 )
+                    db777_set(DB777_RAM,transactions,DB,key,keylen,value,*lenp);
+            }
+            else dest = 0;
+        }
+        if ( result != 0 )
+            sp_destroy(result);
+    }
+    return(flag == 0 ? 0 : dest);
+}
+
 void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
-    int32_t i,c,max,matrixi; struct db777_entry *entry = 0; void *obj,*src,*result = 0,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
+    int32_t i,c,max,matrixi; struct db777_entry *entry = 0; void *src,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
     max = *lenp, *lenp = 0;
     if ( db777_matrixalloc(DB) != 0 )
     {
@@ -191,7 +216,9 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
         }
         if ( (DB->flags & DB777_HDD) != 0 )
         {
-            if ( (obj= sp_object(DB->db)) != 0 )
+            if ( (dest= db777_read(dest,lenp,transactions,DB,key,keylen,DB->flags & DB777_RAM)) != 0 )
+                return(dest);
+            /*if ( (obj= sp_object(DB->db)) != 0 )
             {
                 if ( sp_set(obj,"key",key,keylen) == 0 && (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
                 {
@@ -208,7 +235,7 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
                     sp_destroy(result);
             }
             if ( value != 0 )
-                return(dest);
+                return(dest);*/
         }
     }
     if ( 0 && (DB->flags & DB777_NANO) != 0 && DB->reqsock != 0 )
@@ -468,7 +495,7 @@ int32_t db777_delete(int32_t flags,void *transactions,struct db777 *DB,void *key
 
 int32_t db777_flush(void *transactions,struct db777 *DB)
 {
-    struct db777_entry *entry,*tmp; void *obj; uint32_t key; int32_t allocsize,valuelen,flushed = 0,i,n = 0,numerrs = 0;
+    struct db777_entry *entry,*tmp; void *obj; uint32_t key; int32_t valuelen,flushed = 0,i,n = 0,numerrs = 0;
     if ( (DB->flags & DB777_RAM) != 0 )
     {
         db777_lock(DB);
@@ -483,10 +510,6 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
                     {
                         key = (i * DB777_MATRIXROW);
                         DB->dirty[i] = (db777_set(DB777_HDD,transactions,DB,&key,sizeof(key),DB->matrix[i],valuelen) != 0);
-                        allocsize = sizeof(DB->checkbuf);
-                        if ( db777_get(DB->checkbuf,&allocsize,transactions,DB,&key,sizeof(key)) == 0 || allocsize != valuelen )
-                            printf("got null or %d bytes vs %d bytes\n",allocsize,valuelen);
-                        else printf("verified %s key.%d len.%d | memcmp.%d\n",DB->name,key,valuelen,memcmp(DB->checkbuf,DB->matrix[i],valuelen));
                         n++, flushed += valuelen;
                     } else printf("db777_flush: %s not dirty row[%d]\n",DB->name,i);
                 }
