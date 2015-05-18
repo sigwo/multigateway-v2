@@ -268,7 +268,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
 {
     struct db777_entry *entry = 0; void *db,*newkey,*dest,*obj = 0; int32_t matrixi,retval = 0;
     //if ( strcmp(DB->name,"revaddrs") == 0 )
-    if ( DB->valuesize != 0 && valuelen != DB->valuesize )
+    if ( DB->valuesize != 0 && valuelen > DB->valuesize )
     {
         printf("%s UNEXPECTED SIZE SET.%08x keylen.%d | value %x len.%d value.%p (%s)\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value,value);
         return(-1);
@@ -302,6 +302,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                 DB->dirty[matrixi] = 1;
                 //printf("SETMATRIX %s[%d] %p <- %x\n",DB->name,*(int *)key,dest,*(int *)value);
                 memcpy(dest,value,valuelen);
+                if ( valuelen < DB->valuesize )
+                    memset(&((uint8_t *)dest)[valuelen],0,DB->valuesize - valuelen);
             }
             else printf("db777_set: out of bounds rawind.%u vs. %d (width %d)\n",*(int *)key,DB->matrixentries,DB777_MATRIXROW);
         }
