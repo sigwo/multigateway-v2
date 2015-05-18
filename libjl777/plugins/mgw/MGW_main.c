@@ -447,7 +447,7 @@ int32_t process_acctpubkey(cJSON *item,int32_t gatewayid,uint64_t gatewaybits)
 
 int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
 {
-    cJSON *item,*array; uint64_t gatewaybits; int32_t i,n=0,gatewayid,count = 0,updated = 0;
+    cJSON *array; uint64_t gatewaybits; int32_t i,n=0,gatewayid,count = 0,updated = 0;
     char coinstr[MAX_JSON_FIELD],gatewayNXT[MAX_JSON_FIELD];
     struct coin777 *coin;
     if ( SUPERNET.gatewayid >= 0 )
@@ -461,7 +461,7 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
         {
             //printf("arraysize.%d\n",n);
             for (i=0; i<n; i++)
-                updated += process_acctpubkey(item,gatewayid,gatewaybits);
+                updated += process_acctpubkey(cJSON_GetArrayItem(array,i),gatewayid,gatewaybits);
         }
         sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"updated\":%d,\"total\":%d,\"msigs\":%d}",coinstr,updated,n,count);
         printf("(%s)\n",retbuf);
