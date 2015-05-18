@@ -194,8 +194,7 @@ void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,vo
                 flag = 1;
                 if ( fillcache != 0 )//(DB->flags & DB777_RAM) != 0 )
                     db777_set(DB777_RAM,transactions,DB,key,keylen,value,*lenp);
-            }
-            else dest = 0;
+            } else dest = 0;
         }
         if ( result != 0 )
             sp_destroy(result);
@@ -239,6 +238,7 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
         }
         if ( (DB->flags & DB777_HDD) != 0 )
         {
+            *lenp = max;
             if ( (dest= db777_read(dest,lenp,transactions,DB,key,keylen,DB->flags & DB777_RAM)) != 0 )
                 return(dest);
         }
