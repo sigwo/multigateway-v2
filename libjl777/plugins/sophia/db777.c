@@ -300,9 +300,15 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,valuelen) != 0 )
             {
                 sp_destroy(obj);
+                printf("error setting key/value %s[%d]\n",DB->name,*(int *)key);
                 retval = -4;
             }
-            else retval = sp_set((transactions != 0 ? transactions : db),obj);
+            else
+            {
+                retval = sp_set((transactions != 0 ? transactions : db),obj);
+                if ( strcmp(DB->name,"ledger") == 0 )
+                    printf("retval.%d %s key.%u valuelen.%d\n",retval,DB->name,*(int *)key,valuelen);
+            }
         }
         //if ( ismatrix != 0 )
         //    printf("%s save key.%u valuelen.%d\n",DB->name,*(int *)key,valuelen);
