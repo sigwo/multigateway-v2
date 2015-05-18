@@ -560,25 +560,25 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
         if ( n > 0 )
         {
             revsortfs(sortbuf,n,sizeof(*sortbuf) * 2);
-            strcpy(retbuf,"{\"richlist\":["), len = (int32_t)strlen(retbuf);
+            sprintf(retbuf,"{\"supply\":%.8f,\"richlist\":[",dstr(addrsum)), len = (int32_t)strlen(retbuf);
             if ( numrichlist > 0 && n > 0 )
             {
-            for (i=0; i<numrichlist&&i<n; i++)
-            {
-                memcpy(&addrind,&sortbuf[(i << 1) + 1],sizeof(addrind));
-                allocsize = sizeof(ledger->getbuf);
-                addrinfo = db777_get(ledger->getbuf,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind));
-                ledger_coinaddr(ledger,coinaddr,sizeof(coinaddr),addrind);
-                sprintf(itembuf,"%s[\"%s\", \"%.8f\"],",i==0?"":" ",coinaddr,sortbuf[i << 1]);
-                itemlen = (int32_t)strlen(itembuf);
-                if ( len+itemlen < maxlen-32 )
+                for (i=0; i<numrichlist&&i<n; i++)
                 {
-                    memcpy(retbuf+len,itembuf,itemlen+1);
-                    len += itemlen;
+                    memcpy(&addrind,&sortbuf[(i << 1) + 1],sizeof(addrind));
+                    allocsize = sizeof(ledger->getbuf);
+                    addrinfo = db777_get(ledger->getbuf,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind));
+                    ledger_coinaddr(ledger,coinaddr,sizeof(coinaddr),addrind);
+                    sprintf(itembuf,"%s[\"%s\", \"%.8f\"],",i==0?"":" ",coinaddr,sortbuf[i << 1]);
+                    itemlen = (int32_t)strlen(itembuf);
+                    if ( len+itemlen < maxlen-32 )
+                    {
+                        memcpy(retbuf+len,itembuf,itemlen+1);
+                        len += itemlen;
+                    }
                 }
-            }
             } else strcat(retbuf,"]}");
-            sprintf(retbuf + len - 1,"],\"supply\":%.8f}",dstr(addrsum));
+            strcat(retbuf + len - 1,"]}");
             //printf("(%s) top.%d of %d\n",retbuf,i,n);
         }
         free(sortbuf);
