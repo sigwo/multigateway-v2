@@ -20,7 +20,7 @@ struct ledger_inds
 {
     uint64_t voutsum,spendsum;
     uint32_t blocknum,numsyncs,addrind,txidind,scriptind,unspentind,numspents,numaddrinfos,txoffsets;
-    struct sha256_state hashstates[16]; uint8_t hashes[16][256 >> 3];
+    struct sha256_state hashstates[13]; uint8_t hashes[13][256 >> 3];
 };
 
 struct ledger_blockinfo
@@ -627,7 +627,7 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
 
 int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t numsyncs)
 {
-    struct ledger_inds L;
+    struct ledger_inds L; int32_t checkval,allocsize;
     memset(&L,0,sizeof(L));
     L.blocknum = ledger->blocknum, L.numsyncs = ledger->numsyncs;
     L.voutsum = ledger->voutsum, L.spendsum = ledger->spendsum;
@@ -639,6 +639,9 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
     {
         printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %llx\n",numsyncs,blocknum,dstr(L.voutsum)-dstr(L.spendsum),*(long long *)ledger->ledger.sha256);
         db777_add(1,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L));
+        allocsize = sizeof(checkval);
+        if ( db777_get(&checkval,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs)) != 0 )
+            printf("got checkval.%d vs numsyncs.%d\n",checkval,numsyncs);
     }
     numsyncs = 0;
     return(db777_add(1,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L)));
