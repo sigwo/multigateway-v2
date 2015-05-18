@@ -154,27 +154,25 @@ int32_t db777_matrixalloc(struct db777 *DB)
 
 int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint32_t ind,void *value,int32_t valuelen)
 {
-    struct db777_entry *entry; void *obj,*revptr; int32_t matrixi;
+    struct db777_entry *entry; void *revptr; int32_t matrixi;
     db777_lock(DB);
     HASH_FIND(hh,DB->table,value,valuelen,entry);
     db777_unlock(DB);
-    printf("search value.%x len.%d link.%d -> entry.%p\n",*(int *)value,valuelen,ind,entry);
     if ( entry != 0 )
     {
         if ( entry->valuesize == sizeof(uint32_t)*2 )
         {
-            memcpy(&obj,entry->value,sizeof(obj));
-            if ( memcmp(obj,value,valuelen) == 0 && valuelen == revDB->valuesize )
+            if ( *(uint32_t *)entry->value == ind && valuelen == revDB->valuesize )
             {
                 if ( (revptr= db777_matrixptr(&matrixi,transactions,revDB,&ind,sizeof(ind))) != 0 && memcmp(revptr,value,valuelen) == 0 )
                 {
-                    free(obj);
-                    memcpy(entry->value,&revptr,sizeof(revptr));
+                    free(entry->hh.key);
+                    entry->hh.key = revptr;
                     entry->linked = 1;
                     Linked++;
                     return(0);
                 } else printf("miscompared %s vs %s\n",DB->name,revDB->name);
-            } else printf("miscompared %s ind.%d vs arg | cmp.%d\n",DB->name,ind,memcmp(obj,value,valuelen));
+            } else printf("miscompared %s ind.%d vs %d\n",DB->name,ind,*(uint32_t *)entry->value);
         } else printf("unexpected nonzero valuesize.%d for %s\n",entry->valuesize,DB->name);
     } else printf("couldnt find entry for %s ind.%d: value.%x\n",DB->name,ind,*(int *)value);
     return(-1);
