@@ -445,7 +445,7 @@ struct ledger_blockinfo *ledger_startblock(struct ledger_info *ledger,struct all
     block = memalloc(mem,sizeof(*block),1);
     block->minted = minted, block->numtx = numtx, block->blocknum = blocknum, block->timestamp = timestamp;
     if ( strlen(blockhashstr) == 64 )
-        decode_hex(block->blockhash,32,blockhashstr), printf("blockhash.(%s) %x\n",blockhashstr,*(int *)block->blockhash);
+        decode_hex(block->blockhash,32,blockhashstr);//, printf("blockhash.(%s) %x\n",blockhashstr,*(int *)block->blockhash);
     else printf("warning blockhash len.%ld\n",strlen(blockhashstr));
     return(block);
 }
@@ -491,7 +491,7 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
                 if ( (n= tx->numvouts) > 0 )
                     for (i=0; i<n; i++,vo++,block->numvouts++)
                         ledger_addunspent(&block->numaddrs,&block->numscripts,ledger,mem,txidind,i,++ledger->unspentmap.ind,vo->coinaddr,vo->script,vo->value,blocknum,tx->txidstr,txind);
-                if ( 0 && (n= tx->numvins) > 0 )
+                if ( (n= tx->numvins) > 0 )
                     for (i=0; i<n; i++,vi++,block->numvins++)
                         ledger_addspend(ledger,mem,txidind,++ledger->spentbits.ind,vi->txidstr,vi->vout,blocknum,tx->txidstr,i);
             }
@@ -520,7 +520,7 @@ int32_t ledger_commit(struct ledger_info *ledger,int32_t continueflag)
 uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info *ledger,int32_t numrichlist)
 {
     struct ledger_addrinfo *addrinfo;
-    uint32_t i,n,addrind,itemlen; int32_t len; float *sortbuf; uint64_t balance,addrsum; char coinaddr[128],itembuf[128];
+    uint32_t i,n,addrind,itemlen; int32_t len,allocsize; float *sortbuf; uint64_t balance,addrsum; char coinaddr[128],itembuf[128];
     addrsum = n = 0;
     if ( numrichlist == 0 || retbuf == 0 || maxlen == 0 )
     {
@@ -559,8 +559,8 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
             for (i=0; i<numrichlist&&i<n; i++)
             {
                 memcpy(&addrind,&sortbuf[(i << 1) + 1],sizeof(addrind));
-                len = sizeof(ledger->getbuf);
-                addrinfo = db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind));
+                allocsize = sizeof(ledger->getbuf);
+                addrinfo = db777_get(ledger->getbuf,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind));
                 ledger_coinaddr(ledger,coinaddr,sizeof(coinaddr),addrind);
                 sprintf(itembuf,"%s[\"%s\", \"%.8f\"],",i==0?"":" ",coinaddr,sortbuf[i << 1]);
                 itemlen = (int32_t)strlen(itembuf);

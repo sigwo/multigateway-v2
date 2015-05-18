@@ -132,7 +132,6 @@ int32_t ramchain_update(struct ramchain *ramchain,char *serverport,char *userpas
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
         if ( ledger->DBs.transactions == 0 )
             ledger->DBs.transactions = sp_begin(ledger->DBs.env);
-        printf("call ledgerupdate.%u %p\n",blocknum,ledger->DBs.transactions);
         if ( (block= ledger_update(dispflag,ledger,&MEM,ramchain->name,serverport,userpass,&ramchain->EMIT,blocknum)) != 0 )
         {
             if ( syncflag != 0 )
