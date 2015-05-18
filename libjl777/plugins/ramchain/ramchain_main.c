@@ -116,7 +116,7 @@ int32_t ramchain_rawblock(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
 
 int32_t ramchain_notify(char *retbuf,struct ramchain *ramchain,char *endpoint,cJSON *list)
 {
-    int32_t i,n,m=0; char *coinaddr; struct ledger_addrinfo *addrinfo; struct ledger_info *ledger = ramchain->activeledger;
+    uint32_t firstblocknum; int32_t i,n,m=0; char *coinaddr; struct ledger_addrinfo *addrinfo; struct ledger_info *ledger = ramchain->activeledger;
     if ( ledger == 0 )
     {
         sprintf(retbuf,"{\"error\":\"no active ledger\"}");
@@ -130,12 +130,12 @@ int32_t ramchain_notify(char *retbuf,struct ramchain *ramchain,char *endpoint,cJ
         {
             for (i=0; i<n; i++)
             {
-                if ( (coinaddr= cJSON_str(cJSON_GetArrayItem(list,i))) != 0 && (addrinfo= ledger_addrinfo(ledger,coinaddr)) != 0 )
+                if ( (coinaddr= cJSON_str(cJSON_GetArrayItem(list,i))) != 0 && (addrinfo= ledger_addrinfo(&firstblocknum,ledger,coinaddr)) != 0 )
                 {
                     m++;
                     addrinfo->notify = 1;
-                    printf("NOTIFY.(%s)\n",coinaddr);
-                    sprintf(retbuf,"{\"result\":\"added to notification list\",\"coinaddr\":\"%s\"}",coinaddr);
+                    printf("NOTIFY.(%s) firstblocknum.%u\n",coinaddr,firstblocknum);
+                    sprintf(retbuf,"{\"result\":\"added to notification list\",\"coinaddr\":\"%s\",\"firstblocknum\":\"%u\"}",coinaddr,firstblocknum);
                 } else sprintf(retbuf,"{\"error\":\"cant find address\",\"coinaddr\":\"%s\"}",coinaddr);
             }
             sprintf(retbuf,"{\"result\":\"added to notification list\",\"num\":%d,\"from\":%d}",m,n);
