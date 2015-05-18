@@ -134,6 +134,7 @@ int32_t ramchain_update(struct ramchain *ramchain,char *serverport,char *userpas
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
         if ( ledger->DBs.transactions == 0 )
             ledger->DBs.transactions = sp_begin(ledger->DBs.env);
+        printf("call ledgerupdate.%u %p\n",blocknum,ledger->DBs.transactions);
         if ( (block= ledger_update(dispflag,ledger,&MEM,ramchain->name,serverport,userpass,&ramchain->EMIT,blocknum)) != 0 )
         {
             if ( syncflag != 0 )
@@ -181,7 +182,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
         ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
     else ramchain->startblocknum = 0;
     ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum > 1);
-    printf("set %u to %u | sizes: addrinfo.%ld unspentmap.%ld txoffset.%ld\n",ramchain->startblocknum,endblocknum,sizeof(struct addrinfo),sizeof(struct unspentmap),sizeof(struct upair32));
+    printf("set %u to %u | sizes: addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ramchain->startblocknum,endblocknum,sizeof(struct addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(richlist,sizeof(richlist),ledger,25);
     printf("balance recalculated %.8f\n",dstr(balance));

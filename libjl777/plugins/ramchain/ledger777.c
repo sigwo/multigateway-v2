@@ -439,7 +439,7 @@ struct ledger_blockinfo *ledger_startblock(struct ledger_info *ledger,struct all
     block = memalloc(mem,sizeof(*block),1);
     block->minted = minted, block->numtx = numtx, block->blocknum = blocknum, block->timestamp = timestamp;
     if ( strlen(blockhashstr) == 64 )
-        decode_hex(block->blockhash,32,blockhashstr);
+        decode_hex(block->blockhash,32,blockhashstr), printf("blockhash.(%s)\n",blockhashstr);
     else printf("warning blockhash len.%ld\n",strlen(blockhashstr));
     return(block);
 }
