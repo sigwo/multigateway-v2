@@ -194,7 +194,6 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
 int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind)
 {
     uint32_t ind; void *value; int32_t matrixi;
-    return(0);
     for (ind=1; ind<=maxind; ind++)
     {
         if ( (value= db777_matrixptr(&matrixi,0,revDB,&ind,sizeof(ind))) != 0 )
@@ -208,7 +207,7 @@ int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind)
 
 int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t startblocknum,uint32_t endblocknum)
 {
-    struct ramchain *ramchain = &coin->ramchain; struct ledger_info *ledger; //int32_t numlinks,numlinks2;
+    struct ramchain *ramchain = &coin->ramchain; struct ledger_info *ledger; int32_t numlinks,numlinks2;
     if ( coin != 0 )
     {
         ramchain->syncfreq = DB777_MATRIXROW;
@@ -219,9 +218,9 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
             ledger = ramchain->activeledger;
             ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
             env777_start(0,&ledger->DBs,ramchain->RTblocknum);
-            //numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
-            //numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
-            //printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
+            numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
+            numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
+            printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
             if ( endblocknum == 0 )
                 endblocknum = 1000000000;
             return(ramchain_resume(retbuf,ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum));
