@@ -590,8 +590,6 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
                     else
                     {
                         printf("got allocsize.%d vs %d | ptr.%p vs matrix[] %p\n",allocsize,DB->valuesize * DB777_MATRIXROW,ptr,DB->matrix[j]);
-                        free(DB->matrix[j]);
-                        DB->matrix[j] = 0;
                         break;
                     }
                 }
