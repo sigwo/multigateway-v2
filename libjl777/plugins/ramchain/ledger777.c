@@ -471,8 +471,10 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledger_blockinfo *block = 0;
     uint32_t i,txidind,txind,n;
+    printf("rawblock_load\n");
     if ( rawblock_load(emit,name,serverport,userpass,blocknum) > 0 )
     {
+        printf("ledger_startblock\n");
         tx = emit->txspace, vi = emit->vinspace, vo = emit->voutspace;
         block = ledger_startblock(ledger,mem,blocknum,emit->minted,emit->numtx,emit->timestamp,emit->blockhash);
         if ( block->numtx > 0 )
