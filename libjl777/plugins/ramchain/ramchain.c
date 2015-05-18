@@ -160,40 +160,10 @@ int32_t ramchain_update(struct ramchain *ramchain,char *serverport,char *userpas
     return(0);
 }
 
-int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum)
-{
-    extern uint32_t Duplicate,Mismatch,Added;
-    struct ledger_info *ledger; struct alloc_space MEM; uint64_t balance; char richlist[8192];
-    if ( (ledger= ramchain->activeledger) == 0 )
-    {
-        sprintf(retbuf,"{\"error\":\"no active ledger\"}");
-        return(-1);
-    }
-    Duplicate = Mismatch = Added = 0;
-    ramchain->startmilli = milliseconds();
-    ramchain->totalsize = 0;
-    printf("resuming %u to %u\n",startblocknum,endblocknum);
-    ramchain->startblocknum = ledger_startblocknum(ledger,0);
-    printf("updated %u to %u\n",ramchain->startblocknum,endblocknum);
-    memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
-    if ( ramchain->startblocknum > 0 )
-        ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
-    else ramchain->startblocknum = 0;
-    ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum > 1);
-    printf("set %u to %u | sizes: uthash.%ld addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ramchain->startblocknum,endblocknum,sizeof(UT_hash_handle),sizeof(struct ledger_addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
-    ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
-    balance = ledger_recalc_addrinfos(richlist,sizeof(richlist),ledger,25);
-    printf("balance recalculated %.8f\n",dstr(balance));
-    sprintf(retbuf,"[{\"result\":\"resumed\",\"ledgerhash\":\"%llx\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f},%s]",*(long long *)ledger->ledger.sha256,ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.,richlist);
-    ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,serverport,userpass,ramchain->RTblocknum);
-    ramchain->startmilli = milliseconds();
-    ramchain->paused = 0;
-    return(0);
-}
-
 int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind)
 {
     uint32_t ind; void *value; int32_t matrixi;
+    printf("linkDB maxind.%d\n",maxind);
     for (ind=1; ind<=maxind; ind++)
     {
         if ( (value= db777_matrixptr(&matrixi,0,revDB,&ind,sizeof(ind))) != 0 )
@@ -213,9 +183,43 @@ int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind)
     return(ind);
 }
 
+int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum)
+{
+    extern uint32_t Duplicate,Mismatch,Added;
+    struct ledger_info *ledger; struct alloc_space MEM; uint64_t balance; char richlist[8192]; int32_t numlinks,numlinks2;
+    if ( (ledger= ramchain->activeledger) == 0 )
+    {
+        sprintf(retbuf,"{\"error\":\"no active ledger\"}");
+        return(-1);
+    }
+    Duplicate = Mismatch = Added = 0;
+    ramchain->startmilli = milliseconds();
+    ramchain->totalsize = 0;
+    printf("resuming %u to %u\n",startblocknum,endblocknum);
+    ramchain->startblocknum = ledger_startblocknum(ledger,0);
+    printf("updated %u to %u\n",ramchain->startblocknum,endblocknum);
+    memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
+    if ( ramchain->startblocknum > 0 )
+        ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
+    else ramchain->startblocknum = 0;
+    ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum > 1);
+    printf("set %u to %u | sizes: uthash.%ld addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ramchain->startblocknum,endblocknum,sizeof(UT_hash_handle),sizeof(struct ledger_addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
+    ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
+    numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
+    numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
+    printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
+    balance = ledger_recalc_addrinfos(richlist,sizeof(richlist),ledger,25);
+    printf("balance recalculated %.8f\n",dstr(balance));
+    sprintf(retbuf,"[{\"result\":\"resumed\",\"ledgerhash\":\"%llx\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f},%s]",*(long long *)ledger->ledger.sha256,ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.,richlist);
+    ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,serverport,userpass,ramchain->RTblocknum);
+    ramchain->startmilli = milliseconds();
+    ramchain->paused = 0;
+    return(0);
+}
+
 int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t startblocknum,uint32_t endblocknum)
 {
-    struct ramchain *ramchain = &coin->ramchain; struct ledger_info *ledger; int32_t numlinks,numlinks2;
+    struct ramchain *ramchain = &coin->ramchain; struct ledger_info *ledger;
     if ( coin != 0 )
     {
         ramchain->syncfreq = DB777_MATRIXROW;
@@ -226,9 +230,6 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
             ledger = ramchain->activeledger;
             ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
             env777_start(0,&ledger->DBs,ramchain->RTblocknum);
-            numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
-            numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
-            printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
             if ( endblocknum == 0 )
                 endblocknum = 1000000000;
             return(ramchain_resume(retbuf,ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum));
