@@ -266,16 +266,20 @@ int32_t db777_delete(int32_t flags,void *transactions,struct db777 *DB,void *key
 
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
-    struct db777_entry *entry = 0; void *db,*newkey,*dest,*obj = 0; int32_t matrixi,retval = 0;
+    struct db777_entry *entry = 0; void *db,*newkey,*dest,*obj = 0; int32_t ismatrix,matrixi,retval = 0;
     //if ( strcmp(DB->name,"revaddrs") == 0 )
+    ismatrix = db777_matrixalloc(DB);
     if ( DB->valuesize != 0 && valuelen > DB->valuesize )
     {
-        printf("%s UNEXPECTED SIZE SET.%08x keylen.%d | value %x len.%d value.%p (%s)\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value,value);
-        return(-1);
+        if ( ismatrix == 0 || (ismatrix != 0 && ((*(uint32_t *)key % DB777_MATRIXROW) != 0 || valuelen != DB777_MATRIXROW*DB->valuesize)) )
+        {
+            printf("%s UNEXPECTED SIZE SET.%08x keylen.%d | value %x len.%d value.%p (%s)\n",DB->name,*(int *)key,keylen,*(int *)value,valuelen,value,value);
+            return(-1);
+        }
     }
     if ( ((DB->flags & flags) & DB777_HDD) != 0 )
     {
-        if ( db777_matrixalloc(DB) != 0 && ((*(uint32_t *)key % DB777_MATRIXROW) != 0 || valuelen != DB777_MATRIXROW*DB->valuesize) )
+        if ( ismatrix != 0 && ((*(uint32_t *)key % DB777_MATRIXROW) != 0 || valuelen != DB777_MATRIXROW*DB->valuesize) )
         {
             printf("%s UNEXPECTED db777_set: %x keylen.%d valuelen.%d %x\n",DB->name,*(int *)key,keylen,valuelen,*(int *)value);
             return(-1);
@@ -295,7 +299,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
     }
     if ( ((DB->flags & flags) & DB777_RAM) != 0 )
     {
-        if ( db777_matrixalloc(DB) != 0 )
+        if ( ismatrix != 0 )
         {
             if ( (dest= db777_matrixptr(&matrixi,transactions,DB,key,keylen)) != 0 )
             {
