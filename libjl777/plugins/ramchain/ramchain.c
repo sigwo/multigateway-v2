@@ -219,9 +219,9 @@ int32_t ramchain_init(char *retbuf,struct coin777 *coin,char *coinstr,uint32_t s
             ledger = ramchain->activeledger;
             ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
             env777_start(0,&ledger->DBs,ramchain->RTblocknum);
-            numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
-            numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
-            printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
+            //numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
+            //numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
+            //printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
             if ( endblocknum == 0 )
                 endblocknum = 1000000000;
             return(ramchain_resume(retbuf,ramchain,coin->serverport,coin->userpass,startblocknum,endblocknum));
