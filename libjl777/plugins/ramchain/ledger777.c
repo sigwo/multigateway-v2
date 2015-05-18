@@ -393,8 +393,6 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
         memset(&coinaddr[vout.addrlen],0,ledger->revaddrs.DB->valuesize - vout.addrlen);
         vout.addrlen = ledger->revaddrs.DB->valuesize;
     }
-    if ( vout.addrlen != 34 )
-        printf("vout.addrlen %d vs size.%d\n",vout.addrlen,ledger->addrs.DB->valuesize);
     if ( (vout.U.ind= ledger_rawind(&firstblocknum,1,ledger->DBs.transactions,&ledger->addrs,coinaddr,vout.addrlen,blocknum)) != 0 )
     {
         ledger->unspentmap.ind = unspentind;
@@ -629,7 +627,7 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
 
 int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t numsyncs)
 {
-    struct ledger_inds L; int32_t checkval,allocsize,retval; void *ptr;
+    struct ledger_inds L,checkL; int32_t allocsize,retval;
     memset(&L,0,sizeof(L));
     L.blocknum = ledger->blocknum, L.numsyncs = ledger->numsyncs;
     L.voutsum = ledger->voutsum, L.spendsum = ledger->spendsum;
@@ -641,17 +639,17 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
     if ( numsyncs > 0 )
     {
         db777_add(1,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L));
-        allocsize = sizeof(checkval);
-        if ( db777_get(&checkval,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs)) != 0 )
-            printf("got checkval.%d vs numsyncs.%d\n",checkval,numsyncs);
-        else printf("error getting ledger.DB numsync.%d\n",numsyncs);
+        allocsize = sizeof(checkL);
+        if ( db777_get(&checkL,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs)) != 0 )
+            printf("got checkval.%d/%d vs numsyncs.%d\n",checkL.blocknum,blocknum,numsyncs);
+        else printf("error getting ledger.DB numsync.%d checkL.blocknum %d allocsize.%d\n",numsyncs,checkL.blocknum,allocsize);
     }
     numsyncs = 0;
     retval = db777_add(1,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L));
-    allocsize = sizeof(checkval);
-    if ( (ptr= db777_get(&checkval,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs))) != 0 )
-        printf("got checkval.%d vs numsyncs.%d\n",checkval,numsyncs);
-    else printf("errorB getting ledger.DB numsync.%d ptr.%p allocsize.%d\n",numsyncs,ptr,allocsize);
+    allocsize = sizeof(checkL);
+    if ( db777_get(&checkL,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs)) != 0 )
+        printf("got checkval.%d/%d vs numsyncs.%d\n",L.blocknum,blocknum,numsyncs);
+    else printf("errorB getting ledger.DB numsync.%d L.blocknum %d allocsize.%d\n",numsyncs,L.blocknum,allocsize);
     return(retval);
 }
 
