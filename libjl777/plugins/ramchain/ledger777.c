@@ -427,7 +427,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
         spend.spent_txidind = spent_txidind, spend.spent_vout = spent_vout;
         spend.unspentind = ledger_firstvout(ledger,spent_txidind) + spent_vout;
         ledger_spentbits(ledger,spend.unspentind,1);
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("spent_txidstr.(%s) -> spent_txidind.%u firstvout.%d\n",spent_txidstr,spent_txidind,spend.unspentind-spent_vout);
         if ( (value= ledger_unspentvalue(&addrind,&scriptind,ledger,spend.unspentind)) != 0 && addrind > 0 )
         {
