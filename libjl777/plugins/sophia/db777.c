@@ -160,6 +160,7 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
     db777_unlock(DB);
     if ( entry != 0 )
     {
+        printf("link.%d\n",ind);
         if ( entry->valuesize == 0 )
         {
             memcpy(&obj,entry->value,sizeof(obj));
