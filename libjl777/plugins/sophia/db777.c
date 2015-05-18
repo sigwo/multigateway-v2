@@ -432,6 +432,15 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
     return(-numerrs);
 }
 
+int32_t zcmp(uint8_t *buf,int32_t len)
+{
+    int32_t i;
+    for (i=0; i<len; i++)
+        if ( buf[i] != 0 )
+            return(1);
+    return(0);
+}
+
 uint32_t Duplicate,Mismatch,Added;
 int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
@@ -448,7 +457,7 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
             return(0);
         }
     }
-    if ( forceflag < 0 && allocsize != 0 )
+    if ( forceflag < 0 && allocsize != 0 && (db777_matrixalloc(DB) == 0 || zcmp(val,allocsize) != 0) )
     {
         int i;
         for (i=0; i<60&&i<valuelen; i++)
