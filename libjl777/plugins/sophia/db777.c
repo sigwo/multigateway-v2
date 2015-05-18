@@ -474,6 +474,7 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
         db777_lock(DB);
         if ( db777_matrixalloc(DB) != 0 )
         {
+            valuelen = DB->valuesize * DB777_MATRIXROW;
             for (i=0; i<DB->matrixentries; i++)
             {
                 if ( DB->matrix[i] != 0 )
@@ -481,14 +482,19 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
                     if  ( DB->dirty[i] != 0 )
                     {
                         key = (i * DB777_MATRIXROW);
-                        allocsize = valuelen = DB->valuesize * DB777_MATRIXROW;
                         DB->dirty[i] = (db777_set(DB777_HDD,transactions,DB,&key,sizeof(key),DB->matrix[i],valuelen) != 0);
                         allocsize = sizeof(DB->checkbuf);
                         if ( db777_get(DB->checkbuf,&allocsize,transactions,DB,&key,sizeof(key)) == 0 || allocsize != valuelen )
                             printf("got null or %d bytes vs %d bytes\n",allocsize,valuelen);
+                        else printf("verified %s key.%d len.%d | memcmp.%d\n",DB->name,key,valuelen,memcmp(DB->checkbuf,DB->matrix[i],valuelen));
                         n++, flushed += valuelen;
-                    } else printf("db777_flush: %s missing matrix row[%d]??\n",DB->name,i);
-                } else break;
+                    } else printf("db777_flush: %s not dirty row[%d]\n",DB->name,i);
+                }
+                else
+                {
+                    printf("empty %s matrixrow[%d]\n",DB->name,i);
+                    break;
+                }
             }
         }
         else

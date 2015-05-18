@@ -313,8 +313,8 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
     firstinds.firstvout = firstvout, firstinds.firstvin = firstvin;
     if ( firstvout == 0 )
         printf("illegal firstvout.0 for txidind.%d\n",txidind), debugstop();
-    //if ( Debuglevel > 2 )
-        printf(" db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout);
+    if ( Debuglevel > 2 || firstvout == 0 )
+        printf(" db777_add txidind.%u <- SET firstvout.%d firstvin.%d\n",txidind,firstvout,firstvin);
     if ( db777_add(-1,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind),&firstinds,sizeof(firstinds)) == 0 )
         return(0);
     printf("error db777_add txidind.%u <- SET firstvout.%d\n",txidind,firstvout), debugstop();
@@ -329,7 +329,7 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
     if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
         firstvout = ptr->firstvout;
     else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), debugstop();
-    //if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 || firstvout == 0 )
         printf("search txidind.%u GET -> firstvout.%d\n",txidind,firstvout);
     return(firstvout);
 }
@@ -343,7 +343,7 @@ int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t 
 uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_t txidind,char *txidstr,uint32_t totalvouts,uint16_t numvouts,uint32_t totalspends,uint16_t numvins,uint32_t blocknum)
 {
     uint32_t checkind; uint8_t txid[256]; struct ledger_txinfo tx; int32_t txidlen;
-    if ( Debuglevel > 2 )//|| strcmp(txidstr,"efd9cf795917c178a8fdcc21ec668c17b66958d6cfdba9468561927abe0aaf9d") == 0 )
+    if ( Debuglevel > 2 )
         printf("ledger_tx txidind.%d %s vouts.%d vins.%d | ledger->txoffsets.ind %d\n",txidind,txidstr,totalvouts,totalspends,ledger->txoffsets.ind);
     if ( (checkind= ledger_hexind(0,1,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr,blocknum)) == txidind )
     {
