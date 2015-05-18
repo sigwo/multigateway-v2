@@ -141,7 +141,10 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
     {
         db777_lock(DB);
         if ( (src= db777_matrixptr(&matrixi,DB,key,keylen)) == 0 )
+        {
+            printf("alloc.%d -> %s[%d]\n",DB777_MATRIXROW*DB->valuesize,DB->name,matrixi);
             DB->matrix[matrixi] = calloc(DB777_MATRIXROW,DB->valuesize);
+        }
         db777_unlock(DB);
         if ( (src= db777_matrixptr(&matrixi,DB,key,keylen)) != 0 )
         {
