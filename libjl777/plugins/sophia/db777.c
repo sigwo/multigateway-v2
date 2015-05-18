@@ -114,9 +114,9 @@ void db777_free(struct db777 *DB)
     db777_unlock(DB);
 }
 
-void *db777_matrixptr(int32_t *matrixindp,struct db777 *DB,void *key,int32_t keylen)
+void *db777_matrixptr(int32_t *matrixindp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
-    uint32_t rawind;
+    uint32_t rawind,matrixkey; int32_t allocsize;
     *matrixindp = 0;
     if ( keylen == sizeof(uint32_t) )
     {
@@ -129,6 +129,10 @@ void *db777_matrixptr(int32_t *matrixindp,struct db777 *DB,void *key,int32_t key
             {
                 printf("alloc.%d -> %s[%d]\n",DB777_MATRIXROW*DB->valuesize,DB->name,*matrixindp);
                 DB->matrix[*matrixindp] = calloc(DB777_MATRIXROW,DB->valuesize);
+                matrixkey = (*matrixindp * DB777_MATRIXROW);
+                allocsize = DB->valuesize * DB777_MATRIXROW;
+                if ( db777_get(DB->matrix[*matrixindp],&allocsize,transactions,DB,&matrixkey,sizeof(matrixkey)) == DB->matrix[*matrixindp] )
+                    printf("Loaded %s[%d]\n",DB->name,matrixkey);
             }
             db777_unlock(DB);
             return((void *)((long)DB->matrix[*matrixindp] + ((rawind % DB777_MATRIXROW) * DB->valuesize)));
@@ -148,7 +152,7 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
     max = *lenp, *lenp = 0;
     if ( db777_matrixalloc(DB) != 0 )
     {
-        if ( (src= db777_matrixptr(&matrixi,DB,key,keylen)) != 0 )
+        if ( (src= db777_matrixptr(&matrixi,transactions,DB,key,keylen)) != 0 )
         {
             *lenp = DB->valuesize;
             memcpy(dest,src,DB->valuesize);
@@ -297,7 +301,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
     {
         if ( db777_matrixalloc(DB) != 0 )
         {
-            if ( (dest= db777_matrixptr(&matrixi,DB,key,keylen)) != 0 )
+            if ( (dest= db777_matrixptr(&matrixi,transactions,DB,key,keylen)) != 0 )
             {
                 DB->dirty[matrixi] = 1;
                 //printf("SETMATRIX %s[%d] %p <- %x\n",DB->name,*(int *)key,dest,*(int *)value);
