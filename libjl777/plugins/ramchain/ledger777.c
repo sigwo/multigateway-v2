@@ -388,6 +388,11 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
     vout.newscript = (vout.scriptind == ledger->scripts.ind);
     (*numscriptsp) += vout.newscript;
     vout.addrlen = (int32_t)strlen(coinaddr);
+    if ( vout.addrlen < ledger->addrs.DB->valuesize )
+    {
+        memset(&coinaddr[vout.addrlen],0,ledger->addrs.DB->valuesize - vout.addrlen);
+        vout.addrlen = ledger->addrs.DB->valuesize;
+    }
     if ( (vout.U.ind= ledger_rawind(&firstblocknum,1,ledger->DBs.transactions,&ledger->addrs,coinaddr,vout.addrlen,blocknum)) != 0 )
     {
         ledger->unspentmap.ind = unspentind;
