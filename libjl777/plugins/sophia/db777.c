@@ -116,7 +116,7 @@ void db777_free(struct db777 *DB)
 
 void *db777_matrixptr(int32_t *matrixindp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
-    uint32_t rawind,matrixkey; int32_t allocsize;
+    uint32_t rawind;
     *matrixindp = 0;
     if ( keylen == sizeof(uint32_t) )
     {
@@ -129,11 +129,6 @@ void *db777_matrixptr(int32_t *matrixindp,void *transactions,struct db777 *DB,vo
             {
                 printf("alloc.%d -> %s[%d]\n",DB777_MATRIXROW*DB->valuesize,DB->name,*matrixindp);
                 DB->matrix[*matrixindp] = calloc(DB777_MATRIXROW,DB->valuesize);
-                matrixkey = (*matrixindp * DB777_MATRIXROW);
-                allocsize = DB->valuesize * DB777_MATRIXROW;
-                if ( db777_get(DB->matrix[*matrixindp],&allocsize,0,DB,&matrixkey,sizeof(matrixkey)) == DB->matrix[*matrixindp] )
-                    printf("Loaded %s[%d]\n",DB->name,matrixkey);
-                else printf("new block\n");
             }
             db777_unlock(DB);
             return((void *)((long)DB->matrix[*matrixindp] + ((rawind % DB777_MATRIXROW) * DB->valuesize)));
