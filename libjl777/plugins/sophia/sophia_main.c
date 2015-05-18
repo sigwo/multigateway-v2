@@ -562,7 +562,7 @@ int32_t db777_dbopen(void *ctl,struct db777 *DB)
 
 int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
 {
-    uint32_t matrixkey; int32_t allocsize,err,i,j; struct db777 *DB; cJSON *json; char *str;
+    uint32_t matrixkey; int32_t allocsize,err,i,j; struct db777 *DB; cJSON *json; char *str; void *ptr;
     printf("Open environment\n");
     if ( (err= sp_open(DBs->env)) != 0 )
         printf("err.%d setting sp_open for DBs->env %p\n",err,DBs->env);
@@ -585,16 +585,17 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
                     matrixkey = (j * DB777_MATRIXROW);
                     DB->matrix[j] = calloc(DB->valuesize,DB777_MATRIXROW);
                     allocsize = DB->valuesize * DB777_MATRIXROW;
-                    if ( db777_get(DB->matrix[j],&allocsize,0,DB,&matrixkey,sizeof(matrixkey)) == DB->matrix[j] && allocsize == DB->valuesize * DB777_MATRIXROW )
-                        printf("+[%d] ",matrixkey);
+                    if ( (ptr= db777_get(DB->matrix[j],&allocsize,0,DB,&matrixkey,sizeof(matrixkey))) == DB->matrix[j] && allocsize == DB->valuesize * DB777_MATRIXROW )
+                        fprintf(stderr,"+[%d] ",matrixkey);
                     else
                     {
+                        printf("got allocsize.%d vs %d | ptr.%p vs matrix[] %p\n",allocsize,DB->valuesize * DB777_MATRIXROW,ptr,DB->matrix[j]);
                         free(DB->matrix[j]);
                         DB->matrix[j] = 0;
                         break;
                     }
                 }
-                printf("loaded from DB\n");
+                fprintf(stderr,"loaded matrix.%d from DB\n",j);
             }
             if ( dispflag != 0 && (json= db777_json(DBs->env,DB)) != 0 )
             {
