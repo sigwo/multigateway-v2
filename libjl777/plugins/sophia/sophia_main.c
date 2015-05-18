@@ -588,7 +588,7 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
                 free(str);
                 free_json(json);
             }
-            printf("opened %s.(%s/%s) env.%p ctl.%p db.%p asyncdb.%p matrixalloc.%d\n",DBs->coinstr,DBs->subdir,DB->name,DBs->env,DBs->ctl,DB->db,DB->asyncdb,DB->matrixentries);
+            printf("opened %s.(%s/%s) env.%p ctl.%p db.%p asyncdb.%p matrixalloc.%d | RAM.%d KEY32.%d valuesize.%d\n",DBs->coinstr,DBs->subdir,DB->name,DBs->env,DBs->ctl,DB->db,DB->asyncdb,DB->matrixentries,DB->flags & DB777_RAM,DB->flags & DB777_KEY32,DB->valuesize);
         }
         else
         {
