@@ -164,17 +164,17 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
         if ( entry->valuesize == sizeof(uint32_t)*2 )
         {
             memcpy(&obj,entry->value,sizeof(obj));
-            if ( entry->valuelen == valuelen && memcmp(obj,value,valuelen) == 0 && valuelen == revDB->valuesize )
+            if ( memcmp(obj,value,valuelen) == 0 && valuelen == revDB->valuesize )
             {
                 if ( (revptr= db777_matrixptr(&matrixi,transactions,revDB,&ind,sizeof(ind))) != 0 && memcmp(revptr,value,valuelen) == 0 )
                 {
                     free(obj);
-                    memcpy(entry->value,revptr,valuelen);
+                    memcpy(entry->value,&revptr,sizeof(revptr));
                     entry->linked = 1;
                     Linked++;
                     return(0);
                 } else printf("miscompared %s vs %s\n",DB->name,revDB->name);
-            } else printf("miscompared %s ind.%d vs arg\n",DB->name,ind);
+            } else printf("miscompared %s ind.%d vs arg | cmp.%d\n",DB->name,ind,memcmp(obj,value,valuelen));
         } else printf("unexpected nonzero valuesize.%d for %s\n",entry->valuesize,DB->name);
     } else printf("couldnt find entry for %s ind.%d: value.%x\n",DB->name,ind,*(int *)value);
     return(-1);
