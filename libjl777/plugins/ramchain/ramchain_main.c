@@ -58,7 +58,7 @@ int32_t ramchain_idle(struct plugin_info *plugin)
                         ramchain->paused = 3, syncflag = 2;
                     printf("ramchain.%s blocknum.%d <<< PAUSING paused.%d |  endblocknum.%u\n",ramchain->name,ledger->blocknum,ramchain->paused,ramchain->endblocknum);
                 }
-                flag = ramchain_update(ramchain,coin->serverport,coin->userpass,syncflag);
+                flag = ramchain_update(ramchain,coin->serverport,coin->userpass,syncflag * (ledger->blocknum != 0));
                 if ( ramchain->paused == 3 )
                 {
                     ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
