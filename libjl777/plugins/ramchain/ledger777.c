@@ -133,9 +133,9 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
     uint32_t *ptr,pair[2],rawind = 0; int32_t size = sizeof(pair);
     if ( (ptr= db777_get(pair,&size,transactions,hash->DB,key,keylen)) != 0 )
     {
-        rawind = pair[0];
+        rawind = ptr[0];
         if ( firstblocknump != 0 )
-            *firstblocknump = pair[1];
+            *firstblocknump = ptr[1];
         if ( (rawind - 1) == hash->ind )
             hash->ind = rawind;
         return(rawind);
@@ -146,7 +146,7 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
         pair[0] = rawind, pair[1] = blocknum;
         if ( Debuglevel > 2 || blocknum == 0 )
             printf("%p add rawind.%d keylen.%d: %llx | first appearance block.%u\n",hash->DB,rawind,keylen,*(long long *)key,blocknum);
-        if ( db777_add(1,transactions,hash->DB,key,keylen,&rawind,sizeof(rawind)) != 0 )
+        if ( db777_add(1,transactions,hash->DB,key,keylen,pair,sizeof(pair)) != 0 )
             printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
         else
         {
