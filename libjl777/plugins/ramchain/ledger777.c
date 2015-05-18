@@ -627,7 +627,7 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
 
 int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t numsyncs)
 {
-    struct ledger_inds L; uint16_t key = numsyncs;
+    struct ledger_inds L;
     memset(&L,0,sizeof(L));
     L.blocknum = ledger->blocknum, L.numsyncs = ledger->numsyncs;
     L.voutsum = ledger->voutsum, L.spendsum = ledger->spendsum;
@@ -638,21 +638,19 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
     if ( numsyncs > 0 )
     {
         printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %llx\n",numsyncs,blocknum,dstr(L.voutsum)-dstr(L.spendsum),*(long long *)ledger->ledger.sha256);
-        db777_add(1,ledger->DBs.transactions,ledger->ledger.DB,&key,sizeof(key),&L,sizeof(L));
+        db777_add(1,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L));
     }
-    return(db777_add(2,ledger->DBs.transactions,ledger->ledger.DB,"last",strlen("last"),&L,sizeof(L)));
+    numsyncs = 0;
+    return(db777_add(1,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L)));
 }
 
 struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t syncind)
 {
-    struct ledger_inds *lp; void *key; uint16_t skey; int32_t keylen,allocsize = sizeof(*L);
-    if ( syncind == 0 )
-        key = "last", keylen = (int32_t)strlen(key);
-    else key = &skey, skey = syncind, keylen = sizeof(skey);
-    if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,key,keylen)) != 0 )
+    struct ledger_inds *lp; int32_t allocsize = sizeof(*L);
+    if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&syncind,sizeof(syncind))) != 0 )
         return(lp);
     else memset(L,0,sizeof(*L));
-    printf("couldnt find syncind.%d keylen.%d\n",syncind,keylen);
+    printf("couldnt find syncind.%d keylen.%ld\n",syncind,sizeof(syncind));
     return(0);
 }
 

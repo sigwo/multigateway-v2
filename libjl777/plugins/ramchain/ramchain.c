@@ -137,7 +137,7 @@ int32_t ramchain_update(struct ramchain *ramchain,char *serverport,char *userpas
         {
             if ( syncflag != 0 )
             {
-                ledger_setlast(ledger,ledger->blocknum,++ledger->numsyncs);
+                ledger_setlast(ledger,ledger->blocknum,ledger->numsyncs++);
                 db777_sync(ledger->DBs.transactions,&ledger->DBs,DB777_FLUSH);
                 ledger->DBs.transactions = 0;
             }
