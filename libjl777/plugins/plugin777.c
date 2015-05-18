@@ -383,7 +383,7 @@ int32_t main
                 if ( plugin->sleepmillis != 0 )
                 {
                     sleeptime = plugin->sleepmillis - (milliseconds() - startmilli);
-                    printf("%s sleepmillis.%d sleeptime.%d\n",plugin->name,plugin->sleepmillis,sleeptime);
+                    //printf("%s sleepmillis.%d sleeptime.%d\n",plugin->name,plugin->sleepmillis,sleeptime);
                     if ( sleeptime > 0 )
                         msleep(sleeptime);
                 }
