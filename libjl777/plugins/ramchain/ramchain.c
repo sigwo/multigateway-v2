@@ -194,6 +194,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
 int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind)
 {
     uint32_t ind; void *value; int32_t matrixi;
+    return(0);
     for (ind=1; ind<=maxind; ind++)
     {
         if ( (value= db777_matrixptr(&matrixi,0,revDB,&ind,sizeof(ind))) != 0 )

@@ -349,7 +349,7 @@ uint32_t ledger_addtx(struct ledger_info *ledger,struct alloc_space *mem,uint32_
     {
         if ( db777_add(-1,ledger->DBs.transactions,ledger->revtxids.DB,&txidind,sizeof(txidind),txid,txidlen) != 0 )
             printf("error saving txid.(%s) addrind.%u\n",txidstr,txidind);
-        else db777_link(ledger->DBs.transactions,ledger->txids.DB,ledger->revtxids.DB,txidind,txid,txidlen);
+        //else db777_link(ledger->DBs.transactions,ledger->txids.DB,ledger->revtxids.DB,txidind,txid,txidlen);
         memset(&tx,0,sizeof(tx));
         tx.firstvout = totalvouts, tx.firstvin = totalspends, tx.numvouts = numvouts, tx.numvins = numvins;
         tx.txidlen = txidlen, memcpy(tx.txid,txid,txidlen);
@@ -404,7 +404,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
             vout.newaddr = 1, strcpy(vout.coinaddr,coinaddr), (*numaddrsp)++;
             if ( db777_add(-1,ledger->DBs.transactions,ledger->revaddrs.DB,&vout.U.ind,sizeof(vout.U.ind),coinaddr,vout.addrlen) != 0 )
                 printf("error saving coinaddr.(%s) addrind.%u\n",coinaddr,vout.U.ind);
-            else db777_link(ledger->DBs.transactions,ledger->addrs.DB,ledger->revaddrs.DB,vout.U.ind,coinaddr,vout.addrlen);
+            //else db777_link(ledger->DBs.transactions,ledger->addrs.DB,ledger->revaddrs.DB,vout.U.ind,coinaddr,vout.addrlen);
             update_sha256(ledger->revaddrs.sha256,&ledger->revaddrs.state,(void *)coinaddr,vout.addrlen);
         }
         if ( Debuglevel > 2 )
