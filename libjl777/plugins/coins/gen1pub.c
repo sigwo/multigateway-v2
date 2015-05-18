@@ -289,8 +289,10 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
     if ( (json= _get_blockjson(0,coinstr,serverport,userpass,0,blocknum)) != 0 )
     {
         raw->blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0);
-        //copy_cJSON(raw->blockhash,cJSON_GetObjectItem(json,"hash"));
-        //copy_cJSON(raw->merkleroot,cJSON_GetObjectItem(json,"merkleroot"));
+        copy_cJSON(raw->blockhash,cJSON_GetObjectItem(json,"hash"));
+        printf("blockhash.[%s]\n",raw->blockhash);
+        copy_cJSON(raw->merkleroot,cJSON_GetObjectItem(json,"merkleroot"));
+        printf("raw->merkleroot.[%s]\n",raw->merkleroot);
         raw->timestamp = (uint32_t)get_cJSON_int(cJSON_GetObjectItem(json,"time"),0);
         copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"mint"));
         if ( mintedstr[0] == 0 )
