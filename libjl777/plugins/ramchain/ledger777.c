@@ -393,6 +393,8 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
         memset(&coinaddr[vout.addrlen],0,ledger->addrs.DB->valuesize - vout.addrlen);
         vout.addrlen = ledger->addrs.DB->valuesize;
     }
+    if ( vout.addrlen != 34 )
+        printf("vout.addrlen %d\n",vout.addrlen);
     if ( (vout.U.ind= ledger_rawind(&firstblocknum,1,ledger->DBs.transactions,&ledger->addrs,coinaddr,vout.addrlen,blocknum)) != 0 )
     {
         ledger->unspentmap.ind = unspentind;
