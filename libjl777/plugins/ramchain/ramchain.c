@@ -199,8 +199,16 @@ int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind)
         if ( (value= db777_matrixptr(&matrixi,0,revDB,&ind,sizeof(ind))) != 0 )
         {
             if ( db777_link(0,DB,revDB,ind,value,revDB->valuesize) != 0 )
+            {
+                printf("ind.%d linkerror\n",ind);
                 break;
-        } else break;
+            }
+        }
+        else
+        {
+            printf("couldnt find ind.%d, value.%p valuesize.%d matrixi.%d\n",ind,value,revDB->valuesize,matrixi);
+            break;
+        }
     }
     return(ind);
 }

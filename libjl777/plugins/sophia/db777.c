@@ -305,8 +305,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             else
             {
                 retval = sp_set((transactions != 0 ? transactions : db),obj);
-                if ( strcmp(DB->name,"ledger") == 0 )
-                    printf("retval.%d %s key.%u valuelen.%d\n",retval,DB->name,*(int *)key,valuelen);
+                //if ( strcmp(DB->name,"ledger") == 0 )
+                //    printf("retval.%d %s key.%u valuelen.%d\n",retval,DB->name,*(int *)key,valuelen);
             }
         }
         //if ( ismatrix != 0 )
