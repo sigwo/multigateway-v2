@@ -107,11 +107,10 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | DB777_KEY32,sizeof(struct upair32));
         ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | DB777_KEY32,sizeof(struct unspentmap));
         ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | DB777_KEY32,1);
-        ledger_stateinit(&ledger->DBs,&ledger->ledger,coinstr,subdir,"ledger","zstd",flags,sizeof(struct ledger_inds));
         ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flags | DB777_RAM,sizeof(uint32_t) * 2);
         ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flags | DB777_RAM,sizeof(uint32_t) * 2);
         ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags | DB777_RAM,sizeof(uint32_t) * 2);
-        //ledger_stateinit(&ledger->DBs,&ledger->addrtx,coinstr,subdir,"addrtx","zstd",flags,sizeof(uint32_t) * 2);
+        ledger_stateinit(&ledger->DBs,&ledger->ledger,coinstr,subdir,"ledger","zstd",flags,sizeof(struct ledger_inds));
         ledger->blocknum = 0;
     }
     return(ledger);
@@ -182,7 +181,7 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
         ledger_setblocknum(ledger,&MEM,ramchain->startblocknum);
     else ramchain->startblocknum = 0;
     ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum > 1);
-    printf("set %u to %u | sizes: addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ramchain->startblocknum,endblocknum,sizeof(struct addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
+    printf("set %u to %u | sizes: uthash.%ld addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ramchain->startblocknum,endblocknum,sizeof(UT_hash_handle),sizeof(struct ledger_addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
     balance = ledger_recalc_addrinfos(richlist,sizeof(richlist),ledger,25);
     printf("balance recalculated %.8f\n",dstr(balance));

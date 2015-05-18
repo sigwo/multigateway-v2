@@ -227,18 +227,19 @@ int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,ui
 
 int32_t addrinfo_size(int32_t n) { return(sizeof(struct ledger_addrinfo) + (sizeof(struct unspentmap) * n)); }
 
-struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(0))); }
+struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(1))); }
 
 uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum,char *txidstr,int32_t vout,char *extra,int32_t v,uint32_t scriptind)
 {
     uint64_t balance = 0; int32_t i,n,allocsize = sizeof(ledger->getbuf);
     char itembuf[8192],pubstr[8192],spendaddr[128]; // uint32_t addrtx[2],pair[2];
     struct ledger_addrinfo *addrinfo; struct unspentmap U;
+    printf("addrinfo update block.%d size0 %ld\n",blocknum,addrinfo_size(0));
     if ( (addrinfo= db777_get(ledger->getbuf,&allocsize,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind))) == 0 )
     {
         addrinfo = addrinfo_alloc();
-        db777_set(DB777_RAM,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(addrinfo->count));
-        update_sha256(ledger->addrinfos.sha256,&ledger->addrinfos.state,(void *)addrinfo,addrinfo_size(addrinfo->count));
+        addrinfo->firstblocknum = blocknum;
+        db777_set(DB777_RAM,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind),addrinfo,addrinfo_size(0));
     }
     //addrtx[0] = addrind, addrtx[1] = ++addrinfo->txindex, pair[0] = unspentind, pair[1] = blocknum;
     //db777_add(-1,ledger->DBs.transactions,ledger->addrtx.DB,addrtx,sizeof(addrtx),pair,sizeof(pair)); // skip sha on this one to save time
@@ -281,7 +282,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
     {
         allocsize = addrinfo_size(addrinfo->count + 1);
         addrinfo->balance += value, balance = addrinfo->balance;
-        printf("addrind.%u: add count.%d remove %u +%.8f -> balace %.8f\n",addrind,addrinfo->count,unspentind,dstr(value),dstr(balance));
+        printf("addrind.%u: add count.%d unspentind %u +%.8f -> balace %.8f\n",addrind,addrinfo->count,unspentind,dstr(value),dstr(balance));
         memset(&U,0,sizeof(U));
         U.value = value, U.ind = unspentind, U.scriptind = scriptind;
         addrinfo->unspents[addrinfo->count++] = U;
