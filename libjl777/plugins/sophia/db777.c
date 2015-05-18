@@ -149,6 +149,7 @@ void *db777_matrixptr(int32_t *matrixindp,void *transactions,struct db777 *DB,vo
 
 int32_t db777_matrixalloc(struct db777 *DB)
 {
+    return(0);
     return((DB->flags & (DB777_RAM | DB777_KEY32)) == (DB777_RAM | DB777_KEY32) && DB->valuesize != 0);
 }
 
