@@ -33,7 +33,7 @@ struct rawblock
     uint32_t blocknum,timestamp;
     uint16_t numtx,numrawvins,numrawvouts,pad;
     uint64_t minted;
-    char blockhash[512],merkleroot[512];
+    char blockhash[4096],merkleroot[4096];
     struct rawtx txspace[MAX_BLOCKTX];
     struct rawvin vinspace[MAX_BLOCKTX];
     struct rawvout voutspace[MAX_BLOCKTX];
