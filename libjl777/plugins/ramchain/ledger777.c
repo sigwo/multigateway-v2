@@ -253,7 +253,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
                 {
                     addrinfo->balance -= value, balance = addrinfo->balance;
                     addrinfo->dirty = 1;
-                    //printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
+                    printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
                     if ( addrinfo->notify != 0 )
                     {
                         // T balance, b blocknum, a -value, t this txidstr, v this vin, st spent_txidstr, sv spent_vout
@@ -281,7 +281,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
     {
         allocsize = addrinfo_size(addrinfo->count + 1);
         addrinfo->balance += value, balance = addrinfo->balance;
-        //printf("addrind.%u: add count.%d remove %u +%.8f -> balace %.8f\n",addrind,addrinfo->count,unspentind,dstr(value),dstr(balance));
+        printf("addrind.%u: add count.%d remove %u +%.8f -> balace %.8f\n",addrind,addrinfo->count,unspentind,dstr(value),dstr(balance));
         memset(&U,0,sizeof(U));
         U.value = value, U.ind = unspentind, U.scriptind = scriptind;
         addrinfo->unspents[addrinfo->count++] = U;
@@ -395,7 +395,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
         }
         if ( Debuglevel > 2 )
             printf("txidind.%u v.%d unspent.%d (%s).%u (%s).%u %.8f | %ld\n",txidind,v,unspentind,coinaddr,vout.U.ind,scriptstr,vout.scriptind,dstr(value),sizeof(vout.U));
-        //addrinfo_update(ledger,coinaddr,vout.addrlen,value,unspentind,vout.U.ind,blocknum,txidstr,v,scriptstr,txind,vout.U.scriptind);
+        addrinfo_update(ledger,coinaddr,vout.addrlen,value,unspentind,vout.U.ind,blocknum,txidstr,v,scriptstr,txind,vout.U.scriptind);
         return(ledger_packvout(ledger->addrinfos.sha256,&ledger->addrinfos.state,mem,&vout));
     } else printf("ledger_unspent: cant find addrind.(%s)\n",coinaddr), debugstop();
     return(0);
