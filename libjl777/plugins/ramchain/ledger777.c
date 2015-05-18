@@ -20,7 +20,7 @@ struct ledger_inds
 {
     uint64_t voutsum,spendsum;
     uint32_t blocknum,numsyncs,addrind,txidind,scriptind,unspentind,numspents,numaddrinfos,txoffsets;
-    struct sha256_state hashstates[12]; uint8_t hashes[12][256 >> 3];
+    struct sha256_state hashstates[16]; uint8_t hashes[16][256 >> 3];
 };
 
 struct ledger_blockinfo
