@@ -156,7 +156,7 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
 {
     struct db777_entry *entry; void *obj,*revptr; int32_t matrixi;
     db777_lock(DB);
-    HASH_FIND(hh,DB->table,&ind,sizeof(ind),entry);
+    HASH_FIND(hh,DB->table,value,valuelen,entry);
     db777_unlock(DB);
     printf("search value.%x len.%d link.%d -> entry.%p\n",*(int *)value,valuelen,ind,entry);
     if ( entry != 0 )
