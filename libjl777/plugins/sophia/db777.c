@@ -302,8 +302,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             }
             else retval = sp_set((transactions != 0 ? transactions : db),obj);
         }
-        if ( ismatrix != 0 )
-            printf("%s save key.%u valuelen.%d\n",DB->name,*(int *)key,valuelen);
+        //if ( ismatrix != 0 )
+        //    printf("%s save key.%u valuelen.%d\n",DB->name,*(int *)key,valuelen);
     }
     if ( ((DB->flags & flags) & DB777_RAM) != 0 )
     {
