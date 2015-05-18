@@ -580,12 +580,12 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
                 DB->dirty = calloc(DBs->matrixentries,sizeof(*DB->dirty));
                 DB->matrix = calloc(DBs->matrixentries,sizeof(*DB->matrix));
                 DB->matrixentries = DBs->matrixentries;
-                allocsize = DB->valuesize * DB777_MATRIXROW;
                 for (j=0; j<DB->matrixentries; j++)
                 {
                     matrixkey = (j * DB777_MATRIXROW);
                     DB->matrix[j] = calloc(DB->valuesize,DB777_MATRIXROW);
-                    if ( db777_get(DB->matrix[j],&allocsize,0,DB,&matrixkey,sizeof(matrixkey)) == DB->matrix[j] )
+                    allocsize = DB->valuesize * DB777_MATRIXROW;
+                    if ( db777_get(DB->matrix[j],&allocsize,0,DB,&matrixkey,sizeof(matrixkey)) == DB->matrix[j] && allocsize == DB->valuesize * DB777_MATRIXROW )
                         printf("+[%d] ",matrixkey);
                     else
                     {
