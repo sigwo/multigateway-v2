@@ -251,7 +251,6 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     struct db777_entry *entry = 0; void *db,*newkey,*dest,*obj = 0; int32_t ismatrix,matrixi,retval = 0;
-    //if ( strcmp(DB->name,"revaddrs") == 0 )
     ismatrix = db777_matrixalloc(DB);
     if ( DB->valuesize != 0 && valuelen > DB->valuesize )
     {
@@ -385,11 +384,12 @@ uint32_t Duplicate,Mismatch,Added;
 int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     void *val = 0;
-    int32_t retval,allocsize = sizeof(DB->checkbuf);
+    int32_t retval,flag = 0,allocsize = sizeof(DB->checkbuf);
     if ( DB == 0 )
         return(-1);
     if ( forceflag <= 0 && (val= db777_get(DB->checkbuf,&allocsize,transactions,DB,key,keylen)) != 0 )
     {
+        flag = 1;
         if ( allocsize == valuelen && memcmp(val,value,valuelen) == 0 )
         {
             if ( forceflag < 0 )
@@ -397,7 +397,7 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
             return(0);
         }
     }
-    if ( forceflag < 0 && allocsize != 0 && (db777_matrixalloc(DB) == 0 || zcmp(val,allocsize) != 0) )
+    if ( forceflag < 0 && flag != 0 && (db777_matrixalloc(DB) == 0 || zcmp(val,allocsize) != 0) )
     {
         int i;
         for (i=0; i<60&&i<valuelen; i++)
