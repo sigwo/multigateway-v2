@@ -377,12 +377,13 @@ int32_t main
         }
         if ( n == 0 )
         {
-            if ( plugin->sleepmillis != 0 )
+            startmilli = milliseconds();
+            if ( PLUGNAME(_idle)(plugin) == 0 )
             {
-                startmilli = milliseconds();
-                if ( PLUGNAME(_idle)(plugin) == 0 )
+                if ( plugin->sleepmillis != 0 )
                 {
                     sleeptime = plugin->sleepmillis - (milliseconds() - startmilli);
+                    printf("%s sleepmillis.%d sleeptime.%d\n",plugin->name,plugin->sleepmillis,sleeptime);
                     if ( sleeptime > 0 )
                         msleep(sleeptime);
                 }

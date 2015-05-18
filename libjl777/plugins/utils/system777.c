@@ -98,7 +98,7 @@ struct env777
     int32_t numdbs,needbackup,lastbackup,currentbackup;
 };
 
-#define DEFAULT_APISLEEP 100
+#define DEFAULT_APISLEEP 100  // milliseconds
 struct SuperNET_info
 {
     char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],transport[16];
