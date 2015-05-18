@@ -486,7 +486,7 @@ struct ledger_blockinfo *ledger_update(int32_t dispflag,struct ledger_info *ledg
                 if ( (txidind= has_duplicate_txid(ledger,ledger->DBs.coinstr,blocknum,tx->txidstr)) == 0 )
                     txidind = ledger->txids.ind + 1;
                 ledger_addtx(ledger,mem,txidind,tx->txidstr,ledger->unspentmap.ind+1,tx->numvouts,ledger->spentbits.ind+1,tx->numvins,blocknum);
-                if ( 0 && (n= tx->numvouts) > 0 )
+                if ( (n= tx->numvouts) > 0 )
                     for (i=0; i<n; i++,vo++,block->numvouts++)
                         ledger_addunspent(&block->numaddrs,&block->numscripts,ledger,mem,txidind,i,++ledger->unspentmap.ind,vo->coinaddr,vo->script,vo->value,blocknum,tx->txidstr,txind);
                 if ( 0 && (n= tx->numvins) > 0 )
