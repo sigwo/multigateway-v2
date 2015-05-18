@@ -158,9 +158,9 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
     db777_lock(DB);
     HASH_FIND(hh,DB->table,&ind,sizeof(ind),entry);
     db777_unlock(DB);
+    printf("search value.%x len.%d link.%d -> entry.%p\n",*(int *)value,valuelen,ind,entry);
     if ( entry != 0 )
     {
-        printf("link.%d\n",ind);
         if ( entry->valuesize == 0 )
         {
             memcpy(&obj,entry->value,sizeof(obj));
@@ -176,7 +176,7 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
                 } else printf("miscompared %s vs %s\n",DB->name,revDB->name);
             } else printf("miscompared %s ind.%d vs arg\n",DB->name,ind);
         } else printf("unexpected nonzero valuesize.%d for %s\n",entry->valuesize,DB->name);
-    } else printf("couldnt find entry for %s ind.%d\n",DB->name,ind);
+    } else printf("couldnt find entry for %s ind.%d: value.%x\n",DB->name,ind,*(int *)value);
     return(-1);
 }
 
