@@ -567,7 +567,7 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
     if ( (err= sp_open(DBs->env)) != 0 )
         printf("err.%d setting sp_open for DBs->env %p\n",err,DBs->env);
     DBs->start_RTblocknum = RTblocknum;
-    DBs->matrixentries = ((RTblocknum * 1.1) / DB777_MATRIXROW) + 16;
+    DBs->matrixentries = ((RTblocknum * 10) / DB777_MATRIXROW) + 16;
     for (i=0; i<DBs->numdbs; i++)
     {
         DB = &DBs->dbs[i];

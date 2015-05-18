@@ -123,17 +123,22 @@ void *db777_matrixptr(int32_t *matrixindp,void *transactions,struct db777 *DB,vo
     {
         rawind = *(uint32_t *)key;
         *matrixindp = (rawind / DB777_MATRIXROW);
-        if ( *matrixindp < DB->matrixentries )
+        db777_lock(DB);
         {
-            db777_lock(DB);
+            if ( *matrixindp >= DB->matrixentries )
+            {
+                DB->matrix = realloc(DB->matrix,sizeof(*DB->matrix) * (DB->matrixentries + DB777_MATRIXROW));
+                memset(&DB->matrix[DB->matrixentries],0,sizeof(*DB->matrix) * DB777_MATRIXROW);
+                DB->matrixentries += DB777_MATRIXROW;
+            }
             if ( DB->matrix[*matrixindp] == 0 )
             {
                 printf("alloc.%d -> %s[%d]\n",DB777_MATRIXROW*DB->valuesize,DB->name,*matrixindp);
                 DB->matrix[*matrixindp] = calloc(DB777_MATRIXROW,DB->valuesize);
             }
-            db777_unlock(DB);
-            return((void *)((long)DB->matrix[*matrixindp] + ((rawind % DB777_MATRIXROW) * DB->valuesize)));
-        } else printf("invalid matrixi.%d for %s max.%d\n",*matrixindp,DB->name,DB->matrixentries);
+        }
+        db777_unlock(DB);
+        return((void *)((long)DB->matrix[*matrixindp] + ((rawind % DB777_MATRIXROW) * DB->valuesize)));
     } else printf("invalid keylen.%d for %s\n",keylen,DB->name);
     return(0);
 }
