@@ -268,6 +268,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             }
             else retval = sp_set((transactions != 0 ? transactions : db),obj);
         }
+        if ( ismatrix != 0 )
+            printf("%s save key.%u valuelen.%d\n",DB->name,*(int *)key,valuelen);
     }
     if ( ((DB->flags & flags) & DB777_RAM) != 0 )
     {
@@ -469,16 +471,16 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
         {
             for (i=0; i<DB->matrixentries; i++)
             {
-                if ( DB->dirty[i] != 0 )
+                if ( DB->matrix[i] != 0 )
                 {
-                    if ( DB->matrix[i] != 0 )
+                    if  ( DB->dirty[i] != 0 )
                     {
                         key = (i * DB777_MATRIXROW);
                         valuelen = DB->valuesize * DB777_MATRIXROW;
                         DB->dirty[i] = (db777_set(DB777_HDD,transactions,DB,&key,sizeof(key),DB->matrix[i],valuelen) != 0);
                         n++, flushed += valuelen;
                     } else printf("db777_flush: %s missing matrix row[%d]??\n",DB->name,i);
-                }
+                } else break;
             }
         }
         else
