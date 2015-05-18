@@ -162,11 +162,11 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
     {
         if ( entry->valuesize == sizeof(uint32_t)*2 )
         {
-            if ( *(uint32_t *)entry->value == ind && valuelen == revDB->valuesize )
+            if ( *(uint32_t *)entry->value == ind && valuelen == revDB->valuesize && memcmp(entry->hh.key,value,valuelen) == 0 )
             {
                 if ( (revptr= db777_matrixptr(&matrixi,transactions,revDB,&ind,sizeof(ind))) != 0 && memcmp(revptr,value,valuelen) == 0 )
                 {
-                    free(entry->hh.key);
+                    //free(entry->hh.key);
                     entry->hh.key = revptr;
                     entry->linked = 1;
                     Linked++;
