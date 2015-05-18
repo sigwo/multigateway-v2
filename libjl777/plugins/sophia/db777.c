@@ -155,6 +155,7 @@ int32_t db777_matrixalloc(struct db777 *DB)
 int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint32_t ind,void *value,int32_t valuelen)
 {
     struct db777_entry *entry; void *revptr; int32_t matrixi;
+    return(0);
     db777_lock(DB);
     HASH_FIND(hh,DB->table,value,valuelen,entry);
     db777_unlock(DB);
@@ -166,7 +167,7 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
             {
                 if ( (revptr= db777_matrixptr(&matrixi,transactions,revDB,&ind,sizeof(ind))) != 0 && memcmp(revptr,value,valuelen) == 0 )
                 {
-                    //free(entry->hh.key);
+                    free(entry->hh.key);
                     entry->hh.key = revptr;
                     entry->linked = 1;
                     Linked++;

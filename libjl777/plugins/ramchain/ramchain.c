@@ -205,9 +205,12 @@ int32_t ramchain_resume(char *retbuf,struct ramchain *ramchain,char *serverport,
     ledger->blocknum = ramchain->startblocknum + (ramchain->startblocknum > 1);
     printf("set %u to %u | sizes: uthash.%ld addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ramchain->startblocknum,endblocknum,sizeof(UT_hash_handle),sizeof(struct ledger_addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
     ramchain->endblocknum = (endblocknum > ramchain->startblocknum) ? endblocknum : ramchain->startblocknum;
-    numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
-    numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
-    printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
+    if ( 0 )
+    {
+        numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
+        numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
+        printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
+    }
     balance = ledger_recalc_addrinfos(richlist,sizeof(richlist),ledger,25);
     printf("balance recalculated %.8f\n",dstr(balance));
     sprintf(retbuf,"[{\"result\":\"resumed\",\"ledgerhash\":\"%llx\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f},%s]",*(long long *)ledger->ledger.sha256,ramchain->startblocknum,ramchain->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ramchain->startmilli)/1000.,richlist);
