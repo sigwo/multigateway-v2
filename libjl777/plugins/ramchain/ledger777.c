@@ -637,9 +637,9 @@ int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t num
     L.unspentind = ledger->unspentmap.ind, L.numspents = ledger->spentbits.ind;
     L.numaddrinfos = ledger->addrinfos.ind, L.txoffsets = ledger->txoffsets.ind;
     ledger_copyhashes(&L,ledger,0);
+    printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %llx\n",numsyncs,blocknum,dstr(L.voutsum)-dstr(L.spendsum),*(long long *)ledger->ledger.sha256);
     if ( numsyncs > 0 )
     {
-        printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %llx\n",numsyncs,blocknum,dstr(L.voutsum)-dstr(L.spendsum),*(long long *)ledger->ledger.sha256);
         db777_add(1,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L));
         allocsize = sizeof(checkval);
         if ( db777_get(&checkval,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs)) != 0 )
