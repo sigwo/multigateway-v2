@@ -150,7 +150,7 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
         {
             *lenp = DB->valuesize;
             memcpy(dest,src,DB->valuesize);
-            printf("GETMATRIX %s[%d] %p -> %x\n",DB->name,*(int *)key,src,*(int *)value);
+            //printf("GETMATRIX %s[%d] %p -> %x\n",DB->name,*(int *)key,src,*(int *)value);
             return(dest);
         } else printf("db777_get: unexpected missing matrixi ptr for %s key.%u\n",DB->name,*(int *)key);
         return(0);
@@ -298,7 +298,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             if ( (dest= db777_matrixptr(&matrixi,DB,key,keylen)) != 0 )
             {
                 DB->dirty[matrixi] = 1;
-                printf("SETMATRIX %s[%d] %p <- %x\n",DB->name,*(int *)key,dest,*(int *)value);
+                //printf("SETMATRIX %s[%d] %p <- %x\n",DB->name,*(int *)key,dest,*(int *)value);
                 memcpy(dest,value,valuelen);
             }
             else printf("db777_set: out of bounds rawind.%u vs. %d (width %d)\n",*(int *)key,DB->matrixentries,DB777_MATRIXROW);
