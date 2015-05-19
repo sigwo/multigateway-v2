@@ -35,7 +35,7 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
 
 int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
 {
-     struct alloc_space MEM; uint32_t blocknum; int32_t lag,syncflag,flag = 0;
+    struct alloc_space MEM; uint32_t blocknum; double startmilli,elapsed; int32_t lag,syncflag,flag = 0;
     blocknum = ledger->blocknum;
     if ( (lag= (ramchain->RTblocknum - blocknum)) < 1000 || (blocknum % 100) == 0 )
         ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,ramchain->serverport,ramchain->userpass,ramchain->RTblocknum);
@@ -59,8 +59,12 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
             printf("ramchain.%s blocknum.%d <<< PAUSING paused.%d |  endblocknum.%u\n",ledger->DBs.coinstr,blocknum,ramchain->paused,ledger->endblocknum);
         }
         memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
+        startmilli = milliseconds();
         if ( rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum) > 0 )
+        {
+            elapsed = (milliseconds() - startmilli); fprintf(stderr,"%.3f ",elapsed/1000.);
             flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0));
+        }
         if ( ramchain->paused == 3 )
         {
             ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
