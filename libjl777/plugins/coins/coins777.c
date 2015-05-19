@@ -82,8 +82,9 @@ struct ledger_state
 struct ledger_info
 {
     struct env777 DBs;
-    uint64_t voutsum,spendsum;
-    uint32_t blocknum,blockpending,numsyncs,sessionid,counter;
+    uint64_t voutsum,spendsum,addrsum,totalsize;
+    double startmilli;
+    uint32_t blocknum,blockpending,numsyncs,sessionid,counter,startblocknum,endblocknum,syncfreq,needbackup;
     struct ledger_state ledger,revaddrs,addrs,revtxids,txids,scripts,revscripts,blocks,unspentmap,txoffsets,spentbits,addrinfos;
     uint8_t getbuf[1000000];
 };
@@ -91,9 +92,9 @@ struct ledger_info
 struct ramchain
 {
     char name[16];
-    double lastgetinfo,startmilli;
-    uint64_t addrsum,totalsize;
-    uint32_t startblocknum,endblocknum,RTblocknum,readyflag,syncfreq,paused,needbackup,syncflag;
+    char serverport[512],userpass[4096];
+    double lastgetinfo;
+    uint32_t RTblocknum,readyflag,syncflag,paused;
     struct rawblock EMIT,DECODE;
     struct ledger_info *activeledger,*session_ledgers[1 << CONNECTION_NUMBITS];
 };

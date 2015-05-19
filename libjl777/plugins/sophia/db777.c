@@ -53,6 +53,7 @@ char **db777_index(int32_t *nump,struct db777 *DB,int32_t max);
 int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue);
 void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen,int32_t fillcache);
 void *db777_matrixptr(int32_t *matrixindp,void *transactions,struct db777 *DB,void *key,int32_t keylen);
+int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind);
 
 extern struct db777_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;
@@ -178,6 +179,29 @@ int32_t db777_link(void *transactions,struct db777 *DB,struct db777 *revDB,uint3
         } else printf("unexpected nonzero valuesize.%d for %s\n",entry->valuesize,DB->name);
     } else printf("couldnt find entry for %s ind.%d: value.%x\n",DB->name,ind,*(int *)value);
     return(-1);
+}
+
+int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind)
+{
+    uint32_t ind; void *value; int32_t matrixi;
+    printf("linkDB maxind.%d\n",maxind);
+    for (ind=1; ind<=maxind; ind++)
+    {
+        if ( (value= db777_matrixptr(&matrixi,0,revDB,&ind,sizeof(ind))) != 0 )
+        {
+            if ( db777_link(0,DB,revDB,ind,value,revDB->valuesize) != 0 )
+            {
+                printf("ind.%d linkerror\n",ind);
+                break;
+            }
+        }
+        else
+        {
+            printf("couldnt find ind.%d, value.%p valuesize.%d matrixi.%d\n",ind,value,revDB->valuesize,matrixi);
+            break;
+        }
+    }
+    return(ind);
 }
 
 void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen,int32_t fillcache)
