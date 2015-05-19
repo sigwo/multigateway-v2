@@ -23,7 +23,7 @@
 
 STRUCTNAME RAMCHAINS;
 char *PLUGNAME(_pubmethods)[] = { "ledgerhash", "richlist", "balance", "notify"  }; // list of public methods
-char *PLUGNAME(_methods)[] = { "create", "backup", "pause", "resume", "stop" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "ledgerhash", "richlist", "balance", "notify", "create", "backup", "pause", "resume", "stop" }; // list of supported methods
 char *PLUGNAME(_authmethods)[] = { "signrawtransaction", "dumpprivkey" }; // list of authentication methods
 
 int32_t ramchain_idle(struct plugin_info *plugin)
