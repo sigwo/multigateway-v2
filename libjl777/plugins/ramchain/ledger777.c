@@ -38,13 +38,20 @@ struct ledger_voutdata { struct unspentmap U; uint32_t scriptind; int32_t addrle
 int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp);
 struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags);
 int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag);
-struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr);
+struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr,uint32_t addrind);
 uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info *ledger,int32_t numrichlist);
 int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t numsyncs);
 int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_info *ledger);
 int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum);
 struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum);
 void ledger_free(struct ledger_info *ledger,int32_t closeDBflag);
+
+uint32_t ledger_txidind(uint32_t *firstblocknump,struct ledger_info *ledger,char *txidstr);
+uint32_t ledger_addrind(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr);
+uint32_t ledger_scriptind(uint32_t *firstblocknump,struct ledger_info *ledger,char *scriptstr);
+int32_t ledger_txidstr(struct ledger_info *ledger,char *txidstr,int32_t max,uint32_t txidind);
+int32_t ledger_scriptstr(struct ledger_info *ledger,char *scriptstr,int32_t max,uint32_t scriptind);
+int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,uint32_t addrind);
 
 #endif
 #else
@@ -198,18 +205,49 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
     return(rawind);
 }
 
+uint32_t ledger_txidind(uint32_t *firstblocknump,struct ledger_info *ledger,char *txidstr)
+{
+    return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->txids,txidstr,(int32_t)strlen(txidstr),0));
+}
+
 uint32_t ledger_addrind(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr)
 {
     return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->addrs,coinaddr,(int32_t)strlen(coinaddr),0));
 }
 
-struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr)
+uint32_t ledger_scriptind(uint32_t *firstblocknump,struct ledger_info *ledger,char *scriptstr)
 {
-    uint32_t addrind; int32_t len = sizeof(ledger->getbuf);
-    // printf("ledger_addrinfo.%p %s\n",ledger,coinaddr);
-    if ( ledger != 0 && (addrind= ledger_addrind(firstblocknump,ledger,coinaddr)) > 0 )
-        return(db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind)));
-    else return(0);
+    return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->scripts,scriptstr,(int32_t)strlen(scriptstr),0));
+}
+
+int32_t ledger_txidstr(struct ledger_info *ledger,char *txidstr,int32_t max,uint32_t txidind)
+{
+    uint8_t txid[256],*ptr; int32_t size = sizeof(txid),retval = -1;
+    if ( (ptr= db777_get(txid,&size,ledger->DBs.transactions,ledger->revtxids.DB,&txidind,sizeof(txidind))) != 0 )
+    {
+        if ( size < max/2 )
+        {
+            init_hexbytes_noT(txidstr,ptr,size);
+            retval = 0;
+        }
+        else printf("txid.(%x) %d too long for %d\n",*ptr,size,max);
+    }
+    return(retval);
+}
+
+int32_t ledger_scriptstr(struct ledger_info *ledger,char *scriptstr,int32_t max,uint32_t scriptind)
+{
+    uint8_t script[4096],*ptr; int32_t size = sizeof(script),retval = -1;
+    if ( (ptr= db777_get(script,&size,ledger->DBs.transactions,ledger->revscripts.DB,&scriptind,sizeof(scriptind))) != 0 )
+    {
+        if ( size < max/2 )
+        {
+            init_hexbytes_noT(scriptstr,ptr,size);
+            retval = 0;
+        }
+        else printf("script.(%x) %d too long for %d\n",*ptr,size,max);
+    }
+    return(retval);
 }
 
 int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,uint32_t addrind)
@@ -223,6 +261,20 @@ int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,ui
         else printf("coinaddr.(%s) too long for %d\n",ptr,max);
     }
     return(retval);
+}
+
+struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr,uint32_t addrind)
+{
+    int32_t len = sizeof(ledger->getbuf);
+    // printf("ledger_addrinfo.%p %s\n",ledger,coinaddr);
+    if ( ledger != 0 )
+    {
+        if ( addrind == 0 && coinaddr != 0 && coinaddr[0] != 0 )
+            addrind = ledger_addrind(firstblocknump,ledger,coinaddr);
+        if ( addrind != 0 )
+            return(db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,&addrind,sizeof(addrind)));
+    }
+    return(0);
 }
 
 int32_t addrinfo_size(int32_t n) { return(sizeof(struct ledger_addrinfo) + (sizeof(struct unspentmap) * n)); }
@@ -895,7 +947,7 @@ void ledger_stateinit(struct env777 *DBs,struct ledger_state *sp,char *coinstr,c
 
 struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
 {
-    struct ledger_info *ledger = 0; int32_t flagsM = DB777_RAM | DB777_KEY32;
+    struct ledger_info *ledger = 0; 
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
         if ( flags == 0 )
@@ -904,18 +956,18 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
         printf("open ramchain DB files (%s) (%s)\n",coinstr,subdir);
         ledger_stateinit(&ledger->DBs,&ledger->blocks,coinstr,subdir,"blocks","zstd",flags | DB777_KEY32,0);
-        ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | flagsM,0);
+        ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_RAM,0);
         
-        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flags | flagsM,34);
+        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flags | DB777_KEY32,34);
         ledger_stateinit(&ledger->DBs,&ledger->revscripts,coinstr,subdir,"revscripts","zstd",flags,0);
-        ledger_stateinit(&ledger->DBs,&ledger->revtxids,coinstr,subdir,"revtxids","zstd",flags | flagsM,32);
-        ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | flagsM,sizeof(struct unspentmap));
-        ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | flagsM,sizeof(struct upair32));
-        ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | flagsM,1);
+        ledger_stateinit(&ledger->DBs,&ledger->revtxids,coinstr,subdir,"revtxids","zstd",flags | DB777_KEY32,32);
+        ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | DB777_KEY32,sizeof(struct unspentmap));
+        ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | DB777_KEY32,sizeof(struct upair32));
+        ledger_stateinit(&ledger->DBs,&ledger->spentbits,coinstr,subdir,"spentbits","zstd",flags | DB777_KEY32,1);
         
-        ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flags | DB777_RAM,sizeof(uint32_t) * 2);
-        ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flags | DB777_RAM,sizeof(uint32_t) * 2);
-        ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags | DB777_RAM,sizeof(uint32_t) * 2);
+        ledger_stateinit(&ledger->DBs,&ledger->addrs,coinstr,subdir,"addrs","zstd",flags | 0*DB777_RAM,sizeof(uint32_t) * 2);
+        ledger_stateinit(&ledger->DBs,&ledger->txids,coinstr,subdir,"txids",0,flags | 0*DB777_RAM,sizeof(uint32_t) * 2);
+        ledger_stateinit(&ledger->DBs,&ledger->scripts,coinstr,subdir,"scripts","zstd",flags | 0*DB777_RAM,sizeof(uint32_t) * 2);
         ledger_stateinit(&ledger->DBs,&ledger->ledger,coinstr,subdir,"ledger","zstd",flags,sizeof(struct ledger_inds));
         ledger->blocknum = 0;
     }

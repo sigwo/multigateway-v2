@@ -22,9 +22,11 @@
 #undef DEFINES_ONLY
 
 STRUCTNAME RAMCHAINS;
-char *PLUGNAME(_pubmethods)[] = { "ledgerhash", "richlist", "balance", "notify"  }; // list of public methods
-char *PLUGNAME(_methods)[] = { "ledgerhash", "richlist", "balance", "notify", "create", "backup", "pause", "resume", "stop" }; // list of supported methods
-char *PLUGNAME(_authmethods)[] = { "signrawtransaction", "dumpprivkey" }; // list of authentication methods
+#define PUB_METHODS "ledgerhash", "richlist", "txid", "txidind", "addr", "addrind", "script", "scriptind", "balance", "unspents", "notify"
+
+char *PLUGNAME(_pubmethods)[] = { PUB_METHODS }; // list of public methods
+char *PLUGNAME(_methods)[] = { PUB_METHODS, "create", "backup", "pause", "resume", "stop" }; // list of supported methods
+char *PLUGNAME(_authmethods)[] = { PUB_METHODS, "signrawtransaction", "dumpprivkey" }; // list of authentication methods
 
 int32_t ramchain_idle(struct plugin_info *plugin)
 {

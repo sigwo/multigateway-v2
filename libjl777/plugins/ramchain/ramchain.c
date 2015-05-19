@@ -212,7 +212,7 @@ int32_t ramchain_notify(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
     {
         for (i=0; i<n; i++)
         {
-            if ( (coinaddr= cJSON_str(cJSON_GetArrayItem(list,i))) != 0 && (addrinfo= ledger_addrinfo(&firstblocknum,ledger,coinaddr)) != 0 )
+            if ( (coinaddr= cJSON_str(cJSON_GetArrayItem(list,i))) != 0 && (addrinfo= ledger_addrinfo(&firstblocknum,ledger,coinaddr,0)) != 0 )
             {
                 m++;
                 addrinfo->notify = 1;
@@ -277,13 +277,108 @@ int32_t ramchain_ledgerhash(char *retbuf,int32_t maxlen,struct ramchain *ramchai
     return(-1);
 }
 
+int32_t ramchain_rawind(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *field,char *indname,uint32_t (*ledger_indfuncp)(uint32_t *firstblocknump,struct ledger_info *ledger,char *txidstr))
+{
+    char *str; uint32_t rawind,firstblocknum;
+    if ( (str= cJSON_str(cJSON_GetObjectItem(argjson,field))) != 0 )
+    {
+        if ( (rawind= (*ledger_indfuncp)(&firstblocknum,ramchain->activeledger,str)) != 0 )
+        {
+            sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%u\",\"firstblocknum\":\"%u\"}",ramchain->name,field,str,indname,rawind,firstblocknum);
+        } else sprintf(retbuf,"{\"error\":\"cant find %s\",\"coin\":\"%s\"}",field,ramchain->name);
+    }
+    if ( retbuf[0] == 0 )
+        sprintf(retbuf,"{\"error\":\"no %s\",\"coin\":\"%s\"}",field,ramchain->name);
+    return(-1);
+}
+
+int32_t ramchain_txidind(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    return(ramchain_rawind(retbuf,maxlen,ramchain,argjson,"txid","txidind",ledger_txidind));
+}
+
+int32_t ramchain_addrind(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    return(ramchain_rawind(retbuf,maxlen,ramchain,argjson,"addr","addrind",ledger_addrind));
+}
+
+int32_t ramchain_scriptind(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    return(ramchain_rawind(retbuf,maxlen,ramchain,argjson,"script","scriptind",ledger_scriptind));
+}
+
+int32_t ramchain_string(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *field,char *strname,int32_t (*ledger_strfuncp)(struct ledger_info *ledger,char *str,int32_t max,uint32_t rawind))
+{
+    char str[8192]; uint32_t rawind;
+    if ( (rawind= (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,field),0)) != 0 )
+    {
+        if ( (*ledger_strfuncp)(ramchain->activeledger,str,sizeof(str),rawind) == 0 )
+        {
+            sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"%s\":\"%u\",\"%s\":\"%s\"}",ramchain->name,field,rawind,strname,str);
+        } else sprintf(retbuf,"{\"error\":\"cant find %s\",\"coin\":\"%s\"}",ramchain->name,field);
+    }
+    if ( retbuf[0] == 0 )
+        sprintf(retbuf,"{\"error\":\"no %s\",\"coin\":\"%s\"}",field,ramchain->name);
+    return(-1);
+}
+
+int32_t ramchain_txid(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    return(ramchain_string(retbuf,maxlen,ramchain,argjson,"txidind","txid",ledger_txidstr));
+}
+
+int32_t ramchain_coinaddr(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    return(ramchain_string(retbuf,maxlen,ramchain,argjson,"addrind","coinaddr",ledger_coinaddr));
+}
+
+int32_t ramchain_script(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    return(ramchain_string(retbuf,maxlen,ramchain,argjson,"script","script",ledger_scriptstr));
+}
+
+struct ledger_addrinfo *ramchain_addrinfo(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    char *coinaddr=0,errfield[256]; uint32_t addrind,firstblocknum; struct ledger_addrinfo *addrinfo;
+    if ( (addrind= (uint32_t)cJSON_GetObjectItem(argjson,"addrind")) == 0 && (coinaddr= cJSON_str(cJSON_GetObjectItem(argjson,"addr"))) != 0 )
+        strcpy(errfield,coinaddr);
+    else if ( addrind != 0 )
+        sprintf(errfield,"addrind.%u",addrind);
+    else
+    {
+        sprintf(retbuf,"{\"error\":\"invalid addr or addrind\",\"coin\":\"%s\"}",ramchain->name);
+        return(0);
+    }
+    if ( (addrinfo= ledger_addrinfo(&firstblocknum,ramchain->activeledger,coinaddr,addrind)) == 0 )
+        sprintf(retbuf,"{\"error\":\"cant find %s\",\"coin\":\"%s\"}",errfield,ramchain->name);
+    return(addrinfo);
+}
+
+int32_t ramchain_balance(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    struct ledger_addrinfo *addrinfo;
+    if ( (addrinfo= ramchain_addrinfo(retbuf,maxlen,ramchain,argjson)) == 0 )
+        return(-1);
+    sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"balance\":%.8f}",ramchain->name,dstr(addrinfo->balance));
+    return(0);
+}
+
+int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+{
+    struct ledger_addrinfo *addrinfo;
+    if ( (addrinfo= ramchain_addrinfo(retbuf,maxlen,ramchain,argjson)) == 0 )
+        return(-1);
+    return(0);
+}
+
 char *ramchain_funcs[][2] =
 {
-    { "stop", (char *)ramchain_stop },
-    { "pause", (char *)ramchain_pause },
-    { "ledgerhash", (char *)ramchain_ledgerhash },
+    { "stop", (char *)ramchain_stop }, { "pause", (char *)ramchain_pause },
+    { "ledgerhash", (char *)ramchain_ledgerhash }, { "richlist", (char *)ramchain_richlist },
+    { "txid", (char *)ramchain_txid }, { "addr", (char *)ramchain_coinaddr }, { "script", (char *)ramchain_script },
+    { "txidind", (char *)ramchain_txidind }, { "addrind", (char *)ramchain_addrind }, { "scriptind", (char *)ramchain_scriptind },
+    { "balance", (char *)ramchain_balance }, { "unspents", (char *)ramchain_unspents },
     { "notify", (char *)ramchain_notify },
-    { "richlist", (char *)ramchain_richlist },
 };
 
 int32_t ramchain_func(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *method)
