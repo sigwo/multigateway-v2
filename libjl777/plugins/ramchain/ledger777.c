@@ -385,6 +385,9 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
         printf("ledger_unspent: error getting scriptind.(%s)\n",scriptstr);
         return(0);
     }
+    if ( db777_add(-1,ledger->DBs.transactions,ledger->revscripts.DB,&vout.U.scriptind,sizeof(vout.U.scriptind),vout.script,vout.scriptlen) != 0 )
+        printf("error saving revscript.(%s) addrind.%u scriptind.%u\n",scriptstr,vout.U.ind,vout.U.scriptind);
+    else db777_link(ledger->DBs.transactions,ledger->revscripts.DB,ledger->revscripts.DB,vout.U.scriptind,vout.script,vout.scriptlen);
     vout.newscript = (vout.scriptind == ledger->scripts.ind);
     (*numscriptsp) += vout.newscript;
     vout.addrlen = (int32_t)strlen(coinaddr);

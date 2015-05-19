@@ -84,7 +84,7 @@ struct ledger_info
     struct env777 DBs;
     uint64_t voutsum,spendsum;
     uint32_t blocknum,blockpending,numsyncs,sessionid,counter;
-    struct ledger_state ledger,revaddrs,addrs,revtxids,txids,scripts,blocks,unspentmap,txoffsets,spentbits,addrinfos;
+    struct ledger_state ledger,revaddrs,addrs,revtxids,txids,scripts,revscripts,blocks,unspentmap,txoffsets,spentbits,addrinfos;
     uint8_t getbuf[1000000];
 };
 

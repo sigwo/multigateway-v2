@@ -102,6 +102,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | flagsM,0);
 
         ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flags | flagsM,34);
+        ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revscripts","zstd",flags,0);
         ledger_stateinit(&ledger->DBs,&ledger->revtxids,coinstr,subdir,"revtxids","zstd",flags | flagsM,32);
         ledger_stateinit(&ledger->DBs,&ledger->unspentmap,coinstr,subdir,"unspentmap","zstd",flags | flagsM,sizeof(struct unspentmap));
         ledger_stateinit(&ledger->DBs,&ledger->txoffsets,coinstr,subdir,"txoffsets","zstd",flags | flagsM,sizeof(struct upair32));
