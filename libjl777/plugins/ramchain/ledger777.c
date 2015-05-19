@@ -565,7 +565,7 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
     struct ledger_blockinfo *block;
     uint32_t blocknum,dispflag; uint64_t supply,oldsupply; double estimate,elapsed,startmilli,diff;
     blocknum = ledger->blocknum;
-    if ( blocknum < RTblocknum )
+    if ( blocknum <= RTblocknum )
     {
         startmilli = milliseconds();
         dispflag = 1 || (blocknum > RTblocknum - 1000);
