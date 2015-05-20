@@ -276,6 +276,7 @@ struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_i
         if ( addrind != 0 )
         {
             len = sizeof(ledger->getbuf), pair[0] = addrind, pair[1] = ledger->numsyncs;
+            printf("addrind.%d numsyncs.%d\n",addrind,ledger->numsyncs);
             return(db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,pair,sizeof(pair)));
         }
     }
@@ -725,6 +726,7 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
     struct ledger_blockinfo *block; struct ledger_inds L;
     uint32_t blocknum,dispflag,ledgerhash; uint64_t supply,oldsupply; double estimate,elapsed,startmilli,diff;
     blocknum = ledger->blocknum;
+    printf("blocknum.%d RT.%d minconfirms.%d\n",blocknum,RTblocknum,minconfirms);
     if ( blocknum <= RTblocknum-minconfirms )
     {
         startmilli = milliseconds();
@@ -842,6 +844,8 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
     ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
     if ( startblocknum < 1 )
         return(0);
+    if ( ledger->numsyncs != 0 )
+        ledger->numsyncs--;
     if ( (block= db777_get(ledger->getbuf,&allocsize,0,ledger->blocks.DB,&startblocknum,sizeof(startblocknum))) != 0 )
     {
         if ( block->allocsize == allocsize && block_crc16(block) == block->crc16 )
