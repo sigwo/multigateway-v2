@@ -136,47 +136,55 @@ uint32_t ledger_packvout(uint8_t *hash,struct sha256_state *state,struct alloc_s
 
 uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transactions,struct ledger_state *hash,void *key,int32_t keylen,uint32_t blocknum)
 {
-    uint32_t *ptr,pair[2],rawind = 0; int32_t size = sizeof(pair);
-    if ( (ptr= db777_get(pair,&size,transactions,hash->DB,key,keylen)) != 0 )
+    uint32_t *ptr,pair[2],rawind = 0; int32_t size = sizeof(pair),retries = 3;
+    while ( retries-- > 0 )
     {
-        rawind = ptr[0];
-        if ( firstblocknump != 0 )
-            *firstblocknump = ptr[1];
-        if ( (rawind - 1) == hash->ind )
-            hash->ind = rawind;
-        if ( writeflag > 0 )
+        if ( (ptr= db777_get(pair,&size,transactions,hash->DB,key,keylen)) != 0 )
         {
-            if ( blocknum < ptr[1] )
-                printf("%s writeflag.1 matched rawind.%u firstblocknum %u vs at blocknum %u\n",hash->name,rawind,ptr[1],blocknum), debugstop();
-            else if ( blocknum == ptr[1] )
-                update_sha256(hash->sha256,&hash->state,key,keylen);
-        }
-        return(rawind);
-    }
-    if ( writeflag > 0 )
-    {
-        rawind = ++hash->ind;
-        pair[0] = rawind, pair[1] = blocknum;
-        if ( firstblocknump != 0 )
-            *firstblocknump = blocknum;
-        if ( Debuglevel > 2 || blocknum == 0 )
-            printf("%p add rawind.%d keylen.%d: %llx | first appearance block.%u\n",hash->DB,rawind,keylen,*(long long *)key,blocknum);
-        if ( db777_add(1,transactions,hash->DB,key,keylen,pair,sizeof(pair)) != 0 )
-            printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
-        else
-        {
-            update_sha256(hash->sha256,&hash->state,key,keylen);
+            rawind = ptr[0];
+            if ( firstblocknump != 0 )
+                *firstblocknump = ptr[1];
+            if ( (rawind - 1) == hash->ind )
+                hash->ind = rawind;
+            if ( writeflag > 0 )
+            {
+                if ( blocknum < ptr[1] )
+                    printf("%s writeflag.1 matched rawind.%u firstblocknum %u vs at blocknum %u\n",hash->name,rawind,ptr[1],blocknum), debugstop();
+                else if ( blocknum == ptr[1] )
+                    update_sha256(hash->sha256,&hash->state,key,keylen);
+            }
             return(rawind);
         }
+        if ( writeflag > 0 )
+        {
+            rawind = ++hash->ind;
+            pair[0] = rawind, pair[1] = blocknum;
+            if ( firstblocknump != 0 )
+                *firstblocknump = blocknum;
+            if ( Debuglevel > 2 || blocknum == 0 )
+                printf("%p add rawind.%d keylen.%d: %llx | first appearance block.%u\n",hash->DB,rawind,keylen,*(long long *)key,blocknum);
+            if ( db777_add(1,transactions,hash->DB,key,keylen,pair,sizeof(pair)) != 0 )
+                printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
+            else
+            {
+                update_sha256(hash->sha256,&hash->state,key,keylen);
+                return(rawind);
+            }
+        }
+        else if ( writeflag == 0 )
+        {
+            char hexstr[8192];
+            if ( strcmp(hash->DB->name,"addrs") == 0 )
+                strcpy(hexstr,key);
+            else init_hexbytes_noT(hexstr,key,keylen);
+            printf("%s %p couldnt find expected %s keylen.%d\n",hash->DB->name,hash->DB,hexstr,keylen);
+            sleep(1);
+            continue;
+        }
+        return(0);
     }
-    else if ( writeflag == 0 )
-    {
-        char hexstr[8192];
-        if ( strcmp(hash->DB->name,"addrs") == 0 )
-            strcpy(hexstr,key);
-        else init_hexbytes_noT(hexstr,key,keylen);
-        printf("%s %p couldnt find expected %s keylen.%d\n",hash->DB->name,hash->DB,hexstr,keylen), debugstop(); // db777_dump(hash->DB,1,1),
-    }
+    printf("no more retries\n");
+    debugstop(); // db777_dump(hash->DB,1,1),
     return(0);
 }
 
@@ -930,7 +938,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     struct ledger_info *ledger = 0; 
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
-        Debuglevel = 3;
+        //Debuglevel = 3;
         if ( flags == 0 )
             flags = (DB777_FLUSH | DB777_HDD | DB777_MULTITHREAD | DB777_RAMDISK);
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
