@@ -208,6 +208,8 @@ void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,vo
 {
     void *obj,*value,*result = 0; int32_t flag,max = *lenp;
     flag = 0;
+    if ( strcmp(DB->name,"addrinfos") != 0 )
+        transactions = 0;
     if ( (obj= sp_object(DB->db)) != 0 )
     {
         if ( sp_set(obj,"key",key,keylen) == 0 && (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
@@ -231,6 +233,8 @@ void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,voi
 {
     int32_t i,c,max,matrixi; struct db777_entry *entry = 0; void *src,*value = 0; char buf[8192],_keystr[513],*keystr = _keystr;
     max = *lenp, *lenp = 0;
+    if ( strcmp(DB->name,"addrinfos") != 0 )
+        transactions = 0;
     if ( db777_matrixalloc(DB) != 0 )
     {
         if ( (src= db777_matrixptr(&matrixi,transactions,DB,key,keylen)) != 0 )
@@ -302,6 +306,8 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
 {
     struct db777_entry *entry = 0; void *db,*newkey,*dest,*obj = 0; int32_t ismatrix,matrixi,retval = 0;
     ismatrix = db777_matrixalloc(DB);
+    if ( strcmp(DB->name,"addrinfos") != 0 )
+        transactions = 0;
     if ( DB->valuesize != 0 && valuelen > DB->valuesize )
     {
         if ( ismatrix == 0 || (ismatrix != 0 && ((*(uint32_t *)key % DB777_MATRIXROW) != 0 || valuelen != DB777_MATRIXROW*DB->valuesize)) )
@@ -449,6 +455,8 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
     int32_t retval,flag = 0,allocsize = sizeof(DB->checkbuf);
     if ( DB == 0 )
         return(-1);
+    if ( strcmp(DB->name,"addrinfos") != 0 )
+        transactions = 0;
     if ( forceflag <= 0 && (val= db777_get(DB->checkbuf,&allocsize,transactions,DB,key,keylen)) != 0 )
     {
         flag = 1;
@@ -538,6 +546,8 @@ int32_t db777_delete(int32_t flags,void *transactions,struct db777 *DB,void *key
 int32_t db777_flush(void *transactions,struct db777 *DB)
 {
     struct db777_entry *entry,*tmp; void *obj; uint32_t key; int32_t valuelen,flushed = 0,i,n = 0,numerrs = 0;
+    if ( strcmp(DB->name,"addrinfos") != 0 )
+        transactions = 0;
     if ( (DB->flags & DB777_RAM) != 0 )
     {
         db777_lock(DB);
