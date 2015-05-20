@@ -787,6 +787,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
     {
         for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
         {
+            printf("recalc.%d of %d\n",addrind,ledger->addrs.ind);
             if ( (addrinfo= ledger_addrinfo(0,ledger,0,addrind)) != 0 )
             {
                 if ( addrinfo->notify != 0 )
@@ -799,6 +800,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
         sortbuf = calloc(ledger->addrs.ind,sizeof(float)+sizeof(uint32_t));
         for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
         {
+            printf("recalc.%d of %d\n",addrind,ledger->addrs.ind);
             if ( (addrinfo= ledger_addrinfo(0,ledger,0,addrind)) != 0 )
             {
                 balance = addrinfo->balance;
