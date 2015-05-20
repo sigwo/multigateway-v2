@@ -701,13 +701,13 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t synci)
         ledger->voutsum = lp->voutsum, ledger->spendsum = lp->spendsum;
         ledger->addrs.ind = ledger->revaddrs.ind = lp->addrind;
         ledger->txids.ind = ledger->revtxids.ind = lp->txidind;
-        ledger->scripts.ind = lp->scriptind;
+        ledger->scripts.ind = ledger->revscripts.ind = lp->scriptind;
         ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
         ledger->addrinfos.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->txoffsets;
         ledger_copyhashes(&L,ledger,1);
         ledger_restorehash(&L,LEDGER_NUMHASHES-1,&ledger->ledger);
         ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
-        printf("restored synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f\n",synci,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
+        printf("restored synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f\n",synci,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum)), sleep(10);
     } else printf("ledger_getnearest error getting last\n");
     return(blocknum);
 }
