@@ -92,12 +92,9 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
     ledger->startmilli = milliseconds();
     ledger->totalsize = 0;
     printf("resuming %u to %u\n",startblocknum,endblocknum);
-    ledger->startblocknum = ledger_startblocknum(ledger,0);
+    ledger->startblocknum = ledger_startblocknum(ledger,-1);
     printf("updated %u to %u\n",ledger->startblocknum,endblocknum);
     memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
-    if ( ledger->startblocknum > 0 )
-        ledger_setblocknum(ledger,&MEM,ledger->startblocknum);
-    else ledger->startblocknum = 0;
     ledger->blocknum = ledger->startblocknum + (ledger->startblocknum > 1);
     printf("set %u to %u | sizes: uthash.%ld addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ledger->startblocknum,endblocknum,sizeof(UT_hash_handle),sizeof(struct ledger_addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
     ledger->endblocknum = (endblocknum > ledger->startblocknum) ? endblocknum : ledger->startblocknum;
