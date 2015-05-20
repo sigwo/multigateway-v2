@@ -628,7 +628,7 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
 
 uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_t blocknum,int32_t numsyncs)
 {
-    uint32_t ledgerhash; int32_t n,retval = 0;
+    uint32_t ledgerhash; int32_t i,n,retval = 0;
     memset(L,0,sizeof(*L));
     L->blocknum = ledger->blocknum, L->numsyncs = ledger->numsyncs;
     L->voutsum = ledger->voutsum, L->spendsum = ledger->spendsum;
@@ -644,6 +644,9 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
      }
     else
     {
+        for (i=0; i<n; i++)
+            printf("%08x ",*(int *)L->hashes[i]);
+        printf("crc32 %08x n.%d\n",_crc32(0,(void *)L,sizeof(*L)),n);
         update_sha256(ledger->sha256,&ledger->ledgerstate,(void *)L,sizeof(*L));
         ledgerhash = *(uint32_t *)ledger->sha256;
         memcpy(&L->hashstates[n],&ledger->ledgerstate,sizeof(L->hashstates[n]));
