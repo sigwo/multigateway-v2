@@ -154,7 +154,9 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
     if ( writeflag != 0 )
     {
         rawind = ++hash->ind;
-        pair[0] = rawind, pair[1] = *firstblocknump = blocknum;
+        pair[0] = rawind, pair[1] = blocknum;
+        if ( firstblocknump != 0 )
+            *firstblocknump = blocknum;
         if ( Debuglevel > 2 || blocknum == 0 )
             printf("%p add rawind.%d keylen.%d: %llx | first appearance block.%u\n",hash->DB,rawind,keylen,*(long long *)key,blocknum);
         if ( db777_add(1,transactions,hash->DB,key,keylen,pair,sizeof(pair)) != 0 )
