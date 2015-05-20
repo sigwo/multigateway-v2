@@ -730,7 +730,6 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
     struct ledger_blockinfo *block; struct ledger_inds L;
     uint32_t blocknum,dispflag,ledgerhash; uint64_t supply,oldsupply; double estimate,elapsed,startmilli,diff;
     blocknum = ledger->blocknum;
-    printf("blocknum.%d RT.%d minconfirms.%d\n",blocknum,RTblocknum,minconfirms);
     if ( blocknum <= RTblocknum-minconfirms )
     {
         startmilli = milliseconds();
