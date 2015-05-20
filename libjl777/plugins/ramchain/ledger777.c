@@ -136,8 +136,8 @@ uint32_t ledger_packvout(uint8_t *hash,struct sha256_state *state,struct alloc_s
 
 uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transactions,struct ledger_state *hash,void *key,int32_t keylen,uint32_t blocknum)
 {
-    uint32_t *ptr,pair[2],rawind = 0; int32_t size = sizeof(pair),retries = 3;
-    while ( retries-- > 0 )
+    uint32_t *ptr,pair[2],rawind = 0; int32_t size = sizeof(pair);
+    //while ( retries-- > 0 )
     {
         if ( (ptr= db777_get(pair,&size,transactions,hash->DB,key,keylen)) != 0 )
         {
@@ -178,8 +178,9 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
                 strcpy(hexstr,key);
             else init_hexbytes_noT(hexstr,key,keylen);
             printf("%s %p couldnt find expected %s keylen.%d\n",hash->DB->name,hash->DB,hexstr,keylen);
-            sleep(10);
-            continue;
+            debugstop();
+            //sleep(10);
+            //continue;
         }
         return(0);
     }
@@ -309,7 +310,7 @@ struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(1))); }
 
 uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum,char *txidstr,int32_t vout,char *extra,int32_t v,uint32_t scriptind)
 {
-    uint64_t balance = 0; int32_t i,n,allocflag = 0,allocsize,flag,retries = 3;
+    uint64_t balance = 0; int32_t i,n,allocflag = 0,allocsize,flag;
     char itembuf[8192],pubstr[8192],spendaddr[128]; uint32_t pair[1];
     struct ledger_addrinfo *addrinfo; struct unspentmap U;
     pair[0] = addrind; //, pair[1] = ledger->numsyncs;
@@ -328,7 +329,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
         unspentind &= ~(1 << 31);
         if ( (n= addrinfo->count) > 0 )
         {
-            while ( retries-- > 0 )
+            //while ( retries-- > 0 )
             {
                 flag = 0;
                 for (i=0; i<n; i++)
@@ -350,15 +351,15 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
                         addrinfo->unspents[i] = addrinfo->unspents[--addrinfo->count];
                         memset(&addrinfo->unspents[addrinfo->count],0,sizeof(addrinfo->unspents[addrinfo->count]));
                         unspentind |= (1 << 31);
-                        retries = -1;
+                        //retries = -1;
                         flag = 1;
                         if ( addrinfo->count == 0 && balance != 0 )
                             printf("ILLEGAL: addrind.%u count.%d %.8f\n",addrind,addrinfo->count,dstr(balance)), debugstop();
                         break;
                     }
                 }
-                if ( i == n )
-                    sleep(10);
+                //if ( i == n )
+                //    sleep(10);
             }
             if ( flag == 0 )
             {
@@ -409,15 +410,15 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
 
 uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 {
-    struct upair32 firstinds,*ptr; int32_t flag,retries = 3,size = sizeof(firstinds); uint32_t firstvout = 0;
+    struct upair32 firstinds,*ptr; int32_t flag,size = sizeof(firstinds); uint32_t firstvout = 0;
     if ( txidind == 1 )
         return(1);
-    while ( retries-- > 0 )
+    //while ( retries-- > 0 )
     {
         flag = 0;
         if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
             firstvout = ptr->firstvout, flag = 1;
-        else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), sleep(10);
+        else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), debugstop();
     }
     if ( Debuglevel > 2 || firstvout == 0 || flag == 0 )
         printf("search txidind.%u GET -> firstvout.%d, flag.%d\n",txidind,firstvout,flag);
@@ -887,7 +888,7 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
             {
                 modval = ((100. * addrind) / (ledger->addrs.ind + 1));
                 if ( modval != lastmodval )
-                    fprintf(stderr,"%d%% ",modval), lastmodval = modval;
+                    printf("%d%% ",modval), fflush(stdout), lastmodval = modval;
                 if ( (addrinfo= ledger_addrinfo(0,ledger,0,addrind)) != 0 )
                     balance += addrinfo->balance;
             }
