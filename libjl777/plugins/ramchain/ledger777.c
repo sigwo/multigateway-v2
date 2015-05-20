@@ -146,8 +146,10 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
             hash->ind = rawind;
         if ( writeflag != 0 )
         {
-            printf("%s writeflag.1 matched rawind.%u firstblocknum %u vs at blocknum %u\n",hash->name,rawind,ptr[1],blocknum);
-            debugstop();
+            if ( blocknum < ptr[1] )
+                printf("%s writeflag.1 matched rawind.%u firstblocknum %u vs at blocknum %u\n",hash->name,rawind,ptr[1],blocknum), debugstop();
+            else if ( blocknum == ptr[1] )
+                update_sha256(hash->sha256,&hash->state,key,keylen);
         }
         return(rawind);
     }
