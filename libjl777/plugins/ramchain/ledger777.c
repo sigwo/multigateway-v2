@@ -146,12 +146,10 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
             hash->ind = rawind;
         if ( writeflag != 0 )
         {
-            if ( blocknum == ptr[1] )
-            {
-                update_sha256(hash->sha256,&hash->state,key,keylen);
-                return(rawind);
-            } else printf("%s writeflag.1 matched rawind.%u but firstblocknum %u vs %u\n",hash->name,rawind,ptr[1],blocknum); // fall through
-        } else return(rawind);
+            printf("%s writeflag.1 matched rawind.%u firstblocknum %u vs at blocknum %u\n",hash->name,rawind,ptr[1],blocknum);
+            debugstop();
+        }
+        return(rawind);
     }
     if ( writeflag != 0 )
     {
@@ -282,7 +280,7 @@ struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_i
             addrind = ledger_addrind(firstblocknump,ledger,coinaddr);
         if ( addrind != 0 )
         {
-            len = sizeof(ledger->getbuf), pair[0] = addrind, pair[1] = ledger->numsyncs;
+            len = sizeof(ledger->getbuf), pair[0] = addrind, pair[1] = 0;//ledger->numsyncs;
             return(db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,pair,sizeof(pair)));
         }
     }
@@ -298,7 +296,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
     uint64_t balance = 0; int32_t i,n,allocflag = 0,allocsize;
     char itembuf[8192],pubstr[8192],spendaddr[128]; uint32_t pair[2];
     struct ledger_addrinfo *addrinfo; struct unspentmap U;
-    pair[0] = addrind, pair[1] = ledger->numsyncs;
+    pair[0] = addrind, pair[1] = 0;//ledger->numsyncs;
     if ( Debuglevel > 2 )
         printf("addrinfo update block.%d size0 %d\n",blocknum,addrinfo_size(0));
     if ( (addrinfo= ledger_addrinfo(0,ledger,coinaddr,addrind)) == 0 )
