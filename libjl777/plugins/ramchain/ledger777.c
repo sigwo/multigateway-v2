@@ -288,7 +288,7 @@ int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,ui
 
 struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr,uint32_t addrind)
 {
-    uint32_t pair[2]; int32_t len;
+    uint32_t pair[1]; int32_t len;
     // printf("ledger_addrinfo.%p %s\n",ledger,coinaddr);
     if ( ledger != 0 )
     {
@@ -296,7 +296,7 @@ struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_i
             addrind = ledger_addrind(firstblocknump,ledger,coinaddr);
         if ( addrind != 0 )
         {
-            len = sizeof(ledger->getbuf), pair[0] = addrind, pair[1] = 0;//ledger->numsyncs;
+            len = sizeof(ledger->getbuf), pair[0] = addrind; //, pair[1] = ledger->numsyncs;
             return(db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,pair,sizeof(pair)));
         }
     }
@@ -310,9 +310,9 @@ struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(1))); }
 uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum,char *txidstr,int32_t vout,char *extra,int32_t v,uint32_t scriptind)
 {
     uint64_t balance = 0; int32_t i,n,allocflag = 0,allocsize,flag,retries = 3;
-    char itembuf[8192],pubstr[8192],spendaddr[128]; uint32_t pair[2];
+    char itembuf[8192],pubstr[8192],spendaddr[128]; uint32_t pair[1];
     struct ledger_addrinfo *addrinfo; struct unspentmap U;
-    pair[0] = addrind, pair[1] = 0;//ledger->numsyncs;
+    pair[0] = addrind; //, pair[1] = ledger->numsyncs;
     if ( Debuglevel > 2 )
         printf("addrinfo update block.%d size0 %d\n",blocknum,addrinfo_size(0));
     if ( (addrinfo= ledger_addrinfo(0,ledger,coinaddr,addrind)) == 0 )
