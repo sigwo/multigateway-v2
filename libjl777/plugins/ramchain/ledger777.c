@@ -309,7 +309,7 @@ struct ledger_addrinfo *addrinfo_alloc() { return(calloc(1,addrinfo_size(1))); }
 
 uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum,char *txidstr,int32_t vout,char *extra,int32_t v,uint32_t scriptind)
 {
-    uint64_t balance = 0; int32_t i,n,allocflag = 0,allocsize;
+    uint64_t balance = 0; int32_t i,n,allocflag = 0,allocsize,flag,retries = 3;
     char itembuf[8192],pubstr[8192],spendaddr[128]; uint32_t pair[2];
     struct ledger_addrinfo *addrinfo; struct unspentmap U;
     pair[0] = addrind, pair[1] = 0;//ledger->numsyncs;
@@ -328,31 +328,39 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
         unspentind &= ~(1 << 31);
         if ( (n= addrinfo->count) > 0 )
         {
-            for (i=0; i<n; i++)
+            while ( retries-- > 0 )
             {
-                if ( unspentind == addrinfo->unspents[i].ind )
+                flag = 0;
+                for (i=0; i<n; i++)
                 {
-                    addrinfo->balance -= value, balance = addrinfo->balance;
-                    addrinfo->dirty = 1;
-                    if ( Debuglevel > 2 )
-                        printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
-                    if ( addrinfo->notify != 0 )
+                    if ( unspentind == addrinfo->unspents[i].ind )
                     {
-                        // T balance, b blocknum, a -value, t this txidstr, v this vin, st spent_txidstr, sv spent_vout
-                        ledger_coinaddr(ledger,spendaddr,sizeof(spendaddr),addrind);
-                        sprintf(itembuf,"{\"%s\":\"%s\",\"T\":%.8f,\"b\":%u,\"a\":%.8f,\"t\":\"%s\",\"v\":%d,\"st\":\"%s\",\"sv\":%d,\"si\":%d}",ledger->DBs.coinstr,spendaddr,dstr(addrinfo->balance),blocknum,-dstr(value),extra,v,txidstr,vout,addrinfo->unspents[i].scriptind);
-                        sprintf(pubstr,"{\"%s\":%s}","notify",itembuf);
-                        //nn_publish(pubstr,1);
+                        addrinfo->balance -= value, balance = addrinfo->balance;
+                        addrinfo->dirty = 1;
+                        if ( Debuglevel > 2 )
+                            printf("addrind.%u: i.%d count.%d remove %u -%.8f -> balace %.8f\n",addrind,i,addrinfo->count,unspentind,dstr(value),dstr(balance));
+                        if ( addrinfo->notify != 0 )
+                        {
+                            // T balance, b blocknum, a -value, t this txidstr, v this vin, st spent_txidstr, sv spent_vout
+                            ledger_coinaddr(ledger,spendaddr,sizeof(spendaddr),addrind);
+                            sprintf(itembuf,"{\"%s\":\"%s\",\"T\":%.8f,\"b\":%u,\"a\":%.8f,\"t\":\"%s\",\"v\":%d,\"st\":\"%s\",\"sv\":%d,\"si\":%d}",ledger->DBs.coinstr,spendaddr,dstr(addrinfo->balance),blocknum,-dstr(value),extra,v,txidstr,vout,addrinfo->unspents[i].scriptind);
+                            sprintf(pubstr,"{\"%s\":%s}","notify",itembuf);
+                            //nn_publish(pubstr,1);
+                        }
+                        addrinfo->unspents[i] = addrinfo->unspents[--addrinfo->count];
+                        memset(&addrinfo->unspents[addrinfo->count],0,sizeof(addrinfo->unspents[addrinfo->count]));
+                        unspentind |= (1 << 31);
+                        retries = -1;
+                        flag = 1;
+                        if ( addrinfo->count == 0 && balance != 0 )
+                            printf("ILLEGAL: addrind.%u count.%d %.8f\n",addrind,addrinfo->count,dstr(balance)), debugstop();
+                        break;
                     }
-                    addrinfo->unspents[i] = addrinfo->unspents[--addrinfo->count];
-                    memset(&addrinfo->unspents[addrinfo->count],0,sizeof(addrinfo->unspents[addrinfo->count]));
-                    unspentind |= (1 << 31);
-                    if ( addrinfo->count == 0 && balance != 0 )
-                        printf("ILLEGAL: addrind.%u count.%d %.8f\n",addrind,addrinfo->count,dstr(balance)), debugstop();
-                    break;
                 }
+                if ( i == n )
+                    sleep(1);
             }
-            if ( i == n )
+            if ( flag == 0 )
             {
                 printf("ERROR: addrind.%u cant find unspentind.%u in txlist with %d entries\n",addrind,unspentind,n), debugstop();
                 return(0);
@@ -401,14 +409,18 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
 
 uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 {
-    struct upair32 firstinds,*ptr; int32_t size = sizeof(firstinds); uint32_t firstvout = 0;
+    struct upair32 firstinds,*ptr; int32_t flag,retries = 3,size = sizeof(firstinds); uint32_t firstvout = 0;
     if ( txidind == 1 )
         return(1);
-    if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
-        firstvout = ptr->firstvout;
-    else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), debugstop();
-    if ( Debuglevel > 2 || firstvout == 0 )
-        printf("search txidind.%u GET -> firstvout.%d\n",txidind,firstvout);
+    while ( retries-- > 0 )
+    {
+        flag = 0;
+        if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
+            firstvout = ptr->firstvout, flag = 1;
+        else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), sleep(1);
+    }
+    if ( Debuglevel > 2 || firstvout == 0 || flag == 0 )
+        printf("search txidind.%u GET -> firstvout.%d, flag.%d\n",txidind,firstvout,flag);
     return(firstvout);
 }
 
