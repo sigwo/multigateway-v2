@@ -650,7 +650,7 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
         update_sha256(ledger->sha256,&ledger->ledgerstate,(void *)L,sizeof(*L));
         ledgerhash = *(uint32_t *)ledger->sha256;
         memcpy(&L->hashstates[n],&ledger->ledgerstate,sizeof(L->hashstates[n]));
-        memcpy(L->hashes[n],ledger->ledger.sha256,sizeof(L->hashes[n]));
+        memcpy(L->hashes[n],ledger->sha256,sizeof(L->hashes[n]));
     }
     if ( numsyncs >= 0 )
     {
