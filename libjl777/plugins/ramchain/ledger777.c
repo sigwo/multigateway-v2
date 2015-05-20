@@ -883,12 +883,11 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
         {
             printf("%.8f startmilli %.0f start.%u block.%u ledger block.%u, inds.(txid %d addrs %d scripts %d vouts %d vins %d)\n",dstr(ledger->voutsum)-dstr(ledger->spendsum),milliseconds(),startblocknum,block->blocknum,ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,ledger->spentbits.ind);
             //lastmodval = -1;
-            printf("load addrind.%d numsyncs.%d\n",ledger->addrs.ind,ledger->numsyncs);
             for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
             {
-                //modval = ((100. * addrind) / (ledger->addrs.ind + 1));
-                //if ( modval != lastmodval )
-                 //   printf("%d%% ",modval), fflush(stdout), lastmodval = modval;
+                modval = ((100. * addrind) / (ledger->addrs.ind + 1));
+                if ( modval != lastmodval )
+                    printf("%d%% ",modval), fflush(stdout), lastmodval = modval;
                 if ( (addrind % 1000) == 0 )
                     fprintf(stderr,".");
                 if ( (addrinfo= ledger_addrinfo(0,ledger,0,addrind)) != 0 )
