@@ -144,7 +144,7 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
             *firstblocknump = ptr[1];
         if ( (rawind - 1) == hash->ind )
             hash->ind = rawind;
-        if ( writeflag != 0 )
+        if ( writeflag > 0 )
         {
             if ( blocknum < ptr[1] )
                 printf("%s writeflag.1 matched rawind.%u firstblocknum %u vs at blocknum %u\n",hash->name,rawind,ptr[1],blocknum), debugstop();
@@ -153,7 +153,7 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
         }
         return(rawind);
     }
-    if ( writeflag != 0 )
+    if ( writeflag > 0 )
     {
         rawind = ++hash->ind;
         pair[0] = rawind, pair[1] = blocknum;
@@ -169,10 +169,12 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
             return(rawind);
         }
     }
-    else
+    else if ( writeflag == 0 )
     {
         char hexstr[8192];
-        init_hexbytes_noT(hexstr,key,keylen);
+        if ( strcmp(hash->DB->name,"addrs") == 0 )
+            strcpy(hexstr,key);
+        else init_hexbytes_noT(hexstr,key,keylen);
         printf("%s %p couldnt find expected %s keylen.%d\n",hash->DB->name,hash->DB,hexstr,keylen), debugstop(); // db777_dump(hash->DB,1,1),
     }
     return(0);
@@ -218,19 +220,19 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
 
 uint32_t ledger_addrind(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr)
 {
-    return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->addrs,coinaddr,(int32_t)strlen(coinaddr),0));
+    return(ledger_rawind(firstblocknump,-1,ledger->DBs.transactions,&ledger->addrs,coinaddr,(int32_t)strlen(coinaddr),0));
 }
 
 uint32_t ledger_txidind(uint32_t *firstblocknump,struct ledger_info *ledger,char *txidstr)
 {
     uint8_t txid[256]; int32_t txidlen;
-    return(ledger_hexind(firstblocknump,0,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr,0));
+    return(ledger_hexind(firstblocknump,-1,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr,0));
 }
 
 uint32_t ledger_scriptind(uint32_t *firstblocknump,struct ledger_info *ledger,char *scriptstr)
 {
     uint8_t script[4096]; int32_t scriptlen;
-    return(ledger_hexind(firstblocknump,0,ledger->DBs.transactions,&ledger->scripts,script,&scriptlen,scriptstr,0));
+    return(ledger_hexind(firstblocknump,-1,ledger->DBs.transactions,&ledger->scripts,script,&scriptlen,scriptstr,0));
 }
 
 int32_t ledger_txidstr(struct ledger_info *ledger,char *txidstr,int32_t max,uint32_t txidind)
