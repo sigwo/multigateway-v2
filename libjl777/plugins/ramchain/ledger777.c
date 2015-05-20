@@ -651,7 +651,7 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
         ledgerhash = *(uint32_t *)ledger->sha256;
         memcpy(&L->hashstates[n],&ledger->ledgerstate,sizeof(L->hashstates[n]));
         memcpy(L->hashes[n],ledger->sha256,sizeof(L->hashes[n]));
-        printf(" %08x\n",*(uint32_t *)L->hashes[n]);
+        printf(" %08x\n",ledgerhash);
     }
     if ( numsyncs >= 0 )
     {
@@ -666,7 +666,7 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
                 printf("error saving numsyncs.0 retval.%d\n",retval);
         }
     }
-    return(*(uint32_t *)L->hashes[n]);
+    return(ledgerhash);
 }
 
 struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t syncind)
