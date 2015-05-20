@@ -655,14 +655,14 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     if ( numsyncs >= 0 )
     {
         printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %llx\n",numsyncs,blocknum,dstr(L->voutsum)-dstr(L->spendsum),*(long long *)ledger->ledger.sha256);
+        if ( db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L)) != 0 )
+            printf("error saving ledger\n");
         if ( numsyncs > 0 )
         {
-            if ( db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L)) != 0 )
-                printf("error saving ledger\n");
+            numsyncs = 0;
+            if ( (retval = db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L))) != 0 )
+                printf("error saving numsyncs.0 retval.%d\n",retval);
         }
-        numsyncs = 0;
-        if ( (retval = db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L))) != 0 )
-            printf("error saving numsyncs.0 retval.%d\n",retval);
     }
     return(*(uint32_t *)L->hashes[n]);
 }
