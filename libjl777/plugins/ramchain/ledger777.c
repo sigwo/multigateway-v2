@@ -868,7 +868,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
 
 struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum)
 {
-    uint32_t addrind; int32_t modval,lastmodval,allocsize = sizeof(ledger->getbuf); uint64_t balance = 0;
+    uint32_t addrind; int32_t allocsize = sizeof(ledger->getbuf); uint64_t balance = 0;
     struct ledger_blockinfo *block; struct ledger_addrinfo *addrinfo;
     startblocknum = ledger_startblocknum(ledger,-1);
     ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
@@ -882,19 +882,21 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
         if ( block->allocsize == allocsize && block_crc16(block) == block->crc16 )
         {
             printf("%.8f startmilli %.0f start.%u block.%u ledger block.%u, inds.(txid %d addrs %d scripts %d vouts %d vins %d)\n",dstr(ledger->voutsum)-dstr(ledger->spendsum),milliseconds(),startblocknum,block->blocknum,ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,ledger->spentbits.ind);
-            lastmodval = -1;
+            //lastmodval = -1;
             printf("load addrind.%d numsyncs.%d\n",ledger->addrs.ind,ledger->numsyncs);
             for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
             {
-                modval = ((100. * addrind) / (ledger->addrs.ind + 1));
-                if ( modval != lastmodval )
-                    printf("%d%% ",modval), fflush(stdout), lastmodval = modval;
+                //modval = ((100. * addrind) / (ledger->addrs.ind + 1));
+                //if ( modval != lastmodval )
+                 //   printf("%d%% ",modval), fflush(stdout), lastmodval = modval;
+                if ( (addrind % 1000) == 0 )
+                    fprintf(stderr,".");
                 if ( (addrinfo= ledger_addrinfo(0,ledger,0,addrind)) != 0 )
                     balance += addrinfo->balance;
             }
             printf("balance %.8f endmilli %.0f\n",dstr(balance),milliseconds());
-        } else printf("mismatched block: %u %u, crc16 %u %u\n",block->allocsize,allocsize,block_crc16(block),block->crc16);
-    } else printf("couldnt load block.%u\n",startblocknum);
+        } else printf("mismatched block: %u %u, crc16 %u %u\n",block->allocsize,allocsize,block_crc16(block),block->crc16), debugstop();
+    } else printf("couldnt load block.%u\n",startblocknum), debugstop();
     return(block);
 }
 

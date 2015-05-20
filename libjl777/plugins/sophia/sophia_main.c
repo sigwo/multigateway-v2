@@ -508,8 +508,8 @@ struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *co
         if ( (err= sp_set(DBs->ctl,"backup.path",bdir)) != 0 )
             printf("error.%d settingB backup.path (%s)\n",err,bdir);
         else printf("set backup path to.(%s)\n",bdir);
-        if ( (err= sp_set(DBs->ctl,"scheduler.threads","1")) != 0 )
-            printf("err.%d setting scheduler.threads\n",err);
+        //if ( (err= sp_set(DBs->ctl,"scheduler.threads","1")) != 0 )
+        //    printf("err.%d setting scheduler.threads\n",err);
     }
     if ( DBs->env != 0 && DBs->numdbs < (int32_t)(sizeof(DBs->dbs)/sizeof(*DBs->dbs)) )
     {
