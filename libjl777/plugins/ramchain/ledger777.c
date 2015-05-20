@@ -854,6 +854,7 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
             lastmodval = -1;
             for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
             {
+                printf("load addrind.%d of %d\n",addrind,ledger->addrs.ind);
                 modval = ((100. * addrind) / (ledger->addrs.ind + 1));
                 if ( modval != lastmodval )
                     fprintf(stderr,"%d%% ",modval), lastmodval = modval;
