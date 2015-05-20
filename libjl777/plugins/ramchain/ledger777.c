@@ -646,6 +646,7 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     {
         for (i=0; i<n; i++)
             printf("%08x ",*(int *)L->hashes[i]);
+        printf(" synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",numsyncs,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
         printf("crc32 %08x n.%d\n",_crc32(0,(void *)L,sizeof(*L)),n);
         update_sha256(ledger->sha256,&ledger->ledgerstate,(void *)L,sizeof(*L));
         ledgerhash = *(uint32_t *)ledger->sha256;
@@ -656,12 +657,12 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     {
         printf(" synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",numsyncs,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum)), sleep(3);
         printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %llx\n",numsyncs,blocknum,dstr(L->voutsum)-dstr(L->spendsum),*(long long *)ledger->ledger.sha256);
-        if ( db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L)) != 0 )
+        if ( db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),L,sizeof(*L)) != 0 )
             printf("error saving ledger\n");
         if ( numsyncs > 0 )
         {
             numsyncs = 0;
-            if ( (retval = db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L))) != 0 )
+            if ( (retval = db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),L,sizeof(*L))) != 0 )
                 printf("error saving numsyncs.0 retval.%d\n",retval);
         }
     }

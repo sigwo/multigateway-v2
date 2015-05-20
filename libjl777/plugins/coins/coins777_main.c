@@ -185,6 +185,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         path = cJSON_str(cJSON_GetObjectItem(argjson,"path"));
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
     }
+    else coin->minconfirms = (strcmp("BTC",coinstr) == 0) ? 3 : 10;
     extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
     COINS.LIST[COINS.num] = coin, COINS.num++;
