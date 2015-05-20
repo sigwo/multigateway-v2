@@ -178,7 +178,7 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
                 strcpy(hexstr,key);
             else init_hexbytes_noT(hexstr,key,keylen);
             printf("%s %p couldnt find expected %s keylen.%d\n",hash->DB->name,hash->DB,hexstr,keylen);
-            sleep(1);
+            sleep(10);
             continue;
         }
         return(0);
@@ -358,7 +358,7 @@ uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrl
                     }
                 }
                 if ( i == n )
-                    sleep(1);
+                    sleep(10);
             }
             if ( flag == 0 )
             {
@@ -417,7 +417,7 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
         flag = 0;
         if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
             firstvout = ptr->firstvout, flag = 1;
-        else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), sleep(1);
+        else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), sleep(10);
     }
     if ( Debuglevel > 2 || firstvout == 0 || flag == 0 )
         printf("search txidind.%u GET -> firstvout.%d, flag.%d\n",txidind,firstvout,flag);
@@ -681,7 +681,7 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     }
     if ( numsyncs >= 0 )
     {
-        printf(" synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",numsyncs,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum)), sleep(3);
+        printf(" synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",numsyncs,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
         printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %llx\n",numsyncs,blocknum,dstr(L->voutsum)-dstr(L->spendsum),*(long long *)ledger->ledger.sha256);
         if ( db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),L,sizeof(*L)) != 0 )
             printf("error saving ledger\n");
