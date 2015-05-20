@@ -537,7 +537,7 @@ int32_t db777_delete(int32_t flags,void *transactions,struct db777 *DB,void *key
 
 int32_t db777_flush(void *transactions,struct db777 *DB)
 {
-    struct db777_entry *entry,*tmp; void *obj; uint32_t key; int32_t valuelen,allflag,flushed = 0,i,n = 0,numerrs = 0;
+    struct db777_entry *entry,*tmp; void *obj; uint32_t key; int32_t valuelen,flushed = 0,i,n = 0,numerrs = 0;
     if ( (DB->flags & DB777_RAM) != 0 )
     {
         db777_lock(DB);
@@ -564,7 +564,6 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
         }
         else
         {
-            allflag = (strcmp(DB->name,"addrinfos") == 0);
             HASH_ITER(hh,DB->table,entry,tmp)
             {
                 if ( entry->valuesize == 0 && entry->valuelen < entry->valuesize )
@@ -574,7 +573,7 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
                     obj = realloc(obj,entry->valuelen);
                     memcpy(entry->value,&obj,sizeof(obj));
                 }
-                if ( allflag != 0 || entry->dirty != 0 )
+                if ( entry->dirty != 0 )
                 {
                     if ( (DB->flags & DB777_HDD) != 0 )
                     {
