@@ -216,19 +216,21 @@ uint32_t has_duplicate_txid(struct ledger_info *ledger,char *coinstr,uint32_t bl
     return(rawind);
 }
 
-uint32_t ledger_txidind(uint32_t *firstblocknump,struct ledger_info *ledger,char *txidstr)
-{
-    return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->txids,txidstr,(int32_t)strlen(txidstr),0));
-}
-
 uint32_t ledger_addrind(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr)
 {
     return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->addrs,coinaddr,(int32_t)strlen(coinaddr),0));
 }
 
+uint32_t ledger_txidind(uint32_t *firstblocknump,struct ledger_info *ledger,char *txidstr)
+{
+    uint8_t txid[256]; int32_t txidlen;
+    return(ledger_hexind(firstblocknump,0,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,txidstr,0));
+}
+
 uint32_t ledger_scriptind(uint32_t *firstblocknump,struct ledger_info *ledger,char *scriptstr)
 {
-    return(ledger_rawind(firstblocknump,0,ledger->DBs.transactions,&ledger->scripts,scriptstr,(int32_t)strlen(scriptstr),0));
+    uint8_t script[4096]; int32_t scriptlen;
+    return(ledger_hexind(firstblocknump,0,ledger->DBs.transactions,&ledger->scripts,script,&scriptlen,scriptstr,0));
 }
 
 int32_t ledger_txidstr(struct ledger_info *ledger,char *txidstr,int32_t max,uint32_t txidind)
@@ -933,7 +935,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
         printf("open ramchain DB files (%s) (%s)\n",coinstr,subdir);
         ledger_stateinit(&ledger->DBs,&ledger->blocks,coinstr,subdir,"blocks","zstd",flags | DB777_KEY32,0);
-        ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | 0*DB777_RAM,0);
+        ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_RAM,0);
         
         ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flags | DB777_KEY32,34);
         ledger_stateinit(&ledger->DBs,&ledger->revscripts,coinstr,subdir,"revscripts","zstd",flags,0);
