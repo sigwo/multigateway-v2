@@ -646,12 +646,12 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     {
         for (i=0; i<n; i++)
             printf("%08x ",*(int *)L->hashes[i]);
-        printf(" synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",numsyncs,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
-        printf("crc32 %08x n.%d\n",_crc32(0,(void *)L,sizeof(*L)),n);
+        printf(" blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
         update_sha256(ledger->sha256,&ledger->ledgerstate,(void *)L,sizeof(*L));
         ledgerhash = *(uint32_t *)ledger->sha256;
         memcpy(&L->hashstates[n],&ledger->ledgerstate,sizeof(L->hashstates[n]));
         memcpy(L->hashes[n],ledger->sha256,sizeof(L->hashes[n]));
+        printf(" %08x\n",*(uint32_t *)L->hashes[n]);
     }
     if ( numsyncs >= 0 )
     {
