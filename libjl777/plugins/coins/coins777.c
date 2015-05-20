@@ -94,7 +94,7 @@ struct ramchain
     char name[16];
     char serverport[512],userpass[4096];
     double lastgetinfo;
-    uint32_t RTblocknum,readyflag,syncflag,paused;
+    uint32_t RTblocknum,readyflag,syncflag,paused,minconfirms;
     struct rawblock EMIT,DECODE;
     struct ledger_info *activeledger,*session_ledgers[1 << CONNECTION_NUMBITS];
 };
@@ -104,7 +104,7 @@ struct coin777
     char name[16],serverport[64],userpass[128],*jsonstr;
     cJSON *argjson;
     struct ramchain ramchain;
-    int32_t use_addmultisig;
+    int32_t use_addmultisig,minconfirms;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);

@@ -88,7 +88,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             if ( strcmp(methodstr,"backup") == 0 )
             {
                 if ( coin->ramchain.activeledger == 0 )
-                    ramchain_init(retbuf,maxlen,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum);
+                    ramchain_init(retbuf,maxlen,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum,coin->minconfirms);
                 if ( coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
                 {
                     db777_sync(0,&coin->ramchain.activeledger->DBs,ENV777_BACKUP);
@@ -96,9 +96,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 } else strcpy(retbuf,"{\"error\":\"cant create ramchain when coin not ready\"}");
             }
             else if ( strcmp(methodstr,"resume") == 0 )
-                ramchain_init(retbuf,maxlen,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum);
+                ramchain_init(retbuf,maxlen,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum,coin->minconfirms);
             else if ( strcmp(methodstr,"create") == 0 )
-                ramchain_init(retbuf,maxlen,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum);
+                ramchain_init(retbuf,maxlen,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum,coin->minconfirms);
             else if ( coin->ramchain.activeledger != 0 )
                 ramchain_func(retbuf,maxlen,&coin->ramchain,json,methodstr);
             else sprintf(retbuf,"{\"result\":\"no active ramchain\"}");

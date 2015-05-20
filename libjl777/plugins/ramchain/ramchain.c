@@ -17,7 +17,7 @@
 #include "system777.c"
 #include "ledger777.c"
 
-int32_t ramchain_init(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum);
+int32_t ramchain_init(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum,uint32_t minconfirms);
 int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger);
 int32_t ramchain_func(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *method);
 int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,uint32_t startblocknum,uint32_t endblocknum);
@@ -65,7 +65,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
             if ( rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum) > 0 )
             {
                 elapsed = (milliseconds() - startmilli); fprintf(stderr,"%.3f ",elapsed/1000.);
-                flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0));
+                flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
             }
         }
         if ( ramchain->paused == 3 )
@@ -130,13 +130,14 @@ int32_t ramchain_stop(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSO
     return(0);
 }
 
-int32_t ramchain_init(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum)
+int32_t ramchain_init(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum,uint32_t minconfirms)
 {
     struct ledger_info *ledger;
     strcpy(ramchain->name,coinstr);
     strcpy(ramchain->serverport,serverport);
     strcpy(ramchain->userpass,userpass);
     ramchain->readyflag = 1;
+    ramchain->minconfirms = minconfirms;
     if ( ramchain->activeledger != 0 )
     {
         ramchain_stop(retbuf,maxlen,ramchain,argjson);
@@ -368,9 +369,42 @@ int32_t ramchain_balance(char *retbuf,int32_t maxlen,struct ramchain *ramchain,c
 
 int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
 {
-    struct ledger_addrinfo *addrinfo;
+    //struct ledger_addrinfo { uint64_t balance; uint32_t firstblocknum,count:28,notify:1,pending:1,MGW:1,dirty:1; struct unspentmap unspents[]; };
+    struct ledger_addrinfo *addrinfo; cJSON *json,*array,*item; int32_t i,verbose; char *jsonstr,script[8193];
     if ( (addrinfo= ramchain_addrinfo(retbuf,maxlen,ramchain,argjson)) == 0 )
         return(-1);
+    verbose = get_API_int(cJSON_GetObjectItem(argjson,"verbose"),0);
+    json = cJSON_CreateObject(), array = cJSON_CreateArray();
+    for (i=0; i<addrinfo->count; i++)
+    {
+        if ( verbose == 0 )
+        {
+            item = cJSON_CreateArray();
+            cJSON_AddItemToArray(item,cJSON_CreateNumber(dstr(addrinfo->unspents[i].value)));
+            cJSON_AddItemToArray(item,cJSON_CreateNumber(addrinfo->unspents[i].ind));
+            cJSON_AddItemToArray(item,cJSON_CreateNumber(addrinfo->unspents[i].scriptind));
+        }
+        else
+        {
+            item = cJSON_CreateObject();
+            cJSON_AddItemToObject(item,"value",cJSON_CreateNumber(dstr(addrinfo->unspents[i].value)));
+            //cJSON_AddItemToObject(item,cJSON_CreateNumber(addrinfo->unspents[i].ind));
+            ledger_scriptstr(ramchain->activeledger,script,sizeof(script),addrinfo->unspents[i].scriptind);
+            cJSON_AddItemToObject(item,"script",cJSON_CreateString(script));
+        }
+    }
+    cJSON_AddItemToObject(json,"unspents",array);
+    cJSON_AddItemToObject(json,"count",cJSON_CreateNumber(addrinfo->count));
+    cJSON_AddItemToObject(json,"balance",cJSON_CreateNumber(dstr(addrinfo->balance)));
+    if ( addrinfo->notify != 0 )
+        cJSON_AddItemToObject(json,"notify",cJSON_CreateNumber(1));
+    if ( addrinfo->pending != 0 )
+        cJSON_AddItemToObject(json,"pending",cJSON_CreateNumber(1));
+    if ( addrinfo->MGW != 0 )
+        cJSON_AddItemToObject(json,"MGW",cJSON_CreateNumber(1));
+    jsonstr = cJSON_Print(json), free_json(json);
+    _stripwhite(jsonstr,' ');
+    strncpy(retbuf,jsonstr,maxlen-1), retbuf[maxlen-1] = 0, free(jsonstr);
     return(0);
 }
 

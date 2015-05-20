@@ -37,7 +37,7 @@ struct ledger_voutdata { struct unspentmap U; uint32_t scriptind; int32_t addrle
 
 int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp);
 struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags);
-int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag);
+int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
 struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr,uint32_t addrind);
 uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info *ledger,int32_t numrichlist);
 int32_t ledger_setlast(struct ledger_info *ledger,uint32_t blocknum,uint32_t numsyncs);
@@ -385,6 +385,30 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
     return(firstvout);
 }
 
+int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind)
+{
+    uint32_t floor,ceiling,probe,firstvout,lastvout;
+    floor = 1, ceiling = ledger->txids.ind;
+    while ( floor != ceiling )
+    {
+        probe = (floor + ceiling) >> 1;
+        printf("search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
+        if ( (firstvout= ledger_firstvout(ledger,probe)) == 0 || (lastvout= ledger_firstvout(ledger,probe+1)) == 0 )
+            break;
+        if ( unspentind < firstvout )
+            ceiling = probe;
+        else if ( unspentind >= lastvout )
+            floor = probe;
+        else
+        {
+            if ( ledger_txidstr(ledger,txidstr,255,probe) == 0 )
+                return(unspentind - firstvout);
+            else break;
+        }
+    }
+    return(-1);
+}
+
 int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t state)
 {
     return(db777_add(-1,ledger->DBs.transactions,ledger->spentbits.DB,&unspentind,sizeof(unspentind),&state,sizeof(state)));
@@ -560,12 +584,12 @@ struct ledger_blockinfo *ledger_block(int32_t dispflag,struct ledger_info *ledge
     return(block);
 }
 
-int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag)
+int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
 {
     struct ledger_blockinfo *block;
     uint32_t blocknum,dispflag; uint64_t supply,oldsupply; double estimate,elapsed,startmilli,diff;
     blocknum = ledger->blocknum;
-    if ( blocknum <= RTblocknum )
+    if ( blocknum <= RTblocknum-minconfirms )
     {
         startmilli = milliseconds();
         dispflag = 1 || (blocknum > RTblocknum - 1000);
@@ -667,8 +691,8 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
                         len += itemlen;
                     }
                 }
-            } else strcat(retbuf,"]}");
-            strcat(retbuf + len - 1,"]}");
+            } else strcat(retbuf," ");
+            strcat(retbuf + strlen(retbuf) - 1,"]}");
             //printf("(%s) top.%d of %d\n",retbuf,i,n);
         }
         free(sortbuf);
