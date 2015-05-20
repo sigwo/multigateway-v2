@@ -851,8 +851,6 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
         ledger->numsyncs = 1;
         return(0);
     }
-    if ( ledger->numsyncs != 0 )
-        ledger->numsyncs--;
     if ( (block= db777_get(ledger->getbuf,&allocsize,0,ledger->blocks.DB,&startblocknum,sizeof(startblocknum))) != 0 )
     {
         if ( block->allocsize == allocsize && block_crc16(block) == block->crc16 )
