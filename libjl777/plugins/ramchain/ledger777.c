@@ -693,10 +693,10 @@ int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_inf
     return(n);
 }
 
-int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
+int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t synci)
 {
     struct ledger_inds *lp,L; uint32_t blocknum = 0;
-    if ( (lp= ledger_getsyncdata(&L,ledger,0)) == &L )
+    if ( (lp= ledger_getsyncdata(&L,ledger,synci)) == &L )
     {
         ledger->blocknum = blocknum = lp->blocknum, ledger->numsyncs = lp->numsyncs;
         ledger->voutsum = lp->voutsum, ledger->spendsum = lp->spendsum;
@@ -706,7 +706,7 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum)
         ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
         ledger->addrinfos.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->txoffsets;
         ledger_copyhashes(&L,ledger,1);
-        ledger_restorehash(&L,LEDGER_NUMHASHES-1,&ledger->ledger);//, ledgerhash = *(uint32_t *)ledger->ledger.sha256;
+        ledger_restorehash(&L,LEDGER_NUMHASHES-1,&ledger->ledger);
         ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
     } else printf("ledger_getnearest error getting last\n");
     return(blocknum);
@@ -845,7 +845,10 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
     startblocknum = ledger_startblocknum(ledger,0);
     ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
     if ( startblocknum < 1 )
+    {
+        ledger->numsyncs = 1;
         return(0);
+    }
     if ( ledger->numsyncs != 0 )
         ledger->numsyncs--;
     if ( (block= db777_get(ledger->getbuf,&allocsize,0,ledger->blocks.DB,&startblocknum,sizeof(startblocknum))) != 0 )
