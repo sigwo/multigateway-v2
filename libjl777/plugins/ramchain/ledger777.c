@@ -671,7 +671,7 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     return(ledgerhash);
 }
 
-struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t syncind)
+struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,int32_t syncind)
 {
     struct ledger_inds *lp; int32_t allocsize = sizeof(*L);
     if ( syncind <= 0 )
