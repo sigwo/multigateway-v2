@@ -732,13 +732,13 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
         dispflag += ((blocknum % 100) == 0);
         oldsupply = ledger->voutsum - ledger->spendsum;
         if ( ledger->DBs.transactions == 0 )
-            ledger->DBs.transactions = sp_begin(ledger->DBs.env);
+            ledger->DBs.transactions = sp_begin(ledger->DBs.env), ledger->numsyncs++;
         if ( (block= ledger_block(dispflag,ledger,mem,emit,blocknum)) != 0 )
         {
             ledger->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);
             if ( syncflag != 0 )
             {
-                ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,++ledger->numsyncs);
+                ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,ledger->numsyncs);
                 db777_sync(ledger->DBs.transactions,&ledger->DBs,DB777_FLUSH);
                 ledger->DBs.transactions = 0;
             }
