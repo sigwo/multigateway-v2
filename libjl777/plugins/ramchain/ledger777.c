@@ -276,7 +276,6 @@ struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_i
         if ( addrind != 0 )
         {
             len = sizeof(ledger->getbuf), pair[0] = addrind, pair[1] = ledger->numsyncs;
-            printf("addrind.%d numsyncs.%d\n",addrind,ledger->numsyncs);
             return(db777_get(ledger->getbuf,&len,ledger->DBs.transactions,ledger->addrinfos.DB,pair,sizeof(pair)));
         }
     }
@@ -708,6 +707,7 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t synci)
         ledger_copyhashes(&L,ledger,1);
         ledger_restorehash(&L,LEDGER_NUMHASHES-1,&ledger->ledger);
         ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
+        printf("restored synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f\n",synci,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
     } else printf("ledger_getnearest error getting last\n");
     return(blocknum);
 }
@@ -787,7 +787,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
     {
         for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
         {
-            printf("recalc.%d of %d\n",addrind,ledger->addrs.ind);
+            //printf("recalc.%d of %d\n",addrind,ledger->addrs.ind);
             if ( (addrinfo= ledger_addrinfo(0,ledger,0,addrind)) != 0 )
             {
                 if ( addrinfo->notify != 0 )
@@ -800,7 +800,7 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
         sortbuf = calloc(ledger->addrs.ind,sizeof(float)+sizeof(uint32_t));
         for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
         {
-            printf("recalc.%d of %d\n",addrind,ledger->addrs.ind);
+            //printf("recalc.%d of %d\n",addrind,ledger->addrs.ind);
             if ( (addrinfo= ledger_addrinfo(0,ledger,0,addrind)) != 0 )
             {
                 balance = addrinfo->balance;
@@ -857,9 +857,9 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
         {
             printf("%.8f startmilli %.0f start.%u block.%u ledger block.%u, inds.(txid %d addrs %d scripts %d vouts %d vins %d)\n",dstr(ledger->voutsum)-dstr(ledger->spendsum),milliseconds(),startblocknum,block->blocknum,ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,ledger->spentbits.ind);
             lastmodval = -1;
+            printf("load addrind.%d numsyncs.%d\n",ledger->addrs.ind,ledger->numsyncs);
             for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
             {
-                printf("load addrind.%d of %d\n",addrind,ledger->addrs.ind);
                 modval = ((100. * addrind) / (ledger->addrs.ind + 1));
                 if ( modval != lastmodval )
                     fprintf(stderr,"%d%% ",modval), lastmodval = modval;
