@@ -957,7 +957,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
         safecopy(ledger->DBs.subdir,subdir,sizeof(ledger->DBs.subdir));
         printf("open ramchain DB files (%s) (%s)\n",coinstr,subdir);
         ledger_stateinit(&ledger->DBs,&ledger->blocks,coinstr,subdir,"blocks","zstd",flags | DB777_KEY32,0);
-        ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | 0*DB777_RAM,0);
+        ledger_stateinit(&ledger->DBs,&ledger->addrinfos,coinstr,subdir,"addrinfos","zstd",flags | DB777_RAM,0);
         
         ledger_stateinit(&ledger->DBs,&ledger->revaddrs,coinstr,subdir,"revaddrs","zstd",flags | DB777_KEY32,34);
         ledger_stateinit(&ledger->DBs,&ledger->revscripts,coinstr,subdir,"revscripts","zstd",flags,0);
