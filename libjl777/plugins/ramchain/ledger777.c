@@ -654,6 +654,7 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     }
     if ( numsyncs >= 0 )
     {
+        printf(" synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",numsyncs,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum)), sleep(3);
         printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %llx\n",numsyncs,blocknum,dstr(L->voutsum)-dstr(L->spendsum),*(long long *)ledger->ledger.sha256);
         if ( db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&numsyncs,sizeof(numsyncs),&L,sizeof(L)) != 0 )
             printf("error saving ledger\n");
@@ -707,7 +708,7 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t synci)
         ledger_copyhashes(&L,ledger,1);
         ledger_restorehash(&L,LEDGER_NUMHASHES-1,&ledger->ledger);
         ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
-        printf("restored synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f\n",synci,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum)), sleep(10);
+        printf("restored synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f\n",synci,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum)), sleep(3);
     } else printf("ledger_getnearest error getting last\n");
     return(blocknum);
 }
@@ -925,7 +926,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     struct ledger_info *ledger = 0; 
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
-        Debuglevel = 3;
+       // Debuglevel = 3;
         if ( flags == 0 )
             flags = (DB777_FLUSH | DB777_HDD | DB777_MULTITHREAD | DB777_RAMDISK);
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
