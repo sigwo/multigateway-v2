@@ -144,6 +144,8 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
             *firstblocknump = ptr[1];
         if ( (rawind - 1) == hash->ind )
             hash->ind = rawind;
+        if ( writeflag != 0 )
+            update_sha256(hash->sha256,&hash->state,key,keylen);
         return(rawind);
     }
     if ( writeflag != 0 )
