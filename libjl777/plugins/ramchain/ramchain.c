@@ -147,7 +147,7 @@ int32_t ramchain_init(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSO
     if ( (ramchain->activeledger= ledger_alloc(coinstr,"",0)) != 0 )
     {
         ledger = ramchain->activeledger;
-        ledger->syncfreq = DB777_MATRIXROW;
+        ledger->syncfreq = 100;//DB777_MATRIXROW;
         ledger->startblocknum = startblocknum, ledger->endblocknum = endblocknum;
         ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,ramchain->serverport,ramchain->userpass,ramchain->RTblocknum);
         env777_start(0,&ledger->DBs,ramchain->RTblocknum);

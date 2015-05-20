@@ -618,8 +618,8 @@ int32_t ledger_copyhashes(struct ledger_inds *lp,struct ledger_info *ledger,int3
         for (i=0; i<n; i++)
             ledger_restorehash(lp,i,states[i]);
     }
-#define LEDGER_NUMHASHES 10
-    if ( n != LEDGER_NUMHASHES-1 )
+#define LEDGER_NUMHASHES 9
+    if ( n != LEDGER_NUMHASHES )
         printf("mismatched LEDGER_NUMHASHES %d != %d\n",n,LEDGER_NUMHASHES);
     if ( n >= (int32_t)(sizeof(lp->hashes)/sizeof(*lp->hashes)) )
         printf("Too many hashes to save them %d vs %ld\n",n,(sizeof(lp->hashes)/sizeof(lp->hashes)));
@@ -636,21 +636,14 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     L->unspentind = ledger->unspentmap.ind, L->numspents = ledger->spentbits.ind;
     L->numaddrinfos = ledger->addrinfos.ind, L->txoffsets = ledger->txoffsets.ind;
     n = ledger_copyhashes(L,ledger,0);
-    if ( numsyncs >= 0 )
-    {
-        update_sha256(ledger->ledger.sha256,&ledger->ledger.state,(void *)L,sizeof(*L));
-        ledgerhash = *(uint32_t *)ledger->ledger.sha256;
-        ledger_copyhash(L,n,&ledger->ledger);
-     }
-    else
+    update_sha256(ledger->sha256,&ledger->ledgerstate,0,0);
+    update_sha256(ledger->sha256,&ledger->ledgerstate,(void *)L,sizeof(*L));
+    ledgerhash = *(uint32_t *)ledger->sha256;
+    if ( numsyncs < 0 )
     {
         for (i=0; i<n; i++)
             printf("%08x ",*(int *)L->hashes[i]);
-        printf(" blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
-        update_sha256(ledger->sha256,&ledger->ledgerstate,(void *)L,sizeof(*L));
-        ledgerhash = *(uint32_t *)ledger->sha256;
-        memcpy(&L->hashstates[n],&ledger->ledgerstate,sizeof(L->hashstates[n]));
-        memcpy(L->hashes[n],ledger->sha256,sizeof(L->hashes[n]));
+        printf(" blocknum.%u txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
         printf(" %08x\n",ledgerhash);
     }
     if ( numsyncs >= 0 )
@@ -709,9 +702,7 @@ int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t synci)
         ledger->unspentmap.ind = lp->unspentind, ledger->spentbits.ind = lp->numspents;
         ledger->addrinfos.ind = lp->numaddrinfos, ledger->txoffsets.ind = lp->txoffsets;
         ledger_copyhashes(&L,ledger,1);
-        ledger_restorehash(&L,LEDGER_NUMHASHES-1,&ledger->ledger);
-        ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
-        printf("restored synci.%d: blocknum.%u %08x txids.%d addrs.%d scripts.%d unspents.%d supply %.8f\n",synci,ledger->blocknum,*(int *)ledger->sha256,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum)), sleep(3);
+        printf("restored synci.%d: blocknum.%u txids.%d addrs.%d scripts.%d unspents.%d supply %.8f\n",synci,ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum)), sleep(3);
     } else printf("ledger_getnearest error getting last\n");
     return(blocknum);
 }
