@@ -927,7 +927,7 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     struct ledger_info *ledger = 0; 
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
-        Debuglevel = 3;
+        //Debuglevel = 3;
         if ( flags == 0 )
             flags = (DB777_FLUSH | DB777_HDD | DB777_MULTITHREAD | DB777_RAMDISK);
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));
