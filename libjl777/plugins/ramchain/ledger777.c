@@ -672,6 +672,8 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
 struct ledger_inds *ledger_getsyncdata(struct ledger_inds *L,struct ledger_info *ledger,uint32_t syncind)
 {
     struct ledger_inds *lp; int32_t allocsize = sizeof(*L);
+    if ( syncind <= 0 )
+        syncind = 1;
     if ( (lp= db777_get(L,&allocsize,ledger->DBs.transactions,ledger->ledger.DB,&syncind,sizeof(syncind))) != 0 )
         return(lp);
     else memset(L,0,sizeof(*L));
