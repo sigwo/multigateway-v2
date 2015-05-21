@@ -35,7 +35,7 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
 
 int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
 {
-    struct alloc_space MEM; uint32_t blocknum; double startmilli,elapsed; int32_t lag,syncflag,flag = 0;
+    struct alloc_space MEM; uint32_t blocknum; double startmilli; int32_t lag,syncflag,flag = 0;
     blocknum = ledger->blocknum;
     if ( (lag= (ramchain->RTblocknum - blocknum)) < 1000 || (blocknum % 100) == 0 )
         ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,ramchain->serverport,ramchain->userpass,ramchain->RTblocknum);

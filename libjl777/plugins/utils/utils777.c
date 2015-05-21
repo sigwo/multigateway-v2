@@ -66,6 +66,9 @@ void *memalloc(struct alloc_space *mem,long size,int32_t clearflag);
 int32_t notlocalip(char *ipaddr);
 int32_t is_remote_access(char *previpaddr);
 
+float xblend(float *destp,float val,float decay);
+double dxblend(double *destp,double val,double decay);
+
 #endif
 #else
 #ifndef crypto777_util777_c
@@ -613,6 +616,21 @@ void *memalloc(struct alloc_space *mem,long size,int32_t clearflag)
     return(ptr);
 }
 
+float xblend(float *destp,float val,float decay)
+{
+    float oldval;
+	if ( (oldval = *destp) != 0. )
+		return((oldval * decay) + ((1. - decay) * val));
+	else return(val);
+}
+
+double dxblend(double *destp,double val,double decay)
+{
+    double oldval;
+	if ( (oldval = *destp) != 0. )
+		return((oldval * decay) + ((1. - decay) * val));
+	else return(val);
+}
 
 #endif
 #endif
