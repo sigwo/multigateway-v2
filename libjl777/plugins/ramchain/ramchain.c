@@ -391,7 +391,7 @@ int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
             if ( (vout= ledger_unspentmap(txidstr,ramchain->activeledger,addrinfo->unspents[i].ind)) >= 0 )
             {
                 cJSON_AddItemToObject(item,"txid",cJSON_CreateString(txidstr));
-                cJSON_AddItemToArray(item,cJSON_CreateNumber(vout));
+                cJSON_AddItemToObject(item,"vout",cJSON_CreateNumber(vout));
             }
             else cJSON_AddItemToObject(item,"unspentind",cJSON_CreateNumber(addrinfo->unspents[i].ind));
             ledger_scriptstr(ramchain->activeledger,script,sizeof(script),addrinfo->unspents[i].scriptind);

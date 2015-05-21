@@ -428,7 +428,7 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind)
 {
     uint32_t floor,ceiling,probe,firstvout,lastvout;
-    floor = 1, ceiling = ledger->txids.ind;
+    floor = 1, ceiling = ledger->unspentmap.ind;
     while ( floor != ceiling )
     {
         probe = (floor + ceiling) >> 1;
