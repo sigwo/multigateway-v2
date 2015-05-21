@@ -298,7 +298,7 @@ cstdlib/stdbool.o: cstdlib/stdbool.c interpreter.h platform.h
 cstdlib/unistd.o: cstdlib/unistd.c interpreter.h platform.h
 plugins/lib/stockfish: plugins/stockfish/stockfish.cpp
 plugins/lib/sophia: plugins/sophia/sophia.c plugins/sophia/sophia_main.c
-plugins/lib/echo: plugins/echodemo.c
+plugins/lib/echodemo: plugins/echodemo.c
 #plugins/nonportable/$(OS)/files.o: plugins/nonportable/$(OS)/files.c
 #plugins/nonportable/$(OS)/random.o: plugins/nonportable/$(OS)/random.c
 
