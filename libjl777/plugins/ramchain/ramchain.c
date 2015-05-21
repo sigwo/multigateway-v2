@@ -339,37 +339,38 @@ int32_t ramchain_script(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
     return(ramchain_string(retbuf,maxlen,ramchain,argjson,"script","script",ledger_scriptstr));
 }
 
-struct ledger_addrinfo *ramchain_addrinfo(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
+struct ledger_addrinfo *ramchain_addrinfo(char *field,char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
 {
-    char *coinaddr=0,errfield[256]; uint32_t addrind,firstblocknum; struct ledger_addrinfo *addrinfo;
+    char *coinaddr=0; uint32_t addrind,firstblocknum; struct ledger_addrinfo *addrinfo;
     if ( (addrind= (uint32_t)cJSON_GetObjectItem(argjson,"addrind")) == 0 && (coinaddr= cJSON_str(cJSON_GetObjectItem(argjson,"addr"))) != 0 )
-        strcpy(errfield,coinaddr);
+        strcpy(field,coinaddr);
     else if ( addrind != 0 )
-        sprintf(errfield,"addrind.%u",addrind);
+        sprintf(field,"addrind.%u",addrind);
     else
     {
         sprintf(retbuf,"{\"error\":\"invalid addr or addrind\",\"coin\":\"%s\"}",ramchain->name);
         return(0);
     }
     if ( (addrinfo= ledger_addrinfo(&firstblocknum,ramchain->activeledger,coinaddr,addrind)) == 0 )
-        sprintf(retbuf,"{\"error\":\"cant find %s\",\"coin\":\"%s\"}",errfield,ramchain->name);
+        sprintf(retbuf,"{\"error\":\"cant find %s\",\"coin\":\"%s\"}",field,ramchain->name);
     return(addrinfo);
 }
 
 int32_t ramchain_balance(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
 {
-    struct ledger_addrinfo *addrinfo;
-    if ( (addrinfo= ramchain_addrinfo(retbuf,maxlen,ramchain,argjson)) == 0 )
+    struct ledger_addrinfo *addrinfo; char field[256];
+    if ( (addrinfo= ramchain_addrinfo(field,retbuf,maxlen,ramchain,argjson)) == 0 )
         return(-1);
-    sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"balance\":%.8f}",ramchain->name,dstr(addrinfo->balance));
+    sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"addr\":%s,\"balance\":%.8f}",ramchain->name,field,dstr(addrinfo->balance));
     return(0);
 }
 
 int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson)
 {
-    //struct ledger_addrinfo { uint64_t balance; uint32_t firstblocknum,count:28,notify:1,pending:1,MGW:1,dirty:1; struct unspentmap unspents[]; };
-    struct ledger_addrinfo *addrinfo; cJSON *json,*array,*item; int32_t i,verbose; char *jsonstr,script[8193];
-    if ( (addrinfo= ramchain_addrinfo(retbuf,maxlen,ramchain,argjson)) == 0 )
+    int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind);
+  //struct ledger_addrinfo { uint64_t balance; uint32_t firstblocknum,count:28,notify:1,pending:1,MGW:1,dirty:1; struct unspentmap unspents[]; };
+    struct ledger_addrinfo *addrinfo; cJSON *json,*array,*item; int32_t i,vout,verbose; char *jsonstr,script[8193],txidstr[256],field[256];
+    if ( (addrinfo= ramchain_addrinfo(field,retbuf,maxlen,ramchain,argjson)) == 0 )
         return(-1);
     verbose = get_API_int(cJSON_GetObjectItem(argjson,"verbose"),0);
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
@@ -385,8 +386,14 @@ int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
         else
         {
             item = cJSON_CreateObject();
+            cJSON_AddItemToObject(item,"addr",cJSON_CreateString(field));
             cJSON_AddItemToObject(item,"value",cJSON_CreateNumber(dstr(addrinfo->unspents[i].value)));
-            //cJSON_AddItemToObject(item,cJSON_CreateNumber(addrinfo->unspents[i].ind));
+            if ( (vout= ledger_unspentmap(txidstr,ramchain->activeledger,addrinfo->unspents[i].ind)) >= 0 )
+            {
+                cJSON_AddItemToObject(item,"txid",cJSON_CreateString(txidstr));
+                cJSON_AddItemToArray(item,cJSON_CreateNumber(vout));
+            }
+            else cJSON_AddItemToObject(item,"unspentind",cJSON_CreateNumber(addrinfo->unspents[i].ind));
             ledger_scriptstr(ramchain->activeledger,script,sizeof(script),addrinfo->unspents[i].scriptind);
             cJSON_AddItemToObject(item,"script",cJSON_CreateString(script));
         }
