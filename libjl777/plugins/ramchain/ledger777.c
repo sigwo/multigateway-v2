@@ -426,24 +426,26 @@ uint32_t ledger_firstvout(int32_t requiredflag,struct ledger_info *ledger,uint32
 int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind)
 {
     uint32_t floor,ceiling,probe,firstvout,lastvout;
-    floor = 1, ceiling = ledger_firstvout(1,ledger,ledger->txids.ind+1);
+    floor = 1, ceiling = ledger->txids.ind;
     while ( floor != ceiling )
     {
         probe = (floor + ceiling) >> 1;
-        printf("search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
         if ( (firstvout= ledger_firstvout(1,ledger,probe)) == 0 || (lastvout= ledger_firstvout(1,ledger,probe+1)) == 0 )
             break;
+        printf("search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
         if ( unspentind < firstvout )
             ceiling = probe;
         else if ( unspentind >= lastvout )
             floor = probe;
         else
         {
+            printf("found match! txidind.%u\n",probe);
             if ( ledger_txidstr(ledger,txidstr,255,probe) == 0 )
                 return(unspentind - firstvout);
             else break;
         }
     }
+    printf("end search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
     return(-1);
 }
 
