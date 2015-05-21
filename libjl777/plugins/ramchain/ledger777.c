@@ -675,6 +675,7 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
     ledgerhash = *(uint32_t *)ledger->sha256;
     if ( numsyncs < 0 )
     {
+        printf("\n");
         for (i=0; i<n; i++)
             printf("%08x ",*(int *)L->hashes[i]);
         printf(" blocknum.%u txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
@@ -685,7 +686,6 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
             if ( (i % 32) == 31 && i+32<sizeof(*L) )
                 printf("| %u\n",_crc32(0,&L[(i/32)*32],32));
         }
-        printf("\n");
     }
     if ( numsyncs >= 0 )
     {
