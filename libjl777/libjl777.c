@@ -1253,8 +1253,6 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
 
 #include <stdio.h>
 //
-//  echodemo.c
-//  SuperNET API extension example plugin
 //  crypto777
 //
 //  Copyright (c) 2015 jl777. All rights reserved.
@@ -1327,7 +1325,8 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *retstr,*resultstr;
+    char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json);
+    char *retstr,*resultstr,*methodstr,*destplugin;
     FILE *fp;
     int32_t i;
     retbuf[0] = 0;
@@ -1335,6 +1334,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     if ( initflag > 0 )
     {
         Debuglevel = 2;
+        SUPERNET.disableNXT = get_API_int(cJSON_GetObjectItem(json,"disableNXT"),0);
         SUPERNET.ismainnet = get_API_int(cJSON_GetObjectItem(json,"MAINNET"),1);
         SUPERNET.usessl = get_API_int(cJSON_GetObjectItem(json,"USESSL"),0);
         if ( SUPERNET.NXTAPIURL[0] == 0 )
@@ -1348,9 +1348,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         strcpy(SUPERNET.NXTSERVER,SUPERNET.NXTAPIURL);
         strcat(SUPERNET.NXTSERVER,"?requestType");
-        set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
-        SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
         copy_cJSON(SUPERNET.myNXTacct,cJSON_GetObjectItem(json,"myNXTacct"));
+        if ( SUPERNET.disableNXT == 0 )
+            set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
+        else strcpy(SUPERNET.NXTADDR,SUPERNET.myNXTacct);
+        SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
         copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
         if ( strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
             SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),1);
@@ -1404,13 +1406,18 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     {
         if ( plugin_result(retbuf,json,tag) > 0 )
             return((int32_t)strlen(retbuf));
+        methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
+        if ( (destplugin= cJSON_str(cJSON_GetObjectItem(json,"name"))) == 0 )
+            destplugin = cJSON_str(cJSON_GetObjectItem(json,"path"));
         printf("SUPERNET\n");
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
             retstr = "return registered";
         }
+        else if ( methodstr != 0 && strcmp(methodstr,"install") == 0 && destplugin != 0 && destplugin[0] != 0 )
+            retstr = SuperNET_install(destplugin,jsonstr,json);
         else retstr = "return JSON result";
         sprintf(retbuf,"{\"result\":\"%s\",\"debug\":%d,\"USESSL\":%d,\"MAINNET\":%d,\"DATADIR\":\"%s\",\"NXTAPI\":\"%s\",\"WEBSOCKETD\":\"%s\",\"SUPERNET_PORT\":%d,\"APISLEEP\":%d,\"domain\":\"%s\"}",retstr,Debuglevel,SUPERNET.usessl,SUPERNET.ismainnet,SUPERNET.DATADIR,SUPERNET.NXTAPIURL,SUPERNET.WEBSOCKETD,SUPERNET.port,SUPERNET.APISLEEP,SUPERNET.hostname);
     }

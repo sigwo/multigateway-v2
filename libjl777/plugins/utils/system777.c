@@ -107,7 +107,7 @@ struct SuperNET_info
     char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],transport[16];
     char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[4096],userhome[512],hostname[512];
     uint64_t my64bits;
-    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,gatewayid,numgateways,readyflag,UPNP,iamrelay;
+    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,gatewayid,numgateways,readyflag,UPNP,iamrelay,disableNXT;
     uint16_t port;
     struct env777 DBs;
 }; extern struct SuperNET_info SUPERNET;
@@ -192,7 +192,7 @@ void free_queueitem(void *itemptr);
 
 int upnpredirect(const char* eport, const char* iport, const char* proto, const char* description);
 
-void *aligned_alloc(uint64_t allocsize);
+void *myaligned_alloc(uint64_t allocsize);
 int32_t aligned_free(void *alignedptr);
 
 void *portable_thread_create(void *funcp,void *argp);
@@ -277,7 +277,7 @@ void nn_thread_term (struct nn_thread *self);
 
 static uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (ptrval & 15); return(ptrval); }
 
-void *aligned_alloc(uint64_t allocsize)
+void *myaligned_alloc(uint64_t allocsize)
 {
     void *ptr,*realptr;
     realptr = calloc(1,allocsize + 16 + sizeof(realptr));
