@@ -682,8 +682,8 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
         for (i=0; i<(int)sizeof(*L); i++)
         {
             printf("%02x ",((uint8_t *)L)[i]);
-            if ( (i % 32) == 31 )
-                printf("| %u\n",_crc32(0,&L[i/32],32));
+            if ( (i % 32) == 31 && i+32<sizeof(*L) )
+                printf("| %u\n",_crc32(0,&L[(i/32)*32],32));
         }
         printf("\n");
     }
