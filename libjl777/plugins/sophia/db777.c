@@ -318,34 +318,6 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             return(-1);
         }
     }
-    if ( ((DB->flags & flags) & DB777_HDD) != 0 )
-    {
-        if ( ismatrix != 0 && ((*(uint32_t *)key % DB777_MATRIXROW) != 0 || valuelen != DB777_MATRIXROW*DB->valuesize) )
-        {
-            printf("%s UNEXPECTED db777_set: %x keylen.%d valuelen.%d %x\n",DB->name,*(int *)key,keylen,valuelen,*(int *)value);
-            return(-1);
-        }
-        else
-        {
-            db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
-            if ( (obj= sp_object(db)) == 0 )
-                retval = -3;
-            if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,valuelen) != 0 )
-            {
-                sp_destroy(obj);
-                printf("error setting key/value %s[%d]\n",DB->name,*(int *)key);
-                retval = -4;
-            }
-            else
-            {
-                retval = sp_set((transactions != 0 ? transactions : db),obj);
-                //if ( strcmp(DB->name,"ledger") == 0 )
-                //    printf("retval.%d %s key.%u valuelen.%d\n",retval,DB->name,*(int *)key,valuelen);
-            }
-        }
-        //if ( ismatrix != 0 )
-        //    printf("%s save key.%u valuelen.%d\n",DB->name,*(int *)key,valuelen);
-    }
     if ( ((DB->flags & flags) & DB777_RAM) != 0 )
     {
         if ( ismatrix != 0 )
@@ -396,6 +368,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                 newkey = malloc(keylen);
                 memcpy(newkey,key,keylen);
                 HASH_ADD_KEYPTR(hh,DB->table,newkey,keylen,entry);
+                retval = 0;
             }
             else
             {
@@ -427,6 +400,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                         }
                         entry->valuelen = valuelen;
                     }
+                    retval = 0;
                 }
                 else if ( entry->valuesize != valuelen || valuelen != DB->valuesize )
                     printf("entry->valuesize.%d DB->valuesize.%d vs valuesize.%d??\n",entry->valuesize,DB->valuesize,valuelen);
@@ -434,10 +408,39 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
                 {
                     if ( memcmp(entry->value,value,valuelen) != 0 )
                         memcpy(entry->value,value,valuelen);
+                    retval = 0;
                 }
             }
             db777_unlock(DB);
         }
+    }
+    else if ( ((DB->flags & flags) & DB777_HDD) != 0 )
+    {
+        if ( ismatrix != 0 && ((*(uint32_t *)key % DB777_MATRIXROW) != 0 || valuelen != DB777_MATRIXROW*DB->valuesize) )
+        {
+            printf("%s UNEXPECTED db777_set: %x keylen.%d valuelen.%d %x\n",DB->name,*(int *)key,keylen,valuelen,*(int *)value);
+            return(-1);
+        }
+        else
+        {
+            db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
+            if ( (obj= sp_object(db)) == 0 )
+                retval = -3;
+            if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,valuelen) != 0 )
+            {
+                sp_destroy(obj);
+                printf("error setting key/value %s[%d]\n",DB->name,*(int *)key);
+                retval = -4;
+            }
+            else
+            {
+                retval = sp_set((transactions != 0 ? transactions : db),obj);
+                //if ( strcmp(DB->name,"ledger") == 0 )
+                //    printf("retval.%d %s key.%u valuelen.%d\n",retval,DB->name,*(int *)key,valuelen);
+            }
+        }
+        //if ( ismatrix != 0 )
+        //    printf("%s save key.%u valuelen.%d\n",DB->name,*(int *)key,valuelen);
     }
     return(retval);
 }
