@@ -102,8 +102,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 ramchain_init(retbuf,maxlen,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum,coin->minconfirms);
             else if ( coin->ramchain.activeledger != 0 )
                 ramchain_func(retbuf,maxlen,&coin->ramchain,json,methodstr);
-            else sprintf(retbuf,"{\"result\":\"no active ramchain\"}");
-            printf("RAMCHAIN RETURNS.(%s)\n",retbuf);
+            //else sprintf(retbuf,"{\"result\":\"no active ramchain\"}");
+            //printf("RAMCHAIN RETURNS.(%s)\n",retbuf);
         }
     }
     return((int32_t)strlen(retbuf));

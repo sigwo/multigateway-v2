@@ -369,13 +369,14 @@ int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
 {
     int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind);
   //struct ledger_addrinfo { uint64_t balance; uint32_t firstblocknum,count:28,notify:1,pending:1,MGW:1,dirty:1; struct unspentmap unspents[]; };
-    struct ledger_addrinfo *addrinfo; cJSON *json,*array,*item; int32_t i,vout,verbose; char *jsonstr,script[8193],txidstr[256],field[256];
+    struct ledger_addrinfo *addrinfo; cJSON *json,*array,*item; uint64_t sum = 0; int32_t i,vout,verbose; char *jsonstr,script[8193],txidstr[256],field[256];
     if ( (addrinfo= ramchain_addrinfo(field,retbuf,maxlen,ramchain,argjson)) == 0 )
         return(-1);
     verbose = get_API_int(cJSON_GetObjectItem(argjson,"verbose"),0);
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
     for (i=0; i<addrinfo->count; i++)
     {
+        sum += addrinfo->unspents[i].value;
         if ( verbose == 0 )
         {
             item = cJSON_CreateArray();
@@ -386,14 +387,13 @@ int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
         else
         {
             item = cJSON_CreateObject();
-            cJSON_AddItemToObject(item,"addr",cJSON_CreateString(field));
             cJSON_AddItemToObject(item,"value",cJSON_CreateNumber(dstr(addrinfo->unspents[i].value)));
             if ( (vout= ledger_unspentmap(txidstr,ramchain->activeledger,addrinfo->unspents[i].ind)) >= 0 )
             {
                 cJSON_AddItemToObject(item,"txid",cJSON_CreateString(txidstr));
                 cJSON_AddItemToObject(item,"vout",cJSON_CreateNumber(vout));
             }
-            else cJSON_AddItemToObject(item,"unspentind",cJSON_CreateNumber(addrinfo->unspents[i].ind));
+            cJSON_AddItemToObject(item,"unspentind",cJSON_CreateNumber(addrinfo->unspents[i].ind));
             ledger_scriptstr(ramchain->activeledger,script,sizeof(script),addrinfo->unspents[i].scriptind);
             cJSON_AddItemToObject(item,"script",cJSON_CreateString(script));
         }
@@ -401,7 +401,9 @@ int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
     }
     cJSON_AddItemToObject(json,"unspents",array);
     cJSON_AddItemToObject(json,"count",cJSON_CreateNumber(addrinfo->count));
+    cJSON_AddItemToObject(json,"addr",cJSON_CreateString(field));
     cJSON_AddItemToObject(json,"balance",cJSON_CreateNumber(dstr(addrinfo->balance)));
+    cJSON_AddItemToObject(json,"sum",cJSON_CreateNumber(dstr(sum)));
     if ( addrinfo->notify != 0 )
         cJSON_AddItemToObject(json,"notify",cJSON_CreateNumber(1));
     if ( addrinfo->pending != 0 )

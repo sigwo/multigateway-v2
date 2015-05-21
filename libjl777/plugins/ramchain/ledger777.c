@@ -432,14 +432,14 @@ int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unsp
         probe = (floor + ceiling) >> 1;
         if ( (firstvout= ledger_firstvout(1,ledger,probe)) == 0 || (lastvout= ledger_firstvout(1,ledger,probe+1)) == 0 )
             break;
-        printf("search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
+        //printf("search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
         if ( unspentind < firstvout )
             ceiling = probe;
         else if ( unspentind >= lastvout )
             floor = probe;
         else
         {
-            printf("found match! txidind.%u\n",probe);
+            //printf("found match! txidind.%u\n",probe);
             if ( ledger_txidstr(ledger,txidstr,255,probe) == 0 )
                 return(unspentind - firstvout);
             else break;
