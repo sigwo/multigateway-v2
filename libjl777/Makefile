@@ -78,7 +78,7 @@ plugins: lib/echo lib/MGW lib/stockfish lib/sophia; \
     $(_MGW); \
     cd ..
 
-echodemo: lib/echodemo; \
+echodemo: plugins/lib/echodemo; \
  	cd plugins; $(_echodemo); cd ..
 
 stockfish: lib/stockfish; \
