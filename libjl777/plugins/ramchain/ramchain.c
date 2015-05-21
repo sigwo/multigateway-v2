@@ -64,7 +64,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
             startmilli = milliseconds();
             if ( rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum) > 0 )
             {
-                elapsed = (milliseconds() - startmilli); printf("%.3f ",elapsed/1000.);
+                dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);
                 flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
             }
         }

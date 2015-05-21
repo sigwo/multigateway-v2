@@ -753,7 +753,7 @@ int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp)
 int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
 {
     struct ledger_blockinfo *block; struct ledger_inds L;
-    uint32_t blocknum,dispflag,ledgerhash; uint64_t supply,oldsupply; double estimate,elapsed,startmilli,diff;
+    uint32_t blocknum,dispflag,ledgerhash; uint64_t supply,oldsupply; double estimate,elapsed,startmilli;
     blocknum = ledger->blocknum;
     if ( blocknum <= RTblocknum-minconfirms )
     {
@@ -773,7 +773,7 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
                 ledger->DBs.transactions = 0;
             }
             else ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,-1);
-            diff = (milliseconds() - startmilli);
+            dxblend(&ledger->calc_elapsed,(milliseconds() - startmilli),.99);
             ledger->totalsize += block->allocsize;
             estimate = estimate_completion(ledger->startmilli,blocknum - ledger->startblocknum,RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ledger->startmilli)/60000.;
@@ -781,13 +781,13 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
             if ( dispflag != 0 )
             {
                 extern uint32_t Duplicate,Mismatch,Added,Linked;
-                printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d %d %d %d %08x.%08x\n",diff/1000.,ledger->DBs.coinstr,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ledger->addrsum),dstr(supply)-dstr(ledger->addrsum),dstr(supply)-dstr(oldsupply),dstr(block->minted),elapsed,elapsed+(RTblocknum-blocknum)*diff/60000,elapsed+estimate,block->allocsize,_mbstr(ledger->totalsize),(double)ledger->totalsize/blocknum,Duplicate,Mismatch,Added,Linked,*(uint32_t *)ledger->ledger.sha256,ledgerhash);
+                printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | DMA %d %d %d %d %08x.%08x\n",ledger->calc_elapsed/1000.,ledger->DBs.coinstr,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ledger->addrsum),dstr(supply)-dstr(ledger->addrsum),dstr(supply)-dstr(oldsupply),dstr(block->minted),elapsed,elapsed+(RTblocknum-blocknum)*ledger->calc_elapsed/60000,elapsed+estimate,block->allocsize,_mbstr(ledger->totalsize),(double)ledger->totalsize/blocknum,Duplicate,Mismatch,Added,Linked,*(uint32_t *)ledger->ledger.sha256,ledgerhash);
             }
             ledger->blocknum++;
             return(1);
         }
         else printf("%s error processing block.%d\n",ledger->DBs.coinstr,blocknum);
-    }
+    } else printf("blocknum.%d > RTblocknum.%d - minconfirms.%d\n",blocknum,RTblocknum,minconfirms);
     return(0);
 }
 
