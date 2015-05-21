@@ -58,7 +58,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
                 ramchain->paused = 3, syncflag = 2;
             printf("ramchain.%s blocknum.%d <<< PAUSING paused.%d |  endblocknum.%u\n",ledger->DBs.coinstr,blocknum,ramchain->paused,ledger->endblocknum);
         }
-        if ( blocknum <= ramchain->RTblocknum )
+        if ( blocknum <= (ramchain->RTblocknum - ramchain->minconfirms) )
         {
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
             startmilli = milliseconds();

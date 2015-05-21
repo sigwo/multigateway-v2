@@ -191,7 +191,7 @@ char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,
         json = cJSON_CreateObject();
     if ( json != 0 )
     {
-        if ( cJSON_GetObjectItem(json,"myipaddr") == 0 )
+        if ( strcmp("direct",method) == 0 && cJSON_GetObjectItem(json,"myipaddr") == 0 )
             cJSON_AddItemToObject(json,"myipaddr",cJSON_CreateString(SUPERNET.myipaddr));
         if ( cJSON_GetObjectItem(json,"tag") == 0 )
             sprintf(numstr,"%llu",((long long)rand()<<32) | rand()),cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
