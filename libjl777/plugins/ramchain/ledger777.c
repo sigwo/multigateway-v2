@@ -679,6 +679,13 @@ uint32_t ledger_setlast(struct ledger_inds *L,struct ledger_info *ledger,uint32_
             printf("%08x ",*(int *)L->hashes[i]);
         printf(" blocknum.%u txids.%d addrs.%d scripts.%d unspents.%d supply %.8f | ",ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,dstr(ledger->voutsum)-dstr(ledger->spendsum));
         printf(" %08x\n",_crc32(0,(void *)L,sizeof(*L)));
+        for (i=0; i<(int)sizeof(*L); i++)
+        {
+            printf("%02x ",((uint8_t *)L)[i]);
+            if ( (i % 32) == 31 )
+                printf("| %u\n",_crc32(0,&L[i/32],32));
+        }
+        printf("\n");
     }
     if ( numsyncs >= 0 )
     {
