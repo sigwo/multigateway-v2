@@ -83,7 +83,10 @@ void update_Daemoninfos()
     }
     Numdaemons = n;
     while ( (dp= queue_dequeue(&DaemonQ,0)) != 0 )
+    {
+        printf("dequeued new daemon.(%s)\n",dp->name);
         Daemoninfos[Numdaemons++] = dp;
+    }
     portable_mutex_unlock(&mutex);
 }
 
@@ -387,7 +390,8 @@ void *daemon_loop2(void *args) // launch permanent plugin process
 char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,char *cmd,char *arg,int32_t (*daemonfunc)(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs))
 {
     struct daemon_info *dp;
-    char retbuf[1024];
+    char retbuf[1024]; int32_t i,delim,offset=0;
+    //printf("launch daemon.(%s)\n",plugin);
     if ( Numdaemons >= sizeof(Daemoninfos)/sizeof(*Daemoninfos) )
         return(clonestr("{\"error\":\"too many daemons, cant create anymore\"}"));
     dp = calloc(1,sizeof(*dp));
@@ -396,22 +400,32 @@ char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,ch
     dp->port = port;
     if ( ipaddr != 0 )
         strcpy(dp->ipaddr,ipaddr);
-    if ( plugin != 0 )
-        strcpy(dp->name,plugin);
     randombytes((uint8_t *)&dp->myid,sizeof(dp->myid));
     dp->cmd = clonestr(cmd!=0&&cmd[0]!=0?cmd:plugin);
+#ifdef WIN32
+    delim = '\\';
+#else
+    delim = '/';
+#endif
+    if ( plugin != 0 )
+    {
+        for (i=offset=0; plugin[i]!=0; i++)
+            if ( plugin[i] == delim )
+                offset = i+1;
+        strcpy(dp->name,plugin+offset);
+    }
     dp->daemonid = (uint64_t)(milliseconds() * 1000000) & (~(uint64_t)3) ^ *(int32_t *)plugin;
     memset(&dp->perm,0xff,sizeof(dp->perm));
     memset(&dp->wss,0xff,sizeof(dp->wss));
     dp->jsonargs = (arg != 0 && arg[0] != 0) ? clonestr(arg) : 0;
     dp->daemonfunc = daemonfunc;
     dp->websocket = websocket;
+    queue_enqueue("DaemonQ",&DaemonQ,&dp->DL);
     if ( portable_thread_create((void *)daemon_loop2,dp) == 0 || (dp->bundledflag == 0 && websocket != 0 && portable_thread_create((void *)daemon_loop,dp) == 0) )
     {
         free_daemon_info(dp);
         return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
     }
-    queue_enqueue("DaemonQ",&DaemonQ,&dp->DL);
     sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}\n",(long long)dp->daemonid);
     return(clonestr(retbuf));
  }
@@ -441,6 +455,8 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
     struct daemon_info *dp;
     char retbuf[8192],*methodstr,*authmethodstr,*pubmethodstr;
     int32_t ind;
+    printf("register.(%s)\n",plugin);
+    update_Daemoninfos();
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) != 0 )
     {
         if ( plugin[0] == 0 || strcmp(dp->name,plugin) == 0 )

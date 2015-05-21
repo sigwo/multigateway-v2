@@ -82,7 +82,7 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     cJSON *obj=0,*tmp,*json = 0;
     uint64_t allocsize,nxt64bits,tag = 0;
     int32_t retval = 0;
-printf("call process_json.(%s)\n",jsonargs);
+//printf("call process_json.(%s)\n",jsonargs);
     if ( jsonargs != 0 && (json= cJSON_Parse(jsonargs)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -116,11 +116,11 @@ printf("call process_json.(%s)\n",jsonargs);
             plugin->port = get_API_int(cJSON_GetObjectItem(obj,"port"),0);
         }
     }
-    fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%p) %p %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
+    //fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%s) [%s] %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
     if ( jsonstr != 0 && obj != 0 )
         retval = PLUGNAME(_process_json)(plugin,tag,retbuf,max,jsonstr,obj,initflag);
     else printf("error with JSON.(%s)\n",jsonstr), getchar();
-    fprintf(stderr,"done tag.%llu initflag.%d got jsonargs.(%p) %p %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
+    //fprintf(stderr,"done tag.%llu initflag.%d got jsonargs.(%p) %p %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
     if ( jsonstr != 0 )
         free(jsonstr);
     if ( json != 0 )
@@ -132,7 +132,7 @@ printf("call process_json.(%s)\n",jsonargs);
 static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin,uint64_t tag,int32_t allfields)
 {
     char tagstr[128],*NXTaddr; cJSON *json;
-    //printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
+//printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
     if ( (json= cJSON_Parse(retbuf)) != 0 )
     {
         if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
@@ -225,7 +225,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
     char name[MAX_JSON_FIELD];
     retbuf[0] = *sendflagp = 0;
     if ( Debuglevel > 2 )
-        printf("PLUGIN.(%s) process_plugin_json\n",plugin->name);
+        printf("PLUGIN.(%s) process_plugin_json (%s)\n",plugin->name,jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 )
@@ -241,7 +241,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
             if ( retbuf[0] == 0 )
                 sprintf(retbuf,"{\"result\":\"no response\"}");
             append_stdfields(retbuf,max,plugin,tag,0);
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 printf("return.(%s)\n",retbuf);
             return((int32_t)strlen(retbuf));
         } else printf("(%s) -> no return.%d (%s) vs (%s) len.%d\n",jsonstr,strcmp(name,plugin->name),name,plugin->name,len);
@@ -310,7 +310,7 @@ int32_t main
     plugin->timeout = 1;
     if ( argc <= 2 )
     {
-        jsonargs = (argc > 1) ? clonestr((char *)argv[1]) : clonestr("{}");
+        jsonargs = (argc > 1) ? stringifyM((char *)argv[1]) : stringifyM("{}");
         configure_plugin(retbuf,max,plugin,jsonargs,-1);
         free(jsonargs);
 //fprintf(stderr,"PLUGIN_RETURNS.[%s]\n",retbuf), fflush(stdout);
@@ -337,7 +337,7 @@ int32_t main
         } else plugin_transportaddr(plugin->bindaddr,transportstr,0,plugin->daemonid + 1*OFFSET_ENABLED);
     } else plugin_transportaddr(plugin->bindaddr,transportstr,0,plugin->daemonid + 1*OFFSET_ENABLED);
     plugin_transportaddr(plugin->connectaddr,transportstr,0,plugin->daemonid+2*OFFSET_ENABLED);
-    jsonargs = (argc >= 3) ? (char *)argv[3] : 0;
+    jsonargs = (argc >= 3) ? ((char *)argv[3]) : 0;
     configure_plugin(retbuf,max,plugin,jsonargs,1);
     printf("CONFIGURED.(%s) argc.%d: %s myid.%llu daemonid.%llu NXT.%s\n",plugin->name,argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",(long long)plugin->myid,(long long)plugin->daemonid,plugin->NXTADDR);//,jsonargs!=0?jsonargs:"");
     if ( init_pluginsocks(plugin,plugin->permanentflag,plugin->bindaddr,plugin->connectaddr,plugin->myid,plugin->daemonid,plugin->timeout) == 0 )

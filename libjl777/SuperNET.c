@@ -583,8 +583,8 @@ int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { retur
 
 char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json)
 {
-    char ipaddr[MAX_JSON_FIELD],path[MAX_JSON_FIELD];
-    int32_t ind,async;
+    char ipaddr[MAX_JSON_FIELD],path[MAX_JSON_FIELD],*str,*retstr;
+    int32_t i,ind,async;
     uint16_t port,websocket;
     if ( find_daemoninfo(&ind,plugin,0,0) != 0 )
         return(clonestr("{\"error\":\"plugin already installed\"}"));
@@ -593,7 +593,17 @@ char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json)
     port = get_API_int(cJSON_GetObjectItem(json,"port"),0);
     async = get_API_int(cJSON_GetObjectItem(json,"daemonize"),0);
     websocket = get_API_int(cJSON_GetObjectItem(json,"websocket"),0);
-    return(language_func(plugin,ipaddr,port,websocket,async,path,jsonstr,call_system));
+    str = stringifyM(jsonstr);
+    retstr = language_func(plugin,ipaddr,port,websocket,async,path,str,call_system);
+    for (i=0; i<3; i++)
+    {
+        if ( find_daemoninfo(&ind,plugin,0,0) != 0 )
+            break;
+        poll_daemons();
+        sleep(1);
+    }
+    free(str);
+    return(retstr);
 }
 
 int32_t got_newpeer(const char *ip_port) { if ( Debuglevel > 2 ) printf("got_newpeer.(%s)\n",ip_port); return(0); }
