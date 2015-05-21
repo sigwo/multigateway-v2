@@ -390,6 +390,7 @@ int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct ramchain *ramchain,
             ledger_scriptstr(ramchain->activeledger,script,sizeof(script),addrinfo->unspents[i].scriptind);
             cJSON_AddItemToObject(item,"script",cJSON_CreateString(script));
         }
+        cJSON_AddItemToArray(array,item);
     }
     cJSON_AddItemToObject(json,"unspents",array);
     cJSON_AddItemToObject(json,"count",cJSON_CreateNumber(addrinfo->count));
