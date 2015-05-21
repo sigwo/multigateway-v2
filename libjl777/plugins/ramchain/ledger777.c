@@ -408,19 +408,17 @@ int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t fir
     return(-1);
 }
 
-uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
+uint32_t ledger_firstvout(int32_t requiredflag,struct ledger_info *ledger,uint32_t txidind)
 {
     struct upair32 firstinds,*ptr; int32_t flag,size = sizeof(firstinds); uint32_t firstvout = 0;
     if ( txidind == 1 )
         return(1);
-    //while ( retries-- > 0 )
-    {
-        flag = 0;
-        if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
-            firstvout = ptr->firstvout, flag = 1;
-        else printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), debugstop();
-    }
-    if ( Debuglevel > 2 || firstvout == 0 || flag == 0 )
+    flag = 0;
+    if ( (ptr= db777_get(&firstinds,&size,ledger->DBs.transactions,ledger->txoffsets.DB,&txidind,sizeof(txidind))) != 0 && size == sizeof(firstinds) )
+        firstvout = ptr->firstvout, flag = 1;
+    else if ( requiredflag != 0 )
+        printf("couldnt find txoffset for txidind.%u size.%d vs %ld\n",txidind,size,sizeof(firstinds)), debugstop();
+    if ( Debuglevel > 2 || (requiredflag != 0 && (firstvout == 0 || flag == 0)) )
         printf("search txidind.%u GET -> firstvout.%d, flag.%d\n",txidind,firstvout,flag);
     return(firstvout);
 }
@@ -428,12 +426,12 @@ uint32_t ledger_firstvout(struct ledger_info *ledger,uint32_t txidind)
 int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind)
 {
     uint32_t floor,ceiling,probe,firstvout,lastvout;
-    floor = 1, ceiling = ledger->unspentmap.ind;
+    floor = 1, ceiling = ledger_firstvout(1,ledger,ledger->txids.ind+1);
     while ( floor != ceiling )
     {
         probe = (floor + ceiling) >> 1;
         printf("search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
-        if ( (firstvout= ledger_firstvout(ledger,probe)) == 0 || (lastvout= ledger_firstvout(ledger,probe+1)) == 0 )
+        if ( (firstvout= ledger_firstvout(1,ledger,probe)) == 0 || (lastvout= ledger_firstvout(1,ledger,probe+1)) == 0 )
             break;
         if ( unspentind < firstvout )
             ceiling = probe;
@@ -559,7 +557,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
     {
         memset(&spend,0,sizeof(spend));
         spend.spent_txidind = spent_txidind, spend.spent_vout = spent_vout;
-        spend.unspentind = ledger_firstvout(ledger,spent_txidind) + spent_vout;
+        spend.unspentind = ledger_firstvout(1,ledger,spent_txidind) + spent_vout;
         ledger_spentbits(ledger,spend.unspentind,1);
         if ( Debuglevel > 2 )
             printf("spent_txidstr.(%s) -> spent_txidind.%u firstvout.%d\n",spent_txidstr,spent_txidind,spend.unspentind-spent_vout);
