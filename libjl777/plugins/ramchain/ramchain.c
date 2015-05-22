@@ -70,7 +70,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,str
                 dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);
                 flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
             }
-        }
+        } else printf("blocknum.%u vs RT.%u\n",blocknum,ramchain->RTblocknum);
         if ( ramchain->paused == 3 )
         {
             ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;

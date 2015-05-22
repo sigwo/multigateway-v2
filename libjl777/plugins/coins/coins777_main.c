@@ -83,10 +83,12 @@ int32_t coins_idle(struct plugin_info *plugin)
             }
             if ( flag == 0 && (ledger= coin->ramchain.activeledger) != 0 )
             {
+                printf("readahead.%d vs blocknum.%u\n",coin->readahead,ledger->blocknum);
                 if ( coin->readahead <= ledger->blocknum )
                     coin->readahead = ledger->blocknum;
-                for (; coin->readahead<=ledger->blocknum+width; coin->readahead++)
+                while ( coin->readahead <= ledger->blocknum+width )
                 {
+                    printf("readahead.%u %p\n",coin->readahead++,coin->packed[coin->readahead]);
                     if ( coin->packed[coin->readahead] == 0 )
                     {
                         ram_clear_rawblock(&coin->EMIT,1);
@@ -101,12 +103,12 @@ int32_t coins_idle(struct plugin_info *plugin)
                                     printf("purge.%u\n",coin->readahead-width);
                                     free(coin->packed[coin->readahead-width]), coin->packed[coin->readahead-width] = 0;
                                 }
-                                coin->readahead++;
+                                
                                 flag = 1;
                                 break;
                             }
-                        }
-                    }
+                        } else printf("error rawblock_load.%u\n",coin->readahead);
+                    } else coin->readahead++;
                 }
             }
         }
@@ -327,7 +329,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         } else strcpy(retbuf,"{\"result\":\"no JSON for init\"}");
         COINS.readyflag = 1;
         plugin->allowremote = 1;
-        plugin->sleepmillis = 1;
+        //plugin->sleepmillis = 1;
     }
     else
     {
