@@ -302,7 +302,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
 {
     char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],*coinstr,*str = 0;
     cJSON *array,*item;
-    int32_t i,n,j = 0; uint32_t newmax;
+    int32_t i,n,j = 0;
     struct coin777 *coin;
     retbuf[0] = 0;
     if ( initflag > 0 )
