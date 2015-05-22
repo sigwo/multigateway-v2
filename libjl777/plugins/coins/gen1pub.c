@@ -223,7 +223,7 @@ int32_t rawblock_txvins(struct rawblock *raw,struct rawtx *tx,char *coinstr,char
     return(numvins);
 }
 
-uint64_t rawblock_txidinfo(struct rawblock *raw,struct rawtx *tx,char *coinstr,char *serverport,char *userpass,int32_t txind,char *txidstr)
+uint64_t rawblock_txidinfo(struct rawblock *raw,struct rawtx *tx,char *coinstr,char *serverport,char *userpass,int32_t txind,char *txidstr,uint32_t blocknum)
 {
     char *retstr = 0;
     cJSON *txjson;
@@ -240,7 +240,15 @@ uint64_t rawblock_txidinfo(struct rawblock *raw,struct rawtx *tx,char *coinstr,c
             free_json(txjson);
         } else printf("update_txid_infos parse error.(%s)\n",retstr);
         free(retstr);
-    } else printf("error getting.(%s)\n",txidstr);
+    }
+    else
+    {
+        if ( blocknum == 0 )
+        {
+            
+        }
+        else printf("error getting.(%s)\n",txidstr);
+    }
 //printf("tx.%d: (%s) numvins.%d numvouts.%d (raw %d %d)\n",txind,tx->txidstr,tx->numvins,tx->numvouts,raw->numrawvins,raw->numrawvouts);
     return(total);
 }
@@ -305,7 +313,7 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
             {
                 copy_cJSON(txidstr,cJSON_GetArrayItem(txobj,txind));
                 //printf("block.%d txind.%d TXID.(%s)\n",blocknum,txind,txidstr);
-                total += rawblock_txidinfo(raw,&raw->txspace[raw->numtx++],coinstr,serverport,userpass,txind,txidstr);
+                total += rawblock_txidinfo(raw,&raw->txspace[raw->numtx++],coinstr,serverport,userpass,txind,txidstr,blocknum);
             }
         } else printf("error _get_blocktxarray for block.%d got %d, n.%d vs %d\n",blocknum,blockid,n,MAX_BLOCKTX);
         if ( raw->minted == 0 )
