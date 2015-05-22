@@ -385,7 +385,7 @@ int32_t ledger_finishblock(struct ledger_info *ledger,struct alloc_space *mem,st
     ledger->blockpending = 0;
     if ( db777_add(-1,ledger->DBs.transactions,ledger->blocks.DB,&tmp,sizeof(tmp),block,block->allocsize) != 0 )
     {
-        printf("error saving blocks %s %u\n",ledger->DBs.coinstr,block->blocknum);
+        printf("error saving blocks %s %u %s\n",ledger->DBs.coinstr,block->blocknum,db777_errstr(ledger->DBs.ctl));
         return(0);
     }
     update_sha256(ledger->blocks.sha256,&ledger->blocks.state,(void *)block,block->allocsize);

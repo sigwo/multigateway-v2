@@ -32,6 +32,7 @@
 #define SOPHIA_USERDIR "/user"
 void *db777_get(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen);
 int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen);
+char *db777_errstr(void *ctl);
 
 uint64_t db777_ctlinfo64(void *ctl,char *field);
 int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t len);
@@ -637,6 +638,19 @@ uint64_t db777_ctlinfo64(void *ctl,char *field)
         sp_destroy(obj);
     }
     return(val);
+}
+
+char *db777_errstr(void *ctl)
+{
+   	void *obj,*ptr; static char errstr[1024];
+    errstr[0] = 0;
+    if ( (obj= sp_get(ctl,"sophia.error")) != 0 )
+    {
+        if ( (ptr= sp_get(obj,"value",NULL)) != 0 )
+            strcpy(errstr,ptr);
+        sp_destroy(obj);
+    }
+    return(errstr);
 }
 
 char **db777_index(int32_t *nump,struct db777 *DB,int32_t max)
