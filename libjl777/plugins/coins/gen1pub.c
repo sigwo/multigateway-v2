@@ -423,7 +423,7 @@ void coin777_unpackvin(struct alloc_space *mem,struct packedvin *pvi,struct rawv
    // printf("unpackedvin.(%s) vout.%d\n",vi->txidstr,vi->vout);
 }
 
-struct packedblock *coin777_packrawblock(struct rawblock *raw)
+struct packedblock *coin777_packrawblock(struct coin777 *coin,struct rawblock *raw)
 {
     static long totalsizes,totalpacked;
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct alloc_space MEM,*mem = &MEM;
@@ -461,6 +461,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     //    printf("%02x ",((uint8_t *)mem->ptr)[i]);
     printf("block.%u packed sizes: block.%ld tx.%ld vin.%ld vout.%ld | crc.%-5u mem->size %ld -> %5d %8s vs %8s [%.3fx]\n",raw->blocknum,sizeof(struct packedblock),sizeof(struct packedtx),sizeof(struct packedvout),sizeof(struct packedvin),packed->crc16,mem->size,packed->allocsize,_mbstr(totalsizes),_mbstr2(totalpacked),(double)totalsizes / totalpacked);
     packed = malloc(mem->used), memcpy(packed,mem->ptr,mem->used), free(mem);
+    ramchain_setpackedblock(&coin->ramchain,packed,packed->blocknum);
     return(packed);
 }
 

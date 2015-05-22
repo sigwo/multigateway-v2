@@ -71,8 +71,9 @@ int32_t coins_idle(struct plugin_info *plugin)
                 {
                     if ( coin->packed[coin->packedblocknum] == 0 )
                     {
-                        if ( (coin->packed[coin->packedblocknum]= coin777_packrawblock(&coin->EMIT)) != 0 )
+                        if ( (coin->packed[coin->packedblocknum]= coin777_packrawblock(coin,&coin->EMIT)) != 0 )
                         {
+                            ramchain_setpackedblock(&coin->ramchain,coin->packed[coin->packedblocknum],coin->packedblocknum);
                             //coins_verify(coin,coin->packed[coin->packedblocknum],coin->packedblocknum);
                             coin->packedblocknum += coin->packedincr;
                         }
@@ -94,8 +95,9 @@ int32_t coins_idle(struct plugin_info *plugin)
                         ram_clear_rawblock(&coin->EMIT,1);
                         if ( rawblock_load(&coin->EMIT,coin->name,coin->serverport,coin->userpass,coin->readahead) > 0 )
                         {
-                            if ( (coin->packed[coin->readahead]= coin777_packrawblock(&coin->EMIT)) != 0 )
+                            if ( (coin->packed[coin->readahead]= coin777_packrawblock(coin,&coin->EMIT)) != 0 )
                             {
+                                ramchain_setpackedblock(&coin->ramchain,coin->packed[coin->readahead],coin->readahead);
                                 //coins_verify(coin,coin->packed[coin->readahead],coin->readahead);
                                 width++;
                                 if ( coin->readahead > width && coin->readahead-width > ledger->blocknum && coin->packed[coin->readahead-width] != 0 )
@@ -391,7 +393,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             }
         }
     }
-    printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s) initflag.%d process %s\n",SUPERNET.myNXTaddr,initflag,plugin->name);
+    printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s) initflag.%d process %s slice.%d\n",SUPERNET.myNXTaddr,initflag,plugin->name,COINS.slicei);
     return((int32_t)strlen(retbuf));
 }
 

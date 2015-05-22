@@ -62,7 +62,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     {
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
         plugin->allowremote = 1;
-        copy_cJSON(RAMCHAINS.pullnode,cJSON_GetObjectItem(json,"pullnode"));
         RAMCHAINS.fastmode = get_API_int(cJSON_GetObjectItem(json,"fastmode"),0);
         RAMCHAINS.readyflag = 1;
     }

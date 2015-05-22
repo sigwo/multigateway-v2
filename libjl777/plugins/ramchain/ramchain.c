@@ -34,9 +34,38 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
 #undef DEFINES_ONLY
 #endif
 
+struct packedblock *ramchain_getpackedblock(void *space,int32_t *lenp,struct ramchain *ramchain,uint32_t blocknum)
+{
+    struct ledger_info *ledger;
+    if ( (ledger= ramchain->activeledger) != 0 )
+        return(db777_get(space,lenp,ledger->DBs.transactions,ledger->packed.DB,&blocknum,sizeof(blocknum)));
+    else return(0);
+}
+
+void ramchain_setpackedblock(struct ramchain *ramchain,struct packedblock *packed,uint32_t blocknum)
+{
+    struct ledger_info *ledger;
+    if ( (ledger= ramchain->activeledger) != 0 )
+        db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&blocknum,sizeof(blocknum),packed,packed->allocsize);
+    if ( RELAYS.pushsock >= 0 )
+        nn_send(RELAYS.pushsock,(void *)packed,packed->allocsize,0);
+}
+
+void coin777_pulldata(struct packedblock *packed,int32_t len)
+{
+    struct coin777 *coin;
+    if ( len >= ((long)&packed->allocsize - (long)packed + sizeof(packed->allocsize)) && packed->allocsize == len )
+    {
+        if ( (coin= coin777_find("BTC",0)) != 0 )
+            ramchain_setpackedblock(&coin->ramchain,packed,packed->blocknum);
+        printf("PULLED.(%d) blocknum.%u\n",len,packed->blocknum);
+    } else printf("pulled.%d but size mismatch\n",len);
+    nn_freemsg(packed);
+}
+
 int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,struct packedblock *packed)
 {
-    struct alloc_space MEM; uint32_t blocknum; double startmilli; int32_t lag,syncflag,flag = 0;
+    struct alloc_space MEM; uint32_t blocknum; double startmilli; int32_t len,lag,syncflag,flag = 0;
     blocknum = ledger->blocknum;
     if ( (lag= (ramchain->RTblocknum - blocknum)) < 1000 || (blocknum % 100) == 0 )
         ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,ramchain->serverport,ramchain->userpass,ramchain->RTblocknum);
@@ -63,7 +92,8 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,str
         {
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
             startmilli = milliseconds();
-            if ( packed != 0 )
+            len = (int32_t)MEM.size;
+            if ( packed != 0 || (packed= ramchain_getpackedblock(MEM.ptr,&len,ramchain,blocknum)) != 0 )
             {
                 ram_clear_rawblock(&ramchain->EMIT,0);
                 coin777_unpackblock(&ramchain->EMIT,packed,blocknum);
