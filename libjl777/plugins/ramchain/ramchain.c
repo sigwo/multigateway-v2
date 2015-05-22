@@ -61,6 +61,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,str
         }
         if ( blocknum <= (ramchain->RTblocknum - ramchain->minconfirms) )
         {
+            printf("blocknum.%u vs RT.%u\n",blocknum,ramchain->RTblocknum);
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
             startmilli = milliseconds();
             ram_clear_rawblock(&ramchain->EMIT,0);
