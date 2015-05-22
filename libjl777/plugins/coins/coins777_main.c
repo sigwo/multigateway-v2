@@ -23,6 +23,19 @@
 #include "msig.c"
 #undef DEFINES_ONLY
 
+void ensure_packedptrs(struct coin777 *coin)
+{
+    uint32_t newmax;
+    coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
+    newmax = (uint32_t)(coin->RTblocknum * 1.1);
+    if ( coin->maxpackedblocks < newmax )
+    {
+        coin->packed = realloc(coin->packed,sizeof(*coin->packed) * newmax);
+        memset(&coin->packed[coin->maxpackedblocks],0,sizeof(*coin->packed) * (newmax - coin->maxpackedblocks));
+        coin->maxpackedblocks = newmax;
+    }
+}
+
 void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t blocknum)
 {
     int32_t i;
@@ -265,6 +278,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
     COINS.LIST[COINS.num] = coin, COINS.num++;
+    ensure_packedptrs(coin);
     return(coin);
 }
 
@@ -362,14 +376,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 coin->packedblocknum = coin->packedstart = get_API_int(cJSON_GetObjectItem(json,"start"),0);
                 coin->packedend = get_API_int(cJSON_GetObjectItem(json,"end"),1000000000);
                 coin->packedincr = get_API_int(cJSON_GetObjectItem(json,"incr"),1);
-                coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
-                newmax = (uint32_t)(coin->RTblocknum * 1.1);
-                if ( coin->maxpackedblocks < newmax )
-                {
-                    coin->packed = realloc(coin->packed,sizeof(*coin->packed) * newmax);
-                    memset(&coin->packed[coin->maxpackedblocks],0,sizeof(*coin->packed) * (newmax - coin->maxpackedblocks));
-                    coin->maxpackedblocks = newmax;
-                }
+                ensure_packedptrs(coin);
                 sprintf(retbuf,"{\"result\":\"packblocks\",\"start\":\"%u\",\"end\":\"%u\",\"incr\":\"%u\",\"RTblocknum\":\"%u\"}",coin->packedstart,coin->packedend,coin->packedincr,coin->RTblocknum);
             }
             else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);

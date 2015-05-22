@@ -139,6 +139,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw);
 int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint32_t blocknum);
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);
+void ensure_packedptrs(struct coin777 *coin);
 
 #endif
 #else
