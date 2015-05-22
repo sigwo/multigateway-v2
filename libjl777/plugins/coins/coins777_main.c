@@ -25,11 +25,15 @@
 
 void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t blocknum)
 {
+    int32_t i;
     ram_clear_rawblock(&coin->DECODE,1);
     coin777_unpackblock(&coin->DECODE,packed,blocknum);
     if ( memcmp(&coin->DECODE,&coin->EMIT,sizeof(coin->DECODE)) != 0 )
     {
-        printf("packblock decode error blocknum.%u\n",coin->readahead);
+        for (i=0; i<sizeof(coin->DECODE); i++)
+            if ( ((uint8_t *)&coin->DECODE)[i] != ((uint8_t *)&coin->EMIT)[i] )
+                break;
+        printf("packblock decode error blocknum.%u at position.%d allocsize.%d\n",coin->readahead,i,packed->allocsize);
         coin777_disprawblock(&coin->EMIT);
         printf("----> \n");
         coin777_disprawblock(&coin->DECODE);
