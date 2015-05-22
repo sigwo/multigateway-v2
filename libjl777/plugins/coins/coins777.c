@@ -119,7 +119,7 @@ struct coin777
     cJSON *argjson;
     double lastgetinfo;
     struct ramchain ramchain;
-    uint32_t packedstart,packedend,packedincr,RTblocknum,packedblocknum,maxpackedblocks;
+    uint32_t packedstart,packedend,packedincr,RTblocknum,packedblocknum,maxpackedblocks,readahead;
     int32_t use_addmultisig,minconfirms;
     struct rawblock EMIT;
     struct packedblock **packed;

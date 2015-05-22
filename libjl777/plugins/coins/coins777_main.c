@@ -25,8 +25,8 @@
 
 int32_t coins_idle(struct plugin_info *plugin)
 {
-    int32_t i,flag = 0;
-    struct coin777 *coin;
+    int32_t i,flag = 0; uint32_t width = 1000;
+    struct coin777 *coin; struct ledger_info *ledger;
     for (i=0; i<COINS.num; i++)
     {
         if ( (coin= COINS.LIST[i]) != 0 && coin->packed != 0 )
@@ -42,10 +42,36 @@ int32_t coins_idle(struct plugin_info *plugin)
                         {
                             coin->packedblocknum += coin->packedincr;
                         }
-                        return(1);
+                        flag = 1;
                     }
                 } else break;
                 coin->packedblocknum += coin->packedincr;
+            }
+            if ( flag == 0 && (ledger= coin->ramchain.activeledger) != 0 )
+            {
+                if ( coin->readahead <= ledger->blocknum )
+                    coin->readahead = ledger->blocknum+1;
+                for (; coin->readahead<=ledger->blocknum+width; coin->readahead++)
+                {
+                    if ( coin->packed[coin->readahead] == 0 )
+                    {
+                        if ( rawblock_load(&coin->EMIT,coin->name,coin->serverport,coin->userpass,coin->readahead) > 0 )
+                        {
+                            if ( (coin->packed[coin->readahead]= coin777_packrawblock(&coin->EMIT)) != 0 )
+                            {
+                                width++;
+                                if ( coin->readahead > width && coin->readahead-width > ledger->blocknum && coin->packed[coin->readahead-width] != 0 )
+                                {
+                                    printf("purge.%u\n",coin->readahead-width);
+                                    free(coin->packed[coin->readahead-width]), coin->packed[coin->readahead-width] = 0;
+                                }
+                                coin->readahead++;
+                                flag = 1;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
