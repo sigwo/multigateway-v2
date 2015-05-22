@@ -95,9 +95,9 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
     Duplicate = Mismatch = Added = 0;
     ledger->startmilli = milliseconds();
     ledger->totalsize = 0;
-    printf("resuming %u to %u\n",startblocknum,endblocknum);
+    //printf("resuming %u to %u\n",startblocknum,endblocknum);
     ledger->startblocknum = ledger_startblocknum(ledger,-1);
-    printf("updated %u to %u\n",ledger->startblocknum,endblocknum);
+    //printf("updated %u to %u\n",ledger->startblocknum,endblocknum);
     memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
     ledger_setblocknum(ledger,&MEM,ledger->startblocknum);
     ledger->blocknum = ledger->startblocknum + (ledger->startblocknum > 1);
@@ -110,7 +110,7 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
         printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
     }*/
     balance = 0;//ledger_recalc_addrinfos(0,0,ledger,0);
-    printf("balance recalculated %.8f\n",dstr(balance));
+    //printf("balance recalculated %.8f\n",dstr(balance));
     sprintf(retbuf,"{\"result\":\"resumed\",\"ledgerhash\":\"%llx\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",*(long long *)ledger->ledger.sha256,ledger->startblocknum,ledger->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ledger->startmilli)/1000.);
     ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,ramchain->serverport,ramchain->userpass,ramchain->RTblocknum);
     ledger->startmilli = milliseconds();
