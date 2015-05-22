@@ -454,7 +454,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
         }
     }
     packed->allocsize = (uint32_t)mem->used;
-    crc = _crc32(0,(uint8_t *)&packed[sizeof(packed->crc16)],(int32_t)(packed->allocsize - sizeof(packed->crc16)));
+    crc = _crc32(0,&((uint8_t *)packed)[sizeof(packed->crc16)],(int32_t)(packed->allocsize - sizeof(packed->crc16)));
     packed->crc16 = (((crc >> 16) & 0xffff) ^ (uint16_t)crc);
     totalsizes += mem->size, totalpacked += mem->used;
     for (i=0; i<mem->used; i++)
@@ -473,12 +473,6 @@ int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint
     for (i=0; i<packed->allocsize; i++)
         printf("%02x ",((uint8_t *)packed)[i]);
     printf("unpack %d\n",packed->allocsize);
-    crc = _crc32(0,(uint8_t *)&packed[sizeof(packed->crc16)],(int32_t)(packed->allocsize - sizeof(packed->crc16)));
-    if ( packed->crc16 != (((crc >> 16) & 0xffff) ^ (uint16_t)crc) || packed->blocknum != blocknum )
-    {
-        printf("allocsize.%d crc16 mismatch %u vs %u | blocknum.%u mismatch %u\n",packed->allocsize,packed->crc16,(((crc >> 16) & 0xffff) ^ (uint16_t)crc),blocknum,packed->blocknum);
-        return(-1);
-    }
     mem = init_alloc_space(mem,packed,packed->allocsize,0);
     memalloc(mem,sizeof(*packed),0);
     raw->numtx = packed->numtx, raw->numrawvins = packed->numrawvins, raw->numrawvouts = packed->numrawvouts;
@@ -519,6 +513,12 @@ int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint
     }
     if ( packed->allocsize != mem->used )
         retval = -5, printf("allocsize error.%d != %ld\n",packed->allocsize,mem->used);
+    crc = _crc32(0,&((uint8_t *)packed)[sizeof(packed->crc16)],(int32_t)(packed->allocsize - sizeof(packed->crc16)));
+    if ( packed->crc16 != (((crc >> 16) & 0xffff) ^ (uint16_t)crc) || packed->blocknum != blocknum )
+    {
+        printf("allocsize.%d crc16 mismatch %u vs %u | blocknum.%u mismatch %u\n",packed->allocsize,packed->crc16,(((crc >> 16) & 0xffff) ^ (uint16_t)crc),blocknum,packed->blocknum);
+        return(-6);
+    }
     return(retval);
 }
 
