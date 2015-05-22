@@ -313,12 +313,12 @@ int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,
     int32_t sock,typeind = 0; struct endpoint epbits;
     if ( (sock= nn_socket(AF_SP,type)) < 0 )
         fprintf(stderr,"error getting socket %s\n",nn_errstr());
-    epbits = calc_epbits(SUPERNET.transport,0,SUPERNET.port + nn_portoffset(type) + typeind,type);
-    expand_epbits(endpoint,epbits);
     if ( bindflag != 0 )
     {
+        epbits = calc_epbits(SUPERNET.transport,0,SUPERNET.port + nn_portoffset(type) + typeind,type);
+        expand_epbits(endpoint,epbits);
         //set_endpointaddr(SUPERNET.transport,endpoint,"*",SUPERNET.port,type);
-         if ( nn_bind(sock,endpoint) < 0 )
+        if ( nn_bind(sock,endpoint) < 0 )
             fprintf(stderr,"error binding to relaypoint sock.%d type.%d to (%s) (%s) %s\n",sock,type,name,endpoint,nn_errstr());
         else fprintf(stderr,"BIND.(%s) <- %s\n",endpoint,name);
     }
@@ -1027,6 +1027,7 @@ void serverloop(void *_args)
     lbargs = &RELAYS.args[n++];
     if ( 1 && RAMCHAINS.pullnode[0] != 0 )
     {
+        endpoint[0] = 0;
         RELAYS.pushsock = pushsock = nn_createsocket(endpoint,0,"NN_PUSH",NN_PUSH,SUPERNET.port,sendtimeout,recvtimeout);
         //printf("my push endpoint.(%s)\n",endpoint), getchar();
         expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(RAMCHAINS.pullnode),SUPERNET.port + nn_portoffset(NN_PULL),NN_PULL));
