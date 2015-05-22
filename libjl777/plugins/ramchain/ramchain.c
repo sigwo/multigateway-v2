@@ -65,7 +65,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
             if ( rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum) > 0 )
             {
                 dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);
-                flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
+                flag = ledger_update(0,&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
             }
         }
         if ( ramchain->paused == 3 )
@@ -82,7 +82,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
 int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,uint32_t startblocknum,uint32_t endblocknum)
 {
     extern uint32_t Duplicate,Mismatch,Added;
-    struct ledger_info *ledger; struct alloc_space MEM; uint64_t balance; int32_t numlinks,numlinks2;
+    struct ledger_info *ledger; struct alloc_space MEM; uint64_t balance; //int32_t numlinks,numlinks2;
     if ( (ledger= ramchain->activeledger) == 0 )
     {
         sprintf(retbuf,"{\"error\":\"no active ledger\"}");
@@ -99,12 +99,12 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
     ledger->blocknum = ledger->startblocknum + (ledger->startblocknum > 1);
     printf("set %u to %u | sizes: uthash.%ld addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ledger->startblocknum,endblocknum,sizeof(UT_hash_handle),sizeof(struct ledger_addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
     ledger->endblocknum = (endblocknum > ledger->startblocknum) ? endblocknum : ledger->startblocknum;
-    if ( 0 )
+    /*if ( 0 )
     {
         numlinks = db777_linkDB(ledger->addrs.DB,ledger->revaddrs.DB,ledger->addrs.ind);
         numlinks2 = db777_linkDB(ledger->txids.DB,ledger->revtxids.DB,ledger->txids.ind);
         printf("addrs numlinks.%d, txids numlinks.%d\n",numlinks,numlinks2);
-    }
+    }*/
     balance = ledger_recalc_addrinfos(0,0,ledger,0);
     printf("balance recalculated %.8f\n",dstr(balance));
     sprintf(retbuf,"{\"result\":\"resumed\",\"ledgerhash\":\"%llx\",\"startblocknum\":%d,\"endblocknum\":%d,\"addrsum\":%.8f,\"ledger supply\":%.8f,\"diff\":%.8f,\"elapsed\":%.3f}",*(long long *)ledger->ledger.sha256,ledger->startblocknum,ledger->endblocknum,dstr(balance),dstr(ledger->voutsum) - dstr(ledger->spendsum),dstr(balance) - (dstr(ledger->voutsum) - dstr(ledger->spendsum)),(milliseconds() - ledger->startmilli)/1000.);
