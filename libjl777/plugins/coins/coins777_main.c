@@ -57,7 +57,7 @@ void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t block
 
 int32_t coins_idle(struct plugin_info *plugin)
 {
-    int32_t i,flag = 0; uint32_t width = 1000;
+    int32_t i,len,flag = 0; uint32_t width = 1000;
     struct coin777 *coin; struct ledger_info *ledger;
     for (i=0; i<COINS.num; i++)
     {
@@ -66,20 +66,25 @@ int32_t coins_idle(struct plugin_info *plugin)
             coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
             while ( coin->packedblocknum <= coin->RTblocknum && coin->packedblocknum < coin->packedend )
             {
-                ram_clear_rawblock(&coin->EMIT,1);
-                if ( rawblock_load(&coin->EMIT,coin->name,coin->serverport,coin->userpass,coin->packedblocknum) > 0 )
+                len = (int32_t)sizeof(coin->EMIT);
+                if ( ramchain_getpackedblock(&coin->EMIT,&len,&coin->ramchain,coin->packedblocknum) == 0 )
                 {
-                    if ( coin->packed[coin->packedblocknum] == 0 )
+                    ram_clear_rawblock(&coin->EMIT,1);
+                    if ( rawblock_load(&coin->EMIT,coin->name,coin->serverport,coin->userpass,coin->packedblocknum) > 0 )
                     {
-                        if ( (coin->packed[coin->packedblocknum]= coin777_packrawblock(coin,&coin->EMIT)) != 0 )
+                        if ( coin->packed[coin->packedblocknum] == 0 )
                         {
-                            ramchain_setpackedblock(&coin->ramchain,coin->packed[coin->packedblocknum],coin->packedblocknum);
-                            //coins_verify(coin,coin->packed[coin->packedblocknum],coin->packedblocknum);
-                            coin->packedblocknum += coin->packedincr;
+                            if ( (coin->packed[coin->packedblocknum]= coin777_packrawblock(coin,&coin->EMIT)) != 0 )
+                            {
+                                ramchain_setpackedblock(&coin->ramchain,coin->packed[coin->packedblocknum],coin->packedblocknum);
+                                //coins_verify(coin,coin->packed[coin->packedblocknum],coin->packedblocknum);
+                                coin->packedblocknum += coin->packedincr;
+                            }
+                            flag = 1;
+                            return(1);
                         }
-                        flag = 1;
-                    }
-                } else break;
+                    } else break;
+                }
                 coin->packedblocknum += coin->packedincr;
             }
             if ( 0 && flag == 0 && (ledger= coin->ramchain.activeledger) != 0 )
