@@ -62,7 +62,13 @@ int32_t coins_idle(struct plugin_info *plugin)
                             {
                                 ram_clear_rawblock(&coin->DECODE,1);
                                 if ( memcmp(&coin->DECODE,&coin->EMIT,sizeof(coin->DECODE)) != 0 )
+                                {
                                     printf("packblock decode error blocknum.%u\n",coin->readahead);
+                                    coin777_disprawblock(&coin->EMIT);
+                                    printf("----> \n");
+                                    coin777_disprawblock(&coin->DECODE);
+                                    while ( 1 ) sleep(1);
+                                }
                                 width++;
                                 if ( coin->readahead > width && coin->readahead-width > ledger->blocknum && coin->packed[coin->readahead-width] != 0 )
                                 {

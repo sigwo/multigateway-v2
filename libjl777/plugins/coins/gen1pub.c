@@ -383,30 +383,22 @@ void coin777_packtx(struct alloc_space *mem,struct packedtx *ptx,struct rawtx *t
 {
     //printf("packtx.(%s) numvins.%d numvouts.%d\n",tx->txidstr,tx->numvins,tx->numvouts);
     ptx->firstvin = tx->firstvin, ptx->numvins = tx->numvins, ptx->firstvout = tx->firstvout, ptx->numvouts = tx->numvouts;
-    if ( tx->txidstr[0] == 0 )
-        printf("null txid?\n");
-    else ptx->txidstroffset = coin777_packedoffset(mem,tx->txidstr,1);
+    ptx->txidstroffset = coin777_packedoffset(mem,tx->txidstr,1);
 }
 
 void coin777_packvout(struct alloc_space *mem,struct packedvout *pvo,struct rawvout *vo)
 {
     //printf("packvout.(%s) (%s) %.8f\n",vo->coinaddr,vo->script,dstr(vo->value));
     pvo->value = vo->value;
-    if ( vo->coinaddr[0] == 0 )
-        printf("null coinaddr?\n");
-    else pvo->coinaddroffset = coin777_packedoffset(mem,vo->coinaddr,0);
-    if ( vo->script[0] == 0 )
-        printf("null script?\n");
-    else pvo->scriptoffset = coin777_packedoffset(mem,vo->script,1);
+    pvo->coinaddroffset = coin777_packedoffset(mem,vo->coinaddr,0);
+    pvo->scriptoffset = coin777_packedoffset(mem,vo->script,1);
 }
 
 void coin777_packvin(struct alloc_space *mem,struct packedvin *pvi,struct rawvin *vi)
 {
     //printf("packvin.(%s) vout.%d\n",vi->txidstr,vi->vout);
     pvi->vout = vi->vout;
-    if ( vi->txidstr[0] == 0 )
-        printf("null spend txid?\n");
-    else pvi->txidstroffset = coin777_packedoffset(mem,vi->txidstr,1);
+    pvi->txidstroffset = coin777_packedoffset(mem,vi->txidstr,1);
 }
 
 void coin777_unpacktx(struct alloc_space *mem,struct packedtx *ptx,struct rawtx *tx)
@@ -476,9 +468,9 @@ int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed)
     struct packedtx *ptx; struct packedvin *pvi; struct packedvout *pvo;
     uint32_t i,txind,n,crc; int32_t retval = -1;
     crc = _crc32(0,(uint8_t *)&packed[sizeof(packed->crc16)],(int32_t)(packed->allocsize - sizeof(packed->crc16)));
-    if ( packed->crc16 != (((crc >> 16) & 0xffff) ^ (uint16_t)crc) )
+    if ( packed->crc16 != (((crc >> 16) & 0xffff) ^ (uint16_t)crc) || packed->blocknum != blocknum )
     {
-        printf("crc16 mismatch %u vs %u\n",packed->crc16,(((crc >> 16) & 0xffff) ^ (uint16_t)crc));
+        printf("crc16 mismatch %u vs %u | blocknum.%u mismatch %u\n",packed->crc16,(((crc >> 16) & 0xffff) ^ (uint16_t)crc),blocknum,packed->blocknum);
         return(-1);
     }
     mem = init_alloc_space(mem,packed,packed->allocsize,0);
@@ -522,6 +514,27 @@ int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed)
     if ( packed->allocsize != mem->used )
         retval = -5, printf("allocsize error.%d != %ld\n",packed->allocsize,mem->used);
     return(retval);
+}
+
+
+void coin777_disprawblock(struct rawblock *raw)
+{
+    struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; uint32_t i,txind,n;
+    tx = raw->txspace, vi = raw->vinspace, vo = raw->voutspace;
+    printf("blocknum.%u numtx.%u numvouts.%d numvins.%d | %s %s\n",raw->blocknum,raw->numtx,raw->numrawvouts,raw->numrawvins,raw->blockhash,raw->merkleroot);
+    if ( raw->numtx > 0 )
+    {
+        for (txind=0; txind<raw->numtx; txind++,tx++)
+        {
+            printf("(%s) numvouts.%d numvins.%d\n",tx->txidstr,tx->numvouts,tx->numvins);
+            if ( (n= tx->numvouts) > 0 )
+                for (i=0; i<n; i++,vo++)
+                    printf("(%s) (%s) %.8f\n",vo->coinaddr,vo->script,dstr(vo->value));
+            if ( (n= tx->numvins) > 0 )
+                for (i=0; i<n; i++,vi++)
+                    printf("(%s).v%d ",vi->txidstr,vi->vout);
+        }
+    }
 }
 
 #endif
