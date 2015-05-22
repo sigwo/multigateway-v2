@@ -83,12 +83,12 @@ int32_t coins_idle(struct plugin_info *plugin)
             }
             if ( flag == 0 && (ledger= coin->ramchain.activeledger) != 0 )
             {
-                printf("readahead.%d vs blocknum.%u\n",coin->readahead,ledger->blocknum);
+                //printf("readahead.%d vs blocknum.%u\n",coin->readahead,ledger->blocknum);
                 if ( coin->readahead <= ledger->blocknum )
                     coin->readahead = ledger->blocknum;
                 while ( coin->readahead <= ledger->blocknum+width )
                 {
-                    printf("readahead.%u %p\n",coin->readahead++,coin->packed[coin->readahead]);
+                    //printf("readahead.%u %p\n",coin->readahead++,coin->packed[coin->readahead]);
                     if ( coin->packed[coin->readahead] == 0 )
                     {
                         ram_clear_rawblock(&coin->EMIT,1);
