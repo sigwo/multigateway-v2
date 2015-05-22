@@ -381,14 +381,14 @@ int32_t coin777_unpackoffset(struct alloc_space *mem,char *str,int32_t convflag,
 
 void coin777_packtx(struct alloc_space *mem,struct packedtx *ptx,struct rawtx *tx)
 {
-    //printf("packtx.(%s) numvins.%d numvouts.%d\n",tx->txidstr,tx->numvins,tx->numvouts);
+printf("packtx.(%s) numvins.%d numvouts.%d\n",tx->txidstr,tx->numvins,tx->numvouts);
     ptx->firstvin = tx->firstvin, ptx->numvins = tx->numvins, ptx->firstvout = tx->firstvout, ptx->numvouts = tx->numvouts;
     ptx->txidstroffset = coin777_packedoffset(mem,tx->txidstr,1);
 }
 
 void coin777_packvout(struct alloc_space *mem,struct packedvout *pvo,struct rawvout *vo)
 {
-    //printf("packvout.(%s) (%s) %.8f\n",vo->coinaddr,vo->script,dstr(vo->value));
+printf("packvout.(%s) (%s) %.8f\n",vo->coinaddr,vo->script,dstr(vo->value));
     pvo->value = vo->value;
     pvo->coinaddroffset = coin777_packedoffset(mem,vo->coinaddr,0);
     pvo->scriptoffset = coin777_packedoffset(mem,vo->script,1);
@@ -396,7 +396,7 @@ void coin777_packvout(struct alloc_space *mem,struct packedvout *pvo,struct rawv
 
 void coin777_packvin(struct alloc_space *mem,struct packedvin *pvi,struct rawvin *vi)
 {
-    //printf("packvin.(%s) vout.%d\n",vi->txidstr,vi->vout);
+printf("packvin.(%s) vout.%d\n",vi->txidstr,vi->vout);
     pvi->vout = vi->vout;
     pvi->txidstroffset = coin777_packedoffset(mem,vi->txidstr,1);
 }
@@ -439,7 +439,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     packed->voutspace_offsets = (uint32_t)mem->used, pvo = memalloc(mem,raw->numrawvouts*sizeof(struct packedvout),0);
     packed->vinspace_offsets = (uint32_t)mem->used, pvi = memalloc(mem,raw->numrawvins*sizeof(struct packedvin),0);
     tx = raw->txspace, vi = raw->vinspace, vo = raw->voutspace;
-   // printf("blocknum.%u numtx.%u numvouts.%d numvins.%d | %s\n",raw->blocknum,raw->numtx,raw->numrawvouts,raw->numrawvins,tx[0].txidstr);
+printf("blocknum.%u numtx.%u numvouts.%d numvins.%d | %s\n",raw->blocknum,raw->numtx,raw->numrawvouts,raw->numrawvins,tx[0].txidstr);
     if ( raw->numtx > 0 )
     {
         for (txind=0; txind<raw->numtx; txind++,tx++,ptx++)
