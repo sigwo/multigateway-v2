@@ -19,7 +19,7 @@
 #include "ledger777.c"
 
 int32_t ramchain_init(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum,uint32_t minconfirms);
-int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger);
+int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,struct packedblock *packed);
 int32_t ramchain_func(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *method);
 int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,uint32_t startblocknum,uint32_t endblocknum);
 
@@ -34,7 +34,7 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
 #undef DEFINES_ONLY
 #endif
 
-int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
+int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,struct packedblock *packed)
 {
     struct alloc_space MEM; uint32_t blocknum; double startmilli; int32_t lag,syncflag,flag = 0;
     blocknum = ledger->blocknum;
@@ -63,7 +63,9 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger)
         {
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
             startmilli = milliseconds();
-            if ( rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum) > 0 )
+            ram_clear_rawblock(&ramchain->EMIT,0);
+            coin777_unpackblock(&ramchain->EMIT,packed);
+            //if ( rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum) > 0 )
             {
                 dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);
                 flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);

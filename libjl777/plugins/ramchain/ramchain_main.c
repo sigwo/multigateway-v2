@@ -31,14 +31,14 @@ char *PLUGNAME(_authmethods)[] = { PUB_METHODS, "signrawtransaction", "dumpprivk
 int32_t ramchain_idle(struct plugin_info *plugin)
 {
     int32_t i,flag = 0;
-    struct coin777 *coin; struct ramchain *ramchain; struct ledger_info *ledger;
+    struct coin777 *coin; struct ramchain *ramchain; struct ledger_info *ledger; struct packedblock *packed;
     for (i=0; i<COINS.num; i++)
     {
         if ( (coin= COINS.LIST[i]) != 0 )
         {
             ramchain = &coin->ramchain;
-            if ( ramchain->readyflag != 0 && (ledger= ramchain->activeledger) != 0 )
-                 flag += ramchain_update(ramchain,ledger);
+            if ( ramchain->readyflag != 0 && (ledger= ramchain->activeledger) != 0 && coin->packed != 0 && (packed= coin->packed[ledger->blocknum]) != 0 )
+                 flag += ramchain_update(ramchain,ledger,packed);
         }
     }
     return(flag);

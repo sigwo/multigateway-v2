@@ -55,10 +55,14 @@ int32_t coins_idle(struct plugin_info *plugin)
                 {
                     if ( coin->packed[coin->readahead] == 0 )
                     {
+                        ram_clear_rawblock(&coin->EMIT,1);
                         if ( rawblock_load(&coin->EMIT,coin->name,coin->serverport,coin->userpass,coin->readahead) > 0 )
                         {
                             if ( (coin->packed[coin->readahead]= coin777_packrawblock(&coin->EMIT)) != 0 )
                             {
+                                ram_clear_rawblock(&coin->DECODE,1);
+                                if ( memcmp(&coin->DECODE,&coin->EMIT,sizeof(coin->DECODE)) != 0 )
+                                    printf("packblock decode error blocknum.%u\n",coin->readahead);
                                 width++;
                                 if ( coin->readahead > width && coin->readahead-width > ledger->blocknum && coin->packed[coin->readahead-width] != 0 )
                                 {
