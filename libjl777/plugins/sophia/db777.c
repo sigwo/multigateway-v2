@@ -605,7 +605,8 @@ int32_t db777_flush(void *transactions,struct db777 *DB)
         }
         db777_unlock(DB);
     }
-    printf("(%s %d).%d ",DB->name,flushed,n);
+   if ( Debuglevel > 2 )
+       printf("(%s %d).%d ",DB->name,flushed,n);
     return(-numerrs);
 }
 
