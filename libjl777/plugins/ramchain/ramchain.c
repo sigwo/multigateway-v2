@@ -64,7 +64,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,str
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
             startmilli = milliseconds();
             ram_clear_rawblock(&ramchain->EMIT,0);
-            coin777_unpackblock(&ramchain->EMIT,packed);
+            coin777_unpackblock(&ramchain->EMIT,packed,blocknum);
             //if ( rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum) > 0 )
             {
                 dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);

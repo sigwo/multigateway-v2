@@ -136,7 +136,7 @@ void rawblock_patch(struct rawblock *raw);
 void update_sha256(unsigned char hash[256 >> 3],struct sha256_state *state,unsigned char *src,int32_t len);
 struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize);
 struct packedblock *coin777_packrawblock(struct rawblock *raw);
-int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed);
+int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint32_t blocknum);
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);
 

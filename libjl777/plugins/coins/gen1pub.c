@@ -462,7 +462,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     return(packed);
 }
 
-int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed)
+int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint32_t blocknum)
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct alloc_space MEM,*mem = &MEM;
     struct packedtx *ptx; struct packedvin *pvi; struct packedvout *pvo;
