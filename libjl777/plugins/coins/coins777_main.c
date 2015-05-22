@@ -23,10 +23,37 @@
 #include "msig.c"
 #undef DEFINES_ONLY
 
-int32_t coins_idle(struct plugin_info *plugin) { return(0); }
+int32_t coins_idle(struct plugin_info *plugin)
+{
+    int32_t i,flag = 0;
+    struct coin777 *coin;
+    for (i=0; i<COINS.num; i++)
+    {
+        if ( (coin= COINS.LIST[i]) != 0 && coin->packed != 0 )
+        {
+            coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
+            while ( coin->packedblocknum <= coin->RTblocknum && coin->packedblocknum < coin->packedend )
+            {
+                if ( rawblock_load(&coin->EMIT,coin->name,coin->serverport,coin->userpass,coin->packedblocknum) > 0 )
+                {
+                    if ( coin->packed[coin->packedblocknum] == 0 )
+                    {
+                        if ( (coin->packed[coin->packedblocknum]= coin777_packrawblock(&coin->EMIT)) != 0 )
+                        {
+                            coin->packedblocknum += coin->packedincr;
+                        }
+                        return(1);
+                    }
+                } else break;
+                coin->packedblocknum += coin->packedincr;
+            }
+        }
+    }
+    return(flag);
+}
 
 STRUCTNAME COINS;
-char *PLUGNAME(_methods)[] = { "acctpubkeys", "sendrawtransaction" };
+char *PLUGNAME(_methods)[] = { "acctpubkeys", "sendrawtransaction", "packblocks" };
 char *PLUGNAME(_pubmethods)[] = { "acctpubkeys" };
 char *PLUGNAME(_authmethods)[] = { "acctpubkeys" };
 
@@ -212,7 +239,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
 {
     char *resultstr,sender[MAX_JSON_FIELD],*methodstr,zerobuf[1],*coinstr,*str = 0;
     cJSON *array,*item;
-    int32_t i,n,j = 0;
+    int32_t i,n,j = 0; uint32_t newmax;
     struct coin777 *coin;
     retbuf[0] = 0;
     if ( initflag > 0 )
@@ -263,6 +290,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
             if ( coinstr == 0 )
                 coinstr = zerobuf;
+            else coin = coin777_find(coinstr,1);
             if ( strcmp(methodstr,"acctpubkeys") == 0 )
             {
                 if ( SUPERNET.gatewayid >= 0 )
@@ -279,6 +307,21 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                         } else sprintf(retbuf,"{\"error\":\"no get_msig_pubkeys result\",\"method\":\"%s\"}",methodstr);
                     } else sprintf(retbuf,"{\"error\":\"no coin777\",\"method\":\"%s\"}",methodstr);
                 } else sprintf(retbuf,"{\"error\":\"gateway only method\",\"method\":\"%s\"}",methodstr);
+            }
+            else if ( strcmp(methodstr,"packblocks") == 0 )
+            {
+                coin->packedblocknum = coin->packedstart = get_API_int(cJSON_GetObjectItem(json,"start"),0);
+                coin->packedend = get_API_int(cJSON_GetObjectItem(json,"end"),1000000000);
+                coin->packedincr = get_API_int(cJSON_GetObjectItem(json,"incr"),1);
+                coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
+                newmax = (uint32_t)(coin->RTblocknum * 1.1);
+                if ( coin->maxpackedblocks < newmax )
+                {
+                    coin->packed = realloc(coin->packed,sizeof(*coin->packed) * newmax);
+                    memset(&coin->packed[coin->maxpackedblocks],0,sizeof(*coin->packed) * (newmax - coin->maxpackedblocks));
+                    coin->maxpackedblocks = newmax;
+                }
+                sprintf(retbuf,"{\"result\":\"packblocks\",\"start\":\"%u\",\"end\":\"%u\",\"incr\":\"%u\",\"RTblocknum\":\"%u\"}",coin->packedstart,coin->packedend,coin->packedincr,coin->RTblocknum);
             }
             else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);
             if ( str != 0 )

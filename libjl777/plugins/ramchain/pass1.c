@@ -322,5 +322,101 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
     return(block);
 }
 
+/*
+uint32_t ledger_unpacktx(uint8_t *hash,struct sha256_state *state,struct alloc_space *mem,struct ledger_txinfo *tx)
+{
+    int32_t allocsize;
+    allocsize = sizeof(*tx) - sizeof(tx->txid) + tx->txidlen;
+    memcpy(memalloc(mem,allocsize,0),tx,allocsize);
+    update_sha256(hash,state,(uint8_t *)tx,allocsize);
+    return(allocsize);
+}
+
+uint32_t ledger_unpackspend(uint8_t *hash,struct sha256_state *state,struct alloc_space *mem,struct ledger_spendinfo *spend)
+{
+    memcpy(memalloc(mem,sizeof(spend->unspentind),0),&spend->unspentind,sizeof(spend->unspentind));
+    update_sha256(hash,state,(uint8_t *)&spend->unspentind,sizeof(spend->unspentind));
+    return(sizeof(spend->unspentind));
+}
+
+uint32_t ledger_unpackvoutstr(struct alloc_space *mem,uint32_t rawind,int32_t newitem,uint8_t *str,uint16_t len)
+{
+    int32_t enable_stringout = 0;
+    uint8_t blen,extra = 1;
+    if ( newitem != 0 )
+    {
+        rawind |= (1 << 31);
+        memcpy(memalloc(mem,sizeof(rawind),0),&rawind,sizeof(rawind));
+        if ( enable_stringout != 0 )
+        {
+            extra = 1;
+            if ( len < 0xfd )
+            {
+                blen = len;
+                memcpy(memalloc(mem,1,0),&blen,1);
+            }
+            else
+            {
+                blen = 0xfd;
+                printf("long string len.%d %llx\n",len,*(long long *)str);
+                memcpy(memalloc(mem,1,0),&blen,1);
+                memcpy(memalloc(mem,2,0),&len,2), extra += 2;
+            }
+            memcpy(memalloc(mem,len,0),str,len);
+            return(sizeof(rawind) + extra + len);
+        }
+    }
+    else memcpy(memalloc(mem,sizeof(rawind),0),&rawind,sizeof(rawind));
+    return(sizeof(rawind));
+}
+
+uint32_t ledger_unpackvout(uint8_t *hash,struct sha256_state *state,struct alloc_space *mem,struct ledger_voutdata *vout)
+{
+    uint32_t allocsize; void *ptr;
+    ptr = memalloc(mem,sizeof(vout->U.value),0);
+    memcpy(ptr,&vout->U.value,sizeof(vout->U.value)), allocsize = sizeof(vout->U.value);
+    allocsize += ledger_packvoutstr(mem,vout->U.ind,vout->newaddr,(uint8_t *)vout->coinaddr,vout->addrlen);
+    allocsize += ledger_packvoutstr(mem,vout->scriptind,vout->newscript,vout->script,vout->scriptlen);
+    update_sha256(hash,state,ptr,allocsize);
+    return(allocsize);
+}
+
+struct ledger_blockinfo *ledger_block_pass1(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,struct rawblock *emit,uint32_t blocknum)
+{
+    struct ledger_blockinfo *block = 0;
+    uint32_t i,txidind,txind,n;
+    if ( (block= ledger_getblock(mem->ptr,(int32_t)mem->size,ledger,blocknum)) != 0 )
+    {
+        if ( block->numtx > 0 )
+        {
+            for (txind=0; txind<block->numtx; txind++)
+            {
+                ledger_gettx(ledger,mem,txidind,tx->txidstr,ledger->unspentmap.ind+1,tx->numvouts,ledger->spentbits.ind+1,tx->numvins,blocknum);
+                if ( (n= tx->numvouts) > 0 )
+                    for (i=0; i<n; i++,vo++,block->numvouts++)
+                    {
+                        addrinfo_update(ledger,coinaddr,vout.addrlen,value,unspentind,vout.U.ind,blocknum,txidstr,v,scriptstr,txind,vout.U.scriptind);
+                        //ledger_addunspent(&block->numaddrs,&block->numscripts,ledger,mem,txidind,i,++ledger->unspentmap.ind,vo->coinaddr,vo->script,vo->value,blocknum,tx->txidstr,txind);
+                    }
+                if ( (n= tx->numvins) > 0 )
+                    for (i=0; i<n; i++,vi++,block->numvins++)
+                    {
+                        ledger_spentbits(ledger,spend.unspentind,1);
+                        if ( Debuglevel > 2 )
+                            printf("spent_txidstr.(%s) -> spent_txidind.%u firstvout.%d\n",spent_txidstr,spent_txidind,spend.unspentind-spent_vout);
+                        if ( (value= ledger_unspentvalue(&addrind,&scriptind,ledger,spend.unspentind)) != 0 && addrind > 0 )
+                        {
+                            ledger->spendsum += value;
+                            balance = addrinfo_update(ledger,0,0,value,spend.unspentind | (1 << 31),addrind,blocknum,spent_txidstr,spent_vout,txidstr,v,scriptind);
+                            if ( Debuglevel > 2 )
+                                printf("addrind.%u %.8f\n",addrind,dstr(balance));
+                        } else printf("error getting unspentmap for unspentind.%u (%s).v%d\n",spend.unspentind,spent_txidstr,spent_vout);
+                        //ledger_addspend(ledger,mem,txidind,++ledger->spentbits.ind,vi->txidstr,vi->vout,blocknum,tx->txidstr,i);
+                    }
+            }
+        }
+    }
+}*/
+
 #endif
 #endif
