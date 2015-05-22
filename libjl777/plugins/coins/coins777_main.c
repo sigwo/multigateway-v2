@@ -30,10 +30,10 @@ void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t block
     coin777_unpackblock(&coin->DECODE,packed,blocknum);
     if ( memcmp(&coin->DECODE,&coin->EMIT,sizeof(coin->DECODE)) != 0 )
     {
-        for (i=0; i<packed->allocsize; i++)
-            if ( ((uint8_t *)&coin->DECODE)[i] != ((uint8_t *)&coin->EMIT)[i] )
+        for (i=0; i<sizeof(coin->DECODE); i++)
+            if ( ((uint8_t *)&coin->DECODE)[i] != ((uint8_t *)&coin->DECODE)[i] )
                 break;
-        printf("packblock decode error blocknum.%u at position.%d allocsize.%d\n",coin->readahead,i,packed->allocsize);
+        printf("packblock decode error blocknum.%u\n",coin->readahead);
         coin777_disprawblock(&coin->EMIT);
         printf("----> \n");
         coin777_disprawblock(&coin->DECODE);
@@ -60,7 +60,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                     {
                         if ( (coin->packed[coin->packedblocknum]= coin777_packrawblock(&coin->EMIT)) != 0 )
                         {
-                            coins_verify(coin,coin->packed[coin->packedblocknum],coin->packedblocknum);
+                            //coins_verify(coin,coin->packed[coin->packedblocknum],coin->packedblocknum);
                             coin->packedblocknum += coin->packedincr;
                         }
                         flag = 1;
@@ -81,7 +81,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                         {
                             if ( (coin->packed[coin->readahead]= coin777_packrawblock(&coin->EMIT)) != 0 )
                             {
-                                coins_verify(coin,coin->packed[coin->readahead],coin->readahead);
+                                //coins_verify(coin,coin->packed[coin->readahead],coin->readahead);
                                 width++;
                                 if ( coin->readahead > width && coin->readahead-width > ledger->blocknum && coin->packed[coin->readahead-width] != 0 )
                                 {
