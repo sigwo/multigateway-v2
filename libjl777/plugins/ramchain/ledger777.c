@@ -308,8 +308,7 @@ uint32_t ledger_addtx(int32_t pass,struct ledger_info *ledger,struct alloc_space
          memset(&tx,0,sizeof(tx));
         tx.firstvout = totalvouts, tx.firstvin = totalspends, tx.numvouts = numvouts, tx.numvins = numvins;
         tx.txidlen = txidlen, memcpy(tx.txid,txid,txidlen);
-        if ( pass == 1 )
-            ledger_upairset(ledger,txidind+1,totalvouts + numvouts,totalspends + numvins);
+        ledger_upairset(ledger,txidind+1,totalvouts + numvouts,totalspends + numvins);
         return(ledger_packtx(ledger->txoffsets.sha256,&ledger->txoffsets.state,mem,&tx));
     } else printf("ledger_tx: (%s) mismatched txidind, expected %u got %u\n",txidstr,txidind,checkind), debugstop();
     return(0);
