@@ -23,6 +23,20 @@
 #include "msig.c"
 #undef DEFINES_ONLY
 
+void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t blocknum)
+{
+    ram_clear_rawblock(&coin->DECODE,1);
+    coin777_unpackblock(&coin->DECODE,packed,blocknum);
+    if ( memcmp(&coin->DECODE,&coin->EMIT,sizeof(coin->DECODE)) != 0 )
+    {
+        printf("packblock decode error blocknum.%u\n",coin->readahead);
+        coin777_disprawblock(&coin->EMIT);
+        printf("----> \n");
+        coin777_disprawblock(&coin->DECODE);
+        while ( 1 ) sleep(1);
+    } else printf("COMPARED! ");
+}
+
 int32_t coins_idle(struct plugin_info *plugin)
 {
     int32_t i,flag = 0; uint32_t width = 1000;
@@ -40,6 +54,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                     {
                         if ( (coin->packed[coin->packedblocknum]= coin777_packrawblock(&coin->EMIT)) != 0 )
                         {
+                            coins_verify(coin,coin->packed[coin->packedblocknum],coin->packedblocknum);
                             coin->packedblocknum += coin->packedincr;
                         }
                         flag = 1;
@@ -60,15 +75,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                         {
                             if ( (coin->packed[coin->readahead]= coin777_packrawblock(&coin->EMIT)) != 0 )
                             {
-                                ram_clear_rawblock(&coin->DECODE,1);
-                                if ( memcmp(&coin->DECODE,&coin->EMIT,sizeof(coin->DECODE)) != 0 )
-                                {
-                                    printf("packblock decode error blocknum.%u\n",coin->readahead);
-                                    coin777_disprawblock(&coin->EMIT);
-                                    printf("----> \n");
-                                    coin777_disprawblock(&coin->DECODE);
-                                    while ( 1 ) sleep(1);
-                                } else printf("COMPARED! ");
+                                coins_verify(coin,coin->packed[coin->readahead],coin->readahead);
                                 width++;
                                 if ( coin->readahead > width && coin->readahead-width > ledger->blocknum && coin->packed[coin->readahead-width] != 0 )
                                 {
