@@ -1027,13 +1027,18 @@ void serverloop(void *_args)
     lbargs = &RELAYS.args[n++];
     if ( 1 && RAMCHAINS.pullnode[0] != 0 )
     {
-        endpoint[0] = 0;
-        RELAYS.pushsock = pushsock = nn_createsocket(endpoint,0,"NN_PUSH",NN_PUSH,SUPERNET.port,sendtimeout,recvtimeout);
         //printf("my push endpoint.(%s)\n",endpoint), getchar();
-        expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(RAMCHAINS.pullnode),SUPERNET.port + nn_portoffset(NN_PULL),NN_PULL));
-        nn_connect(pushsock,endpoint);
         if ( strcmp(RAMCHAINS.pullnode,SUPERNET.myipaddr) == 0 )
+        {
+            expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(RAMCHAINS.pullnode),SUPERNET.port + nn_portoffset(NN_PULL),NN_PULL));
+            //nn_connect(pushsock,endpoint);
             RELAYS.pullsock = nn_createsocket(endpoint,1,"NN_PULL",NN_PULL,SUPERNET.port,sendtimeout,recvtimeout);
+        }
+        else
+        {
+            endpoint[0] = 0;
+            RELAYS.pushsock = pushsock = nn_createsocket(endpoint,0,"NN_PUSH",NN_PUSH,SUPERNET.port,sendtimeout,recvtimeout);
+        }
     } else RELAYS.pullsock = RELAYS.pushsock = pushsock = -1;
     RELAYS.querypeers = peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allpeers_processor);

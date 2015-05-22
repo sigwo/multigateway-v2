@@ -49,15 +49,11 @@ void ramchain_setpackedblock(struct ramchain *ramchain,struct packedblock *packe
         db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&blocknum,sizeof(blocknum),packed,packed->allocsize);
     if ( RELAYS.pushsock >= 0 )
     {
-        printf("PUSHED.(%d) blocknum.%u | len %d %d %d %.8f %u %u %u %u %u %u %d\n",packed->blocknum,packed->crc16,packed->numtx,packed->numrawvins,packed->numrawvouts,dstr(packed->minted),packed->timestamp,packed->blockhash_offset,packed->merkleroot_offset,packed->txspace_offsets,packed->vinspace_offsets,packed->voutspace_offsets,packed->allocsize);
+        printf("PUSHED.(%d) blocknum.%u | crc.%u %d %d %d %.8f %u %u %u %u %u %u %d\n",packed->allocsize,packed->blocknum,packed->crc16,packed->numtx,packed->numrawvins,packed->numrawvouts,dstr(packed->minted),packed->timestamp,packed->blockhash_offset,packed->merkleroot_offset,packed->txspace_offsets,packed->vinspace_offsets,packed->voutspace_offsets,packed->allocsize);
         nn_send(RELAYS.pushsock,(void *)packed,packed->allocsize,0);
     }
     
 }
-
-    uint16_t crc16,numtx,numrawvins,numrawvouts;
-    uint64_t minted;
-    uint32_t blocknum,timestamp,blockhash_offset,merkleroot_offset,txspace_offsets,vinspace_offsets,voutspace_offsets,allocsize;
 
 void coin777_pulldata(struct packedblock *packed,int32_t len)
 {
