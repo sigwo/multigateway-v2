@@ -190,13 +190,8 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
         if ( (block= ledger_setblock(dispflag,ledger,mem,emit,blocknum)) != 0 )
         {
             //ledger->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);
-            if ( syncflag != 0 )
-            {
-                ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,ledger->numsyncs);
-                db777_sync(ledger->DBs.transactions,&ledger->DBs,DB777_FLUSH);
-                ledger->DBs.transactions = 0;
-            }
-            else ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,-1);
+            ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,(syncflag != 0) ? ledger->numsyncs : -1);
+            db777_sync(ledger->DBs.transactions,&ledger->DBs,DB777_FLUSH), ledger->DBs.transactions = 0;
             dxblend(&ledger->calc_elapsed,(milliseconds() - startmilli),.99);
             ledger->totalsize += block->allocsize;
             estimate = estimate_completion(ledger->startmilli,blocknum - ledger->startblocknum,RTblocknum-blocknum)/60000;
