@@ -459,7 +459,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     totalsizes += mem->size, totalpacked += mem->used;
     //for (i=0; i<mem->used; i++)
     //    printf("%02x ",((uint8_t *)mem->ptr)[i]);
-    printf("block.%u packed sizes: block.%ld tx.%ld vin.%ld vout.%ld | crc.%u mem->size %ld -> %d %s vs %s [%.3f]\n",raw->blocknum,sizeof(struct packedblock),sizeof(struct packedtx),sizeof(struct packedvout),sizeof(struct packedvin),packed->crc16,mem->size,packed->allocsize,_mbstr(totalsizes),_mbstr2(totalpacked),(double)totalsizes / totalpacked);
+    printf("block.%u packed sizes: block.%ld tx.%ld vin.%ld vout.%ld | crc.%-5u mem->size %ld -> %5d %8s vs %8s [%.3fx]\n",raw->blocknum,sizeof(struct packedblock),sizeof(struct packedtx),sizeof(struct packedvout),sizeof(struct packedvin),packed->crc16,mem->size,packed->allocsize,_mbstr(totalsizes),_mbstr2(totalpacked),(double)totalsizes / totalpacked);
     packed = malloc(mem->used), memcpy(packed,mem->ptr,mem->used), free(mem);
     return(packed);
 }

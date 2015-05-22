@@ -61,17 +61,17 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,str
         }
         if ( blocknum <= (ramchain->RTblocknum - ramchain->minconfirms) )
         {
-            //printf("blocknum.%u vs RT.%u\n",blocknum,ramchain->RTblocknum);
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
             startmilli = milliseconds();
-            ram_clear_rawblock(&ramchain->EMIT,0);
-            coin777_unpackblock(&ramchain->EMIT,packed,blocknum);
-            //if ( rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum) > 0 )
+            if ( packed != 0 )
             {
-                dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);
-                flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
+                ram_clear_rawblock(&ramchain->EMIT,0);
+                coin777_unpackblock(&ramchain->EMIT,packed,blocknum);
             }
-        } //else printf("blocknum.%u vs RT.%u\n",blocknum,ramchain->RTblocknum);
+            else rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum);
+            dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);
+            flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
+        }
         if ( ramchain->paused == 3 )
         {
             ledger_free(ramchain->activeledger,1), ramchain->activeledger = 0;
