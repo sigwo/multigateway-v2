@@ -156,6 +156,12 @@ uint32_t ledger_rawind(uint32_t *firstblocknump,int32_t writeflag,void *transact
             *firstblocknump = blocknum;
         if ( Debuglevel > 2 || blocknum == 0 )
             printf("%p add rawind.%d keylen.%d: %llx | first appearance block.%u\n",hash->DB,rawind,keylen,*(long long *)key,blocknum);
+        if ( hash->fp != 0 )
+        {
+            //fseek(hash->fp,rawind * hash->valuesize,SEEK_SET);
+            //if ( fwrite(key,1,keylen,hash->fp) != keylen )
+            //    printf("error writing %s.%u to file at offset.%ld\n",hash->name,rawind,rawind * hash->valuesize);
+        }
         if ( db777_add(1,transactions,hash->DB,key,keylen,pair,sizeof(pair)) != 0 )
             printf("error adding to %s DB for rawind.%d keylen.%d\n",hash->name,rawind,keylen);
         else

@@ -76,6 +76,7 @@ struct ledger_state
     uint8_t sha256[256 >> 3];
     struct sha256_state state;
     struct db777 *DB;
+    FILE *fp;
     int32_t ind,allocsize;
 };
 
