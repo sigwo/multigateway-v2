@@ -1030,13 +1030,13 @@ void serverloop(void *_args)
         //printf("my push endpoint.(%s)\n",endpoint), getchar();
         if ( strcmp(RAMCHAINS.pullnode,SUPERNET.myipaddr) == 0 )
         {
-            expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(RAMCHAINS.pullnode),SUPERNET.port + nn_portoffset(NN_PULL),NN_PULL));
+            expand_epbits(endpoint,calc_epbits("tcp",0,SUPERNET.port + nn_portoffset(NN_PULL),NN_PULL));
             //nn_connect(pushsock,endpoint);
             RELAYS.pullsock = nn_createsocket(endpoint,1,"NN_PULL",NN_PULL,SUPERNET.port,sendtimeout,recvtimeout);
         }
         else
         {
-            endpoint[0] = 0;
+            expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(RAMCHAINS.pullnode),SUPERNET.port + nn_portoffset(NN_PULL),NN_PULL));
             RELAYS.pushsock = pushsock = nn_createsocket(endpoint,0,"NN_PUSH",NN_PUSH,SUPERNET.port,sendtimeout,recvtimeout);
         }
     } else RELAYS.pullsock = RELAYS.pushsock = pushsock = -1;

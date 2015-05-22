@@ -76,7 +76,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                         {
                             if ( (coin->packed[coin->packedblocknum]= coin777_packrawblock(coin,&coin->EMIT)) != 0 )
                             {
-                                ramchain_setpackedblock(&coin->ramchain,coin->packed[coin->packedblocknum],coin->packedblocknum);
+                                //ramchain_setpackedblock(&coin->ramchain,coin->packed[coin->packedblocknum],coin->packedblocknum);
                                 //coins_verify(coin,coin->packed[coin->packedblocknum],coin->packedblocknum);
                                 coin->packedblocknum += coin->packedincr;
                             }
@@ -102,7 +102,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                         {
                             if ( (coin->packed[coin->readahead]= coin777_packrawblock(coin,&coin->EMIT)) != 0 )
                             {
-                                ramchain_setpackedblock(&coin->ramchain,coin->packed[coin->readahead],coin->readahead);
+                                //ramchain_setpackedblock(&coin->ramchain,coin->packed[coin->readahead],coin->readahead);
                                 //coins_verify(coin,coin->packed[coin->readahead],coin->readahead);
                                 width++;
                                 if ( coin->readahead > width && coin->readahead-width > ledger->blocknum && coin->packed[coin->readahead-width] != 0 )
