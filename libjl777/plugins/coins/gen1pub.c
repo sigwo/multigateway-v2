@@ -471,7 +471,7 @@ int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint
     uint32_t i,txind,n,crc; int32_t retval = -1;
     printf("***************\n\n");
     for (i=0; i<packed->allocsize; i++)
-        printf("%02x ",((uint8_t *)mem->ptr)[i]);
+        printf("%02x ",((uint8_t *)packed)[i]);
     printf("unpack %d\n",packed->allocsize);
     crc = _crc32(0,(uint8_t *)&packed[sizeof(packed->crc16)],(int32_t)(packed->allocsize - sizeof(packed->crc16)));
     if ( packed->crc16 != (((crc >> 16) & 0xffff) ^ (uint16_t)crc) || packed->blocknum != blocknum )

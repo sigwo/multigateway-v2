@@ -33,6 +33,7 @@ void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t block
         coin777_disprawblock(&coin->EMIT);
         printf("----> \n");
         coin777_disprawblock(&coin->DECODE);
+        printf("mismatch\n");
         while ( 1 ) sleep(1);
     } else printf("COMPARED! ");
 }
