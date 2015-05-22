@@ -1333,7 +1333,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! (%s) initflag.%d process %s\n",plugin->name,jsonstr,initflag,plugin->name);
     if ( initflag > 0 )
     {
-        Debuglevel = 2;
         SUPERNET.disableNXT = get_API_int(cJSON_GetObjectItem(json,"disableNXT"),0);
         SUPERNET.ismainnet = get_API_int(cJSON_GetObjectItem(json,"MAINNET"),1);
         SUPERNET.usessl = get_API_int(cJSON_GetObjectItem(json,"USESSL"),0);
@@ -1372,7 +1371,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         copy_cJSON(SUPERNET.DATADIR,cJSON_GetObjectItem(json,"DATADIR"));
         if ( SUPERNET.DATADIR[0] == 0 )
             strcpy(SUPERNET.DATADIR,"archive");
-        Debuglevel = get_API_int(cJSON_GetObjectItem(json,"debug"),0);
+        Debuglevel = get_API_int(cJSON_GetObjectItem(json,"debug"),Debuglevel);
         if ( (fp= fopen("libs/websocketd","rb")) != 0 )
         {
             fclose(fp);
