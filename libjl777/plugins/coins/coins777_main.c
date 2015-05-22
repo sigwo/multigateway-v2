@@ -53,7 +53,7 @@ int32_t coins_idle(struct plugin_info *plugin)
 }
 
 STRUCTNAME COINS;
-char *PLUGNAME(_methods)[] = { "acctpubkeys", "sendrawtransaction", "packblocks" };
+char *PLUGNAME(_methods)[] = { "acctpubkeys",  "packblocks", "sendrawtransaction" };
 char *PLUGNAME(_pubmethods)[] = { "acctpubkeys" };
 char *PLUGNAME(_authmethods)[] = { "acctpubkeys" };
 
@@ -286,7 +286,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             zerobuf[0] = 0;
             str = 0;
-            printf("INSIDE COINS.(%s)\n",jsonstr);
+            printf("INSIDE COINS.(%s) methods.%ld\n",jsonstr,sizeof(coins_methods)/sizeof(*coins_methods));
             copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
             if ( coinstr == 0 )
                 coinstr = zerobuf;
