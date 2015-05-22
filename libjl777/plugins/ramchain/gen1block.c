@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include "coins777.c"
 #include "system777.c"
+#include "pass1.c"
 
 struct ledger_blockinfo
 {
@@ -329,12 +330,12 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
         ledger->unspentmap.ind = unspentind;
         if ( db777_add(-1,ledger->DBs.transactions,ledger->unspentmap.DB,&unspentind,sizeof(unspentind),&vout.U,sizeof(vout.U)) != 0 )
             printf("error saving unspentmap (%s) %u -> %u %.8f\n",ledger->DBs.coinstr,unspentind,vout.U.ind,dstr(value));
-        /*if ( pass == 1 )
+        //if ( pass == 1 )
         {
             if ( Debuglevel > 2 )
                 printf("txidind.%u v.%d unspent.%d (%s).%u (%s).%u %.8f | %ld\n",txidind,v,unspentind,coinaddr,vout.U.ind,scriptstr,vout.scriptind,dstr(value),sizeof(vout.U));
             addrinfo_update(ledger,coinaddr,vout.addrlen,value,unspentind,vout.U.ind,blocknum,txidstr,v,scriptstr,txind,vout.U.scriptind);
-        }*/
+        }
         return(ledger_packvout(ledger->addrinfos.sha256,&ledger->addrinfos.state,mem,&vout));
     } else printf("ledger_unspent: cant find addrind.(%s)\n",coinaddr), debugstop();
     return(0);
@@ -343,7 +344,7 @@ uint32_t ledger_addunspent(uint16_t *numaddrsp,uint16_t *numscriptsp,struct ledg
 uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint32_t txidind,uint32_t totalspends,char *spent_txidstr,uint16_t spent_vout,uint32_t blocknum,char *txidstr,int32_t v)
 {
     struct ledger_spendinfo spend;
-    int32_t txidlen; uint8_t txid[256]; uint32_t spent_txidind;//,addrind,scriptind; uint64_t value,balance;
+    int32_t txidlen; uint8_t txid[256]; uint32_t spent_txidind,addrind,scriptind; uint64_t value,balance;
     if ( Debuglevel > 2 )
         printf("txidind.%d totalspends.%d (%s).v%d\n",txidind,totalspends,spent_txidstr,spent_vout);
     if ( (spent_txidind= ledger_hexind(0,0,ledger->DBs.transactions,&ledger->txids,txid,&txidlen,spent_txidstr,0)) != 0 )
@@ -351,7 +352,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
         memset(&spend,0,sizeof(spend));
         spend.spent_txidind = spent_txidind, spend.spent_vout = spent_vout;
         spend.unspentind = ledger_firstvout(1,ledger,spent_txidind) + spent_vout;
-        /*if ( pass == 1 )
+        //if ( pass == 1 )
         {
             ledger_spentbits(ledger,spend.unspentind,1);
             if ( Debuglevel > 2 )
@@ -363,7 +364,7 @@ uint32_t ledger_addspend(struct ledger_info *ledger,struct alloc_space *mem,uint
                 if ( Debuglevel > 2 )
                     printf("addrind.%u %.8f\n",addrind,dstr(balance));
             } else printf("error getting unspentmap for unspentind.%u (%s).v%d\n",spend.unspentind,spent_txidstr,spent_vout);
-        }*/
+        }
         return(ledger_packspend(ledger->spentbits.sha256,&ledger->spentbits.state,mem,&spend));
     } else printf("ledger_spend: cant find txidind for (%s).v%d\n",spent_txidstr,spent_vout), debugstop();
     return(0);
