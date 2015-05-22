@@ -68,7 +68,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                                     printf("----> \n");
                                     coin777_disprawblock(&coin->DECODE);
                                     while ( 1 ) sleep(1);
-                                }
+                                } else printf("COMPARED! ");
                                 width++;
                                 if ( coin->readahead > width && coin->readahead-width > ledger->blocknum && coin->packed[coin->readahead-width] != 0 )
                                 {
