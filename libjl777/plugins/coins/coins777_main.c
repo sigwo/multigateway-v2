@@ -71,7 +71,7 @@ int32_t coins_idle(struct plugin_info *plugin)
             if ( flag == 0 && (ledger= coin->ramchain.activeledger) != 0 )
             {
                 if ( coin->readahead <= ledger->blocknum )
-                    coin->readahead = ledger->blocknum+1;
+                    coin->readahead = ledger->blocknum;
                 for (; coin->readahead<=ledger->blocknum+width; coin->readahead++)
                 {
                     if ( coin->packed[coin->readahead] == 0 )
