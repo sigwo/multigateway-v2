@@ -171,6 +171,7 @@ uint32_t coin777_packedoffset(struct alloc_space *mem,char *str,int32_t convflag
 
 void coin777_packtx(struct alloc_space *mem,struct packedtx *ptx,struct rawtx *tx)
 {
+    printf("packtx.(%s) numvins.%d numvouts.%d\n",tx->txidstr,tx->numvins,tx->numvouts);
     ptx->firstvin = tx->firstvin, ptx->numvins = tx->numvins, ptx->firstvout = tx->firstvout, ptx->numvouts = tx->numvouts;
     if ( tx->txidstr[0] == 0 )
         printf("null txid?\n");
@@ -179,6 +180,7 @@ void coin777_packtx(struct alloc_space *mem,struct packedtx *ptx,struct rawtx *t
 
 void coin777_packvout(struct alloc_space *mem,struct packedvout *pvo,struct rawvout *vo)
 {
+    printf("packvout.(%s) (%s) %.8f\n",vo->coinaddr,vo->script,dstr(vo->value));
     pvo->value = vo->value;
     if ( vo->coinaddr[0] == 0 )
         printf("null coinaddr?\n");
@@ -190,9 +192,10 @@ void coin777_packvout(struct alloc_space *mem,struct packedvout *pvo,struct rawv
 
 void coin777_packvin(struct alloc_space *mem,struct packedvin *pvi,struct rawvin *vi)
 {
+    printf("packvin.(%s) vout.%d\n",vi->txidstr,vi->vout);
     pvi->vout = vi->vout;
     if ( vi->txidstr[0] == 0 )
-        printf("null txid?\n");
+        printf("null spend txid?\n");
     else pvi->txidstroffset = coin777_packedoffset(mem,vi->txidstr,1);
 }
 
