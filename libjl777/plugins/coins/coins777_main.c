@@ -30,7 +30,7 @@ void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t block
     coin777_unpackblock(&coin->DECODE,packed,blocknum);
     if ( memcmp(&coin->DECODE,&coin->EMIT,sizeof(coin->DECODE)) != 0 )
     {
-        for (i=0; i<sizeof(coin->DECODE); i++)
+        for (i=0; i<packed->allocsize; i++)
             if ( ((uint8_t *)&coin->DECODE)[i] != ((uint8_t *)&coin->EMIT)[i] )
                 break;
         printf("packblock decode error blocknum.%u at position.%d allocsize.%d\n",coin->readahead,i,packed->allocsize);
