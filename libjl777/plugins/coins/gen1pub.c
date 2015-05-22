@@ -429,7 +429,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct alloc_space MEM,*mem = &MEM;
     struct packedtx *ptx; struct packedvin *pvi; struct packedvout *pvo; struct packedblock *packed = 0;
     uint32_t i,txind,n,crc;
-    mem = init_alloc_space(0,0,178 + raw->numtx*sizeof(struct rawtx) + raw->numrawvouts*sizeof(struct rawvout) + raw->numrawvins*sizeof(struct rawvin),0);
+    mem = init_alloc_space(0,0,256 + raw->numtx*sizeof(struct rawtx) + raw->numrawvouts*sizeof(struct rawvout) + raw->numrawvins*sizeof(struct rawvin),0);
     packed = memalloc(mem,sizeof(*packed),1);
     packed->numtx = raw->numtx, packed->numrawvins = raw->numrawvins, packed->numrawvouts = raw->numrawvouts;
     packed->blocknum = raw->blocknum, packed->timestamp = raw->timestamp, packed->minted = raw->minted;
@@ -457,7 +457,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     crc = _crc32(0,(uint8_t *)&packed[sizeof(packed->crc16)],(int32_t)(packed->allocsize - sizeof(packed->crc16)));
     packed->crc16 = (((crc >> 16) & 0xffff) ^ (uint16_t)crc);
     totalsizes += mem->size, totalpacked += mem->used;
-    printf("block.%u packed sizes: block.%ld tx.%ld vin.%ld vout.%ld | mem->size %ld -> %d %s vs %s [%.3f]\n",raw->blocknum,sizeof(struct packedblock),sizeof(struct packedtx),sizeof(struct packedvout),sizeof(struct packedvin),mem->size,packed->allocsize,_mbstr(totalsizes),_mbstr2(totalpacked),(double)totalsizes / totalpacked);
+    printf("block.%u packed sizes: block.%ld tx.%ld vin.%ld vout.%ld | crc.%u mem->size %ld -> %d %s vs %s [%.3f]\n",raw->blocknum,sizeof(struct packedblock),sizeof(struct packedtx),sizeof(struct packedvout),sizeof(struct packedvin),packed->crc16,mem->size,packed->allocsize,_mbstr(totalsizes),_mbstr2(totalpacked),(double)totalsizes / totalpacked);
     packed = malloc(mem->used), memcpy(packed,mem->ptr,mem->used), free(mem);
     return(packed);
 }
@@ -470,7 +470,7 @@ int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint
     crc = _crc32(0,(uint8_t *)&packed[sizeof(packed->crc16)],(int32_t)(packed->allocsize - sizeof(packed->crc16)));
     if ( packed->crc16 != (((crc >> 16) & 0xffff) ^ (uint16_t)crc) || packed->blocknum != blocknum )
     {
-        printf("crc16 mismatch %u vs %u | blocknum.%u mismatch %u\n",packed->crc16,(((crc >> 16) & 0xffff) ^ (uint16_t)crc),blocknum,packed->blocknum);
+        printf("allocsize.%d crc16 mismatch %u vs %u | blocknum.%u mismatch %u\n",packed->allocsize,packed->crc16,(((crc >> 16) & 0xffff) ^ (uint16_t)crc),blocknum,packed->blocknum);
         return(-1);
     }
     mem = init_alloc_space(mem,packed,packed->allocsize,0);

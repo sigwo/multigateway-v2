@@ -48,6 +48,7 @@ int32_t coins_idle(struct plugin_info *plugin)
             coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
             while ( coin->packedblocknum <= coin->RTblocknum && coin->packedblocknum < coin->packedend )
             {
+                ram_clear_rawblock(&coin->EMIT,1);
                 if ( rawblock_load(&coin->EMIT,coin->name,coin->serverport,coin->userpass,coin->packedblocknum) > 0 )
                 {
                     if ( coin->packed[coin->packedblocknum] == 0 )
