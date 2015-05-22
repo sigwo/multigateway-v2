@@ -310,6 +310,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( json != 0 )
         {
             COINS.argjson = cJSON_Duplicate(json,1);
+            COINS.slicei = get_API_int(cJSON_GetObjectItem(json,"slice"),0);
             copy_cJSON(SUPERNET.userhome,cJSON_GetObjectItem(json,"userdir"));
             if ( SUPERNET.userhome[0] == 0 )
                 strcpy(SUPERNET.userhome,"/root");
@@ -373,7 +374,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             }
             else if ( strcmp(methodstr,"packblocks") == 0 )
             {
-                coin->packedblocknum = coin->packedstart = get_API_int(cJSON_GetObjectItem(json,"start"),0);
+                coin->packedblocknum = coin->packedstart = get_API_int(cJSON_GetObjectItem(json,"start"),0) + get_API_int(cJSON_GetObjectItem(json,"slice"),0);
                 coin->packedend = get_API_int(cJSON_GetObjectItem(json,"end"),1000000000);
                 coin->packedincr = get_API_int(cJSON_GetObjectItem(json,"incr"),1);
                 ensure_packedptrs(coin);
