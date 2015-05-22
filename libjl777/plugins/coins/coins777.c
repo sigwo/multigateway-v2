@@ -172,20 +172,28 @@ uint32_t coin777_packedoffset(struct alloc_space *mem,char *str,int32_t convflag
 void coin777_packtx(struct alloc_space *mem,struct packedtx *ptx,struct rawtx *tx)
 {
     ptx->firstvin = tx->firstvin, ptx->numvins = tx->numvins, ptx->firstvout = tx->firstvout, ptx->numvouts = tx->numvouts;
-    ptx->txidstroffset = coin777_packedoffset(mem,tx->txidstr,1);
+    if ( tx->txidstr[0] == 0 )
+        printf("null txid?\n");
+    else ptx->txidstroffset = coin777_packedoffset(mem,tx->txidstr,1);
 }
 
 void coin777_packvout(struct alloc_space *mem,struct packedvout *pvo,struct rawvout *vo)
 {
     pvo->value = vo->value;
-    pvo->coinaddroffset = coin777_packedoffset(mem,vo->coinaddr,0);
-    pvo->scriptoffset = coin777_packedoffset(mem,vo->script,1);
+    if ( vo->coinaddr[0] == 0 )
+        printf("null coinaddr?\n");
+    else pvo->coinaddroffset = coin777_packedoffset(mem,vo->coinaddr,0);
+    if ( vo->script[0] == 0 )
+        printf("null script?\n");
+    else pvo->scriptoffset = coin777_packedoffset(mem,vo->script,1);
 }
 
 void coin777_packvin(struct alloc_space *mem,struct packedvin *pvi,struct rawvin *vi)
 {
     pvi->vout = vi->vout;
-    pvi->txidstroffset = coin777_packedoffset(mem,vi->txidstr,1);
+    if ( vi->txidstr[0] == 0 )
+        printf("null txid?\n");
+    else pvi->txidstroffset = coin777_packedoffset(mem,vi->txidstr,1);
 }
 
 struct packedblock *coin777_packrawblock(struct rawblock *raw)
