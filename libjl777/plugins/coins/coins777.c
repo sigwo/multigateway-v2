@@ -33,7 +33,7 @@ struct rawblock
     uint32_t blocknum,timestamp;
     uint16_t numtx,numrawvins,numrawvouts,pad;
     uint64_t minted;
-    char blockhash[4096],merkleroot[4096];
+    char blockhash[65],merkleroot[65];
     struct rawtx txspace[MAX_BLOCKTX];
     struct rawvin vinspace[MAX_BLOCKTX];
     struct rawvout voutspace[MAX_BLOCKTX];
@@ -155,7 +155,7 @@ uint32_t coin777_packedoffset(struct alloc_space *mem,char *str,int32_t convflag
     if ( convflag != 0 )
     {
         len >>= 1;
-        if ( len >= sizeof(hex) )
+        if ( len >= sizeof(_hex) )
         {
             printf("coin777_packedoffset: extreme len.%d for (%s)\n",len,str);
             hex = malloc(len);
@@ -195,7 +195,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     struct packedtx *ptx; struct packedvin *pvi; struct packedvout *pvo; struct packedblock *packed = 0;
     uint32_t i,txind,n,crc;
     tx = raw->txspace, vi = raw->vinspace, vo = raw->voutspace;
-    mem = init_alloc_space(0,0,sizeof(struct rawblock) + raw->numtx*sizeof(struct rawtx) + raw->numrawvouts*sizeof(struct rawvout) + raw->numrawvins*sizeof(struct rawvin),0);
+    mem = init_alloc_space(0,0,178 + raw->numtx*sizeof(struct rawtx) + raw->numrawvouts*sizeof(struct rawvout) + raw->numrawvins*sizeof(struct rawvin),0);
     packed = memalloc(mem,sizeof(*packed),1);
     packed->numtx = raw->numtx, packed->numrawvins = raw->numrawvins, packed->numrawvouts = raw->numrawvouts;
     packed->blocknum = raw->blocknum, packed->timestamp = raw->timestamp, packed->minted = raw->minted;
