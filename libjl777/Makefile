@@ -269,7 +269,7 @@ libs/libuv.a:
 doesntexist:
 picoc.o: picoc.c picoc.h
 libgfshare.o: libgfshare.c libgfshare.h
-libjl777.o: libjl777.c SuperNET.c  $(CRYPTO) $(UTILS) $(SOPHIA) $(COINS) $(NONPORTABLE) $(RAMCHAIN)
+libjl777.o: $(SRCS)
 table.o: table.c interpreter.h platform.h
 lex.o: lex.c interpreter.h platform.h
 parse.o: parse.c picoc.h interpreter.h platform.h
