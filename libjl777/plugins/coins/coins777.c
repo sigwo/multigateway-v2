@@ -205,8 +205,6 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct alloc_space MEM,*mem = &MEM;
     struct packedtx *ptx; struct packedvin *pvi; struct packedvout *pvo; struct packedblock *packed = 0;
     uint32_t i,txind,n,crc;
-    printf("blocknum.%u numtx.%u numvouts.%d numvins.%d\n",raw->blocknum,raw->numtx,raw->numrawvouts,raw->numrawvins);
-    tx = raw->txspace, vi = raw->vinspace, vo = raw->voutspace;
     mem = init_alloc_space(0,0,178 + raw->numtx*sizeof(struct rawtx) + raw->numrawvouts*sizeof(struct rawvout) + raw->numrawvins*sizeof(struct rawvin),0);
     packed = memalloc(mem,sizeof(*packed),1);
     packed->numtx = raw->numtx, packed->numrawvins = raw->numrawvins, packed->numrawvouts = raw->numrawvouts;
@@ -216,17 +214,19 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     packed->txspace_offsets = (uint32_t)mem->used, ptx = memalloc(mem,raw->numtx*sizeof(struct packedtx),0);
     packed->vinspace_offsets = (uint32_t)mem->used, pvo = memalloc(mem,raw->numrawvouts*sizeof(struct packedvout),0);
     packed->voutspace_offsets = (uint32_t)mem->used, pvi = memalloc(mem,raw->numrawvins*sizeof(struct packedvin),0);
+    tx = raw->txspace, vi = raw->vinspace, vo = raw->voutspace;
+    printf("blocknum.%u numtx.%u numvouts.%d numvins.%d | %s\n",raw->blocknum,raw->numtx,raw->numrawvouts,raw->numrawvins,tx[0].txidstr);
     if ( raw->numtx > 0 )
     {
         for (txind=0; txind<raw->numtx; txind++,tx++,ptx++)
         {
             coin777_packtx(mem,ptx,tx);
-            if ( (n= tx->numvouts) > 0 )
+            /*if ( (n= tx->numvouts) > 0 )
                 for (i=0; i<n; i++,vo++,pvo++)
                     coin777_packvout(mem,pvo,vo);
             if ( (n= tx->numvins) > 0 )
                 for (i=0; i<n; i++,vi++,pvi++)
-                    coin777_packvin(mem,pvi,vi);
+                    coin777_packvin(mem,pvi,vi);*/
         }
     }
     packed->allocsize = (uint32_t)mem->used;
