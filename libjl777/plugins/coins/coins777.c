@@ -205,6 +205,7 @@ struct packedblock *coin777_packrawblock(struct rawblock *raw)
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct alloc_space MEM,*mem = &MEM;
     struct packedtx *ptx; struct packedvin *pvi; struct packedvout *pvo; struct packedblock *packed = 0;
     uint32_t i,txind,n,crc;
+    printf("blocknum.%u numtx.%u numvouts.%d numvins.%d\n",raw->blocknum,raw->numtx,raw->numrawvouts,raw->numrawvins);
     tx = raw->txspace, vi = raw->vinspace, vo = raw->voutspace;
     mem = init_alloc_space(0,0,178 + raw->numtx*sizeof(struct rawtx) + raw->numrawvouts*sizeof(struct rawvout) + raw->numrawvins*sizeof(struct rawvin),0);
     packed = memalloc(mem,sizeof(*packed),1);
