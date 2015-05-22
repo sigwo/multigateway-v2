@@ -17,8 +17,16 @@
 #include "system777.c"
 #include "ledger777.c"
 
+int32_t ledger_txidstr(struct ledger_info *ledger,char *txidstr,int32_t max,uint32_t txidind);
+int32_t ledger_scriptstr(struct ledger_info *ledger,char *scriptstr,int32_t max,uint32_t scriptind);
+int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,uint32_t addrind);
+int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind);
+int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t state);
+uint64_t ledger_unspentvalue(uint32_t *addrindp,uint32_t *scriptindp,struct ledger_info *ledger,uint32_t unspentind);
+
 struct ledger_addrinfo *ledger_addrinfo(uint32_t *firstblocknump,struct ledger_info *ledger,char *coinaddr,uint32_t addrind);
 uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info *ledger,int32_t numrichlist);
+uint64_t addrinfo_update(struct ledger_info *ledger,char *coinaddr,int32_t addrlen,uint64_t value,uint32_t unspentind,uint32_t addrind,uint32_t blocknum,char *txidstr,int32_t vout,char *extra,int32_t v,uint32_t scriptind);
 
 #endif
 #else
@@ -72,6 +80,51 @@ int32_t ledger_coinaddr(struct ledger_info *ledger,char *coinaddr,int32_t max,ui
         else printf("coinaddr.(%s) too long for %d\n",ptr,max);
     }
     return(retval);
+}
+
+int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind)
+{
+    uint32_t floor,ceiling,probe,firstvout,lastvout;
+    floor = 1, ceiling = ledger->txids.ind;
+    while ( floor != ceiling )
+    {
+        probe = (floor + ceiling) >> 1;
+        if ( (firstvout= ledger_firstvout(1,ledger,probe)) == 0 || (lastvout= ledger_firstvout(1,ledger,probe+1)) == 0 )
+            break;
+        //printf("search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
+        if ( unspentind < firstvout )
+            ceiling = probe;
+        else if ( unspentind >= lastvout )
+            floor = probe;
+        else
+        {
+            //printf("found match! txidind.%u\n",probe);
+            if ( ledger_txidstr(ledger,txidstr,255,probe) == 0 )
+                return(unspentind - firstvout);
+            else break;
+        }
+    }
+    printf("end search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
+    return(-1);
+}
+
+int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t state)
+{
+    return(db777_add(-1,ledger->DBs.transactions,ledger->spentbits.DB,&unspentind,sizeof(unspentind),&state,sizeof(state)));
+}
+
+uint64_t ledger_unspentvalue(uint32_t *addrindp,uint32_t *scriptindp,struct ledger_info *ledger,uint32_t unspentind)
+{
+    struct unspentmap *ptr,U; int32_t size = sizeof(U); uint64_t value = 0;
+    *addrindp = 0;
+    if ( (ptr= db777_get(&U,&size,ledger->DBs.transactions,ledger->unspentmap.DB,&unspentind,sizeof(unspentind))) != 0 && size == sizeof(U) )
+    {
+        value = ptr->value;
+        *addrindp = ptr->ind;
+        *scriptindp = ptr->scriptind;
+        //printf("unspentmap.%u %.8f -> addrind.%u\n",unspentind,dstr(value),U->addrind);
+    } else printf("unspentmap unexpectsize %d vs %ld\n",size,sizeof(U));
+    return(value);
 }
 
 int32_t addrinfo_size(int32_t n) { return(sizeof(struct ledger_addrinfo) + (sizeof(struct unspentmap) * n)); }
@@ -236,49 +289,37 @@ uint64_t ledger_recalc_addrinfos(char *retbuf,int32_t maxlen,struct ledger_info 
     return(addrsum);
 }
 
-int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind)
+struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum)
 {
-    uint32_t floor,ceiling,probe,firstvout,lastvout;
-    floor = 1, ceiling = ledger->txids.ind;
-    while ( floor != ceiling )
+    uint32_t addrind; int32_t modval,lastmodval,allocsize = sizeof(ledger->getbuf); uint64_t balance = 0;
+    struct ledger_blockinfo *block; struct ledger_addrinfo *addrinfo;
+    startblocknum = ledger_startblocknum(ledger,-1);
+    //ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
+    if ( startblocknum < 1 )
     {
-        probe = (floor + ceiling) >> 1;
-        if ( (firstvout= ledger_firstvout(1,ledger,probe)) == 0 || (lastvout= ledger_firstvout(1,ledger,probe+1)) == 0 )
-            break;
-        //printf("search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
-        if ( unspentind < firstvout )
-            ceiling = probe;
-        else if ( unspentind >= lastvout )
-            floor = probe;
-        else
-        {
-            //printf("found match! txidind.%u\n",probe);
-            if ( ledger_txidstr(ledger,txidstr,255,probe) == 0 )
-                return(unspentind - firstvout);
-            else break;
-        }
+        ledger->numsyncs = 1;
+        return(0);
     }
-    printf("end search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
-    return(-1);
-}
-
-int32_t ledger_spentbits(struct ledger_info *ledger,uint32_t unspentind,uint8_t state)
-{
-    return(db777_add(-1,ledger->DBs.transactions,ledger->spentbits.DB,&unspentind,sizeof(unspentind),&state,sizeof(state)));
-}
-
-uint64_t ledger_unspentvalue(uint32_t *addrindp,uint32_t *scriptindp,struct ledger_info *ledger,uint32_t unspentind)
-{
-    struct unspentmap *ptr,U; int32_t size = sizeof(U); uint64_t value = 0;
-    *addrindp = 0;
-    if ( (ptr= db777_get(&U,&size,ledger->DBs.transactions,ledger->unspentmap.DB,&unspentind,sizeof(unspentind))) != 0 && size == sizeof(U) )
+    if ( (block= ledger_getblock((struct ledger_blockinfo *)ledger->getbuf,&allocsize,ledger,startblocknum)) != 0 )
     {
-        value = ptr->value;
-        *addrindp = ptr->ind;
-        *scriptindp = ptr->scriptind;
-        //printf("unspentmap.%u %.8f -> addrind.%u\n",unspentind,dstr(value),U->addrind);
-    } else printf("unspentmap unexpectsize %d vs %ld\n",size,sizeof(U));
-    return(value);
+        if ( block->allocsize == allocsize && block_crc16(block) == block->crc16 )
+        {
+            printf("%.8f startmilli %.0f start.%u block.%u ledger block.%u, inds.(txid %d addrs %d scripts %d vouts %d vins %d)\n",dstr(ledger->voutsum)-dstr(ledger->spendsum),milliseconds(),startblocknum,block->blocknum,ledger->blocknum,ledger->txids.ind,ledger->addrs.ind,ledger->scripts.ind,ledger->unspentmap.ind,ledger->spentbits.ind);
+            lastmodval = -1;
+            for (addrind=1; addrind<=ledger->addrs.ind; addrind++)
+            {
+                modval = ((100. * addrind) / (ledger->addrs.ind + 1));
+                if ( modval != lastmodval )
+                    printf("%d%% ",modval), fflush(stdout), lastmodval = modval;
+                if ( (addrind % 1000) == 0 )
+                    fprintf(stderr,".");
+                if ( (addrinfo= ledger_addrinfo(0,ledger,0,addrind)) != 0 )
+                    balance += addrinfo->balance;
+            }
+            printf("balance %.8f endmilli %.0f\n",dstr(balance),milliseconds());
+        } else printf("mismatched block: %u %u, crc16 %u %u\n",block->allocsize,allocsize,block_crc16(block),block->crc16), debugstop();
+    } else printf("couldnt load block.%u\n",startblocknum), debugstop();
+    return(block);
 }
 
 #endif

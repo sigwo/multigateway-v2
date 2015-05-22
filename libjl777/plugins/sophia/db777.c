@@ -69,7 +69,7 @@ extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTa
 #undef DEFINES_ONLY
 #endif
 
-uint32_t Duplicate,Mismatch,Added,Linked;
+uint32_t Duplicate,Mismatch,Added,Linked,Numgets;
 
 void db777_lock(struct db777 *DB)
 {
@@ -214,6 +214,7 @@ void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,vo
         transactions = 0;
     if ( (obj= sp_object(DB->db)) != 0 )
     {
+        Numgets++;
         if ( sp_set(obj,"key",key,keylen) == 0 && (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
         {
             value = sp_get(result,"value",lenp);
@@ -434,6 +435,7 @@ int32_t db777_set(int32_t flags,void *transactions,struct db777 *DB,void *key,in
             }
             else
             {
+                Added++;
                 retval = sp_set((transactions != 0 ? transactions : db),obj);
                 //if ( strcmp(DB->name,"ledger") == 0 )
                 //    printf("retval.%d %s key.%u valuelen.%d\n",retval,DB->name,*(int *)key,valuelen);
@@ -486,8 +488,6 @@ int32_t db777_add(int32_t forceflag,void *transactions,struct db777 *DB,void *ke
         }
         Mismatch++, printf("%s duplicate.%d mismatch.%d | keylen.%d valuelen.%d -> allocsize.%d\n",DB->name,Duplicate,Mismatch,keylen,valuelen,allocsize);
     }
-    if ( forceflag < 1 )
-        Added++;
     retval = db777_set((DB->flags & DB777_RAM) == 0 ? DB777_HDD : DB777_RAM,transactions,DB,key,keylen,value,valuelen);
     return(retval);
 }
