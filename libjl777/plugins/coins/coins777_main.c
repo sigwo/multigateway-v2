@@ -379,7 +379,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             }
             else if ( strcmp(methodstr,"packblocks") == 0 )
             {
-                coin->packedblocknum = coin->packedstart = get_API_int(cJSON_GetObjectItem(json,"start"),0) + get_API_int(cJSON_GetObjectItem(json,"slice"),0);
+                coin->packedblocknum = coin->packedstart = get_API_int(cJSON_GetObjectItem(json,"start"),0) + COINS.slicei;
                 coin->packedend = get_API_int(cJSON_GetObjectItem(json,"end"),1000000000);
                 coin->packedincr = get_API_int(cJSON_GetObjectItem(json,"incr"),1);
                 ensure_packedptrs(coin);
