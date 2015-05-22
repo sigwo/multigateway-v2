@@ -151,7 +151,7 @@ uint32_t coin777_packedoffset(struct alloc_space *mem,char *str,int32_t convflag
 {
     uint32_t offset,len; uint8_t _hex[8192],*hex = _hex;
     offset = (uint32_t)mem->used;
-    len = (uint32_t)strlen(str) + 1;
+    len = (uint32_t)strlen(str);
     if ( convflag != 0 )
     {
         len >>= 1;
@@ -164,7 +164,7 @@ uint32_t coin777_packedoffset(struct alloc_space *mem,char *str,int32_t convflag
         memcpy((void *)((long)mem->ptr + offset),hex,len);
         if ( hex != _hex )
             free(hex);
-    } else memcpy((void *)((long)mem->ptr + offset),str,len);
+    } else memcpy((void *)((long)mem->ptr + offset),str,++len);
     mem->used += len;
     return(offset);
 }
