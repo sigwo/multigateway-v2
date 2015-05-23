@@ -57,7 +57,7 @@ void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t block
 
 int32_t coins_idle(struct plugin_info *plugin)
 {
-    int32_t i,len,flag = 0; uint32_t width = 1000;
+    int32_t i,len,flag = 0; uint32_t width = 10000;
     struct coin777 *coin; struct ledger_info *ledger; struct packedblock *packed;
     for (i=0; i<COINS.num; i++)
     {
