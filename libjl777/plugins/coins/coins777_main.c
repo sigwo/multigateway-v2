@@ -81,7 +81,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                                 coin->packedblocknum += coin->packedincr;
                             }
                             flag = 1;
-                            return(1);
+                            continue;
                         }
                     } else break;
                 }
