@@ -58,7 +58,7 @@ void coins_verify(struct coin777 *coin,struct packedblock *packed,uint32_t block
 int32_t coins_idle(struct plugin_info *plugin)
 {
     int32_t i,len,flag = 0; uint32_t width = 1000;
-    struct coin777 *coin; struct ledger_info *ledger;
+    struct coin777 *coin; struct ledger_info *ledger; struct packedblock *packed;
     for (i=0; i<COINS.num; i++)
     {
         if ( (coin= COINS.LIST[i]) != 0 && coin->packed != 0 )
@@ -67,7 +67,7 @@ int32_t coins_idle(struct plugin_info *plugin)
             while ( coin->packedblocknum <= coin->RTblocknum && coin->packedblocknum < coin->packedend )
             {
                 len = (int32_t)sizeof(coin->EMIT);
-                if ( ramchain_getpackedblock(&coin->EMIT,&len,&coin->ramchain,coin->packedblocknum) == 0 )
+                if ( (packed= ramchain_getpackedblock(&coin->EMIT,&len,&coin->ramchain,coin->packedblocknum)) == 0 || packed_crc16(packed) != packed->crc16 )
                 {
                     ram_clear_rawblock(&coin->EMIT,1);
                     if ( rawblock_load(&coin->EMIT,coin->name,coin->serverport,coin->userpass,coin->packedblocknum) > 0 )

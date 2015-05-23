@@ -45,12 +45,15 @@ struct packedblock *ramchain_getpackedblock(void *space,int32_t *lenp,struct ram
 void ramchain_setpackedblock(struct ramchain *ramchain,struct packedblock *packed,uint32_t blocknum)
 {
     struct ledger_info *ledger;
-    if ( (ledger= ramchain->activeledger) != 0 )
-        db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&blocknum,sizeof(blocknum),packed,packed->allocsize);
-    if ( RELAYS.pushsock >= 0 )
+    if ( packed_crc16(packed) == packed->crc16 )
     {
-        printf("PUSHED.(%d) blocknum.%u | crc.%u %d %d %d %.8f %u %u %u %u %u %u %d\n",packed->allocsize,packed->blocknum,packed->crc16,packed->numtx,packed->numrawvins,packed->numrawvouts,dstr(packed->minted),packed->timestamp,packed->blockhash_offset,packed->merkleroot_offset,packed->txspace_offsets,packed->vinspace_offsets,packed->voutspace_offsets,packed->allocsize);
-        nn_send(RELAYS.pushsock,(void *)packed,packed->allocsize,0);
+        if ( (ledger= ramchain->activeledger) != 0 )
+            db777_set(DB777_HDD,ledger->DBs.transactions,ledger->ledger.DB,&blocknum,sizeof(blocknum),packed,packed->allocsize);
+        if ( RELAYS.pushsock >= 0 )
+        {
+            printf("PUSHED.(%d) blocknum.%u | crc.%u %d %d %d %.8f %u %u %u %u %u %u %d\n",packed->allocsize,packed->blocknum,packed->crc16,packed->numtx,packed->numrawvins,packed->numrawvouts,dstr(packed->minted),packed->timestamp,packed->blockhash_offset,packed->merkleroot_offset,packed->txspace_offsets,packed->vinspace_offsets,packed->voutspace_offsets,packed->allocsize);
+            nn_send(RELAYS.pushsock,(void *)packed,packed->allocsize,0);
+        }
     }
 }
 
@@ -96,7 +99,7 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,str
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
             startmilli = milliseconds();
             len = (int32_t)MEM.size;
-            if ( packed != 0 || (packed= ramchain_getpackedblock(MEM.ptr,&len,ramchain,blocknum)) != 0 )
+            if ( (packed != 0 || (packed= ramchain_getpackedblock(MEM.ptr,&len,ramchain,blocknum)) != 0) && packed_crc16(packed) == packed->crc16 )
             {
                 ram_clear_rawblock(&ramchain->EMIT,0);
                 coin777_unpackblock(&ramchain->EMIT,packed,blocknum);
