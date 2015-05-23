@@ -57,12 +57,12 @@ void ramchain_setpackedblock(struct ramchain *ramchain,struct packedblock *packe
 void coin777_pulldata(struct packedblock *packed,int32_t len)
 {
     struct coin777 *coin;
-    if ( len >= ((long)&packed->allocsize - (long)packed + sizeof(packed->allocsize)) && packed->allocsize == len )
+    if ( len >= ((long)&packed->allocsize - (long)packed + sizeof(packed->allocsize)) && packed->allocsize == len && packed_crc16(packed) == packed->crc16 )
     {
         if ( (coin= coin777_find("BTC",0)) != 0 )
             ramchain_setpackedblock(&coin->ramchain,packed,packed->blocknum);
         printf("PULLED.(%d) blocknum.%u | %u %d %d %d %.8f %u %u %u %u %u %u %d\n",len,packed->blocknum,packed->crc16,packed->numtx,packed->numrawvins,packed->numrawvouts,dstr(packed->minted),packed->timestamp,packed->blockhash_offset,packed->merkleroot_offset,packed->txspace_offsets,packed->vinspace_offsets,packed->voutspace_offsets,packed->allocsize);
-    } else printf("pulled.%d but size mismatch\n",len);
+    } else printf("pulled.%d but size.%d mismatch or crc16 mismatch %d %d\n",len,packed->allocsize,packed_crc16(packed),packed->crc16);
     nn_freemsg(packed);
 }
 
