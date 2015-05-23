@@ -92,7 +92,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                 }
                 coin->packedblocknum += coin->packedincr;
             }
-            if ( 0 && flag == 0 && (ledger= coin->ramchain.activeledger) != 0 )
+            if ( 1 && flag == 0 && (ledger= coin->ramchain.activeledger) != 0 )
             {
                 //printf("readahead.%d vs blocknum.%u\n",coin->readahead,ledger->blocknum);
                 if ( coin->readahead <= ledger->blocknum )

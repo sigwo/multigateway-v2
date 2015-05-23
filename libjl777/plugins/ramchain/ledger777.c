@@ -186,7 +186,7 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
         dispflag += ((blocknum % 100) == 0);
         oldsupply = ledger->voutsum - ledger->spendsum;
         if ( ledger->DBs.transactions == 0 )
-            ledger->DBs.transactions = sp_begin(ledger->DBs.env), ledger->numsyncs++;
+            ledger->DBs.transactions = 0;//sp_begin(ledger->DBs.env), ledger->numsyncs++;
         if ( (block= ledger_setblock(dispflag,ledger,mem,emit,blocknum)) != 0 )
         {
             if ( syncflag != 0 )
@@ -226,7 +226,7 @@ int32_t ledger_commit(struct ledger_info *ledger,int32_t continueflag)
             break;
         msleep(1000);
     }
-    ledger->DBs.transactions = (continueflag != 0) ? sp_begin(ledger->DBs.env) : 0;
+    ledger->DBs.transactions = 0;//(continueflag != 0) ? sp_begin(ledger->DBs.env) : 0;
     return(err);
 }
 
