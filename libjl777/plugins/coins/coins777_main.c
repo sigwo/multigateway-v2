@@ -85,6 +85,11 @@ int32_t coins_idle(struct plugin_info *plugin)
                         }
                     } else break;
                 }
+                else if ( RELAYS.pushsock >= 0 )
+                {
+                    printf("PUSHED.(%d) blocknum.%u | crc.%u %d %d %d %.8f %u %u %u %u %u %u %d\n",packed->allocsize,packed->blocknum,packed->crc16,packed->numtx,packed->numrawvins,packed->numrawvouts,dstr(packed->minted),packed->timestamp,packed->blockhash_offset,packed->merkleroot_offset,packed->txspace_offsets,packed->vinspace_offsets,packed->voutspace_offsets,packed->allocsize);
+                    nn_send(RELAYS.pushsock,(void *)packed,packed->allocsize,0);
+                }
                 coin->packedblocknum += coin->packedincr;
             }
             if ( 0 && flag == 0 && (ledger= coin->ramchain.activeledger) != 0 )
