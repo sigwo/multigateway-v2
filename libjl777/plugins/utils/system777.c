@@ -303,7 +303,7 @@ int32_t aligned_free(void *ptr)
         printf("ptr %p and realptr %p too far apart %ld\n",ptr,realptr,diff);
         return(-2);
     }
-    printf("aligned_free: ptr %p -> realptr %p %ld\n",ptr,realptr,diff);
+    //printf("aligned_free: ptr %p -> realptr %p %ld\n",ptr,realptr,diff);
     free(realptr);
     return(0);
 }

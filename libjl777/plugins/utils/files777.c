@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include "system777.c"
+#include "utils777.c"
 
 // rest of file needs to be OS portable
 struct mappedptr
@@ -40,7 +41,8 @@ void close_mappedptr(struct mappedptr *mp);
 int32_t open_mappedptr(struct mappedptr *mp);
 int32_t sync_mappedptr(struct mappedptr *mp,uint64_t len);
 void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t rwflag,char *fname);
-void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector);
+void *filealloc(struct mappedptr *M,char *fname,struct alloc_space *mem,long size);
+void *tmpalloc(char *coinstr,struct alloc_space *mem,long size);
 
 #endif
 #else
@@ -164,7 +166,9 @@ void ensure_filesize(char *fname,long filesize)
     FILE *fp;
     char *zeroes;
     long i,n,allocsize = 0;
-    //printf("ensure_filesize.(%s) %ld\n",fname,filesize);
+printf("ensure_filesize.(%s) %ld %s | ",fname,filesize,_mbstr(filesize));
+    if ( filesize == 0 )
+        getchar();
     if ( (fp= fopen(os_compatible_path(fname),"rb")) != 0 )
     {
         fseek(fp,0,SEEK_END);
@@ -255,14 +259,15 @@ void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t
 	else mp->actually_allocated = 1;
 	mp->rwflag = rwflag;
 	mp->allocsize = allocsize;
-    if ( rwflag != 0 && mp->actually_allocated == 0 )
+    if ( rwflag != 0 && mp->actually_allocated == 0 && allocsize != 0 )
         ensure_filesize(fname,allocsize);
 	if ( open_mappedptr(mp) != 0 )
 	{
-	    //printf("init_mappedptr %s.rwflag.%d\n",fname,rwflag);
+printf("init_mappedptr %s.rwflag.%d\n",fname,rwflag);
         if ( allocsize != 0 )
 			printf("error mapping(%s) rwflag.%d ptr %p mapped %llu vs allocsize %llu %s\n",fname,rwflag,mp->fileptr,(long long)mp->allocsize,(long long)allocsize,_mbstr(allocsize));
-		if ( rwflag != 0 )
+        else allocsize = mp->allocsize;
+		if ( rwflag != 0 && allocsize != mp->allocsize )
 		{
 			filesize = mp->allocsize;
 			if  ( mp->fileptr != 0 )
@@ -329,7 +334,7 @@ void close_mappedptr(struct mappedptr *mp)
 	strcpy(mp->fname,tmp.fname);
 }
 
-void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector)
+/*void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector)
 {
     static long counts[100],totals[sizeof(counts)/sizeof(*counts)],n;
     struct mappedptr M;
@@ -368,7 +373,7 @@ void *permalloc(char *coinstr,struct alloc_space *mem,long size,int32_t selector
         }
     }
     return(memalloc(mem,size,0));
-}
+}*/
 
 void ensure_dir(char *dirname)
 {
@@ -414,6 +419,39 @@ void delete_file(char *fname,int32_t scrubflag)
         if ( system(os_compatible_path(cmdstr)) != 0 )
             printf("error deleting file.(%s)\n",cmdstr);
     }
+}
+
+void *filealloc(struct mappedptr *M,char *fname,struct alloc_space *mem,long size)
+{
+    //printf("mem->used %ld size.%ld | size.%ld\n",mem->used,size,mem->size);
+    printf("filemalloc new space.%ld %s\n",mem->size,_mbstr(size));
+    memset(M,0,sizeof(*M));
+    //fix_windows_insanity(fname);
+    mem->size = size;
+    if ( init_mappedptr(0,M,mem->size,1,fname) == 0 )
+    {
+        printf("couldnt create mapped file.(%s)\n",fname);
+        exit(-1);
+    }
+    mem->ptr = M->fileptr;
+    mem->used = 0;
+    return(M->fileptr);
+}
+
+void *tmpalloc(char *coinstr,struct alloc_space *mem,long size)
+{
+    static int32_t n;
+    char fname[1024]; struct mappedptr M;
+    if ( (mem->used + size) > mem->size )
+    {
+        sprintf(fname,"/tmp/%s.space.%d",coinstr,n++);
+        if ( filealloc(&M,fname,mem,MAX(mem->size,size)) == 0 )
+        {
+            printf("couldnt map tmpfile %s\n",fname);
+            return(0);
+        }
+    }
+    return(memalloc(mem,size,0));
 }
 
 #endif

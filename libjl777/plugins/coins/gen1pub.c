@@ -17,11 +17,12 @@
 #include "coins777.c"
 
 
-//char *_get_transaction(char *coinstr,char *serverport,char *userpass,char *txidstr);
+char *_get_transaction(char *coinstr,char *serverport,char *userpass,char *txidstr);
 uint64_t ram_verify_txstillthere(char *coinstr,char *serverport,char *userpass,char *txidstr,int32_t vout);
 //char *_get_blockhashstr(char *coinstr,char *serverport,char *userpass,uint32_t blocknum);
-//cJSON *_get_blockjson(uint32_t *heightp,char *coinstr,char *serverport,char *userpass,char *blockhashstr,uint32_t blocknum);
+cJSON *_get_blockjson(uint32_t *heightp,char *coinstr,char *serverport,char *userpass,char *blockhashstr,uint32_t blocknum);
 uint32_t _get_RTheight(double *lastmillip,char *coinstr,char *serverport,char *userpass,int32_t current_RTblocknum);
+cJSON *_rawblock_txarray(uint32_t *blockidp,int32_t *numtxp,cJSON *blockjson);
 
 #endif
 #else
@@ -253,7 +254,7 @@ uint64_t rawblock_txidinfo(struct rawblock *raw,struct rawtx *tx,char *coinstr,c
     return(total);
 }
 
-cJSON *rawblock_txarray(uint32_t *blockidp,int32_t *numtxp,cJSON *blockjson)
+cJSON *_rawblock_txarray(uint32_t *blockidp,int32_t *numtxp,cJSON *blockjson)
 {
     cJSON *txarray = 0;
     if ( blockjson != 0 )
@@ -307,7 +308,7 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
             copy_cJSON(mintedstr,cJSON_GetObjectItem(json,"newmint"));
         if ( mintedstr[0] != 0 )
             raw->minted = (uint64_t)(atof(mintedstr) * SATOSHIDEN);
-        if ( (txobj= rawblock_txarray(&blockid,&n,json)) != 0 && blockid == blocknum && n < MAX_BLOCKTX )
+        if ( (txobj= _rawblock_txarray(&blockid,&n,json)) != 0 && blockid == blocknum && n < MAX_BLOCKTX )
         {
             for (txind=0; txind<n; txind++)
             {
@@ -528,7 +529,6 @@ int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint
         retval = -5, printf("allocsize error.%d != %ld\n",packed->allocsize,mem->used);
     return(retval);
 }
-
 
 void coin777_disprawblock(struct rawblock *raw)
 {

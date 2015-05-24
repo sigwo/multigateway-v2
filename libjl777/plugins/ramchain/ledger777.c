@@ -27,7 +27,7 @@ struct ledger_inds
 // higher level
 struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags);
 void ledger_free(struct ledger_info *ledger,int32_t closeDBflag);
-int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
+int32_t ledger_update(void *state,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
 int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_info *ledger);
 int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum);
 struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum);
@@ -174,10 +174,11 @@ int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp)
     return(0);
 }
 
-int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
+int32_t ledger_update(void *state,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
 {
-    struct ledger_blockinfo *block; struct ledger_inds L;
-    uint32_t blocknum,dispflag,ledgerhash; uint64_t supply,oldsupply; double estimate,elapsed,startmilli;
+    //struct ledger_blockinfo *block;
+    struct ledger_inds L;
+    uint32_t blocknum,dispflag,ledgerhash,numtx,allocsize; uint64_t origsize,supply,oldsupply,minted = 0; double estimate,elapsed,startmilli;
     blocknum = ledger->blocknum;
     if ( blocknum <= RTblocknum-minconfirms )
     {
@@ -187,7 +188,8 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
         oldsupply = ledger->voutsum - ledger->spendsum;
         if ( ledger->DBs.transactions == 0 )
             ledger->DBs.transactions = 0;//sp_begin(ledger->DBs.env), ledger->numsyncs++;
-        if ( (block= ledger_setblock(dispflag,ledger,mem,emit,blocknum)) != 0 )
+        origsize = coin777_permsize(state);
+        if ( (numtx= ledger_setblock(dispflag,ledger,mem,state,blocknum)) != 0 )
         {
             if ( syncflag != 0 )
             {
@@ -198,14 +200,15 @@ int32_t ledger_update(struct rawblock *emit,struct ledger_info *ledger,struct al
             }
             else ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,-1);
             dxblend(&ledger->calc_elapsed,(milliseconds() - startmilli),.99);
-            ledger->totalsize += block->allocsize;
+            allocsize = (uint32_t)(coin777_permsize(state) - origsize);
+            ledger->totalsize += allocsize;
             estimate = estimate_completion(ledger->startmilli,blocknum - ledger->startblocknum,RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ledger->startmilli)/60000.;
             supply = ledger->voutsum - ledger->spendsum;
             if ( dispflag != 0 )
             {
                 extern uint32_t Duplicate,Mismatch,Added,Linked,Numgets;
-                printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | H%d E%d R%d W%d %08x\n",ledger->calc_elapsed/1000.,ledger->DBs.coinstr,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ledger->addrsum),dstr(supply)-dstr(ledger->addrsum),dstr(supply)-dstr(oldsupply),dstr(block->minted),elapsed,elapsed+(RTblocknum-blocknum)*ledger->calc_elapsed/60000,elapsed+estimate,block->allocsize,_mbstr(ledger->totalsize),(double)ledger->totalsize/blocknum,Duplicate,Mismatch,Numgets,Added,ledgerhash);
+                printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | H%d E%d R%d W%d %08x\n",ledger->calc_elapsed/1000.,ledger->DBs.coinstr,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ledger->addrsum),dstr(supply)-dstr(ledger->addrsum),dstr(supply)-dstr(oldsupply),dstr(minted),elapsed,elapsed+(RTblocknum-blocknum)*ledger->calc_elapsed/60000,elapsed+estimate,allocsize,_mbstr(ledger->totalsize),(double)ledger->totalsize/blocknum,Duplicate,Mismatch,Numgets,Added,ledgerhash);
             }
             ledger->blocknum++;
             return(1);
@@ -283,7 +286,10 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     struct ledger_info *ledger = 0; 
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
-    //Debuglevel = 3;
+        int32_t maxblocknum = 1000;
+        coin777_ensurespace(coin777_find(coinstr,0),maxblocknum,maxblocknum*8,maxblocknum*8,maxblocknum*8,maxblocknum*8,maxblocknum*8);
+        return(ledger);
+   //Debuglevel = 3;
         if ( flags == 0 )
             flags = (DB777_FLUSH | DB777_HDD | DB777_MULTITHREAD | DB777_RAMDISK);
         safecopy(ledger->DBs.coinstr,coinstr,sizeof(ledger->DBs.coinstr));

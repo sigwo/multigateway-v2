@@ -40,7 +40,7 @@ int32_t ramchain_idle(struct plugin_info *plugin)
             //printf("packed.%p ledger.%p\n",coin->packed,ramchain->activeledger);
             if ( ramchain->readyflag != 0 && (ledger= ramchain->activeledger) != 0 )//&& ledger->blocknum <= coin->readahead )
             {
-                if ( coin->packed != 0 && (packed= coin->packed[ledger->blocknum]) != 0 )
+                if ( coin->P.packed != 0 && (packed= coin->P.packed[ledger->blocknum]) != 0 )
                     flag += ramchain_update(ramchain,ledger,packed);
                 else flag += ramchain_update(ramchain,ledger,0);
                 //else printf("ptr.%p blocknum.%u\n",packed,ledger->blocknum);

@@ -20,7 +20,7 @@
 #define SATOSHIDEN 100000000L
 #define dstr(x) ((double)(x) / SATOSHIDEN)
 
-struct alloc_space { void *ptr; long used,size; int32_t alignflag; uint8_t space[]; };
+struct alloc_space { void *ptr; long used,size; int32_t alignflag; uint8_t space[4]; };
 
 int32_t portable_pton(int32_t af,char *src,void *dst);
 int32_t portable_ntop(int32_t af,void *src,char *dst,size_t size);

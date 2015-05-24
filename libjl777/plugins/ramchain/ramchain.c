@@ -101,12 +101,12 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,str
             len = (int32_t)MEM.size;
             if ( (packed != 0 || (packed= ramchain_getpackedblock(MEM.ptr,&len,ramchain,blocknum)) != 0) && packed_crc16(packed) == packed->crc16 )
             {
-                ram_clear_rawblock(&ramchain->EMIT,0);
-                coin777_unpackblock(&ramchain->EMIT,packed,blocknum);
+                ram_clear_rawblock(ramchain->EMIT,0);
+                coin777_unpackblock(ramchain->EMIT,packed,blocknum);
             }
-            else rawblock_load(&ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum);
+            else rawblock_load(ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum);
             dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);
-            flag = ledger_update(&ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
+            flag = ledger_update(ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
         }
         if ( ramchain->paused == 3 )
         {
