@@ -19,7 +19,7 @@
 #include "ledger777.c"
 
 int32_t ramchain_init(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum,uint32_t minconfirms);
-int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,struct packedblock *packed);
+int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain,struct ledger_info *ledger,struct packedblock *packed);
 int32_t ramchain_func(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,char *method);
 int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSON *argjson,uint32_t startblocknum,uint32_t endblocknum);
 
@@ -69,7 +69,7 @@ void coin777_pulldata(struct packedblock *packed,int32_t len)
     nn_freemsg(packed);
 }
 
-int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,struct packedblock *packed)
+int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain,struct ledger_info *ledger,struct packedblock *packed)
 {
     struct alloc_space MEM; uint32_t blocknum; double startmilli; int32_t len,lag,syncflag,flag = 0;
     blocknum = ledger->blocknum;
@@ -99,14 +99,14 @@ int32_t ramchain_update(struct ramchain *ramchain,struct ledger_info *ledger,str
             memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
             startmilli = milliseconds();
             len = (int32_t)MEM.size;
-            if ( (packed != 0 || (packed= ramchain_getpackedblock(MEM.ptr,&len,ramchain,blocknum)) != 0) && packed_crc16(packed) == packed->crc16 )
+            /*if ( (packed != 0 || (packed= ramchain_getpackedblock(MEM.ptr,&len,ramchain,blocknum)) != 0) && packed_crc16(packed) == packed->crc16 )
             {
                 ram_clear_rawblock(ramchain->EMIT,0);
                 coin777_unpackblock(ramchain->EMIT,packed,blocknum);
             }
             else rawblock_load(ramchain->EMIT,ramchain->name,ramchain->serverport,ramchain->userpass,blocknum);
-            dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);
-            flag = ledger_update(ramchain->EMIT,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
+            dxblend(&ledger->load_elapsed,(milliseconds() - startmilli),.99); printf("%.3f ",ledger->load_elapsed/1000.);*/
+            flag = ledger_update(coin,ledger,&MEM,ramchain->RTblocknum,syncflag * (blocknum != 0),ramchain->minconfirms);
         }
         if ( ramchain->paused == 3 )
         {
@@ -132,10 +132,10 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJ
     ledger->startmilli = milliseconds();
     ledger->totalsize = 0;
     //printf("resuming %u to %u\n",startblocknum,endblocknum);
-    ledger->startblocknum = ledger_startblocknum(ledger,-1);
+    ledger->startblocknum = startblocknum; //ledger_startblocknum(ledger,-1);
     //printf("updated %u to %u\n",ledger->startblocknum,endblocknum);
     memset(&MEM,0,sizeof(MEM)), MEM.ptr = &ramchain->DECODE, MEM.size = sizeof(ramchain->DECODE);
-    ledger_setblocknum(ledger,&MEM,ledger->startblocknum);
+    //ledger_setblocknum(ledger,&MEM,ledger->startblocknum);
     ledger->blocknum = ledger->startblocknum + (ledger->startblocknum > 1);
     printf("set %u to %u | sizes: uthash.%ld addrinfo.%ld unspentmap.%ld txoffset.%ld db777_entry.%ld\n",ledger->startblocknum,endblocknum,sizeof(UT_hash_handle),sizeof(struct ledger_addrinfo),sizeof(struct unspentmap),sizeof(struct upair32),sizeof(struct db777_entry));
     ledger->endblocknum = (endblocknum > ledger->startblocknum) ? endblocknum : ledger->startblocknum;
@@ -188,7 +188,7 @@ int32_t ramchain_init(char *retbuf,int32_t maxlen,struct ramchain *ramchain,cJSO
         ledger->syncfreq = 100;//DB777_MATRIXROW;
         ledger->startblocknum = startblocknum, ledger->endblocknum = endblocknum;
         ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,ramchain->name,ramchain->serverport,ramchain->userpass,ramchain->RTblocknum);
-        env777_start(0,&ledger->DBs,ramchain->RTblocknum);
+        //env777_start(0,&ledger->DBs,ramchain->RTblocknum);
         if ( endblocknum == 0 )
             endblocknum = 1000000000;
         return(ramchain_resume(retbuf,maxlen,ramchain,argjson,startblocknum,endblocknum));

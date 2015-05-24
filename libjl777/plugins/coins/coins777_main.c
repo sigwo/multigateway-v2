@@ -61,7 +61,7 @@ int32_t coins_idle(struct plugin_info *plugin)
     struct coin777 *coin; struct ledger_info *ledger; struct packedblock *packed;
     for (i=0; i<COINS.num; i++)
     {
-        if ( (coin= COINS.LIST[i]) != 0 && coin->P.packed != 0 )
+        if ( 0 && (coin= COINS.LIST[i]) != 0 )//&& coin->P.packed != 0 )
         {
             if ( coin777_processQs(coin) != 0 )
                 return(1);

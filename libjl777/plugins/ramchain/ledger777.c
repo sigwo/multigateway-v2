@@ -27,7 +27,7 @@ struct ledger_inds
 // higher level
 struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags);
 void ledger_free(struct ledger_info *ledger,int32_t closeDBflag);
-int32_t ledger_update(void *state,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
+int32_t ledger_update(struct coin777 *coin,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
 int32_t ledger_syncblocks(struct ledger_inds *inds,int32_t max,struct ledger_info *ledger);
 int32_t ledger_startblocknum(struct ledger_info *ledger,uint32_t startblocknum);
 struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct alloc_space *mem,uint32_t startblocknum);
@@ -174,46 +174,49 @@ int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp)
     return(0);
 }
 
-int32_t ledger_update(void *state,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
+int32_t ledger_update(struct coin777 *coin,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
 {
     //struct ledger_blockinfo *block;
     struct ledger_inds L;
-    uint32_t blocknum,dispflag,ledgerhash,numtx,allocsize; uint64_t origsize,supply,oldsupply,minted = 0; double estimate,elapsed,startmilli;
+    uint32_t blocknum,dispflag,ledgerhash=0,numtx,allocsize; uint64_t origsize,supply,oldsupply,minted = 0; double estimate,elapsed,startmilli;
     blocknum = ledger->blocknum;
     if ( blocknum <= RTblocknum-minconfirms )
     {
         startmilli = milliseconds();
         dispflag = 1 || (blocknum > RTblocknum - 1000);
         dispflag += ((blocknum % 100) == 0);
-        oldsupply = ledger->voutsum - ledger->spendsum;
+        oldsupply = (coin->credits - coin->debits); //ledger->voutsum - ledger->spendsum;
         if ( ledger->DBs.transactions == 0 )
             ledger->DBs.transactions = 0;//sp_begin(ledger->DBs.env), ledger->numsyncs++;
-        origsize = coin777_permsize(state);
-        if ( (numtx= ledger_setblock(dispflag,ledger,mem,state,blocknum)) != 0 )
+        origsize = coin777_permsize(coin);
+        if ( (numtx= coin777_parse(coin,coin,blocknum)) != 0 )
+        //if ( (numtx= ledger_setblock(dispflag,ledger,mem,state,blocknum)) != 0 )
         {
-            if ( syncflag != 0 )
+           /* if ( syncflag != 0 )
             {
                 ledger->addrsum = ledger_recalc_addrinfos(0,0,ledger,0);
                 ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,ledger->numsyncs);
                 db777_sync(ledger->DBs.transactions,&ledger->DBs,DB777_FLUSH);
                 ledger->DBs.transactions = 0;
             }
-            else ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,-1);
+            else ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,-1);*/
+            if ( syncflag != 0 )
+                coin777_sync(coin);
             dxblend(&ledger->calc_elapsed,(milliseconds() - startmilli),.99);
-            allocsize = (uint32_t)(coin777_permsize(state) - origsize);
+            allocsize = (uint32_t)(coin777_permsize(coin) - origsize);
             ledger->totalsize += allocsize;
             estimate = estimate_completion(ledger->startmilli,blocknum - ledger->startblocknum,RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - ledger->startmilli)/60000.;
-            supply = ledger->voutsum - ledger->spendsum;
+            supply = (coin->credits - coin->debits);//ledger->voutsum - ledger->spendsum;
             if ( dispflag != 0 )
             {
                 extern uint32_t Duplicate,Mismatch,Added,Linked,Numgets;
-                printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | H%d E%d R%d W%d %08x\n",ledger->calc_elapsed/1000.,ledger->DBs.coinstr,RTblocknum-blocknum,blocknum,dstr(supply),dstr(ledger->addrsum),dstr(supply)-dstr(ledger->addrsum),dstr(supply)-dstr(oldsupply),dstr(minted),elapsed,elapsed+(RTblocknum-blocknum)*ledger->calc_elapsed/60000,elapsed+estimate,allocsize,_mbstr(ledger->totalsize),(double)ledger->totalsize/blocknum,Duplicate,Mismatch,Numgets,Added,ledgerhash);
+                printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | H%d E%d R%d W%d %08x\n",ledger->calc_elapsed/1000.,ledger->DBs.coinstr,RTblocknum-blocknum,blocknum,dstr(supply),dstr(coin->addrsum),dstr(supply)-dstr(coin->addrsum),dstr(supply)-dstr(oldsupply),dstr(coin->minted != 0 ? coin->minted : coin->latest.total),elapsed,elapsed+(RTblocknum-blocknum)*ledger->calc_elapsed/60000,elapsed+estimate,allocsize,_mbstr(ledger->totalsize),(double)ledger->totalsize/blocknum,Duplicate,Mismatch,Numgets,Added,ledgerhash);
             }
             ledger->blocknum++;
             return(1);
         }
-        else printf("%s error processing block.%d\n",ledger->DBs.coinstr,blocknum);
+        else printf("%s error processing block.%d numtx.%d\n",ledger->DBs.coinstr,blocknum,numtx);
     } else printf("blocknum.%d > RTblocknum.%d - minconfirms.%d\n",blocknum,RTblocknum,minconfirms);
     return(0);
 }

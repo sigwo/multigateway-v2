@@ -148,6 +148,7 @@ struct coin777_addrinfo
 
 struct Qtx { struct queueitem DL; bits256 txid; uint32_t txidind; };
 struct Qaddr { struct queueitem DL; uint32_t addrind; char coinaddr[]; };
+struct Qunspent { struct queueitem DL; uint32_t unspentind,numunspents; char coinaddr[]; };
 struct Qscript { struct queueitem DL; uint32_t scriptind; uint16_t scriptlen; char script[]; };
 
 struct coin777
@@ -159,7 +160,8 @@ struct coin777
     int32_t use_addmultisig,minconfirms;
     struct packed_info P;
     
-    uint32_t latestblocknum; struct coin_offsets latest;
+    uint64_t credits,debits,minted,addrsum;
+    uint32_t latestblocknum; struct coin_offsets latest; long totalsize;
     struct env777 DBs;  struct coin777_state txids,addrs,scripts,blocks,txoffsets,txidbits,unspents,spends,addrinfos;
     struct alloc_space tmpMEM;
 };
@@ -185,8 +187,9 @@ uint16_t packed_crc16(struct packedblock *packed);
 
 int32_t coin777_parse(void *state,struct coin777 *coin,uint32_t blocknum);
 int32_t coin777_processQs(struct coin777 *coin);
-uint64_t coin777_permsize(void *state);
+uint64_t coin777_permsize(struct coin777 *coin);
 void coin777_ensurespace(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends);
+int32_t coin777_sync(struct coin777 *coin);
 
 #endif
 #else
@@ -202,7 +205,7 @@ void debugstop();
 
 uint64_t parse_voutsobj(int32_t (*voutfuncp)(void *state,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *script,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp),void *state,uint32_t txidind,uint32_t *firstvoutp,uint16_t *txnumvoutsp,uint32_t *numrawvoutsp,uint32_t *addrindp,uint32_t *scriptindp,cJSON *voutsobj)
 {
-    char coinaddr[8192],script[8192]; cJSON *item; uint64_t value,total = 0; int32_t i,numvouts;
+    char coinaddr[8192],script[8192]; cJSON *item; uint64_t value,total = 0; int32_t i,numvouts = 0;
     *firstvoutp = (*numrawvoutsp);
     if ( voutsobj != 0 && is_cJSON_Array(voutsobj) != 0 && (numvouts= cJSON_GetArraySize(voutsobj)) > 0 )
     {
@@ -222,7 +225,7 @@ uint64_t parse_voutsobj(int32_t (*voutfuncp)(void *state,uint32_t txidind,uint16
 
 uint64_t parse_vinsobj(uint64_t (*vinfuncp)(void *state,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spendtxidstr,uint16_t spendvout),void *state,uint32_t txidind,uint32_t *firstvinp,uint16_t *txnumvinsp,uint32_t *numrawvinsp,cJSON *vinsobj)
 {
-    char txidstr[8192],coinbase[8192]; cJSON *item; int32_t i,numvins; uint64_t value,total = 0;
+    char txidstr[8192],coinbase[8192]; cJSON *item; int32_t i,numvins = 0; uint64_t value,total = 0;
     *firstvinp = (*numrawvinsp);
     if ( vinsobj != 0 && is_cJSON_Array(vinsobj) != 0 && (numvins= cJSON_GetArraySize(vinsobj)) > 0 )
     {
@@ -234,7 +237,10 @@ uint64_t parse_vinsobj(uint64_t (*vinfuncp)(void *state,uint32_t txidind,uint16_
             {
                 copy_cJSON(coinbase,cJSON_GetObjectItem(item,"coinbase"));
                 if ( strlen(coinbase) > 1 )
+                {
+                    (*txnumvinsp) = 0;
                     return(0);
+                }
             }
             copy_cJSON(txidstr,cJSON_GetObjectItem(item,"txid"));
             if ( (value= (*vinfuncp)(state,txidind,i,(*numrawvinsp),txidstr,(int)get_cJSON_int(item,"vout"))) == 0 )
@@ -270,6 +276,8 @@ int32_t parse_block(void *state,uint32_t *txidindp,uint32_t *numrawvoutsp,uint32
             {
                 if ( (*blockfuncp)(state,blocknum,blockhash,merkleroot,timestamp,minted,(*txidindp),(*numrawvoutsp),(*numrawvinsp),(*addrindp),(*scriptindp),0,0) != 0 )
                     printf("error adding blocknum.%u\n",blocknum);
+                firstvout = (*numrawvoutsp), firstvin = (*numrawvinsp);
+                numvouts = numvins = 0;
                 for (txind=0; txind<numtx; txind++,(*txidindp)++)
                 {
                     copy_cJSON(txidstr,cJSON_GetArrayItem(txarray,txind));
@@ -278,6 +286,7 @@ int32_t parse_block(void *state,uint32_t *txidindp,uint32_t *numrawvoutsp,uint32
                         if ( (txjson= cJSON_Parse(txidjsonstr)) != 0 )
                         {
                             total += parse_voutsobj(voutfuncp,state,(*txidindp),&firstvout,&numvouts,numrawvoutsp,addrindp,scriptindp,cJSON_GetObjectItem(txjson,"vout"));
+                            coin777_processQs(coin777_find(coinstr,0));
                             spent += parse_vinsobj(vinfuncp,state,(*txidindp),&firstvin,&numvins,numrawvinsp,cJSON_GetObjectItem(txjson,"vin"));
                             free_json(txjson);
                         } else printf("update_txid_infos parse error.(%s)\n",txidjsonstr);
@@ -294,7 +303,8 @@ int32_t parse_block(void *state,uint32_t *txidindp,uint32_t *numrawvoutsp,uint32
         } else printf("blocknum.%u mismatched with %u\n",blocknum,get_API_int(cJSON_GetObjectItem(json,"height"),0));
         free_json(json);
     } else printf("get_blockjson error parsing.(%s)\n",txidstr);
-    //printf("BLOCK.%d: block.%d numtx.%d minted %.8f rawnumvins.%d rawnumvouts.%d\n",blocknum,raw->blocknum,raw->numtx,dstr(raw->minted),raw->numrawvins,raw->numrawvouts);
+    if ( Debuglevel > 2 )
+        printf("BLOCK.%d: numtx.%d minted %.8f rawnumvins.%d rawnumvouts.%d\n",blocknum,numtx,dstr(minted),(*numrawvinsp),(*numrawvoutsp));
     return(numtx);
 }
 
@@ -315,19 +325,22 @@ void coin777_stateinit(struct env777 *DBs,struct coin777_state *sp,char *coinstr
 void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
 {
     char fname[1024]; long needed; int32_t rwflag = 1;
-    needed = ind * sp->itemsize;
+    needed = (ind+2) * sp->itemsize;
     sprintf(fname,"DB"), ensure_directory(fname), strcat(fname,"/"), strcat(fname,coin->name), ensure_directory(fname), strcat(fname,"/"), strcat(fname,sp->name);
     //printf("%s.(%d %d)\n",sp->name,ind,sp->itemsize);
     if ( needed > sp->M.allocsize )
     {
         if ( sp->M.fileptr != 0 )
             release_map_file(sp->M.fileptr,sp->M.allocsize), sp->M.fileptr = 0;
-        ensure_filesize(fname,needed);
+        ensure_filesize(fname,needed + 65536 * sp->itemsize);
     }
     if ( sp->M.fileptr == 0 )
     {
         if ( init_mappedptr(&sp->MEM.ptr,&sp->M,0,rwflag,fname) != 0 )
+        {
             sp->MEM.size = sp->M.allocsize;
+            sp->maxitems = (uint32_t)(sp->MEM.size / sp->itemsize);
+        }
     }
     if ( (sp->table= sp->M.fileptr) == 0 )
         printf("couldnt map %s\n",fname);
@@ -336,7 +349,8 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
 
 void coin777_ensurespace(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends)
 {
-    char *subdir="",*coinstr = coin->name;
+    char dirname[512];
+    int32_t initflag = 0; char *subdir="",*coinstr = coin->name;
     if ( coin->addrs.DB == 0 )
         coin777_stateinit(&coin->DBs,&coin->addrs,coinstr,subdir,"addrs","zstd",DB777_HDD,sizeof(uint32_t));
     if ( coin->scripts.DB == 0 )
@@ -344,7 +358,7 @@ void coin777_ensurespace(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     if ( coin->txids.DB == 0 )
     {
         coin777_stateinit(&coin->DBs,&coin->txids,coinstr,subdir,"txids",0,DB777_HDD,sizeof(uint32_t));
-        //env777_start(0,&coin->DBs,0);
+        initflag = 1;
     }
     if ( coin->blocks.table == 0 )
         coin777_stateinit(0,&coin->blocks,coinstr,subdir,"blocks","zstd",0,sizeof(struct coin_offsets));
@@ -364,6 +378,11 @@ void coin777_ensurespace(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     coin->unspents.table = coin777_ensure(coin,&coin->unspents,unspentind);
     coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,addrind);
     coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
+    if ( initflag != 0 )
+    {
+        env777_start(0,&coin->DBs,0);
+        sprintf(dirname,"DB/%s/actives",coin->name), ensure_directory(dirname);
+    }
 }
 
 void *coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
@@ -379,23 +398,56 @@ void *coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint32_t ind
 
 uint32_t coin777_findind(struct coin777 *coin,struct coin777_state *sp,uint8_t *data,int32_t datalen)
 {
-    struct hashed_uint32 *entry;
+    struct hashed_uint32 *entry; extern int32_t Duplicate;
     HASH_FIND(hh,(struct hashed_uint32 *)sp->table,data,datalen,entry);
     if ( entry != 0 )
+    {
+        Duplicate++;
+        if ( Debuglevel > 2 || strcmp("addrs",sp->name) != 0 )
+            printf("found %s.%x -> %u\n",sp->name,*(int *)data,entry->ind);
         return(entry->ind);
+    }
     return(0);
+}
+
+int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
+{
+    void *db,*obj; int32_t retval; extern int32_t Added;
+    db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
+    if ( (obj= sp_object(db)) == 0 )
+        retval = -3;
+    if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,valuelen) != 0 )
+    {
+        sp_destroy(obj);
+        printf("error setting key/value %s[%d]\n",DB->name,*(int *)key);
+        retval = -4;
+    }
+    else
+    {
+        Added++;
+        coin->totalsize += valuelen;
+        retval = sp_set((transactions != 0 ? transactions : db),obj);
+    }
+    return(retval);
 }
 
 void coin777_addind(struct coin777 *coin,struct coin777_state *sp,void *data,int32_t datalen,uint32_t ind,struct queueitem *item)
 {
-    struct hashed_uint32 *entry,*table;
-    entry = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*entry)), entry->ind = ind;
-    table = coin->addrs.table; HASH_ADD_KEYPTR(hh,table,data,datalen,entry); coin->addrs.table = table;
+    struct hashed_uint32 *entry,*table; //uint32_t checkind;
     if ( item != 0 )
     {
         update_sha256(sp->sha256,&sp->state,data,datalen);
         queue_enqueue(sp->name,&sp->writeQ,item);
     }
+    if ( strcmp(sp->name,"addrs") == 0 )
+    {
+        if ( Debuglevel > 2 )
+            printf("add to %s ind.%u %lx item.%p data.%p size.%d\n",sp->name,ind,*(long *)data,item,data,datalen);
+        entry = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*entry)), entry->ind = ind;
+        table = coin->addrs.table; HASH_ADD_KEYPTR(hh,table,data,datalen,entry); coin->addrs.table = table;
+    }
+     //if ( (checkind= coin777_findind(coin,sp,data,datalen)) != ind )
+    //    printf("save/recall error %u -> %u for %s.%x\n",ind,checkind,sp->name,*(int *)data);
 }
 
 struct coin777_addrinfo *coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,int32_t len,uint8_t *script,uint16_t scriptlen)
@@ -410,71 +462,57 @@ struct coin777_addrinfo *coin777_createaddr(struct coin777 *coin,uint32_t addrin
         addrinfo->unspents_offset = len;
         if ( (addrinfo->unspents_offset & 3) != 0 )
             addrinfo->unspents_offset += 4 - (addrinfo->unspents_offset & 3);
+        coin->totalsize += addrinfo->unspents_offset;
         if ( addrinfo->unspents_offset > sizeof(addrinfo->coinaddr) )
             printf("overflowed unspentinds[] with unspentoffset.%d for (%s)\n",addrinfo->unspents_offset,coinaddr);
-        printf("maxunspents.%ld\n",(sizeof(addrinfo->coinaddr) - addrinfo->unspents_offset) / sizeof(uint32_t));
+        if ( Debuglevel > 2 )
+            printf("maxunspents.%ld\n",(sizeof(addrinfo->coinaddr) - addrinfo->unspents_offset) / sizeof(uint32_t));
     }
     return(addrinfo);
 }
 
+void coin777_Qunspent(struct coin777 *coin,struct coin777_addrinfo *addrinfo,uint32_t unspentind,int32_t numunspents)
+{
+    struct Qunspent *unspent;
+    unspent = calloc(1,sizeof(*unspent) + addrinfo->addrlen);
+    unspent->unspentind = unspentind, unspent->numunspents = numunspents, strcpy(unspent->coinaddr,addrinfo->coinaddr);
+    queue_enqueue("spend",&coin->unspents.writeQ,&unspent->DL);
+}
+
 void coin777_addspend(struct coin777 *coin,uint32_t totalspends,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spending_txidind,uint16_t vin)
 {
-    struct coin777_addrinfo *addrinfo; int32_t i,flag = 0; uint32_t *unspents,*spend,checkind;
+    struct coin777_addrinfo *addrinfo; uint32_t *unspents,*spend;
     if ( (addrinfo= coin777_itemptr(coin,&coin->addrinfos,addrind)) != 0 )
     {
         addrinfo->balance -= value;
-        unspents = (uint32_t *)&addrinfo->coinaddr[addrinfo->unspents_offset];
-        for (i=0; i<addrinfo->numunspents; i++)
-            if ( unspents[i] == unspentind )
-            {
-                unspents[i] |= (1 << 31);
-                flag = 1;
-                break;
-            }
-        if ( flag == 0 )
+        unspentind |= (1 << 31);
+        if ( addrinfo->numunspents < (sizeof(addrinfo->coinaddr) - addrinfo->unspents_offset) / sizeof(uint32_t) )
         {
-            FILE *fp; char fname[1024];
-            sprintf(fname,"DB/%s/actives/%s",coin->name,addrinfo->coinaddr);
-            os_compatible_path(fname);
-            if ( (fp= fopen(fname,"rb+")) != 0 )
-            {
-                while ( fread(&checkind,1,sizeof(checkind),fp) == sizeof(checkind) )
-                    if ( checkind == unspentind )
-                    {
-                        checkind |= (1 << 31);
-                        fseek(fp,-sizeof(unspentind),SEEK_CUR);
-                        fwrite(&checkind,1,sizeof(checkind),fp);
-                        flag = 1;
-                        break;
-                    }
-                fclose(fp);
-            }
-            if ( flag == 0 )
-                printf("couldnt find unspentind.%u %.8f for %s from numunspents.%d of max.%ld\n",unspentind,dstr(value),addrinfo->coinaddr,addrinfo->numunspents,(sizeof(addrinfo->coinaddr) - addrinfo->unspents_offset) / sizeof(uint32_t));
+            unspents = (uint32_t *)&addrinfo->coinaddr[addrinfo->unspents_offset];
+            unspents[addrinfo->numunspents] = unspentind;
         }
+        else coin777_Qunspent(coin,addrinfo,unspentind,addrinfo->numunspents);
+        addrinfo->numunspents++;
     }
     if ( (spend= coin777_itemptr(coin,&coin->spends,totalspends)) != 0 )
         *spend = unspentind;
+    coin->totalsize += sizeof(uint32_t);
     update_sha256(coin->spends.sha256,&coin->spends.state,(uint8_t *)&unspentind,sizeof(unspentind));
 }
 
 void coin777_addunspent(struct coin777 *coin,struct unspent_info *U,uint32_t addrind,uint32_t scriptind,uint64_t value,uint32_t unspentind)
 {
-    struct coin777_addrinfo *addrinfo; FILE *fp; char fname[1024];
+    struct coin777_addrinfo *addrinfo;
     U->value = value, U->addrind = addrind;
     if ( (addrinfo= coin777_itemptr(coin,&coin->addrinfos,addrind)) != 0 )
     {
         addrinfo->balance += value;
+        //printf("balance %.8f <- %.8f\n",dstr(addrinfo->balance),dstr(value));
         if ( addrinfo->numunspents < ((sizeof(addrinfo->coinaddr) - addrinfo->unspents_offset) / sizeof(uint32_t)) )
             ((uint32_t *)&addrinfo->coinaddr[addrinfo->unspents_offset])[(long)addrinfo->numunspents] = unspentind;
-        else
-        {
-            sprintf(fname,"DB/%s/actives/%s",coin->name,addrinfo->coinaddr);
-            os_compatible_path(fname);
-            if ( (fp= fopen(fname,"ab+")) != 0 )
-                fwrite(&unspentind,1,sizeof(unspentind),fp), fclose(fp);
-        }
+        else coin777_Qunspent(coin,addrinfo,unspentind,addrinfo->numunspents);
         addrinfo->numunspents++;
+        coin->totalsize += sizeof(uint32_t);
     }
     update_sha256(coin->unspents.sha256,&coin->unspents.state,(uint8_t *)U,sizeof(*U));
 }
@@ -496,53 +534,64 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
         return(-1);
     }
     if ( blockhashstr == 0 )
-        printf("end block");
+    {
+        if ( Debuglevel > 2 )
+            printf("end block");
+    }
     else
     {
-        printf("    block");
-        decode_hex(blockhash.bytes,sizeof(blockhash),blockhashstr);
-        decode_hex(merkleroot.bytes,sizeof(merkleroot),merklerootstr);
+        if ( Debuglevel > 2 )
+            printf("    block");
+        memset(blockhash.bytes,0,sizeof(blockhash)), decode_hex(blockhash.bytes,sizeof(blockhash),blockhashstr);
+        memset(merkleroot.bytes,0,sizeof(merkleroot)), decode_hex(merkleroot.bytes,sizeof(merkleroot),merklerootstr);
         block->blockhash = blockhash, block->merkleroot = merkleroot;
-        coin777_ensurespace(coin,blocknum+4096,txidind+65536,addrind+65536,scriptind+65536,unspentind+65536,numspends+65536);
+        coin777_ensurespace(coin,blocknum,txidind,addrind,scriptind,unspentind,numspends);
+        if ( (block= coin777_itemptr(coin,&coin->blocks,blocknum)) == 0  )
+        {
+            printf("coin blocks overflow? %p blocknum.%u vs max.%u\n",block,blocknum,coin->blocks.maxitems);
+            return(-1);
+        }
     }
-    printf(" B%u t%d T%u U%u S%u A%u F%u\n",blocknum,timestamp,txidind,unspentind,numspends,addrind,scriptind);
+    if ( Debuglevel > 2 )
+        printf(" B%u t%d T%u U%u S%u A%u F%u\n",blocknum,timestamp,txidind,unspentind,numspends,addrind,scriptind);
     O = *block;
     block->timestamp = timestamp, block->txidind = txidind, block->unspentind = unspentind, block->numspends = numspends, block->addrind = addrind, block->scriptind = scriptind;
     memset(&checkO,0,sizeof(checkO));
     if ( memcmp(&O,&checkO,sizeof(checkO)) != 0 )
     {
-        if ( O.timestamp != block->timestamp )
+        if ( O.timestamp != 0 && O.timestamp != block->timestamp )
             err = -2, printf("nonz timestamp.%u overwritten by %u\n",O.timestamp,block->timestamp);
-        if ( O.txidind != block->txidind )
+        if ( O.txidind != 0 && O.txidind != block->txidind )
             err = -3, printf("nonz txidind.%u overwritten by %u\n",O.txidind,block->txidind);
-        if ( O.unspentind != block->unspentind )
+        if ( O.unspentind != 0 && O.unspentind != block->unspentind )
             err = -4, printf("nonz unspentind.%u overwritten by %u\n",O.unspentind,block->unspentind);
-        if ( O.numspends != block->numspends )
+        if ( O.numspends != 0 && O.numspends != block->numspends )
             err = -5, printf("nonz numspends.%u overwritten by %u\n",O.numspends,block->numspends);
-        if ( O.addrind != block->addrind )
+        if ( O.addrind != 0 && O.addrind != block->addrind )
             err = -6, printf("nonz addrind.%u overwritten by %u\n",O.addrind,block->addrind);
-        if ( O.scriptind != block->scriptind )
+        if ( O.scriptind != 0 && O.scriptind != block->scriptind )
             err = -7, printf("nonz scriptind.%u overwritten by %u\n",O.scriptind,block->scriptind);
-        if ( O.total != block->total && block->total != 0 )
+        if ( O.total != 0 && O.total != block->total )
             err = -8, printf("nonz total %.8f overwritten by %.8f\n",dstr(O.total),dstr(block->total));
-        if ( O.spent != block->spent && block->spent != 0 )
+        if ( O.spent != 0 && O.spent != block->spent )
             err = -9, printf("nonz spent %.8f overwritten by %.8f\n",dstr(O.spent),dstr(block->spent));
     }
     coin->latest = *block, coin->latestblocknum = blocknum;
+    coin->totalsize += sizeof(*block);
     update_sha256(coin->blocks.sha256,&coin->blocks.state,(uint8_t *)block,sizeof(*block));
     return(err);
 }
 
 int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *scriptstr,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp)
 {
-    struct coin777 *coin = state; uint32_t *ptr,addrind,scriptind = 0; int32_t tmp,len,scriptlen; uint8_t script[4096];
+    struct coin777 *coin = state; uint32_t *ptr,addrind,scriptind = 0; int32_t tmp,len,scriptlen; uint8_t script[4096],*scriptptr;
     struct Qaddr *addritem = 0; struct Qscript *scriptitem = 0; struct unspent_info *U; struct coin777_addrinfo *addrinfo;
     if ( (U= coin777_itemptr(coin,&coin->unspents,unspentind)) == 0 )
     {
         printf("coin777_addvout overflow? U.%p txidind.%u vs max.%u\n",U,unspentind,coin->unspents.maxitems);
         return(-1);
     }
-    printf("T%u vo%-3d U%u %.8f %s %s\n",txidind,vout,unspentind,dstr(value),coinaddr,script);
+    coin->credits += value;
     scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
     len = (int32_t)strlen(coinaddr) + 1;
     if ( (addrind= coin777_findind(coin,&coin->addrs,(uint8_t *)coinaddr,len)) == 0 )
@@ -558,7 +607,7 @@ int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unsp
     }
     else if ( coin777_script0(coin,addrind,script,scriptlen) != 0 )
     {
-        if ( (scriptind= coin777_findind(coin,&coin->scripts,script,scriptlen)) == 0 )
+        //if ( (scriptind= coin777_findind(coin,&coin->scripts,script,scriptlen)) == 0 )
         {
             tmp = sizeof(scriptind);
             if ( (ptr= db777_get(&scriptind,&tmp,coin->DBs.transactions,coin->scripts.DB,script,scriptlen)) == 0 || scriptind == 0 || tmp != sizeof(*ptr) )
@@ -566,19 +615,23 @@ int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unsp
                 scriptind = ++(*scriptindp);
                 scriptitem = calloc(1,sizeof(*scriptitem) + scriptlen), scriptitem->scriptind = scriptind, scriptitem->scriptlen = scriptlen, memcpy(scriptitem->script,script,scriptlen);
             }
-            coin777_addind(coin,&coin->scripts,script,scriptlen,scriptind,&scriptitem->DL);
+            scriptptr = malloc(scriptlen), memcpy(scriptptr,script,scriptlen);
+            coin777_addind(coin,&coin->scripts,scriptptr,scriptlen,scriptind,&scriptitem->DL);
          }
     }
-    coin777_addunspent(coin,&U[unspentind],addrind,scriptind,value,unspentind);
+    if ( Debuglevel > 2 )
+        printf("UNSPENT.%u addrind.%u T%u vo%-3d U%u %.8f %s %llx\n",unspentind,addrind,txidind,vout,unspentind,dstr(value),coinaddr,*(long long *)script);
+    coin777_addunspent(coin,U,addrind,scriptind,value,unspentind);
     return(0);
 }
 
 uint64_t coin777_addvin(void *state,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spent_txidstr,uint16_t spent_vout)
 {
     struct coin777 *coin = state; bits256 txid; int32_t tmp; uint32_t *ptr,spent_txidind,*txoffsets,unspentind = 0; struct unspent_info *U = 0;
-    printf("T%u vi%-3d S%u %s vout.%d\n",txidind,vin,totalspends,spent_txidstr,spent_vout);
-    decode_hex(txid.bytes,sizeof(txid),spent_txidstr);
-    if ( (spent_txidind= coin777_findind(coin,&coin->txids,txid.bytes,sizeof(txid))) == 0 )
+    if ( Debuglevel > 2 )
+        printf("SPEND T%u vi%-3d S%u %s vout.%d\n",txidind,vin,totalspends,spent_txidstr,spent_vout);
+    memset(txid.bytes,0,sizeof(txid)), decode_hex(txid.bytes,sizeof(txid),spent_txidstr);
+    //if ( (spent_txidind= coin777_findind(coin,&coin->txids,txid.bytes,sizeof(txid))) == 0 )
     {
         tmp = sizeof(spent_txidind);
         if ( (ptr= db777_get(&spent_txidind,&tmp,coin->DBs.transactions,coin->txids.DB,txid.bytes,sizeof(txid))) == 0 || txidind == 0 || tmp != sizeof(*ptr) )
@@ -586,7 +639,7 @@ uint64_t coin777_addvin(void *state,uint32_t txidind,uint16_t vin,uint32_t total
             printf("cant find txid.(%s) spendvout.%d from \n",spent_txidstr,spent_vout), debugstop();
             return(-1);
         }
-    }
+    } //else printf("found txid\n");
     if ( spent_txidind > txidind )
     {
         printf("coin777_addvin txidind overflow? spent_txidind.%u vs max.%u\n",spent_txidind,txidind), debugstop();
@@ -600,7 +653,10 @@ uint64_t coin777_addvin(void *state,uint32_t txidind,uint16_t vin,uint32_t total
             if ( U->spending_txidind != 0 && U->spending_txidind != txidind )
                 printf("unspentind.%u interloper txidind.%u overwrites.%u\n",unspentind,txidind,U->spending_txidind);
             U->spending_txidind = txidind, U->spending_vin = vin;
+            if ( U->value == 0 || U->addrind == 0 )
+                printf("strange unspent.%u for addrind.%u %.8f\n",unspentind,U->addrind,dstr(U->value));
             coin777_addspend(coin,totalspends,U->addrind,unspentind,U->value,txidind,vin);
+            coin->debits += U->value;
             return(U->value);
         } else printf("error getting unspents[%u]\n",unspentind);
     } else printf("error getting txoffsets for unspentind.%u spent_txidind.%u\n",unspentind,spent_txidind);
@@ -611,10 +667,10 @@ int32_t coin777_addfirstoffsets(uint32_t *txoffsets,uint32_t firstvout,uint32_t 
 {
     int32_t err = 0;
     if ( txoffsets[0] != 0 && txoffsets[0] != firstvout )
-        err = -2, printf("nonz firstvout.%u overwritten by %u\n",txoffsets[0],firstvout);
+        err = -2, printf("txoffsets.%p nonz firstvout.%u overwritten by %u\n",txoffsets,txoffsets[0],firstvout);
     txoffsets[0] = firstvout;
     if ( txoffsets[1] != 0 && txoffsets[1] != firstvin )
-        err = -3, printf("nonz firstvin.%u overwritten by %u\n",txoffsets[1],firstvin);
+        err = -3, printf("txoffsets.%p nonz firstvin.%u overwritten by %u\n",txoffsets,txoffsets[1],firstvin);
     txoffsets[1] = firstvin;
     return(err);
 }
@@ -627,61 +683,86 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
         printf("coin777_addtx offsets overflow? %p %p txidind.%u vs max.%u\n",txidbits,txoffsets,txidind,coin->txids.maxitems);
         return(-1);
     }
-    printf("T%u U%u + %d, S%u + %d\n",txidind,firstvout,numvouts,firstvin,numvins);
+    memset(txid.bytes,0,sizeof(txid));
     decode_hex(txid.bytes,sizeof(txid),txidstr);
     *txidbits = txid;
+    if ( Debuglevel > 2 )
+        printf("ADDTX.%s: %x T%u U%u + numvouts.%d, S%u + numvins.%d\n",txidstr,*(int *)txidbits,txidind,firstvout,numvouts,firstvin,numvins);
     err = coin777_addfirstoffsets(txoffsets,firstvout,firstvin), txoffsets += 2;
     err = coin777_addfirstoffsets(txoffsets,firstvout + numvouts,firstvin + numvins);
+    coin->totalsize += sizeof(txid) + sizeof(*txoffsets) * 2;
     txitem = calloc(1,sizeof(*txitem)), txitem->txid = txid, txitem->txidind = txidind;
     coin777_addind(coin,&coin->txids,txidbits,sizeof(*txidbits),txidind,&txitem->DL);
     return(0);
 }
 
-int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
-{
-    void *db,*obj; int32_t retval; extern int32_t Added;
-    db = DB->asyncdb != 0 ? DB->asyncdb : DB->db;
-    if ( (obj= sp_object(db)) == 0 )
-        retval = -3;
-    if ( sp_set(obj,"key",key,keylen) != 0 || sp_set(obj,"value",value,valuelen) != 0 )
-    {
-        sp_destroy(obj);
-        printf("error setting key/value %s[%d]\n",DB->name,*(int *)key);
-        retval = -4;
-    }
-    else
-    {
-        Added++;
-        retval = sp_set((transactions != 0 ? transactions : db),obj);
-    }
-    return(retval);
-}
-
 int32_t coin777_processQs(struct coin777 *coin)
 {
-    struct Qtx *tx; struct Qaddr *addr; struct Qscript *script; int32_t n = 0;
+    struct Qtx *tx; struct Qaddr *addr; struct Qscript *script; struct Qunspent *unspent; int32_t n = 0;
+    if ( coin == 0 )
+        return(0);
     while ( (tx= queue_dequeue(&coin->txids.writeQ,0)) != 0 )
     {
-        printf("permanently store %llx -> txidind.%u\n",(long long)tx->txid.txid,tx->txidind);
+        if ( Debuglevel > 2 )
+            printf("permanently store %llx -> txidind.%u\n",(long long)tx->txid.txid,tx->txidind);
         coin777_addDB(coin,coin->DBs.transactions,coin->txids.DB,tx->txid.bytes,sizeof(tx->txid),&tx->txidind,sizeof(tx->txidind));
         free(tx);
         n++;
     }
     while ( (addr= queue_dequeue(&coin->addrs.writeQ,0)) != 0 )
     {
-        printf("permanently store (%s) -> addrind.%u\n",addr->coinaddr,addr->addrind);
+        if ( Debuglevel > 2 )
+            printf("permanently store (%s) -> addrind.%u\n",addr->coinaddr,addr->addrind);
         coin777_addDB(coin,coin->DBs.transactions,coin->addrs.DB,addr->coinaddr,(int32_t)strlen(addr->coinaddr)+1,&addr->addrind,sizeof(addr->addrind));
         free(addr);
         n++;
     }
     while ( (script= queue_dequeue(&coin->scripts.writeQ,0)) != 0 )
     {
-        printf("permanently store (%llx) -> scriptind.%u\n",*(long long *)script->script,script->scriptind);
+        //if ( Debuglevel > 2 )
+            printf("permanently store (%llx) -> scriptind.%u addrind.%u\n",*(long long *)script->script,script->scriptind,coin->latest.addrind);
         coin777_addDB(coin,coin->DBs.transactions,coin->scripts.DB,script->script,script->scriptlen,&script->scriptind,sizeof(script->scriptind));
         free(script);
         n++;
     }
+    while ( (unspent= queue_dequeue(&coin->unspents.writeQ,0)) != 0 )
+    {
+        FILE *fp; char fname[1024];
+        sprintf(fname,"DB/%s/actives/%s",coin->name,unspent->coinaddr);
+        os_compatible_path(fname);
+        if ( (fp= fopen(fname,"rb+")) == 0 )
+            fp = fopen(fname,"wb");
+        else fseek(fp,0,SEEK_END);
+        if ( fp != 0 )
+        {
+            fwrite(&unspent->unspentind,1,sizeof(unspent->unspentind),fp), fclose(fp);
+            //printf("wrote queued (%s) <- U%x num.%d\n",fname,unspent->unspentind,unspent->numunspents);
+        }
+        else printf("couldnt open (%s) to append %u spend.%d\n",fname,unspent->unspentind & ~(1<<31),(unspent->unspentind & (1<<31)) != 0);
+    }
     return(n);
+}
+
+int32_t coin777_sync(struct coin777 *coin)
+{
+    if ( coin != 0 )
+    {
+        sync_mappedptr(&coin->blocks.M,0);
+        sync_mappedptr(&coin->txoffsets.M,0);
+        sync_mappedptr(&coin->txidbits.M,0);
+        sync_mappedptr(&coin->unspents.M,0);
+        sync_mappedptr(&coin->addrinfos.M,0);
+        sync_mappedptr(&coin->spends.M,0);
+        while ( queue_size(&coin->txids.writeQ) > 0 )
+            msleep(10);
+        while ( queue_size(&coin->scripts.writeQ) > 0 )
+            msleep(10);
+        while ( queue_size(&coin->addrs.writeQ) > 0 )
+            msleep(10);
+        while ( queue_size(&coin->unspents.writeQ) > 0 )
+            msleep(10);
+    }
+    return(0);
 }
 
 int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint32_t *txidindp,uint32_t *unspentindp,uint32_t *numspendsp,uint32_t *addrindp,uint32_t *scriptindp)
@@ -704,9 +785,20 @@ int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint3
 
 int32_t coin777_parse(void *state,struct coin777 *coin,uint32_t blocknum)
 {
-    uint32_t timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind;
+    uint32_t timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind; int32_t i,numtx; struct coin777_addrinfo *addrinfos; uint64_t sum = 0;
     if ( coin777_getinds(state,blocknum,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
-        return(parse_block(state,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx));
+    {
+        numtx = parse_block(state,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
+        coin777_processQs(coin);
+        if ( (addrinfos= coin777_itemptr(coin,&coin->addrinfos,0)) != 0 )
+        {
+            for (i=0; i<=addrind; i++)
+                sum += addrinfos[i].balance;//, printf("%.8f ",dstr(addrinfos[i].balance));
+            //printf("-> sum %.8f addrind.%d maxinds.%d\n",dstr(sum),addrind,coin->addrs.maxitems);
+            coin->addrsum = sum;
+        }
+        return(numtx);
+    }
     else
     {
         printf("coin777 error getting inds for blocknum%u\n",blocknum);
@@ -714,12 +806,10 @@ int32_t coin777_parse(void *state,struct coin777 *coin,uint32_t blocknum)
     }
 }
 
-uint64_t coin777_permsize(void *state)
+uint64_t coin777_permsize(struct coin777 *coin)
 {
-    int32_t i; struct coin777 *coin = state; uint64_t totalsize = 0;
-    for (i=0; i<coin->DBs.numdbs; i++)
-        totalsize += coin->latest.txidind * (2 * (sizeof(uint32_t) + sizeof(bits256)) + coin->latest.addrind * (36 + sizeof(struct coin777_addrinfo)) + coin->latest.unspentind * sizeof(struct unspent_info) + coin->latestblocknum * sizeof(struct coin_offsets));
-    return(totalsize);
+    return(coin->totalsize);
 }
+
 #endif
 #endif

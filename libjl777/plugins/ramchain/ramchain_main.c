@@ -31,7 +31,7 @@ char *PLUGNAME(_authmethods)[] = { PUB_METHODS, "signrawtransaction", "dumpprivk
 int32_t ramchain_idle(struct plugin_info *plugin)
 {
     int32_t i,flag = 0;
-    struct coin777 *coin; struct ramchain *ramchain; struct ledger_info *ledger = 0; struct packedblock *packed = 0;
+    struct coin777 *coin; struct ramchain *ramchain; struct ledger_info *ledger = 0; //struct packedblock *packed = 0;
     for (i=0; i<COINS.num; i++)
     {
         if ( (coin= COINS.LIST[i]) != 0 )
@@ -40,9 +40,10 @@ int32_t ramchain_idle(struct plugin_info *plugin)
             //printf("packed.%p ledger.%p\n",coin->packed,ramchain->activeledger);
             if ( ramchain->readyflag != 0 && (ledger= ramchain->activeledger) != 0 )//&& ledger->blocknum <= coin->readahead )
             {
-                if ( coin->P.packed != 0 && (packed= coin->P.packed[ledger->blocknum]) != 0 )
-                    flag += ramchain_update(ramchain,ledger,packed);
-                else flag += ramchain_update(ramchain,ledger,0);
+                //if ( coin->P.packed != 0 && (packed= coin->P.packed[ledger->blocknum]) != 0 )
+                //    flag += ramchain_update(coin,ramchain,ledger,packed);
+                //else
+                    flag += ramchain_update(coin,ramchain,ledger,0);
                 //else printf("ptr.%p blocknum.%u\n",packed,ledger->blocknum);
             }
         }

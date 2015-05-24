@@ -424,7 +424,7 @@ void delete_file(char *fname,int32_t scrubflag)
 void *filealloc(struct mappedptr *M,char *fname,struct alloc_space *mem,long size)
 {
     //printf("mem->used %ld size.%ld | size.%ld\n",mem->used,size,mem->size);
-    printf("filemalloc new space.%ld %s\n",mem->size,_mbstr(size));
+    printf("filemalloc.(%s) new space.%ld %s\n",fname,mem->size,_mbstr(size));
     memset(M,0,sizeof(*M));
     //fix_windows_insanity(fname);
     mem->size = size;
@@ -445,6 +445,8 @@ void *tmpalloc(char *coinstr,struct alloc_space *mem,long size)
     if ( (mem->used + size) > mem->size )
     {
         sprintf(fname,"/tmp/%s.space.%d",coinstr,n++);
+        if ( mem->size == 0 )
+            mem->size = 1024 * 1024 * 128L;
         if ( filealloc(&M,fname,mem,MAX(mem->size,size)) == 0 )
         {
             printf("couldnt map tmpfile %s\n",fname);

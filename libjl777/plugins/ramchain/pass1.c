@@ -294,7 +294,6 @@ struct ledger_blockinfo *ledger_setblocknum(struct ledger_info *ledger,struct al
     uint32_t addrind; int32_t modval,lastmodval,allocsize = sizeof(ledger->getbuf); uint64_t balance = 0;
     struct ledger_blockinfo *block; struct ledger_addrinfo *addrinfo;
     startblocknum = ledger_startblocknum(ledger,-1);
-    //ledger->ledgerstate = ledger->ledger.state, memcpy(ledger->sha256,ledger->ledger.sha256,sizeof(ledger->sha256));
     if ( startblocknum < 1 )
     {
         ledger->numsyncs = 1;
