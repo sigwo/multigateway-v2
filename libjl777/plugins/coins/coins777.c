@@ -344,7 +344,7 @@ void coin777_ensurespace(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     if ( coin->txids.DB == 0 )
     {
         coin777_stateinit(&coin->DBs,&coin->txids,coinstr,subdir,"txids",0,DB777_HDD,sizeof(uint32_t));
-        env777_start(0,&coin->DBs,0);
+        //env777_start(0,&coin->DBs,0);
     }
     if ( coin->blocks.table == 0 )
         coin777_stateinit(0,&coin->blocks,coinstr,subdir,"blocks","zstd",0,sizeof(struct coin_offsets));
