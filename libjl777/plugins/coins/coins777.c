@@ -372,16 +372,25 @@ void coin777_ensurespace(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
         coin777_stateinit(0,&coin->spends,coinstr,subdir,"spends","zstd",0,sizeof(uint32_t));
     if ( coin->addrinfos.table == 0 )
         coin777_stateinit(0,&coin->addrinfos,coinstr,subdir,"addrinfos","zstd",0,sizeof(struct coin777_addrinfo));
-    coin->blocks.table = coin777_ensure(coin,&coin->blocks,blocknum);
-    coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
-    coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
-    coin->unspents.table = coin777_ensure(coin,&coin->unspents,unspentind);
-    coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,addrind);
-    coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
     if ( initflag != 0 )
     {
         env777_start(0,&coin->DBs,0);
         sprintf(dirname,"DB/%s/actives",coin->name), ensure_directory(dirname);
+        coin->blocks.table = coin777_ensure(coin,&coin->blocks,400000);
+        coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,50000000);
+        coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,50000000);
+        coin->unspents.table = coin777_ensure(coin,&coin->unspents,500000000);
+        coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,50000000);
+        coin->spends.table = coin777_ensure(coin,&coin->spends,500000000);
+    }
+    else
+    {
+        coin->blocks.table = coin777_ensure(coin,&coin->blocks,blocknum);
+        coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
+        coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
+        coin->unspents.table = coin777_ensure(coin,&coin->unspents,unspentind);
+        coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,addrind);
+        coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
     }
 }
 
