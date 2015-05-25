@@ -607,11 +607,6 @@ uint32_t coin777_findind(struct coin777 *coin,struct coin777_state *sp,uint8_t *
 {
     struct hashed_uint32 *entry; extern int32_t Duplicate;
     HASH_FIND(hh,(struct hashed_uint32 *)sp->table,data,datalen,entry);
-    /*if ( entry == 0 )
-     {
-     coin777_processQs(coin);
-     HASH_FIND(hh,(struct hashed_uint32 *)sp->table,data,datalen,entry);
-     }*/
     if ( entry != 0 )
     {
         Duplicate++;
@@ -729,44 +724,6 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
     return(0);
 }
 
-/*int32_t coin777_processQs(struct coin777 *coin)
-{
-    struct Qtx *tx; struct Qaddr *addr; struct Qscript *script; struct Qactives *actives; int32_t n = 0;
-    if ( coin == 0 )
-        return(0);
-    while ( (tx= queue_dequeue(&coin->txids.writeQ,0)) != 0 )
-    {
-        if ( Debuglevel > 2 )
-            printf("permanently store %llx -> txidind.%u\n",(long long)tx->txid.txid,tx->txidind);
-        coin777_addDB(coin,coin->DBs.transactions,coin->txids.DB,tx->txid.bytes,sizeof(tx->txid),&tx->txidind,sizeof(tx->txidind));
-        //free(tx);
-        n++;
-    }
-    while ( (addr= queue_dequeue(&coin->addrs.writeQ,0)) != 0 )
-    {
-        if ( Debuglevel > 2 )
-            printf("permanently store (%s) -> addrind.%u\n",addr->coinaddr,addr->addrind);
-        coin777_addDB(coin,coin->DBs.transactions,coin->addrs.DB,addr->coinaddr,(int32_t)strlen(addr->coinaddr)+1,&addr->addrind,sizeof(addr->addrind));
-        //free(addr);
-        n++;
-    }
-    while ( (script= queue_dequeue(&coin->scripts.writeQ,0)) != 0 )
-    {
-        //if ( Debuglevel > 2 )
-            printf("permanently store (%llx) -> scriptind.%u addrind.%u\n",*(long long *)script->script,script->scriptind,coin->latest.addrind);
-        coin777_addDB(coin,coin->DBs.transactions,coin->scripts.DB,script->script,script->scriptlen,&script->scriptind,sizeof(script->scriptind));
-        //free(script);
-        n++;
-    }
-    while ( (actives= queue_dequeue(&coin->actives.writeQ,0)) != 0 )
-    {
-        coin777_addDB(coin,coin->DBs.transactions,coin->actives.DB,actives->addrtx,sizeof(actives->addrtx),&actives->unspentind,sizeof(actives->unspentind));
-        //free(actives);
-        n++;
-    }
-    return(n);
-}*/
-
 int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint32_t *txidindp,uint32_t *unspentindp,uint32_t *numspendsp,uint32_t *addrindp,uint32_t *scriptindp)
 {
     struct coin777 *coin = state; struct coin_offsets *block = coin->blocks.table;
@@ -865,7 +822,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
         dispflag += ((blocknum % 100) == 0);
         oldsupply = (coin->credits - coin->debits), origsize = coin777_permsize(coin);
         if ( coin->DBs.transactions == 0 )
-            coin->DBs.transactions = sp_begin(coin->DBs.env), coin->numsyncs++;
+            coin->DBs.transactions = 0;//sp_begin(coin->DBs.env), coin->numsyncs++;
         if ( coin777_getinds(coin,blocknum,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
         {
             numtx = parse_block(coin,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
