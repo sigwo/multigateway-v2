@@ -504,7 +504,7 @@ void coin777_Qunspent(struct coin777 *coin,uint32_t addrind,struct coin777_addri
     //struct Qactives *actives;
     //actives = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*actives));
     //actives->unspentind = unspentind, actives->addrtx[0] = addrind, actives->addrtx[1] = numunspents;
-    update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)actives->addrtx,sizeof(actives->addrtx));
+    update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)addrtx,sizeof(addrtx));
     //queue_enqueue("actives",&coin->actives.writeQ,&actives->DL);
     addrtx[0] = addrind, addrtx[1] = numunspents;
     coin777_addDB(coin,coin->DBs.transactions,coin->actives.DB,addrtx,sizeof(addrtx),&unspentind,sizeof(unspentind));
