@@ -191,7 +191,7 @@ struct packedblock *ramchain_getpackedblock(void *space,int32_t *lenp,struct ram
 uint16_t packed_crc16(struct packedblock *packed);
 
 int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
-int32_t coin777_processQs(struct coin777 *coin);
+//int32_t coin777_processQs(struct coin777 *coin);
 uint64_t coin777_permsize(struct coin777 *coin);
 void coin777_initenv(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends);
 int32_t coin777_sync(struct coin777 *coin);
@@ -811,7 +811,7 @@ int32_t coin777_sync(struct coin777 *coin)
     if ( coin != 0 )
     {
         printf("Sync.%s\n",coin->name);
-        coin777_processQs(coin);
+        //coin777_processQs(coin);
         db777_sync(coin->DBs.transactions,&coin->DBs,DB777_FLUSH);
         sync_mappedptr(&coin->blocks.M,0);
         sync_mappedptr(&coin->txoffsets.M,0);

@@ -63,9 +63,9 @@ int32_t coins_idle(struct plugin_info *plugin)
     {
         if ( 0 && (coin= COINS.LIST[i]) != 0 )//&& coin->P.packed != 0 )
         {
-            if ( coin777_processQs(coin) != 0 )
-                return(1);
-            else continue;
+            //if ( coin777_processQs(coin) != 0 )
+            //    return(1);
+            //else continue;
             coin->P.RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->P.RTblocknum);
             while ( coin->P.packedblocknum <= coin->P.RTblocknum && coin->P.packedblocknum < coin->P.packedend )
             {
