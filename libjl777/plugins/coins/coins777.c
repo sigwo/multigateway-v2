@@ -694,8 +694,10 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
     if ( (txidbits= coin777_itemptr(coin,&coin->txidbits,txidind)) == 0 || (txoffsets= coin777_itemptr(coin,&coin->txoffsets,txidind)) == 0 )
     {
         printf("coin777_addtx offsets overflow? %p %p txidind.%u vs max.%u\n",txidbits,txoffsets,txidind,coin->txids.maxitems);
-        coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
-        coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
+        if ( txidbits == 0 )
+            coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
+        if ( txoffsets == 0 )
+            coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
         if ( (txidbits= coin777_itemptr(coin,&coin->txidbits,txidind)) == 0 || (txoffsets= coin777_itemptr(coin,&coin->txoffsets,txidind)) == 0 )
         {
             printf("coin777_addtx second offsets overflow? %p %p txidind.%u vs max.%u\n",txidbits,txoffsets,txidind,coin->txids.maxitems);
