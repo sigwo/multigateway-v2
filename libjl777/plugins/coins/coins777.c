@@ -395,7 +395,12 @@ void *coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint32_t ind
     if ( ptr == 0 || ind >= sp->maxitems )
     {
         printf("%s overflow? %p addrind.%u vs max.%u\n",sp->name,ptr,ind,sp->maxitems);
-        return(0);
+        sp->table = coin777_ensure(coin,sp,ind);
+        if ( (ptr= sp->table) == 0 )
+        {
+            printf("SECOND ERROR %s overflow? %p addrind.%u vs max.%u\n",sp->name,ptr,ind,sp->maxitems);
+            return(0);
+        } else printf("recovered %s %d\n",sp->name,ind);
     }
     return((void *)((long)ptr + sp->itemsize*ind));
 }
