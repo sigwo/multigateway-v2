@@ -191,7 +191,6 @@ struct packedblock *ramchain_getpackedblock(void *space,int32_t *lenp,struct ram
 uint16_t packed_crc16(struct packedblock *packed);
 
 int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
-//int32_t coin777_processQs(struct coin777 *coin);
 uint64_t coin777_permsize(struct coin777 *coin);
 void coin777_initenv(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends);
 int32_t coin777_sync(struct coin777 *coin);
@@ -856,7 +855,7 @@ uint64_t coin777_ledgerhash(struct coin777 *coin,uint32_t blocknum,int32_t numsy
 
 int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
 {
-    uint32_t blocknum,dispflag,ledgerhash=0,allocsize,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind; int32_t numtx;
+    uint32_t blocknum,dispflag,ledgerhash=0,allocsize,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind; int32_t numtx,err;
     uint64_t origsize,supply,oldsupply; double estimate,elapsed,startmilli;
     blocknum = coin->blocknum;
     if ( blocknum <= (RTblocknum - minconfirms) )
@@ -875,6 +874,13 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
                 coin->addrsum = addrinfos_sum(coin,addrind);
                 ledgerhash = (uint32_t)coin777_ledgerhash(coin,blocknum,coin->numsyncs);
                 coin777_sync(coin);
+                while ( coin->DBs.transactions != 0 && (err= sp_commit(coin->DBs.transactions)) != 0 )
+                {
+                    printf("ledger_commit: sp_commit error.%d\n",err);
+                    if ( err < 0 )
+                        break;
+                    msleep(1000);
+                }
                 coin->DBs.transactions = 0;
             }
             else ledgerhash = (uint32_t)coin777_ledgerhash(coin,blocknum,-1);
