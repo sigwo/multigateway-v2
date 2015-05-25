@@ -200,7 +200,7 @@ int32_t ledger_update(struct coin777 *coin,struct ledger_info *ledger,struct all
                 ledger->DBs.transactions = 0;
             }
             else ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,-1);*/
-            if ( syncflag != 0 )
+            if ( 0 && syncflag != 0 )
                 coin777_sync(coin);
             dxblend(&ledger->calc_elapsed,(milliseconds() - startmilli),.99);
             allocsize = (uint32_t)(coin777_permsize(coin) - origsize);
