@@ -501,7 +501,7 @@ int32_t coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,
 void coin777_Qunspent(struct coin777 *coin,uint32_t addrind,struct coin777_addrinfo *addrinfo,uint32_t unspentind,int32_t numunspents)
 {
     struct Qactives *actives;
-    actives = calloc(1,sizeof(*actives));
+    actives = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*actives));
     actives->unspentind = unspentind, actives->addrtx[0] = addrind, actives->addrtx[1] = numunspents;
     update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)actives->addrtx,sizeof(actives->addrtx));
     queue_enqueue("actives",&coin->actives.writeQ,&actives->DL);
@@ -644,7 +644,7 @@ int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unsp
         {
             addrind = (*addrindp)++;
             coin777_createaddr(coin,addrind,coinaddr,len,script,scriptlen);
-            addritem = calloc(1,sizeof(*addritem) + len + 1), addritem->addrind = addrind, strcpy(addritem->coinaddr,coinaddr);
+            addritem = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*addritem) + len + 1), addritem->addrind = addrind, strcpy(addritem->coinaddr,coinaddr);
         }
         addrptr = tmpalloc(coin->name,&coin->tmpMEM,len), memcpy(addrptr,coinaddr,len);
         coin777_addind(coin,&coin->addrs,addrptr,len,addrind,&addritem->DL);
@@ -657,7 +657,7 @@ int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unsp
             if ( (ptr= db777_get(&scriptind,&tmp,coin->DBs.transactions,coin->scripts.DB,script,scriptlen)) == 0 || scriptind == 0 || tmp != sizeof(*ptr) )
             {
                 scriptind = (*scriptindp)++;
-                scriptitem = calloc(1,sizeof(*scriptitem) + scriptlen), scriptitem->scriptind = scriptind, scriptitem->scriptlen = scriptlen, memcpy(scriptitem->script,script,scriptlen);
+                scriptitem = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*scriptitem) + scriptlen), scriptitem->scriptind = scriptind, scriptitem->scriptlen = scriptlen, memcpy(scriptitem->script,script,scriptlen);
             }
             scriptptr = tmpalloc(coin->name,&coin->tmpMEM,scriptlen), memcpy(scriptptr,script,scriptlen);
             coin777_addind(coin,&coin->scripts,scriptptr,scriptlen,scriptind,&scriptitem->DL);
@@ -720,7 +720,7 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
         printf("ADDTX.%s: %x T%u U%u + numvouts.%d, S%u + numvins.%d\n",txidstr,*(int *)txid.bytes,txidind,firstvout,numvouts,firstvin,numvins);
     txoffsets[0] = firstvout, txoffsets[1] = firstvin, coin777_RWmmap(1 | COIN777_SHA256,txoffsets,coin,&coin->txoffsets,txidind);
     txoffsets[0] += numvouts, txoffsets[1] += numvins, coin777_RWmmap(1 | COIN777_SHA256,txoffsets,coin,&coin->txoffsets,txidind+1);
-    txitem = calloc(1,sizeof(*txitem)), txitem->txid = txid, txitem->txidind = txidind;
+    txitem = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*txitem)), txitem->txid = txid, txitem->txidind = txidind;
     txptr = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*txptr)), *txptr = txid;
     coin777_addind(coin,&coin->txids,txptr,sizeof(txid),txidind,&txitem->DL);
     return(0);
@@ -736,7 +736,7 @@ int32_t coin777_processQs(struct coin777 *coin)
         if ( Debuglevel > 2 )
             printf("permanently store %llx -> txidind.%u\n",(long long)tx->txid.txid,tx->txidind);
         coin777_addDB(coin,coin->DBs.transactions,coin->txids.DB,tx->txid.bytes,sizeof(tx->txid),&tx->txidind,sizeof(tx->txidind));
-        free(tx);
+        //free(tx);
         n++;
     }
     while ( (addr= queue_dequeue(&coin->addrs.writeQ,0)) != 0 )
@@ -744,7 +744,7 @@ int32_t coin777_processQs(struct coin777 *coin)
         if ( Debuglevel > 2 )
             printf("permanently store (%s) -> addrind.%u\n",addr->coinaddr,addr->addrind);
         coin777_addDB(coin,coin->DBs.transactions,coin->addrs.DB,addr->coinaddr,(int32_t)strlen(addr->coinaddr)+1,&addr->addrind,sizeof(addr->addrind));
-        free(addr);
+        //free(addr);
         n++;
     }
     while ( (script= queue_dequeue(&coin->scripts.writeQ,0)) != 0 )
@@ -752,12 +752,13 @@ int32_t coin777_processQs(struct coin777 *coin)
         //if ( Debuglevel > 2 )
             printf("permanently store (%llx) -> scriptind.%u addrind.%u\n",*(long long *)script->script,script->scriptind,coin->latest.addrind);
         coin777_addDB(coin,coin->DBs.transactions,coin->scripts.DB,script->script,script->scriptlen,&script->scriptind,sizeof(script->scriptind));
-        free(script);
+        //free(script);
         n++;
     }
     while ( (actives= queue_dequeue(&coin->actives.writeQ,0)) != 0 )
     {
         coin777_addDB(coin,coin->DBs.transactions,coin->actives.DB,actives->addrtx,sizeof(actives->addrtx),&actives->unspentind,sizeof(actives->unspentind));
+        //free(actives);
         n++;
     }
     return(n);
