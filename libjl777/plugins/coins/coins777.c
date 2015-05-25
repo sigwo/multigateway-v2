@@ -500,11 +500,14 @@ int32_t coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,
 
 void coin777_Qunspent(struct coin777 *coin,uint32_t addrind,struct coin777_addrinfo *addrinfo,uint32_t unspentind,int32_t numunspents)
 {
-    struct Qactives *actives;
-    actives = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*actives));
-    actives->unspentind = unspentind, actives->addrtx[0] = addrind, actives->addrtx[1] = numunspents;
+    uint32_t addrtx[2];
+    //struct Qactives *actives;
+    //actives = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*actives));
+    //actives->unspentind = unspentind, actives->addrtx[0] = addrind, actives->addrtx[1] = numunspents;
     update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)actives->addrtx,sizeof(actives->addrtx));
-    queue_enqueue("actives",&coin->actives.writeQ,&actives->DL);
+    //queue_enqueue("actives",&coin->actives.writeQ,&actives->DL);
+    addrtx[0] = addrind, addrtx[1] = numunspents;
+    coin777_addDB(coin,coin->DBs.transactions,coin->actives.DB,addrtx,sizeof(addrtx),&unspentind,sizeof(unspentind));
 }
 
 void coin777_addspend(struct coin777 *coin,uint32_t totalspends,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spending_txidind,uint16_t vin)
@@ -624,7 +627,8 @@ void coin777_addind(struct coin777 *coin,struct coin777_state *sp,void *data,int
     if ( item != 0 )
     {
         update_sha256(sp->sha256,&sp->state,data,datalen);
-        queue_enqueue(sp->name,&sp->writeQ,item);
+        // queue_enqueue(sp->name,&sp->writeQ,item);
+        coin777_addDB(coin,coin->DBs.transactions,sp->DB,&ind,sizeof(ind),data,datalen);
     }
     entry = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*entry)), entry->ind = ind;
     table = sp->table; HASH_ADD_KEYPTR(hh,table,data,datalen,entry); sp->table = table;
@@ -726,7 +730,7 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
     return(0);
 }
 
-int32_t coin777_processQs(struct coin777 *coin)
+/*int32_t coin777_processQs(struct coin777 *coin)
 {
     struct Qtx *tx; struct Qaddr *addr; struct Qscript *script; struct Qactives *actives; int32_t n = 0;
     if ( coin == 0 )
@@ -762,7 +766,7 @@ int32_t coin777_processQs(struct coin777 *coin)
         n++;
     }
     return(n);
-}
+}*/
 
 int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint32_t *txidindp,uint32_t *unspentindp,uint32_t *numspendsp,uint32_t *addrindp,uint32_t *scriptindp)
 {
