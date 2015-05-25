@@ -693,7 +693,7 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
     memset(txid.bytes,0,sizeof(txid));
     decode_hex(txid.bytes,sizeof(txid),txidstr);
     *txidbits = txid;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("ADDTX.%s: %x T%u U%u + numvouts.%d, S%u + numvins.%d\n",txidstr,*(int *)txidbits,txidind,firstvout,numvouts,firstvin,numvins);
     err = coin777_addfirstoffsets(txoffsets,firstvout,firstvin), txoffsets += 2;
     err = coin777_addfirstoffsets(txoffsets,firstvout + numvouts,firstvin + numvins);
@@ -798,6 +798,21 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t addrind)
         coin->addrsum = sum;
     }
     return(sum);
+}
+
+void time_consuming_task()
+{
+    int32_t i,n = 0; uint64_t sum; struct coin777 *coin;
+    for (i=n=0; i<COINS.num; i++)
+    {
+        if ( (coin= COINS.LIST[i]) != 0 )
+        {
+            if ( coin777_processQs(coin) != 0 )
+                n++;
+            sum = addrinfos_sum(coin,coin->latest.addrind);
+            printf("addrinfos %s sum %.8f\n",coin->name,dstr(sum));
+        }
+    }
 }
 
 int32_t coin777_parse(void *state,struct coin777 *coin,uint32_t blocknum)

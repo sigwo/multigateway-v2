@@ -89,6 +89,7 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr,char *
  * perform the query
  *
  ************************************************************************/
+int32_t CURL_ERROR;
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params)
 {
@@ -103,6 +104,7 @@ char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *
     int32_t specialcase,numretries;
     double starttime;
     numretries = 0;
+    CURL_ERROR = 0;
     if ( debugstr != 0 && strcmp(debugstr,"BTCD") == 0 && command != 0 && strcmp(command,"SuperNET") ==  0 )
         specialcase = 1;
     else specialcase = 0;
@@ -180,6 +182,7 @@ try_again:
         }
         fprintf(stderr, "curl_easy_perform() failed: %s %s.(%s %s), retries: %d\n",curl_easy_strerror(res),debugstr,url,command,numretries);
         free(s.ptr);
+        CURL_ERROR = 1;
         portable_sleep((1<<numretries));
         goto try_again;
         
