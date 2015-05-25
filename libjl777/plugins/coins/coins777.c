@@ -394,7 +394,7 @@ void *coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint32_t ind
     void *ptr = sp->table;
     if ( ptr == 0 || ind >= sp->maxitems )
     {
-        printf("%s addrinfos overflow? %p addrind.%u vs max.%u\n",sp->name,ptr,ind,sp->maxitems);
+        printf("%s overflow? %p addrind.%u vs max.%u\n",sp->name,ptr,ind,sp->maxitems);
         return(0);
     }
     return((void *)((long)ptr + sp->itemsize*ind));
@@ -595,7 +595,13 @@ int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unsp
     if ( (U= coin777_itemptr(coin,&coin->unspents,unspentind)) == 0 )
     {
         printf("coin777_addvout overflow? U.%p txidind.%u vs max.%u\n",U,unspentind,coin->unspents.maxitems);
-        return(-1);
+        coin->unspents.table = coin777_ensure(coin,&coin->unspents,unspentind);
+        if ( (U= coin777_itemptr(coin,&coin->unspents,unspentind)) == 0 )
+        {
+            printf("coin777_addvout second overflow? U.%p txidind.%u vs max.%u\n",U,unspentind,coin->unspents.maxitems);
+            return(-1);
+        }
+        printf("recovered unspentind.%u\n",unspentind);
     }
     coin->credits += value;
     scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
@@ -688,7 +694,14 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
     if ( (txidbits= coin777_itemptr(coin,&coin->txidbits,txidind)) == 0 || (txoffsets= coin777_itemptr(coin,&coin->txoffsets,txidind)) == 0 )
     {
         printf("coin777_addtx offsets overflow? %p %p txidind.%u vs max.%u\n",txidbits,txoffsets,txidind,coin->txids.maxitems);
-        return(-1);
+        coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
+        coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
+        if ( (txidbits= coin777_itemptr(coin,&coin->txidbits,txidind)) == 0 || (txoffsets= coin777_itemptr(coin,&coin->txoffsets,txidind)) == 0 )
+        {
+            printf("coin777_addtx second offsets overflow? %p %p txidind.%u vs max.%u\n",txidbits,txoffsets,txidind,coin->txids.maxitems);
+            return(-1);
+        }
+        printf("recovered txidind.%u\n",txidind);
     }
     memset(txid.bytes,0,sizeof(txid));
     decode_hex(txid.bytes,sizeof(txid),txidstr);
