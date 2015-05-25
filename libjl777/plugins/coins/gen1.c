@@ -655,12 +655,7 @@ int32_t _extract_txvals(char *coinaddr,char *script,int32_t nohexout,cJSON *txob
 
 char *bitcoind_passthru(char *coinstr,char *serverport,char *userpass,char *method,char *params)
 {
-    void time_consuming_task(); extern int32_t CURL_ERROR;
-    char *retstr;
-    retstr = bitcoind_RPC(0,coinstr,serverport,userpass,method,params);
-    if ( CURL_ERROR != 0 )
-        time_consuming_task();
-    return(retstr);
+    return(bitcoind_RPC(0,coinstr,serverport,userpass,method,params));
 }
 
 

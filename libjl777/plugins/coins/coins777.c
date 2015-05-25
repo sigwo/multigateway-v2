@@ -5,6 +5,8 @@
 //  Created by James on 4/9/15.
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
+// code goes so fast, might need to change /proc/sys/net/ipv4/tcp_tw_recycle to have a 1 in it
+//
 
 #ifdef DEFINES_ONLY
 #ifndef crypto777_coins777_h
@@ -757,19 +759,6 @@ int32_t coin777_processQs(struct coin777 *coin)
     {
         coin777_addDB(coin,coin->DBs.transactions,coin->actives.DB,actives->addrtx,sizeof(actives->addrtx),&actives->unspentind,sizeof(actives->unspentind));
         n++;
-        /*FILE *fp; char fname[1024],dir[8];
-        dir[0] = unspent->coinaddr[0], dir[1] = unspent->coinaddr[1], dir[2] = unspent->coinaddr[2], dir[3] = 0;
-        sprintf(fname,"DB/%s/actives/%s",coin->name,dir), ensure_directory(fname), strcat(fname,"/"), strcat(fname,unspent->coinaddr);
-        os_compatible_path(fname);
-        if ( (fp= fopen(fname,"rb+")) == 0 )
-            fp = fopen(fname,"wb");
-        else fseek(fp,0,SEEK_END);
-        if ( fp != 0 )
-        {
-            fwrite(&unspent->unspentind,1,sizeof(unspent->unspentind),fp), fclose(fp);
-            //printf("wrote queued (%s) <- U%x num.%d\n",fname,unspent->unspentind,unspent->numunspents);
-        }
-        else printf("couldnt open (%s) to append %u spend.%d\n",fname,unspent->unspentind & ~(1<<31),(unspent->unspentind & (1<<31)) != 0);*/
     }
     return(n);
 }
@@ -818,21 +807,6 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t addrind)
         coin->addrsum = sum;
     }
     return(sum);
-}
-
-void time_consuming_task()
-{
-    int32_t i,n = 0; uint64_t sum; struct coin777 *coin;
-    for (i=n=0; i<COINS.num; i++)
-    {
-        if ( (coin= COINS.LIST[i]) != 0 )
-        {
-            if ( coin777_processQs(coin) != 0 )
-                n++;
-            sum = addrinfos_sum(coin,coin->latest.addrind);
-            printf("addrinfos %s sum %.8f\n",coin->name,dstr(sum));
-        }
-    }
 }
 
 int32_t coin777_parse(void *state,struct coin777 *coin,uint32_t blocknum)
