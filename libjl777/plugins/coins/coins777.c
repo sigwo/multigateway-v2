@@ -323,15 +323,15 @@ void coin777_stateinit(struct env777 *DBs,struct coin777_state *sp,char *coinstr
 
 void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
 {
-    char fname[1024]; long needed; int32_t rwflag = 1;
-    needed = (ind+2) * sp->itemsize;
+    char fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
+    needed = (ind + 2) * sp->itemsize;
     sprintf(fname,"DB"), ensure_directory(fname), strcat(fname,"/"), strcat(fname,coin->name), ensure_directory(fname), strcat(fname,"/"), strcat(fname,sp->name);
     //printf("%s.(%d %d)\n",sp->name,ind,sp->itemsize);
     if ( needed > sp->M.allocsize )
     {
         printf("REMAP.%s %llu -> %ld\n",sp->name,(long long)sp->M.allocsize,needed);
         if ( sp->M.fileptr != 0 )
-            release_map_file(sp->M.fileptr,sp->M.allocsize), sp->M.fileptr = 0;
+            release_map_file(sp->M.fileptr,sp->M.allocsize), sp->M.fileptr = 0, prevsize = sp->M.allocsize, sp->M.allocsize = 0;
         ensure_filesize(fname,needed + 1024 * sp->itemsize);
     }
     if ( sp->M.fileptr == 0 )
@@ -340,6 +340,8 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
         {
             sp->MEM.size = sp->M.allocsize;
             sp->maxitems = (uint32_t)(sp->MEM.size / sp->itemsize);
+            memset((void *)(sp->M.fileptr + prevsize),0,(sp->MEM.size - prevsize));
+            printf("%s maxitems.%u (MEMsize.%ld / itemsize.%d) prevsize.%ld needed.%ld\n",sp->name,sp->maxitems,sp->MEM.size,sp->itemsize,prevsize,needed);
         }
     }
     if ( (sp->table= sp->M.fileptr) == 0 )
@@ -713,7 +715,7 @@ int32_t coin777_processQs(struct coin777 *coin)
     }
     while ( (addr= queue_dequeue(&coin->addrs.writeQ,0)) != 0 )
     {
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("permanently store (%s) -> addrind.%u\n",addr->coinaddr,addr->addrind);
         coin777_addDB(coin,coin->DBs.transactions,coin->addrs.DB,addr->coinaddr,(int32_t)strlen(addr->coinaddr)+1,&addr->addrind,sizeof(addr->addrind));
         free(addr);
