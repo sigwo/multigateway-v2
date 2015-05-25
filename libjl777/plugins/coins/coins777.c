@@ -325,14 +325,18 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
 {
     char fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
     needed = (ind + 2) * sp->itemsize;
-    sprintf(fname,"DB"), ensure_directory(fname), strcat(fname,"/"), strcat(fname,coin->name), ensure_directory(fname), strcat(fname,"/"), strcat(fname,sp->name);
-    //printf("%s.(%d %d)\n",sp->name,ind,sp->itemsize);
     if ( needed > sp->M.allocsize )
     {
-        printf("REMAP.%s %llu -> %ld\n",sp->name,(long long)sp->M.allocsize,needed);
+        if ( sp->M.fileptr == 0 )
+            sprintf(fname,"DB"), ensure_directory(fname), strcat(fname,"/"), strcat(fname,coin->name), ensure_directory(fname), strcat(fname,"/"), strcat(fname,sp->name);
+        else sprintf(fname,"DB/%s/%s",coin->name,sp->name);
+        needed += 65536 * sp->itemsize;
+        if ( strcmp(sp->name,"addrinfos") == 0 )
+            printf("%s.(%d itemsize.%d) -> needed.%ld M.allocsize %ld\n",sp->name,ind,sp->itemsize,needed,(long)sp->M.allocsize);
+        printf("REMAP.%s %llu -> %ld [%ld]\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize);
         if ( sp->M.fileptr != 0 )
             release_map_file(sp->M.fileptr,sp->M.allocsize), sp->M.fileptr = 0, prevsize = sp->M.allocsize, sp->M.allocsize = 0;
-        ensure_filesize(fname,needed + 1024 * sp->itemsize);
+        ensure_filesize(fname,needed);
     }
     if ( sp->M.fileptr == 0 )
     {
