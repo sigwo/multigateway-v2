@@ -1081,7 +1081,7 @@ void serverloop(void *_args)
     while ( 1 )
     {
         void coin777_pulldata(struct packedblock *packed,int32_t len);
-        int32_t len; struct coin777 *coin;
+        //int32_t len; struct coin777 *coin;
 #ifdef STANDALONE
         char line[1024];
         if ( getline777(line,sizeof(line)-1) > 0 )

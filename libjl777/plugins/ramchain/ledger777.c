@@ -178,7 +178,7 @@ int32_t ledger_update(struct coin777 *coin,struct ledger_info *ledger,struct all
 {
     //struct ledger_blockinfo *block;
     struct ledger_inds L;
-    uint32_t blocknum,dispflag,ledgerhash=0,numtx,allocsize; uint64_t origsize,supply,oldsupply,minted = 0; double estimate,elapsed,startmilli;
+    uint32_t blocknum,dispflag,ledgerhash=0,numtx,allocsize; uint64_t origsize,supply,oldsupply; double estimate,elapsed,startmilli;
     blocknum = ledger->blocknum;
     if ( blocknum <= RTblocknum-minconfirms )
     {
@@ -200,7 +200,7 @@ int32_t ledger_update(struct coin777 *coin,struct ledger_info *ledger,struct all
                 ledger->DBs.transactions = 0;
             }
             else ledgerhash = ledger_setlast(&L,ledger,ledger->blocknum,-1);*/
-            if ( 0 && syncflag != 0 )
+            if ( syncflag != 0 )
                 coin777_sync(coin);
             dxblend(&ledger->calc_elapsed,(milliseconds() - startmilli),.99);
             allocsize = (uint32_t)(coin777_permsize(coin) - origsize);

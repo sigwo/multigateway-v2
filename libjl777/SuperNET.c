@@ -771,8 +771,21 @@ int main(int argc,const char *argv[])
             if ( is_bundled_plugin((char *)argv[i]) != 0 )
                 language_func((char *)argv[i],"",0,0,1,(char *)argv[i],jsonstr,call_system);
     }
+    int32_t coin777_processQs(struct coin777 *coin);
+    struct coin777 *coin; int32_t n;
     while ( 1 )
-        sleep(777);
+    {
+        for (i=n=0; i<COINS.num; i++)
+        {
+            if ( (coin= COINS.LIST[i]) != 0 )
+            {
+                if ( coin777_processQs(coin) != 0 )
+                    n++;
+            }
+        }
+        if ( n == 0 && SUPERNET.APISLEEP != 0 )
+            msleep(SUPERNET.APISLEEP);
+    }
     return(0);
 }
 #endif
