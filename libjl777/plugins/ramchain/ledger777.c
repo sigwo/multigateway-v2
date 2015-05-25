@@ -177,7 +177,7 @@ int32_t ledger_ledgerhash(char *ledgerhash,struct ledger_inds *lp)
 int32_t ledger_update(struct coin777 *coin,struct ledger_info *ledger,struct alloc_space *mem,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
 {
     //struct ledger_blockinfo *block;
-    struct ledger_inds L;
+    //struct ledger_inds L;
     uint32_t blocknum,dispflag,ledgerhash=0,numtx,allocsize; uint64_t origsize,supply,oldsupply; double estimate,elapsed,startmilli;
     blocknum = ledger->blocknum;
     if ( blocknum <= RTblocknum-minconfirms )
@@ -189,7 +189,7 @@ int32_t ledger_update(struct coin777 *coin,struct ledger_info *ledger,struct all
         if ( ledger->DBs.transactions == 0 )
             ledger->DBs.transactions = 0;//sp_begin(ledger->DBs.env), ledger->numsyncs++;
         origsize = coin777_permsize(coin);
-        if ( (numtx= coin777_parse(coin,coin,blocknum)) != 0 )
+        if ( (numtx= coin777_parse(coin,RTblocknum,syncflag,minconfirms)) != 0 )
         //if ( (numtx= ledger_setblock(dispflag,ledger,mem,state,blocknum)) != 0 )
         {
            /* if ( syncflag != 0 )
@@ -289,9 +289,9 @@ struct ledger_info *ledger_alloc(char *coinstr,char *subdir,int32_t flags)
     struct ledger_info *ledger = 0; 
     if ( (ledger= calloc(1,sizeof(*ledger))) != 0 )
     {
-        int32_t maxblocknum = 1000;
-        coin777_ensurespace(coin777_find(coinstr,0),maxblocknum,maxblocknum*8,maxblocknum*8,maxblocknum*8,maxblocknum*8,maxblocknum*8);
-        return(ledger);
+       // int32_t maxblocknum = 1000;
+       // coin777_ensurespace(coin777_find(coinstr,0),maxblocknum,maxblocknum*8,maxblocknum*8,maxblocknum*8,maxblocknum*8,maxblocknum*8);
+       // return(ledger);
    //Debuglevel = 3;
         if ( flags == 0 )
             flags = (DB777_FLUSH | DB777_HDD | DB777_MULTITHREAD | DB777_RAMDISK);

@@ -23,6 +23,7 @@
 #define DB777_HDD 2
 #define DB777_NANO 4
 #define DB777_FLUSH 8
+#define DB777_VOLATILE 0x10
 #define DB777_KEY32 0x20
 #define ENV777_BACKUP 0x40
 #define DB777_MULTITHREAD 0x80
@@ -55,6 +56,7 @@ int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue);
 void *db777_read(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen,int32_t fillcache);
 void *db777_matrixptr(int32_t *matrixindp,void *transactions,struct db777 *DB,void *key,int32_t keylen);
 int32_t db777_linkDB(struct db777 *DB,struct db777 *revDB,uint32_t maxind);
+void db777_path(char *path,char *coinstr,char *subdir,int32_t useramdisk);
 
 extern struct db777_info SOPHIA;
 extern struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata;//,*DB_NXTassettx,;

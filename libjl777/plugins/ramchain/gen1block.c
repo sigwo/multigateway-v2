@@ -38,7 +38,7 @@ uint32_t ledger_addrind(uint32_t *firstblocknump,struct ledger_info *ledger,char
 uint32_t ledger_scriptind(uint32_t *firstblocknump,struct ledger_info *ledger,char *scriptstr);
 uint32_t ledger_firstvout(int32_t requiredflag,struct ledger_info *ledger,uint32_t txidind);
 int32_t ledger_upairset(struct ledger_info *ledger,uint32_t txidind,uint32_t firstvout,uint32_t firstvin);
-int32_t ledger_setblock(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,struct rawblock *emit,uint32_t blocknum);
+struct ledger_blockinfo *ledger_setblock(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,struct rawblock *emit,uint32_t blocknum);
 uint16_t block_crc16(struct ledger_blockinfo *block);
 struct ledger_blockinfo *ledger_getblock(struct ledger_blockinfo *space,int32_t *allocsizep,struct ledger_info *ledger,uint32_t blocknum);
 
@@ -393,7 +393,7 @@ int32_t ledger_finishblock(struct ledger_info *ledger,struct alloc_space *mem,st
     return(block->allocsize);
 }
 
-struct ledger_blockinfo *oldledger_setblock(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,struct rawblock *emit,uint32_t blocknum)
+struct ledger_blockinfo *ledger_setblock(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,struct rawblock *emit,uint32_t blocknum)
 {
     struct rawtx *tx; struct rawvin *vi; struct rawvout *vo; struct ledger_blockinfo *block = 0;
     uint32_t i,txidind,txind,n;
@@ -419,13 +419,13 @@ struct ledger_blockinfo *oldledger_setblock(int32_t dispflag,struct ledger_info 
     return(block);
 }
 
-int32_t ledger_setblock(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,struct rawblock *emit,uint32_t blocknum)
+/*int32_t ledger_setblock(int32_t dispflag,struct ledger_info *ledger,struct alloc_space *mem,struct rawblock *emit,uint32_t blocknum)
 {
     struct coin777 *coin = coin777_find(ledger->DBs.coinstr,0);
     if ( coin != 0 )
         return(coin777_parse(coin,coin,blocknum));
     return(0);
-}
+}*/
 
 #endif
 #endif
