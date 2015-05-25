@@ -558,7 +558,7 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
 {
     bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,block; int32_t err = 0;
     memset(&B,0,sizeof(B));
-    Debuglevel = 3;
+   // Debuglevel = 3;
     if ( Debuglevel > 2 )
         printf("B.%u T.%u U.%u S.%u A.%u C.%u\n",blocknum,txidind,unspentind,numspends,addrind,scriptind);
     if ( blockhashstr != 0 ) // start of block
