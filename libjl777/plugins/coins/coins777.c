@@ -420,7 +420,7 @@ void *coin777_getDB(void *dest,int32_t *lenp,void *transactions,struct db777 *DB
                 memcpy(dest,value,*lenp);
                 sp_destroy(result);
                 return(dest);
-            } else printf("DB.%p %s no result transactions.%p key.%x\n",DB,DB->name,transactions,*(int *)key);
+            } //else printf("DB.%p %s no result transactions.%p key.%x\n",DB,DB->name,transactions,*(int *)key);
         } else printf("no key\n");
     } else printf("getDB no obj\n");
     return(0);
