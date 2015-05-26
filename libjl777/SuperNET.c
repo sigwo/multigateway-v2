@@ -786,6 +786,8 @@ int main(int argc,const char *argv[])
         if ( n == 0 && SUPERNET.APISLEEP != 0 )
             msleep(SUPERNET.APISLEEP);
     }*/
+    while ( 1 )
+        sleep(777);
     return(0);
 }
 #endif

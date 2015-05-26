@@ -31,7 +31,7 @@ void *loadfileM(char *fname,char **bufp,uint64_t *lenp,uint64_t *allocsizep);
 void *loadfile(uint64_t *allocsizep,char *fname);
 
 void ensure_dir(char *dirname);
-void ensure_filesize(char *fname,long filesize);
+long ensure_filesize(char *fname,long filesize,int32_t truncateflag);
 int32_t compare_files(char *fname,char *fname2);
 long copy_file(char *src,char *dest);
 void delete_file(char *fname,int32_t scrubflag);
@@ -161,7 +161,7 @@ long copy_file(char *src,char *dest)
     return(len);
 }
 
-void ensure_filesize(char *fname,long filesize)
+long ensure_filesize(char *fname,long filesize,int32_t truncateflag)
 {
     FILE *fp;
     char *zeroes;
@@ -201,9 +201,14 @@ printf("ensure_filesize.(%s) %ld %s | ",fname,filesize,_mbstr(filesize));
             fclose(fp);
 			aligned_free(zeroes);
         }
+        return(filesize);
     }
-    else if ( allocsize > filesize )
+    else if ( allocsize*truncateflag > filesize )
+    {
         portable_truncate(fname,filesize);
+        return(filesize);
+    }
+    else return(allocsize);
 }
 
 int32_t open_mappedptr(struct mappedptr *mp)
@@ -260,10 +265,10 @@ void *init_mappedptr(void **ptrp,struct mappedptr *mp,uint64_t allocsize,int32_t
 	mp->rwflag = rwflag;
 	mp->allocsize = allocsize;
     if ( rwflag != 0 && mp->actually_allocated == 0 && allocsize != 0 )
-        ensure_filesize(fname,allocsize);
+        allocsize = ensure_filesize(fname,allocsize,0);
 	if ( open_mappedptr(mp) != 0 )
 	{
-printf("init_mappedptr %s.rwflag.%d\n",fname,rwflag);
+printf("init_mappedptr %s.rwflag.%d | ",fname,rwflag);
         if ( allocsize != 0 )
 			printf("error mapping(%s) rwflag.%d ptr %p mapped %llu vs allocsize %llu %s\n",fname,rwflag,mp->fileptr,(long long)mp->allocsize,(long long)allocsize,_mbstr(allocsize));
         else allocsize = mp->allocsize;
@@ -446,7 +451,7 @@ void *tmpalloc(char *coinstr,struct alloc_space *mem,long size)
     {
         sprintf(fname,"/tmp/%s.space.%d",coinstr,n++);
         if ( mem->size == 0 )
-            mem->size = 1024 * 1024 * 128L;
+            mem->size = 1024 * 1024 * 128L * ((strcmp(coinstr,"BTC") == 0) ? 8 : 1);
         if ( filealloc(&M,fname,mem,MAX(mem->size,size)) == 0 )
         {
             printf("couldnt map tmpfile %s\n",fname);

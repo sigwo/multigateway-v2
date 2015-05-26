@@ -143,16 +143,16 @@ struct hashed_uint32 { UT_hash_handle hh; uint32_t ind; };
 struct coin777_addrinfo
 {
     uint64_t balance;
-    uint32_t firstblocknum,numunspents:28,notify:1,pending:1,MGW:1,dirty:1;
+    uint32_t firstblocknum,num:28,notify:1,pending:1,MGW:1,dirty:1;
     uint16_t scriptlen;
     uint8_t addrlen,unspents_offset;
-    char coinaddr[256 - 16];
+    char coinaddr[192 - 20];
 };
 
-struct Qtx { struct queueitem DL; bits256 txid; uint32_t txidind; };
-struct Qaddr { struct queueitem DL; uint32_t addrind; char coinaddr[]; };
-struct Qactives { struct queueitem DL; uint32_t unspentind,addrtx[2]; };
-struct Qscript { struct queueitem DL; uint32_t scriptind; uint16_t scriptlen; char script[]; };
+//struct Qtx { struct queueitem DL; bits256 txid; uint32_t txidind; };
+//struct Qaddr { struct queueitem DL; uint32_t addrind; char coinaddr[]; };
+//struct Qactives { struct queueitem DL; uint32_t unspentind,addrtx[2]; };
+//struct Qscript { struct queueitem DL; uint32_t scriptind; uint16_t scriptlen; char script[]; };
 #define COIN777_SHA256 256
 
 struct coin777
@@ -181,19 +181,28 @@ void rawblock_patch(struct rawblock *raw);
 
 void update_sha256(unsigned char hash[256 >> 3],struct sha256_state *state,unsigned char *src,int32_t len);
 struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize);
-struct packedblock *coin777_packrawblock(struct coin777 *coin,struct rawblock *raw);
-int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint32_t blocknum);
+//struct packedblock *coin777_packrawblock(struct coin777 *coin,struct rawblock *raw);
+//int32_t coin777_unpackblock(struct rawblock *raw,struct packedblock *packed,uint32_t blocknum);
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);
-void ensure_packedptrs(struct coin777 *coin);
-void ramchain_setpackedblock(struct ramchain *ramchain,struct packedblock *packed,uint32_t blocknum);
-struct packedblock *ramchain_getpackedblock(void *space,int32_t *lenp,struct ramchain *ramchain,uint32_t blocknum);
-uint16_t packed_crc16(struct packedblock *packed);
+//void ensure_packedptrs(struct coin777 *coin);
+//void ramchain_setpackedblock(struct ramchain *ramchain,struct packedblock *packed,uint32_t blocknum);
+//struct packedblock *ramchain_getpackedblock(void *space,int32_t *lenp,struct ramchain *ramchain,uint32_t blocknum);
+//uint16_t packed_crc16(struct packedblock *packed);
 
 int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
-uint64_t coin777_permsize(struct coin777 *coin);
-void coin777_initenv(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends);
-int32_t coin777_sync(struct coin777 *coin);
+void coin777_initDBenv(struct coin777 *coin);
+uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci);
+int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint32_t *txidindp,uint32_t *unspentindp,uint32_t *numspendsp,uint32_t *addrindp,uint32_t *scriptindp);
+int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends);
+int32_t coin777_syncblocks(struct coin777_hashes *inds,int32_t max,struct coin777 *coin);
+uint64_t coin777_ledgerhash(char *ledgerhash,struct coin777_hashes *H);
+int32_t coin_txidstr(struct coin777 *coin,char *txidstr,int32_t max,uint32_t txidind,uint32_t addrind);
+int32_t coin_scriptstr(struct coin777 *coin,char *scriptstr,int32_t max,uint32_t scriptind,uint32_t addrind);
+int32_t coin_coinaddr(struct coin777 *coin,char *coinaddr,int32_t max,uint32_t addrind,uint32_t addrind2);
+uint32_t coin_txidind(uint32_t *firstblocknump,struct coin777 *coin,char *txidstr);
+uint32_t coin_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr);
+uint32_t coin_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *scriptstr);
 
 #endif
 #else
@@ -205,9 +214,15 @@ int32_t coin777_sync(struct coin777 *coin);
 #include "coins777.c"
 #endif
 
-void debugstop();
+void debugstop()
+{
+    //#ifdef __APPLE__
+    while ( 1 )
+        sleep(60);
+    //#endif
+}
 
-uint64_t parse_voutsobj(int32_t (*voutfuncp)(void *state,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *script,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp),void *state,uint32_t txidind,uint32_t *firstvoutp,uint16_t *txnumvoutsp,uint32_t *numrawvoutsp,uint32_t *addrindp,uint32_t *scriptindp,cJSON *voutsobj)
+uint64_t parse_voutsobj(int32_t (*voutfuncp)(void *state,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *script,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp,uint32_t blocknum),void *state,uint32_t txidind,uint32_t *firstvoutp,uint16_t *txnumvoutsp,uint32_t *numrawvoutsp,uint32_t *addrindp,uint32_t *scriptindp,cJSON *voutsobj,uint32_t blocknum)
 {
     char coinaddr[8192],script[8192]; cJSON *item; uint64_t value,total = 0; int32_t i,numvouts = 0;
     *firstvoutp = (*numrawvoutsp);
@@ -220,14 +235,14 @@ uint64_t parse_voutsobj(int32_t (*voutfuncp)(void *state,uint32_t txidind,uint16
             value = conv_cJSON_float(item,"value");
             total += value;
             _extract_txvals(coinaddr,script,1,item); // default to nohexout
-            if ( (*voutfuncp)(state,txidind,i,(*numrawvoutsp),coinaddr,script,value,addrindp,scriptindp) != 0 )
+            if ( (*voutfuncp)(state,txidind,i,(*numrawvoutsp),coinaddr,script,value,addrindp,scriptindp,blocknum) != 0 )
                 printf("error vout.%d numrawvouts.%u\n",i,(*numrawvoutsp));
         }
     } else (*txnumvoutsp) = 0, printf("error with vouts\n");
     return(total);
 }
 
-uint64_t parse_vinsobj(uint64_t (*vinfuncp)(void *state,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spendtxidstr,uint16_t spendvout),void *state,uint32_t txidind,uint32_t *firstvinp,uint16_t *txnumvinsp,uint32_t *numrawvinsp,cJSON *vinsobj)
+uint64_t parse_vinsobj(uint64_t (*vinfuncp)(void *state,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spendtxidstr,uint16_t spendvout,uint32_t blocknum),void *state,uint32_t txidind,uint32_t *firstvinp,uint16_t *txnumvinsp,uint32_t *numrawvinsp,cJSON *vinsobj,uint32_t blocknum)
 {
     char txidstr[8192],coinbase[8192]; cJSON *item; int32_t i,numvins = 0; uint64_t value,total = 0;
     *firstvinp = (*numrawvinsp);
@@ -247,7 +262,7 @@ uint64_t parse_vinsobj(uint64_t (*vinfuncp)(void *state,uint32_t txidind,uint16_
                 }
             }
             copy_cJSON(txidstr,cJSON_GetObjectItem(item,"txid"));
-            if ( (value= (*vinfuncp)(state,txidind,i,(*numrawvinsp),txidstr,(int)get_cJSON_int(item,"vout"))) == 0 )
+            if ( (value= (*vinfuncp)(state,txidind,i,(*numrawvinsp),txidstr,(int)get_cJSON_int(item,"vout"),blocknum)) == 0 )
                 printf("error vin.%d numrawvins.%u\n",i,(*numrawvinsp));
             total += value;
         }
@@ -257,8 +272,8 @@ uint64_t parse_vinsobj(uint64_t (*vinfuncp)(void *state,uint32_t txidind,uint16_
 
 int32_t parse_block(void *state,uint32_t *txidindp,uint32_t *numrawvoutsp,uint32_t *numrawvinsp,uint32_t *addrindp,uint32_t *scriptindp,char *coinstr,char *serverport,char *userpass,uint32_t blocknum,
     int32_t (*blockfuncp)(void *state,uint32_t blocknum,char *blockhash,char *merkleroot,uint32_t timestamp,uint64_t minted,uint32_t txidind,uint32_t unspentind,uint32_t numspends,uint32_t addrind,uint32_t scriptind,uint64_t total,uint64_t spent),
-    uint64_t (*vinfuncp)(void *state,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spendtxidstr,uint16_t spendvout),
-    int32_t (*voutfuncp)(void *state,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *script,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp),
+    uint64_t (*vinfuncp)(void *state,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spendtxidstr,uint16_t spendvout,uint32_t blocknum),
+    int32_t (*voutfuncp)(void *state,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *script,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp,uint32_t blocknum),
     int32_t (*txfuncp)(void *state,uint32_t blocknum,uint32_t txidind,char *txidstr,uint32_t firstvout,uint16_t numvouts,uint64_t total,uint32_t firstvin,uint16_t numvins))
 {
     char blockhash[8192],merkleroot[8192],txidstr[8192],mintedstr[8192],*txidjsonstr; cJSON *json,*txarray,*txjson;
@@ -289,8 +304,8 @@ int32_t parse_block(void *state,uint32_t *txidindp,uint32_t *numrawvoutsp,uint32
                     {
                         if ( (txjson= cJSON_Parse(txidjsonstr)) != 0 )
                         {
-                            total += parse_voutsobj(voutfuncp,state,(*txidindp),&firstvout,&numvouts,numrawvoutsp,addrindp,scriptindp,cJSON_GetObjectItem(txjson,"vout"));
-                            spent += parse_vinsobj(vinfuncp,state,(*txidindp),&firstvin,&numvins,numrawvinsp,cJSON_GetObjectItem(txjson,"vin"));
+                            total += parse_voutsobj(voutfuncp,state,(*txidindp),&firstvout,&numvouts,numrawvoutsp,addrindp,scriptindp,cJSON_GetObjectItem(txjson,"vout"),blocknum);
+                            spent += parse_vinsobj(vinfuncp,state,(*txidindp),&firstvin,&numvins,numrawvinsp,cJSON_GetObjectItem(txjson,"vin"),blocknum);
                             free_json(txjson);
                         } else printf("update_txid_infos parse error.(%s)\n",txidjsonstr);
                         free(txidjsonstr);
@@ -311,6 +326,40 @@ int32_t parse_block(void *state,uint32_t *txidindp,uint32_t *numrawvoutsp,uint32
     return(numtx);
 }
 
+void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
+{
+    char fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
+    needed = (ind + 2) * sp->itemsize;
+    if ( needed > sp->M.allocsize )
+    {
+        db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,sp->name), os_compatible_path(fname);
+        needed += 65536 * sp->itemsize;
+        printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
+        if ( sp->M.fileptr != 0 )
+        {
+            sync_mappedptr(&sp->M,0);
+            release_map_file(sp->M.fileptr,sp->M.allocsize);
+            sp->M.fileptr = 0, prevsize = sp->M.allocsize;
+            sp->M.allocsize = 0;
+        }
+        needed = ensure_filesize(fname,needed,0);
+    }
+    if ( sp->M.fileptr == 0 )
+    {
+        if ( init_mappedptr(&sp->MEM.ptr,&sp->M,0,rwflag,fname) != 0 )
+        {
+            sp->MEM.size = sp->M.allocsize;
+            sp->maxitems = (uint32_t)(sp->MEM.size / sp->itemsize);
+            if ( prevsize != 0 )
+                memset((void *)((long)sp->M.fileptr + prevsize),0,(sp->MEM.size - prevsize));
+            printf("%p %s maxitems.%u (MEMsize.%ld / itemsize.%d) prevsize.%ld needed.%ld\n",sp->MEM.ptr,sp->name,sp->maxitems,sp->MEM.size,sp->itemsize,prevsize,needed);
+        }
+    }
+    if ( (sp->table= sp->M.fileptr) == 0 )
+        printf("couldnt map %s\n",fname);
+    return(sp->table);
+}
+
 struct coin777_state *coin777_stateinit(struct env777 *DBs,struct coin777_state *sp,char *coinstr,char *subdir,char *name,char *compression,int32_t flags,int32_t valuesize)
 {
     safecopy(sp->name,name,sizeof(sp->name));
@@ -328,47 +377,13 @@ struct coin777_state *coin777_stateinit(struct env777 *DBs,struct coin777_state 
     return(sp);
 }
 
-void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
-{
-    char fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
-    needed = (ind + 2) * sp->itemsize;
-    if ( needed > sp->M.allocsize )
-    {
-        db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,sp->name), os_compatible_path(fname);
-        needed += 65536 * sp->itemsize;
-        printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
-        if ( sp->M.fileptr != 0 )
-        {
-            sync_mappedptr(&sp->M,0);
-            release_map_file(sp->M.fileptr,sp->M.allocsize);
-            sp->M.fileptr = 0, prevsize = sp->M.allocsize;
-            sp->M.allocsize = 0;
-        }
-        ensure_filesize(fname,needed);
-    }
-    if ( sp->M.fileptr == 0 )
-    {
-        if ( init_mappedptr(&sp->MEM.ptr,&sp->M,0,rwflag,fname) != 0 )
-        {
-            sp->MEM.size = sp->M.allocsize;
-            sp->maxitems = (uint32_t)(sp->MEM.size / sp->itemsize);
-            memset((void *)((long)sp->M.fileptr + prevsize),0,(sp->MEM.size - prevsize));
-            printf("%s maxitems.%u (MEMsize.%ld / itemsize.%d) prevsize.%ld needed.%ld\n",sp->name,sp->maxitems,sp->MEM.size,sp->itemsize,prevsize,needed);
-        }
-    }
-    if ( (sp->table= sp->M.fileptr) == 0 )
-        printf("couldnt map %s\n",fname);
-    return(sp->table);
-}
-
-void coin777_initenv(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends)
+void coin777_initDBenv(struct coin777 *coin)
 {
     char *subdir="",*coinstr = coin->name; int32_t n = 0;
     coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->txids,coinstr,subdir,"txids",0,DB777_HDD,sizeof(uint32_t));
     coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->addrs,coinstr,subdir,"addrs","zstd",DB777_HDD,sizeof(uint32_t));
     coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->scripts,coinstr,subdir,"scripts","zstd",DB777_HDD,sizeof(uint32_t));
     coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->actives,coinstr,subdir,"actives","zstd",DB777_HDD,sizeof(uint32_t));
-    coin777_stateinit(&coin->DBs,&coin->hashes,coinstr,subdir,"hashes","zstd",DB777_HDD,sizeof(struct coin777_hashes));
     
     coin->sps[n++] = coin777_stateinit(0,&coin->blocks,coinstr,subdir,"blocks","zstd",DB777_VOLATILE,sizeof(struct coin_offsets));
     coin->sps[n++] = coin777_stateinit(0,&coin->txoffsets,coinstr,subdir,"txoffsets","zstd",0,sizeof(uint32_t) * 2);
@@ -377,13 +392,19 @@ void coin777_initenv(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uin
     coin->sps[n++] = coin777_stateinit(0,&coin->addrinfos,coinstr,subdir,"addrinfos","zstd",DB777_VOLATILE,sizeof(struct coin777_addrinfo));
     coin->sps[n++] = coin777_stateinit(0,&coin->spends,coinstr,subdir,"spends","zstd",0,sizeof(uint32_t));
     coin->num = n;
+    coin777_stateinit(&coin->DBs,&coin->hashes,coinstr,subdir,"hashes","zstd",DB777_HDD,sizeof(struct coin777_hashes));
+    env777_start(0,&coin->DBs,0);
+}
+
+int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends)
+{
     coin->blocks.table = coin777_ensure(coin,&coin->blocks,blocknum);
     coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
     coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
     coin->unspents.table = coin777_ensure(coin,&coin->unspents,unspentind);
     coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,addrind);
     coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
-    env777_start(0,&coin->DBs,0);
+    return(0);
 }
 
 int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
@@ -405,6 +426,32 @@ int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,v
         retval = sp_set((transactions != 0 ? transactions : db),obj);
     }
     return(retval);
+}
+
+void *coin777_getDB(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
+{
+    void *obj,*value,*result = 0;
+    if ( (obj= sp_object(DB->db)) != 0 )
+    {
+        if ( sp_set(obj,"key",key,keylen) == 0 )
+        {
+            if ( (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
+            {
+                value = sp_get(result,"value",lenp);
+                memcpy(dest,value,*lenp);
+                sp_destroy(result);
+                return(dest);
+            } else printf("no result transactions.%p key.%x\n",transactions,*(int *)key);
+        } else printf("no key\n");
+    } else printf("getDB no obj\n");
+    return(0);
+}
+
+int32_t coin777_queueDB(struct coin777 *coin,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
+{
+    //addritem = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*addritem) + len + 1), addritem->addrind = addrind, strcpy(addritem->coinaddr,coinaddr);
+    //queue_enqueue(DB->name,&coin->actives.writeQ,&actives->DL);
+    return(coin777_addDB(coin,coin->DBs.transactions,DB,key,keylen,value,valuelen));
 }
 
 void *_coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
@@ -440,7 +487,7 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
         else
         {
             size = sp->itemsize;
-            if ( (ptr= db777_get(value,&size,coin->DBs.transactions,sp->DB,&rawind,sizeof(rawind))) == 0 || size != sp->itemsize )
+            if ( (ptr= coin777_getDB(value,&size,coin->DBs.transactions,sp->DB,&rawind,sizeof(rawind))) == 0 || size != sp->itemsize )
                 return(-1);
             return(0);
         }
@@ -472,80 +519,148 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
                     memcpy(ptr,value,sp->itemsize);
                 }
             }
-            else  memcpy(value,ptr,sp->itemsize);
+            else memcpy(value,ptr,sp->itemsize);
         } else retval = -2;
         portable_mutex_unlock(&sp->mutex);
     }
     return(retval);
 }
 
-int32_t coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,int32_t len,uint8_t *script,uint16_t scriptlen)
+void coin777_addind(struct coin777 *coin,struct coin777_state *sp,void *data,int32_t datalen,uint32_t ind,int32_t flag)
+{
+    struct hashed_uint32 *entry,*table; void *ptr;
+    if ( (flag & COIN777_SHA256) != 0 )
+    {
+        update_sha256(sp->sha256,&sp->state,data,datalen);
+        coin777_addDB(coin,coin->DBs.transactions,sp->DB,&ind,sizeof(ind),data,datalen);
+    }
+    ptr = tmpalloc(coin->name,&coin->tmpMEM,datalen), memcpy(ptr,data,datalen);
+    entry = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*entry)), entry->ind = ind;
+    table = sp->table; HASH_ADD_KEYPTR(hh,table,ptr,datalen,entry); sp->table = table;
+}
+
+uint32_t coin777_findind(struct coin777 *coin,struct coin777_state *sp,uint8_t *data,int32_t datalen)
+{
+    struct hashed_uint32 *entry; extern int32_t Duplicate;
+    HASH_FIND(hh,(struct hashed_uint32 *)sp->table,data,datalen,entry);
+    if ( entry != 0 )
+    {
+        Duplicate++;
+        return(entry->ind);
+    }
+    return(0);
+}
+
+uint32_t coin_txidind(uint32_t *firstblocknump,struct coin777 *coin,char *txidstr)
+{
+    bits256 txid;
+    *firstblocknump = 0;
+    memset(txid.bytes,0,sizeof(txid)), decode_hex(txid.bytes,sizeof(txid),txidstr);
+    return(coin777_findind(coin,&coin->txids,txid.bytes,sizeof(txid)));
+}
+
+uint32_t coin_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr)
+{
+    int32_t len;
+    *firstblocknump = 0;
+    len = (int32_t)strlen(coinaddr) + 1;
+    return(coin777_findind(coin,&coin->addrs,(uint8_t *)coinaddr,len));
+}
+
+uint32_t coin_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *scriptstr)
+{
+    uint8_t script[4096]; int32_t scriptlen;
+    *firstblocknump = 0;
+    scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
+    return(coin777_findind(coin,&coin->scripts,script,scriptlen));
+}
+
+int32_t coin_txidstr(struct coin777 *coin,char *txidstr,int32_t max,uint32_t txidind,uint32_t addrind)
+{
+    bits256 txid;
+    if ( coin777_RWmmap(0,&txid,coin,&coin->txidbits,txidind) == 0 )
+        init_hexbytes_noT(txidstr,txid.bytes,sizeof(txid));
+    return(0);
+}
+
+int32_t coin_scriptstr(struct coin777 *coin,char *scriptstr,int32_t max,uint32_t scriptind,uint32_t addrind)
+{
+    struct coin777_addrinfo A;
+    if ( scriptind != 0 )
+    {
+        //if ( (ptr= coin777_getDB(&scriptind,&tmp,coin->DBs.transactions,coin->scripts.DB,script,scriptlen)) == 0 || scriptind == 0 || tmp != sizeof(*ptr) )
+        //    init_hexbytes_noT(scriptstr,script,sizeof(txid));
+    }
+    else
+    {
+        memset(&A,0,sizeof(A));
+        if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
+            init_hexbytes_noT(scriptstr,(uint8_t *)&A.coinaddr[A.addrlen],A.scriptlen);
+    }
+    return(0);
+}
+
+int32_t coin_coinaddr(struct coin777 *coin,char *coinaddr,int32_t max,uint32_t addrind,uint32_t addrind2)
 {
     struct coin777_addrinfo A;
     memset(&A,0,sizeof(A));
-    A.addrlen = len;
-    A.scriptlen = scriptlen;
-    memcpy(A.coinaddr,coinaddr,len);
-    memcpy(&A.coinaddr[len],script,scriptlen), len += scriptlen;
+    if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
+        strcpy(coinaddr,A.coinaddr);
+    return(-1);
+}
+
+int32_t coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,int32_t len,uint8_t *script,uint16_t scriptlen,uint32_t blocknum)
+{
+    struct coin777_addrinfo A;
+    memset(&A,0,sizeof(A));
+    A.firstblocknum = blocknum;
+    A.addrlen = len, memcpy(A.coinaddr,coinaddr,len);
+    A.scriptlen = scriptlen, memcpy(&A.coinaddr[len],script,scriptlen), len += scriptlen;
     A.unspents_offset = len;
     if ( (A.unspents_offset & 3) != 0 )
         A.unspents_offset += 4 - (A.unspents_offset & 3);
     if ( A.unspents_offset > sizeof(A.coinaddr) )
         printf("overflowed unspentinds[] with unspentoffset.%d for (%s)\n",A.unspents_offset,coinaddr);
     if ( Debuglevel > 2 )
-        printf("maxunspents.%ld\n",(sizeof(A.coinaddr) - A.unspents_offset) / sizeof(uint32_t));
+        printf("maxunspents.%ld addrinfos.DB %p\n",(sizeof(A.coinaddr) - A.unspents_offset) / sizeof(uint32_t),coin->addrinfos.DB);
     return(coin777_RWmmap(1 | COIN777_SHA256,&A,coin,&coin->addrinfos,addrind));
 }
 
-void coin777_Qunspent(struct coin777 *coin,uint32_t addrind,struct coin777_addrinfo *addrinfo,uint32_t unspentind,int32_t numunspents)
+int32_t coin777_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,int64_t value,uint32_t blocknum)
 {
-    uint32_t addrtx[2];
-    //struct Qactives *actives;
-    //actives = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*actives));
-    //actives->unspentind = unspentind, actives->addrtx[0] = addrind, actives->addrtx[1] = numunspents;
-    update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)addrtx,sizeof(addrtx));
-    //queue_enqueue("actives",&coin->actives.writeQ,&actives->DL);
-    addrtx[0] = addrind, addrtx[1] = numunspents;
-    coin777_addDB(coin,coin->DBs.transactions,coin->actives.DB,addrtx,sizeof(addrtx),&unspentind,sizeof(unspentind));
-}
-
-void coin777_addspend(struct coin777 *coin,uint32_t totalspends,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spending_txidind,uint16_t vin)
-{
-    struct coin777_addrinfo A; uint32_t *unspents;
-    if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
-    {
-        A.balance -= value;
-        unspentind |= (1 << 31);
-        if ( A.numunspents < (sizeof(A.coinaddr) - A.unspents_offset) / sizeof(uint32_t) )
-        {
-            unspents = (uint32_t *)&A.coinaddr[A.unspents_offset];
-            unspents[A.numunspents] = unspentind;
-        }
-        else coin777_Qunspent(coin,addrind,&A,unspentind,A.numunspents);
-        A.numunspents++;
-        coin777_RWmmap(1 | COIN777_SHA256,&A,coin,&coin->addrinfos,addrind);
-    }
-    coin777_RWmmap(1 | COIN777_SHA256,&unspentind,coin,&coin->spends,totalspends);
-}
-
-void coin777_addunspent(struct coin777 *coin,uint32_t addrind,uint32_t scriptind,uint64_t value,uint32_t unspentind)
-{
-    struct coin777_addrinfo A; struct unspent_info U;
-    if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind) == 0 )
-    {
-        U.value = value, U.addrind = addrind;
-        coin777_RWmmap(1 | COIN777_SHA256,&U,coin,&coin->unspents,unspentind);
-    }
+    struct coin777_addrinfo A; uint32_t addrtx[2][2],*unspents;
+    memset(&A,0,sizeof(A));
     if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
     {
         A.balance += value;
-        //printf("balance %.8f <- %.8f\n",dstr(A.balance),dstr(value));
-        if ( A.numunspents < ((sizeof(A.coinaddr) - A.unspents_offset) / sizeof(uint32_t)) )
-            ((uint32_t *)&A.coinaddr[A.unspents_offset])[(long)A.numunspents] = unspentind;
-        else coin777_Qunspent(coin,addrind,&A,unspentind,A.numunspents);
-        A.numunspents++;
-        coin777_RWmmap(1 | COIN777_SHA256,&A,coin,&coin->addrinfos,addrind);
-    }
+        //printf("%s += %.8f -> %.8f\n",A.coinaddr,dstr(value),dstr(A.balance));
+        if ( A.num < (sizeof(A.coinaddr) - A.unspents_offset) / (2 * sizeof(uint32_t)) )
+        {
+            unspents = (uint32_t *)&A.coinaddr[A.unspents_offset];
+            unspents[A.num << 1] = unspentind, unspents[(A.num << 1) + 1] = blocknum, A.num++;
+        }
+        else
+        {
+            addrtx[0][0] = addrind, addrtx[0][1] = A.num++;
+            addrtx[1][0] = unspentind, addrtx[1][1] = blocknum;
+            update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)addrtx,sizeof(addrtx));
+            coin777_queueDB(coin,coin->actives.DB,addrtx[0],sizeof(addrtx[0]),addrtx[1],sizeof(addrtx[1]));
+        }
+    } else printf("coin777_unspent cant find addrinfo for addrind.%u\n",addrind);
+    return(-1);
+}
+
+int32_t coin777_vin(struct coin777 *coin,uint32_t totalspends,uint32_t addrind,uint32_t unspentind,int64_t value,uint32_t blocknum)
+{
+    coin777_RWmmap(1 | COIN777_SHA256,&unspentind,coin,&coin->spends,totalspends);
+    return(coin777_addrinfo(coin,addrind,unspentind | (1 << 31),-value,blocknum));
+}
+
+int32_t coin777_vout(struct coin777 *coin,uint32_t addrind,uint32_t scriptind,int64_t value,uint32_t unspentind,uint32_t blocknum)
+{
+    struct unspent_info U;
+    memset(&U,0,sizeof(U)), U.value = value, U.addrind = addrind, coin777_RWmmap(1 | COIN777_SHA256,&U,coin,&coin->unspents,unspentind);
+    return(coin777_addrinfo(coin,addrind,unspentind,value,blocknum));
 }
 
 int32_t coin777_script0(struct coin777 *coin,uint32_t addrind,uint8_t *script,int32_t scriptlen)
@@ -556,11 +671,237 @@ int32_t coin777_script0(struct coin777 *coin,uint32_t addrind,uint8_t *script,in
     return(-1);
 }
 
+int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *scriptstr,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp,uint32_t blocknum)
+{
+    struct coin777 *coin = state; uint32_t *ptr,addrind,scriptind = 0; int32_t tmp,flag=0,len,scriptlen; uint8_t script[4096];
+    coin->credits += value;
+    scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
+    len = (int32_t)strlen(coinaddr) + 1;
+    if ( (addrind= coin777_findind(coin,&coin->addrs,(uint8_t *)coinaddr,len)) == 0 )
+    {
+        tmp = sizeof(addrind);
+        if ( (ptr= coin777_getDB(&addrind,&tmp,coin->DBs.transactions,coin->addrs.DB,coinaddr,len)) == 0 || addrind == 0 || tmp != sizeof(*ptr) )
+        {
+            addrind = (*addrindp)++;
+            coin777_createaddr(coin,addrind,coinaddr,len,script,scriptlen,blocknum);
+            flag = COIN777_SHA256;
+        }
+        coin777_addind(coin,&coin->addrs,coinaddr,len,addrind,flag);
+    }
+    else if ( coin777_script0(coin,addrind,script,scriptlen) != 0 )
+    {
+        if ( (scriptind= coin777_findind(coin,&coin->scripts,script,scriptlen)) == 0 )
+        {
+            flag = 0;
+            tmp = sizeof(scriptind);
+            if ( (ptr= coin777_getDB(&scriptind,&tmp,coin->DBs.transactions,coin->scripts.DB,script,scriptlen)) == 0 || scriptind == 0 || tmp != sizeof(*ptr) )
+            {
+                scriptind = (*scriptindp)++;
+                flag = COIN777_SHA256;
+            }
+            coin777_addind(coin,&coin->scripts,script,scriptlen,scriptind,flag);
+         }
+    }
+    if ( Debuglevel > 2 )
+        printf("UNSPENT.%u addrind.%u T%u vo%-3d U%u %.8f %s %llx %s\n",unspentind,addrind,txidind,vout,unspentind,dstr(value),coinaddr,*(long long *)script,scriptstr);
+    coin777_vout(coin,addrind,scriptind,value,unspentind,blocknum);
+    return(0);
+}
+
+uint64_t coin777_addvin(void *state,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spent_txidstr,uint16_t spent_vout,uint32_t blocknum)
+{
+    struct coin777 *coin = state; bits256 txid; int32_t tmp; uint32_t *ptr,spent_txidind,txoffsets[2],unspentind = 0; struct unspent_info U;
+    if ( Debuglevel > 2 )
+        printf("SPEND T%u vi%-3d S%u %s vout.%d\n",txidind,vin,totalspends,spent_txidstr,spent_vout);
+    memset(txid.bytes,0,sizeof(txid)), decode_hex(txid.bytes,sizeof(txid),spent_txidstr);
+    if ( (spent_txidind= coin777_findind(coin,&coin->txids,txid.bytes,sizeof(txid))) == 0 )
+    {
+        tmp = sizeof(spent_txidind);
+        if ( (ptr= coin777_getDB(&spent_txidind,&tmp,coin->DBs.transactions,coin->txids.DB,txid.bytes,sizeof(txid))) == 0 || spent_txidind == 0 || tmp != sizeof(*ptr) )
+        {
+            db777_dump(coin->txids.DB,1,1);
+            printf("cant find txid.(%s) ptr.%p spent_txidind.%u spendvout.%d from len.%ld (%s)\n",spent_txidstr,ptr,spent_txidind,spent_vout,sizeof(txid),db777_errstr(coin->DBs.ctl)), debugstop();
+            return(-1);
+        }
+    }
+    if ( spent_txidind > txidind )
+    {
+        printf("coin777_addvin txidind overflow? spent_txidind.%u vs max.%u\n",spent_txidind,txidind), debugstop();
+        return(-2);
+    }
+    if ( coin777_RWmmap(0,txoffsets,coin,&coin->txoffsets,spent_txidind) == 0  )
+    {
+        unspentind = txoffsets[0] + spent_vout;
+        if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind) == 0 )
+        {
+            if ( U.spending_txidind != 0 && U.spending_txidind != txidind )
+                printf("unspentind.%u interloper txidind.%u overwrites.%u\n",unspentind,txidind,U.spending_txidind);
+            U.spending_txidind = txidind;
+            U.spending_vin = vin;
+            if ( U.value == 0 || U.addrind == 0 )
+                printf("strange unspent.%u for addrind.%u %.8f\n",unspentind,U.addrind,dstr(U.value));
+            coin777_vin(coin,totalspends,U.addrind,unspentind,U.value,blocknum);
+            coin->debits += U.value;
+            return(U.value);
+        } else printf("error getting unspents[%u]\n",unspentind);
+    } else printf("error getting txoffsets for unspentind.%u spent_txidind.%u\n",unspentind,spent_txidind);
+    return(0);
+}
+
+int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txidstr,uint32_t firstvout,uint16_t numvouts,uint64_t total,uint32_t firstvin,uint16_t numvins)
+{
+    struct coin777 *coin = state; bits256 txid; uint32_t txoffsets[2];
+    memset(txid.bytes,0,sizeof(txid)), decode_hex(txid.bytes,sizeof(txid),txidstr);
+    coin777_RWmmap(1 | COIN777_SHA256,&txid,coin,&coin->txidbits,txidind);
+    if ( Debuglevel > 2 )
+        printf("ADDTX.%s: %x T%u U%u + numvouts.%d, S%u + numvins.%d\n",txidstr,*(int *)txid.bytes,txidind,firstvout,numvouts,firstvin,numvins);
+    txoffsets[0] = firstvout, txoffsets[1] = firstvin, coin777_RWmmap(1,txoffsets,coin,&coin->txoffsets,txidind);
+    txoffsets[0] += numvouts, txoffsets[1] += numvins, coin777_RWmmap(1 | COIN777_SHA256,txoffsets,coin,&coin->txoffsets,txidind+1);
+    coin777_addind(coin,&coin->txids,txid.bytes,sizeof(txid),txidind,COIN777_SHA256);
+    return(0);
+}
+
+struct coin777_hashes *coin777_getsyncdata(struct coin777_hashes *H,struct coin777 *coin,int32_t syncind)
+{
+    struct coin777_hashes *hp; int32_t allocsize = sizeof(*H);
+    if ( syncind <= 0 )
+        syncind++;
+    if ( (hp= coin777_getDB(H,&allocsize,coin->DBs.transactions,coin->hashes.DB,&syncind,sizeof(syncind))) != 0 )
+        return(hp);
+    else memset(H,0,sizeof(*H));
+    printf("couldnt find syncind.%d keylen.%ld\n",syncind,sizeof(syncind));
+    return(0);
+}
+
+int32_t coin777_syncblocks(struct coin777_hashes *inds,int32_t max,struct coin777 *coin)
+{
+    struct coin777_hashes H,*hp; int32_t i,n = 0;
+    if ( (hp= coin777_getsyncdata(&H,coin,-1)) != 0 )
+    {
+        inds[n++] = *hp;
+        for (i=coin->numsyncs; i>0&&n<max; i--)
+        {
+            if ( (hp= coin777_getsyncdata(&H,coin,i)) != 0 )
+                inds[n++] = *hp;
+        }
+    } else printf("null return from coin777_getsyncdata\n");
+    return(n);
+}
+
+uint64_t coin777_ledgerhash(char *ledgerhash,struct coin777_hashes *H)
+{
+    bits256 hashbits;
+    if ( H != 0 )
+    {
+        calc_sha256(0,hashbits.bytes,(uint8_t *)(void *)((long)H + sizeof(H->ledgerhash)),sizeof(*H) - sizeof(H->ledgerhash));
+        H->ledgerhash = hashbits.txid;
+        if ( ledgerhash != 0 )
+            ledgerhash[0] = 0, init_hexbytes_noT(ledgerhash,hashbits.bytes,sizeof(hashbits));
+        return(hashbits.txid);
+    }
+    return(0);
+}
+
+uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci)
+{
+    struct coin777_hashes H,*hp; uint32_t i,blocknum = 0; uint64_t ledgerhash;
+    if ( (hp= coin777_getsyncdata(&H,coin,synci)) == &H )
+    {
+        coin->blocknum = blocknum = hp->blocknum, coin->numsyncs = hp->numsyncs;
+        ledgerhash = coin777_ledgerhash(0,hp);
+        for (i=0; i<coin->num; i++)
+        {
+            coin->sps[i]->state = H.states[i];
+            memcpy(coin->sps[i]->sha256,H.sha256[i],sizeof(H.sha256[i]));
+            printf("%08x ",*(uint32_t *)H.sha256[i]);
+        }
+        printf("RESTORED.%d -> block.%u ledgerhash %08x\n",synci,blocknum,(uint32_t)ledgerhash);
+    } else printf("ledger_getnearest error getting last\n");
+    return(blocknum);
+}
+
+uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs)
+{
+    int32_t i,err,retval = 0; struct coin777_hashes H;
+    memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs;
+    for (i=0; i<coin->num; i++)
+    {
+        if ( numsyncs >= 0 && coin->sps[i]->M.fileptr != 0 )
+        {
+            printf("sync_mappedptr.%d (%s) %ld\n",i,coin->sps[i]->M.fname,(long)coin->sps[i]->M.allocsize);
+            sync_mappedptr(&coin->sps[i]->M,0);
+        }
+        H.states[i] = coin->sps[i]->state;
+        memcpy(H.sha256[i],coin->sps[i]->sha256,sizeof(H.sha256[i]));
+    }
+    H.ledgerhash = coin777_ledgerhash(0,&H);
+    if ( numsyncs < 0 )
+    {
+        for (i=0; i<coin->num; i++)
+            printf("%08x ",*(int *)H.sha256[i]);
+    }
+    if ( numsyncs >= 0 )
+    {
+        if ( coin->DBs.transactions != 0 )
+        {
+            while ( (err= sp_commit(coin->DBs.transactions)) != 0 )
+            {
+                printf("ledger_commit: sp_commit error.%d\n",err);
+                if ( err < 0 )
+                    break;
+                msleep(1000);
+            }
+            coin->DBs.transactions = 0;
+        }
+        printf("SYNCNUM.%d -> %d supply %.8f | txids.%u addrs.%u scripts.%u unspents.%u spends.%u ledgerhash %08x\n",numsyncs,blocknum,dstr(coin->credits)-dstr(coin->debits),coin->latest.txidind,coin->latest.addrind,coin->latest.scriptind,coin->latest.unspentind,coin->latest.numspends,(uint32_t)H.ledgerhash);
+        if ( coin777_addDB(coin,coin->DBs.transactions,coin->hashes.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H)) != 0 )
+            printf("error saving ledger\n");
+        if ( numsyncs > 0 )
+        {
+            numsyncs = 0;
+            if ( (retval = coin777_addDB(coin,coin->DBs.transactions,coin->hashes.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H))) != 0 )
+                printf("error saving numsyncs.0 retval.%d\n",retval);
+        }
+    }
+    return(H.ledgerhash);
+}
+
+int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint32_t *txidindp,uint32_t *unspentindp,uint32_t *numspendsp,uint32_t *addrindp,uint32_t *scriptindp)
+{
+    struct coin777 *coin = state; struct coin_offsets block;
+    if ( coin->blocks.table == 0 )
+        coin777_stateinit(0,&coin->blocks,coin->name,"","blocks","zstd",DB777_VOLATILE,sizeof(struct coin_offsets));
+    if ( blocknum == 0 )
+        *txidindp = *unspentindp = *numspendsp = *addrindp = *scriptindp = 1, *timestampp = 0;
+    else
+    {
+        coin777_RWmmap(0,&block,coin,&coin->blocks,blocknum);
+        *timestampp = block.timestamp, *txidindp = block.txidind, *unspentindp = block.unspentind, *numspendsp = block.numspends, *addrindp = block.addrind, *scriptindp = block.scriptind;
+        printf("blocknum.%u loaded txidind.%u unspentind.%u numspends.%u addrind.%u scriptind.%u\n",blocknum,*txidindp,*unspentindp,*numspendsp,*addrindp,*scriptindp);
+    }
+    return(0);
+}
+
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind)
+{
+    struct coin777_addrinfo A; uint64_t sum = 0; int32_t i;
+    for (i=0; i<=maxaddrind; i++)
+    {
+        if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,i) == 0 )
+        {
+            sum += A.balance;//, printf("%.8f ",dstr(A.balance));
+            //printf("-> sum %.8f addrind.%d maxinds.%d\n",dstr(sum),addrind,coin->addrs.maxitems);
+            coin->addrsum = sum;
+        }
+    }
+    return(sum);
+}
+
 int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *merklerootstr,uint32_t timestamp,uint64_t minted,uint32_t txidind,uint32_t unspentind,uint32_t numspends,uint32_t addrind,uint32_t scriptind,uint64_t total,uint64_t spent)
 {
     bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,block; int32_t err = 0;
     memset(&B,0,sizeof(B));
-   // Debuglevel = 3;
+    Debuglevel = 3;
     if ( Debuglevel > 2 )
         printf("B.%u T.%u U.%u S.%u A.%u C.%u\n",blocknum,txidind,unspentind,numspends,addrind,scriptind);
     if ( blockhashstr != 0 ) // start of block
@@ -603,216 +944,9 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
     return(err);
 }
 
-uint32_t coin777_findind(struct coin777 *coin,struct coin777_state *sp,uint8_t *data,int32_t datalen)
-{
-    struct hashed_uint32 *entry; extern int32_t Duplicate;
-    HASH_FIND(hh,(struct hashed_uint32 *)sp->table,data,datalen,entry);
-    if ( entry != 0 )
-    {
-        Duplicate++;
-        return(entry->ind);
-    }
-    return(0);
-}
-
-void coin777_addind(struct coin777 *coin,struct coin777_state *sp,void *data,int32_t datalen,uint32_t ind,struct queueitem *item)
-{
-    struct hashed_uint32 *entry,*table;
-    if ( item != 0 )
-    {
-        update_sha256(sp->sha256,&sp->state,data,datalen);
-        // queue_enqueue(sp->name,&sp->writeQ,item);
-        coin777_addDB(coin,coin->DBs.transactions,sp->DB,&ind,sizeof(ind),data,datalen);
-    }
-    entry = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*entry)), entry->ind = ind;
-    table = sp->table; HASH_ADD_KEYPTR(hh,table,data,datalen,entry); sp->table = table;
-}
-
-int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *scriptstr,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp)
-{
-    struct coin777 *coin = state; uint32_t *ptr,addrind,scriptind = 0; int32_t tmp,len,scriptlen; uint8_t script[4096],*scriptptr,*addrptr;
-    struct Qaddr *addritem = 0; struct Qscript *scriptitem = 0;
-    coin->credits += value;
-    scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
-    len = (int32_t)strlen(coinaddr) + 1;
-    if ( (addrind= coin777_findind(coin,&coin->addrs,(uint8_t *)coinaddr,len)) == 0 )
-    {
-        tmp = sizeof(addrind);
-        if ( (ptr= db777_get(&addrind,&tmp,coin->DBs.transactions,coin->addrs.DB,coinaddr,len)) == 0 || addrind == 0 || tmp != sizeof(*ptr) )
-        {
-            addrind = (*addrindp)++;
-            coin777_createaddr(coin,addrind,coinaddr,len,script,scriptlen);
-            addritem = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*addritem) + len + 1), addritem->addrind = addrind, strcpy(addritem->coinaddr,coinaddr);
-        }
-        addrptr = tmpalloc(coin->name,&coin->tmpMEM,len), memcpy(addrptr,coinaddr,len);
-        coin777_addind(coin,&coin->addrs,addrptr,len,addrind,&addritem->DL);
-    }
-    else if ( coin777_script0(coin,addrind,script,scriptlen) != 0 )
-    {
-        if ( (scriptind= coin777_findind(coin,&coin->scripts,script,scriptlen)) == 0 )
-        {
-            tmp = sizeof(scriptind);
-            if ( (ptr= db777_get(&scriptind,&tmp,coin->DBs.transactions,coin->scripts.DB,script,scriptlen)) == 0 || scriptind == 0 || tmp != sizeof(*ptr) )
-            {
-                scriptind = (*scriptindp)++;
-                scriptitem = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*scriptitem) + scriptlen), scriptitem->scriptind = scriptind, scriptitem->scriptlen = scriptlen, memcpy(scriptitem->script,script,scriptlen);
-            }
-            scriptptr = tmpalloc(coin->name,&coin->tmpMEM,scriptlen), memcpy(scriptptr,script,scriptlen);
-            coin777_addind(coin,&coin->scripts,scriptptr,scriptlen,scriptind,&scriptitem->DL);
-         }
-    }
-    if ( Debuglevel > 2 )
-        printf("UNSPENT.%u addrind.%u T%u vo%-3d U%u %.8f %s %llx\n",unspentind,addrind,txidind,vout,unspentind,dstr(value),coinaddr,*(long long *)script);
-    coin777_addunspent(coin,addrind,scriptind,value,unspentind);
-    return(0);
-}
-
-uint64_t coin777_addvin(void *state,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spent_txidstr,uint16_t spent_vout)
-{
-    struct coin777 *coin = state; bits256 txid; int32_t tmp; uint32_t *ptr,spent_txidind,txoffsets[2],unspentind = 0; struct unspent_info U;
-    if ( Debuglevel > 2 )
-        printf("SPEND T%u vi%-3d S%u %s vout.%d\n",txidind,vin,totalspends,spent_txidstr,spent_vout);
-    memset(txid.bytes,0,sizeof(txid)), decode_hex(txid.bytes,sizeof(txid),spent_txidstr);
-    if ( (spent_txidind= coin777_findind(coin,&coin->txids,txid.bytes,sizeof(txid))) == 0 )
-    {
-        tmp = sizeof(spent_txidind);
-        if ( (ptr= db777_get(&spent_txidind,&tmp,coin->DBs.transactions,coin->txids.DB,txid.bytes,sizeof(txid))) == 0 || txidind == 0 || tmp != sizeof(*ptr) )
-        {
-            printf("cant find txid.(%s) spendvout.%d from \n",spent_txidstr,spent_vout), debugstop();
-            return(-1);
-        }
-    }
-    if ( spent_txidind > txidind )
-    {
-        printf("coin777_addvin txidind overflow? spent_txidind.%u vs max.%u\n",spent_txidind,txidind), debugstop();
-        return(-2);
-    }
-    if ( coin777_RWmmap(0,txoffsets,coin,&coin->txoffsets,spent_txidind) == 0  )
-    {
-        unspentind = txoffsets[0] + spent_vout;
-        if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind) == 0 )
-        {
-            if ( U.spending_txidind != 0 && U.spending_txidind != txidind )
-                printf("unspentind.%u interloper txidind.%u overwrites.%u\n",unspentind,txidind,U.spending_txidind);
-            if ( txidind != U.spending_txidind )
-                U.spending_txidind = txidind;
-            if ( vin != U.spending_vin )
-                U.spending_vin = vin;
-            if ( U.value == 0 || U.addrind == 0 )
-                printf("strange unspent.%u for addrind.%u %.8f\n",unspentind,U.addrind,dstr(U.value));
-            coin777_addspend(coin,totalspends,U.addrind,unspentind,U.value,txidind,vin);
-            coin->debits += U.value;
-            coin777_RWmmap(1 | COIN777_SHA256,&U,coin,&coin->unspents,unspentind);
-            return(U.value);
-        } else printf("error getting unspents[%u]\n",unspentind);
-    } else printf("error getting txoffsets for unspentind.%u spent_txidind.%u\n",unspentind,spent_txidind);
-    return(0);
-}
-
-int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txidstr,uint32_t firstvout,uint16_t numvouts,uint64_t total,uint32_t firstvin,uint16_t numvins)
-{
-    struct coin777 *coin = state; bits256 txid,*txptr; uint32_t txoffsets[2]; struct Qtx *txitem;
-    memset(txid.bytes,0,sizeof(txid)), decode_hex(txid.bytes,sizeof(txid),txidstr);
-    coin777_RWmmap(1 | COIN777_SHA256,&txid,coin,&coin->txidbits,txidind);
-    if ( Debuglevel > 2 )
-        printf("ADDTX.%s: %x T%u U%u + numvouts.%d, S%u + numvins.%d\n",txidstr,*(int *)txid.bytes,txidind,firstvout,numvouts,firstvin,numvins);
-    txoffsets[0] = firstvout, txoffsets[1] = firstvin, coin777_RWmmap(1 | COIN777_SHA256,txoffsets,coin,&coin->txoffsets,txidind);
-    txoffsets[0] += numvouts, txoffsets[1] += numvins, coin777_RWmmap(1 | COIN777_SHA256,txoffsets,coin,&coin->txoffsets,txidind+1);
-    txitem = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*txitem)), txitem->txid = txid, txitem->txidind = txidind;
-    txptr = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*txptr)), *txptr = txid;
-    coin777_addind(coin,&coin->txids,txptr,sizeof(txid),txidind,&txitem->DL);
-    return(0);
-}
-
-int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint32_t *txidindp,uint32_t *unspentindp,uint32_t *numspendsp,uint32_t *addrindp,uint32_t *scriptindp)
-{
-    struct coin777 *coin = state; struct coin_offsets *block = coin->blocks.table;
-    if ( block == 0 || blocknum >= coin->blocks.maxitems )
-    {
-        printf("coin777_getinds offsets overflow? %p blocknum.%u vs max.%u\n",block,blocknum,coin->blocks.maxitems);
-        return(-1);
-    }
-    block = &block[blocknum];
-    if ( blocknum == 0 )
-        *txidindp = *unspentindp = *numspendsp = *addrindp = *scriptindp = 1, *timestampp = 0;
-    else
-    {
-        *timestampp = block->timestamp, *txidindp = block->txidind, *unspentindp = block->unspentind, *numspendsp = block->numspends, *addrindp = block->addrind, *scriptindp = block->scriptind;
-    }
-    return(0);
-}
-
-uint64_t addrinfos_sum(struct coin777 *coin,uint32_t addrind)
-{
-    struct coin777_addrinfo A; uint64_t sum = 0; int32_t i;
-    for (i=0; i<=addrind; i++)
-    {
-        if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
-        {
-            sum += A.balance;//, printf("%.8f ",dstr(addrinfos[i].balance));
-            //printf("-> sum %.8f addrind.%d maxinds.%d\n",dstr(sum),addrind,coin->addrs.maxitems);
-            coin->addrsum = sum;
-        }
-    }
-    return(sum);
-}
-
-uint64_t coin777_permsize(struct coin777 *coin)
-{
-    return(coin->totalsize);
-}
-
-int32_t coin777_sync(struct coin777 *coin)
-{
-    if ( coin != 0 )
-    {
-        printf("Sync.%s\n",coin->name);
-        //coin777_processQs(coin);
-        db777_sync(coin->DBs.transactions,&coin->DBs,DB777_FLUSH);
-        sync_mappedptr(&coin->blocks.M,0);
-        sync_mappedptr(&coin->txoffsets.M,0);
-        sync_mappedptr(&coin->txidbits.M,0);
-        sync_mappedptr(&coin->unspents.M,0);
-        sync_mappedptr(&coin->addrinfos.M,0);
-        sync_mappedptr(&coin->spends.M,0);
-    }
-    return(0);
-}
-
-uint64_t coin777_ledgerhash(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs)
-{
-    int32_t i,retval = 0; struct coin777_hashes H; bits256 hashbits;
-    memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs;
-    for (i=0; i<coin->num; i++)
-    {
-        H.states[i] = coin->sps[i]->state;
-        memcpy(H.sha256[i],coin->sps[i]->sha256,sizeof(H.sha256[i]));
-    }
-    calc_sha256(0,hashbits.bytes,(uint8_t *)(void *)((long)&H + sizeof(H.ledgerhash)),sizeof(H) - sizeof(H.ledgerhash));
-    H.ledgerhash = hashbits.txid;
-    if ( numsyncs < 0 )
-    {
-        for (i=0; i<coin->num; i++)
-            printf("%08x ",*(int *)H.sha256[i]);
-    }
-    if ( numsyncs >= 0 )
-    {
-        printf("SYNCNUM.%d -> %d supply %.8f | ledgerhash %08x\n",numsyncs,blocknum,dstr(coin->credits)-dstr(coin->debits),(uint32_t)hashbits.txid);
-        if ( db777_set(DB777_HDD,coin->DBs.transactions,coin->hashes.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H)) != 0 )
-            printf("error saving ledger\n");
-        if ( numsyncs > 0 )
-        {
-            numsyncs = 0;
-            if ( (retval = db777_set(DB777_HDD,coin->DBs.transactions,coin->hashes.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H))) != 0 )
-                printf("error saving numsyncs.0 retval.%d\n",retval);
-        }
-    }
-    return((uint32_t)H.ledgerhash);
-}
-
 int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
 {
-    uint32_t blocknum,dispflag,ledgerhash=0,allocsize,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind; int32_t numtx,err;
+    uint32_t blocknum,dispflag,ledgerhash=0,allocsize,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind; int32_t numtx;
     uint64_t origsize,supply,oldsupply; double estimate,elapsed,startmilli;
     blocknum = coin->blocknum;
     if ( blocknum <= (RTblocknum - minconfirms) )
@@ -820,29 +954,22 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
         startmilli = milliseconds();
         dispflag = 1 || (blocknum > RTblocknum - 1000);
         dispflag += ((blocknum % 100) == 0);
-        oldsupply = (coin->credits - coin->debits), origsize = coin777_permsize(coin);
-        if ( coin->DBs.transactions == 0 )
-            coin->DBs.transactions = 0;//sp_begin(coin->DBs.env), coin->numsyncs++;
+        oldsupply = (coin->credits - coin->debits), origsize = coin->totalsize;
+        //if ( coin->DBs.transactions == 0 )
+        //    coin->DBs.transactions = sp_begin(coin->DBs.env);
         if ( coin777_getinds(coin,blocknum,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
         {
             numtx = parse_block(coin,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
+            coin->addrsum = addrinfos_sum(coin,addrind);
             if ( syncflag != 0 )
             {
-                coin->addrsum = addrinfos_sum(coin,addrind);
-                ledgerhash = (uint32_t)coin777_ledgerhash(coin,blocknum,coin->numsyncs);
-                coin777_sync(coin);
-                while ( coin->DBs.transactions != 0 && (err= sp_commit(coin->DBs.transactions)) != 0 )
-                {
-                    printf("ledger_commit: sp_commit error.%d\n",err);
-                    if ( err < 0 )
-                        break;
-                    msleep(1000);
-                }
-                coin->DBs.transactions = 0;
+                if ( coin->numsyncs == 0 )
+                    coin->numsyncs = 1;
+                ledgerhash = (uint32_t)coin777_sync(coin,blocknum,coin->numsyncs++);
             }
-            else ledgerhash = (uint32_t)coin777_ledgerhash(coin,blocknum,-1);
+            else ledgerhash = (uint32_t)coin777_sync(coin,blocknum,-1);
             dxblend(&coin->calc_elapsed,(milliseconds() - startmilli),.99);
-            allocsize = (uint32_t)(coin777_permsize(coin) - origsize);
+            allocsize = (uint32_t)(coin->totalsize - origsize);
             estimate = estimate_completion(coin->startmilli,blocknum - coin->startblocknum,RTblocknum-blocknum)/60000;
             elapsed = (milliseconds() - coin->startmilli)/60000.;
             supply = (coin->credits - coin->debits);

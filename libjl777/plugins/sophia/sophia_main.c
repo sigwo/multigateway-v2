@@ -489,7 +489,7 @@ void db777_path(char *path,char *coinstr,char *subdir,int32_t useramdisk)
         strcat(path,"/"), strcat(path,coinstr), ensure_directory(path);
     if ( subdir[0] != 0 )
         strcat(path,"/"), strcat(path,subdir), ensure_directory(path);
-    printf("db777_path.(%s)\n",path);
+   // printf("db777_path.(%s)\n",path);
 }
 
 struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize)

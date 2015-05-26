@@ -738,7 +738,7 @@ int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue)
                 init_hexbytes_noT(keyhex,key,keylen), key = keyhex;
             if ( binaryvalue != 0 )
                 init_hexbytes_noT(valuehex,value,len), value = valuehex;
-            printf("%-5d: %100s | %s\n",n,key,value);
+            printf("%-5d: %16s keylen.%d | %s len.%d\n",n,key,keylen,value,len);
             n++;
         }
         sp_destroy(cursor);
