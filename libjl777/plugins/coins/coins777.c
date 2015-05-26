@@ -719,7 +719,7 @@ uint64_t coin777_addvin(void *state,uint32_t txidind,uint16_t vin,uint32_t total
         tmp = sizeof(spent_txidind);
         if ( (ptr= coin777_getDB(&spent_txidind,&tmp,coin->DBs.transactions,coin->txids.DB,txid.bytes,sizeof(txid))) == 0 || spent_txidind == 0 || tmp != sizeof(*ptr) )
         {
-            db777_dump(coin->txids.DB,1,1);
+            //db777_dump(coin->txids.DB,1,1);
             printf("cant find txid.(%s) ptr.%p spent_txidind.%u spendvout.%d from len.%ld (%s)\n",spent_txidstr,ptr,spent_txidind,spent_vout,sizeof(txid),db777_errstr(coin->DBs.ctl)), debugstop();
             return(-1);
         }
