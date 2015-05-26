@@ -407,6 +407,25 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     return(0);
 }
 
+void *coin777_getDB(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
+{
+    void *obj,*value,*result = 0;
+    if ( (obj= sp_object(DB->db)) != 0 )
+    {
+        if ( sp_set(obj,"key",key,keylen) == 0 )
+        {
+            if ( (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
+            {
+                value = sp_get(result,"value",lenp);
+                memcpy(dest,value,*lenp);
+                sp_destroy(result);
+                return(dest);
+            } else printf("DB.%p %s no result transactions.%p key.%x\n",DB,DB->name,transactions,*(int *)key);
+        } else printf("no key\n");
+    } else printf("getDB no obj\n");
+    return(0);
+}
+
 int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
 {
     void *db,*obj; int32_t retval; extern int32_t Added;
@@ -424,27 +443,17 @@ int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,v
         Added++;
         coin->totalsize += valuelen;
         retval = sp_set((transactions != 0 ? transactions : db),obj);
+        {
+            void *check; char dest[8192]; int32_t len = sizeof(dest);
+            check = coin777_getDB(dest,&len,0,DB,key,keylen);
+            if ( check == 0 )
+                printf("can find just added key.%x\n",*(int *)key);
+            else if ( memcmp(dest,value,valuelen) != 0 && len == valuelen )
+                printf("cmp error just added key.%x len.%d valuelen.%d\n",*(int *)key,len,valuelen);
+            //else printf("cmp success!\n");
+        }
     }
     return(retval);
-}
-
-void *coin777_getDB(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
-{
-    void *obj,*value,*result = 0;
-    if ( (obj= sp_object(DB->db)) != 0 )
-    {
-        if ( sp_set(obj,"key",key,keylen) == 0 )
-        {
-            if ( (result= sp_get(transactions != 0 ? transactions : DB->db,obj)) != 0 )
-            {
-                value = sp_get(result,"value",lenp);
-                memcpy(dest,value,*lenp);
-                sp_destroy(result);
-                return(dest);
-            } else printf("no result transactions.%p key.%x\n",transactions,*(int *)key);
-        } else printf("no key\n");
-    } else printf("getDB no obj\n");
-    return(0);
 }
 
 int32_t coin777_queueDB(struct coin777 *coin,struct db777 *DB,void *key,int32_t keylen,void *value,int32_t valuelen)
@@ -901,7 +910,7 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
 {
     bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,block; int32_t err = 0;
     memset(&B,0,sizeof(B));
-    Debuglevel = 3;
+   // Debuglevel = 3;
     if ( Debuglevel > 2 )
         printf("B.%u T.%u U.%u S.%u A.%u C.%u\n",blocknum,txidind,unspentind,numspends,addrind,scriptind);
     if ( blockhashstr != 0 ) // start of block
