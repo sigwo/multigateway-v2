@@ -141,7 +141,7 @@ struct unspent_info { uint64_t value; uint32_t addrind,spending_txidind; uint16_
 struct hashed_uint32 { UT_hash_handle hh; uint32_t ind; };
 //5eec7352 55609d3c 97473abd e9549e4e 13fb2d31 5bbd8b39 e9549e4e 42c4b0e3 42c4b0e3 42c4b0e3 0.005 BTCD  [lag 542785] 1370   109044.13122870 109044.13122870 (0.00000000) [80.00000000]   80.00000000 | dur 0.12 44.94 46.41 | len.364   903.566kb 675.4 | H0 E0 R1 W2211 802a3fb6
 #ifndef ADDRINFO_SIZE
-#define ADDRINFO_SIZE 192
+#define ADDRINFO_SIZE 128
 #endif
 
 struct coin777_addrinfo
@@ -1099,7 +1099,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
                 coin->addrsum = addrinfos_sum(coin,addrind,0);
             if ( coin->addrsum != supply )
             {
-                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum+1,supply);
+                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum,supply);
                 if ( coin->addrsum != supply )
                     printf("recalc new error: [%.8f]\n",dstr(coin->addrsum) - dstr(supply)), debugstop();
             }
