@@ -148,9 +148,9 @@ struct coin777_addrinfo
 {
     int64_t balance,syncbalance;
     uint32_t firstblocknum,num,syncnum;
-    uint16_t scriptlen,pad2;
-    uint8_t addrlen,unspents_offset,pad; uint8_t notify:1,pending:1,MGW:1,dirty:1,tbd:4;
-    char coinaddr[ADDRINFO_SIZE - 36];
+    uint16_t scriptlen,unspents_offset;
+    uint8_t addrlen; uint8_t notify:1,pending:1,MGW:1,dirty:1,tbd:4;
+    char coinaddr[ADDRINFO_SIZE - 34];
 };
 
 #define COIN777_SHA256 256
@@ -640,10 +640,10 @@ int32_t coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,
     A.unspents_offset = len;
     if ( (A.unspents_offset & 3) != 0 )
         A.unspents_offset += 4 - (A.unspents_offset & 3);
-    if ( A.unspents_offset >= (uint8_t)(sizeof(A.coinaddr) - sizeof(A.unspents_offset)) )
+    if ( A.unspents_offset >= (uint16_t)(sizeof(A.coinaddr) - sizeof(A.unspents_offset)) )
     {
         printf("overflowed unspentinds[] with unspentoffset.%d for (%s)\n",A.unspents_offset,coinaddr);
-        A.unspents_offset = (uint8_t)sizeof(A.coinaddr);
+        A.unspents_offset = (uint16_t)sizeof(A.coinaddr);
     }
     if ( Debuglevel > 2 )
         printf("maxunspents.%ld addrinfos.DB %p\n",(sizeof(A.coinaddr) - A.unspents_offset) / sizeof(uint32_t),coin->addrinfos.DB);
@@ -659,7 +659,7 @@ int32_t coin777_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspenti
         A.balance += value;
         if ( Debuglevel > 2 )
             printf("addrind.%u num.%d %s += %.8f -> %.8f\n",addrind,A.num,A.coinaddr,dstr(value),dstr(A.balance));
-        if ( A.unspents_offset < sizeof(A.coinaddr) && A.num < (sizeof(A.coinaddr) - A.unspents_offset) / (2 * sizeof(uint32_t)) )
+        if ( A.unspents_offset < (uint16_t)sizeof(A.coinaddr) && A.num < (sizeof(A.coinaddr) - A.unspents_offset) / (2 * sizeof(uint32_t)) )
         {
             unspents = (uint32_t *)&A.coinaddr[A.unspents_offset];
             unspents[A.num << 1] = unspentind, unspents[(A.num << 1) + 1] = blocknum;
