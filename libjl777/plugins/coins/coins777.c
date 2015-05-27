@@ -939,8 +939,8 @@ int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint3
     struct coin777 *coin = state; struct coin_offsets block;
     if ( coin->blocks.table == 0 )
         coin777_stateinit(0,&coin->blocks,coin->name,"","blocks","zstd",DB777_VOLATILE,sizeof(struct coin_offsets));
-    if ( coin->addrinfos.table == 0 )
-        coin777_stateinit(0,&coin->addrinfos,coin->name,"","addrinfos","zstd",DB777_VOLATILE,sizeof(struct coin777_addrinfo));
+    //if ( coin->addrinfos.table == 0 )
+    //    coin777_stateinit(0,&coin->addrinfos,coin->name,"","addrinfos","zstd",DB777_VOLATILE,sizeof(struct coin777_addrinfo));
     if ( blocknum == 0 )
         *txidindp = *unspentindp = *numspendsp = *addrindp = *scriptindp = 1, *timestampp = 0;
     else
@@ -948,7 +948,7 @@ int32_t coin777_getinds(void *state,uint32_t blocknum,uint32_t *timestampp,uint3
         coin777_RWmmap(0,&block,coin,&coin->blocks,blocknum);
         *timestampp = block.timestamp, *txidindp = block.txidind, *unspentindp = block.unspentind, *numspendsp = block.numspends, *addrindp = block.addrind, *scriptindp = block.scriptind;
         if ( blocknum == coin->startblocknum )
-            printf("blocknum.%u loaded txidind.%u unspentind.%u numspends.%u addrind.%u scriptind.%u\n",blocknum,*txidindp,*unspentindp,*numspendsp,*addrindp,*scriptindp);
+            printf("(%.8f - %.8f) supply %.8f blocknum.%u loaded txidind.%u unspentind.%u numspends.%u addrind.%u scriptind.%u\n",dstr(coin->credits),dstr(coin->debits),dstr(coin->credits)-dstr(coin->debits),blocknum,*txidindp,*unspentindp,*numspendsp,*addrindp,*scriptindp);
     }
     return(0);
 }
@@ -986,7 +986,6 @@ uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,ui
     int32_t i,err,retval = 0; struct coin777_hashes H;
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = coin->credits, H.debits = coin->debits;
     H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind;
-
     if ( numsyncs >= 0 )
         addrinfos_sum(coin,addrind,1);
     for (i=0; i<=coin->num; i++)
