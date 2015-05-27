@@ -978,7 +978,7 @@ uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci)
         }
         printf("RESTORED.%d -> block.%u ledgerhash %08x addrsum %.8f maxaddrind.%u\n",synci,blocknum,(uint32_t)ledgerhash,dstr(coin->addrsum),hp->addrind);
     } else printf("ledger_getnearest error getting last\n");
-    return(blocknum == 0 ? blocknum : blocknum - 1);
+    return(blocknum);// == 0 ? blocknum : blocknum - 1);
 }
 
 uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind)
