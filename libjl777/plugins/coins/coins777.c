@@ -622,7 +622,7 @@ int32_t coin777_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspenti
     memset(&A,0,sizeof(A));
     if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
     {
-        coin777_RWmmap(0,lbalance,coin,&coin->ledger,addrind);
+        coin777_RWmmap(0,&lbalance,coin,&coin->ledger,addrind);
         if ( lbalance != A.balance )
             printf("block.%u addrind.%u ledger %.8f vs %.8f? new value %.8f\n",blocknum,addrind,dstr(lbalance),dstr(A.balance),dstr(value));
         A.balance += value;
