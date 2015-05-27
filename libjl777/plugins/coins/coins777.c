@@ -1098,7 +1098,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             numtx = parse_block(coin,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
             supply = (coin->credits - coin->debits);
             coin->addrsum = addrinfos_sum(coin,addrind,0);
-            if ( coin->addrsum != supply )
+            if ( 0 && coin->addrsum != supply )
             {
                 coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum);
                 if ( coin->addrsum != supply )
