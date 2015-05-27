@@ -167,7 +167,7 @@ struct coin777
     uint64_t minted,addrsum; double calc_elapsed,startmilli;
     uint32_t latestblocknum,blocknum,numsyncs,RTblocknum,startblocknum,endblocknum,needbackup,num,syncfreq;
     struct coin_offsets latest; long totalsize;
-    struct env777 DBs;  struct coin777_state *sps[16],txidDB,addrDB,scriptDB,blocks,txoffsets,txidbits,unspents,spends,addrinfos,activeDB,hashDB;
+    struct env777 DBs;  struct coin777_state *sps[16],txidDB,addrDB,scriptDB,ledger,blocks,txoffsets,txidbits,unspents,spends,addrinfos,activeDB,hashDB;
     struct alloc_space tmpMEM;
 };
 
@@ -380,6 +380,7 @@ void coin777_initDBenv(struct coin777 *coin)
     coin->sps[n++] = coin777_stateinit(0,&coin->txidbits,coinstr,subdir,"txidbits",0,0,sizeof(bits256));
     coin->sps[n++] = coin777_stateinit(0,&coin->unspents,coinstr,subdir,"unspents","zstd",DB777_VOLATILE,sizeof(struct unspent_info));
     coin->sps[n++] = coin777_stateinit(0,&coin->spends,coinstr,subdir,"spends","zstd",0,sizeof(uint32_t));
+    coin->sps[n++] = coin777_stateinit(0,&coin->ledger,coinstr,subdir,"ledger","zstd",0,sizeof(uint64_t));
     
     coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->txidDB,coinstr,subdir,"txids",0,DB777_HDD,sizeof(uint32_t));
     coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->addrDB,coinstr,subdir,"addrs","zstd",DB777_HDD,sizeof(uint32_t));
