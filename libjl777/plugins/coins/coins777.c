@@ -1101,7 +1101,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
                 coin->addrsum = addrinfos_sum(coin,addrind,0);
             if ( coin->addrsum != supply )
             {
-                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum);
+                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum+1);
                 if ( coin->addrsum != supply )
                     printf("recalc new error: [%.8f]\n",dstr(coin->addrsum) - dstr(supply)), debugstop();
             }
