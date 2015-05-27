@@ -709,7 +709,7 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t 
                     unspentind = addrtx[1][0], blocknum = addrtx[1][1];//, printf("{A%d.%d} -> ",addrtx[0][0],addrtx[0][1]);
                 else printf("coin777_addrbalance: cant find addrtx.%d of num.%d n.%d\n",i,A.num,n);
             }
-            printf("(u%x b%u).%d ",unspentind,blocknum,i);
+            //printf("(u%x b%u).%d ",unspentind,blocknum,i);
             if ( blocknum >= lastblocknum )
                 break;
             if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind & ~(1 << 31)) == 0 )
