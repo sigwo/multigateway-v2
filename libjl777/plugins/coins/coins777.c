@@ -938,14 +938,17 @@ uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci)
             B.timestamp = hp->timestamp, B.txidind = hp->txidind, B.unspentind = hp->unspentind, B.numspends = hp->numspends, B.addrind = hp->addrind, B.scriptind = hp->scriptind;
             coin777_RWmmap(1,&B,coin,&coin->blocks,blocknum);
         }
-        allocsize = (sizeof(*hp) + sizeof(uint64_t)*hp->addrind), space = malloc(allocsize);
-        if ( (ptr= coin777_getDB(space,&allocsize,coin->DBs.transactions,coin->hashDB.DB,&synci,sizeof(synci))) != 0 )
+        if ( hp->addrind > 1 )
         {
-            coin->ledger.table = coin777_ensure(coin,&coin->ledger,hp->addrind);
-            memcpy(coin->ledger.M.fileptr,(void *)((long)ptr + sizeof(H)),sizeof(uint64_t) * hp->addrind);
+            allocsize = (sizeof(*hp) + sizeof(uint64_t)*hp->addrind), space = malloc(allocsize);
+            if ( (ptr= coin777_getDB(space,&allocsize,coin->DBs.transactions,coin->hashDB.DB,&synci,sizeof(synci))) != 0 )
+            {
+                coin->ledger.table = coin777_ensure(coin,&coin->ledger,hp->addrind);
+                memcpy(coin->ledger.M.fileptr,(void *)((long)ptr + sizeof(H)),sizeof(uint64_t) * hp->addrind);
+            }
+            free(space);
+            coin->addrsum = addrinfos_sum(coin,hp->addrind,-1);
         }
-        free(space);
-        coin->addrsum = addrinfos_sum(coin,hp->addrind,-1);
         ledgerhash = coin777_ledgerhash(0,hp);
         for (i=0; i<coin->num; i++)
         {
@@ -995,12 +998,16 @@ uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,ui
             coin->DBs.transactions = 0;
         }
         printf("SYNCNUM.%d -> %d addrsum %.8f addrind.%u supply %.8f | txids.%u addrs.%u scripts.%u unspents.%u spends.%u ledgerhash %08x\n",numsyncs,blocknum,dstr(coin->addrsum),addrind,dstr(credits)-dstr(debits),coin->latest.txidind,coin->latest.addrind,coin->latest.scriptind,coin->latest.unspentind,coin->latest.numspends,(uint32_t)H.ledgerhash);
-        hp = malloc(sizeof(*hp) + addrind*sizeof(uint64_t));
-        *hp = H;
-        memcpy((void *)((long)hp + sizeof(*hp)),coin->ledger.M.fileptr,sizeof(uint64_t) * addrind);
-        if ( coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),hp,sizeof(*hp) + addrind*sizeof(uint64_t)) != 0 )
-            printf("error saving ledger\n");
-        free(hp);
+        if ( addrind > 1 && coin->ledger.M.fileptr != 0 && coin->ledger.M.allocsize >= sizeof(uint64_t) * addrind )
+        {
+            hp = malloc(sizeof(*hp) + addrind*sizeof(uint64_t));
+            *hp = H;
+            printf("saving ledger with size %ld\n",sizeof(*hp) + addrind*sizeof(uint64_t));
+            memcpy((void *)((long)hp + sizeof(*hp)),coin->ledger.M.fileptr,sizeof(uint64_t) * addrind);
+            if ( coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),hp,sizeof(*hp) + addrind*sizeof(uint64_t)) != 0 )
+                printf("error saving ledger\n");
+            free(hp);
+        } else printf("null ledger M.fileptr?\n");
         if ( numsyncs > 0 )
         {
             numsyncs = 0;
@@ -1108,7 +1115,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             //if ( syncflag != 0 )
             {
                 coin->addrsum = addrinfos_sum(coin,addrind,0);
-                if ( coin->addrsum != supply )
+                if ( coin->addrsum != oldsupply )
                 {
                     coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum,supply);
                     if ( coin->addrsum != supply )
