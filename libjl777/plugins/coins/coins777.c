@@ -407,6 +407,7 @@ int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,v
         Added++;
         coin->totalsize += valuelen;
         retval = sp_set((transactions != 0 ? transactions : db),obj);
+        if ( 0 && valuelen < 8192 )
         {
             void *check; char dest[8192]; int32_t len = sizeof(dest);
             check = coin777_getDB(dest,&len,transactions,DB,key,keylen);
