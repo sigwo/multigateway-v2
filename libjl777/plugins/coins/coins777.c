@@ -837,14 +837,15 @@ int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unsp
             if ( (ptr= coin777_getDB(&scriptind,&tmp,coin->DBs.transactions,coin->scriptDB.DB,script,scriptlen)) == 0 || scriptind == 0 )
             {
                 scriptind = (*scriptindp)++;
-                //if ( Debuglevel > 2 )
+                if ( Debuglevel > 2 )
                     printf("NEW SCRIPT (%s) -> scriptind.%u [%u]\n",scriptstr,scriptind,(*scriptindp));
                 update_sha256(coin->scriptDB.sha256,&coin->scriptDB.state,script,scriptlen);
                 coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,script,scriptlen,&scriptind,sizeof(scriptind));
             }
             else
             {
-                printf("search for (%s) -> scriptind.%u [%u]\n",scriptstr,scriptind,(*scriptindp));
+                if ( Debuglevel > 2 )
+                    printf("search for (%s) -> scriptind.%u [%u]\n",scriptstr,scriptind,(*scriptindp));
                 if ( scriptind == (*scriptindp) )
                     (*scriptindp)++;
                 else if ( scriptind > (*scriptindp) )
@@ -853,7 +854,7 @@ int32_t coin777_addvout(void *state,uint32_t txidind,uint16_t vout,uint32_t unsp
             }
         }
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("UNSPENT.%u addrind.%u T%u vo%-3d U%u %.8f %s %llx %s\n",unspentind,addrind,txidind,vout,unspentind,dstr(value),coinaddr,*(long long *)script,scriptstr);
     coin777_vout(coin,addrind,scriptind,value,unspentind,blocknum);
     return(0);
@@ -879,7 +880,7 @@ uint64_t coin777_addvin(void *state,uint32_t txidind,uint16_t vin,uint32_t total
     }
     if ( coin777_value(coin,&unspentind,&U,spent_txidind,spent_vout) != 0 )
     {
-        if ( Debuglevel > 1 )
+        if ( Debuglevel > 2 )
             printf("SPEND T%u vi%-3d S%u %s vout.%d -> A%u %.8f\n",txidind,vin,totalspends,spent_txidstr,spent_vout,U.addrind,dstr(U.value));
         if ( U.spending_txidind != 0 && U.spending_txidind != txidind )
             printf(" interloper txidind.%u overwrites.%u\n",txidind,U.spending_txidind);
