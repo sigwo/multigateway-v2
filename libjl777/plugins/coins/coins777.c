@@ -1095,11 +1095,14 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             else ledgerhash = (uint32_t)coin777_sync(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
             supply = (credits - debits);
+            if ( syncflag != 0 )
+                sync_mappedptr(&coin->addrinfos.M,0);
+
             //if ( syncflag != 0 )
                 coin->addrsum = addrinfos_sum(coin,addrind,0);
             if ( coin->addrsum != supply )
             {
-                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum,supply);
+                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum+1,supply);
                 if ( coin->addrsum != supply )
                     printf("recalc new error: [%.8f]\n",dstr(coin->addrsum) - dstr(supply)), debugstop();
             }
