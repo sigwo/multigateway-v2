@@ -1007,12 +1007,13 @@ uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,ui
             for (i=0; i<addrind; i++)
             {
                 coin777_RWmmap(0,&balances[i],coin,&coin->ledger,i);
-                if ( balances[i] != 0 )
+                if ( 0 && balances[i] != 0 )
                     fprintf(stderr,"(%d %.8f) ",i,dstr(balances[i]));
             }
   printf("saving ledger with size %ld\n",sizeof(*hp) + addrind*sizeof(uint64_t));
-            if ( 0 && coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),hp,sizeof(*hp) + addrind*sizeof(uint64_t)) != 0 )
+            if ( 1 && coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),hp,sizeof(*hp) + 0*addrind*sizeof(uint64_t)) != 0 )
                 printf("error saving ledger\n");
+            printf("saved ledger with size %ld\n",sizeof(*hp) + addrind*sizeof(uint64_t));
             free(hp);
         } else printf("null ledger M.fileptr?\n");
         printf("done\n");
@@ -1042,7 +1043,7 @@ void coin777_initDBenv(struct coin777 *coin)
     coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->scriptDB,coinstr,subdir,"scripts","zstd",DB777_HDD,sizeof(uint32_t));
     coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->activeDB,coinstr,subdir,"actives","zstd",DB777_HDD,sizeof(uint32_t));
     coin->num = n;
-    coin->sps[n] = coin777_stateinit(&coin->DBs,&coin->hashDB,coinstr,subdir,"hashes","zstd",DB777_HDD,0*sizeof(struct coin777_hashes));
+    coin->sps[n] = coin777_stateinit(&coin->DBs,&coin->hashDB,coinstr,subdir,"hashes","zstd",DB777_HDD,sizeof(struct coin777_hashes));
     env777_start(0,&coin->DBs,0);
 }
 
