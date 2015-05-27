@@ -1105,22 +1105,26 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
         if ( coin777_getinds(coin,blocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
         {
             oldsupply = (credits - debits), origsize = coin->totalsize;
+            //if ( syncflag != 0 )
+            {
+                coin->addrsum = addrinfos_sum(coin,addrind,0);
+                if ( coin->addrsum != supply )
+                {
+                    coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum,supply);
+                    if ( coin->addrsum != supply )
+                        printf("recalc new error: [%.8f]\n",dstr(coin->addrsum) - dstr(supply)), debugstop();
+                }
+            }
             if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
                 ledgerhash = (uint32_t)coin777_sync(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             else ledgerhash = (uint32_t)coin777_sync(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
             supply = (credits - debits);
-            if ( syncflag != 0 )
-                sync_mappedptr(&coin->addrinfos.M,0);
-
-            //if ( syncflag != 0 )
-                coin->addrsum = addrinfos_sum(coin,addrind,0);
-            if ( coin->addrsum != supply )
+            /*if ( syncflag != 0 )
             {
-                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum,supply);
-                if ( coin->addrsum != supply )
-                    printf("recalc new error: [%.8f]\n",dstr(coin->addrsum) - dstr(supply)), debugstop();
-            }
+                sync_mappedptr(&coin->addrinfos.M,0);
+                sync_mappedptr(&coin->ledger.M,0);
+            }*/
             dxblend(&coin->calc_elapsed,(milliseconds() - startmilli),.99);
             allocsize = (uint32_t)(coin->totalsize - origsize);
             estimate = estimate_completion(coin->startmilli,blocknum - coin->startblocknum,RTblocknum-blocknum)/60000;
