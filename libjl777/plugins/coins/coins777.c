@@ -757,12 +757,12 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                     A.balance = A.syncbalance, A.num = A.syncnum;
                 coin777_RWmmap(1,&A,coin,&coin->addrinfos,i);
             }
-            if ( 1 && A.balance != 0 )
+            if ( 0 && A.balance != 0 )
                 printf("%.8f ",dstr(A.balance));
             sum += A.balance;
         }
     }
-    printf(" -> sum %.8f\n",dstr(sum));
+    //printf(" -> sum %.8f\n",dstr(sum));
     coin->addrsum = sum;
     return(sum);
 }
