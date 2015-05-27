@@ -640,10 +640,10 @@ int32_t coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,
     A.unspents_offset = len;
     if ( (A.unspents_offset & 3) != 0 )
         A.unspents_offset += 4 - (A.unspents_offset & 3);
-    if ( A.unspents_offset >= (sizeof(A.coinaddr) - sizeof(A.unspents_offset)) )
+    if ( A.unspents_offset >= (uint8_t)(sizeof(A.coinaddr) - sizeof(A.unspents_offset)) )
     {
         printf("overflowed unspentinds[] with unspentoffset.%d for (%s)\n",A.unspents_offset,coinaddr);
-        A.unspents_offset = sizeof(A.coinaddr);
+        A.unspents_offset = (uint8_t)sizeof(A.coinaddr);
     }
     if ( Debuglevel > 2 )
         printf("maxunspents.%ld addrinfos.DB %p\n",(sizeof(A.coinaddr) - A.unspents_offset) / sizeof(uint32_t),coin->addrinfos.DB);
@@ -1097,7 +1097,8 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             else ledgerhash = (uint32_t)coin777_sync(coin,blocknum,-1,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             numtx = parse_block(coin,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
             supply = (coin->credits - coin->debits);
-            coin->addrsum = addrinfos_sum(coin,addrind,0);
+            if ( syncflag != 0 )
+                coin->addrsum = addrinfos_sum(coin,addrind,0);
             if ( 0 && coin->addrsum != supply )
             {
                 coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum);
