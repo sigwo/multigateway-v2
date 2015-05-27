@@ -722,7 +722,7 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t 
         }
         if ( 1 && A.balance != origbalance )
         {
-            printf("(%.8f -> %.8f).A%u  addrind.%d n.%d num.%d block.%u vs %u\n",dstr(origbalance),dstr(A.balance),addrind,addrind,n,A.num,blocknum,lastblocknum);
+            printf("(%.8f -> %.8f).A%u  addrind.%d max.%d num.%d block.%u vs %u\n",dstr(origbalance),dstr(A.balance),addrind,addrind,n,A.num,blocknum,lastblocknum);
             coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind);
         }
         return(A.balance);
@@ -1101,7 +1101,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
                 coin->addrsum = addrinfos_sum(coin,addrind,0);
             if ( coin->addrsum != supply )
             {
-                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum+1);
+                coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum);
                 if ( coin->addrsum != supply )
                     printf("recalc new error: [%.8f]\n",dstr(coin->addrsum) - dstr(supply)), debugstop();
             }
