@@ -1005,12 +1005,17 @@ uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,ui
             *hp = H;
             balances = (void *)((long)hp + sizeof(*hp));
             for (i=0; i<addrind; i++)
+            {
                 coin777_RWmmap(0,&balances[i],coin,&coin->ledger,i);
+                if ( balances[i] != 0 )
+                    fprintf(stderr,"(%d %.8f) ",i,dstr(balances[i]));
+            }
   printf("saving ledger with size %ld\n",sizeof(*hp) + addrind*sizeof(uint64_t));
             if ( coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),hp,sizeof(*hp) + addrind*sizeof(uint64_t)) != 0 )
                 printf("error saving ledger\n");
             free(hp);
         } else printf("null ledger M.fileptr?\n");
+        printf("done\n");
         if ( numsyncs > 0 )
         {
             numsyncs = 0;
