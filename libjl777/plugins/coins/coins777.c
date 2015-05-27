@@ -1008,7 +1008,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
         dispflag += ((blocknum % 100) == 0);
         oldsupply = (coin->credits - coin->debits), origsize = coin->totalsize;
         if ( coin->DBs.transactions == 0 )
-            coin->DBs.transactions = sp_begin(coin->DBs.env);
+            coin->DBs.transactions = 0;//sp_begin(coin->DBs.env);
         if ( coin777_getinds(coin,blocknum,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
         {
             if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
