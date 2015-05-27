@@ -657,7 +657,7 @@ int32_t coin777_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspenti
     if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
     {
         A.balance += value;
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("addrind.%u num.%d %s += %.8f -> %.8f\n",addrind,A.num,A.coinaddr,dstr(value),dstr(A.balance));
         if ( A.unspents_offset < (uint16_t)sizeof(A.coinaddr) && A.num < (sizeof(A.coinaddr) - A.unspents_offset) / (2 * sizeof(uint32_t)) )
         {
@@ -709,7 +709,7 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t 
                     unspentind = addrtx[1][0], blocknum = addrtx[1][1];//, printf("{A%d.%d} -> ",addrtx[0][0],addrtx[0][1]);
                 else printf("coin777_addrbalance: cant find addrtx.%d of num.%d n.%d\n",i,A.num,n);
             }
-            //printf("(u%u b%u).%d ",unspentind,blocknum,i);
+            printf("(u%x b%u).%d ",unspentind,blocknum,i);
             if ( blocknum > lastblocknum )
                 break;
             if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind & ~(1 << 31)) == 0 )
@@ -722,7 +722,7 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t 
         }
         if ( 1 && A.balance != origbalance )
         {
-            printf("(%.8f -> %.8f).A%u  addrind.%d n.%d num.%d",dstr(origbalance),dstr(A.balance),addrind,addrind,n,A.num);
+            printf("(%.8f -> %.8f).A%u  addrind.%d n.%d num.%d block.%u vs %u\n",dstr(origbalance),dstr(A.balance),addrind,addrind,n,A.num,blocknum,lastblocknum);
             coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind);
         }
         return(A.balance);
