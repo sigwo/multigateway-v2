@@ -135,7 +135,7 @@ struct coin777_state
     uint32_t maxitems,itemsize,flags;
 };
 
-struct coin777_hashes { uint64_t ledgerhash,credits,debits; uint8_t sha256[10][256 >> 3]; struct sha256_state states[10]; uint32_t blocknum,numsyncs,timestamp,txidind,unspentind,numspends,addrind,scriptind; };
+struct coin777_hashes { uint64_t ledgerhash,credits,debits; uint8_t sha256[11][256 >> 3]; struct sha256_state states[11]; uint32_t blocknum,numsyncs,timestamp,txidind,unspentind,numspends,addrind,scriptind; };
 struct coin_offsets { bits256 blockhash,merkleroot; uint64_t credits,debits; uint32_t timestamp,txidind,unspentind,numspends,addrind,scriptind; };
 struct unspent_info { uint64_t value; uint32_t addrind,spending_txidind; uint16_t spending_vin; };
 struct hashed_uint32 { UT_hash_handle hh; uint32_t ind; };
@@ -369,37 +369,6 @@ struct coin777_state *coin777_stateinit(struct env777 *DBs,struct coin777_state 
     if ( DBs != 0 )
         sp->DB = db777_open(0,DBs,name,compression,flags,valuesize);
     return(sp);
-}
-
-void coin777_initDBenv(struct coin777 *coin)
-{
-    char *subdir="",*coinstr = coin->name; int32_t n = 0;
-    coin->sps[n++] = coin777_stateinit(0,&coin->addrinfos,coinstr,subdir,"addrinfos","zstd",DB777_VOLATILE,sizeof(struct coin777_addrinfo));
-    coin->sps[n++] = coin777_stateinit(0,&coin->blocks,coinstr,subdir,"blocks","zstd",DB777_VOLATILE,sizeof(struct coin_offsets));
-    coin->sps[n++] = coin777_stateinit(0,&coin->txoffsets,coinstr,subdir,"txoffsets","zstd",0,sizeof(uint32_t) * 2);
-    coin->sps[n++] = coin777_stateinit(0,&coin->txidbits,coinstr,subdir,"txidbits",0,0,sizeof(bits256));
-    coin->sps[n++] = coin777_stateinit(0,&coin->unspents,coinstr,subdir,"unspents","zstd",DB777_VOLATILE,sizeof(struct unspent_info));
-    coin->sps[n++] = coin777_stateinit(0,&coin->spends,coinstr,subdir,"spends","zstd",0,sizeof(uint32_t));
-    coin->sps[n++] = coin777_stateinit(0,&coin->ledger,coinstr,subdir,"ledger","zstd",0,sizeof(uint64_t));
-    
-    coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->txidDB,coinstr,subdir,"txids",0,DB777_HDD,sizeof(uint32_t));
-    coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->addrDB,coinstr,subdir,"addrs","zstd",DB777_HDD,sizeof(uint32_t));
-    coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->scriptDB,coinstr,subdir,"scripts","zstd",DB777_HDD,sizeof(uint32_t));
-    coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->activeDB,coinstr,subdir,"actives","zstd",DB777_HDD,sizeof(uint32_t));
-    coin->num = n;
-    coin->sps[n] = coin777_stateinit(&coin->DBs,&coin->hashDB,coinstr,subdir,"hashes","zstd",DB777_HDD,sizeof(struct coin777_hashes));
-    env777_start(0,&coin->DBs,0);
-}
-
-int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends)
-{
-    coin->blocks.table = coin777_ensure(coin,&coin->blocks,blocknum);
-    coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
-    coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
-    coin->unspents.table = coin777_ensure(coin,&coin->unspents,unspentind);
-    coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,addrind);
-    coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
-    return(0);
 }
 
 void *coin777_getDB(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
@@ -649,12 +618,16 @@ int32_t coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,
 
 int32_t coin777_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,int64_t value,uint32_t blocknum)
 {
-    struct coin777_addrinfo A; uint32_t addrtx[2][2],*unspents;
+    struct coin777_addrinfo A; uint32_t addrtx[2][2],*unspents; uint64_t lbalance;
     memset(&A,0,sizeof(A));
     if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
     {
+        coin777_RWmmap(0,lbalance,coin,&coin->ledger,addrind);
+        if ( lbalance != A.balance )
+            printf("block.%u addrind.%u ledger %.8f vs %.8f? new value %.8f\n",blocknum,addrind,dstr(lbalance),dstr(A.balance),dstr(value));
         A.balance += value;
-        //if ( Debuglevel > 2 )
+        coin777_RWmmap(1 | COIN777_SHA256,&A.balance,coin,&coin->ledger,addrind);
+        if ( Debuglevel > 2 )
             printf("addrind.%u num.%d %s += %.8f -> %.8f\n",addrind,A.num,A.coinaddr,dstr(value),dstr(A.balance));
         if ( A.unspents_offset < (int16_t)sizeof(A.coinaddr) && A.num < coin777_maxfixed(&A) )
         {
@@ -740,7 +713,7 @@ uint64_t coin777_recalc_addrinfos(struct coin777 *coin,uint32_t maxaddrind,uint3
 
 uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag)
 {
-    struct coin777_addrinfo A; int64_t sum = 0; int32_t i;
+    struct coin777_addrinfo A; int64_t sum = 0; int32_t i; uint64_t lbalance;
     for (i=1; i<maxaddrind; i++)
     {
         if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,i) == 0 )
@@ -754,6 +727,9 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                     A.balance = A.syncbalance, A.num = A.syncnum;
                 coin777_RWmmap(1,&A,coin,&coin->addrinfos,i);
             }
+            coin777_RWmmap(0,&lbalance,coin,&coin->ledger,i);
+            if ( lbalance != A.balance )
+                printf("addrind.%u ledger %.8f vs %.8f?\n",i,dstr(lbalance),dstr(A.balance));
             if ( 0 && A.balance != 0 )
                 printf("%.8f ",dstr(A.balance));
             sum += A.balance;
@@ -1027,6 +1003,38 @@ uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,ui
         }
     }
     return(H.ledgerhash);
+}
+
+void coin777_initDBenv(struct coin777 *coin)
+{
+    char *subdir="",*coinstr = coin->name; int32_t n = 0;
+    coin->sps[n++] = coin777_stateinit(0,&coin->addrinfos,coinstr,subdir,"addrinfos","zstd",DB777_VOLATILE,sizeof(struct coin777_addrinfo));
+    coin->sps[n++] = coin777_stateinit(0,&coin->blocks,coinstr,subdir,"blocks","zstd",DB777_VOLATILE,sizeof(struct coin_offsets));
+    coin->sps[n++] = coin777_stateinit(0,&coin->txoffsets,coinstr,subdir,"txoffsets","zstd",0,sizeof(uint32_t) * 2);
+    coin->sps[n++] = coin777_stateinit(0,&coin->txidbits,coinstr,subdir,"txidbits",0,0,sizeof(bits256));
+    coin->sps[n++] = coin777_stateinit(0,&coin->unspents,coinstr,subdir,"unspents","zstd",DB777_VOLATILE,sizeof(struct unspent_info));
+    coin->sps[n++] = coin777_stateinit(0,&coin->spends,coinstr,subdir,"spends","zstd",0,sizeof(uint32_t));
+    coin->sps[n++] = coin777_stateinit(0,&coin->ledger,coinstr,subdir,"ledger","zstd",0,sizeof(uint64_t));
+    
+    coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->txidDB,coinstr,subdir,"txids",0,DB777_HDD,sizeof(uint32_t));
+    coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->addrDB,coinstr,subdir,"addrs","zstd",DB777_HDD,sizeof(uint32_t));
+    coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->scriptDB,coinstr,subdir,"scripts","zstd",DB777_HDD,sizeof(uint32_t));
+    coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->activeDB,coinstr,subdir,"actives","zstd",DB777_HDD,sizeof(uint32_t));
+    coin->num = n;
+    coin->sps[n] = coin777_stateinit(&coin->DBs,&coin->hashDB,coinstr,subdir,"hashes","zstd",DB777_HDD,sizeof(struct coin777_hashes));
+    env777_start(0,&coin->DBs,0);
+}
+
+int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends)
+{
+    coin->blocks.table = coin777_ensure(coin,&coin->blocks,blocknum);
+    coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
+    coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
+    coin->unspents.table = coin777_ensure(coin,&coin->unspents,unspentind);
+    coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,addrind);
+    coin->ledger.table = coin777_ensure(coin,&coin->ledger,addrind);
+    coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
+    return(0);
 }
 
 int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *merklerootstr,uint32_t timestamp,uint64_t minted,uint32_t txidind,uint32_t unspentind,uint32_t numspends,uint32_t addrind,uint32_t scriptind,uint64_t credits,uint64_t debits)
