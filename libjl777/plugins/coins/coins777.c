@@ -1000,6 +1000,7 @@ uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,ui
         printf("SYNCNUM.%d -> %d addrsum %.8f addrind.%u supply %.8f | txids.%u addrs.%u scripts.%u unspents.%u spends.%u ledgerhash %08x\n",numsyncs,blocknum,dstr(coin->addrsum),addrind,dstr(credits)-dstr(debits),coin->latest.txidind,coin->latest.addrind,coin->latest.scriptind,coin->latest.unspentind,coin->latest.numspends,(uint32_t)H.ledgerhash);
         if ( addrind > 1 && coin->ledger.M.fileptr != 0 && coin->ledger.M.allocsize >= sizeof(uint64_t) * addrind )
         {
+            coin->ledger.table = coin777_ensure(coin,&coin->ledger,addrind);
             hp = malloc(sizeof(*hp) + addrind*sizeof(uint64_t));
             *hp = H;
             printf("saving ledger with size %ld\n",sizeof(*hp) + addrind*sizeof(uint64_t));
@@ -1111,17 +1112,18 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             coin->DBs.transactions = 0;//sp_begin(coin->DBs.env);
         if ( coin777_getinds(coin,blocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
         {
-            oldsupply = (credits - debits), origsize = coin->totalsize;
+            supply = (credits - debits), origsize = coin->totalsize;
             //if ( syncflag != 0 )
             {
                 coin->addrsum = addrinfos_sum(coin,addrind,0);
-                if ( coin->addrsum != oldsupply )
+                if ( coin->addrsum != supply )
                 {
                     coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum,supply);
                     if ( coin->addrsum != supply )
                         printf("recalc new error: [%.8f]\n",dstr(coin->addrsum) - dstr(supply)), debugstop();
                 }
             }
+            oldsupply = supply;
             if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
                 ledgerhash = (uint32_t)coin777_sync(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             else ledgerhash = (uint32_t)coin777_sync(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
