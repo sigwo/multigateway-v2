@@ -622,12 +622,16 @@ int32_t coin777_createaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,
     memset(&A,0,sizeof(A));
     A.firstblocknum = blocknum;
     A.addrlen = len, memcpy(A.coinaddr,coinaddr,len);
-    A.scriptlen = scriptlen, memcpy(&A.coinaddr[len],script,scriptlen), len += scriptlen;
+    if ( scriptlen < (sizeof(coinaddr) - len) )
+        A.scriptlen = scriptlen, memcpy(&A.coinaddr[len],script,scriptlen), len += scriptlen;
     A.unspents_offset = len;
     if ( (A.unspents_offset & 3) != 0 )
         A.unspents_offset += 4 - (A.unspents_offset & 3);
-    if ( A.unspents_offset > sizeof(A.coinaddr) )
+    if ( A.unspents_offset >= (sizeof(A.coinaddr) - sizeof(A.unspents_offset)) )
+    {
         printf("overflowed unspentinds[] with unspentoffset.%d for (%s)\n",A.unspents_offset,coinaddr);
+        A.unspents_offset = sizeof(A.coinaddr);
+    }
     if ( Debuglevel > 2 )
         printf("maxunspents.%ld addrinfos.DB %p\n",(sizeof(A.coinaddr) - A.unspents_offset) / sizeof(uint32_t),coin->addrinfos.DB);
     return(coin777_RWmmap(1 | COIN777_SHA256,&A,coin,&coin->addrinfos,addrind));
@@ -642,7 +646,7 @@ int32_t coin777_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspenti
         A.balance += value;
         if ( Debuglevel > 2 )
             printf("addrind.%u num.%d %s += %.8f -> %.8f\n",addrind,A.num,A.coinaddr,dstr(value),dstr(A.balance));
-        if ( A.num < (sizeof(A.coinaddr) - A.unspents_offset) / (2 * sizeof(uint32_t)) )
+        if ( A.unspents_offset < sizeof(A.coinaddr) && A.num < (sizeof(A.coinaddr) - A.unspents_offset) / (2 * sizeof(uint32_t)) )
         {
             unspents = (uint32_t *)&A.coinaddr[A.unspents_offset];
             unspents[A.num << 1] = unspentind, unspents[(A.num << 1) + 1] = blocknum, A.num++;
