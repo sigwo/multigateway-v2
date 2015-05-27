@@ -548,12 +548,14 @@ void coin777_addind(struct coin777 *coin,struct coin777_state *sp,void *key,int3
 uint32_t coin777_findind(struct coin777 *coin,struct coin777_state *sp,uint8_t *data,int32_t datalen)
 {
     struct hashed_uint32 *entry; extern int32_t Duplicate;
-    return(0);
-    HASH_FIND(hh,(struct hashed_uint32 *)sp->table,data,datalen,entry);
-    if ( entry != 0 )
+    if ( RAMCHAINS.fastmode != 0 )
     {
-        Duplicate++;
-        return(entry->ind);
+        HASH_FIND(hh,(struct hashed_uint32 *)sp->table,data,datalen,entry);
+        if ( entry != 0 )
+        {
+            Duplicate++;
+            return(entry->ind);
+        }
     }
     return(0);
 }
