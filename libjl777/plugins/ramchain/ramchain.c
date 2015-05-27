@@ -50,7 +50,7 @@ int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain,void *dep
         coin->syncfreq = DB777_MATRIXROW/1000;
     if ( ramchain->paused < 10 )
     {
-        syncflag = (((blocknum % coin->syncfreq) == 0) || (coin->needbackup != 0) || (blocknum % 10000) == 0);
+        syncflag = (((blocknum % coin->syncfreq) == 0) || (coin->needbackup != 0) || (blocknum % DB777_MATRIXROW) == 0);
         if ( blocknum >= coin->endblocknum || ramchain->paused != 0 )
         {
             if ( blocknum >= coin->endblocknum )
@@ -111,7 +111,7 @@ int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ra
         while ( ramchain->activeledger != 0 )
             sleep(1);
     }
-    coin->syncfreq = 1000;
+    coin->syncfreq = 100000;
     coin->startblocknum = startblocknum, coin->endblocknum = endblocknum;
     coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
     if ( endblocknum == 0 )
