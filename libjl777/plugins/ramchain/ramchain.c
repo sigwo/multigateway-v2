@@ -111,7 +111,7 @@ int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ra
         while ( ramchain->activeledger != 0 )
             sleep(1);
     }
-    coin->syncfreq = 100000;
+    coin->syncfreq = 1000;
     coin->startblocknum = startblocknum, coin->endblocknum = endblocknum;
     coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
     if ( endblocknum == 0 )
