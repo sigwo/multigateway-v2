@@ -135,7 +135,7 @@ struct coin777_state
     uint32_t maxitems,itemsize,flags;
 };
 
-struct coin777_hashes { uint64_t ledgerhash,credits,debits; uint8_t sha256[11][256 >> 3]; struct sha256_state states[11]; uint32_t blocknum,numsyncs,timestamp,txidind,unspentind,numspends,addrind,scriptind; };
+struct coin777_hashes { uint64_t ledgerhash,credits,debits; uint8_t sha256[12][256 >> 3]; struct sha256_state states[12]; uint32_t blocknum,numsyncs,timestamp,txidind,unspentind,numspends,addrind,scriptind; };
 struct coin_offsets { bits256 blockhash,merkleroot; uint64_t credits,debits; uint32_t timestamp,txidind,unspentind,numspends,addrind,scriptind; };
 struct unspent_info { uint64_t value; uint32_t addrind,spending_txidind; uint16_t spending_vin; };
 struct hashed_uint32 { UT_hash_handle hh; uint32_t ind; };
@@ -963,7 +963,7 @@ uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci)
 
 uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind)
 {
-    int32_t i,err,retval = 0; struct coin777_hashes H,*hp;
+    int32_t i,err,retval = 0; struct coin777_hashes H,*hp; uint64_t *balances;
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
     H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind;
     if ( numsyncs >= 0 )
@@ -1003,8 +1003,10 @@ uint64_t coin777_sync(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,ui
             coin->ledger.table = coin777_ensure(coin,&coin->ledger,addrind);
             hp = malloc(sizeof(*hp) + addrind*sizeof(uint64_t));
             *hp = H;
-            printf("saving ledger with size %ld\n",sizeof(*hp) + addrind*sizeof(uint64_t));
-            memcpy((void *)((long)hp + sizeof(*hp)),coin->ledger.M.fileptr,sizeof(uint64_t) * addrind);
+            balances = (void *)((long)hp + sizeof(*hp));
+            for (i=0; i<addrind; i++)
+                coin777_RWmmap(0,&balances[i],coin,&coin->ledger,i);
+  printf("saving ledger with size %ld\n",sizeof(*hp) + addrind*sizeof(uint64_t));
             if ( coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),hp,sizeof(*hp) + addrind*sizeof(uint64_t)) != 0 )
                 printf("error saving ledger\n");
             free(hp);
