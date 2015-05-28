@@ -601,7 +601,7 @@ uint64_t coin777_value(struct coin777 *coin,uint32_t *unspentindp,struct unspent
 
 // coin777 addrinfo funcs
 #define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)&(A)->coinaddr[(A)->addrlen])
-#define coin777_maxfixed(A) ((A)->unspents_offset == 0 ? 0 : (int32_t)((sizeof((A)->coinaddr) - (A)->unspents_offset) / (2 * sizeof(uint32_t))))
+#define coin777_maxfixed(A) (((A)->unspents_offset == 0 || (A)->unspents_offset == sizeof((A)->coinaddr)) ? 0 : (int32_t)((sizeof((A)->coinaddr) - (A)->unspents_offset) / (2 * sizeof(uint32_t))))
 #define coin777_unspents(A) (coin777_maxfixed(A) <= 0 ? 0 : (uint32_t *)&(A)->coinaddr[(A)->unspents_offset])
 
 int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,int64_t value,uint32_t blocknum)
@@ -758,8 +758,9 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     A.unspents_offset = len;
     if ( (A.unspents_offset & 3) != 0 )
         A.unspents_offset += 4 - (A.unspents_offset & 3);
-    if ( coin777_maxfixed(&A) <= 0 )
+    if ( A.unspents_offset > (sizeof(A.coinaddr) - 2*sizeof(uint32_t)) )
     {
+        A.unspents_offset = sizeof(A.coinaddr);
         printf("overflowed unspentinds[] with unspentoffset.%d for (%s) A.addrlen.%d A.scriptlen %d sizeof(coinaddr) %ld\n",A.unspents_offset,coinaddr,A.addrlen,A.scriptlen,sizeof(A.coinaddr));
         A.unspents_offset = (int16_t)sizeof(A.coinaddr);
     }
