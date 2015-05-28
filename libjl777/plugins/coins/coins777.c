@@ -197,6 +197,8 @@ int32_t coin777_coinaddr(struct coin777 *coin,char *coinaddr,int32_t max,uint32_
 uint32_t coin777_txidind(uint32_t *firstblocknump,struct coin777 *coin,char *txidstr);
 uint32_t coin777_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr);
 uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr,char *scriptstr);
+uint32_t coin777_addrtx(struct coin777 *coin,uint32_t *blocknump,uint32_t addrtx[2][2],struct coin777_addrinfo *A,uint32_t addrind,int32_t addrtxi);
+int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct coin777_state *sp,uint32_t rawind);
 
 #endif
 #else
@@ -560,32 +562,6 @@ int32_t coin777_txidstr(struct coin777 *coin,char *txidstr,int32_t max,uint32_t 
     return(0);
 }
 
-int32_t coin777_scriptstr(struct coin777 *coin,char *scriptstr,int32_t max,uint32_t scriptind,uint32_t addrind)
-{
-    struct coin777_addrinfo A;
-    if ( scriptind != 0 )
-    {
-        //if ( (ptr= coin777_getDB(&scriptind,&tmp,coin->DBs.transactions,coin->scripts.DB,script,scriptlen)) == 0 || scriptind == 0 || tmp != sizeof(*ptr) )
-        //    init_hexbytes_noT(scriptstr,script,sizeof(txid));
-    }
-    else
-    {
-       // memset(&A,0,sizeof(A));
-       // if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
-       //     init_hexbytes_noT(scriptstr,(uint8_t *)&A.coinaddr[A.addrlen],A.scriptlen);
-    }
-    return(0);
-}
-
-int32_t coin777_coinaddr(struct coin777 *coin,char *coinaddr,int32_t max,uint32_t addrind,uint32_t addrind2)
-{
-    struct coin777_addrinfo A;
-    memset(&A,0,sizeof(A));
-    if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
-        strcpy(coinaddr,A.coinaddr);
-    return(-1);
-}
-
 uint64_t coin777_value(struct coin777 *coin,uint32_t *unspentindp,struct unspent_info *U,uint32_t txidind,int16_t vout)
 {
     uint32_t unspentind,txoffsets[2];
@@ -604,6 +580,33 @@ uint64_t coin777_value(struct coin777 *coin,uint32_t *unspentindp,struct unspent
 #define coin777_maxfixed(A) (((A)->unspents_offset == 0 || (A)->unspents_offset == sizeof((A)->coinaddr)) ? 0 : (int32_t)((sizeof((A)->coinaddr) - (A)->unspents_offset) / (2 * sizeof(uint32_t))))
 #define coin777_unspents(A) (coin777_maxfixed(A) <= 0 ? 0 : (uint32_t *)&(A)->coinaddr[(A)->unspents_offset])
 
+int32_t coin777_scriptstr(struct coin777 *coin,char *scriptstr,int32_t max,uint32_t scriptind,uint32_t addrind)
+{
+    struct coin777_addrinfo A; uint8_t *scriptptr;
+    if ( scriptind != 0 )
+    {
+        printf("need to reverse scriptind.%u\n",scriptind);
+        //if ( (ptr= coin777_getDB(&scriptind,&tmp,coin->DBs.transactions,coin->scripts.DB,script,scriptlen)) == 0 || scriptind == 0 || tmp != sizeof(*ptr) )
+        //    init_hexbytes_noT(scriptstr,script,sizeof(txid));
+    }
+    else
+    {
+        memset(&A,0,sizeof(A));
+        if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 && (scriptptr= coin777_scriptptr(&A)) != 0 )
+            init_hexbytes_noT(scriptstr,scriptptr,A.scriptlen);
+    }
+    return(0);
+}
+
+int32_t coin777_coinaddr(struct coin777 *coin,char *coinaddr,int32_t max,uint32_t addrind,uint32_t addrind2)
+{
+    struct coin777_addrinfo A;
+    memset(&A,0,sizeof(A));
+    if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
+        strcpy(coinaddr,A.coinaddr);
+    return(-1);
+}
+
 int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,int64_t value,uint32_t blocknum)
 {
     struct coin777_addrinfo A; uint32_t addrtx[2][2],*unspents; uint64_t lbalance; int32_t maxfixed;
@@ -611,8 +614,8 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
     {
         coin777_RWmmap(0,&lbalance,coin,&coin->ledger,addrind);
-        if ( Debuglevel > 2 && lbalance != A.balance )
-            printf("block.%u addrind.%u ledger %.8f vs %.8f? new value %.8f\n",blocknum,addrind,dstr(lbalance),dstr(A.balance),dstr(value));
+        if ( lbalance != A.balance )
+            printf("coin777_update_addrinfo: block.%u addrind.%u ledger %.8f vs %.8f? new value %.8f\n",blocknum,addrind,dstr(lbalance),dstr(A.balance),dstr(value));
         A.balance += value;
         coin777_RWmmap(1 | COIN777_SHA256,&A.balance,coin,&coin->ledger,addrind);
         maxfixed = coin777_maxfixed(&A);
@@ -646,28 +649,34 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     return(-1);
 }
 
+uint32_t coin777_addrtx(struct coin777 *coin,uint32_t *blocknump,uint32_t addrtx[2][2],struct coin777_addrinfo *A,uint32_t addrind,int32_t addrtxi)
+{
+    uint32_t *unspents,*ptr,unspentind = 0; int32_t len,maxfixed;
+    maxfixed = coin777_maxfixed(A);
+    if ( addrtxi < maxfixed && (unspents= coin777_unspents(A)) != 0 )
+        addrtx[1][0] = unspentind = unspents[addrtxi << 1], addrtx[1][1] = *blocknump = unspents[(addrtxi << 1) + 1];
+    else
+    {
+        len = sizeof(addrtx[1]), addrtx[0][0] = addrind, addrtx[0][1] = addrtxi;
+        if ( (ptr= coin777_getDB(addrtx[1],&len,coin->DBs.transactions,coin->activeDB.DB,addrtx[0],sizeof(addrtx[0]))) != 0 )
+            unspentind = addrtx[1][0], *blocknump = addrtx[1][1];//, printf("{A%d.%d} -> ",addrtx[0][0],addrtx[0][1]);
+        else printf("coin777_addrbalance: cant find addrtx.%d of num.%d maxfixed.%d\n",addrtxi,A->num,maxfixed);
+    }
+    return(unspentind);
+}
+
 uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t lastblocknum)
 {
-    uint32_t addrtx[2][2],*unspents,*ptr,blocknum,unspentind; int32_t i,maxfixed,len;
+    uint32_t addrtx[2][2],blocknum,unspentind; int32_t i;
     struct coin777_addrinfo A; struct unspent_info U; uint64_t origbalance;
     memset(&A,0,sizeof(A));
     if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
     {
-        maxfixed = coin777_maxfixed(&A);
         origbalance = A.balance, A.balance = 0;
         for (i=0; i<A.num; i++)
         {
-            if ( i < maxfixed && (unspents= coin777_unspents(&A)) != 0 )
-                addrtx[1][0] = unspentind = unspents[i << 1], addrtx[1][1] = blocknum = unspents[(i << 1) + 1];
-            else
-            {
-                len = sizeof(addrtx[1]), addrtx[0][0] = addrind, addrtx[0][1] = i;
-                if ( (ptr= coin777_getDB(addrtx[1],&len,coin->DBs.transactions,coin->activeDB.DB,addrtx[0],sizeof(addrtx[0]))) != 0 )
-                    unspentind = addrtx[1][0], blocknum = addrtx[1][1];//, printf("{A%d.%d} -> ",addrtx[0][0],addrtx[0][1]);
-                else printf("coin777_addrbalance: cant find addrtx.%d of num.%d maxfixed.%d\n",i,A.num,maxfixed);
-            }
-            //printf("(u%x b%u).%d ",unspentind,blocknum,i);
-            if ( blocknum >= lastblocknum )
+            unspentind = coin777_addrtx(coin,&blocknum,addrtx,&A,addrind,i);
+            if ( unspentind == 0 || blocknum >= lastblocknum )
                 break;
             if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind & ~(1 << 31)) == 0 )
             {
@@ -679,7 +688,7 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t 
         }
         if ( 1 && A.balance != origbalance )
         {
-            printf("(%.8f -> %.8f).A%u  addrind.%d maxfixed.%d num.%d block.%u vs %u\n",dstr(origbalance),dstr(A.balance),addrind,addrind,maxfixed,A.num,blocknum,lastblocknum);
+            printf("(%.8f -> %.8f).A%u  addrind.%d maxfixed.%d num.%d block.%u vs %u\n",dstr(origbalance),dstr(A.balance),addrind,addrind,coin777_maxfixed(&A),A.num,blocknum,lastblocknum);
             coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind);
         }
         return(A.balance);
@@ -983,7 +992,7 @@ uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci)
             memcpy(coin->sps[i]->sha256,H.sha256[i],sizeof(H.sha256[i]));
             printf("%08x ",*(uint32_t *)H.sha256[i]);
         }
-        printf("RESTORED.%d -> block.%u ledgerhash %08x addrsum %.8f maxaddrind.%u\n",synci,blocknum,(uint32_t)ledgerhash,dstr(coin->addrsum),hp->addrind);
+        printf("RESTORED.%d -> block.%u ledgerhash %08x addrsum %.8f maxaddrind.%u supply %.8f\n",synci,blocknum,(uint32_t)ledgerhash,dstr(coin->addrsum),hp->addrind,dstr(B.credits)-dstr(B.debits));
     } else printf("ledger_getnearest error getting last\n");
     return(blocknum);// == 0 ? blocknum : blocknum - 1);
 }
@@ -1147,7 +1156,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             if ( dispflag != 0 )
             {
                 extern int32_t Duplicate,Mismatch,Added,Linked,Numgets;
-                printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | H%d E%d R%d W%d %08x\n",coin->calc_elapsed/1000.,coin->name,RTblocknum-blocknum,blocknum,dstr(supply),dstr(coin->addrsum),dstr(supply)-dstr(coin->addrsum),dstr(supply)-dstr(oldsupply),dstr(coin->minted != 0 ? coin->minted : (supply - oldsupply)),elapsed,elapsed+(RTblocknum-blocknum)*coin->calc_elapsed/60000,elapsed+estimate,allocsize,_mbstr(coin->totalsize),(double)coin->totalsize/blocknum,Duplicate,Mismatch,Numgets,Added,ledgerhash);
+                printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | H%d E%d R%d W%d %08x\n",coin->calc_elapsed/1000.,coin->name,RTblocknum-blocknum,blocknum,dstr(oldsupply),dstr(coin->addrsum),dstr(oldsupply)-dstr(coin->addrsum),dstr(supply)-dstr(oldsupply),dstr(coin->minted != 0 ? coin->minted : (supply - oldsupply)),elapsed,elapsed+(RTblocknum-blocknum)*coin->calc_elapsed/60000,elapsed+estimate,allocsize,_mbstr(coin->totalsize),(double)coin->totalsize/blocknum,Duplicate,Mismatch,Numgets,Added,ledgerhash);
             }
             coin->blocknum++;
             return(1);

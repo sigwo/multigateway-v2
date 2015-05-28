@@ -70,16 +70,70 @@ int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain,void *dep
     return(flag);
 }
 
+//struct coin_offsets { bits256 blockhash,merkleroot; uint64_t credits,debits; uint32_t timestamp,txidind,unspentind,numspends,addrind,scriptind; };
+//struct unspent_info { uint64_t value; uint32_t addrind,spending_txidind; uint16_t spending_vin; };
+#define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)&(A)->coinaddr[(A)->addrlen])
+
+int32_t coin777_replayblock(struct coin777 *coin,uint32_t blocknum,int32_t verifyflag)
+{
+    struct coin_offsets B,nextB; struct unspent_info U; struct coin777_addrinfo A;
+    uint32_t checkblocknum,txidind,spendind,unspentind,txoffsets[2],nexttxoffsets[2],addrtx[2][2]; char scriptstr[4096]; uint8_t *scriptptr; int32_t i,errs = 0;
+    if ( coin777_RWmmap(0,&B,coin,&coin->blocks,blocknum) == 0 && coin777_RWmmap(0,&nextB,coin,&coin->blocks,blocknum+1) == 0 )
+    {
+        for (txidind=B.txidind; txidind<nextB.txidind; txidind++)
+        {
+            if ( coin777_RWmmap(0,txoffsets,coin,&coin->txoffsets,txidind) == 0 && coin777_RWmmap(0,nexttxoffsets,coin,&coin->txoffsets,txidind+1) == 0 )
+            {
+                for (unspentind=txoffsets[0]; unspentind<nexttxoffsets[0]; unspentind++)
+                {
+                    if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind) == 0 && coin777_RWmmap(0,&A,coin,&coin->addrinfos,U.addrind) == 0 )
+                    {
+                        if ( (scriptptr= coin777_scriptptr(&A)) != 0 )
+                            init_hexbytes_noT(scriptstr,scriptptr,A.scriptlen);
+                        else strcpy(scriptstr,"big script");
+                        printf("(%s %.8f %s) ",A.coinaddr,dstr(U.value),scriptstr);
+                        if ( verifyflag != 0 )
+                        {
+                            for (i=0; i<A.num; i++)
+                            {
+                                if ( coin777_addrtx(coin,&checkblocknum,addrtx,&A,U.addrind,i) != unspentind || checkblocknum != blocknum )
+                                    errs++, printf("error verifying.%d/%d unspentind.%u from addrind.%u block.%u vs checkblock.%u\n",i,A.num,unspentind,U.addrind,blocknum,checkblocknum);
+                            }
+                        }
+                    }
+                    else errs++, printf("error getting unspendid.%u\n",unspentind);
+                }
+                for (spendind=txoffsets[1]; spendind<nexttxoffsets[1]; spendind++)
+                {
+                    if ( coin777_RWmmap(0,&unspentind,coin,&coin->spends,spendind) == 0 )
+                    {
+                        if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind) == 0 )
+                            printf("-(u%d %.8f) ",unspentind,dstr(U.value));
+                    }
+                    else errs++, printf("error getting spendind.%u\n",spendind);
+                }
+                printf("numvins.%d\n",nexttxoffsets[1] - txoffsets[1]);
+            }
+        }
+        printf("blocknum.%u numtx.%d supply %.8f\n",blocknum,nextB.txidind - B.txidind,dstr(B.credits) - dstr(B.debits));
+    }
+    return(-errs);
+}
+
 int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,uint32_t startblocknum,uint32_t endblocknum)
 {
-    uint32_t txidind,addrind,scriptind,numrawvouts,numrawvins,timestamp; uint64_t credits,debits;
+    uint32_t blocknum,txidind,addrind,scriptind,numrawvouts,numrawvins,timestamp; uint64_t credits,debits;
     coin->startmilli = milliseconds();
     coin->RTblocknum = _get_RTheight(&coin->lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->RTblocknum);
     coin777_initDBenv(coin);
     coin->startblocknum = coin777_startblocknum(coin,-1);
     printf("startblocknum.%u\n",coin->startblocknum);
     if ( coin777_getinds(coin,coin->startblocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
+    {
         coin777_initmmap(coin,coin->startblocknum,txidind,addrind,scriptind,numrawvouts,numrawvins);
+        for (blocknum=0; blocknum<=coin->startblocknum; blocknum++)
+            coin777_replayblock(coin,blocknum,1);
+    }
     ramchain->paused = 0;
     return(0);
 }
