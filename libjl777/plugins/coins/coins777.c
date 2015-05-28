@@ -939,7 +939,7 @@ uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci)
             B.timestamp = hp->timestamp, B.txidind = hp->txidind, B.unspentind = hp->unspentind, B.numspends = hp->numspends, B.addrind = hp->addrind, B.scriptind = hp->scriptind;
             coin777_RWmmap(1,&B,coin,&coin->blocks,blocknum);
         }
-        if ( hp->addrind > 1 )
+        if ( 0 && hp->addrind > 1 )
         {
             allocsize = (sizeof(*hp) + sizeof(uint64_t)*hp->addrind), space = malloc(allocsize);
             if ( (ptr= coin777_getDB(space,&allocsize,coin->DBs.transactions,coin->hashDB.DB,&synci,sizeof(synci))) != 0 )
