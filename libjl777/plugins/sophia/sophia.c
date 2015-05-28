@@ -11629,7 +11629,7 @@ size_t FSE_FUNCTION_NAME(FSE_buildDTable, FSE_FUNCTION_EXTENSION)
 *  Memory usage formula : N->2^N Bytes (examples : 10 -> 1KB; 12 -> 4KB ; 16 -> 64KB; 20 -> 1MB; etc.)
 *  Increasing memory usage improves compression ratio
 *  Reduced memory usage can improve speed, due to cache effect */
-#define ZSTD_MEMORY_USAGE 20
+#define ZSTD_MEMORY_USAGE 17
 
 
 /**************************************
@@ -11700,7 +11700,7 @@ static const U32 ZSTD_magicNumber = 0xFD2FB51C;   /* Initial (limited) frame for
 #define GB *(1U<<30)
 #endif
 
-#define BLOCKSIZE (1024 KB)                 /* define, for static allocation */
+#define BLOCKSIZE (128 KB)                 /* define, for static allocation */
 static const U32 g_maxDistance = 4 * BLOCKSIZE;
 static const U32 g_maxLimit = 1 GB;
 static const U32 g_searchStrength = 8;

@@ -1091,12 +1091,12 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
         }
         printf("SYNCNUM.%d -> %d addrsum %.8f addrind.%u supply %.8f | txids.%u addrs.%u scripts.%u unspents.%u spends.%u ledgerhash %08x\n",numsyncs,blocknum,dstr(coin->addrsum),addrind,dstr(credits)-dstr(debits),coin->latest.txidind,coin->latest.addrind,coin->latest.scriptind,coin->latest.unspentind,coin->latest.numspends,(uint32_t)H.ledgerhash);
         if ( coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H)) != 0 )
-            printf("error saving ledger %s\n",db777_errstr(coin->DBs.ctl));
+            printf("error saving numsyncs.0 retval.%d %s\n",retval,db777_errstr(coin->DBs.ctl));
         if ( numsyncs > 0 )
         {
             numsyncs = 0;
             if ( (retval = coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H))) != 0 )
-                printf("error saving numsyncs.0 retval.%d\n",retval);
+                printf("error saving numsyncs.0 retval.%d %s\n",retval,db777_errstr(coin->DBs.ctl));
         }
     }
     return(H.ledgerhash);
