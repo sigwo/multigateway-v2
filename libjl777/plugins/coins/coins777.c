@@ -600,7 +600,7 @@ uint64_t coin777_value(struct coin777 *coin,uint32_t *unspentindp,struct unspent
 }
 
 // coin777 addrinfo funcs
-#define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)(A)->coinaddr[(A)->addrlen])
+#define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)&(A)->coinaddr[(A)->addrlen])
 #define coin777_maxfixed(A) ((A)->unspents_offset == 0 ? 0 : (int32_t)((sizeof((A)->coinaddr) - (A)->unspents_offset) / (2 * sizeof(uint32_t))))
 #define coin777_unspents(A) (coin777_maxfixed(A) <= 0 ? 0 : (uint32_t *)&(A)->coinaddr[(A)->unspents_offset])
 
@@ -743,20 +743,22 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
     return(0);
 }
 
-int32_t coin777_addcoinaddr(struct coin777 *coin,uint32_t addrind,char *coinaddr,int32_t len,uint8_t *script,uint16_t scriptlen,uint32_t blocknum)
+int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinaddr,int32_t len,uint8_t *script,uint16_t scriptlen,uint32_t blocknum)
 {
-    struct coin777_addrinfo A;
+    struct coin777_addrinfo A; uint8_t *scriptptr;
     memset(&A,0,sizeof(A));
     A.firstblocknum = blocknum;
     A.addrlen = len, memcpy(A.coinaddr,coinaddr,len);
-    if ( scriptlen < (sizeof(coinaddr) - len) )
-        A.scriptlen = scriptlen, memcpy(&A.coinaddr[len],script,scriptlen), len += scriptlen;
+    A.scriptlen = scriptlen;
+    if ( (scriptptr= coin777_script(&A)) != 0 )
+        memcpy(scriptptr,script,scriptlen), len += scriptlen;
+    else A.scriptlen = 0;
     A.unspents_offset = len;
     if ( (A.unspents_offset & 3) != 0 )
         A.unspents_offset += 4 - (A.unspents_offset & 3);
     if ( coin777_maxfixed(&A) <= 0 )
     {
-        printf("overflowed unspentinds[] with unspentoffset.%d for (%s)\n",A.unspents_offset,coinaddr);
+        printf("overflowed unspentinds[] with unspentoffset.%d for (%s) A.scriptlen %d\n",A.unspents_offset,coinaddr,A.scriptlen);
         A.unspents_offset = (int16_t)sizeof(A.coinaddr);
     }
     if ( Debuglevel > 2 )
@@ -793,7 +795,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         if ( (ptr= coin777_getDB(&addrind,&tmp,coin->DBs.transactions,coin->addrDB.DB,coinaddr,len)) == 0 || addrind == 0 )
         {
             addrind = (*addrindp)++;
-            script0flag = coin777_addcoinaddr(coin,addrind,coinaddr,len,script,scriptlen,blocknum);
+            script0flag = coin777_add_addrinfo(coin,addrind,coinaddr,len,script,scriptlen,blocknum);
             coin777_addscript(coin,scriptindp,script,scriptlen,script0flag), havescript = 1;
             update_sha256(coin->addrDB.sha256,&coin->addrDB.state,(uint8_t *)coinaddr,len);
             coin777_addDB(coin,coin->DBs.transactions,coin->addrDB.DB,coinaddr,len,&addrind,sizeof(addrind));
