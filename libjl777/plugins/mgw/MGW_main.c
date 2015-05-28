@@ -6,6 +6,7 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 // add to limbo:  txids 204961939803594792, 7301360590217481477, 14387806392702706073 for a total of 568.1248 BTCD
+// http://chain.explorebtcd.info/tx/1dc0faf122e64aa46393291f00483f7779b73504573c1776301347545b760ea9
 
 #define BUNDLED
 #define PLUGINSTR "MGW"

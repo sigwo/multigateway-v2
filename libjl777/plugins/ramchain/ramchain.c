@@ -212,17 +212,18 @@ int32_t ramchain_rawind(char *retbuf,int32_t maxlen,struct coin777 *coin,struct 
 
 int32_t ramchain_txidind(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
-    return(ramchain_rawind(retbuf,maxlen,coin,ramchain,argjson,"txid","txidind",coin_txidind));
+    return(ramchain_rawind(retbuf,maxlen,coin,ramchain,argjson,"txid","txidind",coin777_txidind));
 }
 
 int32_t ramchain_addrind(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
-    return(ramchain_rawind(retbuf,maxlen,coin,ramchain,argjson,"addr","addrind",coin_addrind));
+    return(ramchain_rawind(retbuf,maxlen,coin,ramchain,argjson,"addr","addrind",coin777_addrind));
 }
 
 int32_t ramchain_scriptind(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
-    return(ramchain_rawind(retbuf,maxlen,coin,ramchain,argjson,"script","scriptind",coin_scriptind));
+    //return(ramchain_rawind(retbuf,maxlen,coin,ramchain,argjson,"script","scriptind",coin777_scriptind));
+    return(0);
 }
 
 int32_t ramchain_string(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,char *field,char *strname,int32_t (*coin_strfuncp)(struct coin777 *coin,char *str,int32_t max,uint32_t rawind,uint32_t addrind))
@@ -242,17 +243,17 @@ int32_t ramchain_string(char *retbuf,int32_t maxlen,struct coin777 *coin,struct 
 
 int32_t ramchain_txid(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
-    return(ramchain_string(retbuf,maxlen,coin,ramchain,argjson,"txidind","txid",coin_txidstr));
+    return(ramchain_string(retbuf,maxlen,coin,ramchain,argjson,"txidind","txid",coin777_txidstr));
 }
 
 int32_t ramchain_coinaddr(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
-    return(ramchain_string(retbuf,maxlen,coin,ramchain,argjson,"addrind","coinaddr",coin_coinaddr));
+    return(ramchain_string(retbuf,maxlen,coin,ramchain,argjson,"addrind","coinaddr",coin777_coinaddr));
 }
 
 int32_t ramchain_script(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
-    return(ramchain_string(retbuf,maxlen,coin,ramchain,argjson,"script","script",coin_scriptstr));
+    return(ramchain_string(retbuf,maxlen,coin,ramchain,argjson,"script","script",coin777_scriptstr));
 }
 
 struct ledger_addrinfo *ramchain_addrinfo(char *field,char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
