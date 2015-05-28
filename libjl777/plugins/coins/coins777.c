@@ -1059,7 +1059,7 @@ int32_t coin777_getinds(void *state,uint32_t blocknum,uint64_t *creditsp,uint64_
 
 uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind)
 {
-    int32_t i,err,retval = 0; struct coin777_hashes H;//,*hp; uint64_t *balances;
+    int32_t i,retval = 0; struct coin777_hashes H;//,*hp; uint64_t *balances;
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
     H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind;
     if ( numsyncs >= 0 )
@@ -1082,17 +1082,6 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
     }
     if ( numsyncs >= 0 )
     {
-        if ( coin->DBs.transactions != 0 )
-        {
-            while ( (err= sp_commit(coin->DBs.transactions)) != 0 )
-            {
-                printf("ledger_commit: sp_commit error.%d\n",err);
-                if ( err < 0 )
-                    break;
-                msleep(1000);
-            }
-            coin->DBs.transactions = 0;
-        }
         printf("SYNCNUM.%d -> %d addrsum %.8f addrind.%u supply %.8f | txids.%u addrs.%u scripts.%u unspents.%u spends.%u ledgerhash %08x\n",numsyncs,blocknum,dstr(coin->addrsum),addrind,dstr(credits)-dstr(debits),coin->latest.txidind,coin->latest.addrind,coin->latest.scriptind,coin->latest.unspentind,coin->latest.numspends,(uint32_t)H.ledgerhash);
         if ( coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H)) != 0 )
             printf("error saving numsyncs.0 retval.%d %s\n",retval,db777_errstr(coin->DBs.ctl)), sleep(30);
@@ -1108,7 +1097,7 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
 
 int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
 {
-    uint32_t blocknum,dispflag,ledgerhash=0,allocsize,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind; int32_t numtx;
+    uint32_t blocknum,dispflag,ledgerhash=0,allocsize,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind; int32_t numtx,err;
     uint64_t origsize,supply,oldsupply,credits,debits; double estimate,elapsed,startmilli;
     blocknum = coin->blocknum;
     if ( blocknum <= (RTblocknum - minconfirms) )
@@ -1116,10 +1105,10 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
         startmilli = milliseconds();
         dispflag = 1 || (blocknum > RTblocknum - 1000);
         dispflag += ((blocknum % 100) == 0);
-        if ( coin->DBs.transactions == 0 )
-            coin->DBs.transactions = sp_begin(coin->DBs.env);
         if ( coin777_getinds(coin,blocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
         {
+            if ( coin->DBs.transactions == 0 )
+                coin->DBs.transactions = sp_begin(coin->DBs.env);
             supply = (credits - debits), origsize = coin->totalsize;
             if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
@@ -1136,6 +1125,17 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
                 ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
+            if ( coin->DBs.transactions != 0 )
+            {
+                while ( (err= sp_commit(coin->DBs.transactions)) != 0 )
+                {
+                    printf("ledger_commit: sp_commit error.%d\n",err);
+                    if ( err < 0 )
+                        break;
+                    msleep(1000);
+                }
+                coin->DBs.transactions = 0;
+            }
             supply = (credits - debits);
             dxblend(&coin->calc_elapsed,(milliseconds() - startmilli),.99);
             allocsize = (uint32_t)(coin->totalsize - origsize);
