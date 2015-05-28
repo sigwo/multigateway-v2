@@ -749,16 +749,18 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     memset(&A,0,sizeof(A));
     A.firstblocknum = blocknum;
     A.addrlen = len, memcpy(A.coinaddr,coinaddr,len);
-    A.scriptlen = scriptlen;
-    if ( (scriptptr= coin777_scriptptr(&A)) != 0 )
-        memcpy(scriptptr,script,scriptlen), len += scriptlen;
-    else A.scriptlen = 0;
+    if ( (scriptlen + A.addrlen) <= sizeof(A.coinaddr) )
+    {
+        A.scriptlen = scriptlen;
+        if ( (scriptptr= coin777_scriptptr(&A)) != 0 )
+            memcpy(scriptptr,script,scriptlen), len += scriptlen;
+    }
     A.unspents_offset = len;
     if ( (A.unspents_offset & 3) != 0 )
         A.unspents_offset += 4 - (A.unspents_offset & 3);
     if ( coin777_maxfixed(&A) <= 0 )
     {
-        printf("overflowed unspentinds[] with unspentoffset.%d for (%s) A.scriptlen %d\n",A.unspents_offset,coinaddr,A.scriptlen);
+        printf("overflowed unspentinds[] with unspentoffset.%d for (%s) A.addrlen.%d A.scriptlen %d sizeof(coinaddr) %ld\n",A.unspents_offset,coinaddr,A.addrlen,A.scriptlen,sizeof(A.coinaddr));
         A.unspents_offset = (int16_t)sizeof(A.coinaddr);
     }
     if ( Debuglevel > 2 )
