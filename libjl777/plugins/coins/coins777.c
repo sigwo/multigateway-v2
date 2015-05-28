@@ -729,7 +729,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                 coin777_RWmmap(1,&A,coin,&coin->addrinfos,i);
             }
             coin777_RWmmap(0,&lbalance,coin,&coin->ledger,i);
-            if ( lbalance != A.balance )
+            if ( Debuglevel > 2 && lbalance != A.balance )
                 printf("addrind.%u ledger %.8f vs %.8f?\n",i,dstr(lbalance),dstr(A.balance));
             if ( 0 && A.balance != 0 )
                 printf("%.8f ",dstr(A.balance));
