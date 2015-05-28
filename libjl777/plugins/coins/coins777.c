@@ -1125,7 +1125,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
                 coin->addrsum = addrinfos_sum(coin,addrind,0);
-                if ( coin->addrsum != supply )
+                if ( 0 && coin->addrsum != supply )
                 {
                     coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum,supply);
                     if ( coin->addrsum != supply )
