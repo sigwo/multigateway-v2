@@ -1348,15 +1348,15 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             if ( coin->DBs.transactions == 0 )
                 coin->DBs.transactions = 0;//sp_begin(coin->DBs.env);
             supply = (credits - debits), origsize = coin->totalsize;
+            oldsupply = supply;
+            if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
+                ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
+            else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             //if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
                 if ( coin777_verify(coin,blocknum,credits,debits,addrind,syncflag != 0 || blocknum == coin->startblocknum) != 0 )
                     printf("cant verify at block.%u\n",blocknum), debugstop();
             }
-            oldsupply = supply;
-            if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
-                ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
-            else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
             if ( coin->DBs.transactions != 0 )
             {
