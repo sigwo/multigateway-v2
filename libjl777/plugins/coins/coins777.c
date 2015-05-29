@@ -1313,7 +1313,7 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
             }
         }
         printf("blocknum.%u supply %.8f numtx.%d allocsize.%d\n",blocknum,dstr(B.credits) - dstr(B.debits),nextB.txidind - B.txidind,allocsize);
-    }
+    } else printf("Error loading blockpair %d\n",blocknum);
     hp->timestamp = B.timestamp, hp->numsyncs = synci;
     hp->ledgerhash = coin777_ledgerhash(0,hp);
     return(-errs);
