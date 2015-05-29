@@ -790,7 +790,8 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     }
     if ( Debuglevel > 2 )
         printf("maxfixed.%d\n",coin777_maxfixed(&A));
-    return(coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind));
+    coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind);
+    return(coin777_scriptptr(&A) != 0 );
 }
 
 uint32_t coin777_addscript(struct coin777 *coin,uint32_t *scriptindp,uint8_t *script,int32_t scriptlen,int32_t script0flag)
@@ -809,7 +810,7 @@ uint32_t coin777_addscript(struct coin777 *coin,uint32_t *scriptindp,uint8_t *sc
 
 int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t vout,uint32_t unspentind,char *coinaddr,char *scriptstr,uint64_t value,uint32_t *addrindp,uint32_t *scriptindp,uint32_t blocknum)
 {
-    struct coin777 *coin = state; uint32_t *ptr,addrind,scriptind = 0; int32_t script0flag=0,tmp,len,scriptlen,havescript = 0;
+    struct coin777 *coin = state; uint32_t *ptr,addrind,scriptind = 0; int32_t newflag = 0,script0flag=0,tmp,len,scriptlen,havescript = 0;
     uint8_t script[4096]; struct unspent_info U;
     (*creditsp) += value;
     scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
@@ -823,18 +824,21 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         tmp = sizeof(addrind);
         if ( (ptr= coin777_getDB(&addrind,&tmp,coin->DBs.transactions,coin->addrDB.DB,coinaddr,len)) == 0 || addrind == 0 )
         {
-            addrind = (*addrindp)++;
-            script0flag = coin777_add_addrinfo(coin,addrind,coinaddr,len,script,scriptlen,blocknum);
-            coin777_addscript(coin,scriptindp,script,scriptlen,script0flag), havescript = 1;
+            newflag = 1, addrind = (*addrindp)++;
             coin777_addDB(coin,coin->DBs.transactions,coin->addrDB.DB,coinaddr,len,&addrind,sizeof(addrind));
         }
         else
         {
             if ( addrind == (*addrindp) )
-                (*addrindp)++;
+                newflag = 1, (*addrindp)++;
             else if ( addrind > (*addrindp) )
                 printf("DB returned addrind.%u vs (*addrindp).%u\n",addrind,(*addrindp));
-            coin777_addind(coin,&coin->addrDB,coinaddr,len,addrind);
+        }
+        coin777_addind(coin,&coin->addrDB,coinaddr,len,addrind);
+        if ( newflag != 0 )
+        {
+            script0flag = coin777_add_addrinfo(coin,addrind,coinaddr,len,script,scriptlen,blocknum);
+            coin777_addscript(coin,scriptindp,script,scriptlen,script0flag), havescript = 1;
         }
     }
     if ( havescript == 0 && (script0flag= coin777_script0(coin,addrind,script,scriptlen)) == 0 )
@@ -853,8 +857,8 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
                     (*scriptindp)++;
                 else if ( scriptind > (*scriptindp) )
                     printf("DB returned scriptind.%u vs (*scriptindp).%u\n",scriptind,(*scriptindp));
-                coin777_addind(coin,&coin->scriptDB,script,scriptlen,scriptind);
             }
+            coin777_addind(coin,&coin->scriptDB,script,scriptlen,scriptind);
         }
     }
     else if ( scriptind == (*scriptindp) )
