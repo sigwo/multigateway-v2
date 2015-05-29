@@ -81,7 +81,7 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct coin777 *coin,struct 
     if ( coin777_getinds(coin,coin->startblocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
     {
         coin777_initmmap(coin,coin->startblocknum,txidind,addrind,scriptind,numrawvouts,numrawvins);
-        //coin777_replayblocks(coin,0,coin->startblocknum,1);
+        coin777_replayblocks(coin,0,coin->startblocknum,1);
     }
     ramchain->paused = 0;
     return(0);

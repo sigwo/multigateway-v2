@@ -1238,10 +1238,10 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
     struct coin_offsets B,nextB; struct unspent_info U; struct coin777_addrinfo A;
     uint32_t txidind,spendind,unspentind,scriptind,txoffsets[2],nexttxoffsets[2],tmp[2]; bits256 txid;
     char scriptstr[4096],txidstr[65]; uint8_t *scriptptr,script[8193],buf[32]; int32_t i,scriptlen,buflen,allocsize = 0,errs = 0;
-    for (i=0; i<coin->num; i++)
-        printf("%02x ",hp->sha256[i][0]);
     if ( coin777_RWmmap(0,&B,coin,&coin->blocks,blocknum) == 0 && coin777_RWmmap(0,&nextB,coin,&coin->blocks,blocknum+1) == 0 )
     {
+        for (i=0; i<coin->num; i++)
+            printf("%02x.%02x ",hp->sha256[i][0],hp->sha256[i][0] ^ B.check[i]);
         if ( B.txidind != hp->txidind || B.txidind != hp->txidind || B.txidind != hp->txidind || B.txidind != hp->txidind || B.txidind != hp->txidind || B.txidind != hp->txidind || B.credits != hp->credits || B.debits != hp->debits )
         {
             printf("coin777_replayblock.%d: ind mismatch (%u %u %u %u %u) vs (%u %u %u %u %u) || %.8f %.8f vs %.8f %.8f\n",blocknum,B.txidind,B.addrind,B.scriptind,B.unspentind,B.numspends,hp->txidind,hp->addrind,hp->scriptind,hp->unspentind,hp->numspends,dstr(B.credits),dstr(B.debits),dstr(hp->credits),dstr(hp->debits));
