@@ -803,7 +803,7 @@ uint32_t coin777_addscript(struct coin777 *coin,uint32_t *scriptindp,uint8_t *sc
         retval = coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,script,scriptlen,&scriptind,sizeof(scriptind));
         retval += coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,&scriptind,sizeof(scriptind),script,scriptlen);
     }
-    //if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         printf("NEW SCRIPT scriptind.%u [%u] script0flag.%d\n",scriptind,(*scriptindp),script0flag);
     return(scriptind);
 }
@@ -852,7 +852,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
                 scriptind = coin777_addscript(coin,scriptindp,script,scriptlen,0);
             else
             {
-                //if ( Debuglevel > 2 )
+                if ( Debuglevel > 2 )
                     printf("cant find  (%s) -> scriptind.%u [%u]\n",scriptstr,scriptind,(*scriptindp));
                 if ( scriptind == (*scriptindp) )
                     (*scriptindp)++;
@@ -1312,15 +1312,17 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,u
     int32_t errs = 0;
     if ( blocknum > 0 )
     {
-        coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,0);
+        coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,forceflag);
         if ( forceflag != 0 || coin->addrsum != (credits - debits) )
         {
             if ( coin->addrsum != (credits - debits) )
                 printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
-            coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,1);
-            if ( coin->addrsum != (credits - debits) )
+            if ( forceflag == 0 )
+                coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,1);
+            if ( forceflag != 0 || coin->addrsum != (credits - debits) )
             {
-                printf("ERROR recalc did not fix discrepancy %.8f != supply %.8f (%.8f - %.8f) -> Lchain recovery\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
+                if ( coin->addrsum != (credits - debits) )
+                    printf("ERROR recalc did not fix discrepancy %.8f != supply %.8f (%.8f - %.8f) -> Lchain recovery\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
                 errs = coin777_replayblocks(coin,coin777_latestledger(coin),blocknum,1);
             } else printf("recalc resolved discrepancies: supply %.8f addrsum %.8f\n",dstr(credits)-dstr(debits),dstr(coin->addrsum));
         }
