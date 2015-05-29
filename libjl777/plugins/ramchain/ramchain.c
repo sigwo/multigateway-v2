@@ -81,20 +81,7 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct coin777 *coin,struct 
     if ( coin777_getinds(coin,coin->startblocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
     {
         coin777_initmmap(coin,coin->startblocknum,txidind,addrind,scriptind,numrawvouts,numrawvins);
-        if ( coin->startblocknum > 0 )
-        {
-            coin->addrsum = addrinfos_sum(coin,addrind,-1,coin->startblocknum,0);
-            if ( coin->addrsum != (credits - debits) )
-            {
-                printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
-                coin->addrsum = addrinfos_sum(coin,addrind,-1,coin->startblocknum,1);
-                if ( coin->addrsum != (credits - debits) )
-                {
-                    printf("ERROR recalc did not fix discrepancy %.8f != supply %.8f (%.8f - %.8f) -> Lchain recovery\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
-                    coin777_replayblocks(coin,0,coin->startblocknum,1);
-                } else printf("recalc resolved discrepancies: supply %.8f addrsum %.8f\n",dstr(credits)-dstr(debits),dstr(coin->addrsum));
-            }
-        }
+        coin777_verify(coin,coin->startblocknum,credits,debits,addrind);
     }
     ramchain->paused = 0;
     return(0);
