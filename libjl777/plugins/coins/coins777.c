@@ -197,7 +197,7 @@ int32_t coin777_coinaddr(struct coin777 *coin,char *coinaddr,int32_t max,uint32_
 uint32_t coin777_txidind(uint32_t *firstblocknump,struct coin777 *coin,char *txidstr);
 uint32_t coin777_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr);
 uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr,char *scriptstr);
-uint32_t coin777_addrtx(struct coin777 *coin,uint32_t *blocknump,uint32_t addrtx[2][2],struct coin777_addrinfo *A,uint32_t addrind,int32_t addrtxi);
+uint32_t coin777_addrtx(struct coin777 *coin,uint32_t *blocknump,struct coin777_addrinfo *A,uint32_t addrind,int32_t addrtxi);
 int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_t endblocknum,int32_t verifyflag);
 uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag);
 int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag);
@@ -623,6 +623,22 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
     return(buflen);
 }
 
+uint32_t coin777_addrtx(struct coin777 *coin,uint32_t *blocknump,struct coin777_addrinfo *A,uint32_t addrind,int32_t addrtxi)
+{
+    uint32_t *unspents,*ptr,addrtx[2][2],unspentind = 0; int32_t len,maxfixed;
+    maxfixed = coin777_maxfixed(A);
+    if ( addrtxi < maxfixed && (unspents= coin777_unspents(A)) != 0 )
+        unspentind = unspents[addrtxi << 1], *blocknump = unspents[(addrtxi << 1) + 1];
+    else
+    {
+        len = sizeof(addrtx[1]), addrtx[0][0] = addrind, addrtx[0][1] = addrtxi;
+        if ( (ptr= coin777_getDB(addrtx[1],&len,coin->DBs.transactions,coin->activeDB.DB,addrtx[0],sizeof(addrtx[0]))) != 0 )
+            unspentind = addrtx[1][0], *blocknump = addrtx[1][1];//, printf("{A%d.%d} -> ",addrtx[0][0],addrtx[0][1]);
+        else printf("coin777_addrbalance: cant find addrtx.%d of num.%d maxfixed.%d\n",addrtxi,A->num,maxfixed);
+    }
+    return(unspentind);
+}
+
 int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,int64_t value,uint32_t blocknum)
 {
     struct coin777_addrinfo A; uint32_t addrtx[2][2],tmp[2],*unspents; uint64_t lbalance; int32_t maxfixed,buflen; uint8_t buf[32];
@@ -649,6 +665,9 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
             addrtx[1][0] = unspentind, addrtx[1][1] = blocknum;
             coin777_queueDB(coin,coin->activeDB.DB,addrtx[0],sizeof(addrtx[0]),addrtx[1],sizeof(addrtx[1]));
         }
+        if ( (tmp[1]= coin777_addrtx(coin,&tmp[0],&A,addrind,A.num)) != unspentind || tmp[0] != blocknum )
+            printf("addrtx error blocknum.%d got %d unspentind.%d vs %d\n",blocknum,tmp[0],unspentind,tmp[1]);
+
         A.num++;
         buflen = coin777_activebuf(buf,value,addrind,blocknum);
         update_sha256(coin->ledger.sha256,&coin->ledger.state,buf,buflen);
@@ -658,25 +677,9 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     return(-1);
 }
 
-uint32_t coin777_addrtx(struct coin777 *coin,uint32_t *blocknump,uint32_t addrtx[2][2],struct coin777_addrinfo *A,uint32_t addrind,int32_t addrtxi)
-{
-    uint32_t *unspents,*ptr,unspentind = 0; int32_t len,maxfixed;
-    maxfixed = coin777_maxfixed(A);
-    if ( addrtxi < maxfixed && (unspents= coin777_unspents(A)) != 0 )
-        addrtx[1][0] = unspentind = unspents[addrtxi << 1], addrtx[1][1] = *blocknump = unspents[(addrtxi << 1) + 1];
-    else
-    {
-        len = sizeof(addrtx[1]), addrtx[0][0] = addrind, addrtx[0][1] = addrtxi;
-        if ( (ptr= coin777_getDB(addrtx[1],&len,coin->DBs.transactions,coin->activeDB.DB,addrtx[0],sizeof(addrtx[0]))) != 0 )
-            unspentind = addrtx[1][0], *blocknump = addrtx[1][1];//, printf("{A%d.%d} -> ",addrtx[0][0],addrtx[0][1]);
-        else printf("coin777_addrbalance: cant find addrtx.%d of num.%d maxfixed.%d\n",addrtxi,A->num,maxfixed);
-    }
-    return(unspentind);
-}
-
 uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t lastblocknum)
 {
-    uint32_t addrtx[2][2],blocknum,unspentind; int32_t i;
+    uint32_t blocknum,unspentind; int32_t i;
     struct coin777_addrinfo A; struct unspent_info U; uint64_t origbalance;
     memset(&A,0,sizeof(A));
     if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 )
@@ -684,7 +687,7 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t 
         origbalance = A.balance, A.balance = 0;
         for (i=0; i<A.num; i++)
         {
-            unspentind = coin777_addrtx(coin,&blocknum,addrtx,&A,addrind,i);
+            unspentind = coin777_addrtx(coin,&blocknum,&A,addrind,i);
             if ( unspentind == 0 || blocknum >= lastblocknum )
                 break;
             if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind & ~(1 << 31)) == 0 )
