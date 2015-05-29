@@ -690,7 +690,11 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t 
             if ( coin777_RWmmap(0,&U,coin,&coin->unspents,unspentind & ~(1 << 31)) == 0 )
             {
                 if ( (unspentind & (1 << 31)) != 0 )
+                {
                     A.balance -= U.value;
+                    if ( A.balance < 0 )
+                        printf("illegal negative balance (%s) %.8f i.%d/%d\n",A.coinaddr,dstr(A.balance),i,A.num);
+                }
                 else A.balance += U.value;
             }
         }
@@ -743,7 +747,10 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                 if ( calcbalance != lbalance )
                     fixups++, coin777_RWmmap(1,&calcbalance,coin,&coin->ledger,i);
                 if ( A.balance != calcbalance )
+                {
                     errs++, A.balance = calcbalance;
+                    coin777_RWmmap(1,&A,coin,&coin->addrinfos,i);
+                }
             }
             if ( 0 && A.balance != 0 )
                 printf("%.8f ",dstr(A.balance));
@@ -1329,7 +1336,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
         if ( coin777_getinds(coin,blocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind) == 0 )
         {
             if ( coin->DBs.transactions == 0 )
-                coin->DBs.transactions = sp_begin(coin->DBs.env);
+                coin->DBs.transactions = 0;//sp_begin(coin->DBs.env);
             supply = (credits - debits), origsize = coin->totalsize;
             //if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
