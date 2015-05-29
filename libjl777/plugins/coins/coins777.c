@@ -720,7 +720,11 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                 if ( syncflag > 0 )
                     A.syncbalance = A.balance, A.syncnum = A.num;//, printf("%.8f ",dstr(A.balance));
                 else if ( syncflag < 0 )
+                {
+                    if ( (i % 1000) == 0 )
+                        fprintf(stderr,"%.1f%% ",100. * i / maxaddrind);
                     A.balance = A.syncbalance, A.num = A.syncnum;
+                }
                 coin777_RWmmap(1,&A,coin,&coin->addrinfos,i);
             }
             coin777_RWmmap(0,&lbalance,coin,&coin->ledger,i);
@@ -741,7 +745,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
             sum += A.balance;
         }
     }
-    if ( fixups != 0 )
+    if ( fixups != 0 || syncflag < 0 )
         printf("addrinfos_sum @ blocknum.%u neeed %d fixups -> sum %.8f\n",blocknum,fixups,dstr(sum));
     coin->addrsum = sum;
     return(sum);
