@@ -1298,11 +1298,11 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,u
     int32_t errs = 0;
     if ( blocknum > 0 )
     {
-        coin->addrsum = addrinfos_sum(coin,addrind,-1,blocknum,0);
+        coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,0);
         if ( coin->addrsum != (credits - debits) )
         {
             printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
-            coin->addrsum = addrinfos_sum(coin,addrind,-1,blocknum,1);
+            coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,1);
             if ( coin->addrsum != (credits - debits) )
             {
                 printf("ERROR recalc did not fix discrepancy %.8f != supply %.8f (%.8f - %.8f) -> Lchain recovery\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
