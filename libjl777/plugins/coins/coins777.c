@@ -200,7 +200,7 @@ uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *c
 uint32_t coin777_addrtx(struct coin777 *coin,uint32_t *blocknump,uint32_t addrtx[2][2],struct coin777_addrinfo *A,uint32_t addrind,int32_t addrtxi);
 int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_t endblocknum,int32_t verifyflag);
 uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag);
-int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind);
+int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag);
 
 #endif
 #else
@@ -840,8 +840,8 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
                 scriptind = coin777_addscript(coin,scriptindp,script,scriptlen,0);
             else
             {
-                if ( Debuglevel > 2 )
-                    printf("search for (%s) -> scriptind.%u [%u]\n",scriptstr,scriptind,(*scriptindp));
+                //if ( Debuglevel > 2 )
+                    printf("cant find  (%s) -> scriptind.%u [%u]\n",scriptstr,scriptind,(*scriptindp));
                 if ( scriptind == (*scriptindp) )
                     (*scriptindp)++;
                 else if ( scriptind > (*scriptindp) )
@@ -850,6 +850,8 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
             }
         }
     }
+    else if ( scriptind == (*scriptindp) )
+        (*scriptindp)++;
     if ( Debuglevel > 2 )
         printf("UNSPENT.%u addrind.%u T%u vo%-3d U%u %.8f %s %llx %s\n",unspentind,addrind,txidind,vout,unspentind,dstr(value),coinaddr,*(long long *)script,scriptstr);
     memset(&U,0,sizeof(U)), U.value = value, U.addrind = addrind;
@@ -1293,15 +1295,16 @@ uint32_t coin777_latestledger(struct coin777 *coin777)
     return(0);
 }
 
-int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind)
+int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag)
 {
     int32_t errs = 0;
     if ( blocknum > 0 )
     {
         coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,0);
-        if ( coin->addrsum != (credits - debits) )
+        if ( forceflag != 0 || coin->addrsum != (credits - debits) )
         {
-            printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
+            if ( coin->addrsum != (credits - debits) )
+                printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
             coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,1);
             if ( coin->addrsum != (credits - debits) )
             {
@@ -1328,9 +1331,9 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             if ( coin->DBs.transactions == 0 )
                 coin->DBs.transactions = sp_begin(coin->DBs.env);
             supply = (credits - debits), origsize = coin->totalsize;
-            if ( syncflag != 0 || blocknum == coin->startblocknum )
+            //if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
-                if ( coin777_verify(coin,blocknum,credits,debits,addrind) != 0 )
+                if ( coin777_verify(coin,blocknum,credits,debits,addrind,syncflag != 0 || blocknum == coin->startblocknum) != 0 )
                     printf("cant verify at block.%u\n",blocknum), debugstop();
             }
             oldsupply = supply;
