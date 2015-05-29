@@ -199,6 +199,7 @@ uint32_t coin777_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coi
 uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr,char *scriptstr);
 uint32_t coin777_addrtx(struct coin777 *coin,uint32_t *blocknump,uint32_t addrtx[2][2],struct coin777_addrinfo *A,uint32_t addrind,int32_t addrtxi);
 int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_t endblocknum,int32_t verifyflag);
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag);
 
 #endif
 #else
@@ -707,9 +708,9 @@ uint64_t coin777_recalc_addrinfos(struct coin777 *coin,uint32_t maxaddrind,uint3
     return(sum);
 }
 
-uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum)
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag)
 {
-    struct coin777_addrinfo A; int64_t sum = 0; int32_t i,fixups = 0; uint64_t lbalance,calcbalance;
+    struct coin777_addrinfo A; int64_t sum = 0; int32_t i,errs = 0,fixups = 0; uint64_t lbalance,calcbalance;
     for (i=1; i<maxaddrind; i++)
     {
         if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,i) == 0 )
@@ -722,23 +723,21 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                 else if ( syncflag < 0 )
                 {
                     if ( (i % 10000) == 0 )
-                        fprintf(stderr,"(%.1f%% %d) ",100. * i / maxaddrind,fixups);
+                        fprintf(stderr,"(%.1f%% %d) ",100. * i / maxaddrind,errs);
                     A.balance = A.syncbalance, A.num = A.syncnum;
                 }
                 coin777_RWmmap(1,&A,coin,&coin->addrinfos,i);
             }
             coin777_RWmmap(0,&lbalance,coin,&coin->ledger,i);
-            if ( lbalance != A.balance )
+            if ( recalcflag != 0 || lbalance != A.balance )
             {
                 calcbalance = coin777_recalc_addrinfo(coin,i,blocknum);
                 if ( Debuglevel > 1 )
                     printf("addrind.%u ledger %.8f vs %.8f calc %.8f?\n",i,dstr(lbalance),dstr(A.balance),dstr(calcbalance));
                 if ( calcbalance != lbalance )
-                {
-                    coin777_RWmmap(1,&calcbalance,coin,&coin->ledger,i);
-                    fixups++;
-                }
-                A.balance = calcbalance;
+                    fixups++, coin777_RWmmap(1,&calcbalance,coin,&coin->ledger,i);
+                if ( A.balance != calcbalance )
+                    errs++, A.balance = calcbalance;
             }
             if ( 0 && A.balance != 0 )
                 printf("%.8f ",dstr(A.balance));
@@ -746,7 +745,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
         }
     }
     if ( fixups != 0 || syncflag < 0 )
-        printf("addrinfos_sum @ blocknum.%u neeed %d fixups -> sum %.8f\n",blocknum,fixups,dstr(sum));
+        printf("addrinfos_sum @ blocknum.%u neeed %d fixups -> sum %.8f | A.balance errs.%d\n",blocknum,fixups,dstr(sum),errs);
     coin->addrsum = sum;
     return(sum);
 }
@@ -1027,8 +1026,6 @@ uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci)
             B.timestamp = hp->timestamp, B.txidind = hp->txidind, B.unspentind = hp->unspentind, B.numspends = hp->numspends, B.addrind = hp->addrind, B.scriptind = hp->scriptind;
             coin777_RWmmap(1,&B,coin,&coin->blocks,blocknum);
         }
-        if ( hp->addrind > 1 )
-            coin->addrsum = addrinfos_sum(coin,hp->addrind,-1,blocknum);
         ledgerhash = coin777_ledgerhash(0,hp);
         for (i=0; i<coin->num; i++)
         {
@@ -1142,7 +1139,7 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
     H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind;
     if ( numsyncs >= 0 )
-        addrinfos_sum(coin,addrind,1,blocknum);
+        addrinfos_sum(coin,addrind,1,blocknum,0);
     for (i=0; i<=coin->num; i++)
     {
         if ( numsyncs >= 0 && coin->sps[i]->M.fileptr != 0 )
@@ -1191,7 +1188,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             supply = (credits - debits), origsize = coin->totalsize;
             if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
-                coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum);
+                coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,0);
                 if ( 0 && coin->addrsum != supply )
                 {
                     coin->addrsum = coin777_recalc_addrinfos(coin,addrind,blocknum,supply);
