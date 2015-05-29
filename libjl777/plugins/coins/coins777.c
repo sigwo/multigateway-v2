@@ -803,7 +803,7 @@ uint32_t coin777_addscript(struct coin777 *coin,uint32_t *scriptindp,uint8_t *sc
         retval = coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,script,scriptlen,&scriptind,sizeof(scriptind));
         retval += coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,&scriptind,sizeof(scriptind),script,scriptlen);
     }
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         printf("NEW SCRIPT scriptind.%u [%u] script0flag.%d\n",scriptind,(*scriptindp),script0flag);
     return(scriptind);
 }
@@ -838,7 +838,8 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         if ( newflag != 0 )
         {
             script0flag = coin777_add_addrinfo(coin,addrind,coinaddr,len,script,scriptlen,blocknum);
-            coin777_addscript(coin,scriptindp,script,scriptlen,script0flag), havescript = 1;
+            if ( (scriptind= coin777_findind(coin,&coin->scriptDB,script,scriptlen)) == 0 )
+                coin777_addscript(coin,scriptindp,script,scriptlen,script0flag), havescript = 1;
         }
     }
     if ( havescript == 0 && (script0flag= coin777_script0(coin,addrind,script,scriptlen)) == 0 )
