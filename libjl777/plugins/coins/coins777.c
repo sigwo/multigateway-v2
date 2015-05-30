@@ -466,27 +466,23 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
         {
             if ( writeflag != 0 )
             {
-                if ( memcmp(value,ptr,sp->itemsize) != 0 )
+                if ( writeflag == 1 && (sp->flags & DB777_VOLATILE) == 0 && memcmp(value,ptr,sp->itemsize) != 0 )
                 {
-                    if ( (sp->flags & DB777_VOLATILE) == 0 )
+                    if ( sp->itemsize <= sizeof(zeroes) )
                     {
-                        if ( sp->itemsize <= sizeof(zeroes) )
+                        if ( memcmp(ptr,zeroes,sp->itemsize) != 0 )
                         {
-                            if ( memcmp(ptr,zeroes,sp->itemsize) != 0 )
-                            {
-                                for (i=0; i<sp->itemsize; i++)
-                                    printf("%02x ",((uint8_t *)ptr)[i]);
-                                printf("existing.%s %d <-- overwritten\n",sp->name,sp->itemsize);
-                                for (i=0; i<sp->itemsize; i++)
-                                    printf("%02x ",((uint8_t *)value)[i]);
-                                printf("new value.%s %d rawind.%u\n",sp->name,sp->itemsize,rawind);
-                            }
-                        } else printf("coin777_RWmmap unexpected itemsize.%d for %s bigger than %ld\n",sp->itemsize,sp->name,sizeof(zeroes));
-                    }
-                    memcpy(ptr,value,sp->itemsize);
+                            for (i=0; i<sp->itemsize; i++)
+                                printf("%02x ",((uint8_t *)ptr)[i]);
+                            printf("existing.%s %d <-- overwritten\n",sp->name,sp->itemsize);
+                            for (i=0; i<sp->itemsize; i++)
+                                printf("%02x ",((uint8_t *)value)[i]);
+                            printf("new value.%s %d rawind.%u\n",sp->name,sp->itemsize,rawind);
+                        }
+                    } else printf("coin777_RWmmap unexpected itemsize.%d for %s bigger than %ld\n",sp->itemsize,sp->name,sizeof(zeroes));
                 }
-            }
-            else memcpy(value,ptr,sp->itemsize);
+                memcpy(ptr,value,sp->itemsize);
+            } else memcpy(value,ptr,sp->itemsize);
         } else retval = -2;
         portable_mutex_unlock(&sp->mutex);
     }
@@ -718,8 +714,8 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         if ( (calcbalance = coin777_recalc_addrinfo(0,coin,lp,totaladdrtxp)) != lp->balance )
             printf("numaddrtx.%d of max.%d mismatched balance %.8f vs %.8f\n",lp->numaddrtx,lp->maxaddrtx,dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
         update_ledgersha256(coin->addrtx.sha256,&coin->addrtx.state,atx->change,atx->rawind,blocknum);
-        if ( addrind == 46527 )
-        printf("addrind.46527: i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u\n",lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum);
+        //if ( addrind == 46527 )
+        printf("atx.%p addrind.46527: i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u\n",atx,lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum);
     }
     else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(atx->change),blocknum);
     return(lp->balance);
@@ -745,7 +741,7 @@ void debug(struct coin777 *coin,uint32_t maxaddrind,uint32_t *totaladdrtxp)
         coin777_RWmmap(0,&L,coin,&coin->ledger,addrind);
         atx = coin777_addrtx(coin,&L,0,totaladdrtxp);
         calcbalance = coin777_recalc_addrinfo(1,coin,&L,totaladdrtxp);
-        printf("DEBUG %.8f %.8f found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d\n",dstr(atx[0].change),dstr(atx[1].change),dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx);
+        printf("DEBUG.%p %.8f %.8f found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d\n",atx,dstr(atx[0].change),dstr(atx[1].change),dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx);
     }
 }
 
@@ -941,7 +937,7 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
 
 int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *merklerootstr,uint32_t timestamp,uint64_t minted,uint32_t txidind,uint32_t unspentind,uint32_t numspends,uint32_t addrind,uint32_t scriptind,uint32_t totaladdrtx,uint64_t credits,uint64_t debits)
 {
-    bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,block; int32_t i,err = 0;
+    bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,block; int32_t i,flag,err = 0;
     memset(&B,0,sizeof(B));
 //Debuglevel = 3;
     if ( Debuglevel > 2 )
@@ -983,8 +979,9 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
         }
         coin->latest = B, coin->latestblocknum = blocknum;
         if ( blockhashstr != 0 )
-            update_blocksha256(coin->blocks.sha256,&coin->blocks.state,&B);
-        if ( coin777_RWmmap(1,&B,coin,&coin->blocks,blocknum) != 0 )
+            flag = 1, update_blocksha256(coin->blocks.sha256,&coin->blocks.state,&B);
+        else flag = 2;
+        if ( coin777_RWmmap(flag,&B,coin,&coin->blocks,blocknum) != 0 )
             return(-1);
     }
     return(err);
