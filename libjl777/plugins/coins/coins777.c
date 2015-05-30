@@ -144,7 +144,8 @@ struct freelist_entry { struct queueitem DL; uint64_t offset; uint32_t freei; };
 struct unspent_info { uint64_t value; uint32_t addrind,scriptind_or_blocknum:31,isblocknum:1; };
 struct spend_info { uint32_t unspentind,addrind,spending_txidind; uint16_t spending_vin; };
 struct addrtx_info { int64_t change; uint32_t rawind,blocknum:31,spent:1; };
-struct coin777_Lentry { int64_t balance; uint64_t addrtx_offset; uint32_t numaddrtx:27,freei:5,maxaddrtx:28,insideA:1,pending:1,MGW:1,dirty:1; };
+//struct coin777_Lentry { int64_t balance; uint64_t addrtx_offset; uint32_t numaddrtx:27,freei:5,maxaddrtx:28,insideA:1,pending:1,MGW:1,dirty:1; };
+struct coin777_Lentry { int64_t balance; struct addrtx_info *addrtx; uint32_t numaddrtx:27,freei:5,maxaddrtx:28,insideA:1,pending:1,MGW:1,dirty:1; };
 
 #ifndef ADDRINFO_SIZE
 #define ADDRINFO_SIZE 168
@@ -628,7 +629,14 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi)
 {
-    uint64_t i,newsize,oldsize,len,incr = 32; struct addrtx_info *atx,*newptr,*oldptr = 0; struct freelist_entry E,*newp,*oldp = 0;
+    if ( addrtxi >= lp->maxaddrtx )
+    {
+        lp->addrtx = realloc(lp->addrtx,sizeof(*lp->addrtx) * (addrtxi + 128));
+        memset(&lp->addrtx[lp->maxaddrtx],0,sizeof(*lp->addrtx) * (addrtxi + 128 - lp->maxaddrtx));
+        lp->maxaddrtx = (addrtxi + 128);
+    }
+    return(&lp->addrtx[addrtxi]);
+ /* uint64_t i,newsize,oldsize,len,incr = 32; struct addrtx_info *atx,*newptr,*oldptr = 0; struct freelist_entry E,*newp,*oldp = 0;
     if ( addrtxi >= lp->maxaddrtx )
     {
         if ( lp->insideA == 0 )
@@ -677,7 +685,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
     if ( lp->insideA != 0 )
         newptr = ((struct addrtx_info *)((long)coin->addrinfos.M.fileptr + lp->addrtx_offset));
     else newptr = ((struct addrtx_info *)((long)coin->actives.M.fileptr + lp->addrtx_offset));
-    return(&newptr[addrtxi]);
+    return(&newptr[addrtxi]);*/
 }
 
 uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp)
@@ -813,11 +821,11 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind);
     coin777_RWmmap(0,&L,coin,&coin->ledger,addrind);
     memset(&L,0,sizeof(L));
-    if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info))) > 0 )
+    /*if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info))) > 0 )
     {
         L.addrtx_offset = ((addrind * sizeof(A)) + len);
         L.insideA = 1;
-    } else L.maxaddrtx = 0;
+    } else L.maxaddrtx = 0;*/
     coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
     return(coin777_scriptptr(&A) != 0 );
 }
