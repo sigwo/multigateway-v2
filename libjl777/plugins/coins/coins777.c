@@ -174,7 +174,7 @@ struct coin777
     struct coin_offsets latest; long totalsize;
     struct env777 DBs;  struct coin777_state *sps[16],txidDB,addrDB,scriptDB,ledger,addrtx,blocks,txoffsets,txidbits,unspents,spends,addrinfos,hashDB;
     struct alloc_space tmpMEM;
-    queue_t freeQ[32];
+    uint64_t freelist[100000][2]; int32_t numfree;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
@@ -622,7 +622,7 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *lp,int32_t addrtxi,uint32_t *totaladdrtxp)
 {
-    struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr;
+    struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr,i,flag = 0;
     if ( lp->addrtx_offset != 0 )
         addrtx = (struct addrtx_info *)(((lp->insideA == 0) ? (long)coin->addrtx.M.fileptr : (long)coin->addrinfos.M.fileptr) + lp->addrtx_offset);
     if ( addrtxi >= lp->maxaddrtx )
@@ -632,13 +632,32 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
         incr += lp->maxaddrtx;
         if ( incr < addrtxi )
             printf("unexpected addrtxi inverstion %d vs %d\n",incr,addrtxi), debugstop();
-        coin->addrtx.table = coin777_ensure(coin,&coin->addrtx,(*totaladdrtxp) + incr);
         if ( lp->insideA == 0 )
         {
-            
+            if ( coin->numfree < sizeof(coin->freelist)/sizeof(*coin->freelist) )
+            {
+                coin->freelist[coin->numfree][0] = lp->addrtx_offset;
+                coin->freelist[coin->numfree][1] = lp->maxaddrtx;
+                coin->numfree++;
+            } else printf("filled freelist %d\n",coin->numfree);
         }
         else lp->insideA = 0;
-        lp->addrtx_offset = ((*totaladdrtxp) * sizeof(struct addrtx_info));
+        for (i=0; i<coin->numfree; i++)
+        {
+            if ( coin->freelist[i][1] == incr )
+            {
+                lp->addrtx_offset = coin->freelist[i][0];
+                coin->numfree--;
+                coin->freelist[i][0] = coin->freelist[coin->numfree][0], coin->freelist[i][1] = coin->freelist[coin->numfree][1];
+                flag = 1;
+                break;
+            }
+        }
+        if ( flag == 0 )
+        {
+            coin->addrtx.table = coin777_ensure(coin,&coin->addrtx,(*totaladdrtxp) + incr);
+            lp->addrtx_offset = ((*totaladdrtxp) * sizeof(struct addrtx_info));
+        }
         if ( Debuglevel > 2 )
             printf("ADDRTX.%u ALLOC offset.%ld to %ld\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx));
         newaddrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + lp->addrtx_offset);
@@ -726,8 +745,8 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         if ( (calcbalance = coin777_recalc_addrinfo(0,coin,addrind,lp,totaladdrtxp)) != lp->balance )
             printf("numaddrtx.%d of max.%d mismatched balance %.8f vs %.8f\n",lp->numaddrtx,lp->maxaddrtx,dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
         update_ledgersha256(coin->addrtx.sha256,&coin->addrtx.state,atx->change,atx->rawind,blocknum);
-        //if ( addrind == 46527 )
-        //printf("atx.%p i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u | offset.%ld\n",atx,lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum,(long)lp->addrtx_offset);
+        if ( addrind == 93496 )
+        printf("atx.%p i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u | offset.%ld\n",atx,lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum,(long)lp->addrtx_offset);
     }
     else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(atx->change),blocknum);
     return(lp->balance);
