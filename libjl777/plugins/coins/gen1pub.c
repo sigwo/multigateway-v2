@@ -40,6 +40,7 @@ uint32_t _get_RTheight(double *lastmillip,char *coinstr,char *serverport,char *u
     char *retstr;
     cJSON *json;
     uint32_t height = 0;
+    return(300000);
     if ( milliseconds() > (*lastmillip + 1000) )
     {
         //printf("RTheight.(%s) (%s)\n",ram->name,ram->serverport);

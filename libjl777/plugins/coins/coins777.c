@@ -629,7 +629,7 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi)
 {
-    uint64_t newsize,oldsize,incr = 32; void *newptr,*oldptr = 0; struct freelist_entry E,*newp,*oldp = 0;
+    uint64_t newsize,oldsize,len,incr = 32; void *newptr,*oldptr = 0; struct addrtx_info *atx; struct freelist_entry E,*newp,*oldp = 0;
     if ( addrtxi >= lp->maxaddrtx )
     {
         if ( lp->insideA == 0 )
@@ -648,15 +648,19 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
                 lp->freei++;
         }
         newsize = ((incr << lp->freei) * sizeof(struct addrtx_info));
-        fprintf(stderr,"insideA.%d oldsize.%ld oldptr.%p oldp.%p, newsize.%ld lp->freei.%d lp->maxaddrtx.%d lp->addrtx_offset %ld -> ",lp->insideA,(long)oldsize,oldptr,oldp,(long)newsize,lp->freei,lp->maxaddrtx,(long)lp->addrtx_offset);
+        fprintf(stderr,"addrtxi.%d  insideA.%d oldsize.%ld oldptr.%p oldp.%p, newsize.%ld lp->freei.%d numaddrtxi.%d lp->maxaddrtx.%d lp->addrtx_offset %ld -> ",addrtxi,lp->insideA,(long)oldsize,oldptr,oldp,(long)newsize,lp->freei,lp->numaddrtx,lp->maxaddrtx,(long)lp->addrtx_offset);
+        if ( (atx= coin->actives.table) != 0 )
+            len = atx->change;
+        else len = sizeof(struct addrtx_info);
         if ( (newp= queue_dequeue(&coin->freeQ[lp->freei],0)) == 0 )
         {
-            fprintf(stderr,"DEQUEUE freei.%d offset.%ld\n",newp->freei,(long)newp->offset);
-            newp = &E, newp->offset = coin->actives.M.allocsize, newp->freei = lp->freei;
-            coin->actives.table = coin777_ensure(coin,&coin->actives,(int32_t)(coin->actives.M.allocsize + newsize));
+            newp = &E, newp->offset = len, newp->freei = lp->freei;
+            fprintf(stderr,"DEQUEUE freei.%d offset.%ld ATX0.%ld\n",newp->freei,(long)newp->offset,(long)len);
+            coin->actives.table = atx = coin777_ensure(coin,&coin->actives,(int32_t)(len + newsize));
+            atx->change = len;
         }
         fprintf(stderr,"newp.%p ",newp);
-        lp->addrtx_offset = newp->offset, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
+        lp->addrtx_offset = len, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
         newptr = (void *)((long)coin->actives.table + lp->addrtx_offset);
         fprintf(stderr,"new offset.%ld maxaddrtx.%d newptr.%p\n",(long)newp->offset,lp->maxaddrtx,newptr);
         memcpy(newptr,oldptr,oldsize);
@@ -1130,12 +1134,16 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     coin->ledger.table = coin777_ensure(coin,&coin->ledger,addrind);
     coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
     coin->actives.table = coin777_ensure(coin,&coin->actives,1);
+    if ( 0 )
     {
-        struct coin777_Lentry L; uint8_t script[32]; int32_t addrtxi;
+        struct coin777_Lentry L; uint8_t script[32]; int32_t addrtxi; struct addrtx_info *atx;
+        atx = coin->actives.table;
+        if ( atx->change == 0 )
+            atx->change = sizeof(struct addrtx_info);
         coin777_add_addrinfo(coin,1,"test coinaddr",(int32_t)strlen("test coinaddr")+1,script,sizeof(script),0);
         coin777_RWmmap(0,&L,coin,&coin->ledger,1);
         for (addrtxi=0; addrtxi<1000; addrtxi++)
-            coin777_addrtx(coin,&L,addrtxi);
+            atx = coin777_addrtx(coin,&L,addrtxi), L.numaddrtx++;
         getchar();
     }
     return(0);
