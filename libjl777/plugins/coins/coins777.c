@@ -638,6 +638,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
             {
                 coin->freelist[coin->numfree][0] = lp->addrtx_offset;
                 coin->freelist[coin->numfree][1] = lp->maxaddrtx;
+                printf("add to freelist.%d (%ld %d)\n",coin->numfree,(long)lp->addrtx_offset,lp->maxaddrtx);
                 coin->numfree++;
             } else printf("filled freelist %d\n",coin->numfree);
         }
@@ -647,6 +648,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
             if ( coin->freelist[i][1] == incr )
             {
                 lp->addrtx_offset = coin->freelist[i][0];
+                printf("found exact match in slot.%d (%ld %d) numfree.%d\n",i,(long)lp->addrtx_offset,(int)coin->freelist[i][1],coin->numfree);
                 coin->numfree--;
                 coin->freelist[i][0] = coin->freelist[coin->numfree][0], coin->freelist[i][1] = coin->freelist[coin->numfree][1];
                 flag = 1;
@@ -657,6 +659,8 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
         {
             coin->addrtx.table = coin777_ensure(coin,&coin->addrtx,(*totaladdrtxp) + incr);
             lp->addrtx_offset = ((*totaladdrtxp) * sizeof(struct addrtx_info));
+            (*totaladdrtxp) += (incr + lp->maxaddrtx);
+            coin->totalsize += (sizeof(*addrtx) * incr);
         }
         if ( Debuglevel > 2 )
             printf("ADDRTX.%u ALLOC offset.%ld to %ld\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx));
@@ -667,8 +671,6 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx), debugstop();
         lp->maxaddrtx = incr;
         addrtx = newaddrtx;
-        (*totaladdrtxp) += (incr + lp->maxaddrtx);
-        coin->totalsize += (sizeof(*addrtx) * incr);
     }
     return(&addrtx[addrtxi]);
 }
