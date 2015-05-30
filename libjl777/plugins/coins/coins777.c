@@ -1062,10 +1062,10 @@ struct coin777_state *coin777_stateinit(struct env777 *DBs,struct coin777_state 
 #define COIN777_UNSPENTS 4 // matches
 #define COIN777_SPENDS 5 // matches
 #define COIN777_LEDGER 6 //
-#define COIN777_TXIDS 7 // matches
-#define COIN777_ADDRS 8 //
-#define COIN777_SCRIPTS 9 //
-#define COIN777_ADDRTX 10 //
+#define COIN777_ADDRTX 7 //
+#define COIN777_TXIDS 8 // matches
+#define COIN777_ADDRS 9 //
+#define COIN777_SCRIPTS 10 //
 
 #define COIN777_HASHES 11
 
