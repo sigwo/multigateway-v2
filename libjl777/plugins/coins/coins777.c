@@ -760,7 +760,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     struct coin777_Lentry L;
     if ( coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
     {
-        printf("addrind.%u: ",addrind);
+        //printf("addrind.%u: ",addrind);
         coin777_update_Lentry(coin,&L,addrind,unspentind,value,spendind,blocknum);
         return(coin777_RWmmap(1,&L,coin,&coin->ledger,addrind));
     } else printf("coin777_unspent cant find addrinfo for addrind.%u\n",addrind);
