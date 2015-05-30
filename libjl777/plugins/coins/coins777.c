@@ -648,21 +648,6 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
     return(&addrtx[addrtxi]);
 }
 
-uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t *totaladdrtxp)
-{
-    struct addrtx_info *atx; int32_t addrtxi; int64_t balance = 0;
-    atx = coin777_addrtx(coin,lp,0,totaladdrtxp);
-    for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
-    {
-        balance += atx[addrtxi].change;
-        if ( Debuglevel > 2 && lp->numaddrtx > 2 )
-            printf("%.8f ",dstr(atx[addrtxi].change));
-    }
-    if ( Debuglevel > 2 && lp->numaddrtx > 2 )
-        printf("-> balance %.8f\n",dstr(balance));
-    return(balance);
-}
-
 void update_addrinfosha256(uint8_t *sha256,struct sha256_state *state,uint32_t blocknum,char *coinaddr,int32_t addrlen,uint8_t *script,int32_t scriptlen)
 {
     update_sha256(sha256,state,(uint8_t *)&blocknum,sizeof(blocknum));
@@ -683,6 +668,21 @@ void update_blocksha256(uint8_t *sha256,struct sha256_state *state,struct coin_o
     tmpB.totaladdrtx = 0;
     memset(tmpB.check,0,sizeof(tmpB.check));
     update_sha256(sha256,state,(uint8_t *)&tmpB,sizeof(tmpB));
+}
+
+uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,struct coin777_Lentry *lp,uint32_t *totaladdrtxp)
+{
+    struct addrtx_info *atx; int32_t addrtxi; int64_t balance = 0;
+    atx = coin777_addrtx(coin,lp,0,totaladdrtxp);
+    for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
+    {
+        balance += atx[addrtxi].change;
+        if ( (dispflag != 0 || Debuglevel > 2) && lp->numaddrtx > 2 )
+            printf("%.8f ",dstr(atx[addrtxi].change));
+    }
+    if ( (dispflag != 0 || Debuglevel > 2) && lp->numaddrtx > 2 )
+        printf("-> balance %.8f\n",dstr(balance));
+    return(balance);
 }
 
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
@@ -715,7 +715,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         update_ledgersha256(coin->ledger.sha256,&coin->ledger.state,atx->change,addrind,blocknum);
         atx->blocknum = blocknum;
         lp->balance += atx->change, lp->numaddrtx++;
-        if ( (calcbalance = coin777_recalc_addrinfo(coin,lp,totaladdrtxp)) != lp->balance )
+        if ( (calcbalance = coin777_recalc_addrinfo(0,coin,lp,totaladdrtxp)) != lp->balance )
             printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
         update_ledgersha256(coin->addrtx.sha256,&coin->addrtx.state,atx->change,atx->rawind,blocknum);
         if ( addrind == 25178 )
@@ -746,11 +746,12 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
         {
             if ( recalcflag != 0 )
             {
-                calcbalance = coin777_recalc_addrinfo(coin,&L,totaladdrtxp);
+                calcbalance = coin777_recalc_addrinfo(0,coin,&L,totaladdrtxp);
                 if ( Debuglevel > 2 )
                     printf("addrind.%u ledger %.8f calc %.8f?\n",addrind,dstr(L.balance),dstr(calcbalance));
                 if ( calcbalance != L.balance )
                 {
+                    calcbalance = coin777_recalc_addrinfo(1,coin,&L,totaladdrtxp);
                     printf("found mismatch: (%.8f -> %.8f) addrind.%d num.%d\n",dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx);
                     L.balance = calcbalance;
                     errs++, coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
