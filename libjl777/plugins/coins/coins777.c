@@ -204,8 +204,8 @@ uint32_t coin777_txidind(uint32_t *firstblocknump,struct coin777 *coin,char *txi
 uint32_t coin777_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr);
 uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr,char *scriptstr);
 int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_t endblocknum,int32_t verifyflag);
-uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag);
-int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag);
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag,uint32_t *totaladdrtxp);
+int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp);
 
 #endif
 #else
@@ -624,28 +624,33 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
     return(buflen);
 }
 
-struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi)
+struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi,uint32_t *totaladdrtxp)
 {
-    struct addrtx_info *addrtx = 0;
+    struct addrtx_info *addrtx = 0; int32_t incr;
     if ( lp->addrtx != 0 )
         addrtx = (lp->insideA == 0) ? lp->addrtx : (struct addrtx_info *)((long)coin->addrinfos.M.fileptr + (long)lp->addrtx);
     if ( addrtxi >= lp->maxaddrtx )
     {
-        lp->addrtx = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*lp->addrtx) * (addrtxi + 128));
+        if ( (incr= (lp->maxaddrtx << 1)) < 128 )
+            incr = 128;
+        coin->addrtx.table = coin777_ensure(coin,&coin->addrtx,(*totaladdrtxp) + incr);
+        lp->addrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + ((*totaladdrtxp) * sizeof(struct addrtx_info)));
         if ( addrtx != 0 )
             memcpy(lp->addrtx,addrtx,lp->maxaddrtx * sizeof(struct addrtx_info));
-        memset(&lp->addrtx[lp->maxaddrtx],0,sizeof(*lp->addrtx) * (addrtxi + 128 - lp->maxaddrtx));
-        lp->maxaddrtx = (addrtxi + 128);
+        else if ( lp->maxaddrtx != 0 )
+            printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx);
+        lp->maxaddrtx = (addrtxi + incr);
         lp->insideA = 0;
         addrtx = lp->addrtx;
+        (*totaladdrtxp) += incr;
     }
     return(&addrtx[addrtxi]);
 }
 
-uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp)
+uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t *totaladdrtxp)
 {
     struct addrtx_info *atx; int32_t addrtxi; int64_t balance = 0;
-    atx = coin777_addrtx(coin,lp,0);
+    atx = coin777_addrtx(coin,lp,0,totaladdrtxp);
     for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
     {
         balance += atx[addrtxi].change;
@@ -671,12 +676,12 @@ void update_ledgersha256(uint8_t *sha256,struct sha256_state *state,int64_t valu
     update_sha256(sha256,state,buf,buflen);
 }
 
-int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
+int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
     int32_t i; struct addrtx_info *atx; int64_t calcbalance;
     if ( spendind != 0 )
     {
-        if ( (atx= coin777_addrtx(coin,lp,0)) != 0 )
+        if ( (atx= coin777_addrtx(coin,lp,0,totaladdrtxp)) != 0 )
         {
             for (i=0; i<lp->numaddrtx; i++,atx++)
                 if ( atx[i].change > 0 && unspentind == atx[i].rawind )
@@ -687,36 +692,36 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
                     break;
                 }
             if ( i == lp->numaddrtx )
-                printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f\n",unspentind,addrind,dstr(value));
+                printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),lp->numaddrtx,lp->maxaddrtx);
         }
     }
-    if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx)) != 0 )
+    if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx,totaladdrtxp)) != 0 )
     {
         if ( spendind == 0 )
             atx->change = value, atx->rawind = unspentind;
         else atx->change = -value, atx->rawind = spendind;
         atx->blocknum = blocknum;
         lp->balance += atx->change, lp->numaddrtx++;
-        if ( (calcbalance = coin777_recalc_addrinfo(coin,lp)) != lp->balance )
+        if ( (calcbalance = coin777_recalc_addrinfo(coin,lp,totaladdrtxp)) != lp->balance )
             printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
     }
     else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(atx->change),blocknum);
     return(lp->balance);
 }
 
-int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
+int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
     struct coin777_Lentry L;
     if ( coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
     {
         //printf("addrind.%u: ",addrind);
-        coin777_update_Lentry(coin,&L,addrind,unspentind,value,spendind,blocknum);
+        coin777_update_Lentry(coin,&L,addrind,unspentind,value,spendind,blocknum,totaladdrtxp);
         return(coin777_RWmmap(1,&L,coin,&coin->ledger,addrind));
     } else printf("coin777_unspent cant find addrinfo for addrind.%u\n",addrind);
     return(-1);
 }
 
-uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag)
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag,uint32_t *totaladdrtxp)
 {
     struct coin777_addrinfo A; int64_t sum = 0; uint32_t addrind; int32_t errs = 0; int64_t calcbalance; struct coin777_Lentry L;
     for (addrind=1; addrind<maxaddrind; addrind++)
@@ -725,7 +730,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
         {
             if ( recalcflag != 0 )
             {
-                calcbalance = coin777_recalc_addrinfo(coin,&L);
+                calcbalance = coin777_recalc_addrinfo(coin,&L,totaladdrtxp);
                 if ( Debuglevel > 2 )
                     printf("addrind.%u ledger %.8f calc %.8f?\n",addrind,dstr(L.balance),dstr(calcbalance));
                 if ( calcbalance != L.balance )
@@ -849,7 +854,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         U.scriptind_or_blocknum = scriptind;
     else U.scriptind_or_blocknum = blocknum, U.isblocknum = 1;
     coin777_RWmmap(1 | COIN777_SHA256,&U,coin,&coin->unspents,unspentind);
-    return(coin777_update_addrinfo(coin,addrind,unspentind,value,0,blocknum));
+    return(coin777_update_addrinfo(coin,addrind,unspentind,value,0,blocknum,totaladdrtxp));
 }
 
 uint64_t coin777_addvin(void *state,uint64_t *debitsp,uint32_t txidind,uint16_t vin,uint32_t totalspends,char *spent_txidstr,uint16_t spent_vout,uint32_t blocknum,uint32_t *totaladdrtxp)
@@ -876,7 +881,7 @@ uint64_t coin777_addvin(void *state,uint64_t *debitsp,uint32_t txidind,uint16_t 
             printf("SPEND T%u vi%-3d S%u %s vout.%d -> A%u %.8f\n",txidind,vin,totalspends,spent_txidstr,spent_vout,U.addrind,dstr(U.value));
         S.unspentind = unspentind, S.addrind = U.addrind, S.spending_txidind = txidind, S.spending_vin = vin;
         coin777_RWmmap(1 | COIN777_SHA256,&S,coin,&coin->spends,totalspends);
-        coin777_update_addrinfo(coin,U.addrind,unspentind,U.value,totalspends,blocknum);
+        coin777_update_addrinfo(coin,U.addrind,unspentind,U.value,totalspends,blocknum,totaladdrtxp);
         (*debitsp) += U.value;
         return(U.value);
     } else printf("warning: (%s).v%d null value\n",spent_txidstr,spent_vout);
@@ -1135,13 +1140,13 @@ int32_t coin777_getinds(void *state,uint32_t blocknum,uint64_t *creditsp,uint64_
     return(0);
 }
 
-uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind,uint32_t totaladdrtx)
+uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind,uint32_t *totaladdrtxp)
 {
     int32_t i,retval = 0; struct coin777_hashes H;//,*hp; uint64_t *balances;
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
-    H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind, H.totaladdrtx = totaladdrtx;
+    H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind, H.totaladdrtx = *totaladdrtxp;
     if ( numsyncs >= 0 )
-        coin->addrsum = addrinfos_sum(coin,addrind,1,blocknum,0);
+        coin->addrsum = addrinfos_sum(coin,addrind,1,blocknum,0,totaladdrtxp);
     for (i=0; i<=coin->num; i++)
     {
         if ( numsyncs >= 0 && coin->sps[i]->M.fileptr != 0 )
@@ -1280,18 +1285,18 @@ uint32_t coin777_latestledger(struct coin777 *coin777)
     return(0);
 }
 
-int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag)
+int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
 {
     int32_t errs = 0;
     if ( blocknum > 0 )
     {
-        coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,forceflag);
+        coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,forceflag,totaladdrtxp);
         if ( forceflag != 0 || coin->addrsum != (credits - debits) )
         {
             if ( coin->addrsum != (credits - debits) )
                 printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
             if ( forceflag == 0 )
-                coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,1);
+                coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,1,totaladdrtxp);
             if ( forceflag != 0 || coin->addrsum != (credits - debits) )
             {
                 if ( coin->addrsum != (credits - debits) )
@@ -1320,11 +1325,11 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             supply = (credits - debits), origsize = coin->totalsize;
             oldsupply = supply;
             if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
-                ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,totaladdrtx);
-            else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,totaladdrtx);
+                ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,&totaladdrtx);
+            else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,&totaladdrtx);
             if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
-                if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum) != 0 )
+                if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum,&totaladdrtx) != 0 )
                     printf("cant verify at block.%u\n",blocknum), debugstop();
             }
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
