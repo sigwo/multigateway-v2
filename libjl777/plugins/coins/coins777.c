@@ -145,7 +145,7 @@ struct unspent_info { uint64_t value; uint32_t addrind,scriptind_or_blocknum:31,
 struct spend_info { uint32_t unspentind,addrind,spending_txidind; uint16_t spending_vin; };
 struct addrtx_info { int64_t change; uint32_t rawind,blocknum:31,spent:1; };
 //struct coin777_Lentry { int64_t balance; uint64_t addrtx_offset; uint32_t numaddrtx:27,freei:5,maxaddrtx:28,insideA:1,pending:1,MGW:1,dirty:1; };
-struct coin777_Lentry { int64_t balance; struct addrtx_info *addrtx; uint32_t numaddrtx:27,freei:5,maxaddrtx:28,insideA:1,pending:1,MGW:1,dirty:1; };
+struct coin777_Lentry { int64_t balance; struct addrtx_info *addrtx; uint32_t numaddrtx:30,insideA:1,pending:1,maxaddrtx:30,MGW:1,dirty:1; };
 
 #ifndef ADDRINFO_SIZE
 #define ADDRINFO_SIZE 168
@@ -561,8 +561,6 @@ uint64_t coin777_value(struct coin777 *coin,uint32_t *unspentindp,struct unspent
 
 // coin777 addrinfo funcs
 #define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)&(A)->coinaddr[(A)->addrlen])
-//#define coin777_maxfixed(A) (((A)->unspents_offset == 0 || (A)->unspents_offset == sizeof((A)->coinaddr)) ? 0 : (int32_t)((sizeof((A)->coinaddr) - (A)->unspents_offset) / sizeof(struct addrtx_info)))
-//#define _coin777_addrtx(A) (coin777_maxfixed(A) <= 0 ? 0 : (struct addrtx_info *)&(A)->coinaddr[(A)->unspents_offset])
 
 int32_t coin777_script0(struct coin777 *coin,uint32_t addrind,uint8_t *script,int32_t scriptlen)
 {
@@ -629,63 +627,17 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi)
 {
+    struct addrtx_info *addrtx;
+    addrtx = (lp->insideA == 0) ? lp->addrtx : (struct addrtx_info *)((long)coin->addrinfos.M.fileptr);
     if ( addrtxi >= lp->maxaddrtx )
     {
-        lp->addrtx = realloc(lp->addrtx,sizeof(*lp->addrtx) * (addrtxi + 128));
+        lp->addrtx = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*lp->addrtx) * (addrtxi + 128));
+        memcpy(lp->addrtx,addrtx,lp->maxaddrtx * sizeof(struct addrtx_info));
         memset(&lp->addrtx[lp->maxaddrtx],0,sizeof(*lp->addrtx) * (addrtxi + 128 - lp->maxaddrtx));
         lp->maxaddrtx = (addrtxi + 128);
+        lp->insideA = 0;
     }
-    return(&lp->addrtx[addrtxi]);
- /* uint64_t i,newsize,oldsize,len,incr = 32; struct addrtx_info *atx,*newptr,*oldptr = 0; struct freelist_entry E,*newp,*oldp = 0;
-    if ( addrtxi >= lp->maxaddrtx )
-    {
-        if ( lp->insideA == 0 )
-        {
-            oldsize = ((incr << lp->freei) * sizeof(struct addrtx_info));
-            oldp = calloc(1,sizeof(*oldp)), oldp->offset = lp->addrtx_offset, oldp->freei = lp->freei++;
-            if ( coin->actives.M.fileptr == 0 )
-                fprintf(stderr,"unexpected null coin->actives.M.fileptr\n");
-            oldptr = (void *)((long)coin->actives.M.fileptr + lp->addrtx_offset);
-        }
-        else
-        {
-            oldsize = (lp->maxaddrtx * sizeof(struct addrtx_info));
-            oldptr = (void *)((long)coin->addrinfos.M.fileptr + lp->addrtx_offset);
-            while ( (incr << lp->freei) < lp->maxaddrtx )
-                lp->freei++;
-        }
-        newsize = ((incr << lp->freei) * sizeof(struct addrtx_info));
-        //fprintf(stderr,"addrtxi.%d  insideA.%d oldsize.%ld oldptr.%p oldp.%p, newsize.%ld lp->freei.%d numaddrtxi.%d lp->maxaddrtx.%d lp->addrtx_offset %ld -> ",addrtxi,lp->insideA,(long)oldsize,oldptr,oldp,(long)newsize,lp->freei,lp->numaddrtx,lp->maxaddrtx,(long)lp->addrtx_offset);
-        if ( (atx= coin->actives.table) != 0 )
-            len = atx->change;
-        else len = sizeof(struct addrtx_info);
-        if ( (newp= queue_dequeue(&coin->freeQ[lp->freei],0)) == 0 )
-        {
-            newp = &E, newp->offset = len, newp->freei = lp->freei;
-            coin->actives.table = atx = coin777_ensure(coin,&coin->actives,(int32_t)(len + newsize));
-            atx->change = len;
-        } else fprintf(stderr,"DEQUEUED freei.%d offset.%ld ATX0.%ld\n",newp->freei,(long)newp->offset,(long)len);
-        lp->addrtx_offset = len, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
-        newptr = (struct addrtx_info *)((long)coin->actives.table + lp->addrtx_offset);
-        for (i=0; i<(newsize / sizeof(struct addrtx_info)); i++)
-        {
-            if ( (i * sizeof(struct addrtx_info)) < oldsize )
-                newptr[i] = oldptr[i], memset(&oldptr[i],0,sizeof(*oldptr));
-            else  memset(&newptr[i],0,sizeof(*newptr));
-        }
-        fprintf(stderr,"addrtxi.%d new offset.%ld maxaddrtx.%d newptr.%p\n",addrtxi,(long)newp->offset,lp->maxaddrtx,newptr);
-        if ( oldp != 0 )
-        {
-            printf("QUEUE freei.%d offset.%ld\n",oldp->freei,(long)oldp->offset);
-            queue_enqueue("freelist",&coin->freeQ[oldp->freei],&oldp->DL);
-        }
-        if ( newp != 0 && newp != &E )
-            free(newp);
-    }
-    if ( lp->insideA != 0 )
-        newptr = ((struct addrtx_info *)((long)coin->addrinfos.M.fileptr + lp->addrtx_offset));
-    else newptr = ((struct addrtx_info *)((long)coin->actives.M.fileptr + lp->addrtx_offset));
-    return(&newptr[addrtxi]);*/
+    return(&addrtx[addrtxi]);
 }
 
 uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp)
@@ -821,11 +773,11 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind);
     coin777_RWmmap(0,&L,coin,&coin->ledger,addrind);
     memset(&L,0,sizeof(L));
-    /*if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info))) > 0 )
+    if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info))) > 0 )
     {
-        L.addrtx_offset = ((addrind * sizeof(A)) + len);
+        L.addrtx = (void *)((addrind * sizeof(A)) + len);
         L.insideA = 1;
-    } else L.maxaddrtx = 0;*/
+    } else L.maxaddrtx = 0;
     coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
     return(coin777_scriptptr(&A) != 0 );
 }
