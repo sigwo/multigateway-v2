@@ -810,7 +810,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
     scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
     update_sha256(coin->scriptDB.sha256,&coin->scriptDB.state,(uint8_t *)scriptstr,scriptlen << 1);
     len = (int32_t)strlen(coinaddr) + 1;
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("addvout.%d: (%s) (%s) %.8f\n",vout,coinaddr,scriptstr,dstr(value));
     if ( (addrind= coin777_findind(coin,&coin->addrDB,(uint8_t *)coinaddr,len)) == 0 )
     {
