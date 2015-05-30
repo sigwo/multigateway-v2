@@ -1126,6 +1126,7 @@ void coin777_initDBenv(struct coin777 *coin)
 
 int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends)
 {
+    struct addrtx_info *atx;
     coin->blocks.table = coin777_ensure(coin,&coin->blocks,blocknum);
     coin->txoffsets.table = coin777_ensure(coin,&coin->txoffsets,txidind);
     coin->txidbits.table = coin777_ensure(coin,&coin->txidbits,txidind);
@@ -1134,12 +1135,12 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     coin->ledger.table = coin777_ensure(coin,&coin->ledger,addrind);
     coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
     coin->actives.table = coin777_ensure(coin,&coin->actives,1);
+    atx = coin->actives.table;
+    if ( atx->change == 0 )
+        atx->change = sizeof(struct addrtx_info);
     if ( 0 )
     {
-        struct coin777_Lentry L; uint8_t script[32]; int32_t addrtxi; struct addrtx_info *atx;
-        atx = coin->actives.table;
-        if ( atx->change == 0 )
-            atx->change = sizeof(struct addrtx_info);
+        struct coin777_Lentry L; uint8_t script[32]; int32_t addrtxi;
         coin777_add_addrinfo(coin,1,"test coinaddr",(int32_t)strlen("test coinaddr")+1,script,sizeof(script),0);
         coin777_RWmmap(0,&L,coin,&coin->ledger,1);
         for (addrtxi=0; addrtxi<1000; addrtxi++)
