@@ -627,15 +627,18 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi)
 {
-    struct addrtx_info *addrtx;
-    addrtx = (lp->insideA == 0) ? lp->addrtx : (struct addrtx_info *)((long)coin->addrinfos.M.fileptr + (long)lp->addrtx);
+    struct addrtx_info *addrtx = 0;
+    if ( lp->addrtx != 0 )
+        addrtx = (lp->insideA == 0) ? lp->addrtx : (struct addrtx_info *)((long)coin->addrinfos.M.fileptr + (long)lp->addrtx);
     if ( addrtxi >= lp->maxaddrtx )
     {
         lp->addrtx = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*lp->addrtx) * (addrtxi + 128));
-        memcpy(lp->addrtx,addrtx,lp->maxaddrtx * sizeof(struct addrtx_info));
+        if ( addrtx != 0 )
+            memcpy(lp->addrtx,addrtx,lp->maxaddrtx * sizeof(struct addrtx_info));
         memset(&lp->addrtx[lp->maxaddrtx],0,sizeof(*lp->addrtx) * (addrtxi + 128 - lp->maxaddrtx));
         lp->maxaddrtx = (addrtxi + 128);
         lp->insideA = 0;
+        addrtx = lp->addrtx;
     }
     return(&addrtx[addrtxi]);
 }
@@ -673,19 +676,22 @@ void update_ledgersha256(uint8_t *sha256,struct sha256_state *state,int64_t valu
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
 {
     int32_t i; struct addrtx_info *atx; //int64_t calcbalance;
-    if ( spendind == 0 )
+    if ( 1 )//spendind == 0 )
     {
         if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx)) != 0 )
         {
-            atx->change = value, atx->rawind = unspentind, atx->blocknum = blocknum;
-            lp->balance += value, lp->numaddrtx++;
+            if ( spendind == 0 )
+                atx->change = value, atx->rawind = unspentind;
+            else atx->change = -value, atx->rawind = spendind;
+            atx->blocknum = blocknum;
+            lp->balance += atx->change, lp->numaddrtx++;
             //calcbalance = coin777_recalc_addrinfo(coin,lp);
             //if ( lp->balance != calcbalance )
             //    printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
             update_ledgersha256(coin->actives.sha256,&coin->actives.state,value,addrind,blocknum);
         }
         else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(value),blocknum);
-        return(value);
+        return(lp->balance);
     }
     else if ( (atx= coin777_addrtx(coin,lp,0)) != 0 )
     {
