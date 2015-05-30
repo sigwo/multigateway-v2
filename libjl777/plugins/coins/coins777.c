@@ -1129,7 +1129,7 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,addrind);
     coin->ledger.table = coin777_ensure(coin,&coin->ledger,addrind);
     coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
-    coin->actives.table = coin777_ensure(coin,&coin->actives,0);
+    coin->actives.table = coin777_ensure(coin,&coin->actives,1);
     return(0);
 }
 
