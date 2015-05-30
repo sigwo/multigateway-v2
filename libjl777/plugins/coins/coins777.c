@@ -692,7 +692,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
     {
         if ( (atx= coin777_addrtx(coin,lp,0,totaladdrtxp)) != 0 )
         {
-            for (i=0; i<lp->numaddrtx; i++,atx++)
+            for (i=0; i<lp->numaddrtx; i++)
                 if ( atx[i].change > 0 && unspentind == atx[i].rawind )
                 {
                     if ( atx[i].change != value || atx[i].spent == 1 )
@@ -700,8 +700,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
                     else atx[i].spent = 1;
                     break;
                 }
-            if ( i == lp->numaddrtx )
-                printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),lp->numaddrtx,lp->maxaddrtx);
+            printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),lp->numaddrtx,lp->maxaddrtx);
         }
     }
     if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx,totaladdrtxp)) != 0 )
