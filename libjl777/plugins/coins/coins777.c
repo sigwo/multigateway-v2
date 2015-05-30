@@ -737,6 +737,18 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     return(-1);
 }
 
+void debug(struct coin777 *coin,uint32_t maxaddrind,uint32_t *totaladdrtxp)
+{
+    struct addrtx_info *atx; uint32_t addrind = 46527; int64_t calcbalance;  struct coin777_Lentry L;
+    if ( maxaddrind > addrind )
+    {
+        coin777_RWmmap(0,&L,coin,&coin->ledger,addrind);
+        atx = coin777_addrtx(coin,&L,0,totaladdrtxp);
+        calcbalance = coin777_recalc_addrinfo(1,coin,&L,totaladdrtxp);
+        printf("DEBUG %.8f %.8f found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d\n",dstr(atx[0].change),dstr(atx[1].change),dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx);
+    }
+}
+
 uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag,uint32_t *totaladdrtxp)
 {
     struct coin777_addrinfo A; int64_t sum = 0; uint32_t addrind; int32_t errs = 0; int64_t calcbalance; struct coin777_Lentry L;
@@ -1382,6 +1394,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
                 printf("%.3f %-5s [lag %-5d] %-6u %.8f %.8f (%.8f) [%.8f] %13.8f | dur %.2f %.2f %.2f | len.%-5d %s %.1f | H%d E%d R%d W%d %08x\n",coin->calc_elapsed/1000.,coin->name,RTblocknum-blocknum,blocknum,dstr(oldsupply),dstr(coin->addrsum),dstr(oldsupply)-dstr(coin->addrsum),dstr(supply)-dstr(oldsupply),dstr(coin->minted != 0 ? coin->minted : (supply - oldsupply)),elapsed,elapsed+(RTblocknum-blocknum)*coin->calc_elapsed/60000,elapsed+estimate,allocsize,_mbstr(coin->totalsize),(double)coin->totalsize/blocknum,Duplicate,Mismatch,Numgets,Added,ledgerhash);
             }
             coin->blocknum++;
+debug(coin,addrind,&totaladdrtx);
             return(1);
         }
         else
