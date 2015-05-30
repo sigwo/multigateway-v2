@@ -1087,7 +1087,7 @@ void coin777_initDBenv(struct coin777 *coin)
     if ( n == COIN777_LEDGER )
         coin->sps[n++] = coin777_stateinit(0,&coin->ledger,coinstr,subdir,"ledger","zstd",DB777_VOLATILE,sizeof(struct coin777_Lentry));
     if ( n == COIN777_ADDRTX )
-        coin->sps[n++] = coin777_stateinit(0,&coin->ledger,coinstr,subdir,"addrtx","zstd",DB777_VOLATILE,sizeof(struct addrtx_info));
+        coin->sps[n++] = coin777_stateinit(0,&coin->addrtx,coinstr,subdir,"addrtx","zstd",DB777_VOLATILE,sizeof(struct addrtx_info));
     
     if ( n == COIN777_TXIDS )
         coin->sps[n++] = coin777_stateinit(&coin->DBs,&coin->txidDB,coinstr,subdir,"txids",0,DB777_HDD,sizeof(uint32_t));
