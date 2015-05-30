@@ -651,10 +651,11 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
         fprintf(stderr,"insideA.%d oldsize.%ld oldptr.%p oldp.%p, newsize.%ld lp->freei.%d lp->maxaddrtx.%d lp->addrtx_offset %ld -> ",lp->insideA,(long)oldsize,oldptr,oldp,(long)newsize,lp->freei,lp->maxaddrtx,(long)lp->addrtx_offset);
         if ( (newp= queue_dequeue(&coin->freeQ[lp->freei],0)) == 0 )
         {
-            printf("DEQUEUE freei.%d offset.%ld\n",newp->freei,(long)newp->offset);
+            fprintf(stderr,"DEQUEUE freei.%d offset.%ld\n",newp->freei,(long)newp->offset);
             newp = &E, newp->offset = coin->actives.M.allocsize, newp->freei = lp->freei;
             coin->actives.table = coin777_ensure(coin,&coin->actives,(int32_t)(coin->actives.M.allocsize + newsize));
         }
+        fprintf(stderr,"newp.%p ",newp);
         lp->addrtx_offset = newp->offset, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
         newptr = (void *)((long)coin->actives.table + lp->addrtx_offset);
         fprintf(stderr,"new offset.%ld maxaddrtx.%d newptr.%p\n",(long)newp->offset,lp->maxaddrtx,newptr);
