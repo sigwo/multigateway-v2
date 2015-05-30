@@ -147,7 +147,7 @@ struct addrtx_info { int64_t change; uint32_t rawind,blocknum:31,spent:1; };
 struct coin777_Lentry { int64_t balance; uint64_t addrtx_offset; uint32_t numaddrtx:27,freei:5,maxaddrtx:28,insideA:1,pending:1,MGW:1,dirty:1; };
 
 #ifndef ADDRINFO_SIZE
-#define ADDRINFO_SIZE 128
+#define ADDRINFO_SIZE 168
 #endif
 
 struct coin777_addrinfo
@@ -696,7 +696,7 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp)
 
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
 {
-    int32_t i; struct addrtx_info *atx; uint64_t calcbalance;
+    int32_t i; struct addrtx_info *atx; int64_t calcbalance;
     if ( spendind == 0 )
     {
         if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx)) != 0 )
@@ -751,7 +751,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
 
 uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag)
 {
-    struct coin777_addrinfo A; int64_t sum = 0; uint32_t addrind; int32_t errs = 0; uint64_t calcbalance; struct coin777_Lentry L;
+    struct coin777_addrinfo A; int64_t sum = 0; uint32_t addrind; int32_t errs = 0; int64_t calcbalance; struct coin777_Lentry L;
     for (addrind=1; addrind<maxaddrind; addrind++)
     {
         if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 && coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
