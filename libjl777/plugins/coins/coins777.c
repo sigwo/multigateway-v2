@@ -742,9 +742,11 @@ void debug(struct coin777 *coin,uint32_t maxaddrind,uint32_t *totaladdrtxp)
         coin777_RWmmap(0,&L,coin,&coin->ledger,addrind);
         atx = coin777_addrtx(coin,addrind,&L,0,totaladdrtxp);
         calcbalance = coin777_recalc_addrinfo(1,coin,addrind,&L,totaladdrtxp);
-        printf("DEBUG.%p %.8f %.8f found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d\n",atx,dstr(atx[0].change),dstr(atx[1].change),dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx);
         if ( atx[0].change < 0 )
+        {
+            printf("DEBUG.%p %.8f %.8f found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d\n",atx,dstr(atx[0].change),dstr(atx[1].change),dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx);
             debugstop();
+        }
     }
 }
 
@@ -890,6 +892,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         U.scriptind_or_blocknum = scriptind;
     else U.scriptind_or_blocknum = blocknum, U.isblocknum = 1;
     coin777_RWmmap(1 | COIN777_SHA256,&U,coin,&coin->unspents,unspentind);
+    debug(coin,46527,totaladdrtxp);
     return(coin777_update_addrinfo(coin,addrind,unspentind,value,0,blocknum,totaladdrtxp));
 }
 
@@ -919,6 +922,7 @@ uint64_t coin777_addvin(void *state,uint64_t *debitsp,uint32_t txidind,uint16_t 
         coin777_RWmmap(1 | COIN777_SHA256,&S,coin,&coin->spends,totalspends);
         coin777_update_addrinfo(coin,U.addrind,unspentind,U.value,totalspends,blocknum,totaladdrtxp);
         (*debitsp) += U.value;
+debug(coin,46527,totaladdrtxp);
         return(U.value);
     } else printf("warning: (%s).v%d null value\n",spent_txidstr,spent_vout);
     return(0);
