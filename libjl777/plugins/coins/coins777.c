@@ -809,8 +809,6 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
     (*creditsp) += value;
     scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
     len = (int32_t)strlen(coinaddr) + 1;
-    update_sha256(coin->addrDB.sha256,&coin->addrDB.state,(uint8_t *)coinaddr,len);
-    update_sha256(coin->scriptDB.sha256,&coin->scriptDB.state,(uint8_t *)scriptstr,scriptlen << 1);
     if ( Debuglevel > 2 )
         printf("addvout.%d: (%s) (%s) %.8f\n",vout,coinaddr,scriptstr,dstr(value));
     if ( (addrind= coin777_findind(coin,&coin->addrDB,(uint8_t *)coinaddr,len)) == 0 )
@@ -819,12 +817,16 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         if ( (ptr= coin777_getDB(&addrind,&tmp,coin->DBs.transactions,coin->addrDB.DB,coinaddr,len)) == 0 || addrind == 0 )
         {
             newflag = 1, addrind = (*addrindp)++;
+            update_sha256(coin->addrDB.sha256,&coin->addrDB.state,(uint8_t *)coinaddr,len);
             coin777_addDB(coin,coin->DBs.transactions,coin->addrDB.DB,coinaddr,len,&addrind,sizeof(addrind));
         }
         else
         {
             if ( addrind == (*addrindp) )
+            {
+                update_sha256(coin->addrDB.sha256,&coin->addrDB.state,(uint8_t *)coinaddr,len);
                 newflag = 1, (*addrindp)++;
+            }
             else if ( addrind > (*addrindp) )
                 printf("DB returned addrind.%u vs (*addrindp).%u\n",addrind,(*addrindp));
         }
@@ -834,6 +836,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
             script0flag = coin777_add_addrinfo(coin,addrind,coinaddr,len,script,scriptlen,blocknum);
             if ( script0flag == 0 && (scriptind= coin777_findind(coin,&coin->scriptDB,script,scriptlen)) == 0 )
             {
+                update_sha256(coin->scriptDB.sha256,&coin->scriptDB.state,(uint8_t *)scriptstr,scriptlen << 1);
                 coin777_addscript(coin,scriptindp,script,scriptlen,script0flag);
                 coin777_addind(coin,&coin->scriptDB,script,scriptlen,scriptind);
             }
@@ -846,13 +849,19 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         {
             tmp = sizeof(scriptind);
             if ( (ptr= coin777_getDB(&scriptind,&tmp,coin->DBs.transactions,coin->scriptDB.DB,script,scriptlen)) == 0 || scriptind == 0 )
+            {
+                update_sha256(coin->scriptDB.sha256,&coin->scriptDB.state,(uint8_t *)scriptstr,scriptlen << 1);
                 scriptind = coin777_addscript(coin,scriptindp,script,scriptlen,0);
+            }
             else
             {
                 if ( Debuglevel > 2 )
                     printf("cant find  (%s) -> scriptind.%u [%u]\n",scriptstr,scriptind,(*scriptindp));
                 if ( scriptind == (*scriptindp) )
+                {
+                    update_sha256(coin->scriptDB.sha256,&coin->scriptDB.state,(uint8_t *)scriptstr,scriptlen << 1);
                     (*scriptindp)++;
+                }
                 else if ( scriptind > (*scriptindp) )
                     printf("DB returned scriptind.%u vs (*scriptindp).%u\n",scriptind,(*scriptindp));
             }
@@ -1229,9 +1238,12 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
                             init_hexbytes_noT(scriptstr,scriptptr,A.scriptlen);
                         else if ( U.isblocknum == 0 )
                         {
-                            if ( U.scriptind_or_blocknum == hp->scriptind )
-                                hp->scriptind++;
                             coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),U.scriptind_or_blocknum,U.addrind);
+                            if ( U.scriptind_or_blocknum == hp->scriptind )
+                            {
+                                update_sha256(hp->sha256[COIN777_SCRIPTS],&hp->states[COIN777_SCRIPTS],(uint8_t *)scriptstr,(int32_t)strlen(scriptstr));
+                                hp->scriptind++;
+                            }
                             printf("got long script.(%s) addrind.%u scriptind.%u\n",scriptstr,U.addrind,U.scriptind_or_blocknum);
                         } else errs++, printf("replayblock illegal case of no scriptptr blocknum.%u unspentind.%u\n",blocknum,unspentind);
                         scriptlen = ((int32_t)strlen(scriptstr) >> 1);
@@ -1240,6 +1252,8 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
                         {
                             hp->addrind++;
                             allocsize += sizeof(A);
+                            update_sha256(hp->sha256[COIN777_ADDRS],&hp->states[COIN777_ADDRS],(uint8_t *)A.coinaddr,A.addrlen);
+                            update_sha256(hp->sha256[COIN777_SCRIPTS],&hp->states[COIN777_SCRIPTS],(uint8_t *)scriptstr,(int32_t)strlen(scriptstr));
                             update_addrinfosha256(hp->sha256[COIN777_ADDRINFOS],&hp->states[COIN777_ADDRINFOS],blocknum,A.coinaddr,A.addrlen,script,scriptlen);
                         }
                         update_sha256(hp->sha256[COIN777_UNSPENTS],&hp->states[COIN777_UNSPENTS],(uint8_t *)&U,sizeof(U));
