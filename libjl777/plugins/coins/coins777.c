@@ -666,9 +666,6 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
             else  memset(&newptr[i],0,sizeof(*newptr));
         }
         fprintf(stderr,"addrtxi.%d new offset.%ld maxaddrtx.%d newptr.%p\n",addrtxi,(long)newp->offset,lp->maxaddrtx,newptr);
-        //memcpy(newptr,oldptr,oldsize);
-        //memset((void *)((long)newptr + oldsize),0,newsize - oldsize);
-        //memset(oldptr,0,oldsize);
         if ( oldp != 0 )
         {
             printf("QUEUE freei.%d offset.%ld\n",oldp->freei,(long)oldp->offset);
@@ -688,8 +685,13 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp)
     struct addrtx_info *atx; int32_t addrtxi; int64_t balance = 0;
     atx = coin777_addrtx(coin,lp,0);
     for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
-        balance += atx[addrtxi].change, printf("%.8f ",dstr(atx[addrtxi].change));
-    printf("-> balance %.8f\n",dstr(balance));
+    {
+        balance += atx[addrtxi].change;
+        if ( lp->numaddrtx > 2 )
+            printf("%.8f ",dstr(atx[addrtxi].change));
+    }
+    if ( lp->numaddrtx > 2 )
+        printf("-> balance %.8f\n",dstr(balance));
     return(balance);
 }
 
@@ -742,6 +744,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     struct coin777_Lentry L;
     if ( coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
     {
+        printf("addrind.%u: ",addrind);
         coin777_update_Lentry(coin,&L,unspentind,value,spendind,blocknum);
         return(coin777_RWmmap(1,&L,coin,&coin->ledger,addrind));
     } else printf("coin777_unspent cant find addrinfo for addrind.%u\n",addrind);
@@ -1374,7 +1377,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             //if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
-                if ( coin777_verify(coin,blocknum,credits,debits,addrind,syncflag != 0 || blocknum == coin->startblocknum) != 0 )
+                if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum) != 0 )
                     printf("cant verify at block.%u\n",blocknum), debugstop();
             }
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
