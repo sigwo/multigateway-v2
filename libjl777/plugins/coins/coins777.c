@@ -704,7 +704,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
                 printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),lp->numaddrtx,lp->maxaddrtx);
         }
     }
-    if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx,totaladdrtxp)) != 0 )
+    if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx+1,totaladdrtxp)) != 0 )
     {
         memset(atx,0,sizeof(*atx));
         if ( spendind == 0 )
@@ -716,6 +716,8 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         if ( (calcbalance = coin777_recalc_addrinfo(coin,lp,totaladdrtxp)) != lp->balance )
             printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
         update_ledgersha256(coin->addrtx.sha256,&coin->addrtx.state,atx->change,atx->rawind,blocknum);
+        if ( addrind == 25178 )
+        printf("addrind.25178: i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u\n",lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum);
     }
     else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(atx->change),blocknum);
     return(lp->balance);
@@ -1077,7 +1079,7 @@ struct coin777_state *coin777_stateinit(struct env777 *DBs,struct coin777_state 
     return(sp);
 }
 
-#define COIN777_ADDRINFOS 0 //
+#define COIN777_ADDRINFOS 0 // matches
 #define COIN777_BLOCKS 1 //
 #define COIN777_TXOFFSETS 2 // matches
 #define COIN777_TXIDBITS 3 // matches
@@ -1087,7 +1089,7 @@ struct coin777_state *coin777_stateinit(struct env777 *DBs,struct coin777_state 
 #define COIN777_ADDRTX 7 // matches
 #define COIN777_TXIDS 8 // matches
 #define COIN777_ADDRS 9 // matches
-#define COIN777_SCRIPTS 10 //
+#define COIN777_SCRIPTS 10 // matches
 
 #define COIN777_HASHES 11
 
