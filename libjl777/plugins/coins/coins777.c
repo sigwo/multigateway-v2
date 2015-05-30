@@ -1130,6 +1130,14 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     coin->ledger.table = coin777_ensure(coin,&coin->ledger,addrind);
     coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
     coin->actives.table = coin777_ensure(coin,&coin->actives,1);
+    {
+        struct coin777_Lentry L; uint8_t script[32]; int32_t addrtxi;
+        coin777_add_addrinfo(coin,1,"test coinaddr",(int32_t)strlen("test coinaddr")+1,script,sizeof(script),0);
+        coin777_RWmmap(0,&L,coin,&coin->ledger,1);
+        for (addrtxi=0; addrtxi<1000; addrtxi++)
+            coin777_addrtx(coin,&L,addrtxi);
+        getchar();
+    }
     return(0);
 }
 
