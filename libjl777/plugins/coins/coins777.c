@@ -629,7 +629,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
     struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr;
     if ( lp->addrtx_offset != 0 )
         addrtx = (struct addrtx_info *)(((lp->insideA == 0) ? (long)coin->addrtx.M.fileptr : (long)coin->addrinfos.M.fileptr) + lp->addrtx_offset);
-    if ( addrtxi >= lp->maxaddrtx )
+    if ( (addrtxi+1) >= lp->maxaddrtx )
     {
         if ( (incr= (lp->maxaddrtx << 1)) < 128 )
             incr = 128;
@@ -704,7 +704,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
                 printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),lp->numaddrtx,lp->maxaddrtx);
         }
     }
-    if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx+1,totaladdrtxp)) != 0 )
+    if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx,totaladdrtxp)) != 0 )
     {
         memset(atx,0,sizeof(*atx));
         if ( spendind == 0 )
