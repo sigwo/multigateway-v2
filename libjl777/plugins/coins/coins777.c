@@ -628,7 +628,7 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi)
 {
-    uint64_t newsize,oldsize,len,incr = 32; void *newptr,*oldptr = 0; struct addrtx_info *atx; struct freelist_entry E,*newp,*oldp = 0;
+    uint64_t i,newsize,oldsize,len,incr = 32; struct addrtx_info *atx,*newptr,*oldptr = 0; struct freelist_entry E,*newp,*oldp = 0;
     if ( addrtxi >= lp->maxaddrtx )
     {
         if ( lp->insideA == 0 )
@@ -647,7 +647,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
                 lp->freei++;
         }
         newsize = ((incr << lp->freei) * sizeof(struct addrtx_info));
-        fprintf(stderr,"addrtxi.%d  insideA.%d oldsize.%ld oldptr.%p oldp.%p, newsize.%ld lp->freei.%d numaddrtxi.%d lp->maxaddrtx.%d lp->addrtx_offset %ld -> ",addrtxi,lp->insideA,(long)oldsize,oldptr,oldp,(long)newsize,lp->freei,lp->numaddrtx,lp->maxaddrtx,(long)lp->addrtx_offset);
+        //fprintf(stderr,"addrtxi.%d  insideA.%d oldsize.%ld oldptr.%p oldp.%p, newsize.%ld lp->freei.%d numaddrtxi.%d lp->maxaddrtx.%d lp->addrtx_offset %ld -> ",addrtxi,lp->insideA,(long)oldsize,oldptr,oldp,(long)newsize,lp->freei,lp->numaddrtx,lp->maxaddrtx,(long)lp->addrtx_offset);
         if ( (atx= coin->actives.table) != 0 )
             len = atx->change;
         else len = sizeof(struct addrtx_info);
@@ -660,7 +660,13 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
         }
         fprintf(stderr,"newp.%p ",newp);
         lp->addrtx_offset = len, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
-        newptr = (void *)((long)coin->actives.table + lp->addrtx_offset);
+        newptr = (struct addrtx_info *)((long)coin->actives.table + lp->addrtx_offset);
+        for (i=0; i<(newsize / sizeof(struct addrtx_info)); i++)
+        {
+            if ( (i * sizeof(struct addrtx_info)) < oldsize )
+                newptr[i] = oldptr[i], memset(&oldptr[i],0,sizeof(*oldptr));
+            else  memset(&newptr[i],0,sizeof(*newptr));
+        }
         fprintf(stderr,"new offset.%ld maxaddrtx.%d newptr.%p\n",(long)newp->offset,lp->maxaddrtx,newptr);
         memcpy(newptr,oldptr,oldsize);
         memset((void *)((long)newptr + oldsize),0,newsize - oldsize);
