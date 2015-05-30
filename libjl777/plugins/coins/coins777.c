@@ -628,7 +628,7 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi)
 {
     struct addrtx_info *addrtx;
-    addrtx = (lp->insideA == 0) ? lp->addrtx : (struct addrtx_info *)((long)coin->addrinfos.M.fileptr);
+    addrtx = (lp->insideA == 0) ? lp->addrtx : (struct addrtx_info *)((long)coin->addrinfos.M.fileptr + (long)lp->addrtx);
     if ( addrtxi >= lp->maxaddrtx )
     {
         lp->addrtx = tmpalloc(coin->name,&coin->tmpMEM,sizeof(*lp->addrtx) * (addrtxi + 128));
