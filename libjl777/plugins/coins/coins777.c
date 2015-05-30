@@ -629,18 +629,21 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
     {
         if ( (incr= (lp->maxaddrtx << 1)) < 128 )
             incr = 128;
+        incr += lp->maxaddrtx;
+        if ( incr < addrtxi )
+            printf("unexpected addrtxi inverstion %d vs %d\n",incr,addrtxi), debugstop();
         coin->addrtx.table = coin777_ensure(coin,&coin->addrtx,(*totaladdrtxp) + incr);
         lp->addrtx_offset = ((*totaladdrtxp) * sizeof(struct addrtx_info));
-        printf("ADDRTX.%u ALLOC offset.%ld to %ld\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(struct addrtx_info));
+        printf("ADDRTX.%u ALLOC offset.%ld to %ld\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx));
         newaddrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + lp->addrtx_offset);
         if ( addrtx != 0 )
-            memcpy(newaddrtx,addrtx,lp->numaddrtx * sizeof(struct addrtx_info));
+            memcpy(newaddrtx,addrtx,lp->maxaddrtx * sizeof(*addrtx));
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx), debugstop();
-        lp->maxaddrtx = (addrtxi + incr);
+        lp->maxaddrtx += incr;
         lp->insideA = 0;
         addrtx = newaddrtx;
-        (*totaladdrtxp) += incr;
+        (*totaladdrtxp) += (incr + lp->maxaddrtx);
         coin->totalsize += (sizeof(*addrtx) * incr);
     }
     return(&addrtx[addrtxi]);
