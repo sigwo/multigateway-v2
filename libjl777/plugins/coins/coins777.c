@@ -1387,8 +1387,8 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             //if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
-                if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum) != 0 )
-                    printf("cant verify at block.%u\n",blocknum), debugstop();
+                //if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum) != 0 )
+                //    printf("cant verify at block.%u\n",blocknum), debugstop();
             }
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
             if ( coin->DBs.transactions != 0 )
