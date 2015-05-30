@@ -144,7 +144,7 @@ struct freelist_entry { struct queueitem DL; uint64_t offset; uint32_t freei; };
 struct unspent_info { uint64_t value; uint32_t addrind,scriptind_or_blocknum:31,isblocknum:1; };
 struct spend_info { uint32_t unspentind,addrind,spending_txidind; uint16_t spending_vin; };
 struct addrtx_info { int64_t change; uint32_t rawind,blocknum:31,spent:1; };
-struct coin777_Lentry { int64_t balance; struct addrtx_info *addrtx; uint32_t numaddrtx:30,insideA:1,pending:1,maxaddrtx:30,MGW:1,dirty:1; };
+struct coin777_Lentry { int64_t balance; long addrtx_offset; uint32_t numaddrtx:30,insideA:1,pending:1,maxaddrtx:30,MGW:1,dirty:1; };
 
 #ifndef ADDRINFO_SIZE
 #define ADDRINFO_SIZE 168
@@ -626,22 +626,23 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi,uint32_t *totaladdrtxp)
 {
-    struct addrtx_info *addrtx = 0; int32_t incr;
-    if ( lp->addrtx != 0 )
-        addrtx = (lp->insideA == 0) ? lp->addrtx : (struct addrtx_info *)((long)coin->addrinfos.M.fileptr + (long)lp->addrtx);
+    struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr;
+    if ( lp->addrtx_offset != 0 )
+        addrtx = (struct addrtx_info *)(((lp->insideA == 0) ? (long)coin->addrtx.M.fileptr : (long)coin->addrinfos.M.fileptr) + lp->addrtx_offset);
     if ( addrtxi >= lp->maxaddrtx )
     {
         if ( (incr= (lp->maxaddrtx << 1)) < 128 )
             incr = 128;
         coin->addrtx.table = coin777_ensure(coin,&coin->addrtx,(*totaladdrtxp) + incr);
-        lp->addrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + ((*totaladdrtxp) * sizeof(struct addrtx_info)));
+        lp->addrtx_offset = ((*totaladdrtxp) * sizeof(struct addrtx_info));
+        newaddrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + lp->addrtx_offset);
         if ( addrtx != 0 )
-            memcpy(lp->addrtx,addrtx,lp->maxaddrtx * sizeof(struct addrtx_info));
+            memcpy(newaddrtx,addrtx,lp->maxaddrtx * sizeof(struct addrtx_info));
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx);
         lp->maxaddrtx = (addrtxi + incr);
         lp->insideA = 0;
-        addrtx = lp->addrtx;
+        addrtx = newaddrtx;
         (*totaladdrtxp) += incr;
     }
     return(&addrtx[addrtxi]);
@@ -769,7 +770,7 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     memset(&L,0,sizeof(L));
     if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info))) > 0 )
     {
-        L.addrtx = (void *)((addrind * sizeof(A)) + len);
+        L.addrtx_offset = ((addrind * sizeof(A)) + len);
         L.insideA = 1;
     } else L.maxaddrtx = 0;
     coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
