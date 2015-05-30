@@ -654,11 +654,9 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
         if ( (newp= queue_dequeue(&coin->freeQ[lp->freei],0)) == 0 )
         {
             newp = &E, newp->offset = len, newp->freei = lp->freei;
-            fprintf(stderr,"DEQUEUE freei.%d offset.%ld ATX0.%ld\n",newp->freei,(long)newp->offset,(long)len);
             coin->actives.table = atx = coin777_ensure(coin,&coin->actives,(int32_t)(len + newsize));
             atx->change = len;
-        }
-        fprintf(stderr,"newp.%p ",newp);
+        } else fprintf(stderr,"DEQUEUED freei.%d offset.%ld ATX0.%ld\n",newp->freei,(long)newp->offset,(long)len);
         lp->addrtx_offset = len, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
         newptr = (struct addrtx_info *)((long)coin->actives.table + lp->addrtx_offset);
         for (i=0; i<(newsize / sizeof(struct addrtx_info)); i++)
@@ -667,10 +665,10 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
                 newptr[i] = oldptr[i], memset(&oldptr[i],0,sizeof(*oldptr));
             else  memset(&newptr[i],0,sizeof(*newptr));
         }
-        fprintf(stderr,"new offset.%ld maxaddrtx.%d newptr.%p\n",(long)newp->offset,lp->maxaddrtx,newptr);
-        memcpy(newptr,oldptr,oldsize);
-        memset((void *)((long)newptr + oldsize),0,newsize - oldsize);
-        memset(oldptr,0,oldsize);
+        fprintf(stderr,"addrtxi.%d new offset.%ld maxaddrtx.%d newptr.%p\n",addrtxi,(long)newp->offset,lp->maxaddrtx,newptr);
+        //memcpy(newptr,oldptr,oldsize);
+        //memset((void *)((long)newptr + oldsize),0,newsize - oldsize);
+        //memset(oldptr,0,oldsize);
         if ( oldp != 0 )
         {
             printf("QUEUE freei.%d offset.%ld\n",oldp->freei,(long)oldp->offset);
@@ -680,8 +678,9 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
             free(newp);
     }
     if ( lp->insideA != 0 )
-        return((struct addrtx_info *)((long)coin->addrinfos.M.fileptr + lp->addrtx_offset));
-    else return((struct addrtx_info *)((long)coin->actives.M.fileptr + lp->addrtx_offset));
+        newptr = ((struct addrtx_info *)((long)coin->addrinfos.M.fileptr + lp->addrtx_offset));
+    else newptr = ((struct addrtx_info *)((long)coin->actives.M.fileptr + lp->addrtx_offset));
+    return(&newptr[addrtxi]);
 }
 
 uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp)
