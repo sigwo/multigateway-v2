@@ -627,7 +627,7 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
     return(buflen);
 }
 
-struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi)
+struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *lp,int32_t addrtxi,uint32_t addrind)
 {
     uint64_t newsize,oldsize,len,incr = 32; void *newptr,*oldptr = 0; struct addrtx_info *atx; struct freelist_entry E,*newp,*oldp = 0;
     if ( addrtxi >= lp->maxaddrtx )
@@ -663,6 +663,8 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
         lp->addrtx_offset = len, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
         newptr = (void *)((long)coin->actives.table + lp->addrtx_offset);
         fprintf(stderr,"new offset.%ld maxaddrtx.%d newptr.%p\n",(long)newp->offset,lp->maxaddrtx,newptr);
+uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *lp);
+        fprintf(stderr,"old balance %.8f vs calcbalance %.8f ",dstr(lp->balance),dstr(coin777_recalc_addrinfo(coin,addrind,lp)));
         memcpy(newptr,oldptr,oldsize);
         memset((void *)((long)newptr + oldsize),0,newsize - oldsize);
         memset(oldptr,0,oldsize);
@@ -679,12 +681,12 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
     else return((struct addrtx_info *)((long)coin->actives.M.fileptr + lp->addrtx_offset));
 }
 
-int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
+int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
 {
     int32_t i; struct addrtx_info *atx;
     if ( spendind == 0 )
     {
-        if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx)) != 0 )
+        if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx,addrind)) != 0 )
         {
             atx->change = value, atx->rawind = unspentind, atx->blocknum = blocknum;
             lp->balance += value, lp->numaddrtx++;
@@ -693,7 +695,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(value),blocknum);
         return(value);
     }
-    else if ( (atx= coin777_addrtx(coin,lp,0)) != 0 )
+    else if ( (atx= coin777_addrtx(coin,lp,0,addrind)) != 0 )
     {
         for (i=0; i<lp->numaddrtx; i++)
             if ( atx[i].change > 0 && unspentind == atx[i].rawind )
@@ -702,7 +704,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
                     printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u\n",i,lp->numaddrtx,unspentind,dstr(value),dstr(atx[i].change),blocknum);
                 else
                 {
-                    if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx)) != 0 )
+                    if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx,addrind)) != 0 )
                     {
                         atx->change = -value, atx->rawind = spendind, atx->blocknum = blocknum;
                         lp->balance += atx->change, lp->numaddrtx++;
@@ -722,7 +724,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     struct coin777_Lentry L;
     if ( coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
     {
-        coin777_update_Lentry(coin,&L,unspentind,value,spendind,blocknum);
+        coin777_update_Lentry(coin,&L,addrind,unspentind,value,spendind,blocknum);
         return(coin777_RWmmap(1,&L,coin,&coin->ledger,addrind));
     } else printf("coin777_unspent cant find addrinfo for addrind.%u\n",addrind);
     return(-1);
@@ -731,7 +733,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
 uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *lp)
 {
     struct addrtx_info *atx; int32_t addrtxi; int64_t balance = 0;
-    atx = coin777_addrtx(coin,lp,0);
+    atx = coin777_addrtx(coin,lp,0,addrind);
     for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
         balance += atx[addrtxi].change;
     return(balance);
@@ -1144,7 +1146,7 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
         coin777_add_addrinfo(coin,1,"test coinaddr",(int32_t)strlen("test coinaddr")+1,script,sizeof(script),0);
         coin777_RWmmap(0,&L,coin,&coin->ledger,1);
         for (addrtxi=0; addrtxi<1000; addrtxi++)
-            atx = coin777_addrtx(coin,&L,addrtxi), L.numaddrtx++;
+            atx = coin777_addrtx(coin,&L,addrtxi,1), L.numaddrtx++;
         getchar();
     }
     return(0);
