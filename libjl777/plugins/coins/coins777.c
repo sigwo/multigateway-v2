@@ -690,16 +690,18 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
     int32_t i; struct addrtx_info *atx; int64_t calcbalance;
     if ( spendind != 0 )
     {
-        if ( (atx= coin777_addrtx(coin,lp,0,totaladdrtxp)) != 0 )
+        for (i=0; i<lp->numaddrtx; i++)
         {
-            for (i=0; i<lp->numaddrtx; i++)
-                if ( atx[i].change > 0 && unspentind == atx[i].rawind )
+            if ( (atx= coin777_addrtx(coin,lp,i,totaladdrtxp)) != 0 )
+            {
+                if ( atx->change > 0 && unspentind == atx->rawind )
                 {
-                    if ( atx[i].change != value || atx[i].spent == 1 )
-                        printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u || double spend.%d\n",i,lp->numaddrtx,unspentind,dstr(value),dstr(atx[i].change),blocknum,atx[i].spent);
-                    else atx[i].spent = 1;
+                    if ( atx->change != value || atx->spent == 1 )
+                        printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u || double spend.%d\n",i,lp->numaddrtx,unspentind,dstr(value),dstr(atx->change),blocknum,atx->spent);
+                    else atx->spent = 1;
                     break;
                 }
+            }
             printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),lp->numaddrtx,lp->maxaddrtx);
         }
     }
