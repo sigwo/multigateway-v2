@@ -937,7 +937,7 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
 
 int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *merklerootstr,uint32_t timestamp,uint64_t minted,uint32_t txidind,uint32_t unspentind,uint32_t numspends,uint32_t addrind,uint32_t scriptind,uint32_t totaladdrtx,uint64_t credits,uint64_t debits)
 {
-    bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,block; int32_t i,flag,err = 0;
+    bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,tmpB,block; int32_t i,flag,err = 0;
     memset(&B,0,sizeof(B));
 //Debuglevel = 3;
     if ( Debuglevel > 2 )
@@ -980,7 +980,12 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
         coin->latest = B, coin->latestblocknum = blocknum;
         if ( blockhashstr != 0 )
             flag = 1, update_blocksha256(coin->blocks.sha256,&coin->blocks.state,&B);
-        else flag = 2;
+        else
+        {
+            flag = 2;
+            if ( coin777_RWmmap(0,&tmpB,coin,&coin->blocks,blocknum) == 0  )
+                B.blockhash = tmpB.blockhash, B.merkleroot = tmpB.merkleroot;
+        }
         if ( coin777_RWmmap(flag,&B,coin,&coin->blocks,blocknum) != 0 )
             return(-1);
     }
