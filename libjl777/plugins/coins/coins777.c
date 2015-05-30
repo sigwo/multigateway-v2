@@ -172,7 +172,7 @@ struct coin777
     uint64_t minted,addrsum; double calc_elapsed,startmilli;
     uint32_t latestblocknum,blocknum,numsyncs,RTblocknum,startblocknum,endblocknum,needbackup,num,syncfreq;
     struct coin_offsets latest; long totalsize;
-    struct env777 DBs;  struct coin777_state *sps[16],txidDB,addrDB,scriptDB,ledger,blocks,txoffsets,txidbits,unspents,spends,addrinfos,actives,hashDB;
+    struct env777 DBs;  struct coin777_state *sps[16],txidDB,addrDB,scriptDB,ledger,blocks,txoffsets,txidbits,unspents,spends,addrinfos,hashDB;
     struct alloc_space tmpMEM;
     queue_t freeQ[32];
 };
@@ -682,7 +682,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
             for (i=0; i<lp->numaddrtx; i++,atx++)
                 if ( atx[i].change > 0 && unspentind == atx[i].rawind )
                 {
-                    if ( atx[i].change != value || atx[i].spent == 0 )
+                    if ( atx[i].change != value || atx[i].spent == 1 )
                         printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u || double spend.%d\n",i,lp->numaddrtx,unspentind,dstr(value),dstr(atx[i].change),blocknum,atx[i].spent);
                     else atx[i].spent = 1;
                     break;
@@ -700,7 +700,6 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         lp->balance += atx->change, lp->numaddrtx++;
         if ( (calcbalance = coin777_recalc_addrinfo(coin,lp)) != lp->balance )
             printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
-        update_ledgersha256(coin->actives.sha256,&coin->actives.state,value,addrind,blocknum);
     }
     else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(atx->change),blocknum);
     return(lp->balance);
@@ -1111,19 +1110,6 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     coin->addrinfos.table = coin777_ensure(coin,&coin->addrinfos,addrind);
     coin->ledger.table = coin777_ensure(coin,&coin->ledger,addrind);
     coin->spends.table = coin777_ensure(coin,&coin->spends,totalspends);
-    /*coin->actives.table = coin777_ensure(coin,&coin->actives,1);
-    atx = coin->actives.table;
-    if ( atx->change == 0 )
-        atx->change = sizeof(struct addrtx_info);
-    if ( 0 )
-    {
-        struct coin777_Lentry L; uint8_t script[32]; int32_t addrtxi;
-        coin777_add_addrinfo(coin,1,"test coinaddr",(int32_t)strlen("test coinaddr")+1,script,sizeof(script),0);
-        coin777_RWmmap(0,&L,coin,&coin->ledger,1);
-        for (addrtxi=0; addrtxi<1000; addrtxi++)
-            atx = coin777_addrtx(coin,&L,addrtxi), L.numaddrtx++;
-        getchar();
-    }*/
     return(0);
 }
 
@@ -1334,10 +1320,10 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
                 ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
             else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind);
-            //if ( syncflag != 0 || blocknum == coin->startblocknum )
+            if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
-                //if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum) != 0 )
-                //    printf("cant verify at block.%u\n",blocknum), debugstop();
+                if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum) != 0 )
+                    printf("cant verify at block.%u\n",blocknum), debugstop();
             }
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
             if ( coin->DBs.transactions != 0 )
