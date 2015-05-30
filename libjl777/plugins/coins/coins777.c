@@ -883,7 +883,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
             coin777_addind(coin,&coin->scriptDB,script,scriptlen,scriptind);
         }
     }
-    if ( Debuglevel > 2 )
+   // if ( Debuglevel > 2 )
         printf("UNSPENT.%u addrind.%u T%u vo%-3d U%u %.8f %s %llx %s\n",unspentind,addrind,txidind,vout,unspentind,dstr(value),coinaddr,*(long long *)script,scriptstr);
     memset(&U,0,sizeof(U)), U.value = value, U.addrind = addrind;
     if ( script0flag != 0 )
@@ -913,7 +913,7 @@ uint64_t coin777_addvin(void *state,uint64_t *debitsp,uint32_t txidind,uint16_t 
     }
     if ( coin777_value(coin,&unspentind,&U,spent_txidind,spent_vout) != 0 )
     {
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("SPEND T%u vi%-3d S%u %s vout.%d -> A%u %.8f\n",txidind,vin,totalspends,spent_txidstr,spent_vout,U.addrind,dstr(U.value));
         S.unspentind = unspentind, S.addrind = U.addrind, S.spending_txidind = txidind, S.spending_vin = vin;
         coin777_RWmmap(1 | COIN777_SHA256,&S,coin,&coin->spends,totalspends);
