@@ -644,14 +644,14 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
         }
         else lp->insideA = 0;
         for (i=0; i<coin->numfree; i++)
-        {break;
+        {
             if ( coin->freelist[i][1] == incr )
             {
-                lp->addrtx_offset = coin->freelist[i][0];
-                printf("found exact match in slot.%d (%ld %d) numfree.%d\n",i,(long)lp->addrtx_offset,(int)coin->freelist[i][1],coin->numfree);
+                //lp->addrtx_offset = coin->freelist[i][0];
+                fprintf(stderr,"found exact match in slot.%d (%ld %d) numfree.%d\n",i,(long)lp->addrtx_offset,(int)coin->freelist[i][1],coin->numfree);
                 coin->numfree--;
                 coin->freelist[i][0] = coin->freelist[coin->numfree][0], coin->freelist[i][1] = coin->freelist[coin->numfree][1];
-                flag = 1;
+                //flag = 1;
                 break;
             }
         }
