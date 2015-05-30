@@ -677,6 +677,14 @@ void update_ledgersha256(uint8_t *sha256,struct sha256_state *state,int64_t valu
     update_sha256(sha256,state,buf,buflen);
 }
 
+void update_blocksha256(uint8_t *sha256,struct sha256_state *state,struct coin_offsets *B)
+{
+    struct coin_offsets tmpB = *B;
+    tmpB.totaladdrtx = 0;
+    memset(tmpB.check,0,sizeof(tmpB.check));
+    update_sha256(sha256,state,(uint8_t *)&tmpB,sizeof(tmpB));
+}
+
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
     int32_t i; struct addrtx_info *atx; int64_t calcbalance;
@@ -950,7 +958,9 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
             }
         }
         coin->latest = B, coin->latestblocknum = blocknum;
-        if ( coin777_RWmmap(1 | (blockhashstr != 0)*COIN777_SHA256,&B,coin,&coin->blocks,blocknum) != 0 )
+        if ( blockhashstr != 0 )
+            update_blocksha256(coin->blocks.sha256,&coin->blocks.state,&B);
+        if ( coin777_RWmmap(1,&B,coin,&coin->blocks,blocknum) != 0 )
             return(-1);
     }
     return(err);
@@ -1196,7 +1206,7 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
             printf("coin777_replayblock.%d: ind mismatch (%u %u %u %u %u) vs (%u %u %u %u %u) || %.8f %.8f vs %.8f %.8f\n",blocknum,B.txidind,B.addrind,B.scriptind,B.unspentind,B.numspends,hp->txidind,hp->addrind,hp->scriptind,hp->unspentind,hp->numspends,dstr(B.credits),dstr(B.debits),dstr(hp->credits),dstr(hp->debits));
         }
         if ( blocknum != 0 )
-            update_sha256(hp->sha256[COIN777_BLOCKS],&hp->states[COIN777_BLOCKS],(uint8_t *)&B,(int32_t)sizeof(B));
+            update_blocksha256(hp->sha256[COIN777_BLOCKS],&hp->states[COIN777_BLOCKS],&B);
         allocsize += sizeof(B);
         for (txidind=B.txidind; txidind<nextB.txidind; txidind++,hp->txidind++)
         {
@@ -1255,7 +1265,7 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
                     }
                     else errs++, printf("error getting spendind.%u\n",spendind);
                 }
-                printf("numvins.%d\n",nexttxoffsets[1] - txoffsets[1]);
+                printf("numvins.%d | ",nexttxoffsets[1] - txoffsets[1]);
             }
         }
         printf("blocknum.%u supply %.8f numtx.%d allocsize.%d\n",blocknum,dstr(B.credits) - dstr(B.debits),nextB.txidind - B.txidind,allocsize);
