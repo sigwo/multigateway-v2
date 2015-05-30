@@ -677,10 +677,10 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,struct co
     for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
     {
         balance += atx[addrtxi].change;
-        if ( (dispflag != 0 || Debuglevel > 2) && lp->numaddrtx > 2 )
+        if ( dispflag != 0 )
             printf("%.8f ",dstr(atx[addrtxi].change));
     }
-    if ( (dispflag != 0 || Debuglevel > 2) && lp->numaddrtx > 2 )
+    if ( dispflag != 0 )
         printf("-> balance %.8f\n",dstr(balance));
     return(balance);
 }
@@ -751,6 +751,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                     printf("addrind.%u ledger %.8f calc %.8f?\n",addrind,dstr(L.balance),dstr(calcbalance));
                 if ( calcbalance != L.balance )
                 {
+                    coin777_recalc_addrinfo(1,coin,&L,totaladdrtxp);
                     printf("found mismatch: (%.8f -> %.8f) addrind.%d num.%d\n",dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx);
                     L.balance = calcbalance;
                     errs++, coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
@@ -763,7 +764,6 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
     }
     if ( errs != 0 || syncflag < 0 )
     {
-        calcbalance = coin777_recalc_addrinfo(1,coin,&L,totaladdrtxp);
         printf("addrinfos_sum @ blocknum.%u errs.%d -> sum %.8f\n",blocknum,errs,dstr(sum));
     }
     return(sum);
