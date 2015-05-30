@@ -702,8 +702,9 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
                     break;
                 }
             }
-            printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),lp->numaddrtx,lp->maxaddrtx);
         }
+        if ( i == lp->numaddrtx )
+            printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),lp->numaddrtx,lp->maxaddrtx), debugstop();
     }
     if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx,totaladdrtxp)) != 0 )
     {
@@ -925,7 +926,7 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
 {
     bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,block; int32_t i,err = 0;
     memset(&B,0,sizeof(B));
-Debuglevel = 3;
+//Debuglevel = 3;
     if ( Debuglevel > 2 )
         printf("B.%u T.%u U.%u S.%u A.%u C.%u\n",blocknum,txidind,unspentind,numspends,addrind,scriptind);
     if ( blockhashstr != 0 ) // start of block
