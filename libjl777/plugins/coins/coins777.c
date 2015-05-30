@@ -797,7 +797,7 @@ uint32_t coin777_addscript(struct coin777 *coin,uint32_t *scriptindp,uint8_t *sc
         retval = coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,script,scriptlen,&scriptind,sizeof(scriptind));
         retval += coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,&scriptind,sizeof(scriptind),script,scriptlen);
     }
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("NEW SCRIPT scriptind.%u [%u] script0flag.%d\n",scriptind,(*scriptindp),script0flag);
     return(scriptind);
 }
