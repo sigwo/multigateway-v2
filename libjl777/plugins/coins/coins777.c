@@ -695,19 +695,34 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,struct coin777_Lentry *lp)
     return(balance);
 }
 
-int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
+void update_addrinfosha256(uint8_t *sha256,struct sha256_state *state,uint32_t blocknum,char *coinaddr,int32_t addrlen,uint8_t *script,int32_t scriptlen)
 {
-    int32_t i; struct addrtx_info *atx; int64_t calcbalance;
+    update_sha256(sha256,state,(uint8_t *)&blocknum,sizeof(blocknum));
+    update_sha256(sha256,state,(uint8_t *)coinaddr,addrlen);
+    update_sha256(sha256,state,script,scriptlen);
+}
+
+
+void update_ledgersha256(uint8_t *sha256,struct sha256_state *state,int64_t value,uint32_t addrind,uint32_t blocknum)
+{
+    uint32_t buflen; uint8_t buf[64];
+    buflen = coin777_activebuf(buf,value,addrind,blocknum);
+    update_sha256(sha256,state,buf,buflen);
+}
+
+int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
+{
+    int32_t i; struct addrtx_info *atx; //int64_t calcbalance;
     if ( spendind == 0 )
     {
         if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx)) != 0 )
         {
             atx->change = value, atx->rawind = unspentind, atx->blocknum = blocknum;
             lp->balance += value, lp->numaddrtx++;
-            calcbalance = coin777_recalc_addrinfo(coin,lp);
-            if ( lp->balance != calcbalance )
-                printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
-            update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)lp,sizeof(*lp));
+            //calcbalance = coin777_recalc_addrinfo(coin,lp);
+            //if ( lp->balance != calcbalance )
+            //    printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
+            update_ledgersha256(coin->actives.sha256,&coin->actives.state,value,addrind,blocknum);
         }
         else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(value),blocknum);
         return(value);
@@ -725,10 +740,11 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
                     {
                         atx->change = -value, atx->rawind = spendind, atx->blocknum = blocknum;
                         lp->balance += atx->change, lp->numaddrtx++;
-                        calcbalance = coin777_recalc_addrinfo(coin,lp);
-                        if ( lp->balance != calcbalance )
-                            printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
-                        update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)lp,sizeof(*lp));
+                        //calcbalance = coin777_recalc_addrinfo(coin,lp);
+                        //if ( lp->balance != calcbalance )
+                        //    printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
+                        update_ledgersha256(coin->actives.sha256,&coin->actives.state,-value,addrind,blocknum);
+                        //update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)lp,sizeof(*lp));
                     }
                     else printf("coin777_update_Lentry cant get memory for spendind.%u %.8f blocknum.%u\n",spendind,-dstr(value),blocknum);
                     return(lp->balance);
@@ -745,7 +761,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     if ( coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
     {
         printf("addrind.%u: ",addrind);
-        coin777_update_Lentry(coin,&L,unspentind,value,spendind,blocknum);
+        coin777_update_Lentry(coin,&L,addrind,unspentind,value,spendind,blocknum);
         return(coin777_RWmmap(1,&L,coin,&coin->ledger,addrind));
     } else printf("coin777_unspent cant find addrinfo for addrind.%u\n",addrind);
     return(-1);
@@ -785,9 +801,7 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
 {
     struct coin777_addrinfo A; struct coin777_Lentry L; uint8_t *scriptptr;
     memset(&A,0,sizeof(A));
-    update_sha256(coin->addrinfos.sha256,&coin->addrinfos.state,(uint8_t *)&blocknum,sizeof(blocknum));
-    update_sha256(coin->addrinfos.sha256,&coin->addrinfos.state,(uint8_t *)coinaddr,len);
-    update_sha256(coin->addrinfos.sha256,&coin->addrinfos.state,script,scriptlen);
+    update_addrinfosha256(coin->addrinfos.sha256,&coin->addrinfos.state,blocknum,coinaddr,len,script,scriptlen);
     A.firstblocknum = blocknum;
     A.addrlen = len, memcpy(A.coinaddr,coinaddr,len);
     if ( (scriptlen + A.addrlen) <= sizeof(A.coinaddr) )
@@ -1094,12 +1108,12 @@ struct coin777_state *coin777_stateinit(struct env777 *DBs,struct coin777_state 
 
 #define COIN777_ADDRINFOS 0 //
 #define COIN777_BLOCKS 1 //
-#define COIN777_TXOFFSETS 2 //
-#define COIN777_TXIDBITS 3 //
-#define COIN777_UNSPENTS 4 //
-#define COIN777_SPENDS 5 //
+#define COIN777_TXOFFSETS 2 // matches
+#define COIN777_TXIDBITS 3 // matches
+#define COIN777_UNSPENTS 4 // matches
+#define COIN777_SPENDS 5 // matches
 #define COIN777_LEDGER 6 //
-#define COIN777_TXIDS 7 //
+#define COIN777_TXIDS 7 // matches
 #define COIN777_ADDRS 8 //
 #define COIN777_SCRIPTS 9 //
 #define COIN777_ACTIVES 10
@@ -1226,7 +1240,7 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
 {
     struct coin_offsets B,nextB; struct unspent_info U; struct coin777_addrinfo A; struct spend_info S;
     uint32_t txidind,spendind,unspentind,txoffsets[2],nexttxoffsets[2],tmp[2]; bits256 txid;
-    char scriptstr[8192],txidstr[65]; uint8_t *scriptptr,script[8193],buf[32]; int32_t i,scriptlen,buflen,allocsize = 0,errs = 0;
+    char scriptstr[8192],txidstr[65]; uint8_t *scriptptr,script[8193]; int32_t i,scriptlen,allocsize = 0,errs = 0;
     if ( coin777_RWmmap(0,&B,coin,&coin->blocks,blocknum) == 0 && coin777_RWmmap(0,&nextB,coin,&coin->blocks,blocknum+1) == 0 )
     {
         for (i=0; i<coin->num; i++)
@@ -1270,14 +1284,11 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
                         {
                             hp->addrind++;
                             allocsize += sizeof(A);
-                            update_sha256(hp->sha256[COIN777_ADDRINFOS],&hp->states[COIN777_ADDRINFOS],(uint8_t *)&blocknum,sizeof(blocknum));
-                            update_sha256(hp->sha256[COIN777_ADDRINFOS],&hp->states[COIN777_ADDRINFOS],(uint8_t *)A.coinaddr,A.addrlen);
-                            update_sha256(hp->sha256[COIN777_ADDRINFOS],&hp->states[COIN777_ADDRINFOS],script,scriptlen);
+                            update_addrinfosha256(hp->sha256[COIN777_ADDRINFOS],&hp->states[COIN777_ADDRINFOS],blocknum,A.coinaddr,A.addrlen,script,scriptlen);
                         }
                         update_sha256(hp->sha256[COIN777_UNSPENTS],&hp->states[COIN777_UNSPENTS],(uint8_t *)&U,sizeof(U));
                         update_sha256(hp->sha256[COIN777_SCRIPTS],&hp->states[COIN777_SCRIPTS],script,scriptlen);
-                        buflen = coin777_activebuf(buf,U.value,U.addrind,blocknum);
-                        update_sha256(hp->sha256[COIN777_LEDGER],&hp->states[COIN777_LEDGER],buf,buflen);
+                        update_ledgersha256(hp->sha256[COIN777_LEDGER],&hp->states[COIN777_LEDGER],U.value,U.addrind,blocknum);
                         tmp[0] = U.addrind, tmp[1] = unspentind, update_sha256(hp->sha256[COIN777_ACTIVES],&hp->states[COIN777_ACTIVES],(uint8_t *)tmp,sizeof(tmp));
                     } else errs++, printf("error getting unspendid.%u\n",unspentind);
                 }
@@ -1290,8 +1301,7 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
                         if ( coin777_RWmmap(0,&U,coin,&coin->unspents,S.unspentind) == 0 )
                         {
                             hp->debits += U.value;
-                            buflen = coin777_activebuf(buf,-U.value,U.addrind,blocknum);
-                            update_sha256(hp->sha256[COIN777_LEDGER],&hp->states[COIN777_LEDGER],buf,buflen);
+                            update_ledgersha256(hp->sha256[COIN777_LEDGER],&hp->states[COIN777_LEDGER],-U.value,U.addrind,blocknum);
                             tmp[0] = U.addrind, tmp[1] = unspentind | (1 << 31), update_sha256(hp->sha256[COIN777_ACTIVES],&hp->states[COIN777_ACTIVES],(uint8_t *)tmp,sizeof(tmp));
                             printf("-(u%d %.8f) ",unspentind,dstr(U.value));
                         }
