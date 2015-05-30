@@ -646,7 +646,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
             memcpy(newaddrtx,addrtx,lp->maxaddrtx * sizeof(*addrtx));
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx), debugstop();
-        lp->maxaddrtx += incr;
+        lp->maxaddrtx = incr;
         addrtx = newaddrtx;
         (*totaladdrtxp) += (incr + lp->maxaddrtx);
         coin->totalsize += (sizeof(*addrtx) * incr);
