@@ -663,8 +663,6 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
         lp->addrtx_offset = len, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
         newptr = (void *)((long)coin->actives.table + lp->addrtx_offset);
         fprintf(stderr,"new offset.%ld maxaddrtx.%d newptr.%p\n",(long)newp->offset,lp->maxaddrtx,newptr);
-uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *lp);
-        fprintf(stderr,"old balance %.8f vs calcbalance %.8f ",dstr(lp->balance),dstr(coin777_recalc_addrinfo(coin,addrind,lp)));
         memcpy(newptr,oldptr,oldsize);
         memset((void *)((long)newptr + oldsize),0,newsize - oldsize);
         memset(oldptr,0,oldsize);
@@ -681,15 +679,27 @@ uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,struct co
     else return((struct addrtx_info *)((long)coin->actives.M.fileptr + lp->addrtx_offset));
 }
 
+uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *lp)
+{
+    struct addrtx_info *atx; int32_t addrtxi; int64_t balance = 0;
+    atx = coin777_addrtx(coin,lp,0,addrind);
+    for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
+        balance += atx[addrtxi].change;
+    return(balance);
+}
+
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum)
 {
-    int32_t i; struct addrtx_info *atx;
+    int32_t i; struct addrtx_info *atx; uint64_t calcbalance;
     if ( spendind == 0 )
     {
         if ( (atx= coin777_addrtx(coin,lp,lp->numaddrtx,addrind)) != 0 )
         {
             atx->change = value, atx->rawind = unspentind, atx->blocknum = blocknum;
             lp->balance += value, lp->numaddrtx++;
+            calcbalance = coin777_recalc_addrinfo(coin,addrind,lp);
+            if ( lp->balance != calcbalance )
+                printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
             update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)lp,sizeof(*lp));
         }
         else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(value),blocknum);
@@ -708,6 +718,9 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
                     {
                         atx->change = -value, atx->rawind = spendind, atx->blocknum = blocknum;
                         lp->balance += atx->change, lp->numaddrtx++;
+                        calcbalance = coin777_recalc_addrinfo(coin,addrind,lp);
+                        if ( lp->balance != calcbalance )
+                            printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
                         update_sha256(coin->actives.sha256,&coin->actives.state,(uint8_t *)lp,sizeof(*lp));
                     }
                     else printf("coin777_update_Lentry cant get memory for spendind.%u %.8f blocknum.%u\n",spendind,-dstr(value),blocknum);
@@ -728,15 +741,6 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
         return(coin777_RWmmap(1,&L,coin,&coin->ledger,addrind));
     } else printf("coin777_unspent cant find addrinfo for addrind.%u\n",addrind);
     return(-1);
-}
-
-uint64_t coin777_recalc_addrinfo(struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *lp)
-{
-    struct addrtx_info *atx; int32_t addrtxi; int64_t balance = 0;
-    atx = coin777_addrtx(coin,lp,0,addrind);
-    for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
-        balance += atx[addrtxi].change;
-    return(balance);
 }
 
 uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag)
