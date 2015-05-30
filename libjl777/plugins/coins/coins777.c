@@ -629,7 +629,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
     struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr;
     if ( lp->addrtx_offset != 0 )
         addrtx = (struct addrtx_info *)(((lp->insideA == 0) ? (long)coin->addrtx.M.fileptr : (long)coin->addrinfos.M.fileptr) + lp->addrtx_offset);
-    if ( (addrtxi+1) >= lp->maxaddrtx )
+    if ( (lp->numaddrtx+1) >= lp->maxaddrtx )
     {
         if ( (incr= (lp->maxaddrtx << 1)) < 128 )
             incr = 128;
@@ -637,10 +637,10 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
         lp->addrtx_offset = ((*totaladdrtxp) * sizeof(struct addrtx_info));
         newaddrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + lp->addrtx_offset);
         if ( addrtx != 0 )
-            memcpy(newaddrtx,addrtx,lp->maxaddrtx * sizeof(struct addrtx_info));
+            memcpy(newaddrtx,addrtx,lp->numaddrtx * sizeof(struct addrtx_info));
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx);
-        lp->maxaddrtx = (addrtxi + incr);
+        lp->maxaddrtx = (lp->numaddrtx + incr);
         lp->insideA = 0;
         addrtx = newaddrtx;
         (*totaladdrtxp) += incr;
