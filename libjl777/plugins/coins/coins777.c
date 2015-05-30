@@ -797,7 +797,7 @@ uint32_t coin777_addscript(struct coin777 *coin,uint32_t *scriptindp,uint8_t *sc
         retval = coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,script,scriptlen,&scriptind,sizeof(scriptind));
         retval += coin777_addDB(coin,coin->DBs.transactions,coin->scriptDB.DB,&scriptind,sizeof(scriptind),script,scriptlen);
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("NEW SCRIPT scriptind.%u [%u] script0flag.%d\n",scriptind,(*scriptindp),script0flag);
     return(scriptind);
 }
@@ -810,7 +810,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
     scriptlen = (int32_t)strlen(scriptstr) >> 1, decode_hex(script,scriptlen,scriptstr);
     update_sha256(coin->scriptDB.sha256,&coin->scriptDB.state,(uint8_t *)scriptstr,scriptlen << 1);
     len = (int32_t)strlen(coinaddr) + 1;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("addvout.%d: (%s) (%s) %.8f\n",vout,coinaddr,scriptstr,dstr(value));
     if ( (addrind= coin777_findind(coin,&coin->addrDB,(uint8_t *)coinaddr,len)) == 0 )
     {
@@ -1235,11 +1235,10 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
                             coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),U.scriptind_or_blocknum,U.addrind);
                             if ( U.scriptind_or_blocknum == hp->scriptind )
                                 hp->scriptind++;
-                            printf("got long script.(%s) addrind.%u scriptind.%u\n",scriptstr,U.addrind,U.scriptind_or_blocknum);
+                            //printf("got long script.(%s) addrind.%u scriptind.%u\n",scriptstr,U.addrind,U.scriptind_or_blocknum);
                         } else errs++, printf("replayblock illegal case of no scriptptr blocknum.%u unspentind.%u\n",blocknum,unspentind);
                         scriptlen = ((int32_t)strlen(scriptstr) >> 1);
                         decode_hex(script,scriptlen,scriptstr);
-                        printf("scriptind.%u (%s)\n",hp->scriptind,scriptstr);
                         update_sha256(hp->sha256[COIN777_SCRIPTS],&hp->states[COIN777_SCRIPTS],(uint8_t *)scriptstr,scriptlen<<1);
                         if ( U.addrind == hp->addrind && A.firstblocknum == blocknum )
                         {
