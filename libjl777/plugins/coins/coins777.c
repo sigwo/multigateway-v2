@@ -716,10 +716,10 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         atx->blocknum = blocknum;
         lp->balance += atx->change, lp->numaddrtx++;
         if ( (calcbalance = coin777_recalc_addrinfo(0,coin,lp,totaladdrtxp)) != lp->balance )
-            printf("mismatched balance %.8f vs %.8f\n",dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
+            printf("numaddrtx.%d of max.%d mismatched balance %.8f vs %.8f\n",lp->numaddrtx,lp->maxaddrtx,dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
         update_ledgersha256(coin->addrtx.sha256,&coin->addrtx.state,atx->change,atx->rawind,blocknum);
-        if ( addrind == 25178 )
-        printf("addrind.25178: i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u\n",lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum);
+        if ( addrind == 46527 )
+        printf("addrind.46527: i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u\n",lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum);
     }
     else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(atx->change),blocknum);
     return(lp->balance);
@@ -751,8 +751,10 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                     printf("addrind.%u ledger %.8f calc %.8f?\n",addrind,dstr(L.balance),dstr(calcbalance));
                 if ( calcbalance != L.balance )
                 {
-                    coin777_recalc_addrinfo(1,coin,&L,totaladdrtxp);
-                    printf("found mismatch: (%.8f -> %.8f) addrind.%d num.%d\n",dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx);
+                    struct addrtx_info *atx;
+                    atx = coin777_addrtx(coin,&L,0,totaladdrtxp);
+                    
+                    printf("%.8f %.8f found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d\n",dstr(atx[0].change),dstr(atx[1].change),dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx);
                     L.balance = calcbalance;
                     errs++, coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
                 }
