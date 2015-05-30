@@ -636,6 +636,8 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
         {
             oldsize = ((incr << lp->freei) * sizeof(struct addrtx_info));
             oldp = calloc(1,sizeof(*oldp)), oldp->offset = lp->addrtx_offset, oldp->freei = lp->freei++;
+            if ( coin->actives.M.fileptr == 0 )
+                fprintf(stderr,"unexpected null coin->actives.M.fileptr\n");
             oldptr = (void *)((long)coin->actives.M.fileptr + lp->addrtx_offset);
         }
         else
@@ -646,14 +648,16 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,struct coin777_Lentry *l
                 lp->freei++;
         }
         newsize = ((incr << lp->freei) * sizeof(struct addrtx_info));
+        fprintf(stderr,"insideA.%d oldsize.%ld oldptr.%p oldp.%p, newsize.%ld lp->freei.%d lp->maxaddrtx.%d lp->addrtx_offset %ld -> ",lp->insideA,(long)oldsize,oldptr,oldp,(long)newsize,lp->freei,lp->maxaddrtx,(long)lp->addrtx_offset);
         if ( (newp= queue_dequeue(&coin->freeQ[lp->freei],0)) == 0 )
         {
             printf("DEQUEUE freei.%d offset.%ld\n",newp->freei,(long)newp->offset);
             newp = &E, newp->offset = coin->actives.M.allocsize, newp->freei = lp->freei;
             coin->actives.table = coin777_ensure(coin,&coin->actives,(int32_t)(coin->actives.M.allocsize + newsize));
         }
-        lp->addrtx_offset = newp->offset, lp->insideA = 0;
+        lp->addrtx_offset = newp->offset, lp->maxaddrtx = (uint32_t)(newsize / sizeof(struct addrtx_info)), lp->insideA = 0;
         newptr = (void *)((long)coin->actives.table + lp->addrtx_offset);
+        fprintf(stderr,"new offset.%ld maxaddrtx.%d newptr.%p\n",(long)newp->offset,lp->maxaddrtx,newptr);
         memcpy(newptr,oldptr,oldsize);
         memset((void *)((long)newptr + oldsize),0,newsize - oldsize);
         memset(oldptr,0,oldsize);
