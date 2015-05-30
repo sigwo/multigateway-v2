@@ -633,15 +633,20 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
         if ( incr < addrtxi )
             printf("unexpected addrtxi inverstion %d vs %d\n",incr,addrtxi), debugstop();
         coin->addrtx.table = coin777_ensure(coin,&coin->addrtx,(*totaladdrtxp) + incr);
+        if ( lp->insideA == 0 )
+        {
+            
+        }
+        else lp->insideA = 0;
         lp->addrtx_offset = ((*totaladdrtxp) * sizeof(struct addrtx_info));
-        printf("ADDRTX.%u ALLOC offset.%ld to %ld\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx));
+        if ( Debuglevel > 2 )
+            printf("ADDRTX.%u ALLOC offset.%ld to %ld\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx));
         newaddrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + lp->addrtx_offset);
         if ( addrtx != 0 )
             memcpy(newaddrtx,addrtx,lp->maxaddrtx * sizeof(*addrtx));
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx), debugstop();
         lp->maxaddrtx += incr;
-        lp->insideA = 0;
         addrtx = newaddrtx;
         (*totaladdrtxp) += (incr + lp->maxaddrtx);
         coin->totalsize += (sizeof(*addrtx) * incr);
@@ -722,7 +727,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
             printf("numaddrtx.%d of max.%d mismatched balance %.8f vs %.8f\n",lp->numaddrtx,lp->maxaddrtx,dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
         update_ledgersha256(coin->addrtx.sha256,&coin->addrtx.state,atx->change,atx->rawind,blocknum);
         //if ( addrind == 46527 )
-        printf("atx.%p i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u | offset.%ld\n",atx,lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum,(long)lp->addrtx_offset);
+        //printf("atx.%p i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u | offset.%ld\n",atx,lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum,(long)lp->addrtx_offset);
     }
     else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(atx->change),blocknum);
     return(lp->balance);
@@ -743,6 +748,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
 void debug(struct coin777 *coin,uint32_t maxaddrind,uint32_t *totaladdrtxp)
 {
     struct addrtx_info *atx; uint32_t addrind = 46527; int64_t calcbalance;  struct coin777_Lentry L;
+    return;
     if ( maxaddrind > addrind )
     {
         coin777_RWmmap(0,&L,coin,&coin->ledger,addrind);
