@@ -1241,6 +1241,7 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
                             coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),U.scriptind_or_blocknum,U.addrind);
                             if ( U.scriptind_or_blocknum == hp->scriptind )
                             {
+                                printf("BIG scriptind.%u (%s)\n",hp->scriptind,scriptstr);
                                 update_sha256(hp->sha256[COIN777_SCRIPTS],&hp->states[COIN777_SCRIPTS],(uint8_t *)scriptstr,(int32_t)strlen(scriptstr));
                                 hp->scriptind++;
                             }
@@ -1253,11 +1254,11 @@ int32_t coin777_replayblock(struct coin777_hashes *hp,struct coin777 *coin,uint3
                             hp->addrind++;
                             allocsize += sizeof(A);
                             update_sha256(hp->sha256[COIN777_ADDRS],&hp->states[COIN777_ADDRS],(uint8_t *)A.coinaddr,A.addrlen);
+                            printf("scriptind.%u (%s)\n",hp->scriptind,scriptstr);
                             update_sha256(hp->sha256[COIN777_SCRIPTS],&hp->states[COIN777_SCRIPTS],(uint8_t *)scriptstr,(int32_t)strlen(scriptstr));
                             update_addrinfosha256(hp->sha256[COIN777_ADDRINFOS],&hp->states[COIN777_ADDRINFOS],blocknum,A.coinaddr,A.addrlen,script,scriptlen);
                         }
                         update_sha256(hp->sha256[COIN777_UNSPENTS],&hp->states[COIN777_UNSPENTS],(uint8_t *)&U,sizeof(U));
-                        update_sha256(hp->sha256[COIN777_SCRIPTS],&hp->states[COIN777_SCRIPTS],script,scriptlen);
                         update_ledgersha256(hp->sha256[COIN777_LEDGER],&hp->states[COIN777_LEDGER],U.value,U.addrind,blocknum);
                         update_ledgersha256(hp->sha256[COIN777_ADDRTX],&hp->states[COIN777_ADDRTX],U.value,unspentind,blocknum);
                     } else errs++, printf("error getting unspendid.%u\n",unspentind);
