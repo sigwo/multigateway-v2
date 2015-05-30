@@ -625,7 +625,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
     struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr;
     if ( lp->addrtx_offset != 0 )
         addrtx = (struct addrtx_info *)(((lp->insideA == 0) ? (long)coin->addrtx.M.fileptr : (long)coin->addrinfos.M.fileptr) + lp->addrtx_offset);
-    if ( (lp->numaddrtx+1) >= lp->maxaddrtx )
+    if ( addrtxi >= lp->maxaddrtx )
     {
         if ( (incr= (lp->maxaddrtx << 1)) < 128 )
             incr = 128;
@@ -637,10 +637,11 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
             memcpy(newaddrtx,addrtx,lp->numaddrtx * sizeof(struct addrtx_info));
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx), debugstop();
-        lp->maxaddrtx = (lp->numaddrtx + incr);
+        lp->maxaddrtx = (addrtxi + incr);
         lp->insideA = 0;
         addrtx = newaddrtx;
         (*totaladdrtxp) += incr;
+        coin->totalsize += (sizeof(*addrtx) * incr);
     }
     return(&addrtx[addrtxi]);
 }
@@ -808,6 +809,7 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
         L.insideA = 1;
     else L.addrtx_offset = L.maxaddrtx = 0;
     coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
+    coin->totalsize += sizeof(A);
     return(coin777_scriptptr(&A) != 0 );
 }
 
@@ -892,6 +894,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         U.scriptind_or_blocknum = scriptind;
     else U.scriptind_or_blocknum = blocknum, U.isblocknum = 1;
     coin777_RWmmap(1 | COIN777_SHA256,&U,coin,&coin->unspents,unspentind);
+    coin->totalsize += sizeof(U);
     debug(coin,46527,totaladdrtxp);
     return(coin777_update_addrinfo(coin,addrind,unspentind,value,0,blocknum,totaladdrtxp));
 }
@@ -920,6 +923,7 @@ uint64_t coin777_addvin(void *state,uint64_t *debitsp,uint32_t txidind,uint16_t 
             printf("SPEND T%u vi%-3d S%u %s vout.%d -> A%u %.8f\n",txidind,vin,totalspends,spent_txidstr,spent_vout,U.addrind,dstr(U.value));
         S.unspentind = unspentind, S.addrind = U.addrind, S.spending_txidind = txidind, S.spending_vin = vin;
         coin777_RWmmap(1 | COIN777_SHA256,&S,coin,&coin->spends,totalspends);
+        coin->totalsize += sizeof(S);
         coin777_update_addrinfo(coin,U.addrind,unspentind,U.value,totalspends,blocknum,totaladdrtxp);
         (*debitsp) += U.value;
 debug(coin,46527,totaladdrtxp);
@@ -940,6 +944,7 @@ int32_t coin777_addtx(void *state,uint32_t blocknum,uint32_t txidind,char *txids
     txoffsets[0] = firstvout, txoffsets[1] = firstvin, coin777_RWmmap(1 | COIN777_SHA256,txoffsets,coin,&coin->txoffsets,txidind);
     txoffsets[0] += numvouts, txoffsets[1] += numvins, coin777_RWmmap(1,txoffsets,coin,&coin->txoffsets,txidind+1);
     coin777_addind(coin,&coin->txidDB,txid.bytes,sizeof(txid),txidind);
+    coin->totalsize += sizeof(txoffsets) + sizeof(txid);
     return(0);
 }
 
@@ -987,7 +992,11 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
         }
         coin->latest = B, coin->latestblocknum = blocknum;
         if ( blockhashstr != 0 )
-            flag = 1, update_blocksha256(coin->blocks.sha256,&coin->blocks.state,&B);
+        {
+            flag = 1;
+            update_blocksha256(coin->blocks.sha256,&coin->blocks.state,&B);
+            coin->totalsize += sizeof(B);
+        }
         else
         {
             flag = 2;
