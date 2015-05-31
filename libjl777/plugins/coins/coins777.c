@@ -625,7 +625,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
     struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr,i,flag = 0;
     if ( lp->addrtx_offset != 0 )
         addrtx = (struct addrtx_info *)(((lp->insideA == 0) ? (long)coin->addrtx.M.fileptr : (long)coin->addrinfos.M.fileptr) + lp->addrtx_offset);
-    if ( addrtxi >= lp->maxaddrtx )
+    if ( (addrtxi + 1) >= lp->maxaddrtx )
     {
         if ( (incr= (lp->maxaddrtx << 1)) < 128 )
             incr = 128;
