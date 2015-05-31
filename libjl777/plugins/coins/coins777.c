@@ -703,7 +703,16 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
                 printf("coin777_addrtx WARNING linkage unexpected value %u != %u\n",L->first_addrtxi,PTR.next_addrtxi);
             actives = calloc(oldL.numaddrtx,sizeof(*actives));
             for (i=0; i<oldL.numaddrtx; i++)
+            {
                 coin777_RWaddrtx(0,coin,addrind,&actives[i],&oldL,i);
+                if ( actives[i].change < 0 )
+                {
+                    coin777_RWmmap(0,&S,coin,&coin->spends,actives[i].rawind);
+                    printf("(S%u %.8f U%u) ",actives[i].rawind,dstr(actives[i].change),S.unspentind);
+                }
+                else printf("(%.8f U%u) ",dstr(actives[i].change),actives[i].rawind);
+            }
+            printf("compact %d\n",oldL.numaddrtx);
             for (balance=i=addrtxi=0; i<oldL.numaddrtx; i++)
             {
                 if ( actives[i].change < 0 )
