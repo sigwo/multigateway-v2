@@ -683,7 +683,7 @@ uint64_t coin777_compact(int32_t *numaddrtxp,struct coin777 *coin,uint32_t addri
         flag = 0;
         if ( actives[i].change < 0 )
             printf("coin777_addrtx unmatched spend in slot.%d of %d: %.8f spend.%u blocknum.%u\n",i,oldL->numaddrtx,dstr(actives[i].change),actives[i].rawind,actives[i].blocknum), debugstop();
-        else if ( i < oldL->numaddrtx-1 )
+        else if ( i < oldL->numaddrtx-1 && actives[i].change != 0 && actives[i].rawind != 0 )
         {
             refvalue = -actives[i].change, unspentind = actives[i].rawind;
             for (j=i+1; j<oldL->numaddrtx; j++)
