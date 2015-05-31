@@ -1423,6 +1423,7 @@ uint32_t coin777_latestledger(struct coin777 *coin777)
 int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
 {
     int32_t errs = 0;
+    fprintf(stderr,"VERIFY: ");
     if ( blocknum > 0 )
     {
         coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,forceflag,totaladdrtxp);
