@@ -772,7 +772,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
     int32_t i,flag = 0; struct addrtx_info ATX;
-    if ( spendind != 0 )
+    if ( RAMCHAINS.verifyspends != 0 && spendind != 0 )
     {
         for (i=0; i<L->numaddrtx; i++)
         {
