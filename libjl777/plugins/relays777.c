@@ -16,7 +16,7 @@
 #define DEFINES_ONLY
 #include "system777.c"
 #include "plugin777.c"
-#include "gen1block.c"
+//#include "gen1block.c"
 #undef DEFINES_ONLY
 #define NN_WS -4
 
@@ -1080,7 +1080,7 @@ void serverloop(void *_args)
     } else conv_busdata(&i,cJSON_Parse("{\"key\":\"foo\",\"data\":\"deadbeef\"}"));
     while ( 1 )
     {
-        void coin777_pulldata(struct packedblock *packed,int32_t len);
+        //void coin777_pulldata(struct packedblock *packed,int32_t len);
         //int32_t len; struct coin777 *coin;
 #ifdef STANDALONE
         char line[1024];

@@ -41,7 +41,7 @@ struct rawblock
     struct rawvout voutspace[MAX_BLOCKTX];
 };
 
-struct packedvin { uint32_t txidstroffset; uint16_t vout; };
+/*struct packedvin { uint32_t txidstroffset; uint16_t vout; };
 struct packedvout { uint32_t coinaddroffset,scriptoffset; uint64_t value; };
 struct packedtx { uint16_t firstvin,numvins,firstvout,numvouts; uint32_t txidstroffset; };
 
@@ -52,6 +52,7 @@ struct packedblock
     uint32_t blocknum,timestamp,blockhash_offset,merkleroot_offset,txspace_offsets,vinspace_offsets,voutspace_offsets,allocsize;
     uint8_t rawdata[];
 };
+*/
 
 #define MAX_COINTX_INPUTS 16
 #define MAX_COINTX_OUTPUTS 8
@@ -79,7 +80,7 @@ struct sha256_state
     uint8_t buf[64];
 };
 
-struct upair32 { uint32_t firstvout,firstvin; };
+/*struct upair32 { uint32_t firstvout,firstvin; };
 struct unspentmap { uint64_t value; uint32_t ind,scriptind; };
 struct ledger_addrinfo { uint64_t balance; uint32_t firstblocknum,count:28,notify:1,pending:1,MGW:1,dirty:1; struct unspentmap unspents[]; };
 
@@ -103,7 +104,7 @@ struct ledger_info
     //uint8_t sha256[256 >> 3];
     //struct sha256_state ledgerstate;
     uint8_t getbuf[1000000];
-};
+};*/
 
 struct ramchain
 {
@@ -111,8 +112,9 @@ struct ramchain
     char serverport[512],userpass[4096];
     double lastgetinfo;
     uint32_t RTblocknum,readyflag,syncflag,paused,minconfirms;
-    struct rawblock *EMIT,*DECODE;
-    struct ledger_info *activeledger;//,*session_ledgers[1 << CONNECTION_NUMBITS];
+    void *activeledger;
+   // struct rawblock *EMIT,*DECODE;
+    //struct ledger_info *activeledger;//,*session_ledgers[1 << CONNECTION_NUMBITS];
 };
 
 struct packed_info

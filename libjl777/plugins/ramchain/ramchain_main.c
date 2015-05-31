@@ -17,7 +17,7 @@
 #include "../plugin777.c"
 #include "storage.c"
 #include "system777.c"
-#include "ledger777.c"
+//#include "ledger777.c"
 #include "ramchain.c"
 #undef DEFINES_ONLY
 

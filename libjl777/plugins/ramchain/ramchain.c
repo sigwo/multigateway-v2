@@ -15,7 +15,8 @@
 #include <stdlib.h>
 #include "cJSON.h"
 #include "system777.c"
-#include "pass1.c"
+#include "coins777.c"
+//#include "pass1.c"
 //#include "ledger777.c"
 
 int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum,uint32_t minconfirms);
@@ -282,20 +283,20 @@ int32_t ramchain_balance(char *retbuf,int32_t maxlen,struct coin777 *coin,struct
     struct ledger_addrinfo *addrinfo; char field[256];
     if ( (addrinfo= ramchain_addrinfo(field,retbuf,maxlen,coin,ramchain,argjson)) == 0 )
         return(-1);
-    sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"addr\":%s,\"balance\":%.8f}",ramchain->name,field,dstr(addrinfo->balance));
+    //sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"addr\":%s,\"balance\":%.8f}",ramchain->name,field,dstr(addrinfo->balance));
     return(0);
 }
 
 int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
-    int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind);
+    //int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind);
   //struct ledger_addrinfo { uint64_t balance; uint32_t firstblocknum,count:28,notify:1,pending:1,MGW:1,dirty:1; struct unspentmap unspents[]; };
     struct ledger_addrinfo *addrinfo; cJSON *json,*array,*item; uint64_t sum = 0; int32_t i,vout,verbose; char *jsonstr,script[8193],txidstr[256],field[256];
     if ( (addrinfo= ramchain_addrinfo(field,retbuf,maxlen,coin,ramchain,argjson)) == 0 )
         return(-1);
     verbose = get_API_int(cJSON_GetObjectItem(argjson,"verbose"),0);
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
-    for (i=0; i<addrinfo->count; i++)
+    /*for (i=0; i<addrinfo->count; i++)
     {
         sum += addrinfo->unspents[i].value;
         if ( verbose == 0 )
@@ -333,7 +334,7 @@ int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct coin777 *coin,struc
         cJSON_AddItemToObject(json,"MGW",cJSON_CreateNumber(1));
     jsonstr = cJSON_Print(json), free_json(json);
     _stripwhite(jsonstr,' ');
-    strncpy(retbuf,jsonstr,maxlen-1), retbuf[maxlen-1] = 0, free(jsonstr);
+    strncpy(retbuf,jsonstr,maxlen-1), retbuf[maxlen-1] = 0, free(jsonstr);*/
     return(0);
 }
 
