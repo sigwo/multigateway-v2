@@ -707,12 +707,12 @@ void update_blocksha256(uint8_t *sha256,struct sha256_state *state,struct coin_o
 uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *lp,uint32_t *totaladdrtxp)
 {
     struct addrtx_info *atx; int32_t addrtxi; int64_t balance = 0;
-    atx = coin777_addrtx(coin,addrind,lp,0,totaladdrtxp);
     for (addrtxi=0; addrtxi<lp->numaddrtx; addrtxi++)
     {
-        balance += atx[addrtxi].change;
+        atx = coin777_addrtx(coin,addrind,lp,addrtxi,totaladdrtxp);
+        balance += atx->change;
         if ( dispflag != 0 )
-            printf("%.8f ",dstr(atx[addrtxi].change));
+            printf("%.8f ",dstr(atx->change));
     }
     if ( dispflag != 0 )
         printf("-> balance %.8f atx.%p\n",dstr(balance),atx);
