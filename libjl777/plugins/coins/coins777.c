@@ -1315,7 +1315,7 @@ int32_t coin777_MMbackup(char *dirname,struct coin777_state *sp,uint32_t firstin
             errs++;
         if ( fwrite(&lastind,1,sizeof(lastind),fp) != sizeof(lastind) )
             errs++;
-        if ( fwrite((void *)((long)sp->M.fileptr + firstind*sp->itemsize),(lastind - firstind + 1),sp->itemsize,fp) != (lastind - firstind + 1)*sp->itemsize )
+        if ( fwrite((void *)((long)sp->M.fileptr + firstind*sp->itemsize),(lastind - firstind + 1),sp->itemsize,fp) != (lastind - firstind + 1) )
             errs++;
         fclose(fp);
     }
