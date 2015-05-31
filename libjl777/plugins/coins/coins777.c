@@ -400,7 +400,7 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
             sprintf(srcfname,"%s.sync",fname);
             copy_file(srcfname,fname);
         }
-        needed += 65536 * sp->itemsize;
+        needed += 10000000 * sp->itemsize;
         printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
         if ( sp->M.fileptr != 0 )
         {
@@ -790,7 +790,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
     if ( totaladdrtxp != 0 )
     {
         coin777_RWaddrtx(1,coin,addrind,atx,L,L->numaddrtx++), L->balance += atx->change;
-        if ( Debuglevel > 2 || addrind == 93946 )
+        if ( Debuglevel > 2 )
             printf("rawind.%u block.%u updated addrind.%u addrtxi.%d %.8f -> %.8f num.%d of %d\n",atx->rawind,atx->blocknum,addrind,addrtxi,dstr(atx->change),dstr(L->balance),L->numaddrtx,L->maxaddrtx);
         coin777_RWmmap(1,L,coin,&coin->ledger,addrind);
         update_ledgersha256(coin->ledger.sha256,&coin->ledger.state,atx->change,addrind,atx->blocknum);
@@ -1587,7 +1587,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,u
 uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind,uint32_t *totaladdrtxp)
 {
     int32_t i,retval = 0; struct coin777_hashes H;
-    if ( 1 || blocknum == coin->startblocknum || blocknum > coin-> RTblocknum-1000 || numsyncs > 0 )
+    if ( blocknum == coin->startblocknum || blocknum > coin-> RTblocknum-1000 || numsyncs > 0 )
     {
         if ( coin777_verify(coin,blocknum,credits,debits,addrind,1,totaladdrtxp) != 0 )
             printf("cant verify at block.%u\n",blocknum), debugstop();
