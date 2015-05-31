@@ -390,11 +390,20 @@ int32_t coin777_queueDB(struct coin777 *coin,struct db777 *DB,void *key,int32_t 
 // coin777 MM funcs
 void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
 {
-    char fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
+    char tmpfname[1024],fname[1024],*name; long needed,prevsize = 0; int32_t rwflag = 1; FILE *Fp;
     needed = (ind + 2) * sp->itemsize;
     if ( needed > sp->M.allocsize )
     {
         db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,sp->name), os_compatible_path(fname);
+        if ( strcmp(sp->name,"addrtx") == 0 || strcmp(sp->name,"ledger") == 0 )
+        {
+            sprintf(tmpfname,"%s.backup",fname);
+            if ( (fp= fopen(tmpfname,"rb")) != 0 )
+            {
+                fclose(fp);
+                strcpy(fname,tmpfname);
+            }
+        }
         needed += 65536 * sp->itemsize;
         printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
         if ( sp->M.fileptr != 0 )
@@ -692,7 +701,7 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
                         printf("coin777_addrtx mismatched addrind A%u vs A%u in (S%u %.8f U%u).%d of %d\n",S.addrind,addrind,actives[j].rawind,dstr(actives[j].change),S.unspentind,j,oldL->numaddrtx), debugstop();
                     else if ( S.unspentind == unspentind )
                     {
-                        if ( Debuglevel > 2 )
+                        if ( Debuglevel > 2 || fp != 0 )
                             printf("clear.(S%u %.8f U%u).%d ",actives[j].rawind,dstr(actives[j].change),S.unspentind,j);
                         memset(&actives[j],0,sizeof(actives[j]));
                         flag = 1;
@@ -703,7 +712,7 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
         }
         if ( flag == 0 )
         {
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 2 || fp != 0 )
                 printf("+(u%u %.8f).%d ",actives[i].rawind,dstr(actives[i].change),i);
             if ( fp == 0 && L != 0 )
                 coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
@@ -1387,30 +1396,34 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
             db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx.backup"), os_compatible_path(fname);
             ATXfp2 = fopen(fname,"wb");
             memset(&ATX,0,sizeof(ATX)), memset(&L,0,sizeof(L));
-            if ( fwrite(&ATX,1,sizeof(ATX),ATXfp) != sizeof(ATX) || fwrite(&ATX,1,sizeof(ATX),ATXfp2) != sizeof(ATX) )
+            if ( fwrite(&ATX,1,sizeof(ATX),ATXfp) != sizeof(ATX) || (ATXfp2 != 0 && fwrite(&ATX,1,sizeof(ATX),ATXfp2) != sizeof(ATX)) )
                 errs++;
-            if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || fwrite(&L,1,sizeof(L),fp2) != sizeof(L) )
+            if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || (fp2 != 0 && fwrite(&L,1,sizeof(L),fp2) != sizeof(L)) )
                 errs++;
             for (i=1; i<=H->addrind; i++)
             {
                 if ( coin777_RWmmap(0,&L,coin,&coin->ledger,i) == 0 )
                 {
-                    L.first_addrtxi = (uint32_t)(ftell(ATXfp) / sizeof(ATX));
-                    L.numaddrtx = 0, L.insideA = 0;
                     if ( L.numaddrtx > 0 && (balance= coin777_compact(ATXfp,ATXfp2,&addrtxi,coin,i,&L,0)) != L.balance )
                     {
                         printf("(A%u %.8f -> %.8f).%d/%d ",i,dstr(L.balance),dstr(balance),L.numaddrtx,L.maxaddrtx);
                         L.balance = balance;
                         L.numaddrtx = addrtxi;
                     }
-                    if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || fwrite(&L,1,sizeof(L),fp2) != sizeof(L) )
+                    L.first_addrtxi = (uint32_t)(ftell(ATXfp) / sizeof(ATX));
+                    L.numaddrtx = 0, L.insideA = 0;
+                    if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || (fp2 != 0 && fwrite(&L,1,sizeof(L),fp2) != sizeof(L)) )
                         errs++;
                     sum += L.balance;
                 }
             }
             fclose(ATXfp);
+            if ( ATXfp2 != 0 )
+                fclose(ATXfp2);
         }
         fclose(fp);
+        if ( fp2 != 0 )
+            fclose(fp2);
     }
     printf("finished Backup.(%s) supply %.8f in %.0f millis\n",dirname,dstr(sum),milliseconds() - startmilli);
     return(-errs);
