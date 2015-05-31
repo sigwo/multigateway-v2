@@ -285,7 +285,6 @@ int32_t parse_block(void *state,uint64_t *creditsp,uint64_t *debitsp,uint32_t *t
     char blockhash[8192],merkleroot[8192],txidstr[8192],mintedstr[8192],*txidjsonstr; cJSON *json,*txarray,*txjson;
     uint32_t checkblocknum,timestamp,firstvout,firstvin; uint16_t numvins,numvouts; int32_t txind,numtx = 0; uint64_t minted,total=0,spent=0;
     minted = total = 0;
-    printf("parseblock\n");
     if ( (json= _get_blockjson(0,coinstr,serverport,userpass,0,blocknum)) != 0 )
     {
         if ( get_API_int(cJSON_GetObjectItem(json,"height"),0) == blocknum )
@@ -773,7 +772,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
     int32_t i,flag = 0; struct addrtx_info ATX;
-    if ( RAMCHAINS.verifyspends != 0 && spendind != 0 )
+    if ( spendind != 0 )
     {
         for (i=0; i<L->numaddrtx; i++)
         {
@@ -838,7 +837,6 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
 {
     struct coin777_addrinfo A; struct coin777_Lentry L;
     int64_t sum = 0; uint32_t addrind; int32_t errs = 0; int64_t calcbalance;
-    printf("addrinfos sum maxaddrind.%u\n",maxaddrind);
     for (addrind=1; addrind<maxaddrind; addrind++)
     {
         if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 && coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
@@ -855,7 +853,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
             sum += L.balance;
         } else printf("error loading addrinfo or ledger entry for addrind.%u\n",addrind);
     }
-   // if ( errs != 0 || syncflag < 0 )
+    if ( errs != 0 || syncflag < 0 )
         printf("addrinfos_sum @ blocknum.%u errs.%d -> sum %.8f\n",blocknum,errs,dstr(sum));
     return(sum);
 }
@@ -1425,7 +1423,6 @@ uint32_t coin777_latestledger(struct coin777 *coin777)
 int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
 {
     int32_t errs = 0;
-    fprintf(stderr,"VERIFY: ");
     if ( blocknum > 0 )
     {
         coin->addrsum = addrinfos_sum(coin,addrind,0,blocknum,forceflag,totaladdrtxp);
@@ -1474,7 +1471,6 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
             if ( coin->DBs.transactions != 0 )
             {
-                printf("wait for commit\n");
                 while ( (err= sp_commit(coin->DBs.transactions)) != 0 )
                 {
                     printf("ledger_commit: sp_commit error.%d\n",err);
