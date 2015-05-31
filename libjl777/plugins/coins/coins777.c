@@ -644,7 +644,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
         }
         else lp->insideA = 0;
         for (i=0; i<coin->numfree; i++)
-        {
+        {break;
             if ( coin->freelist[i][1] == incr )
             {
                 //lp->addrtx_offset = coin->freelist[i][0];
