@@ -727,7 +727,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
                                 }
                             }
                         }
-                    }
+                    } else j = oldL.numaddrtx;
                     if ( j == oldL.numaddrtx )
                     {
                         printf("(u%u %.8f) ",actives[i].rawind,dstr(actives[i].change));
