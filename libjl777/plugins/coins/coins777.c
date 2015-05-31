@@ -1297,15 +1297,18 @@ int32_t coin777_MMbackup(char *dirname,struct coin777_state *sp,uint32_t firstin
 
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H)
 {
-    char fname[1024],dirname[128]; int16_t scriptlen; int64_t balance,sum; int32_t i,addrtxi,len,errs = 0; FILE *fp,*ATXfp; uint8_t script[8192];
-    struct coin777_hashes prevH; struct coin_offsets B; struct addrtx_info ATX; struct coin777_Lentry L;
+    char fname[1024],dirname[128]; int16_t scriptlen; int64_t balance,sum; int32_t i,addrtxi,len,errs = 0; uint8_t script[8192];
+    struct coin777_hashes prevH; struct coin_offsets B; struct addrtx_info ATX; struct coin777_Lentry L; FILE *fp,*ATXfp; double startmilli;
+    sprintf(dirname,"%s/%s",SUPERNET.BACKUPS,coin->name);
+    ensure_directory(dirname);
     if ( prevsynci <= 0 || coin777_getsyncdata(&prevH,coin,prevsynci) == 0 )
     {
         coin777_genesishash(coin,&prevH);
-        sprintf(dirname,"%s/fullbackup.%d",SUPERNET.BACKUPS,blocknum);
-    } else sprintf(dirname,"%s/incrbackup.%d_%d",SUPERNET.BACKUPS,prevH.blocknum,blocknum);
+        sprintf(dirname+strlen(dirname),"/full.%d",blocknum);
+    } else sprintf(dirname+strlen(dirname),"/incr.%d_%d",prevH.blocknum,blocknum);
     ensure_directory(dirname);
-    printf("start Backup.(%s) %.3f\n",dirname,milliseconds()/1000.);
+    printf("start Backup.(%s)\n",dirname);
+    startmilli = milliseconds();
     sprintf(fname,"%s/blocks",dirname);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
@@ -1377,7 +1380,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
         }
         fclose(fp);
     }
-    printf("finished Backup.(%s) supply %.8f in %.3f seconds\n",dirname,dstr(sum),milliseconds()/1000.);
+    printf("finished Backup.(%s) supply %.8f in %.0f millis\n",dirname,dstr(sum),milliseconds() - startmilli);
     return(-errs);
 }
 
