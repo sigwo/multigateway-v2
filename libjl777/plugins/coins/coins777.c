@@ -1460,9 +1460,9 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
                 ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,&totaladdrtx);
             else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,&totaladdrtx);
-            //if ( syncflag != 0 || blocknum == coin->startblocknum )
+            if ( RAMCHAINS.verifyspends != 0 || syncflag != 0 || blocknum == coin->startblocknum || blocknum > RTblocknum-1000 )
             {
-                if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum,&totaladdrtx) != 0 )
+                if ( coin777_verify(coin,blocknum,credits,debits,addrind,RAMCHAINS.verifyspends != 0 || syncflag != 0 || blocknum == coin->startblocknum,&totaladdrtx) != 0 )
                     printf("cant verify at block.%u\n",blocknum), debugstop();
             }
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
