@@ -479,6 +479,7 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
                     {
                         if ( memcmp(ptr,zeroes,sp->itemsize) != 0 )
                         {
+                            printf("\n");
                             for (i=0; i<sp->itemsize; i++)
                                 printf("%02x ",((uint8_t *)ptr)[i]);
                             printf("existing.%s %d <-- overwritten\n",sp->name,sp->itemsize);
@@ -815,11 +816,12 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint
 uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t *totaladdrtxp,uint32_t blocknum)
 {
     struct addrtx_info ATX; int32_t addrtxi; int64_t balance = 0;
-    for (addrtxi=0; addrtxi<L->numaddrtx; addrtxi++)
+    for (addrtxi=0; addrtxi<L->maxaddrtx-1; addrtxi++)
     {
-        if ( coin777_update_addrtx(coin,addrind,&ATX,L,addrtxi,blocknum,0) != 0 && ATX.blocknum < blocknum )
+        if ( coin777_update_addrtx(coin,addrind,&ATX,L,addrtxi,blocknum,0) != 0 )
         {
-            balance += ATX.change;
+            if ( ATX.blocknum < blocknum )
+                balance += ATX.change;
             if ( dispflag != 0 )
                 printf("(%u %.8f).b%d ",ATX.rawind,dstr(ATX.change),ATX.blocknum);
         } else break;
