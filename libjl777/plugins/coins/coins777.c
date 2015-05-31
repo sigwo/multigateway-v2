@@ -499,7 +499,7 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
                                 printf("%02x ",((uint8_t *)value)[i]);
                             printf("new value.%s %d rawind.%u\n",sp->name,sp->itemsize,rawind);
                         }
-                    } else printf("coin777_RWmmap unexpected itemsize.%d for %s bigger than %ld\n",sp->itemsize,sp->name,sizeof(zeroes));
+                    }
                 }
                 memcpy(ptr,value,sp->itemsize);
             } else memcpy(value,ptr,sp->itemsize);
