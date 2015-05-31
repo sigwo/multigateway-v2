@@ -669,7 +669,11 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
             printf("ADDRTX.%u ALLOC offset.%ld to %ld | addrtx.%p\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx),addrtx);
         newaddrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + lp->addrtx_offset);
         if ( addrtx != 0 )
-            memcpy(newaddrtx,addrtx,lp->maxaddrtx * sizeof(*addrtx));
+        {
+            for (i=0; i<lp->maxaddrtx; i++)
+                newaddrtx[i] = addrtx[i], printf("%.8f ",dstr(addrtx[i].change));
+            printf("copied oldmax.%d\n",lp->maxaddrtx);
+        }
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx), debugstop();
         lp->maxaddrtx = incr;
