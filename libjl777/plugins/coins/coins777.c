@@ -742,7 +742,8 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
     if ( totaladdrtxp != 0 )
     {
         coin777_RWaddrtx(1,coin,addrind,atx,L,L->numaddrtx++), L->balance += atx->change;
-        coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
+        printf("updated addrind.%u %.8f -> %.8f\n",addrind,atx->change,L->balance);
+        coin777_RWmmap(1,L,coin,&coin->ledger,addrind);
         update_ledgersha256(coin->ledger.sha256,&coin->ledger.state,atx->change,addrind,atx->blocknum);
         update_sha256(coin->addrtx.sha256,&coin->addrtx.state,(uint8_t *)atx,sizeof(*atx));
     }
