@@ -742,7 +742,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
     if ( totaladdrtxp != 0 )
     {
         coin777_RWaddrtx(1,coin,addrind,atx,L,L->numaddrtx++), L->balance += atx->change;
-        printf("updated addrind.%u %.8f -> %.8f\n",addrind,atx->change,L->balance);
+        printf("updated addrind.%u %.8f -> %.8f\n",addrind,dstr(atx->change),dstr(L->balance));
         coin777_RWmmap(1,L,coin,&coin->ledger,addrind);
         update_ledgersha256(coin->ledger.sha256,&coin->ledger.state,atx->change,addrind,atx->blocknum);
         update_sha256(coin->addrtx.sha256,&coin->addrtx.state,(uint8_t *)atx,sizeof(*atx));
@@ -1410,12 +1410,12 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,u
             if ( forceflag != 0 || coin->addrsum != (credits - debits) )
             {
                 if ( coin->addrsum != (credits - debits) )
-                    printf("ERROR recalc did not fix discrepancy %.8f != supply %.8f (%.8f - %.8f) -> Lchain recovery\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
+                    errs++, printf("ERROR recalc did not fix discrepancy %.8f != supply %.8f (%.8f - %.8f) -> Lchain recovery\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
                 //errs = coin777_replayblocks(coin,coin777_latestledger(coin),blocknum,1);
             } else printf("recalc resolved discrepancies: supply %.8f addrsum %.8f\n",dstr(credits)-dstr(debits),dstr(coin->addrsum));
         }
     }
-    return(errs);
+    return(-errs);
 }
 
 int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms)
