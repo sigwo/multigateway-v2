@@ -822,7 +822,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint
                 if ( coin777_update_addrtx(coin,addrind,&ATX,L,i,blocknum,0) != 0 )
                     if ( ATX.blocknum != 0 )
                         printf("(%u %.8f).b%u ",ATX.rawind,dstr(ATX.change),ATX.blocknum);
-            printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),L->numaddrtx,L->maxaddrtx), debugstop();
+            printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d insideA.%d firsti.%u\n",unspentind,addrind,dstr(value),L->numaddrtx,L->maxaddrtx,L->insideA,L->first_addrtxi), debugstop();
         }
     }
     memset(&ATX,0,sizeof(ATX));
