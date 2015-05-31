@@ -768,6 +768,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
                 incr = (L->maxaddrtx << 1);
             if ( incr > 128 )
                 incr = 128;
+            incr += L->maxaddrtx;
             memset(&PTR,0,sizeof(PTR)), PTR.balance = L->balance, PTR.blocknum = blocknum, PTR.next_addrtxi = (*totaladdrtxp);
             coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,L,addrtxi);
             if ( coin777_addrtxalloc(coin,L,incr,totaladdrtxp) != PTR.next_addrtxi )
