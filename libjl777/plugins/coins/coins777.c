@@ -777,7 +777,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
             addrtxi = 0;
             if ( oldL.numaddrtx > 0 && (balance= coin777_compact(0,0,&addrtxi,coin,addrind,&oldL,L)) != L->balance )
                 L->balance = balance, printf("coin777_addrtx A.%u num %d -> %d warning recalc unspent %llu != %llu | firsti.%u\n",addrind,oldL.numaddrtx,addrtxi,(long long)balance,(long long)L->balance,L->first_addrtxi);
-            else //if ( Debuglevel > 2 )
+            else if ( Debuglevel > 2 )
                 printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f | firsti.%u\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,addrtxi,incr,dstr(L->balance),dstr(atx->change),L->first_addrtxi);
             L->numaddrtx = addrtxi;
         }
