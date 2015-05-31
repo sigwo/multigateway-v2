@@ -446,7 +446,7 @@ void *coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint32_t ind
 int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct coin777_state *sp,uint32_t rawind)
 {
     static uint8_t zeroes[4096];
-    void *ptr; struct coin777_addrinfo *A; int32_t i,itemsize,size,retval = 0;
+    void *ptr; struct coin777_addrinfo *A; struct coin_offsets B,tmpB; int32_t i,itemsize,size,retval = 0;
     if ( (writeflag & COIN777_SHA256) != 0 )
     {
         coin->totalsize += sp->itemsize;
@@ -478,9 +478,16 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
                     A = ptr;
                     itemsize = (sizeof(*A) - sizeof(A->coinaddr) + A->addrlen + A->scriptlen);
                 }
-                if ( writeflag == 1 && (sp->flags & DB777_VOLATILE) == 0 && memcmp(value,ptr,itemsize) != 0 )
+                if ( writeflag == 1 && (sp->flags & DB777_VOLATILE) == 0 )
                 {
-                    if ( sp->itemsize <= sizeof(zeroes) )
+                    if ( strcmp(sp->name,"blocks") == 0 )
+                    {
+                        memcpy(&B,ptr,sizeof(B));
+                        memcpy(&tmpB,value,sizeof(tmpB));
+                        if ( memcmp(&B.blockhash.bytes,zeroes,sizeof(B.blockhash)) == 0 && memcmp(&B.merkleroot.bytes,zeroes,sizeof(B.merkleroot)) == 0 )
+                            B.blockhash = tmpB.blockhash, B.merkleroot = tmpB.merkleroot, ptr = &B;
+                    }
+                    if ( memcmp(value,ptr,itemsize) != 0 && sp->itemsize <= sizeof(zeroes) )
                     {
                         if ( memcmp(ptr,zeroes,sp->itemsize) != 0 )
                         {
