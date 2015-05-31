@@ -1404,7 +1404,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
                 errs++;
             if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || (fp2 != 0 && fwrite(&L,1,sizeof(L),fp2) != sizeof(L)) )
                 errs++;
-            for (addrind=1; addrind<=H->addrind; addrind++)
+            for (addrind=1; addrind<H->addrind; addrind++)
             {
                 if ( coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
                 {
@@ -1432,6 +1432,9 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
                     sum += L.balance;
                 }
             }
+            memset(&L,0,sizeof(L));
+            if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || (fp2 != 0 && fwrite(&L,1,sizeof(L),fp2) != sizeof(L)) )
+                errs++;
             fclose(ATXfp);
             if ( ATXfp2 != 0 )
                 fclose(ATXfp2);
