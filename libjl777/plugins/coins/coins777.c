@@ -751,7 +751,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
     if ( totaladdrtxp != 0 )
     {
         coin777_RWaddrtx(1,coin,addrind,atx,L,L->numaddrtx++), L->balance += atx->change;
-        printf("updated addrind.%u %.8f -> %.8f\n",addrind,dstr(atx->change),dstr(L->balance));
+        printf("rawind.%u block.%u updated addrind.%u addrtxi.%d %.8f -> %.8f num.%d of %d\n",atx->rawind,atx->blocknum,addrind,addrtxi,dstr(atx->change),dstr(L->balance),L->numaddrtx,L->maxaddrtx);
         coin777_RWmmap(1,L,coin,&coin->ledger,addrind);
         update_ledgersha256(coin->ledger.sha256,&coin->ledger.state,atx->change,addrind,atx->blocknum);
         update_sha256(coin->addrtx.sha256,&coin->addrtx.state,(uint8_t *)atx,sizeof(*atx));
@@ -767,7 +767,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint
     {
         for (i=0; i<L->numaddrtx; i++)
         {
-            if ( coin777_update_addrtx(coin,addrind,&ATX,L,i,blocknum,0) != 0 && ATX.blocknum < blocknum )
+            if ( coin777_update_addrtx(coin,addrind,&ATX,L,i,blocknum,0) != 0 && ATX.blocknum <= blocknum )
             {
                 if ( ATX.change > 0 && unspentind == ATX.rawind )
                 {
@@ -779,7 +779,12 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint
             } else break;
         }
         if ( flag == 0 )
+        {
+            for (i=0; i<L->numaddrtx; i++)
+                if ( coin777_update_addrtx(coin,addrind,&ATX,L,i,blocknum,0) != 0 && ATX.blocknum <= blocknum )
+                    printf("(%u %.8f) ",ATX.rawind,dstr(ATX.change));
             printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d\n",unspentind,addrind,dstr(value),L->numaddrtx,L->maxaddrtx), debugstop();
+        }
     }
     memset(&ATX,0,sizeof(ATX));
     if ( spendind == 0 )
@@ -795,7 +800,7 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
     struct addrtx_info ATX; int32_t addrtxi; int64_t balance = 0;
     for (addrtxi=0; addrtxi<L->numaddrtx; addrtxi++)
     {
-        if ( coin777_update_addrtx(coin,addrind,&ATX,L,addrtxi,blocknum,0) != 0 && ATX.blocknum < blocknum )
+        if ( coin777_update_addrtx(coin,addrind,&ATX,L,addrtxi,blocknum,0) != 0 && ATX.blocknum <= blocknum )
         {
             balance += ATX.change;
             if ( dispflag != 0 )
