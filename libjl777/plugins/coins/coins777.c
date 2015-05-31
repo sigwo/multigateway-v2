@@ -750,7 +750,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         if ( (calcbalance = coin777_recalc_addrinfo(0,coin,addrind,lp,totaladdrtxp)) != lp->balance )
             printf("numaddrtx.%d of max.%d mismatched balance %.8f vs %.8f\n",lp->numaddrtx,lp->maxaddrtx,dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
         update_ledgersha256(coin->addrtx.sha256,&coin->addrtx.state,atx->change,atx->rawind,blocknum);
-        if ( addrind == 93496 )
+        if ( addrind == 93496 || addrind == 9 )
         printf("atx.%p i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u | offset.%ld\n",atx,lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum,(long)lp->addrtx_offset);
     }
     else printf("coin777_update_Lentry cant get memory for uspentind.%u %.8f blocknum.%u\n",unspentind,dstr(atx->change),blocknum);
@@ -838,7 +838,7 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     L.addrtx_offset = ((addrind * sizeof(A)) + (long)&A.coinaddr[len] - (long)&A);
     if ( (L.addrtx_offset & 3) != 0 )
         L.addrtx_offset += 4 - (L.addrtx_offset & 3), len += (4 - (L.addrtx_offset & 3));
-    if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info)) - 1) > 0 )
+    if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info))) > 0 )
         L.insideA = 1;
     else L.addrtx_offset = L.maxaddrtx = 0;
     coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
