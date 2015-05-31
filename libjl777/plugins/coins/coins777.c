@@ -749,7 +749,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
             if ( oldL.numaddrtx > 0 && (balance= coin777_compact(0,&addrtxi,coin,addrind,&oldL,L)) != L->balance )
                 L->balance = balance, printf("coin777_addrtx A.%u num %d -> %d warning recalc unspent %.8f != %.8f\n",addrind,oldL.numaddrtx,addrtxi,dstr(balance),dstr(L->balance));
             else //if ( Debuglevel > 2 )
-                printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,addrtxi,incr,dstr(L->balance),dstr(atx->change));
+                printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f | firsti.%u\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,addrtxi,incr,dstr(L->balance),dstr(atx->change),L->firsti_addrtxi);
             L->numaddrtx = addrtxi;
         }
     }
@@ -1522,7 +1522,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,u
 uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind,uint32_t *totaladdrtxp)
 {
     int32_t i,retval = 0; struct coin777_hashes H;
-    if ( blocknum == coin->startblocknum || blocknum > coin-> RTblocknum-1000 )
+    if ( 1 || blocknum == coin->startblocknum || blocknum > coin-> RTblocknum-1000 )
     {
         if ( coin777_verify(coin,blocknum,credits,debits,addrind,1,totaladdrtxp) != 0 )
             printf("cant verify at block.%u\n",blocknum), debugstop();
