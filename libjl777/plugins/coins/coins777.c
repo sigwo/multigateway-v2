@@ -672,7 +672,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
         {
             for (i=0; i<lp->maxaddrtx; i++)
                 newaddrtx[i] = addrtx[i], printf("%.8f ",dstr(addrtx[i].change));
-            printf("copied oldmax.%d\n",lp->maxaddrtx);
+            printf("copied oldmax.%d -> %p\n",lp->maxaddrtx,newaddrtx);
         }
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx), debugstop();
@@ -752,7 +752,11 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *lp,uin
         atx->blocknum = blocknum;
         lp->balance += atx->change, lp->numaddrtx++;
         if ( (calcbalance = coin777_recalc_addrinfo(0,coin,addrind,lp,totaladdrtxp)) != lp->balance )
-            printf("numaddrtx.%d of max.%d mismatched balance %.8f vs %.8f\n",lp->numaddrtx,lp->maxaddrtx,dstr(lp->balance),dstr(calcbalance)), lp->balance = calcbalance;
+        {
+            printf("numaddrtx.%d of max.%d mismatched balance %.8f vs %.8f\n",lp->numaddrtx,lp->maxaddrtx,dstr(lp->balance),dstr(calcbalance));
+            lp->balance = calcbalance;
+            coin777_recalc_addrinfo(1,coin,addrind,lp,totaladdrtxp);
+        }
         update_ledgersha256(coin->addrtx.sha256,&coin->addrtx.state,atx->change,atx->rawind,blocknum);
         if ( addrind == 93496 || addrind == 9 )
         printf("atx.%p i.%d of %d update Lentry addrind.%u unspentind.%u %.8f spendind.%u blocknum.%u | offset.%ld\n",atx,lp->numaddrtx,lp->maxaddrtx,addrind,unspentind,dstr(atx->change),spendind,blocknum,(long)lp->addrtx_offset);
