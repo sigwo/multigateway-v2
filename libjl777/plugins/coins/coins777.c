@@ -712,7 +712,7 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
         }
         if ( flag == 0 )
         {
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 printf("+(u%u %.8f).%d ",actives[i].rawind,dstr(actives[i].change),i);
             if ( fp == 0 && L != 0 )
                 coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi);
@@ -1357,11 +1357,15 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
         }
         fclose(fp);
     }
+    if ( errs != 0 )
+        printf("errs.%d after blocks\n",errs);
     errs += coin777_MMbackup(dirname,&coin->addrinfos,prevH.addrind,H->addrind);
     errs += coin777_MMbackup(dirname,&coin->txoffsets,prevH.txidind,H->txidind);
     errs += coin777_MMbackup(dirname,&coin->txidbits,prevH.txidind,H->txidind);
     errs += coin777_MMbackup(dirname,&coin->unspents,prevH.unspentind,H->unspentind);
     errs += coin777_MMbackup(dirname,&coin->spends,prevH.numspends,H->numspends);
+    if ( errs != 0 )
+        printf("errs.%d after coin777_MMbackups\n",errs);
     sprintf(fname,"%s/scripts",dirname);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
@@ -1384,6 +1388,8 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
         }
         fclose(fp);
     }
+    if ( errs != 0 )
+        printf("errs.%d after scripts\n",errs);
     sprintf(fname,"%s/ledger",dirname);
     sum = 0;
     if ( (fp= fopen(fname,"wb")) != 0 )
@@ -1414,7 +1420,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
                     L.numaddrtx = addrtxi, L.insideA = 0;
                     if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || (fp2 != 0 && fwrite(&L,1,sizeof(L),fp2) != sizeof(L)) )
                         errs++;
-                    printf("A%-6u firsti.%-6u num.%-3d max.%3d %.8f\n",i,L.first_addrtxi,L.numaddrtx,L.maxaddrtx,dstr(L.balance));
+                    printf("A%-6u firsti.%-6u num.%-3d max.%3d %.8f | errs.%d\n",i,L.first_addrtxi,L.numaddrtx,L.maxaddrtx,dstr(L.balance),errs);
                     sum += L.balance;
                 }
             }
