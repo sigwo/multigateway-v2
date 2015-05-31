@@ -1399,7 +1399,6 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
         }
     }
     H.ledgerhash = coin777_ledgerhash(0,&H);
-    coin777_incrbackup(coin,blocknum,numsyncs-1,&H);
     if ( numsyncs < 0 )
     {
         for (i=0; i<coin->num; i++)
@@ -1412,6 +1411,7 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
             printf("error saving numsyncs.0 retval.%d %s\n",retval,db777_errstr(coin->DBs.ctl)), sleep(30);
         if ( numsyncs > 0 )
         {
+            coin777_incrbackup(coin,blocknum,numsyncs-1,&H);
             numsyncs = 0;
             if ( (retval = coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H))) != 0 )
                 printf("error saving numsyncs.0 retval.%d %s\n",retval,db777_errstr(coin->DBs.ctl)), sleep(30);
