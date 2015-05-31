@@ -1327,8 +1327,8 @@ uint32_t coin777_latestledger(struct coin777 *coin777)
 
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H)
 {
-    char fname[1024],dirname[128]; int16_t scriptlen; int64_t balance,sum; int32_t addrind,i,addrtxi,extra,len,errs = 0; uint8_t script[8192];
-    struct coin777_hashes prevH; struct coin_offsets B; struct addrtx_info ATX; struct coin777_Lentry L; double startmilli;
+    char fname[1024],dirname[128]; int16_t scriptlen; int64_t balance,sum; int32_t first_addrtxi,addrind,i,addrtxi,extra,len,errs = 0;
+    struct coin777_hashes prevH; struct coin_offsets B; struct addrtx_info ATX; struct coin777_Lentry L; uint8_t script[8192]; double startmilli;
     FILE *fp,*fp2,*ATXfp,*ATXfp2;
     sprintf(dirname,"%s/%s",SUPERNET.BACKUPS,coin->name);
     ensure_directory(dirname);
@@ -1414,6 +1414,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
                         extra = (addrtxi >> 1);
                         if ( extra < 7 )
                             extra = 7;
+                        first_addrtxi = (uint32_t)(ftell(ATXfp) / sizeof(ATX));
                         if ( L.numaddrtx > 0 && (balance= coin777_compact(ATXfp,ATXfp2,&addrtxi,coin,addrind,&L,0)) != L.balance )
                         {
                             printf("(A%u %.8f -> %.8f).%d/%d ",addrind,dstr(L.balance),dstr(balance),L.numaddrtx,L.maxaddrtx);
@@ -1423,7 +1424,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
                         for (L.maxaddrtx=addrtxi; L.maxaddrtx<addrtxi+extra+1; L.maxaddrtx++)
                             if ( fwrite(&ATX,1,sizeof(ATX),ATXfp) != sizeof(ATX) || (ATXfp2 != 0 && fwrite(&ATX,1,sizeof(ATX),ATXfp2) != sizeof(ATX)) )
                                 errs++;
-                        L.first_addrtxi = (uint32_t)(ftell(ATXfp) / sizeof(ATX));
+                        L.first_addrtxi = first_addrtxi;
                         L.numaddrtx = addrtxi, L.insideA = 0;
                     }
                     if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || (fp2 != 0 && fwrite(&L,1,sizeof(L),fp2) != sizeof(L)) )
