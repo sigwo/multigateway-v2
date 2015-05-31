@@ -721,7 +721,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
 {
     struct addrtx_linkptr PTR; struct coin777_Lentry oldL; struct addrtx_info ATX;
     int32_t incr = 16; uint64_t balance;
-    if ( (totaladdrtxp == 0 && addrtxi >= L->numaddrtx) || (totaladdrtxp != 0 && addrtxi != L->numaddrtx) )
+    if ( (totaladdrtxp == 0 && addrtxi >= L->maxaddrtx-1) || (totaladdrtxp != 0 && addrtxi != L->numaddrtx) )
     {
         printf("addrtx_info error trying to load past num.%d of max.%d || %p trying to write noncontinuous %d\n",L->numaddrtx,L->maxaddrtx,totaladdrtxp,addrtxi);
         return(0);
