@@ -400,7 +400,7 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
             sprintf(srcfname,"%s.sync",fname);
             copy_file(srcfname,fname);
         }
-        needed += 100L * 1000 * 1000 * sp->itemsize;
+        needed += RAMCHAINS.fileincr * sp->itemsize;
         printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
         if ( sp->M.fileptr != 0 )
         {

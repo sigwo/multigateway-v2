@@ -65,6 +65,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         plugin->allowremote = 1;
         RAMCHAINS.fastmode = get_API_int(cJSON_GetObjectItem(json,"fastmode"),0);
         RAMCHAINS.verifyspends = get_API_int(cJSON_GetObjectItem(json,"verifyspends"),1);
+        RAMCHAINS.fileincr = get_API_int(cJSON_GetObjectItem(json,"fileincr"),100L * 1000 * 1000);
         RAMCHAINS.readyflag = 1;
     }
     else
