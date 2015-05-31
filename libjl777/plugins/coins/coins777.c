@@ -1319,12 +1319,20 @@ int32_t coin777_MMbackup(char *dirname,struct coin777_state *sp,uint32_t firstin
     sprintf(fname,"%s/%s",dirname,sp->name);
     if ( (fp= fopen(fname,"wb")) != 0 )
     {
-        if ( fwrite(&firstind,1,sizeof(firstind),fp) != sizeof(firstind) )
-            errs++;
-        if ( fwrite(&lastind,1,sizeof(lastind),fp) != sizeof(lastind) )
-            errs++;
-        if ( fwrite((void *)((long)sp->M.fileptr + firstind*sp->itemsize),1,(lastind - firstind + 1)*sp->itemsize,fp) != (lastind - firstind + 1)*sp->itemsize )
-            errs++;
+        if ( firstind == 0 )
+        {
+            if ( fwrite(sp->M.fileptr,1,lastind*sp->itemsize,fp) != lastind*sp->itemsize )
+                errs++;
+        }
+        else
+        {
+            if ( fwrite(&firstind,1,sizeof(firstind),fp) != sizeof(firstind) )
+                errs++;
+            if ( fwrite(&lastind,1,sizeof(lastind),fp) != sizeof(lastind) )
+                errs++;
+            if ( fwrite((void *)((long)sp->M.fileptr + firstind*sp->itemsize),1,(lastind - firstind + 1)*sp->itemsize,fp) != (lastind - firstind + 1)*sp->itemsize )
+                errs++;
+        }
         fclose(fp);
     }
     return(-errs);
@@ -1361,23 +1369,27 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
     ensure_directory(dirname);
     printf("start Backup.(%s)\n",dirname);
     startmilli = milliseconds();
-    sprintf(fname,"%s/blocks",dirname);
-    if ( (fp= fopen(fname,"wb")) != 0 )
+    if ( prevH.blocknum != 0 )
     {
-        if ( fwrite(H,1,sizeof(*H),fp) != sizeof(*H) )
-            errs++;
-        if ( fwrite(&prevH,1,sizeof(prevH),fp) != sizeof(prevH) )
-            errs++;
-        for (i=prevH.blocknum; i<=H->blocknum; i++)
+        sprintf(fname,"%s/blocks",dirname);
+        if ( (fp= fopen(fname,"wb")) != 0 )
         {
-            coin777_RWmmap(0,&B,coin,&coin->blocks,i);
-            if ( fwrite(&B,1,sizeof(B),fp) != sizeof(B) )
+            if ( fwrite(H,1,sizeof(*H),fp) != sizeof(*H) )
                 errs++;
+            if ( fwrite(&prevH,1,sizeof(prevH),fp) != sizeof(prevH) )
+                errs++;
+            for (i=prevH.blocknum; i<=H->blocknum; i++)
+            {
+                coin777_RWmmap(0,&B,coin,&coin->blocks,i);
+                if ( fwrite(&B,1,sizeof(B),fp) != sizeof(B) )
+                    errs++;
+            }
+            fclose(fp);
         }
-        fclose(fp);
+        if ( errs != 0 )
+            printf("errs.%d after blocks\n",errs);
     }
-    if ( errs != 0 )
-        printf("errs.%d after blocks\n",errs);
+    else errs += coin777_MMbackup(dirname,&coin->blocks,0,H->blocknum);
     errs += coin777_MMbackup(dirname,&coin->addrinfos,prevH.addrind,H->addrind);
     errs += coin777_MMbackup(dirname,&coin->txoffsets,prevH.txidind,H->txidind);
     errs += coin777_MMbackup(dirname,&coin->txidbits,prevH.txidind,H->txidind);
