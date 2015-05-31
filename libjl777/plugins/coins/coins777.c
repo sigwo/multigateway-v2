@@ -706,7 +706,7 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
                 }
             }
         }
-        if ( flag == 0 )
+        if ( flag == 0 && actives[i].rawind != 0 && actives[i].change != 0 )
         {
             if ( Debuglevel > 1 )
                 printf("+(u%u %.8f).%d ",actives[i].rawind,dstr(actives[i].change),i);
@@ -725,6 +725,8 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
     }
     free(actives);
     *numaddrtxp = addrtxi;
+    if ( addrtxi != 0 && Debuglevel > 1 )
+        printf("-> balance %.8f ",dstr(balance));
     return(balance);
 }
 
@@ -1439,6 +1441,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
             fclose(fp2);
     }
     printf("finished Backup.(%s) supply %.8f in %.0f millis | errs.%d\n",dirname,dstr(sum),milliseconds() - startmilli,errs);
+    exit(1);
     return(-errs);
 }
 
