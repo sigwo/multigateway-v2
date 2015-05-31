@@ -149,7 +149,7 @@ struct addrtx_info { int64_t change; uint32_t rawind,blocknum; };
 struct addrtx_linkptr { int64_t balance; uint32_t next_addrtxi,blocknum; };
 
 #ifndef ADDRINFO_SIZE
-#define ADDRINFO_SIZE 128
+#define ADDRINFO_SIZE 256
 #endif
 
 struct coin777_addrinfo
@@ -400,7 +400,7 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
             sprintf(srcfname,"%s.sync",fname);
             copy_file(srcfname,fname);
         }
-        needed += 10000000 * sp->itemsize;
+        needed += 100L * 1000 * 1000 * sp->itemsize;
         printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
         if ( sp->M.fileptr != 0 )
         {
