@@ -297,7 +297,7 @@ int32_t sync_mappedptr(struct mappedptr *mp,uint64_t len)
 		return(0);
 	if ( len == 0 )
 		len = mp->allocsize;
-	err = msync(mp->fileptr,len,MS_SYNC);
+	err = msync(mp->fileptr,len,MS_ASYNC);
 	if ( err != 0 )
 		printf("sync (%s) len %llu, err %d\n",mp->fname,(long long)len,err);
     Sync_total += len;
