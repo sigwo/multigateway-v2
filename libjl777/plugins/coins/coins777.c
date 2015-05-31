@@ -390,7 +390,7 @@ int32_t coin777_queueDB(struct coin777 *coin,struct db777 *DB,void *key,int32_t 
 // coin777 MM funcs
 void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
 {
-    char tmpfname[1024],fname[1024],*name; long needed,prevsize = 0; int32_t rwflag = 1; FILE *Fp;
+    char tmpfname[1024],fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1; FILE *fp;
     needed = (ind + 2) * sp->itemsize;
     if ( needed > sp->M.allocsize )
     {
