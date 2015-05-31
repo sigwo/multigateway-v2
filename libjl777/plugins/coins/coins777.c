@@ -665,7 +665,7 @@ uint32_t coin777_addrtxalloc(struct coin777 *coin,struct coin777_Lentry *L,int32
 
 uint64_t coin777_compact(int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL,struct coin777_Lentry *L,uint32_t *totaladdrtxp)
 {
-    int32_t i,j,addrtxi; uint32_t unspentind; struct addrtx_info *actives; int64_t refvalue; uint64_t balance; struct spend_info S;
+    int32_t i,j,addrtxi,flag; uint32_t unspentind; struct addrtx_info *actives; int64_t refvalue; uint64_t balance; struct spend_info S;
     actives = calloc(oldL->numaddrtx,sizeof(*actives));
     for (i=0; i<oldL->numaddrtx; i++)
     {
@@ -680,35 +680,34 @@ uint64_t coin777_compact(int32_t *numaddrtxp,struct coin777 *coin,uint32_t addri
     printf("compact %d\n",oldL->numaddrtx);
     for (balance=i=addrtxi=0; i<oldL->numaddrtx; i++)
     {
+        flag = 0;
         if ( actives[i].change < 0 )
             printf("coin777_addrtx unmatched spend in slot.%d of %d: %.8f spend.%u blocknum.%u\n",i,oldL->numaddrtx,dstr(actives[i].change),actives[i].rawind,actives[i].blocknum), debugstop();
-        else
+        else if ( i < oldL->numaddrtx-1 )
         {
-            if ( i < oldL->numaddrtx-1 )
+            refvalue = -actives[i].change, unspentind = actives[i].rawind;
+            for (j=i+1; j<oldL->numaddrtx; j++)
             {
-                refvalue = -actives[i].change, unspentind = actives[i].rawind;
-                for (j=i+1; j<oldL->numaddrtx; j++)
+                if ( actives[j].change == refvalue )
                 {
-                    if ( actives[j].change == refvalue )
+                    coin777_RWmmap(0,&S,coin,&coin->spends,actives[j].rawind);
+                    if ( S.addrind != addrind )
+                        printf("coin777_addrtx mismatched addrind A%u vs A%u in (S%u %.8f U%u).%d of %d\n",S.addrind,addrind,actives[j].rawind,dstr(actives[j].change),S.unspentind,j,oldL->numaddrtx), debugstop();
+                    else if ( S.unspentind == unspentind )
                     {
-                        coin777_RWmmap(0,&S,coin,&coin->spends,actives[j].rawind);
-                        if ( S.addrind != addrind )
-                            printf("coin777_addrtx mismatched addrind A%u vs A%u in addrtx[%d] of %d\n",actives[j].rawind,addrind,j,oldL->numaddrtx), debugstop();
-                        else if ( S.unspentind == unspentind )
-                        {
-                            printf("(S%u %.8f U%u) ",actives[j].rawind,dstr(refvalue),unspentind);
-                            memset(&actives[j],0,sizeof(actives[j]));
-                            break;
-                        }
+                        printf("clear.(S%u %.8f U%u).%d ",actives[j].rawind,dstr(actives[j].change),S.unspentind,j);
+                        memset(&actives[j],0,sizeof(actives[j]));
+                        flag = 1;
+                        break;
                     }
                 }
-            } else j = oldL->numaddrtx;
-            if ( j == oldL->numaddrtx )
-            {
-                printf("(u%u %.8f) ",actives[i].rawind,dstr(actives[i].change));
-                coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
-                balance += actives[i].change;
             }
+        }
+        if ( flag == 0 )
+        {
+            printf("+(u%u %.8f).%d ",actives[i].rawind,dstr(actives[i].change),i);
+            coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
+            balance += actives[i].change;
         }
     }
     free(actives);
