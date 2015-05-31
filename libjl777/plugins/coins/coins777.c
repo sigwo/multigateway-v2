@@ -766,8 +766,8 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
                 printf("coin777_addrtx FATAL datastructure size mismatch %ld vs %ld\n",sizeof(ATX),sizeof(PTR)), debugstop();
             if ( (L->maxaddrtx << 1) > incr )
                 incr = (L->maxaddrtx << 1);
-            if ( incr > 65536 )
-                incr = 65536;
+            if ( incr > 128 )
+                incr = 128;
             memset(&PTR,0,sizeof(PTR)), PTR.balance = L->balance, PTR.blocknum = blocknum, PTR.next_addrtxi = (*totaladdrtxp);
             coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,L,addrtxi);
             if ( coin777_addrtxalloc(coin,L,incr,totaladdrtxp) != PTR.next_addrtxi )
@@ -788,7 +788,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
     if ( totaladdrtxp != 0 )
     {
         coin777_RWaddrtx(1,coin,addrind,atx,L,L->numaddrtx++), L->balance += atx->change;
-        if ( Debuglevel > 2 || addrind == 65462 )
+        if ( Debuglevel > 2 || addrind == 93946 )
             printf("rawind.%u block.%u updated addrind.%u addrtxi.%d %.8f -> %.8f num.%d of %d\n",atx->rawind,atx->blocknum,addrind,addrtxi,dstr(atx->change),dstr(L->balance),L->numaddrtx,L->maxaddrtx);
         coin777_RWmmap(1,L,coin,&coin->ledger,addrind);
         update_ledgersha256(coin->ledger.sha256,&coin->ledger.state,atx->change,addrind,atx->blocknum);
@@ -801,7 +801,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
     int32_t i,flag = 0; struct addrtx_info ATX;
-    if ( RAMCHAINS.verifyspends != 0 && spendind != 0 )
+    if ( spendind != 0 ) //RAMCHAINS.verifyspends != 0 &&
     {
         for (i=0; i<L->numaddrtx; i++)
         {
