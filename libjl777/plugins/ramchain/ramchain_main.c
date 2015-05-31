@@ -40,11 +40,7 @@ int32_t ramchain_idle(struct plugin_info *plugin)
             //printf("packed.%p ledger.%p\n",coin->packed,ramchain->activeledger);
             if ( ramchain->readyflag != 0 )//&& (ledger= ramchain->activeledger) != 0 )//&& ledger->blocknum <= coin->readahead )
             {
-                //if ( coin->P.packed != 0 && (packed= coin->P.packed[ledger->blocknum]) != 0 )
-                //    flag += ramchain_update(coin,ramchain,ledger,packed);
-                //else
-                    flag += ramchain_update(coin,ramchain,ledger,0);
-                //else printf("ptr.%p blocknum.%u\n",packed,ledger->blocknum);
+                flag += ramchain_update(coin,ramchain,ledger,0);
             }
         }
     }
@@ -96,11 +92,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             if ( strcmp(methodstr,"backup") == 0 )
             {
-                if ( coin->ramchain.activeledger == 0 )
+                if ( coin->DBs.ctl == 0 )
                     ramchain_init(retbuf,maxlen,coin,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum,coin->minconfirms);
-                if ( coin->ramchain.activeledger != 0 && coin->ramchain.activeledger->DBs.ctl != 0 )
+                if ( coin->DBs.ctl != 0 )
                 {
-                    db777_sync(0,&coin->ramchain.activeledger->DBs,ENV777_BACKUP);
+                    coin777_incrbackup(coin,0,0,0);
                     strcpy(retbuf,"{\"result\":\"started backup\"}");
                 } else strcpy(retbuf,"{\"error\":\"cant create ramchain when coin not ready\"}");
             }

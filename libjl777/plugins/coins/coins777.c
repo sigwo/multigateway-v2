@@ -140,7 +140,6 @@ struct hashed_uint32 { UT_hash_handle hh; uint32_t ind; };
 struct coin777_hashes { uint64_t ledgerhash,credits,debits; uint8_t sha256[12][256 >> 3]; struct sha256_state states[12]; uint32_t blocknum,numsyncs,timestamp,txidind,unspentind,numspends,addrind,scriptind,totaladdrtx; };
 struct coin_offsets { bits256 blockhash,merkleroot; uint64_t credits,debits; uint32_t timestamp,txidind,unspentind,numspends,addrind,scriptind,totaladdrtx; uint8_t check[16]; };
 
-struct freelist_entry { struct queueitem DL; uint64_t offset; uint32_t freei; };
 struct unspent_info { uint64_t value; uint32_t addrind,scriptind_or_blocknum:31,isblocknum:1; };
 struct spend_info { uint32_t unspentind,addrind,spending_txidind; uint16_t spending_vin; };
 
@@ -207,6 +206,7 @@ uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *c
 int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_t endblocknum,int32_t verifyflag);
 uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag,uint32_t *totaladdrtxp);
 int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp);
+int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H);
 
 #endif
 #else
@@ -1338,8 +1338,19 @@ uint32_t coin777_latestledger(struct coin777 *coin777)
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H)
 {
     char fname[1024],dirname[128]; int16_t scriptlen; int64_t balance,sum; int32_t first_addrtxi,addrind,i,addrtxi,extra,len,errs = 0;
-    struct coin777_hashes prevH; struct coin_offsets B; struct addrtx_info ATX; struct coin777_Lentry L; uint8_t script[8192]; double startmilli;
+    struct coin777_hashes prevH,_H; struct coin_offsets B; struct addrtx_info ATX; struct coin777_Lentry L; uint8_t script[8192]; double startmilli;
     FILE *fp,*fp2,*ATXfp,*ATXfp2;
+    if ( H == 0 )
+    {
+        H = &_H, i = 0, len = sizeof(*H);
+        if ( coin777_getDB(H,&len,coin->DBs.transactions,coin->hashDB.DB,&i,sizeof(i)) == 0 )
+        {
+            printf("cant fine latest hashes entry\n");
+            return(-1);
+        }
+        blocknum = H->blocknum;
+        printf("doing full backup to blocknum.%u\n",blocknum);
+    }
     sprintf(dirname,"%s/%s",SUPERNET.BACKUPS,coin->name);
     ensure_directory(dirname);
     if ( prevsynci <= 0 || coin777_getsyncdata(&prevH,coin,prevsynci) == 0 )
