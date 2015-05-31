@@ -1379,6 +1379,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             strcpy(SUPERNET.WEBSOCKETD,"libs/websocketd");
         }
         else strcpy(SUPERNET.WEBSOCKETD,"websocketd");
+        copy_cJSON(SUPERNET.BACKUPS,cJSON_GetObjectItem(json,"backups"));
+        if ( SUPERNET.BACKUPS[0] == 0 )
+            strcpy(SUPERNET.BACKUPS,"/tmp");
         copy_cJSON(SOPHIA.PATH,cJSON_GetObjectItem(json,"SOPHIA"));
         copy_cJSON(SOPHIA.RAMDISK,cJSON_GetObjectItem(json,"RAMDISK"));
         if ( SOPHIA.PATH[0] == 0 )

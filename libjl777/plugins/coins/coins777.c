@@ -176,7 +176,6 @@ struct coin777
     struct coin_offsets latest; long totalsize;
     struct env777 DBs;  struct coin777_state *sps[16],txidDB,addrDB,scriptDB,ledger,addrtx,blocks,txoffsets,txidbits,unspents,spends,addrinfos,hashDB;
     struct alloc_space tmpMEM;
-    uint64_t freelist[100000][2]; int32_t numfree;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
@@ -663,7 +662,7 @@ uint32_t coin777_addrtxalloc(struct coin777 *coin,struct coin777_Lentry *L,int32
     return(L->first_addrtxi);
 }
 
-uint64_t coin777_compact(int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL,struct coin777_Lentry *L,uint32_t *totaladdrtxp)
+uint64_t coin777_compact(FILE *fp,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL,struct coin777_Lentry *L)
 {
     int32_t i,j,addrtxi,flag; uint32_t unspentind; struct addrtx_info *actives; int64_t refvalue; uint64_t balance; struct spend_info S;
     actives = calloc(oldL->numaddrtx,sizeof(*actives));
@@ -699,7 +698,10 @@ uint64_t coin777_compact(int32_t *numaddrtxp,struct coin777 *coin,uint32_t addri
         {
             if ( Debuglevel > 2 )
                 printf("+(u%u %.8f).%d ",actives[i].rawind,dstr(actives[i].change),i);
-            coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
+            if ( fp == 0 && L != 0 )
+                coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
+            else if ( fp != 0 )
+                fwrite(&actives[i],1,sizeof(actives[i]),fp);
             balance += actives[i].change;
         }
     }
@@ -744,7 +746,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
             if ( coin777_addrtxalloc(coin,L,incr,totaladdrtxp) != PTR.next_addrtxi )
                 printf("coin777_addrtx WARNING linkage unexpected value %u != %u\n",L->first_addrtxi,PTR.next_addrtxi);
             addrtxi = 0;
-            if ( oldL.numaddrtx > 0 && (balance= coin777_compact(&addrtxi,coin,addrind,&oldL,L,totaladdrtxp)) != L->balance )
+            if ( oldL.numaddrtx > 0 && (balance= coin777_compact(0,&addrtxi,coin,addrind,&oldL,L)) != L->balance )
                 L->balance = balance, printf("coin777_addrtx A.%u num %d -> %d warning recalc unspent %.8f != %.8f\n",addrind,oldL.numaddrtx,addrtxi,dstr(balance),dstr(L->balance));
             else //if ( Debuglevel > 2 )
                 printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,addrtxi,incr,dstr(L->balance),dstr(atx->change));
@@ -1126,9 +1128,20 @@ uint64_t coin777_ledgerhash(char *ledgerhash,struct coin777_hashes *H)
     return(0);
 }
 
+void coin777_genesishash(struct coin777 *coin,struct coin777_hashes *H)
+{
+    int32_t i;
+    memset(H,0,sizeof(*H));
+    coin777_getinds(coin,0,&H->credits,&H->debits,&H->timestamp,&H->txidind,&H->unspentind,&H->numspends,&H->addrind,&H->scriptind,&H->totaladdrtx);
+    H->numsyncs = 1;
+    for (i=0; i<coin->num; i++)
+        update_sha256(H->sha256[i],&H->states[i],0,0);
+    H->ledgerhash = coin777_ledgerhash(0,H);
+}
+
 uint32_t coin777_hashes(int32_t *syncip,struct coin777_hashes *bestH,struct coin777 *coin,uint32_t refblocknum,int32_t lastsynci)
 {
-    int32_t i,synci,flag = 0; struct coin777_hashes *hp,H;
+    int32_t synci,flag = 0; struct coin777_hashes *hp,H;
     *syncip = -1;
     for (synci=1; synci<=lastsynci; synci++)
     {
@@ -1139,14 +1152,7 @@ uint32_t coin777_hashes(int32_t *syncip,struct coin777_hashes *bestH,struct coin
         flag = 1;
     }
     if ( flag == 0 )
-    {
-        memset(bestH,0,sizeof(*bestH));
-        coin777_getinds(coin,0,&bestH->credits,&bestH->debits,&bestH->timestamp,&bestH->txidind,&bestH->unspentind,&bestH->numspends,&bestH->addrind,&bestH->scriptind,&bestH->totaladdrtx);
-        bestH->numsyncs = 1;
-        for (i=0; i<coin->num; i++)
-            update_sha256(bestH->sha256[i],&bestH->states[i],0,0);
-        bestH->ledgerhash = coin777_ledgerhash(0,bestH);
-    }
+        coin777_genesishash(coin,bestH);
     return(bestH->blocknum);
 }
 
@@ -1160,7 +1166,7 @@ uint32_t coin777_startblocknum(struct coin777 *coin,uint32_t synci)
         if ( coin777_RWmmap(0,&B,coin,&coin->blocks,blocknum) == 0  )
         {
             B.credits = hp->credits, B.debits = hp->debits;
-            B.timestamp = hp->timestamp, B.txidind = hp->txidind, B.unspentind = hp->unspentind, B.numspends = hp->numspends, B.addrind = hp->addrind, B.scriptind = hp->scriptind;
+            B.timestamp = hp->timestamp, B.txidind = hp->txidind, B.unspentind = hp->unspentind, B.numspends = hp->numspends, B.addrind = hp->addrind, B.scriptind = hp->scriptind, B.totaladdrtx = hp->totaladdrtx;
             coin777_RWmmap(1,&B,coin,&coin->blocks,blocknum);
         }
         ledgerhash = coin777_ledgerhash(0,hp);
@@ -1272,9 +1278,112 @@ int32_t coin777_getinds(void *state,uint32_t blocknum,uint64_t *creditsp,uint64_
     return(0);
 }
 
+int32_t coin777_MMbackup(char *dirname,struct coin777_state *sp,uint32_t firstind,uint32_t lastind)
+{
+    char fname[1024]; FILE *fp; int32_t errs = 0;
+    sprintf(fname,"%s/%s",dirname,sp->name);
+    if ( (fp= fopen(fname,"wb")) != 0 )
+    {
+        if ( fwrite(&firstind,1,sizeof(firstind),fp) != sizeof(firstind) )
+            errs++;
+        if ( fwrite(&lastind,1,sizeof(lastind),fp) != sizeof(lastind) )
+            errs++;
+        if ( fwrite((void *)((long)sp->M.fileptr + firstind*sp->itemsize),(lastind - firstind + 1),sp->itemsize,fp) != (lastind - firstind + 1)*sp->itemsize )
+            errs++;
+        fclose(fp);
+    }
+    return(-errs);
+}
+
+int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H)
+{
+    char fname[1024],dirname[128]; int16_t scriptlen; int64_t balance,sum; int32_t i,addrtxi,len,errs = 0; FILE *fp,*ATXfp; uint8_t script[8192];
+    struct coin777_hashes prevH; struct coin_offsets B; struct addrtx_info ATX; struct coin777_Lentry L;
+    if ( prevsynci <= 0 || coin777_getsyncdata(&prevH,coin,prevsynci) == 0 )
+    {
+        coin777_genesishash(coin,&prevH);
+        sprintf(dirname,"%s/fullbackup.%d",SUPERNET.BACKUPS,blocknum);
+    } else sprintf(dirname,"%s/incrbackup.%d_%d",SUPERNET.BACKUPS,prevH.blocknum,blocknum);
+    ensure_directory(dirname);
+    printf("start Backup.(%s) %.3f\n",dirname,milliseconds()/1000.);
+    sprintf(fname,"%s/blocks",dirname);
+    if ( (fp= fopen(fname,"wb")) != 0 )
+    {
+        if ( fwrite(H,1,sizeof(*H),fp) != sizeof(*H) )
+            errs++;
+        if ( fwrite(&prevH,1,sizeof(prevH),fp) != sizeof(prevH) )
+            errs++;
+        for (i=prevH.blocknum; i<=H->blocknum; i++)
+        {
+            coin777_RWmmap(0,&B,coin,&coin->blocks,i);
+            if ( fwrite(&B,1,sizeof(B),fp) != sizeof(B) )
+                errs++;
+        }
+        fclose(fp);
+    }
+    errs += coin777_MMbackup(dirname,&coin->addrinfos,prevH.addrind,H->addrind);
+    errs += coin777_MMbackup(dirname,&coin->txoffsets,prevH.txidind,H->txidind);
+    errs += coin777_MMbackup(dirname,&coin->txidbits,prevH.txidind,H->txidind);
+    errs += coin777_MMbackup(dirname,&coin->unspents,prevH.unspentind,H->unspentind);
+    errs += coin777_MMbackup(dirname,&coin->spends,prevH.numspends,H->numspends);
+    sprintf(fname,"%s/scripts",dirname);
+    if ( (fp= fopen(fname,"wb")) != 0 )
+    {
+        for (i=prevH.scriptind; i<=H->scriptind; i++)
+        {
+            if ( coin777_getDB(script,&len,coin->DBs.transactions,coin->scriptDB.DB,&i,sizeof(i)) != 0 )
+            {
+                scriptlen = len;
+                if ( fwrite(&scriptlen,1,sizeof(scriptlen),fp) != sizeof(scriptlen) )
+                    errs++;
+                if ( fwrite(script,1,scriptlen,fp) != scriptlen )
+                    errs++;
+            }
+            else
+            {
+                scriptlen = 0;
+                if ( fwrite(&scriptlen,1,sizeof(scriptlen),fp) != sizeof(scriptlen) )
+                    errs++;
+            }
+        }
+        fclose(fp);
+    }
+    sprintf(fname,"%s/ledger",dirname);
+    sum = 0;
+    if ( (fp= fopen(fname,"wb")) != 0 )
+    {
+        sprintf(fname,"%s/addrtx",dirname);
+        if ( (ATXfp= fopen(fname,"wb")) != 0 )
+        {
+            memset(&ATX,0,sizeof(ATX));
+            if ( fwrite(&ATX,1,sizeof(ATX),fp) != sizeof(ATX) )
+                errs++;
+            for (i=prevH.addrind; i<=H->addrind; i++)
+            {
+                if ( coin777_RWmmap(0,&L,coin,&coin->ledger,i) == 0 )
+                {
+                    L.first_addrtxi = (uint32_t)(ftell(ATXfp) / sizeof(ATX));
+                    L.numaddrtx = 0;
+                    if ( L.numaddrtx > 0 && (balance= coin777_compact(ATXfp,&addrtxi,coin,i,&L,0)) != L.balance )
+                    {
+                        printf("(A%u %.8f -> %.8f).%d/%d ",i,dstr(L.balance),dstr(balance),L.numaddrtx,L.maxaddrtx);
+                        L.balance = balance;
+                        L.numaddrtx = addrtxi;
+                    }
+                    sum += L.balance;
+                }
+            }
+            fclose(ATXfp);
+        }
+        fclose(fp);
+    }
+    printf("finished Backup.(%s) supply %.8f in %.3f seconds\n",dirname,dstr(sum),milliseconds()/1000.);
+    return(-errs);
+}
+
 uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind,uint32_t *totaladdrtxp)
 {
-    int32_t i,retval = 0; struct coin777_hashes H;//,*hp; uint64_t *balances;
+    int32_t i,retval = 0; struct coin777_hashes H;
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
     H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind, H.totaladdrtx = *totaladdrtxp;
     if ( numsyncs >= 0 )
@@ -1290,6 +1399,7 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
         }
     }
     H.ledgerhash = coin777_ledgerhash(0,&H);
+    coin777_incrbackup(coin,blocknum,numsyncs-1,&H);
     if ( numsyncs < 0 )
     {
         for (i=0; i<coin->num; i++)
