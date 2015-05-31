@@ -838,7 +838,7 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     L.addrtx_offset = ((addrind * sizeof(A)) + (long)&A.coinaddr[len] - (long)&A);
     if ( (L.addrtx_offset & 3) != 0 )
         L.addrtx_offset += 4 - (L.addrtx_offset & 3), len += (4 - (L.addrtx_offset & 3));
-    if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info))) > 0 )
+    if ( (L.maxaddrtx= (int32_t)((sizeof(A.coinaddr) - len) / sizeof(struct addrtx_info)) - 1) > 0 )
         L.insideA = 1;
     else L.addrtx_offset = L.maxaddrtx = 0;
     coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
