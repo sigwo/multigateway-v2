@@ -845,7 +845,7 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
         {
             if ( ATX.blocknum < blocknum )
                 balance += ATX.change;
-            if ( dispflag != 0 )
+            if ( dispflag != 0 && ATX.change != 0 )
                 printf("(%u %.8f).b%d ",ATX.rawind,dstr(ATX.change),ATX.blocknum);
         } else break;
     }
