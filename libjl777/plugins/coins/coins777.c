@@ -663,10 +663,63 @@ uint32_t coin777_addrtxalloc(struct coin777 *coin,struct coin777_Lentry *L,int32
     return(L->first_addrtxi);
 }
 
+uint64_t coin777_compact(int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL,struct coin777_Lentry *L,uint32_t *totaladdrtxp)
+{
+    int32_t i,j,addrtxi; uint32_t unspentind; struct addrtx_info *actives; int64_t refvalue; uint64_t balance; struct spend_info S;
+    actives = calloc(oldL->numaddrtx,sizeof(*actives));
+    for (i=0; i<oldL->numaddrtx; i++)
+    {
+        coin777_RWaddrtx(0,coin,addrind,&actives[i],oldL,i);
+        if ( actives[i].change < 0 )
+        {
+            coin777_RWmmap(0,&S,coin,&coin->spends,actives[i].rawind);
+            printf("(S%u %.8f U%u) ",actives[i].rawind,dstr(actives[i].change),S.unspentind);
+        }
+        else printf("(%.8f U%u) ",dstr(actives[i].change),actives[i].rawind);
+    }
+    printf("compact %d\n",oldL->numaddrtx);
+    for (balance=i=addrtxi=0; i<oldL->numaddrtx; i++)
+    {
+        if ( actives[i].change < 0 )
+            printf("coin777_addrtx unmatched spend in slot.%d of %d: %.8f spend.%u blocknum.%u\n",i,oldL->numaddrtx,dstr(actives[i].change),actives[i].rawind,actives[i].blocknum), debugstop();
+        else
+        {
+            if ( i < oldL->numaddrtx-1 )
+            {
+                refvalue = -actives[i].change, unspentind = actives[i].rawind;
+                for (j=i+1; j<oldL->numaddrtx; j++)
+                {
+                    if ( actives[j].change == refvalue )
+                    {
+                        coin777_RWmmap(0,&S,coin,&coin->spends,actives[j].rawind);
+                        if ( S.addrind != addrind )
+                            printf("coin777_addrtx mismatched addrind A%u vs A%u in addrtx[%d] of %d\n",actives[j].rawind,addrind,j,oldL->numaddrtx), debugstop();
+                        else if ( S.unspentind == unspentind )
+                        {
+                            printf("(S%u %.8f U%u) ",actives[j].rawind,dstr(refvalue),unspentind);
+                            memset(&actives[j],0,sizeof(actives[j]));
+                            break;
+                        }
+                    }
+                }
+            } else j = oldL->numaddrtx;
+            if ( j == oldL->numaddrtx )
+            {
+                printf("(u%u %.8f) ",actives[i].rawind,dstr(actives[i].change));
+                coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
+                balance += actives[i].change;
+            }
+        }
+    }
+    free(actives);
+    *numaddrtxp = addrtxi;
+    return(balance);
+}
+
 struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,struct addrtx_info *atx,struct coin777_Lentry *L,int32_t addrtxi,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
-    struct addrtx_linkptr PTR; struct coin777_Lentry oldL; struct spend_info S; struct addrtx_info ATX,*actives;
-    int32_t i,j,incr = 16; uint32_t unspentind; int64_t refvalue; uint64_t balance;
+    struct addrtx_linkptr PTR; struct coin777_Lentry oldL; struct addrtx_info ATX;
+    int32_t incr = 16; uint64_t balance;
     if ( (totaladdrtxp == 0 && addrtxi >= L->numaddrtx) || (totaladdrtxp != 0 && addrtxi != L->numaddrtx) )
     {
         printf("addrtx_info error trying to load past num.%d of max.%d || %p trying to write noncontinuous %d\n",L->numaddrtx,L->maxaddrtx,totaladdrtxp,addrtxi);
@@ -694,62 +747,15 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
                 incr = (L->maxaddrtx << 1);
             if ( incr > 65536 )
                 incr = 65536;
-            memset(&PTR,0,sizeof(PTR));
-            PTR.balance = L->balance;
-            PTR.blocknum = blocknum;
-            PTR.next_addrtxi = (*totaladdrtxp);
+            memset(&PTR,0,sizeof(PTR)), PTR.balance = L->balance, PTR.blocknum = blocknum, PTR.next_addrtxi = (*totaladdrtxp);
             coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,L,addrtxi);
             if ( coin777_addrtxalloc(coin,L,incr,totaladdrtxp) != PTR.next_addrtxi )
                 printf("coin777_addrtx WARNING linkage unexpected value %u != %u\n",L->first_addrtxi,PTR.next_addrtxi);
-            actives = calloc(oldL.numaddrtx,sizeof(*actives));
-            for (i=0; i<oldL.numaddrtx; i++)
-            {
-                coin777_RWaddrtx(0,coin,addrind,&actives[i],&oldL,i);
-                if ( actives[i].change < 0 )
-                {
-                    coin777_RWmmap(0,&S,coin,&coin->spends,actives[i].rawind);
-                    printf("(S%u %.8f U%u) ",actives[i].rawind,dstr(actives[i].change),S.unspentind);
-                }
-                else printf("(%.8f U%u) ",dstr(actives[i].change),actives[i].rawind);
-            }
-            printf("compact %d\n",oldL.numaddrtx);
-            for (balance=i=addrtxi=0; i<oldL.numaddrtx; i++)
-            {
-                if ( actives[i].change < 0 )
-                    printf("coin777_addrtx unmatched spend in slot.%d of %d: %.8f spend.%u blocknum.%u\n",i,oldL.numaddrtx,dstr(actives[i].change),actives[i].rawind,actives[i].blocknum), debugstop();
-                else
-                {
-                    if ( i < oldL.numaddrtx-1 )
-                    {
-                        refvalue = -actives[i].change, unspentind = actives[i].rawind;
-                        for (j=i+1; j<oldL.numaddrtx; j++)
-                        {
-                            if ( actives[j].change == refvalue )
-                            {
-                                coin777_RWmmap(0,&S,coin,&coin->spends,actives[j].rawind);
-                                if ( S.addrind != addrind )
-                                    printf("coin777_addrtx mismatched addrind A%u vs A%u in addrtx[%d] of %d\n",actives[j].rawind,addrind,j,oldL.numaddrtx), debugstop();
-                                else if ( S.unspentind == unspentind )
-                                {
-                                    printf("(S%u %.8f U%u) ",actives[j].rawind,dstr(refvalue),unspentind);
-                                    break;
-                                }
-                            }
-                        }
-                    } else j = oldL.numaddrtx;
-                    if ( j == oldL.numaddrtx )
-                    {
-                        printf("(u%u %.8f) ",actives[i].rawind,dstr(actives[i].change));
-                        coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
-                        balance += actives[i].change;
-                    }
-                }
-            }
-            if ( balance != L->balance )
-                printf("coin777_addrtx A.%u num %d -> %d warning recalc unspent %.8f != %.8f\n",addrind,oldL.numaddrtx,addrtxi,dstr(balance),dstr(L->balance));
-            else printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,addrtxi,incr,dstr(balance),dstr(atx->change));
+            addrtxi = 0;
+            if ( oldL.numaddrtx > 0 && (balance= coin777_compact(&addrtxi,coin,addrind,&oldL,L,totaladdrtxp)) != L->balance )
+                L->balance = balance, printf("coin777_addrtx A.%u num %d -> %d warning recalc unspent %.8f != %.8f\n",addrind,oldL.numaddrtx,addrtxi,dstr(balance),dstr(L->balance));
+            else printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,addrtxi,incr,dstr(L->balance),dstr(atx->change));
             L->numaddrtx = addrtxi;
-            L->balance = balance;
         }
     }
     if ( addrtxi >= L->maxaddrtx-1 )
