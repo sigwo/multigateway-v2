@@ -632,27 +632,30 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
         incr += lp->maxaddrtx;
         if ( incr < addrtxi )
             printf("unexpected addrtxi inverstion %d vs %d\n",incr,addrtxi), debugstop();
-        if ( lp->insideA == 0 )
+        if ( 0 )
         {
-            if ( coin->numfree < sizeof(coin->freelist)/sizeof(*coin->freelist) )
+            if ( lp->insideA == 0 )
             {
-                coin->freelist[coin->numfree][0] = lp->addrtx_offset;
-                coin->freelist[coin->numfree][1] = lp->maxaddrtx;
-                printf("add to freelist.%d (%ld %d)\n",coin->numfree,(long)lp->addrtx_offset,lp->maxaddrtx);
-                coin->numfree++;
-            } else printf("filled freelist %d\n",coin->numfree);
-        }
-        else lp->insideA = 0;
-        for (i=0; i<coin->numfree; i++)
-        {break;
-            if ( coin->freelist[i][1] == incr )
+                if ( coin->numfree < sizeof(coin->freelist)/sizeof(*coin->freelist) )
+                {
+                    coin->freelist[coin->numfree][0] = lp->addrtx_offset;
+                    coin->freelist[coin->numfree][1] = lp->maxaddrtx;
+                    printf("add to freelist.%d (%ld %d)\n",coin->numfree,(long)lp->addrtx_offset,lp->maxaddrtx);
+                    coin->numfree++;
+                } else printf("filled freelist %d\n",coin->numfree);
+            }
+            else lp->insideA = 0;
+            for (i=0; i<coin->numfree; i++)
             {
-                //lp->addrtx_offset = coin->freelist[i][0];
-                fprintf(stderr,"found exact match in slot.%d (%ld %d) numfree.%d\n",i,(long)lp->addrtx_offset,(int)coin->freelist[i][1],coin->numfree);
-                coin->numfree--;
-                coin->freelist[i][0] = coin->freelist[coin->numfree][0], coin->freelist[i][1] = coin->freelist[coin->numfree][1];
-                //flag = 1;
-                break;
+                if ( coin->freelist[i][1] == incr )
+                {
+                    lp->addrtx_offset = coin->freelist[i][0];
+                    fprintf(stderr,"found exact match in slot.%d (%ld %d) numfree.%d\n",i,(long)lp->addrtx_offset,(int)coin->freelist[i][1],coin->numfree);
+                    coin->numfree--;
+                    coin->freelist[i][0] = coin->freelist[coin->numfree][0], coin->freelist[i][1] = coin->freelist[coin->numfree][1];
+                    flag = 1;
+                    break;
+                }
             }
         }
         if ( flag == 0 )
