@@ -706,18 +706,21 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
             {
                 if ( actives[i].change < 0 )
                     printf("coin777_addrtx unmatched spend in slot.%d of %d: %.8f spend.%u blocknum.%u\n",i,oldL.numaddrtx,dstr(actives[i].change),actives[i].rawind,actives[i].blocknum), debugstop();
-                else if ( i < oldL.numaddrtx-1 )
+                else
                 {
-                    refvalue = -actives[i].change, unspentind = actives[i].rawind;
-                    for (j=i+1; j<oldL.numaddrtx; j++)
+                    if ( i < oldL.numaddrtx-1 )
                     {
-                        if ( actives[j].change == refvalue )
+                        refvalue = -actives[i].change, unspentind = actives[i].rawind;
+                        for (j=i+1; j<oldL.numaddrtx; j++)
                         {
-                            coin777_RWmmap(0,&S,coin,&coin->spends,actives[j].rawind);
-                            if ( S.addrind != addrind )
-                                printf("coin777_addrtx mismatched addrind A%u vs A%u in addrtx[%d] of %d\n",actives[j].rawind,addrind,j,oldL.numaddrtx), debugstop();
-                            else if ( S.unspentind == unspentind )
-                                break;
+                            if ( actives[j].change == refvalue )
+                            {
+                                coin777_RWmmap(0,&S,coin,&coin->spends,actives[j].rawind);
+                                if ( S.addrind != addrind )
+                                    printf("coin777_addrtx mismatched addrind A%u vs A%u in addrtx[%d] of %d\n",actives[j].rawind,addrind,j,oldL.numaddrtx), debugstop();
+                                else if ( S.unspentind == unspentind )
+                                    break;
+                            }
                         }
                     }
                     if ( j == oldL.numaddrtx )
