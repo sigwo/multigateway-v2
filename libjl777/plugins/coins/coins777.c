@@ -708,7 +708,7 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
         }
         if ( flag == 0 && actives[i].rawind != 0 && actives[i].change != 0 )
         {
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("+(u%u %.8f).%d ",actives[i].rawind,dstr(actives[i].change),i);
             if ( fp == 0 && L != 0 )
                 coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi);
@@ -725,7 +725,7 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
     }
     free(actives);
     *numaddrtxp = addrtxi;
-    if ( addrtxi != 0 && Debuglevel > 1 )
+    if ( addrtxi != 0 && Debuglevel > 2 )
         printf("-> balance %.8f ",dstr(balance));
     return(balance);
 }
@@ -1428,7 +1428,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
                     }
                     if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || (fp2 != 0 && fwrite(&L,1,sizeof(L),fp2) != sizeof(L)) )
                         errs++;
-                    printf("A%-6u firsti.%-6u num.%-3d max.%3d %.8f | errs.%d\n",addrind,L.first_addrtxi,L.numaddrtx,L.maxaddrtx,dstr(L.balance),errs);
+                    //printf("A%-6u firsti.%-6u num.%-3d max.%3d %.8f | errs.%d\n",addrind,L.first_addrtxi,L.numaddrtx,L.maxaddrtx,dstr(L.balance),errs);
                     sum += L.balance;
                 }
             }
