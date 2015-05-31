@@ -674,8 +674,9 @@ uint32_t coin777_addrtxalloc(struct coin777 *coin,struct coin777_Lentry *L,int32
 {
     int32_t i; struct addrtx_info ATX;
     L->first_addrtxi = (*totaladdrtxp);
+    memset(&ATX,0,sizeof(ATX));
     for (i=0; i<incr; i++)
-        coin777_RWmmap(0,&ATX,coin,&coin->addrtx,(*totaladdrtxp)++);
+        coin777_RWmmap(1,&ATX,coin,&coin->addrtx,(*totaladdrtxp)++);
     L->maxaddrtx = incr;
     L->insideA = 0;
     return(L->first_addrtxi);
