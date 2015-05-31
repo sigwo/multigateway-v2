@@ -863,7 +863,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
 // coin777 add funcs
 int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinaddr,int32_t len,uint8_t *script,uint16_t scriptlen,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
-    struct coin777_addrinfo A; struct coin777_Lentry L; uint8_t *scriptptr;
+    struct coin777_addrinfo A,tmpA; struct coin777_Lentry L; uint8_t *scriptptr;
     memset(&A,0,sizeof(A));
     update_addrinfosha256(coin->addrinfos.sha256,&coin->addrinfos.state,blocknum,coinaddr,len,script,scriptlen);
     A.firstblocknum = blocknum;
@@ -887,6 +887,8 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
         printf("not enough space for embedded addrtx A%u \n",addrind);
     }
     coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
+    coin777_RWmmap(0,&tmpA,coin,&coin->addrinfos,addrind);
+    memcpy(&tmpA,&A,sizeof(A) - sizeof(A.coinaddr) + len);
     coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind);
     coin->totalsize += sizeof(A);
     return(coin777_scriptptr(&A) != 0 );
