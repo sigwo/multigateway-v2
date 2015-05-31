@@ -390,19 +390,15 @@ int32_t coin777_queueDB(struct coin777 *coin,struct db777 *DB,void *key,int32_t 
 // coin777 MM funcs
 void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
 {
-    char tmpfname[1024],fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1; FILE *fp;
+    char srcfname[1024],fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
     needed = (ind + 2) * sp->itemsize;
     if ( needed > sp->M.allocsize )
     {
         db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,sp->name), os_compatible_path(fname);
         if ( strcmp(sp->name,"addrtx") == 0 || strcmp(sp->name,"ledger") == 0 )
         {
-            sprintf(tmpfname,"%s.sync",fname);
-            if ( (fp= fopen(tmpfname,"rb")) != 0 )
-            {
-                fclose(fp);
-                strcpy(fname,tmpfname);
-            }
+            sprintf(srcfname,"%s.sync",fname);
+            copy_file(srcfname,fname);
         }
         needed += 65536 * sp->itemsize;
         printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
