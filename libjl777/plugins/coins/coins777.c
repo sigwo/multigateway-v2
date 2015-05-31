@@ -822,7 +822,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint
 uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t *totaladdrtxp,uint32_t blocknum)
 {
     struct addrtx_info ATX; int32_t addrtxi; int64_t balance = 0;
-    for (addrtxi=0; addrtxi<L->maxaddrtx-1; addrtxi++)
+    for (addrtxi=0; addrtxi<L->numaddrtx; addrtxi++)
     {
         if ( coin777_update_addrtx(coin,addrind,&ATX,L,addrtxi,blocknum,0) != 0 )
         {
