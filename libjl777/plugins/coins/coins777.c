@@ -861,7 +861,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
 // coin777 add funcs
 int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinaddr,int32_t len,uint8_t *script,uint16_t scriptlen,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
-    struct coin777_addrinfo A,tmpA; struct coin777_Lentry L; uint8_t *scriptptr;
+    struct coin777_addrinfo A; struct coin777_Lentry L; uint8_t *scriptptr;
     memset(&A,0,sizeof(A));
     update_addrinfosha256(coin->addrinfos.sha256,&coin->addrinfos.state,blocknum,coinaddr,len,script,scriptlen);
     A.firstblocknum = blocknum;
@@ -885,8 +885,6 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
         printf("not enough space for embedded addrtx A%u \n",addrind);
     }
     coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
-    coin777_RWmmap(0,&tmpA,coin,&coin->addrinfos,addrind);
-    memcpy(&tmpA,&A,sizeof(A) - sizeof(A.coinaddr) + len);
     coin777_RWmmap(1,&A,coin,&coin->addrinfos,addrind);
     coin->totalsize += sizeof(A);
     return(coin777_scriptptr(&A) != 0 );
@@ -1436,7 +1434,6 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,u
             {
                 if ( coin->addrsum != (credits - debits) )
                     errs++, printf("ERROR recalc did not fix discrepancy %.8f != supply %.8f (%.8f - %.8f) -> Lchain recovery\n",dstr(coin->addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
-                debugstop();
                 //errs = coin777_replayblocks(coin,coin777_latestledger(coin),blocknum,1);
             } else printf("recalc resolved discrepancies: supply %.8f addrsum %.8f\n",dstr(credits)-dstr(debits),dstr(coin->addrsum));
         }
@@ -1463,9 +1460,9 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
             if ( syncflag != 0 && blocknum > (coin->startblocknum + 1) )
                 ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,&totaladdrtx);
             else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,&totaladdrtx);
-            if ( RAMCHAINS.fastmode == 0 || syncflag != 0 || blocknum == coin->startblocknum )
+            //if ( syncflag != 0 || blocknum == coin->startblocknum )
             {
-                if ( coin777_verify(coin,blocknum,credits,debits,addrind,RAMCHAINS.fastmode == 0 || syncflag != 0 || blocknum == coin->startblocknum,&totaladdrtx) != 0 )
+                if ( coin777_verify(coin,blocknum,credits,debits,addrind,1 || syncflag != 0 || blocknum == coin->startblocknum,&totaladdrtx) != 0 )
                     printf("cant verify at block.%u\n",blocknum), debugstop();
             }
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
