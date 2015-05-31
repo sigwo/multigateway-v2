@@ -417,7 +417,7 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
         {
             sp->MEM.size = sp->M.allocsize;
             sp->maxitems = (uint32_t)(sp->MEM.size / sp->itemsize);
-            if ( prevsize != 0 )
+            if ( prevsize > sp->MEM.size )
                 memset((void *)((long)sp->M.fileptr + prevsize),0,(sp->MEM.size - prevsize));
             printf("%p %s maxitems.%u (MEMsize.%ld / itemsize.%d) prevsize.%ld needed.%ld\n",sp->MEM.ptr,sp->name,sp->maxitems,sp->MEM.size,sp->itemsize,prevsize,needed);
         }
