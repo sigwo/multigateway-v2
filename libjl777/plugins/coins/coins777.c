@@ -622,11 +622,10 @@ int32_t coin777_activebuf(uint8_t *buf,int64_t value,uint32_t addrind,uint32_t b
 
 struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *lp,int32_t addrtxi,uint32_t *totaladdrtxp)
 {
-    struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr,i,flag = 0;
-    if ( lp->addrtx_offset != 0 )
-        addrtx = (struct addrtx_info *)(((lp->insideA == 0) ? (long)coin->addrtx.M.fileptr : (long)coin->addrinfos.M.fileptr) + lp->addrtx_offset);
+    struct addrtx_info *newaddrtx,*addrtx = 0; int32_t incr,i,flag = 0; long oldoffset;
     if ( addrtxi >= lp->maxaddrtx )
     {
+        oldoffset = lp->addrtx_offset;
         if ( (incr= (lp->maxaddrtx << 1)) < 128 )
             incr = 128;
         incr += lp->maxaddrtx;
@@ -644,7 +643,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
                     coin->numfree++;
                 } else printf("filled freelist %d\n",coin->numfree);
             }
-            else lp->insideA = 0;
+            //else lp->insideA = 0;
             for (i=0; i<coin->numfree; i++)
             {
                 if ( coin->freelist[i][1] == incr )
@@ -665,19 +664,22 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
             (*totaladdrtxp) += (incr + lp->maxaddrtx);
             coin->totalsize += (sizeof(*addrtx) * incr);
         }
+        if ( oldoffset != 0 )
+            addrtx = (struct addrtx_info *)(((lp->insideA == 0) ? (long)coin->addrtx.M.fileptr : (long)coin->addrinfos.M.fileptr) + oldoffset);
         if ( Debuglevel > 1 )
             printf("\nADDRTX.%u ALLOC offset.%ld to %ld | addrtx.%p\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx),addrtx);
         newaddrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + lp->addrtx_offset);
         if ( addrtx != 0 )
         {
             for (i=0; i<lp->maxaddrtx; i++)
-                newaddrtx[i] = addrtx[i], printf("%.8f ",dstr(addrtx[i].change));
-            printf("copied oldmax.%d -> %p\n",lp->maxaddrtx,newaddrtx);
+                newaddrtx[i] = addrtx[i], printf("%.8f ",dstr(newaddrtx[i].change));
+            printf("copied oldmax.%d -> %p[%ld] addrtxi.%d\n",lp->maxaddrtx,newaddrtx,(long)incr,addrtxi);
         }
         else if ( lp->maxaddrtx != 0 )
             printf("no addrtx when maxaddrtx.%d?\n",lp->maxaddrtx), debugstop();
         lp->maxaddrtx = incr;
         addrtx = newaddrtx;
+        lp->insideA = 0;
     }
     return(&addrtx[addrtxi]);
 }
