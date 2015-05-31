@@ -837,6 +837,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
 {
     struct coin777_addrinfo A; struct coin777_Lentry L;
     int64_t sum = 0; uint32_t addrind; int32_t errs = 0; int64_t calcbalance;
+    printf("addrinfos sum maxaddrind.%u\n",maxaddrind);
     for (addrind=1; addrind<maxaddrind; addrind++)
     {
         if ( coin777_RWmmap(0,&A,coin,&coin->addrinfos,addrind) == 0 && coin777_RWmmap(0,&L,coin,&coin->ledger,addrind) == 0 )
@@ -853,7 +854,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
             sum += L.balance;
         } else printf("error loading addrinfo or ledger entry for addrind.%u\n",addrind);
     }
-    if ( errs != 0 || syncflag < 0 )
+   // if ( errs != 0 || syncflag < 0 )
         printf("addrinfos_sum @ blocknum.%u errs.%d -> sum %.8f\n",blocknum,errs,dstr(sum));
     return(sum);
 }
