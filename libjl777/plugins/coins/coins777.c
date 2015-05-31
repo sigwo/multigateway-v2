@@ -1413,6 +1413,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
                     L.numaddrtx = addrtxi, L.insideA = 0;
                     if ( fwrite(&L,1,sizeof(L),fp) != sizeof(L) || (fp2 != 0 && fwrite(&L,1,sizeof(L),fp2) != sizeof(L)) )
                         errs++;
+                    printf("A%-6u firsti.%-6u num.%-3d max.%3d %.8f\n",i,L.first_addrtxi,L.numaddrtx,L.maxaddrtx,dstr(L.balance));
                     sum += L.balance;
                 }
             }
@@ -1424,7 +1425,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
         if ( fp2 != 0 )
             fclose(fp2);
     }
-    printf("finished Backup.(%s) supply %.8f in %.0f millis\n",dirname,dstr(sum),milliseconds() - startmilli);
+    printf("finished Backup.(%s) supply %.8f in %.0f millis | errs.%d\n",dirname,dstr(sum),milliseconds() - startmilli,errs);
     return(-errs);
 }
 
@@ -1593,6 +1594,7 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
             numsyncs = 0;
             if ( (retval = coin777_addDB(coin,coin->DBs.transactions,coin->hashDB.DB,&numsyncs,sizeof(numsyncs),&H,sizeof(H))) != 0 )
                 printf("error saving numsyncs.0 retval.%d %s\n",retval,db777_errstr(coin->DBs.ctl)), sleep(30);
+exit(1);
         }
     }
     return(H.ledgerhash);
