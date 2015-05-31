@@ -149,7 +149,7 @@ struct addrtx_info { int64_t change; uint32_t rawind,blocknum; };
 struct addrtx_linkptr { int64_t balance; uint32_t next_addrtxi,blocknum; };
 
 #ifndef ADDRINFO_SIZE
-#define ADDRINFO_SIZE 112
+#define ADDRINFO_SIZE 96
 #endif
 
 struct coin777_addrinfo
@@ -692,6 +692,8 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
                 printf("coin777_addrtx FATAL datastructure size mismatch %ld vs %ld\n",sizeof(ATX),sizeof(PTR)), debugstop();
             if ( (L->maxaddrtx << 1) > incr )
                 incr = (L->maxaddrtx << 1);
+            if ( incr > 65536 )
+                incr = 65536;
             memset(&PTR,0,sizeof(PTR));
             PTR.balance = L->balance;
             PTR.blocknum = blocknum;
@@ -719,12 +721,16 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
                                 if ( S.addrind != addrind )
                                     printf("coin777_addrtx mismatched addrind A%u vs A%u in addrtx[%d] of %d\n",actives[j].rawind,addrind,j,oldL.numaddrtx), debugstop();
                                 else if ( S.unspentind == unspentind )
+                                {
+                                    printf("(S%u %.8f U%u) ",actives[j].rawind,dstr(refvalue),unspentind);
                                     break;
+                                }
                             }
                         }
                     }
                     if ( j == oldL.numaddrtx )
                     {
+                        printf("(u%u %.8f) ",actives[i].rawind,dstr(actives[i].change));
                         coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
                         balance += actives[i].change;
                     }
@@ -732,7 +738,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
             }
             if ( balance != L->balance )
                 printf("coin777_addrtx A.%u num %d -> %d warning recalc unspent %.8f != %.8f\n",addrind,oldL.numaddrtx,addrtxi,dstr(balance),dstr(L->balance));
-            else printf("coin777_addrtx A.%u num %d/%d -> %d/%d unspent %.8f\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,addrtxi,incr,dstr(balance));
+            else printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,addrtxi,incr,dstr(balance),dstr(atx->change));
             L->numaddrtx = addrtxi;
             L->balance = balance;
         }
