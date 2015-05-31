@@ -1444,7 +1444,6 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
             fclose(fp2);
     }
     printf("finished Backup.(%s) supply %.8f in %.0f millis | errs.%d\n",dirname,dstr(sum),milliseconds() - startmilli,errs);
-    exit(1);
     return(-errs);
 }
 
@@ -1615,6 +1614,7 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
                 printf("error saving numsyncs.0 retval.%d %s\n",retval,db777_errstr(coin->DBs.ctl)), sleep(30);
         }
     }
+    exit(1);
     return(H.ledgerhash);
 }
 
