@@ -666,7 +666,7 @@ struct addrtx_info *coin777_addrtx(struct coin777 *coin,uint32_t addrind,struct 
             coin->totalsize += (sizeof(*addrtx) * incr);
         }
         if ( Debuglevel > 1 )
-            printf("ADDRTX.%u ALLOC offset.%ld to %ld | addrtx.%p\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx),addrtx);
+            printf("\nADDRTX.%u ALLOC offset.%ld to %ld | addrtx.%p\n",addrind,(long)lp->addrtx_offset,(long)lp->addrtx_offset + incr * sizeof(*addrtx),addrtx);
         newaddrtx = (struct addrtx_info *)((long)coin->addrtx.M.fileptr + lp->addrtx_offset);
         if ( addrtx != 0 )
         {
@@ -715,7 +715,7 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
             printf("%.8f ",dstr(atx[addrtxi].change));
     }
     if ( dispflag != 0 )
-        printf("-> balance %.8f\n",dstr(balance));
+        printf("-> balance %.8f atx.%p\n",dstr(balance),atx);
     return(balance);
 }
 
@@ -810,7 +810,6 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                 {
                     struct addrtx_info *atx;
                     atx = coin777_addrtx(coin,addrind,&L,0,totaladdrtxp);
-                    
                     printf("%.8f %.8f found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d\n",dstr(atx[0].change),dstr(atx[1].change),dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx);
                     L.balance = calcbalance;
                     errs++, coin777_RWmmap(1,&L,coin,&coin->ledger,addrind);
