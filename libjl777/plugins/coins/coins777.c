@@ -715,7 +715,7 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
             if ( Debuglevel > 2 )
                 printf("+(u%u %.8f).%d ",actives[i].rawind,dstr(actives[i].change),i);
             if ( fp == 0 && L != 0 )
-                coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi++);
+                coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi);
             else
             {
                 if ( fp != 0 )
@@ -724,6 +724,7 @@ uint64_t coin777_compact(FILE *fp,FILE *fp2,int32_t *numaddrtxp,struct coin777 *
                     fwrite(&actives[i],1,sizeof(actives[i]),fp2);
             }
             balance += actives[i].change;
+            addrtxi++;
         }
     }
     free(actives);
