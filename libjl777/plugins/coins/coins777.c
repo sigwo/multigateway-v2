@@ -337,12 +337,12 @@ int32_t coin777_queueDB(struct coin777 *coin,struct db777 *DB,void *key,int32_t 
 // coin777 MM funcs
 void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
 {
-    char srcfname[1024],fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
+    char fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
     needed = (ind + 2) * sp->itemsize;
     if ( needed > sp->M.allocsize )
     {
         db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,sp->name), os_compatible_path(fname);
-        needed += RAMCHAINS.fileincr * sp->itemsize;
+        needed = (((needed * 1.1) + RAMCHAINS.fileincr * sp->itemsize) / sp->itemsize) * sp->itemsize;
         printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
         if ( sp->M.fileptr != 0 )
         {
@@ -445,7 +445,7 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
                 }
                 if ( sp->fp == 0 )
                     memcpy(ptr,value,sp->itemsize);
-                else
+                else // all ready for rb+ fp and readonly mapping, but need to init properly
                 {
                     fseek(sp->fp,(long)sp->itemsize * rawind,SEEK_SET);
                     fwrite(value,1,sp->itemsize,sp->fp);
