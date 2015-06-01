@@ -115,6 +115,7 @@ int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ra
         while ( ramchain->activeledger != 0 )
             sleep(1);
     }*/
+    printf("(%s %s %s) vs (%s %s %s)\n",coinstr,serverport,userpass,coin->name,coin->serverport,coin->userpass);
     ramchain->syncfreq = 10000;
     ramchain->startblocknum = startblocknum, ramchain->endblocknum = endblocknum;
     ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coin->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
