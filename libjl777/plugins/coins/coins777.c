@@ -342,7 +342,7 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
     if ( needed > sp->M.allocsize )
     {
         db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,sp->name), os_compatible_path(fname);
-        needed = (((needed * 1.1) + RAMCHAINS.fileincr * sp->itemsize) / sp->itemsize) * sp->itemsize;
+        needed = (((needed * 1.1) + 1024 * sp->itemsize) / sp->itemsize) * sp->itemsize;
         printf("REMAP.%s %llu -> %ld [%ld] (%s)\n",sp->name,(long long)sp->M.allocsize,needed,(long)(needed - sp->M.allocsize)/sp->itemsize,fname);
         if ( sp->M.fileptr != 0 )
         {
