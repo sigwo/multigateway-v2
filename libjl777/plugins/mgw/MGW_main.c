@@ -522,44 +522,45 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
     }
     return(-1);
 }
+
 /*
-uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,char *addr,struct rampayload *addrpayload)
+uint64_t calc_addr_unspent(struct ramchain *ramchain,struct multisig_addr *msig,char *addr,struct rampayload *addrpayload)
 {
     uint64_t nxt64bits,pending = 0;
     char txidstr[4096];
-    struct NXT_asset *ap = ram->ap;
+    struct NXT_asset *ap = ramchain->ap;
     struct NXT_assettxid *tp;
     int32_t j;
     if ( ap != 0 )
     {
-        ram_txid(txidstr,ram,addrpayload->otherind);
+        ramchain_txid(txidstr,ramchain,addrpayload->otherind);
         for (j=0; j<ap->num; j++)
         {
             tp = ap->txids[j];
             if ( tp->cointxid != 0 && strcmp(tp->cointxid,txidstr) == 0 )
             {
-                if ( ram_mark_depositcomplete(ram,tp,tp->coinblocknum) != 0 )
+                if ( ramchain_mark_depositcomplete(ramchain,tp,tp->coinblocknum) != 0 )
                     _complete_assettxid(tp);
                 break;
             }
         }
         //if ( strcmp("9908a63216f866650f81949684e93d62d543bdb06a23b6e56344e1c419a70d4f",txidstr) == 0 )
         //    printf("calc_addr_unspent.(%s) j.%d of apnum.%d valid.%d msig.%p\n",txidstr,j,ap->num,_valid_txamount(ram,addrpayload->value),msig);
-        if ( (addrpayload->pendingdeposit != 0 || j == ap->num) && _valid_txamount(ram,addrpayload->value,msig->multisigaddr) > 0 && msig != 0 )
+        if ( (addrpayload->pendingdeposit != 0 || j == ap->num) && _valid_txamount(ramchain,addrpayload->value,msig->multisigaddr) > 0 && msig != 0 )
         {
             //printf("addr_unspent.(%s)\n",msig->NXTaddr);
             if ( (nxt64bits= calc_nxt64bits(msig->NXTaddr)) != 0 )
             {
-                printf("deposit.(%s/%d %d,%d %s %.8f)rt%d_%d_%d_%d.g%d -> NXT.%s %d\n",txidstr,addrpayload->B.v,addrpayload->B.blocknum,addrpayload->B.txind,addr,dstr(addrpayload->value),ram->S.NXT_is_realtime,ram->S.enable_deposits,(addrpayload->B.blocknum + ram->depositconfirms) <= ram->S.RTblocknum,ram->S.MGWbalance >= 0,(int32_t)(nxt64bits % NUM_GATEWAYS),msig->NXTaddr,ram->S.NXT_is_realtime != 0 && (addrpayload->B.blocknum + ram->depositconfirms) <= ram->S.RTblocknum && ram->S.enable_deposits != 0);
+                printf("deposit.(%s/%d %d,%d %s %.8f)rt%d_%d_%d_%d.g%d -> NXT.%s %d\n",txidstr,addrpayload->B.v,addrpayload->B.blocknum,addrpayload->B.txind,addr,dstr(addrpayload->value),ramchain->S.NXT_is_realtime,ramchain->S.enable_deposits,(addrpayload->B.blocknum + ramchain->depositconfirms) <= ramchain->S.RTblocknum,ramchain->S.MGWbalance >= 0,(int32_t)(nxt64bits % NUM_GATEWAYS),msig->NXTaddr,ramchain->S.NXT_is_realtime != 0 && (addrpayload->B.blocknum + ramchain->depositconfirms) <= ramchain->S.RTblocknum && ramchain->S.enable_deposits != 0);
                 pending += addrpayload->value;
                 if ( ram_MGW_ready(ram,addrpayload->B.blocknum,0,nxt64bits,0) > 0 )
                 {
-                    if ( ram_verify_txstillthere(ram->name,ram->serverport,ram->userpass,txidstr,addrpayload->B.v) != addrpayload->value )
+                    if ( ram_verify_txstillthere(ramchain->DBs.coinstr,ramchain->serverport,ramchain->userpass,txidstr,addrpayload->B.v) != addrpayload->value )
                     {
                         printf("ram_calc_unspent: tx gone due to a fork. (%d %d %d) txid.%s %.8f\n",addrpayload->B.blocknum,addrpayload->B.txind,addrpayload->B.v,txidstr,dstr(addrpayload->value));
                         exit(1); // seems the best thing to do
                     }
-                    if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ram->ap,addrpayload->value,msig->multisigaddr,txidstr,&addrpayload->B,&msig->buyNXT,ram->srvNXTADDR,ram->srvNXTACCTSECRET,ram->DEPOSIT_XFER_DURATION) == addrpayload->value )
+                    if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ap,addrpayload->value,msig->multisigaddr,txidstr,&addrpayload->B,&msig->buyNXT,ramchain->srvNXTADDR,ramchain->srvNXTACCTSECRET,ramchain->DEPOSIT_XFER_DURATION) == addrpayload->value )
                         addrpayload->pendingdeposit = 0;
                 }
             }
@@ -568,7 +569,7 @@ uint64_t calc_addr_unspent(struct ramchain_info *ram,struct multisig_addr *msig,
     return(pending);
 }
 
-uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ramchain_hashptr **addrptrp,struct ramchain_info *ram,char *addr,int32_t MGWflag)
+uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ramchain_hashptr **addrptrp,struct ramchain *ramchain,char *addr,int32_t MGWflag)
 {
     //char redeemScript[8192],normaladdr[8192];
     uint64_t pending,unspent = 0;
