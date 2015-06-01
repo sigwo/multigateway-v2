@@ -417,5 +417,17 @@ struct ledger_blockinfo *ledger_block_pass1(int32_t dispflag,struct ledger_info 
     }
 }*/
 
+/*struct packedvin { uint32_t txidstroffset; uint16_t vout; };
+ struct packedvout { uint32_t coinaddroffset,scriptoffset; uint64_t value; };
+ struct packedtx { uint16_t firstvin,numvins,firstvout,numvouts; uint32_t txidstroffset; };
+ 
+ struct packedblock
+ {
+ uint16_t crc16,numtx,numrawvins,numrawvouts;
+ uint64_t minted;
+ uint32_t blocknum,timestamp,blockhash_offset,merkleroot_offset,txspace_offsets,vinspace_offsets,voutspace_offsets,allocsize;
+ uint8_t rawdata[];
+ };
+ */
 #endif
 #endif

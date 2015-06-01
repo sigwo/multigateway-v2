@@ -31,7 +31,7 @@ char *PLUGNAME(_authmethods)[] = { PUB_METHODS, "signrawtransaction", "dumpprivk
 int32_t ramchain_idle(struct plugin_info *plugin)
 {
     int32_t i,flag = 0;
-    struct coin777 *coin; struct ramchain *ramchain; struct ledger_info *ledger = 0; //struct packedblock *packed = 0;
+    struct coin777 *coin; struct ramchain *ramchain;
     for (i=0; i<COINS.num; i++)
     {
         if ( (coin= COINS.LIST[i]) != 0 )
@@ -40,7 +40,7 @@ int32_t ramchain_idle(struct plugin_info *plugin)
             //printf("packed.%p ledger.%p\n",coin->packed,ramchain->activeledger);
             if ( ramchain->readyflag != 0 )//&& (ledger= ramchain->activeledger) != 0 )//&& ledger->blocknum <= coin->readahead )
             {
-                flag += ramchain_update(coin,ramchain,ledger,0);
+                flag += ramchain_update(coin,ramchain);
             }
         }
     }
@@ -61,7 +61,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         plugin->allowremote = 1;
         RAMCHAINS.fastmode = get_API_int(cJSON_GetObjectItem(json,"fastmode"),0);
         RAMCHAINS.verifyspends = get_API_int(cJSON_GetObjectItem(json,"verifyspends"),1);
-        RAMCHAINS.fileincr = get_API_int(cJSON_GetObjectItem(json,"fileincr"),100L * 1000 * 1000);
+        RAMCHAINS.fileincr = get_API_int(cJSON_GetObjectItem(json,"fileincr"),100L * 1000 * 1);
         RAMCHAINS.readyflag = 1;
     }
     else
@@ -92,9 +92,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             if ( strcmp(methodstr,"backup") == 0 )
             {
-                if ( coin->DBs.ctl == 0 )
+                if ( coin->ramchain.DBs.ctl == 0 )
                     ramchain_init(retbuf,maxlen,coin,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum,coin->minconfirms);
-                if ( coin->DBs.ctl != 0 )
+                if ( coin->ramchain.DBs.ctl != 0 )
                 {
                     coin777_incrbackup(coin,0,0,0);
                     strcpy(retbuf,"{\"result\":\"started backup\"}");
@@ -104,8 +104,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 ramchain_init(retbuf,maxlen,coin,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum,coin->minconfirms);
             else if ( strcmp(methodstr,"create") == 0 )
                 ramchain_init(retbuf,maxlen,coin,&coin->ramchain,json,coinstr,coin->serverport,coin->userpass,startblocknum,endblocknum,coin->minconfirms);
-            else if ( coin->ramchain.activeledger != 0 )
-                ramchain_func(retbuf,maxlen,coin,&coin->ramchain,json,methodstr);
+            else ramchain_func(retbuf,maxlen,coin,&coin->ramchain,json,methodstr);
             //else sprintf(retbuf,"{\"result\":\"no active ramchain\"}");
             //printf("RAMCHAIN RETURNS.(%s)\n",retbuf);
         }
