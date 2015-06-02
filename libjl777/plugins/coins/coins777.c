@@ -918,7 +918,8 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 }
                 else
                 {
-                    printf("linear search found u%d when bsearch missed it?\n",unspentind);
+                    if ( L->numaddrtx > 1 )
+                        printf("linear search found u%d when bsearch missed it?\n",unspentind);
                     return(i);
                 }
             }
