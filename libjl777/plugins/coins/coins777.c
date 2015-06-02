@@ -1505,6 +1505,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
                                     L.balance = balance;
                                 }
                             }
+                            L.maxaddrtx = addrtxi;
                             if ( 0 )
                             {
                                 memset(&ATX,0,sizeof(ATX));
