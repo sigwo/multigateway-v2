@@ -903,7 +903,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 break;
             }
         }
-        if ( L->numaddrtx > 1 )
+        if ( 0 && L->numaddrtx > 1 )
             printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
     }
     for (i=0; i<L->numaddrtx; i++)
@@ -919,7 +919,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 }
                 else
                 {
-                    if ( L->numaddrtx > 1 )
+                    if ( 0 && L->numaddrtx > 1 )
                         printf("linear search found u%d when bsearch missed it?\n",unspentind);
                     return(i);
                 }
