@@ -954,6 +954,8 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
 int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
     struct coin777_Lentry L;
+    if ( value == 0 )
+        return(0);
     if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
     {
         coin777_update_Lentry(coin,&L,addrind,unspentind,value,spendind,blocknum,totaladdrtxp);
