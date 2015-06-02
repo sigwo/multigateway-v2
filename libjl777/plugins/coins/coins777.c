@@ -1314,7 +1314,7 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
         }
         for (i=1; i<addrind; i++)
         {
-            fprintf(stderr,"patch %d of %d: ",i,addrind);
+            //fprintf(stderr,"patch %d of %d: ",i,addrind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,i);
             if ( L.insideA == 0 )
             {
