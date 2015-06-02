@@ -1302,14 +1302,17 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     //ramchain->addrtx.table = coin777_ensure(coin,&ramchain->addrtx,totaladdrtx);
     db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx"), os_compatible_path(fname);
     memset(&M,0,sizeof(M));
-    if ( init_mappedptr(&ptr,&M,0,0,fname) != 0 )
+    if ( init_mappedptr(&ptr,&M,0,1,fname) != 0 )
     {
+        double calcbalance;
         for (i=1; i<addrind; i++)
         {
-            printf("patch %d of %d\n",i,addrind);
+            printf("patch %d of %d: ",i,addrind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,i);
             L.first_addrtxi = (struct addrtx_info *)((long)ptr + (long)L.first_addrtxi);
             coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,i);
+            if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,100000000)) != L.balance || 1 )
+                printf("calcbalance %.8f vs %.8f\n",dstr(calcbalance),dstr(L.balance));
         }
     }
     return(0);
