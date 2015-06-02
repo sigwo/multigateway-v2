@@ -1307,7 +1307,7 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     if ( init_mappedptr(&ptr,&M,0,0,fname) != 0 )
     {
         double calcbalance; struct addrtx_info *atx = ptr;
-        printf("allocsize %ld\n",(long)M.allocsize);
+        printf("allocsize %ld size of atx %ld\n",(long)M.allocsize,sizeof(*atx));
         for (i=0; i<M.allocsize; i+=sizeof(*atx),atx++)
         {
             printf("%ld: %.8f %u %u\n",i/sizeof(*atx),dstr(atx->value),atx->rawind,atx->num31);
@@ -1316,11 +1316,12 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
         {
             fprintf(stderr,"patch %d of %d: ",i,addrind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,i);
-            L.first_addrtxi = (struct addrtx_info *)((long)ptr + (long)L.first_addrtxi);
-            fprintf(stderr,"%p num.%d max.%d ",L.first_addrtxi,L.numaddrtx,L.maxaddrtx);
-            if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,blocknum)) != L.balance )
-                fprintf(stderr,"calcbalance %.8f vs %.8f\n",dstr(calcbalance),dstr(L.balance));
-            coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,i);
+            printf("i.%d %.8f first %ld %ld num.%d max.%d\n",i,dstr(L.balance),(long)L.first_addrtxi,(long)L.first_addrtxi/sizeof(*atx),L.numaddrtx,L.maxaddrtx);
+            //L.first_addrtxi = (struct addrtx_info *)((long)ptr + (long)L.first_addrtxi);
+            //fprintf(stderr,"%p num.%d max.%d ",L.first_addrtxi,L.numaddrtx,L.maxaddrtx);
+            //if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,blocknum)) != L.balance )
+            //    fprintf(stderr,"calcbalance %.8f vs %.8f\n",dstr(calcbalance),dstr(L.balance));
+            //coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,i);
         }
     }
     return(0);
