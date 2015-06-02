@@ -846,7 +846,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
 {
     uint32_t floor,ceiling,probe; int32_t i,flag = 0;
     struct addrtx_info *ATX = L->first_addrtxi;
-    floor = 0, ceiling = L->numaddrtx - 1;
+    floor = 0, ceiling = L->numaddrtx-1;
     if ( L->numaddrtx == 0 )
         return(-1);
     if ( 1 )
@@ -854,7 +854,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
         while ( floor != ceiling )
         {
             probe = (floor + ceiling) >> 1;
-            for (i=probe; i<=ceiling; i++)
+            for (i=probe; i<ceiling; i++)
             {
                 if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
                 {
@@ -873,7 +873,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             }
             if ( i < 0 || i >= L->numaddrtx || flag == 0 )
                 break;
-            printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->rawind,dstr(atx->value),floor,ceiling);
+            printf("search %u %.8f, probe.%u u%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->rawind,atx[1].rawind,dstr(atx->value),floor,ceiling);
             if ( unspentind < atx->rawind )
                 ceiling = probe;
             else if ( unspentind > atx->rawind )
@@ -885,8 +885,13 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             }
             else
             {
-                printf("unexpected value mismatch %.8f vs %.8f\n",dstr(ATX[i].value),dstr(value));
+                printf("unexpected value mismatch %.8f vs %.8f\n",dstr(atx->value),dstr(value));
                 break;
+            }
+            if ( floor+1 == ceiling )
+            {
+                if ( coin777_update_addrtx(coin,addrind,atx,L,ceiling,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
+                    return(ceiling);
             }
         }
         printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
