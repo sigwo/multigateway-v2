@@ -892,6 +892,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             {
                 if ( coin777_update_addrtx(coin,addrind,atx,L,ceiling,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
                     return(ceiling);
+                break;
             }
         }
         printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
