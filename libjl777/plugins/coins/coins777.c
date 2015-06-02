@@ -849,7 +849,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
     floor = 0, ceiling = L->numaddrtx-1;
     if ( L->numaddrtx == 0 )
         return(-1);
-    if ( 1 )
+    if ( 0 )
     {
         while ( floor != ceiling )
         {
