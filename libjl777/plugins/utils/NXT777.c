@@ -122,7 +122,6 @@ uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_
 bits256 calc_sharedsecret(uint64_t *nxt64bitsp,int32_t *haspubpeyp,uint8_t *NXTACCTSECRET,int32_t secretlen,uint64_t other64bits);
 int32_t curve25519_donna(uint8_t *mypublic,const uint8_t *secret,const uint8_t *basepoint);
 uint64_t ram_verify_NXTtxstillthere(uint64_t ap_mult,uint64_t txidbits);
-int32_t _in_specialNXTaddrs(char **specialNXTaddrs,int32_t n,char *NXTaddr);
 uint32_t _get_NXTheight(uint32_t *firsttimep);
 char *_issue_getAsset(char *assetidstr);
 uint64_t _get_NXT_ECblock(uint32_t *ecblockp);
@@ -242,15 +241,6 @@ bits256 calc_sharedsecret(uint64_t *nxt64bitsp,int32_t *haspubpeyp,uint8_t *NXTA
         shared = curve25519(mysecret,pubkey);
     } else memset(&shared,0,sizeof(shared)), *nxt64bitsp = 0;
     return(shared);
-}
-
-int32_t _in_specialNXTaddrs(char **specialNXTaddrs,int32_t n,char *NXTaddr)
-{
-    int32_t i;
-    for (i=0; i<n; i++)
-        if ( strcmp(specialNXTaddrs[i],NXTaddr) == 0 )
-            return(1);
-    return(0);
 }
 
 char *_issue_getAsset(char *assetidstr)

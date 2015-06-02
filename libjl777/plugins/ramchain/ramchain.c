@@ -288,16 +288,130 @@ int32_t ramchain_balance(char *retbuf,int32_t maxlen,struct coin777 *coin,struct
     return(0);
 }
 
+int _increasing_rawind(const void *a,const void *b)
+{
+#define uint_a (((struct addrtx_info *)a)->rawind)
+#define uint_b (((struct addrtx_info *)b)->rawind)
+	if ( uint_b > uint_a )
+		return(-1);
+	else if ( uint_b < uint_a )
+		return(1);
+	return(0);
+#undef uint_a
+#undef uint_b
+}
+
+struct addrtx_info *coin777_acctunspents(uint64_t *sump,int32_t *nump,struct coin777 *coin,uint32_t *addrinds,int32_t num)
+{
+    uint64_t balance; int32_t i,j,n; struct coin777_Lentry L; struct addrtx_info *unspents,*allunspents = 0;
+    *sump = *nump = 0;
+    for (i=0; i<num; i++)
+    {
+        if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrinds[i]) == 0 && (unspents= coin777_compact(&balance,&n,coin,addrinds[i],&L)) != 0 )
+        {
+            for (j=0; j<n; j++)
+                unspents[j].num31 = addrinds[i];
+            allunspents = realloc(allunspents,sizeof(*allunspents) * (n + (*nump)));
+            memcpy(&allunspents[*nump],unspents,n * sizeof(*unspents));
+            free(unspents);
+            (*sump) += balance;
+            (*nump) += n;
+        }
+    }
+    if ( *nump != 0 )
+       	qsort(allunspents,*nump,sizeof(*allunspents),_increasing_rawind);
+    return(allunspents);
+}
+
+uint32_t *conv_addrjson(int32_t *nump,struct coin777 *coin,cJSON *addrjson)
+{
+    uint32_t firstblocknum,*addrinds = 0; int32_t i;
+    if ( is_cJSON_String(addrjson) != 0 )
+    {
+        *nump = 1;
+        addrinds = malloc(sizeof(*addrinds));
+        addrinds[0] = coin777_addrind(&firstblocknum,coin,cJSON_str(addrjson));
+    }
+    else if ( is_cJSON_Array(addrjson) != 0 && (*nump= cJSON_GetArraySize(addrjson)) > 0 )
+    {
+        addrinds = calloc(*nump,sizeof(*addrinds));
+        for (i=0; i<*nump; i++)
+            addrinds[i] = coin777_addrind(&firstblocknum,coin,cJSON_str(cJSON_GetArrayItem(addrjson,i)));
+    }
+    return(addrinds);
+}
+
+struct addrtx_info *coin777_bestfit(struct addrtx_info *unspents,int32_t numunspents,uint64_t value)
+{
+    uint64_t above,below,gap;
+    int32_t i;
+    struct addrtx_info *vin,*abovevin,*belowvin;
+    abovevin = belowvin = 0;
+    for (above=below=i=0; i<numunspents; i++)
+    {
+        vin = &unspents[i];
+        if ( vin->flag != 0 )
+            continue;
+        if ( vin->value == value )
+            return(vin);
+        else if ( vin->value > value )
+        {
+            gap = (vin->value - value);
+            if ( above == 0 || gap < above )
+            {
+                above = gap;
+                abovevin = vin;
+            }
+        }
+        else
+        {
+            gap = (value - vin->value);
+            if ( below == 0 || gap < below )
+            {
+                below = gap;
+                belowvin = vin;
+            }
+        }
+    }
+    return((abovevin != 0) ? abovevin : belowvin);
+}
+
+int64_t coin777_inputs(int64_t *changep,int32_t *nump,struct addrtx_info *inputs,int32_t max,struct addrtx_info *unspents,int32_t numunspents,struct cointx_info *cointx,uint64_t amount,uint64_t txfee)
+{
+    int64_t remainder,sum = 0; int32_t i,numinputs = 0; struct addrtx_info *vin;
+    remainder = amount + txfee;
+    for (i=0; i<numunspents&&i<max-1; i++)
+    {
+        if ( (vin= coin777_bestfit(unspents,numunspents,remainder)) != 0 )
+        {
+            sum += vin->value;
+            remainder -= vin->value;
+            vin->flag = 1;
+            inputs[numinputs++] = *vin;
+            if ( sum >= (amount + txfee) )
+            {
+                amount = amount;
+                *nump = numinputs;
+                *changep = (sum - amount - txfee);
+                fprintf(stderr,"numinputs %d sum %.8f vs amount %.8f change %.8f -> miners %.8f\n",numinputs,dstr(sum),dstr(amount),dstr(*changep),dstr(sum - *changep - amount));
+                return(sum);
+            }
+        } else printf("no bestfit found i.%d of %d\n",i,numunspents);
+    }
+    fprintf(stderr,"error numinputs %d sum %.8f\n",numinputs,dstr(sum));
+    return(0);
+}
+
 int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
     //int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind);
   //struct ledger_addrinfo { uint64_t balance; uint32_t firstblocknum,count:28,notify:1,pending:1,MGW:1,dirty:1; struct unspentmap unspents[]; };
-    struct ledger_addrinfo *addrinfo; cJSON *json,*array,*item; uint64_t sum = 0; int32_t i,vout,verbose; char *jsonstr,script[8193],txidstr[256],field[256];
+    /*struct ledger_addrinfo *addrinfo; cJSON *json,*array,*item; uint64_t sum = 0; int32_t i,vout,verbose; char *jsonstr,script[8193],txidstr[256],field[256];
     if ( (addrinfo= ramchain_addrinfo(field,retbuf,maxlen,coin,ramchain,argjson)) == 0 )
         return(-1);
     verbose = get_API_int(cJSON_GetObjectItem(argjson,"verbose"),0);
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
-    /*for (i=0; i<addrinfo->count; i++)
+    for (i=0; i<addrinfo->count; i++)
     {
         sum += addrinfo->unspents[i].value;
         if ( verbose == 0 )

@@ -523,6 +523,10 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
     return(-1);
 }
 
+// transfer approved, transfer pending, transfer completed, added to virtual balance, selected, spent
+// set of unspents - deposit completed - pending transfer -> start transfer
+// deposit completed -> pool for withdraws
+
 /*
 uint64_t calc_addr_unspent(struct ramchain *ramchain,struct multisig_addr *msig,char *addr,struct rampayload *addrpayload)
 {
@@ -560,7 +564,7 @@ uint64_t calc_addr_unspent(struct ramchain *ramchain,struct multisig_addr *msig,
                         printf("ram_calc_unspent: tx gone due to a fork. (%d %d %d) txid.%s %.8f\n",addrpayload->B.blocknum,addrpayload->B.txind,addrpayload->B.v,txidstr,dstr(addrpayload->value));
                         exit(1); // seems the best thing to do
                     }
-                    if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ap,addrpayload->value,msig->multisigaddr,txidstr,&addrpayload->B,&msig->buyNXT,ramchain->srvNXTADDR,ramchain->srvNXTACCTSECRET,ramchain->DEPOSIT_XFER_DURATION) == addrpayload->value )
+                    if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ap,addrpayload->value,msig->multisigaddr,txidstr,&addrpayload-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             >B,&msig->buyNXT,ramchain->srvNXTADDR,ramchain->srvNXTACCTSECRET,ramchain->DEPOSIT_XFER_DURATION) == addrpayload->value )
                         addrpayload->pendingdeposit = 0;
                 }
             }
