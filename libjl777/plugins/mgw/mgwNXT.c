@@ -18,7 +18,8 @@
 #include "uthash.h"
 #include "utils777.c"
 #include "NXT777.c"
-#include "msig.c"
+//#include "msig.c"
+#include "mgw.c"
 //#include "search.c"
 
 #define DEPOSIT_XFER_DURATION 5
@@ -103,9 +104,9 @@ cJSON *_process_MGW_message(struct mgw777 *mgw,uint32_t height,int32_t funcid,cJ
                 break;
             case BIND_DEPOSIT_ADDRESS:
                 //fprintf(stderr,"b");
-                if ( _in_specialNXTaddrs(sender) != 0 && (msig= decode_msigjson(0,argjson,sender)) != 0 ) // strcmp(sender,receiver) == 0) &&
+                if ( _in_specialNXTaddrs(mgw,sender) != 0 && (msig= decode_msigjson(0,argjson,sender)) != 0 ) // strcmp(sender,receiver) == 0) &&
                 {
-                    if ( strcmp(msig->coinstr,mgw->DBs.coinstr) == 0 && find_msigaddr(msig,&len,msig->coinstr,msig->NXTaddr,msig->multisigaddr) == 0 )
+                    if ( strcmp(msig->coinstr,mgw->coinstr) == 0 && find_msigaddr(msig,&len,msig->coinstr,msig->NXTaddr,msig->multisigaddr) == 0 )
                     {
                         //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone > 1 )
                         //    fprintf(stderr,"BINDFUNC: %s func.(%c) %s -> %s txid.(%s)\n",msig->coinstr,funcid,sender,receiver,txid);
@@ -128,8 +129,8 @@ cJSON *_process_MGW_message(struct mgw777 *mgw,uint32_t height,int32_t funcid,cJ
             case MONEY_SENT:
                 //fprintf(stderr,"m");
                 //printf("MONEY_SENT.(%s)\n",cJSON_Print(argjson));
-                if ( _in_specialNXTaddrs(sender) != 0 )
-                    ram_update_redeembits(ramchain,argjson,calc_nxt64bits(txid));
+                if ( _in_specialNXTaddrs(mgw,sender) != 0 )
+                    ram_update_redeembits(mgw,argjson,calc_nxt64bits(txid));
                 break;
             default: printf("funcid.(%c) not handled\n",funcid);
         }
@@ -161,7 +162,7 @@ void _process_AM_message(struct mgw777 *mgw,uint32_t height,struct json_AM *AM,c
     if ( (argjson= _parse_json_AM(AM)) != 0 )
     {
         if ( AM->funcid > 0 )
-            argjson = _process_MGW_message(ramchain,height,AM->funcid,argjson,0,0,sender,receiver,txid);
+            argjson = _process_MGW_message(mgw,height,AM->funcid,argjson,0,0,sender,receiver,txid);
         if ( argjson != 0 )
             free_json(argjson);
     }
@@ -177,7 +178,7 @@ struct NXT_assettxid *_set_assettxid(struct mgw777 *mgw,uint32_t height,char *re
     char sender[MAX_JSON_FIELD],cointxid[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
     if ( (ap= mgw->ap) == 0 )
     {
-        printf("no NXT_asset for %s\n",mgw->DBs.coinstr);
+        printf("no NXT_asset for %s\n",mgw->coinstr);
         return(0);
     }
     redeemtxid = calc_nxt64bits(redeemtxidstr);
@@ -197,9 +198,9 @@ struct NXT_assettxid *_set_assettxid(struct mgw777 *mgw,uint32_t height,char *re
     {
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
         if ( coinstr[0] == 0 )
-            strcpy(coinstr,mgw->DBs.coinstr);
+            strcpy(coinstr,mgw->coinstr);
         //printf("%s txid.(%s) (%s)\n",ram->name,redeemtxidstr,commentstr!=0?commentstr:"NULL");
-        if ( strcmp(coinstr,mgw->DBs.coinstr) == 0 )
+        if ( strcmp(coinstr,mgw->coinstr) == 0 )
         {
             if ( tp->comment != 0 )
                 free(tp->comment);
@@ -211,7 +212,7 @@ struct NXT_assettxid *_set_assettxid(struct mgw777 *mgw,uint32_t height,char *re
             if ( (obj= cJSON_GetObjectItem(json,"coinv")) == 0 )
                 obj = cJSON_GetObjectItem(json,"vout");
             tp->coinv = (uint32_t)get_API_int(obj,0);
-            if ( mgw->NXTfee_equiv != 0 && ram->txfee != 0 )
+            if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
                 tp->estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * tp->U.assetoshis / SATOSHIDEN);
             if ( (cointxidobj= cJSON_GetObjectItem(json,"cointxid")) != 0 )
             {
@@ -225,7 +226,7 @@ struct NXT_assettxid *_set_assettxid(struct mgw777 *mgw,uint32_t height,char *re
                     }
                     tp->cointxid = clonestr(cointxid);
                     expand_nxt64bits(sender,senderbits);
-                    if ( _in_specialNXTaddrs(sender) != 0 && tp->sentNXT != tp->buyNXT )
+                    if ( _in_specialNXTaddrs(mgw,sender) != 0 && tp->sentNXT != tp->buyNXT )
                     {
                         //ram->boughtNXT -= tp->sentNXT;
                         //ram->boughtNXT += tp->buyNXT;
@@ -234,7 +235,7 @@ struct NXT_assettxid *_set_assettxid(struct mgw777 *mgw,uint32_t height,char *re
                 }
                 if ( tp->completed == 0 )
                 {
-                    if ( ram_mark_depositcomplete(ramchain,tp,tp->coinblocknum) != 0 )
+                    if ( ram_mark_depositcomplete(mgw,tp,tp->coinblocknum) != 0 )
                         _complete_assettxid(tp);
                 }
                 if ( Debuglevel > 2 )
@@ -245,7 +246,7 @@ struct NXT_assettxid *_set_assettxid(struct mgw777 *mgw,uint32_t height,char *re
                 if ( Debuglevel > 2 )
                     printf("%s txid.(%s) got comment.(%s) gotpossibleredeem.(%d.%d.%d) %.8f/%.8f NXTequiv %.8f -> redeemtxid.%llu\n",ap->name,redeemtxidstr,tp->comment!=0?tp->comment:"",tp->coinblocknum,tp->cointxind,tp->coinv,dstr(tp->quantity * ap->mult),dstr(tp->U.assetoshis),tp->estNXT,(long long)tp->redeemtxid);
             }
-        } else printf("mismatched coin.%s vs (%s) for transfer.%llu (%s)\n",coinstr,mgw->DBs.coinstr,(long long)redeemtxid,commentstr);
+        } else printf("mismatched coin.%s vs (%s) for transfer.%llu (%s)\n",coinstr,mgw->coinstr,(long long)redeemtxid,commentstr);
         free_json(json);
     } //else printf("error with (%s) tp->comment %p\n",commentstr,tp->comment);
     return(tp);
@@ -264,7 +265,7 @@ void _set_NXT_sender(char *sender,cJSON *txobj)
 
 void ram_gotpayment(struct mgw777 *mgw,char *comment,cJSON *commentobj)
 {
-    printf("ram_gotpayment.(%s) from %s\n",comment,mgw->DBs.coinstr);
+    printf("ram_gotpayment.(%s) from %s\n",comment,mgw->coinstr);
 }
 
 uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
@@ -314,7 +315,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
                     decode_hex((void *)buf,(int32_t)(n>>1),AMstr);
                     buf[(n>>1)] = 0;
                     hdr = (struct NXT_AMhdr *)buf;
-                    _process_AM_message(ramchain,height,(void *)hdr,sender,receiver,txid);
+                    _process_AM_message(mgw,height,(void *)hdr,sender,receiver,txid);
                 }
             }
             else if ( assetjson != 0 && type == 2 && subtype == 1 )
@@ -332,7 +333,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
                 {
                     assetoshis = get_cJSON_int(attachment,"quantityQNT");
                     //fprintf(stderr,"a");
-                    tp = _set_assettxid(ramchain,height,txid,calc_nxt64bits(sender),calc_nxt64bits(receiver),timestamp,commentstr,assetoshis);
+                    tp = _set_assettxid(mgw,height,txid,calc_nxt64bits(sender),calc_nxt64bits(receiver),timestamp,commentstr,assetoshis);
                     //if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0  )
                     //    _add_pendingxfer(ram,height,1,tp->redeemtxid);
                 }
@@ -349,7 +350,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
                     if ( commentobj != 0 )
                     {
                         funcid = (int32_t)get_API_int(cJSON_GetObjectItem(commentobj,"funcid"),-1);
-                        if ( funcid >= 0 && (commentobj= _process_MGW_message(ramchain,height,funcid,commentobj,calc_nxt64bits(assetidstr),units,sender,receiver,txid)) != 0 )
+                        if ( funcid >= 0 && (commentobj= _process_MGW_message(mgw,height,funcid,commentobj,calc_nxt64bits(assetidstr),units,sender,receiver,txid)) != 0 )
                             free_json(commentobj);
                     }
                 }
@@ -357,20 +358,20 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
                 {
                     //if ( strcmp(txid,"998606823456096714") == 0 )
                     //    printf("Inside message: %s\n",comment);
-                    if ( _in_specialNXTaddrs(sender) != 0 )
+                    if ( _in_specialNXTaddrs(mgw,sender) != 0 )
                     {
                         buyNXT = get_API_int(cJSON_GetObjectItem(commentobj,"buyNXT"),0);
                         satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
                         if ( buyNXT*SATOSHIDEN == satoshis )
                         {
-                            ram->S.sentNXT += buyNXT * SATOSHIDEN;
+                            mgw->S.sentNXT += buyNXT * SATOSHIDEN;
                             printf("%s sent %d NXT, total sent %.0f\n",sender,buyNXT,dstr(mgw->S.sentNXT));
                         }
                         else if ( buyNXT != 0 )
                             printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
                     }
                     if ( strcmp(sender,mgw->srvNXTADDR) == 0 )
-                        ram_gotpayment(ramchain,comment,commentobj);
+                        ram_gotpayment(mgw,comment,commentobj);
                 }
             }
         }
@@ -408,7 +409,7 @@ uint64_t _calc_circulation(int32_t minconfirms,struct NXT_asset *ap,struct mgw77
                     copy_cJSON(acct,cJSON_GetObjectItem(item,"account"));
                     if ( acct[0] == 0 )
                         continue;
-                    if ( _in_specialNXTaddrs(acct) == 0 && (quantity= get_API_nxt64bits(cJSON_GetObjectItem(item,"quantityQNT"))) != 0 )
+                    if ( _in_specialNXTaddrs(mgw,acct) == 0 && (quantity= get_API_nxt64bits(cJSON_GetObjectItem(item,"quantityQNT"))) != 0 )
                     {
                         //if ( quantity > 2000 )
                         //    printf("Whale %s: %.8f\n",acct,dstr(quantity*ap->mult));
@@ -429,7 +430,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
     char cmd[1024],txid[512],*jsonstr,*txidjsonstr; //fname[512],
     struct NXT_asset *ap;
     uint32_t i,j,n,height,timestamp,oldest;
-    while ( (ap= ram->ap) == 0 )
+    while ( (ap= mgw->ap) == 0 )
         portable_sleep(1);
     if ( mgw->MGWbits == 0 )
     {
@@ -463,17 +464,17 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
                     {
                         if ( mgw->firsttime == 0 )
                             mgw->firsttime = timestamp;
-                        if ( mgw->S.enable_deposits == 0 && timestamp > (mgw->firsttime + (mgw->DEPOSIT_XFER_DURATION+1)*60) )
+                        if ( mgw->S.enable_deposits == 0 && timestamp > (mgw->firsttime + (DEPOSIT_XFER_DURATION+1)*60) )
                         {
                             mgw->S.enable_deposits = 1;
-                            printf("1st.%d ram->NXTtimestamp %d -> %d: enable_deposits.%d | %d > %d\n",mgw->firsttime,mgw->NXTtimestamp,timestamp,mgw->S.enable_deposits,(timestamp - mgw->firsttime),(mgw->DEPOSIT_XFER_DURATION+1)*60);
+                            printf("1st.%d ram->NXTtimestamp %d -> %d: enable_deposits.%d | %d > %d\n",mgw->firsttime,mgw->NXTtimestamp,timestamp,mgw->S.enable_deposits,(timestamp - mgw->firsttime),(DEPOSIT_XFER_DURATION+1)*60);
                         }
-                        ram->NXTtimestamp = timestamp;
+                        mgw->NXTtimestamp = timestamp;
                     }
                     if ( (array= cJSON_GetObjectItem(json,"transactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                     {
                         for (i=0; i<n; i++)
-                            _process_NXTtransaction(1,ram,cJSON_GetArrayItem(array,i));
+                            _process_NXTtransaction(1,mgw,cJSON_GetArrayItem(array,i));
                     }
                     free_json(json);
                 } else printf("error parsing.(%s)\n",jsonstr);
@@ -492,7 +493,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
                     if ( (array= cJSON_GetObjectItem(json,"unconfirmedTransactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
                     {
                         for (i=0; i<n; i++)
-                            _process_NXTtransaction(0,ramchain,cJSON_GetArrayItem(array,i));
+                            _process_NXTtransaction(0,mgw,cJSON_GetArrayItem(array,i));
                     }
                     free_json(json);
                 }
@@ -502,7 +503,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
     }
     else
     {
-        for (j=0; j<ram->numspecials; j++)
+        for (j=0; j<mgw->numspecials; j++)
         {
             //sprintf(fname,"%s/ramchains/NXT.%s",SUPERNET.MGWROOT,ram->special_NXTaddrs[j]);
             printf("(%s) init NXT special.%d of %d (%s)\n",mgw->name,j,mgw->numspecials,mgw->special_NXTaddrs[j]);
@@ -519,7 +520,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
                         for (i=0; i<n; i++)
                         {
                             //fprintf(stderr,".");
-                            if ( (height= _process_NXTtransaction(1,ramchain,cJSON_GetArrayItem(array,i))) != 0 && height > mostrecent )
+                            if ( (height= _process_NXTtransaction(1,mgw,cJSON_GetArrayItem(array,i))) != 0 && height > mostrecent )
                                 mostrecent = height;
                         }
                     }
@@ -547,7 +548,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
                         {
                             if ( (json= cJSON_Parse(txidjsonstr)) != 0 )
                             {
-                                if ( (height= _process_NXTtransaction(1,ramchain,json)) != 0 && height > mostrecent )
+                                if ( (height= _process_NXTtransaction(1,mgw,json)) != 0 && height > mostrecent )
                                     mostrecent = height;
                                 free_json(json);
                             }
@@ -560,9 +561,9 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
             free(jsonstr);
         }
     }
-    mgw->S.circulation = _calc_circulation(mgw->min_NXTconfirms,mgw->ap,ramchain);
+    mgw->S.circulation = _calc_circulation(mgw->min_NXTconfirms,mgw->ap,mgw);
     if ( mgw->S.is_realtime != 0 )
-        mgw->S.orphans = _find_pending_transfers(&mgw->S.MGWpendingredeems,ramchain);
+        mgw->S.orphans = _find_pending_transfers(&mgw->S.MGWpendingredeems,mgw);
     //printf("return mostrecent.%d\n",mostrecent);
     return(mostrecent);
 }
@@ -584,7 +585,7 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
         exit(-1);
     }
     expand_nxt64bits(NXTaddr,nxt64bits);
-    sprintf(comment,"{\"coin\":\"%s\",\"coinaddr\":\"%s\",\"cointxid\":\"%s\",\"coinblocknum\":%u,\"cointxind\":%u,\"coinv\":%u,\"amount\":\"%.8f\",\"sender\":\"%s\",\"receiver\":\"%llu\",\"timestamp\":%u,\"quantity\":\"%llu\"}",ap->name,coinaddr,txidstr,blocknum,txind,vout,dstr(value),srvNXTADDR,(long long)nxt64bits,(uint32_t)time(NULL),(long long)(value/ap->mult));
+    sprintf(comment,"{\"coin\":\"%s\",\"coinaddr\":\"%s\",\"cointxid\":\"%s\",\"coinblocknum\":%u,\"cointxind\":%u,\"coinv\":%u,\"amount\":\"%.8f\",\"sender\":\"%s\",\"receiver\":\"%llu\",\"timestamp\":%u,\"quantity\":\"%llu\"}",ap->name,coinaddr,txidstr,blocknum,txidind,vout,dstr(value),srvNXTADDR,(long long)nxt64bits,(uint32_t)time(NULL),(long long)(value/ap->mult));
     pair = cJSON_Parse(comment);
     cJSON_AddItemToObject(pair,"NXT",cJSON_CreateString(NXTaddr));
     printf("forceflag.%d haspubkey.%d >>>>>>>>>>>>>> Need to transfer %.8f %ld assetoshis | %s to %llu for (%s) %s\n",forceflag,haspubkey,dstr(value),(long)(value/ap->mult),ap->name,(long long)nxt64bits,txidstr,comment);

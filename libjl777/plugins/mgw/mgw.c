@@ -20,10 +20,9 @@
 #include "NXT777.c"
 #include "files777.c"
 #include "db777.c"
-#include "mgwNXT.c"
-//#undef DEFINES_ONLY
+//#include "mgwNXT.c"
 
-//#define DEPOSIT_XFER_DURATION 5
+#define DEPOSIT_XFER_DURATION 5
 #define MIN_DEPOSIT_FACTOR 5
 
 struct MGWstate
@@ -37,18 +36,25 @@ struct MGWstate
     uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,enable_withdraws,NXT_ECheight,permblocks;
 };
 
+#define NUM_GATEWAYS 3
 struct mgw777
 {
-    uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2; int32_t numgateways;
-    struct MGWstate S,otherS[16];
+    uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;
+    int32_t numgateways,nummsigs,depositconfirms,withdrawconfirms,remotemode,numpendingsends,min_NXTconfirms,numspecials;
+    uint32_t firsttime,NXTtimestamp;
+    double NXTconvrate;
+    struct MGWstate S,otherS[16],remotesrcs[16];
+    struct NXT_asset *ap;
+    char multisigchar,*name,*srvNXTADDR,**special_NXTaddrs,*MGWredemption,*backups,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];
 };
+#undef DEFINES_ONLY
 
-int32_t _in_specialNXTaddrs(char *NXTaddr)
+int32_t _in_specialNXTaddrs(struct mgw777 *mgw,char *NXTaddr)
 {
     // char **specialNXTaddrs,int32_t n,
     int32_t i;
-    for (i=0; i<n; i++)
-        if ( strcmp(specialNXTaddrs[i],NXTaddr) == 0 )
+    for (i=0; i<mgw->numspecials; i++)
+        if ( strcmp(mgw->special_NXTaddrs[i],NXTaddr) == 0 )
             return(1);
     return(0);
 }
@@ -127,14 +133,14 @@ void ram_set_MGWdispbuf(char *dispbuf,struct mgw777 *mgw,int32_t selector)
 void ram_get_MGWpingstr(struct mgw777 *mgw,char *MGWpingstr,int32_t selector)
 {
     MGWpingstr[0] = 0;
-    // printf("get MGWpingstr\n");
-    if ( Numramchains != 0 )
+    printf("get MGWpingstr\n"); getchar();
+    /*if ( Numramchains != 0 )
     {
         if ( ram == 0 )
             ram = Ramchains[rand() % Numramchains];
         if ( ram != 0 )
             ram_set_MGWpingstr(MGWpingstr,ram,selector);
-    }
+    }*/
 }
 
 void ram_parse_MGWstate(struct MGWstate *sp,cJSON *json,char *coinstr,char *NXTaddr)
@@ -201,15 +207,15 @@ void ram_parse_MGWpingstr(struct mgw777 *mgw,char *sender,char *pingstr)
     if ( (array= cJSON_Parse(pingstr)) != 0 && is_cJSON_Array(array) != 0 )
     {
         json = cJSON_GetArrayItem(array,0);
-        if ( ram == 0 )
+        if ( mgw == 0 )
         {
             copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
             if ( coinstr[0] != 0 )
-                ram = get_ramchain_info(coinstr);
+                mgw = get_MGW_info(coinstr);
         }
-        if ( Debuglevel > 2 || (ram != 0 && mgw->remotemode != 0) )
+        if ( Debuglevel > 2 || (mgw != 0 && mgw->remotemode != 0) )
             printf("[%s] parse.(%s)\n",coinstr,pingstr);
-        if ( ram != 0 )
+        if ( mgw != 0 )
         {
             cJSON_DeleteItemFromObject(json,"ipaddr");
             if ( (gatewayid= (int32_t)get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1)) >= 0 && gatewayid < mgw->numgateways )
@@ -222,7 +228,7 @@ void ram_parse_MGWpingstr(struct mgw777 *mgw,char *sender,char *pingstr)
             {
                 //printf("call parse.(%s)\n",cJSON_Print(json));
                 ram_parse_MGWstate(&S,json,mgw->coinstr,sender);
-                ram_update_remotesrc(ram,&S);
+                ram_update_remotesrc(mgw,&S);
             }
             jsonstr = cJSON_Print(json);
             if ( gatewayid >= 0 && gatewayid < 3 && strcmp(mgw->mgwstrs[gatewayid],jsonstr) != 0 )
@@ -281,6 +287,7 @@ int32_t ram_MGW_ready(struct mgw777 *mgw,uint32_t blocknum,uint32_t NXTheight,ui
     return(retval);
 }
 
+/*
 int32_t ram_mark_depositcomplete(struct mgw777 *mgw,struct NXT_assettxid *tp,uint32_t blocknum)
 { // NXT
     struct ramchain_hashptr *addrptr,*txptr;
@@ -345,14 +352,14 @@ void ram_addunspent(struct mgw777 *mgw,char *coinaddr,struct rampayload *txpaylo
                 addrpayload->pendingdeposit = _valid_txamount(ram,addrpayload->value,coinaddr);
             } else if ( 0 && addrptr->multisig != 0 )
                 printf("find_msigaddr: couldnt find.(%s)\n",coinaddr);
-            /*else if ( (tp= _is_pending_withdraw(ram,coinaddr)) != 0 )
-             {
-             if ( tp->completed == 0 && _is_pending_withdrawamount(ram,tp,addrpayload->value) != 0 ) // one to many problem
-             {
-             printf("ram_addunspent: pending withdraw %s %.8f -> %s completed for NXT.%llu\n",mgw->coinstr,dstr(tp->U.assetoshis),coinaddr,(long long)tp->senderbits);
-             tp->completed = 1;
-             }
-             }*/
+            //else if ( (tp= _is_pending_withdraw(ram,coinaddr)) != 0 )
+            // {
+            // if ( tp->completed == 0 && _is_pending_withdrawamount(ram,tp,addrpayload->value) != 0 ) // one to many problem
+            // {
+            // printf("ram_addunspent: pending withdraw %s %.8f -> %s completed for NXT.%llu\n",mgw->coinstr,dstr(tp->U.assetoshis),coinaddr,(long long)tp->senderbits);
+            // tp->completed = 1;
+            // }
+            // }
         }
     }
 }
@@ -399,6 +406,7 @@ int32_t _ram_update_redeembits(struct mgw777 *mgw,uint64_t redeembits,uint64_t A
         printf("_ram_update_redeembits: unexpected no pending redeems when AMtxidbits.0\n");
     return(num);
 }
+
 
 int32_t ram_update_redeembits(struct mgw777 *mgw,cJSON *argjson,uint64_t AMtxidbits)
 {
@@ -466,6 +474,7 @@ void ram_disp_status(struct mgw777 *mgw)
     ram_setdispstr(buf,ram,mgw->startmilli);
     fprintf(stderr,"%s\n",buf);
 }
+*/
 
 char *_calc_withdrawaddr(char *withdrawaddr,struct mgw777 *mgw,struct NXT_assettxid *tp,cJSON *argjson)
 {
@@ -547,7 +556,7 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct mgw777 *m
         amount = tp->quantity * ap->mult;
         if ( tp->comment != 0 && (argjson= cJSON_Parse(tp->comment)) != 0 ) //(tp->comment[0] == '{' || tp->comment[0] == '[') &&
         {
-            if ( _calc_withdrawaddr(withdrawaddr,ramchain,tp,argjson) == 0 )
+            if ( _calc_withdrawaddr(withdrawaddr,mgw,tp,argjson) == 0 )
             {
                 printf("(%llu) no withdraw.(%s) or autoconvert.(%s)\n",(long long)tp->redeemtxid,withdrawaddr,tp->comment);
                 _complete_assettxid(tp);
@@ -569,7 +578,7 @@ char *_parse_withdraw_instructions(char *destaddr,char *NXTaddr,struct mgw777 *m
                 _complete_assettxid(tp);
                 retstr = 0;
             }
-            else if ( ramchain != 0 && get_pubkey(pubkey,mgw->coinstr,mgw->serverport,mgw->userpass,withdrawaddr) < 0 )
+            else if ( mgw != 0 && get_pubkey(pubkey,mgw->coinstr,mgw->serverport,mgw->userpass,withdrawaddr) < 0 )
             {
                 printf("%llu: invalid address.(%s) for NXT.%s %.8f validate.%d\n",(long long)tp->redeemtxid,withdrawaddr,NXTaddr,dstr(amount),get_pubkey(pubkey,mgw->coinstr,mgw->serverport,mgw->userpass,withdrawaddr));
                 _complete_assettxid(tp);
@@ -608,9 +617,9 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct mgw777 *mgw)
         if ( tp->completed == 0 )
         {
             expand_nxt64bits(sender,tp->senderbits);
-            specialsender = _in_specialNXTaddrs(sender);
+            specialsender = _in_specialNXTaddrs(mgw,sender);
             expand_nxt64bits(receiver,tp->receiverbits);
-            specialreceiver = _in_specialNXTaddrs(receiver);
+            specialreceiver = _in_specialNXTaddrs(mgw,receiver);
             if ( (specialsender ^ specialreceiver) == 0 || tp->cointxid != 0 )
             {
                 printf("autocomplete: %llu cointxid.%p\n",(long long)tp->redeemtxid,tp->cointxid);
@@ -618,7 +627,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct mgw777 *mgw)
             }
             else
             {
-                if ( _is_limbo_redeem(ramchain,tp->redeemtxid) != 0 )
+                if ( _is_limbo_redeem(mgw,tp->redeemtxid) != 0 )
                 {
                     printf("autocomplete: limbo %llu cointxid.%p\n",(long long)tp->redeemtxid,tp->cointxid);
                     _complete_assettxid(tp);
@@ -627,7 +636,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct mgw777 *mgw)
                 if ( tp->receiverbits == mgw->MGWbits ) // redeem start
                 {
                     destaddr = "coinaddr";
-                    if ( _valid_txamount(ramchain,tp->U.assetoshis,0) > 0 && (tp->convwithdrawaddr != 0 || (destaddr= _parse_withdraw_instructions(withdrawaddr,sender,ramchain,tp,ap)) != 0) )
+                    if ( _valid_txamount(mgw,tp->U.assetoshis,0) > 0 && (tp->convwithdrawaddr != 0 || (destaddr= _parse_withdraw_instructions(withdrawaddr,sender,mgw,tp,ap)) != 0) )
                     {
                         if ( tp->convwithdrawaddr == 0 )
                             tp->convwithdrawaddr = clonestr(destaddr);
@@ -641,7 +650,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct mgw777 *mgw)
                             int32_t i,numpayloads;
                             struct ramchain_hashptr *addrptr;
                             struct rampayload *payloads;
-                            if ( (payloads= ram_addrpayloads(&addrptr,&numpayloads,ramchain,destaddr)) != 0 && addrptr != 0 && numpayloads > 0 )
+                            if ( (payloads= ram_addrpayloads(&addrptr,&numpayloads,mgw,destaddr)) != 0 && addrptr != 0 && numpayloads > 0 )
                             {
                                 for (i=0; i<numpayloads; i++)
                                     if ( (dstr(tp->U.assetoshis) - dstr(payloads[i].value)) == .0101 ) // historical BTCD parameter
@@ -658,11 +667,11 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct mgw777 *mgw)
                             numpending++;
                             if ( disable_newsends == 0 )
                             {
-                                if ( (cointx= _calc_cointx_withdraw(ramchain,tp->convwithdrawaddr,tp->U.assetoshis,tp->redeemtxid)) != 0 )
+                                if ( (cointx= _calc_cointx_withdraw(mgw,tp->convwithdrawaddr,tp->U.assetoshis,tp->redeemtxid)) != 0 )
                                 {
-                                    if ( ram_MGW_ready(ram,0,tp->height,0,tp->U.assetoshis) > 0 )
+                                    if ( ram_MGW_ready(mgw,0,tp->height,0,tp->U.assetoshis) > 0 )
                                     {
-                                        ram_send_cointx(ramchain,cointx);
+                                        ram_send_cointx(mgw,cointx);
                                         mgw->numpendingsends++;
                                         //ram_add_pendingsend(0,ram,tp,cointx);
                                         // disable_newsends = 1;
@@ -673,12 +682,12 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct mgw777 *mgw)
                                     //tp->completed = 1; // ignore malformed requests for now
                                 }
                             }
-                            if ( mgw->S.gatewayid >= 0 && ram_check_consensus(txidstr,ramchain,tp) != 0 )
+                            if ( mgw->S.gatewayid >= 0 && ram_check_consensus(txidstr,mgw,tp) != 0 )
                                 printf("completed redeem.%llu with cointxid.%s\n",(long long)tp->redeemtxid,txidstr);
                             //printf("(%llu %.8f).%d ",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),(int32_t)(time(NULL) - tp->redeemstarted));
                         } else printf("%llu %.8f: completed.%d withdraw.%p destaddr.%p\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),tp->completed,tp->convwithdrawaddr,destaddr);
                     }
-                    else if ( tp->completed == 0 && _valid_txamount(ramchain,tp->U.assetoshis,0) > 0 )
+                    else if ( tp->completed == 0 && _valid_txamount(mgw,tp->U.assetoshis,0) > 0 )
                         printf("incomplete but skipped.%llu: %.8f destaddr.%s\n",(long long)tp->redeemtxid,dstr(tp->U.assetoshis),destaddr);
                     else printf("%s.%llu %.8f is too small, thank you for your donation to MGW\n",mgw->coinstr,(long long)tp->redeemtxid,dstr(tp->U.assetoshis)), tp->completed = 1;
                 }
@@ -686,7 +695,7 @@ uint64_t _find_pending_transfers(uint64_t *pendingredeemsp,struct mgw777 *mgw)
                 {
                     orphans += tp->U.assetoshis;
                     _complete_assettxid(tp);
-                    printf("find_pending_transfers: internal transfer.%llu limbo.%d complete %s %.8f to NXT.%s\n",(long long)tp->redeemtxid,_is_limbo_redeem(ramchain,tp->redeemtxid),mgw->coinstr,dstr(tp->U.assetoshis),receiver);
+                    printf("find_pending_transfers: internal transfer.%llu limbo.%d complete %s %.8f to NXT.%s\n",(long long)tp->redeemtxid,_is_limbo_redeem(mgw,tp->redeemtxid),mgw->coinstr,dstr(tp->U.assetoshis),receiver);
                 } else tp->completed = 1; // this is some independent tx
             }
         }

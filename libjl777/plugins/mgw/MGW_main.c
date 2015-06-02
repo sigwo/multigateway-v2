@@ -25,6 +25,8 @@
 
 int32_t MGW_idle(struct plugin_info *plugin) { return(0); }
 
+struct db777 *DB_MGW;
+
 STRUCTNAME MGW;
 char *PLUGNAME(_methods)[] = { "myacctpubkeys" };
 char *PLUGNAME(_pubmethods)[] = { "myacctpubkeys" };
@@ -46,7 +48,7 @@ int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     flag = 0;
     coinaddr[0] = pubkey[0] = 0;
     //printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
-    if ( (keycoinaddr= db777_get(buf,&len,0,DB_NXTaccts,key,sizeof(key))) != 0 )
+    if ( (keycoinaddr= db777_read(buf,&len,0,DB_NXTaccts,key,sizeof(key),0)) != 0 )
     {
         strcpy(coinaddr,keycoinaddr);
         //free(keycoinaddr);
@@ -63,14 +65,14 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     key[2] = nxt64bits;
     flag = 1;
 //printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
-    if ( (coinaddr= db777_get(buf,&len,0,DB_NXTaccts,key,sizeof(key))) != 0 )
+    if ( (coinaddr= db777_read(buf,&len,0,DB_NXTaccts,key,sizeof(key),0)) != 0 )
     {
         if ( strcmp(coinaddr,newcoinaddr) == 0 )
             flag = 0;
     }
     if ( flag != 0 )
     {
-        if ( db777_add(1,0,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
+        if ( db777_write(0,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
             updated = 1;
         else printf("error adding (%s)\n",newcoinaddr);
     }
@@ -102,7 +104,7 @@ struct multisig_addr *find_msigaddr(struct multisig_addr *msig,int32_t *lenp,cha
     char keystr[1024];
     multisig_keystr(keystr,coinstr,NXTaddr,msigaddr);
     printf("search_msig.(%s)\n",keystr);
-    return(db777_get(msig,lenp,0,DB_msigs,keystr,(int32_t)strlen(keystr)+1));
+    return(db777_read(msig,lenp,0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,0));
 }
 
 int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int32_t len)
@@ -110,7 +112,7 @@ int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int
     char keystr[1024];
     multisig_keystr(keystr,coinstr,NXTaddr,msig->multisigaddr);
     printf("save_msig.(%s)\n",keystr);
-    return(db777_add(0,0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,len));
+    return(db777_write(0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,len));
 }
 
 int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr)
@@ -302,7 +304,7 @@ struct multisig_addr *get_NXT_msigaddr(struct multisig_addr *msig,uint64_t *srv6
     key[i+1] = nxt64bits;
     keylen = (int32_t)(sizeof(*key) * (i+2));
     len = sizeof(*msig) + 16*sizeof(struct pubkey_info);
-    if ( (msig= db777_get(msig,&len,0,DB_msigs,key,keylen)) != 0 )
+    if ( (msig= db777_read(msig,&len,0,DB_msigs,key,keylen,0)) != 0 )
         return(msig);
     if ( (coin= coin777_find(coinstr,0)) != 0 )
     {
@@ -328,7 +330,7 @@ struct multisig_addr *get_NXT_msigaddr(struct multisig_addr *msig,uint64_t *srv6
             return(0);
         }
         save_msigaddr(coinstr,NXTaddr,msig,msig->size);
-        if ( db777_add(1,0,DB_msigs,key,keylen,msig,msig->size) != 0 )
+        if ( db777_write(0,DB_msigs,key,keylen,msig,msig->size) != 0 )
             printf("error saving msig.(%s)\n",msig->multisigaddr);
     }
     return(msig);
@@ -608,43 +610,164 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
     return(unspent);
 }
 
-uint64_t ram_calc_MGWunspent(uint64_t *pendingp,struct MGW_info *mgw)
+*/
+#define DEPOSIT_XFER_DURATION 5
+#define MIN_DEPOSIT_FACTOR 5
+
+struct MGWstate
 {
-    struct multisig_addr **msigs;
+    char name[64];
+    uint64_t nxt64bits;
+    int64_t MGWbalance,supply;
+    uint64_t totalspends,numspends,totaloutputs,numoutputs;
+    uint64_t boughtNXT,circulation,sentNXT,MGWpendingredeems,orphans,MGWunspent,MGWpendingdeposits,NXT_ECblock;
+    int32_t gatewayid;
+    uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,enable_withdraws,NXT_ECheight,permblocks;
+};
+
+#define NUM_GATEWAYS 3
+struct mgw777
+{
+    uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;
+    int32_t numgateways,nummsigs,depositconfirms,withdrawconfirms,remotemode,numpendingsends,min_NXTconfirms,numspecials;
+    uint32_t firsttime,NXTtimestamp,marker_rawind,marker2_rawind;
+    double NXTconvrate;
+    struct MGWstate S,otherS[16],remotesrcs[16];
+    struct NXT_asset *ap;
+    char multisigchar,*srvNXTADDR,**special_NXTaddrs,*MGWredemption,*backups,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];
+};
+
+#define MGW_ISINTERNAL 1
+#define MGW_PENDINGXFER 2
+#define MGW_DEPOSITDONE 4
+#define MGW_ERRORSTATUS 0x8000
+
+int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t addrind,uint32_t unspentind,char *txidstr,int32_t vout)
+{
+    char txidstr0[1024]; int32_t vout0; uint32_t txidind0,addrind0; struct unspent_info U;
+    if ( vout == 0 )
+        addrind0 = addrind;
+    else if ( (vout0= coin777_unspentmap(&txidind0,txidstr0,coin,unspentind - vout)) == 0 )
+    {
+        if ( strcmp(txidstr,txidstr0) == 0 )
+        {
+            if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,unspentind - vout) == 0 )
+            {
+                if ( U.addrind == coin->ramchain.marker_rawind || U.addrind == coin->ramchain.marker2_rawind )
+                {
+                    printf("U.%u -> (%s).v%u is internal\n",unspentind,txidstr,vout);
+                    return(MGW_ISINTERNAL);
+                }
+                else return(0);
+            }
+            printf("mgw_isinternal error loading unspent_info %u - v%d\n",unspentind,vout);
+            return(-1);
+        }
+        printf("mgw_isinternal mismatched txidstr.(%s) vs (%s)\n",txidstr,txidstr0);
+        return(-1);
+    }
+    else
+    {
+        printf("got vout.%d instead of expected 0 from unspentind.%d - %d\n",vout0,unspentind,vout);
+        return(-1);
+    }
+    return(-1);
+}
+
+int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout)
+{
+    // check NXT asset transfers
+    return(0);
+}
+
+int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
+{
+    int32_t slen;
+    slen = (int32_t)strlen(txidstr) + 1;
+    memcpy(key,&vout,sizeof(vout)), memcpy((char *)((long)key + sizeof(vout)),txidstr,slen), slen += sizeof(vout);
+    return(slen);
+}
+
+int32_t mgw_markunspent(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout,int32_t status)
+{
+    if ( status < 0 )
+        status = MGW_ERRORSTATUS;
+    uint8_t key[1024]; int32_t keylen;
+    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
+    return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
+}
+
+int32_t mgw_unspentstatus(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,uint16_t vout)
+{
+    uint8_t key[1024]; int32_t status,keylen,len = sizeof(status);
+    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
+    if ( db777_read(&status,&len,0,DB_MGW,key,keylen,0) != 0 )
+        return(status);
+    return(-1);
+}
+
+int32_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
+{
+    int32_t i,status,vout; uint32_t unspentind,txidind; char txidstr[512]; struct multisig_addr *msig = args;
+    for (i=0; i<num; i++)
+    {
+        unspentind = unspents[i].rawind;
+        if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
+        {
+            if ( mgw_unspentstatus(coin,msig,txidstr,vout) != 0 )
+            {
+                if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout)) != 0 )
+                    mgw_markunspent(coin,msig,txidstr,vout,status);
+                else if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) != 0 )
+                    mgw_markunspent(coin,msig,txidstr,vout,status);
+                else
+                {
+                    printf("pretend pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(unspents[i].value),msig->multisigaddr);
+                    mgw_markunspent(coin,msig,txidstr,vout,MGW_PENDINGXFER);
+                }
+            }
+        } else printf("error getting unspendind.%u\n",unspentind);
+    }
+    return(0);
+}
+
+uint64_t mgw_calc_unspent(uint64_t *pendingp,char *smallestaddr,char *smallestaddrB,struct mgw777 *mgw)
+{
+    struct multisig_addr **msigs; struct coin777 *coin = coin777_find(mgw->coinstr,0);
     int32_t i,n,m;
     uint64_t pending,smallest,val,unspent = 0;
-    pending = 0;
-    mgw->numunspents = 0;
-    if ( mgw->unspents != 0 )
-        memset(mgw->unspents,0,sizeof(*mgw->unspents) * mgw->maxunspents);
-    if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,DB_msigs,0)) != 0 )
+    smallestaddr[0] = smallestaddrB[0] = 0;
+    if ( coin == 0 )
     {
-        ram->nummsigs = n;
-        mgw->smallest[0] = mgw->smallestB[0] = 0;
+        printf("mgw_calc_MGWunspent: no coin777 for %s\n",mgw->coinstr);
+        return(0);
+    }
+    pending = 0;
+    if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,DB_msigs,"value",0)) != 0 )
+    {
         for (smallest=i=m=0; i<n; i++)
         {
-            if ( (val= mgw_calc_unspent(&pending,0,0,ram,msigs[i]->multisigaddr,1)) != 0 )
+            if ( (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
             {
                 unspent += val;
                 if ( smallest == 0 || val < smallest )
                 {
                     smallest = val;
-                    strcpy(mgw->smallestB,mgw->smallest);
-                    strcpy(mgw->smallest,msigs[i]->multisigaddr);
+                    strcpy(smallestaddrB,smallestaddr);
+                    strcpy(smallestaddr,msigs[i]->multisigaddr);
                 }
-                else if ( mgw->smallestB[0] == 0 && strcmp(mgw->smallest,msigs[i]->multisigaddr) != 0 )
-                    strcpy(mgw->smallestB,msigs[i]->multisigaddr);
+                else if ( smallestaddrB[0] == 0 && strcmp(smallestaddr,msigs[i]->multisigaddr) != 0 )
+                    strcpy(smallestaddrB,msigs[i]->multisigaddr);
             }
             free(msigs[i]);
         }
         free(msigs);
         if ( Debuglevel > 2 )
-            printf("MGWnumunspents.%d smallest (%s %.8f)\n",mgw->numunspents,mgw->smallest,dstr(smallest));
+            printf("smallest (%s %.8f)\n",smallestaddr,dstr(smallest));
     }
     *pendingp = pending;
     return(unspent);
 }
-*/
 
 int32_t make_MGWbus(uint16_t port,char *bindaddr,char serverips[MAX_MGWSERVERS][64],int32_t n)
 {
@@ -746,6 +869,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1);
             }
         }
+        if ( DB_MGW == 0 )
+            DB_MGW = db777_create(0,0,"MGW",0,0);
         MGW.readyflag = 1;
         plugin->allowremote = 1;
     }

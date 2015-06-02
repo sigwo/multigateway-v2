@@ -89,8 +89,8 @@ struct coin_offsets { bits256 blockhash,merkleroot; uint64_t credits,debits; uin
 struct unspent_info { uint64_t value; uint32_t addrind,rawind_or_blocknum:31,isblocknum:1; };
 struct spend_info { uint32_t unspentind,addrind,spending_txidind; uint16_t spending_vin; };
 
-struct coin777_Lentry { struct addrtx_info *first_addrtxi; int64_t balance; uint32_t numaddrtx:30,insideA:1,pending:1,maxaddrtx:30,MGW:1,dirty:1; };
 struct addrtx_info { int64_t value; uint32_t rawind,num31:31,flag:1; };
+struct coin777_Lentry { struct addrtx_info *first_addrtxi; int64_t balance; uint32_t numaddrtx:30,insideA:1,pending:1,maxaddrtx:30,MGW:1,tbd:1; };
 struct addrtx_linkptr { int64_t balance; uint32_t next_addrtxi,blocknum; };
 
 #ifndef ADDRINFO_SIZE
@@ -115,6 +115,8 @@ struct ramchain
     struct env777 DBs;
     struct coin777_state *sps[16],txidDB,addrDB,scriptDB,hashDB,ledger,addrtx,blocks,txoffsets,txidbits,unspents,spends,addrinfos;
     struct alloc_space tmpMEM;
+    
+    uint32_t marker_rawind,marker2_rawind;
 };
 
 struct coin777
@@ -156,6 +158,8 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,u
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H);
 int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct coin777_state *sp,uint32_t rawind);
 struct addrtx_info *coin777_compact(uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL);
+uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args);
+int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin,uint32_t unspentind);
 
 #endif
 #else
@@ -517,6 +521,42 @@ int32_t coin777_txidstr(struct coin777 *coin,char *txidstr,int32_t max,uint32_t 
     return(0);
 }
 
+int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin,uint32_t unspentind)
+{
+    uint32_t floor,ceiling,probe,firstvout,lastvout,txoffsets[2],nexttxoffsets[2];
+    floor = 1, ceiling = coin->ramchain.latest.txidind;
+    *txidindp = 0;
+    while ( floor != ceiling )
+    {
+        probe = (floor + ceiling) >> 1;
+        if ( coin777_RWmmap(0,txoffsets,coin,&coin->ramchain.txoffsets,probe) == 0 && coin777_RWmmap(0,nexttxoffsets,coin,&coin->ramchain.txoffsets,probe+1) == 0 )
+        {
+            if ( (firstvout= txoffsets[0]) == 0 || (lastvout= nexttxoffsets[0]) == 0 )
+                break;
+            printf("search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
+            if ( unspentind < firstvout )
+                ceiling = probe;
+            else if ( unspentind >= lastvout )
+                floor = probe;
+            else
+            {
+                *txidindp = probe;
+                printf("found match! txidind.%u\n",probe);
+                if ( coin777_txidstr(coin,txidstr,255,probe,0) == 0 )
+                    return(unspentind - firstvout);
+                else break;
+            }
+        }
+        else
+        {
+            printf("error loading txoffsets at probe.%d\n",probe);
+            break;
+        }
+    }
+    printf("end search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
+    return(-1);
+}
+
 uint64_t coin777_value(struct coin777 *coin,uint32_t *unspentindp,struct unspent_info *U,uint32_t txidind,int16_t vout)
 {
     uint32_t unspentind,txoffsets[2];
@@ -802,24 +842,75 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
     return(atx);
 }
 
+int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t unspentind,uint64_t value,uint32_t blocknum)
+{
+    uint32_t floor,ceiling,probe; int32_t i;
+    struct addrtx_info *ATX = L->first_addrtxi;
+    floor = 0, ceiling = L->numaddrtx - 1;
+    if ( L->numaddrtx == 0 )
+        return(-1);
+    while ( floor != ceiling )
+    {
+        probe = (floor + ceiling) >> 1;
+        for (i=probe; i<=ceiling; i++)
+            if ( ATX[i].value > 0 )
+                break;
+        if ( i > ceiling )
+        {
+            for (i=probe; i>=floor; i--)
+                if ( ATX[i].value > 0 )
+                    break;
+        }
+        printf("search %u, probe.%u (%.8f) floor.%u ceiling.%u\n",unspentind,probe,dstr(ATX[i].value),floor,ceiling);
+        if ( ATX[i].value < 0 )
+            break;
+        if ( unspentind < ATX[i].rawind )
+            ceiling = probe;
+        else if ( unspentind >= ATX[i].rawind )
+            floor = probe;
+        else if ( ATX[i].value == value )
+        {
+            printf("found match! addrtxi.%u\n",i);
+            *atx = ATX[i];
+            return(i);
+        }
+        else
+        {
+            printf("unexpected value mismatch %.8f vs %.8f\n",dstr(ATX[i].value),dstr(value));
+            break;
+        }
+        
+    }
+    printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
+    for (i=0; i<L->numaddrtx; i++)
+    {
+        if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum )
+        {
+            if ( atx->value > 0 && unspentind == atx->rawind )
+            {
+                if ( atx->value != value )
+                {
+                    printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u\n",i,L->numaddrtx,unspentind,dstr(value),dstr(atx->value),blocknum);
+                    break;
+                }
+                else
+                {
+                    printf("linear search found u%d when bsearch missed it?\n",unspentind);
+                    return(i);
+                }
+            }
+        } else break;
+    }
+    return(-1);
+}
+
 int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
 {
     int32_t i,flag = 0; struct addrtx_info ATX;
     if ( spendind != 0 ) //RAMCHAINS.verifyspends != 0 &&
     {
-        for (i=0; i<L->numaddrtx; i++)
-        {
-            if ( coin777_update_addrtx(coin,addrind,&ATX,L,i,blocknum,0) != 0 && ATX.num31 <= blocknum )
-            {
-                if ( ATX.value > 0 && unspentind == ATX.rawind )
-                {
-                    if ( ATX.value != value )
-                        printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u\n",i,L->numaddrtx,unspentind,dstr(value),dstr(ATX.value),blocknum);
-                    else flag = 1;
-                    break;
-                }
-            } else break;
-        }
+        if ( (i= coin777_bsearch(&ATX,coin,addrind,L,unspentind,value,blocknum)) >= 0 && ATX.num31 <= blocknum && ATX.value > 0 && unspentind == ATX.rawind )
+            flag = 1;
         if ( flag == 0 )
         {
             for (i=0; i<L->maxaddrtx-1; i++)
@@ -895,6 +986,20 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
     if ( errs != 0 || syncflag < 0 )
         printf("addrinfos_sum @ blocknum.%u errs.%d -> sum %.8f\n",blocknum,errs,dstr(sum));
     return(sum);
+}
+
+uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args)
+{
+    uint32_t addrind,firstblocknum; struct coin777_Lentry L; struct addrtx_info *unspents; uint64_t balance = 0; int32_t n,retval = -1;
+    if ( (addrind= coin777_addrind(&firstblocknum,coin,coinaddr)) != 0 )
+    {
+        if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 && (unspents= coin777_compact(&balance,&n,coin,addrind,&L)) != 0 )
+        {
+            retval = (*unspentsfuncp)(coin,args,addrind,unspents,n,balance);
+            free(unspents);
+        }
+    }
+    return(balance);
 }
 
 // coin777 add funcs
