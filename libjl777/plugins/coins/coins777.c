@@ -845,10 +845,12 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
     {
         if ( coin777_update_addrtx(coin,addrind,&ATX,L,addrtxi,blocknum,0) != 0 )
         {
+            if ( dispflag != 0 && ATX.value != 0 )
+                fprintf(stderr,"(%u %.8f).b%d ",ATX.rawind,dstr(ATX.value),ATX.num31);
             if ( ATX.num31 < blocknum )
                 balance += ATX.value;
-            if ( dispflag != 0 && ATX.value != 0 )
-                printf("(%u %.8f).b%d ",ATX.rawind,dstr(ATX.value),ATX.num31);
+            else if ( ATX.num31 == 0 || ATX.num31 >= blocknum )
+                break;
         } else break;
     }
     L->numaddrtx = addrtxi;
@@ -1307,11 +1309,12 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
         double calcbalance;
         for (i=1; i<addrind; i++)
         {
-            printf("patch %d of %d: ",i,addrind);
+            fprintf(stderr,"patch %d of %d: ",i,addrind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,i);
             L.first_addrtxi = (struct addrtx_info *)((long)ptr + (long)L.first_addrtxi);
-            if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,100000000)) != L.balance )
-                printf("calcbalance %.8f vs %.8f\n",dstr(calcbalance),dstr(L.balance));
+            fprintf(stderr,"%p num.%d max.%d ",L.first_addrtxi,L.numaddrtx,L.maxaddrtx);
+            if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,blocknum)) != L.balance )
+                fprintf(stderr,"calcbalance %.8f vs %.8f\n",dstr(calcbalance),dstr(L.balance));
             coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,i);
         }
     }
