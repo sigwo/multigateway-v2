@@ -1306,7 +1306,12 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     memset(&M,0,sizeof(M));
     if ( init_mappedptr(&ptr,&M,0,0,fname) != 0 )
     {
-        double calcbalance;
+        double calcbalance; struct addrtx_info *atx = ptr;
+        printf("allocsize %ld\n",(long)M.allocsize);
+        for (i=0; i<M.allocsize; i+=sizeof(*atx),atx++)
+        {
+            printf("%ld: %.8f %u %u\n",i/sizeof(*atx),dstr(atx->value),atx->rawind,atx->num31);
+        }
         for (i=1; i<addrind; i++)
         {
             fprintf(stderr,"patch %d of %d: ",i,addrind);
