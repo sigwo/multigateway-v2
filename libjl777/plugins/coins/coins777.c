@@ -849,16 +849,15 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
     floor = 0, ceiling = L->numaddrtx-1;
     if ( L->numaddrtx == 0 )
         return(-1);
-    if ( 0 )
+    if ( 1 )
     {
         while ( floor != ceiling )
         {
             probe = (floor + ceiling) >> 1;
             for (i=probe; i<ceiling; i++)
             {
-                atx = &ATX[i];
-                //coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0);
-                if ( atx->num31 <= blocknum && atx->value > 0 )
+                //atx = &ATX[i];
+                if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
                 {
                     flag = 1;
                     break;
@@ -868,9 +867,8 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             {
                 for (i=probe; i>=floor; i--)
                 {
-                    atx = &ATX[i];
-                    //coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0);
-                    if ( atx->num31 <= blocknum && atx->value > 0 )
+                    //atx = &ATX[i];
+                    if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
                     {
                         flag = 1;
                         break;
@@ -897,9 +895,8 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             }
             if ( floor+1 == ceiling )
             {
-                atx = &ATX[ceiling];
-                //coin777_update_addrtx(coin,addrind,atx,L,ceiling,blocknum,0)
-                if ( atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
+                //atx = &ATX[ceiling];
+                if ( coin777_update_addrtx(coin,addrind,atx,L,ceiling,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
                     return(ceiling);
                 break;
             }
