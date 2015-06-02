@@ -861,7 +861,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 if ( ATX[i].value > 0 )
                     break;
         }
-        printf("search %u, probe.%u (%.8f) floor.%u ceiling.%u\n",unspentind,probe,dstr(ATX[i].value),floor,ceiling);
+        printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,ATX[probe].rawind,dstr(ATX[i].value),floor,ceiling);
         if ( ATX[i].value < 0 )
             break;
         if ( unspentind < ATX[i].rawind )
