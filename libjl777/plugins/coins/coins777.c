@@ -863,9 +863,9 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                     if ( ATX[i].value > 0 )
                         break;
             }
-            printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,ATX[probe].rawind,dstr(ATX[i].value),floor,ceiling);
             if ( i < 0 || i >= L->numaddrtx || ATX[i].value < 0 )
                 break;
+            printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,ATX[probe].rawind,dstr(ATX[i].value),floor,ceiling);
             if ( unspentind < ATX[i].rawind )
                 ceiling = probe;
             else if ( unspentind > ATX[i].rawind )
@@ -881,7 +881,6 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 printf("unexpected value mismatch %.8f vs %.8f\n",dstr(ATX[i].value),dstr(value));
                 break;
             }
-            
         }
         printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
     }
@@ -1180,7 +1179,7 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
 {
     bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,tmpB,block; int32_t i,flag,err = 0;
     memset(&B,0,sizeof(B));
-Debuglevel = 3;
+//Debuglevel = 3;
     if ( Debuglevel > 2 )
         printf("B.%u T.%u U.%u S.%u A.%u C.%u\n",blocknum,txidind,unspentind,numspends,addrind,scriptind);
     if ( blockhashstr != 0 ) // start of block
