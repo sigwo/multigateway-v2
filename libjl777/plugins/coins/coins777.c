@@ -851,7 +851,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
         return(-1);
     while ( floor != ceiling )
     {
-        probe = (floor + ceiling) >> 1;
+        probe = (floor + ceiling + 1) >> 1;
         for (i=probe; i<=ceiling; i++)
             if ( ATX[i].value > 0 )
                 break;
