@@ -866,11 +866,11 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             break;
         if ( unspentind < ATX[i].rawind )
             ceiling = probe;
-        else if ( unspentind >= ATX[i].rawind )
+        else if ( unspentind > ATX[i].rawind )
             floor = probe;
         else if ( ATX[i].value == value )
         {
-            printf("found match! addrtxi.%u\n",i);
+            printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
             *atx = ATX[i];
             return(i);
         }
