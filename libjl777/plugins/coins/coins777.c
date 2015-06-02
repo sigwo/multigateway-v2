@@ -1304,8 +1304,9 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     memset(&M,0,sizeof(M));
     if ( init_mappedptr(&ptr,&M,0,0,fname) != 0 )
     {
-        for (i=1; i<=addrind; i++)
+        for (i=1; i<addrind; i++)
         {
+            printf("patch %d of %d\n",i,addrind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,i);
             L.first_addrtxi = (struct addrtx_info *)((long)ptr + (long)L.first_addrtxi);
             coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,i);
