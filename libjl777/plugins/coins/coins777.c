@@ -913,7 +913,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint
             flag = 1;
         if ( flag == 0 )
         {
-            for (i=0; i<L->maxaddrtx-1; i++)
+            for (i=0; i<L->numaddrtx; i++)
                 if ( coin777_update_addrtx(coin,addrind,&ATX,L,i,blocknum,0) != 0 )
                     if ( ATX.num31 != 0 )
                         printf("(%u %.8f).b%u ",ATX.rawind,dstr(ATX.value),ATX.num31);
@@ -926,6 +926,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint
     else ATX.value = -value, ATX.rawind = spendind;
     ATX.num31 = blocknum;
     coin777_update_addrtx(coin,addrind,&ATX,L,L->numaddrtx,blocknum,totaladdrtxp);
+    printf("updated %.8f -> balance %.8f\n",dstr(value),dstr(L->balance));
     return(L->balance);
 }
 
@@ -1174,7 +1175,7 @@ int32_t coin777_addblock(void *state,uint32_t blocknum,char *blockhashstr,char *
 {
     bits256 blockhash,merkleroot; struct coin777 *coin = state; struct coin_offsets zeroB,B,tmpB,block; int32_t i,flag,err = 0;
     memset(&B,0,sizeof(B));
-//Debuglevel = 3;
+Debuglevel = 3;
     if ( Debuglevel > 2 )
         printf("B.%u T.%u U.%u S.%u A.%u C.%u\n",blocknum,txidind,unspentind,numspends,addrind,scriptind);
     if ( blockhashstr != 0 ) // start of block
