@@ -1299,10 +1299,10 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     ramchain->addrinfos.table = coin777_ensure(coin,&ramchain->addrinfos,addrind);
     ramchain->ledger.table = coin777_ensure(coin,&ramchain->ledger,addrind);
     ramchain->spends.table = coin777_ensure(coin,&ramchain->spends,totalspends);
-    //ramchain->addrtx.table = coin777_ensure(coin,&ramchain->addrtx,totaladdrtx);
+    ramchain->addrtx.table = coin777_ensure(coin,&ramchain->addrtx,totaladdrtx);
     db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx"), os_compatible_path(fname);
     memset(&M,0,sizeof(M));
-    if ( init_mappedptr(&ptr,&M,0,1,fname) != 0 )
+    if ( init_mappedptr(&ptr,&M,0,0,fname) != 0 )
     {
         double calcbalance;
         for (i=1; i<addrind; i++)
