@@ -844,7 +844,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
 
 int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t unspentind,uint64_t value,uint32_t blocknum)
 {
-    uint32_t floor,ceiling,probe; int32_t i;
+    uint32_t floor,ceiling,probe; int32_t i,flag = 0;
     struct addrtx_info *ATX = L->first_addrtxi;
     floor = 0, ceiling = L->numaddrtx - 1;
     if ( L->numaddrtx == 0 )
@@ -855,25 +855,32 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
         {
             probe = (floor + ceiling) >> 1;
             for (i=probe; i<=ceiling; i++)
-                if ( ATX[i].value > 0 )
+            {
+                if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
+                {
+                    flag = 1;
                     break;
-            if ( i > ceiling )
+                }
+            }
+            if ( flag == 0 )
             {
                 for (i=probe; i>=floor; i--)
-                    if ( ATX[i].value > 0 )
+                    if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
+                    {
+                        flag = 1;
                         break;
+                    }
             }
-            if ( i < 0 || i >= L->numaddrtx || ATX[i].value < 0 )
+            if ( i < 0 || i >= L->numaddrtx || flag == 0 )
                 break;
-            printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,ATX[probe].rawind,dstr(ATX[i].value),floor,ceiling);
-            if ( unspentind < ATX[i].rawind )
+            printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->rawind,dstr(atx->value),floor,ceiling);
+            if ( unspentind < atx->rawind )
                 ceiling = probe;
-            else if ( unspentind > ATX[i].rawind )
+            else if ( unspentind > atx->rawind )
                 floor = probe;
-            else if ( ATX[i].value == value )
+            else if ( atx->value == value )
             {
                 printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
-                *atx = ATX[i];
                 return(i);
             }
             else
