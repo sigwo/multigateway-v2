@@ -845,7 +845,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
 int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t unspentind,uint64_t value,uint32_t blocknum)
 {
     uint32_t floor,ceiling,probe; int32_t i,flag = 0;
-    struct addrtx_info *ATX = L->first_addrtxi;
+    //struct addrtx_info *ATX = L->first_addrtxi;
     floor = 0, ceiling = L->numaddrtx-1;
     if ( L->numaddrtx == 0 )
         return(-1);
@@ -898,6 +898,8 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 //atx = &ATX[ceiling];
                 if ( coin777_update_addrtx(coin,addrind,atx,L,ceiling,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
                     return(ceiling);
+                else if ( coin777_update_addrtx(coin,addrind,atx,L,floor,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
+                    return(floor);
                 break;
             }
         }
