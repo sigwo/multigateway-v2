@@ -390,7 +390,6 @@ int64_t coin777_inputs(int64_t *changep,int32_t *nump,struct addrtx_info *inputs
             inputs[numinputs++] = *vin;
             if ( sum >= (amount + txfee) )
             {
-                amount = amount;
                 *nump = numinputs;
                 *changep = (sum - amount - txfee);
                 fprintf(stderr,"numinputs %d sum %.8f vs amount %.8f change %.8f -> miners %.8f\n",numinputs,dstr(sum),dstr(amount),dstr(*changep),dstr(sum - *changep - amount));
