@@ -1322,7 +1322,7 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
                     L.first_addrtxi = (struct addrtx_info *)((long)ptr + (long)L.first_addrtxi);
                 //printf("i.%d %.8f first %p %ld num.%d max.%d\n",i,dstr(L.balance),L.first_addrtxi,((long)L.first_addrtxi - (long)ptr)/sizeof(*atx),L.numaddrtx,L.maxaddrtx);
                 //fprintf(stderr,"%p num.%d max.%d ",L.first_addrtxi,L.numaddrtx,L.maxaddrtx);
-                if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,blocknum)) != L.balance )
+                if ( (calcbalance= coin777_recalc_addrinfo(0,coin,i,&L,0,blocknum)) != L.balance )
                     fprintf(stderr,"calcbalance %.8f vs %.8f\n",dstr(calcbalance),dstr(L.balance));
                 coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,i);
             }
