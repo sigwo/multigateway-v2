@@ -849,39 +849,42 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
     floor = 0, ceiling = L->numaddrtx - 1;
     if ( L->numaddrtx == 0 )
         return(-1);
-    while ( floor != ceiling )
+    if ( 0 )
     {
-        probe = (floor + ceiling) >> 1;
-        for (i=probe; i<=ceiling; i++)
-            if ( ATX[i].value > 0 )
-                break;
-        if ( i > ceiling )
+        while ( floor != ceiling )
         {
-            for (i=probe; i>=floor; i--)
+            probe = (floor + ceiling) >> 1;
+            for (i=probe; i<=ceiling; i++)
                 if ( ATX[i].value > 0 )
                     break;
+            if ( i > ceiling )
+            {
+                for (i=probe; i>=floor; i--)
+                    if ( ATX[i].value > 0 )
+                        break;
+            }
+            printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,ATX[probe].rawind,dstr(ATX[i].value),floor,ceiling);
+            if ( i < 0 || i >= L->numaddrtx || ATX[i].value < 0 )
+                break;
+            if ( unspentind < ATX[i].rawind )
+                ceiling = probe;
+            else if ( unspentind > ATX[i].rawind )
+                floor = probe;
+            else if ( ATX[i].value == value )
+            {
+                printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
+                *atx = ATX[i];
+                return(i);
+            }
+            else
+            {
+                printf("unexpected value mismatch %.8f vs %.8f\n",dstr(ATX[i].value),dstr(value));
+                break;
+            }
+            
         }
-        printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,ATX[probe].rawind,dstr(ATX[i].value),floor,ceiling);
-        if ( ATX[i].value < 0 )
-            break;
-        if ( unspentind < ATX[i].rawind )
-            ceiling = probe;
-        else if ( unspentind > ATX[i].rawind )
-            floor = probe;
-        else if ( ATX[i].value == value )
-        {
-            printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
-            *atx = ATX[i];
-            return(i);
-        }
-        else
-        {
-            printf("unexpected value mismatch %.8f vs %.8f\n",dstr(ATX[i].value),dstr(value));
-            break;
-        }
-        
+        printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
     }
-    printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
     for (i=0; i<L->numaddrtx; i++)
     {
         if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum )
