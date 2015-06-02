@@ -856,7 +856,9 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             probe = (floor + ceiling) >> 1;
             for (i=probe; i<ceiling; i++)
             {
-                if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
+                atx = &ATX[i];
+                //coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0);
+                if ( atx->num31 <= blocknum && atx->value > 0 )
                 {
                     flag = 1;
                     break;
@@ -865,22 +867,26 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             if ( flag == 0 )
             {
                 for (i=probe; i>=floor; i--)
-                    if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
+                {
+                    atx = &ATX[i];
+                    //coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0);
+                    if ( atx->num31 <= blocknum && atx->value > 0 )
                     {
                         flag = 1;
                         break;
                     }
+                }
             }
             if ( i < 0 || i >= L->numaddrtx || flag == 0 )
                 break;
-            printf("search %u %.8f, probe.%u u%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->rawind,atx[1].rawind,dstr(atx->value),floor,ceiling);
+            printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->rawind,dstr(atx->value),floor,ceiling);
             if ( unspentind < atx->rawind )
                 ceiling = probe;
             else if ( unspentind > atx->rawind )
                 floor = probe;
             else if ( atx->value == value )
             {
-                printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
+                //printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
                 return(i);
             }
             else
@@ -890,7 +896,9 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             }
             if ( floor+1 == ceiling )
             {
-                if ( coin777_update_addrtx(coin,addrind,atx,L,ceiling,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
+                atx = &ATX[ceiling];
+                //coin777_update_addrtx(coin,addrind,atx,L,ceiling,blocknum,0)
+                if ( atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
                     return(ceiling);
                 break;
             }
@@ -941,7 +949,7 @@ int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint
     else ATX.value = -value, ATX.rawind = spendind;
     ATX.num31 = blocknum;
     coin777_update_addrtx(coin,addrind,&ATX,L,L->numaddrtx,blocknum,totaladdrtxp);
-    printf("updated %.8f -> balance %.8f\n",dstr(value),dstr(L->balance));
+   // printf("updated %.8f -> balance %.8f\n",dstr(value),dstr(L->balance));
     return(L->balance);
 }
 
