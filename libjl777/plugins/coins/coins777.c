@@ -784,7 +784,7 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
             }
         }
     }
-    if ( addrtxi >= L->maxaddrtx-1 )
+    if ( addrtxi >= L->maxaddrtx-1*0 )
     {
         printf("coin777_addrtx INVALID addrtxi.%d when max %d\n",addrtxi,L->maxaddrtx);
         return(0);
