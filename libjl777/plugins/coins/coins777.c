@@ -903,7 +903,8 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 break;
             }
         }
-        printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
+        if ( L->numaddrtx > 1 )
+            printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
     }
     for (i=0; i<L->numaddrtx; i++)
     {
