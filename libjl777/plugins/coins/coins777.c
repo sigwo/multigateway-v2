@@ -365,10 +365,10 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
         if ( init_mappedptr(&sp->MEM.ptr,&sp->M,0,rwflag,fname) != 0 )
         {
             sp->MEM.size = sp->M.allocsize;
-            sp->maxitems = (uint32_t)(sp->MEM.size / sp->itemsize);
-            if ( prevsize > sp->MEM.size )
+            sp->maxitems = (sp->MEM.size / sp->itemsize);
+            if ( 0 && prevsize > sp->MEM.size )
                 memset((void *)((long)sp->M.fileptr + prevsize),0,(sp->MEM.size - prevsize));
-            printf("%p %s maxitems.%u (MEMsize.%ld / itemsize.%d) prevsize.%ld needed.%ld\n",sp->MEM.ptr,sp->name,sp->maxitems,sp->MEM.size,sp->itemsize,prevsize,needed);
+            printf("%p %s maxitems.%llu (MEMsize.%ld / itemsize.%d) prevsize.%ld needed.%ld\n",sp->MEM.ptr,sp->name,(long long)sp->maxitems,sp->MEM.size,sp->itemsize,prevsize,needed);
         }
     }
     if ( (sp->table= sp->M.fileptr) == 0 )
@@ -384,7 +384,7 @@ void *coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint32_t ind
         sp->table = coin777_ensure(coin,sp,ind);
         if ( (ptr= sp->table) == 0 )
         {
-            printf("SECOND ERROR %s overflow? %p addrind.%u vs max.%u\n",sp->name,ptr,ind,sp->maxitems);
+            printf("SECOND ERROR %s overflow? %p addrind.%u vs max.%llu\n",sp->name,ptr,ind,(long long)sp->maxitems);
             return(0);
         }
     }
@@ -881,9 +881,9 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             if ( Debuglevel > 2 )
                 printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->rawind,dstr(atx->value),floor,ceiling);
             if ( unspentind < atx->rawind )
-                ceiling = i;
+                ceiling = probe;
             else if ( unspentind > atx->rawind )
-                floor = i;
+                floor = probe;
             else if ( atx->value == value )
             {
                 //printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
