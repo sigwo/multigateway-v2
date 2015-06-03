@@ -746,7 +746,7 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
             if ( L->first_addrtxi != 0 )
             {
                 memset(&PTR,0,sizeof(PTR)), PTR.maxunspentind = maxunspentind, PTR.next_addrtxi = (*totaladdrtxp);
-                coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,&oldL,oldL.maxaddrtx);
+                coin777_RWaddrtx(2,coin,addrind,(struct addrtx_info *)&PTR,&oldL,oldL.maxaddrtx);
             }
             coin777_addrtxalloc(coin,L,incr,totaladdrtxp);
             L->numaddrtx = 0;
@@ -818,15 +818,6 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 break;
             }
         }
-        /*if ( floor+1 == ceiling )
-         {
-         //atx = &ATX[ceiling];
-         if ( coin777_RWaddrtx(0,coin,addrind,atx,L,ceiling) == 0 && atx->num31 <= blocknum && atx_value > 0 && unspentind == atx->rawind )
-         return(ceiling);
-         else if ( coin777_RWaddrtx(0,coin,addrind,atx,L,floor) == 0 && atx->num31 <= blocknum && atx_value > 0 && unspentind == atx->rawind )
-         return(floor);
-         break;
-         }*/
     }
     if ( 1 && L->numaddrtx > 1 )
         printf("SEARCH FAILURE %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)numprobes/numsearches);
@@ -898,7 +889,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
             if ( (addrtxi= coin777_bsearch(&ATX,coin,addrind,&L,unspentind,value)) >= 0  )
             {
                 ATX.spendind = spendind;
-                coin777_RWaddrtx(1,coin,addrind,&ATX,&L,addrtxi);
+                coin777_RWaddrtx(2,coin,addrind,&ATX,&L,addrtxi);
                 L.balance -= value;
                 return(coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind));
             }
