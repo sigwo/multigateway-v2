@@ -891,7 +891,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 floor = probe;
             else if ( atx->value == value )
             {
-                //printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
+                printf("FOUND MATCH end search %u, probe.%u floor.%u ceiling.%u i.%d flag.%d numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,i,flag,numsearches,numprobes,(double)numprobes/numsearches);
                 return(i);
             }
             else
@@ -899,7 +899,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 printf("unexpected value mismatch %.8f vs %.8f\n",dstr(atx->value),dstr(value));
                 break;
             }
-           /* if ( floor+1 == ceiling )
+            if ( floor+1 == ceiling )
             {
                 //atx = &ATX[ceiling];
                 if ( coin777_RWaddrtx(0,coin,addrind,atx,L,ceiling) == 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
@@ -907,7 +907,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 else if ( coin777_RWaddrtx(0,coin,addrind,atx,L,floor) == 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
                     return(floor);
                 break;
-            }*/
+            }
         }
         if ( 1 && L->numaddrtx > 1 )
             printf("end search %u, probe.%u floor.%u ceiling.%u i.%d flag.%d numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,i,flag,numsearches,numprobes,(double)numprobes/numsearches);
