@@ -1379,14 +1379,14 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     ramchain->ledger.table = coin777_ensure(coin,&ramchain->ledger,addrind);
     ramchain->spends.table = coin777_ensure(coin,&ramchain->spends,totalspends);
     ramchain->addrtx.table = coin777_ensure(coin,&ramchain->addrtx,totaladdrtx);
-    if ( 1 )
+    if ( 0 )
     {
         uint64_t calcbalance;
         for (i=1; i<addrind; i++)
         {
             //fprintf(stderr,"patch %d of %d: ",i,addrind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,i);
-            if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,unspentind)) != L.balance )
+            if ( (calcbalance= coin777_recalc_addrinfo(0,coin,i,&L,0,unspentind)) != L.balance )
                 fprintf(stderr,"calcbalance %.8f vs %.8f firsti.%u maxunspentind.%u\n",dstr(calcbalance),dstr(L.balance),L.first_addrtxi,unspentind);
         }
     }
@@ -1755,6 +1755,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint64_t cred
     int32_t errs = 0;
     if ( maxunspentind > 1 )
     {
+        printf("VERIFY maxunspentind.%u\n",maxunspentind);
         coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,forceflag,totaladdrtxp);
         if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
         {
