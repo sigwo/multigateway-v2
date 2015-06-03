@@ -1756,35 +1756,35 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
 {
     struct coin777_Lentry L; struct unspent_info U; struct spend_info S; struct addrtx_info ATX;
     int32_t errs = 0; uint32_t unspentind,spendind; uint64_t Ucredits,Udebits; int64_t correction = 0;
-    if ( maxunspentind > 1 )
+    if ( maxunspentind > 1 ) 
     {
-        Ucredits = Udebits = 0;
-        for (unspentind=1; unspentind<maxunspentind; unspentind++)
-        {
-            Ucredits += coin777_Uvalue(&U,coin,unspentind);
-            coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
-            if ( coin777_bsearch(&ATX,coin,U.addrind,&L,unspentind,U.value) < 0  )
-            {
-                correction += U.value;
-                printf("U cant find addrind.%u U.%u %.8f | correction %.8f\n",U.addrind,unspentind,dstr(U.value),dstr(correction));
-            }
-        }
-        for (spendind=1; spendind<totalspends; spendind++)
-        {
-            Udebits += coin777_Svalue(&S,coin,spendind);
-            coin777_Uvalue(&U,coin,S.unspentind);
-            coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
-            if ( coin777_bsearch(&ATX,coin,U.addrind,&L,S.unspentind,U.value) < 0 || ATX.spendind != spendind )
-            {
-                correction -= U.value;
-                printf("S cant find addrind.%u U.%u %.8f || spendind mismatch %u vs %u | correction %.8f\n",U.addrind,S.unspentind,dstr(U.value),ATX.spendind,spendind,dstr(correction));
-            }
-       }
-        printf("VERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f)\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits));
         coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,forceflag,totaladdrtxp);
         if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
         {
-            if ( coin->ramchain.addrsum != (credits - debits) )
+            Ucredits = Udebits = 0;
+            for (unspentind=1; unspentind<maxunspentind; unspentind++)
+            {
+                Ucredits += coin777_Uvalue(&U,coin,unspentind);
+                coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
+                if ( coin777_bsearch(&ATX,coin,U.addrind,&L,unspentind,U.value) < 0  )
+                {
+                    correction += U.value;
+                    printf("U cant find addrind.%u U.%u %.8f | correction %.8f\n",U.addrind,unspentind,dstr(U.value),dstr(correction));
+                }
+            }
+            for (spendind=1; spendind<totalspends; spendind++)
+            {
+                Udebits += coin777_Svalue(&S,coin,spendind);
+                coin777_Uvalue(&U,coin,S.unspentind);
+                coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
+                if ( coin777_bsearch(&ATX,coin,U.addrind,&L,S.unspentind,U.value) < 0 || ATX.spendind != spendind )
+                {
+                    correction -= U.value;
+                    printf("S cant find addrind.%u U.%u %.8f || spendind mismatch %u vs %u | correction %.8f\n",U.addrind,S.unspentind,dstr(U.value),ATX.spendind,spendind,dstr(correction));
+                }
+            }
+            printf("VERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f)\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits));
+          if ( coin->ramchain.addrsum != (credits - debits) )
                 printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->ramchain.addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
             if ( forceflag == 0 )
                 coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,1,totaladdrtxp);
