@@ -78,7 +78,8 @@ struct coin777_state
     queue_t writeQ; portable_mutex_t mutex;
     void *table;
     FILE *fp;
-    uint32_t maxitems,itemsize,flags;
+    uint64_t maxitems;
+    uint32_t itemsize,flags;
 };
 
 struct hashed_uint32 { UT_hash_handle hh; uint32_t ind; };
@@ -857,7 +858,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             for (i=probe; i<=ceiling; i++)
             {
                 //atx = &ATX[i];
-                if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
+                if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->value > 0 )
                 {
                     flag = 1;
                     break;
@@ -868,7 +869,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 for (i=probe; i>=floor; i--)
                 {
                     //atx = &ATX[i];
-                    if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 )
+                    if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->value > 0 )
                     {
                         flag = 1;
                         break;
@@ -880,9 +881,9 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             if ( Debuglevel > 2 )
                 printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->rawind,dstr(atx->value),floor,ceiling);
             if ( unspentind < atx->rawind )
-                ceiling = probe;
+                ceiling = i;
             else if ( unspentind > atx->rawind )
-                floor = probe;
+                floor = i;
             else if ( atx->value == value )
             {
                 //printf("found match! addrtxi.%u %.8f\n",i,dstr(value));
@@ -908,7 +909,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
     }
     for (i=0; i<L->numaddrtx; i++)
     {
-        if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->num31 <= blocknum )
+        if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 )//&& atx->num31 <= blocknum )
         {
             if ( atx->value > 0 && unspentind == atx->rawind )
             {
@@ -920,7 +921,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 else
                 {
                     if ( 1 && L->numaddrtx > 1 )
-                        printf("linear search found u%d when bsearch missed it?\n",unspentind);
+                        printf("linear search found u%d in  slot.%d when bsearch missed it?\n",unspentind,i);
                     return(i);
                 }
             }
