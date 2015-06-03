@@ -906,7 +906,10 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
             {
                 ATX.spendind = spendind;
                 if ( coin777_RWaddrtx(1,coin,addrind,&ATX,&L,addrtxi) == 0 )
+                {
+                    L.balance -= value;
                     return(coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind));
+                }
             }
             else
             {
