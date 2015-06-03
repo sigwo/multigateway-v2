@@ -49,6 +49,7 @@ uint32_t _get_RTheight(double *lastmillip,char *coinstr,char *serverport,char *u
             if ( (json= cJSON_Parse(retstr)) != 0 )
             {
                 height = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocks"),0);
+                printf("get_RTheight %u\n",height);
                 free_json(json);
                 *lastmillip = milliseconds();
             }
