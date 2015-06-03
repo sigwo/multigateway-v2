@@ -94,7 +94,7 @@ struct oldaddrtx_info { int64_t value; uint32_t rawind,num31:31,flag:1; };
 struct addrtx_info { uint32_t unspentind,spendind; };
 struct oldcoin777_Lentry { struct addrtx_info *first_addrtxi; int64_t balance; uint32_t numaddrtx:30,insideA:1,pending:1,maxaddrtx:30,MGW:1,tbd:1; };
 struct coin777_Lentry { int64_t balance; uint32_t first_addrtxi,numaddrtx:31,insideA:1,maxaddrtx:31,tbd:1; };
-struct addrtx_linkptr { int64_t balance; uint32_t next_addrtxi,maxunspentind; };
+struct addrtx_linkptr { uint32_t next_addrtxi,maxunspentind; };
 
 #ifndef ADDRINFO_SIZE
 #define ADDRINFO_SIZE 16384
@@ -749,7 +749,7 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
                 incr = (L->maxaddrtx << 1);
             if ( 1 )
             {
-                memset(&PTR,0,sizeof(PTR)), PTR.balance = L->balance, PTR.maxunspentind = maxunspentind, PTR.next_addrtxi = (*totaladdrtxp);
+                memset(&PTR,0,sizeof(PTR)), PTR.maxunspentind = maxunspentind, PTR.next_addrtxi = (*totaladdrtxp);
                 coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,&oldL,oldL.maxaddrtx);
                 if ( coin777_addrtxalloc(coin,L,incr,totaladdrtxp) != PTR.next_addrtxi )
                     printf("coin777_addrtx WARNING linkage unexpected value %u != %u\n",(uint32_t)L->first_addrtxi,PTR.next_addrtxi);
@@ -1366,6 +1366,7 @@ void coin777_initDBenv(struct coin777 *coin)
 int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends,uint32_t totaladdrtx)
 {
     char fname[1024],srcfname[1024]; struct ramchain *ramchain = &coin->ramchain; struct coin777_Lentry L; uint32_t i; void *ptr; struct mappedptr M;
+    printf("initmmap unspentind.%u\n",unspentind);
     db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx"), sprintf(srcfname,"%s.sync",fname);
     os_compatible_path(fname), os_compatible_path(srcfname), copy_file(srcfname,fname);
     db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"ledger"), sprintf(srcfname,"%s.sync",fname);
