@@ -1386,7 +1386,7 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
             //fprintf(stderr,"patch %d of %d: ",i,addrind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,i);
             if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,unspentind)) != L.balance )
-                fprintf(stderr,"calcbalance %.8f vs %.8f firsti.%u\n",dstr(calcbalance),dstr(L.balance),L.first_addrtxi);
+                fprintf(stderr,"calcbalance %.8f vs %.8f firsti.%u maxunspentind.%u\n",dstr(calcbalance),dstr(L.balance),L.first_addrtxi,unspentind);
         }
     }
     if ( 0 )
