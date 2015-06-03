@@ -845,20 +845,24 @@ struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,
 
 int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t unspentind,uint64_t value,uint32_t blocknum)
 {
-    uint32_t floor,ceiling,probe; int32_t i,flag = 0;
+    static long numsearches,numprobes;
+    uint32_t floor,ceiling,probe,iter,start,end; int32_t i,flag;
     //struct addrtx_info *ATX = L->first_addrtxi;
     floor = 0, ceiling = L->numaddrtx-1;
     if ( L->numaddrtx == 0 )
         return(-1);
+    numsearches++;
     if ( 1 )
     {
         while ( floor != ceiling )
         {
             probe = (floor + ceiling) >> 1;
+            flag = 0;
             for (i=probe; i<=ceiling; i++)
             {
+                numprobes++;
                 //atx = &ATX[i];
-                if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->value > 0 )
+                if ( coin777_RWaddrtx(0,coin,addrind,atx,L,i) == 0 && atx->value > 0 )
                 {
                     flag = 1;
                     break;
@@ -868,8 +872,9 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             {
                 for (i=probe; i>=floor; i--)
                 {
+                    numprobes++;
                     //atx = &ATX[i];
-                    if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 && atx->value > 0 )
+                    if ( coin777_RWaddrtx(0,coin,addrind,atx,L,i) == 0 && atx->value > 0 )
                     {
                         flag = 1;
                         break;
@@ -894,38 +899,46 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
                 printf("unexpected value mismatch %.8f vs %.8f\n",dstr(atx->value),dstr(value));
                 break;
             }
-            if ( floor+1 == ceiling )
+           /* if ( floor+1 == ceiling )
             {
                 //atx = &ATX[ceiling];
-                if ( coin777_update_addrtx(coin,addrind,atx,L,ceiling,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
+                if ( coin777_RWaddrtx(0,coin,addrind,atx,L,ceiling) == 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
                     return(ceiling);
-                else if ( coin777_update_addrtx(coin,addrind,atx,L,floor,blocknum,0) != 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
+                else if ( coin777_RWaddrtx(0,coin,addrind,atx,L,floor) == 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
                     return(floor);
                 break;
-            }
+            }*/
         }
         if ( 1 && L->numaddrtx > 1 )
-            printf("end search %u, probe.%u floor.%u ceiling.%u\n",unspentind,probe,floor,ceiling);
+            printf("end search %u, probe.%u floor.%u ceiling.%u i.%d flag.%d numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,i,flag,numsearches,numprobes,(double)numprobes/numsearches);
     }
-    for (i=0; i<L->numaddrtx; i++)
+    for (iter=0; iter<2; iter++)
     {
-        if ( coin777_update_addrtx(coin,addrind,atx,L,i,blocknum,0) != 0 )//&& atx->num31 <= blocknum )
+        if ( iter == 0 )
+            start = floor, end = ceiling;
+        else start = 0, end = L->numaddrtx-1;
+        for (i=start; i<=end; i++)
         {
-            if ( atx->value > 0 && unspentind == atx->rawind )
+            numprobes++;
+            if ( coin777_RWaddrtx(0,coin,addrind,atx,L,i) == 0 )//&& atx->num31 <= blocknum )
             {
-                if ( atx->value != value )
+                if ( atx->value > 0 && unspentind == atx->rawind )
                 {
-                    printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u\n",i,L->numaddrtx,unspentind,dstr(value),dstr(atx->value),blocknum);
-                    break;
+                    if ( atx->value != value )
+                    {
+                        printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u\n",i,L->numaddrtx,unspentind,dstr(value),dstr(atx->value),blocknum);
+                        break;
+                    }
+                    else
+                    {
+                        if ( 1 && L->numaddrtx > 1 )
+                            printf("linear search found u%d in  slot.%d when bsearch missed it?\n",unspentind,i);
+                        return(i);
+                    }
                 }
-                else
-                {
-                    if ( 1 && L->numaddrtx > 1 )
-                        printf("linear search found u%d in  slot.%d when bsearch missed it?\n",unspentind,i);
-                    return(i);
-                }
-            }
-        } else break;
+            } else break;
+        }
+        printf("linear search iter.%d failure\n",iter);
     }
     return(-1);
 }
