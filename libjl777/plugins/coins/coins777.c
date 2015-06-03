@@ -1356,7 +1356,7 @@ void coin777_initDBenv(struct coin777 *coin)
 
 int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends,uint32_t totaladdrtx)
 {
-    char fname[1024],srcfname[1024]; struct ramchain *ramchain = &coin->ramchain; struct coin777_Lentry L; uint32_t i; void *ptr; struct mappedptr M;
+    char fname[1024],srcfname[1024]; struct ramchain *ramchain = &coin->ramchain;
     printf("initmmap unspentind.%u\n",unspentind);
     db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx"), sprintf(srcfname,"%s.sync",fname);
     os_compatible_path(fname), os_compatible_path(srcfname), copy_file(srcfname,fname);
@@ -1420,9 +1420,9 @@ int32_t coin777_MMbackup(char *dirname,struct coin777_state *sp,uint32_t firstin
 
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H)
 {
-    char fname[1024],dirname[128],destfname[1024]; int16_t scriptlen; uint64_t balance; int64_t sum; int32_t addrind,i,addrtxi,extra,len,errs = 0;
-    struct coin777_hashes prevH,_H; struct coin_offsets B; struct addrtx_info ATX,*actives; struct coin777_Lentry L; uint8_t script[8192]; double startmilli;
-    FILE *fp,*fp2,*ATXfp,*ATXfp2;
+    char fname[1024],dirname[128],destfname[1024]; int16_t scriptlen; int64_t sum; int32_t i,len,errs = 0;
+    struct coin777_hashes prevH,_H; struct coin_offsets B; uint8_t script[8192]; double startmilli;
+    FILE *fp;
     if ( H == 0 )
     {
         H = &_H, i = 0, len = sizeof(*H);
