@@ -157,7 +157,7 @@ uint32_t coin777_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coi
 uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr,char *scriptstr);
 int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_t endblocknum,int32_t verifyflag);
 uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t maxunspentind,int32_t recalcflag,uint32_t *totaladdrtxp);
-int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp);
+int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t maxspendind,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp);
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H);
 int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct coin777_state *sp,uint32_t rawind);
 struct addrtx_info *coin777_compact(uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL);
@@ -563,10 +563,18 @@ int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin
 
 uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t unspentind)
 {
-    ;
     if ( coin777_RWmmap(0,U,coin,&coin->ramchain.unspents,unspentind) == 0 )
         return(U->value);
     else printf("error getting unspents[%u]\n",unspentind);
+    return(0);
+}
+
+uint64_t coin777_Svalue(struct spend_info *S,struct coin777 *coin,uint32_t spendind)
+{
+    struct unspent_info U;
+    if ( coin777_RWmmap(0,S,coin,&coin->ramchain.spends,spendind) == 0 )
+        return(coin777_Uvalue(&U,coin,S->unspentind));
+    else printf("error getting spendind[%u]\n",spendind);
     return(0);
 }
 
@@ -1744,12 +1752,17 @@ int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_
     return(0);
 }
 
-int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
+int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t totalspends,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
 {
-    int32_t errs = 0;
+    int32_t errs = 0; uint32_t unspentind,spendind; uint64_t Ucredits,Udebits; struct unspent_info U; struct spend_info S;
     if ( maxunspentind > 1 )
     {
-        printf("VERIFY maxunspentind.%u\n",maxunspentind);
+        Ucredits = Udebits = 0;
+        for (unspentind=1; unspentind<maxunspentind; unspentind++)
+            Ucredits += coin777_Uvalue(&U,coin,unspentind);
+        for (spendind=1; spendind<totalspends; spendind++)
+            Udebits += coin777_Svalue(&S,coin,spendind);
+        printf("VERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f)\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits));
         coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,forceflag,totaladdrtxp);
         if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
         {
@@ -1773,7 +1786,7 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
     int32_t i,retval = 0; struct coin777_hashes H;
     if ( 1 || blocknum == coin->ramchain.startblocknum || blocknum > coin->ramchain.RTblocknum-1000 || numsyncs > 0 )
     {
-        if ( coin777_verify(coin,numrawvouts,credits,debits,addrind,1,totaladdrtxp) != 0 )
+        if ( coin777_verify(coin,numrawvouts,numrawvins,credits,debits,addrind,1,totaladdrtxp) != 0 )
             printf("cant verify at block.%u\n",blocknum), debugstop();
     }
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
