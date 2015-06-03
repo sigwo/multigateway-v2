@@ -799,7 +799,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
     rangetotal += L->numaddrtx;
     if ( 1 )
     {
-        while ( floor < ceiling-1 )
+        while ( floor < ceiling )
         {
             probe = (floor + ceiling) >> 1;
             coin777_RWaddrtx(0,coin,addrind,atx,L,probe);
@@ -880,8 +880,12 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
                 fprintf(stderr,"(%u %.8f).s%u ",ATX.unspentind,dstr(atx_value),ATX.spendind);
             if ( ATX.spendind == 0 && ATX.unspentind < maxunspentind )
                 balance += atx_value;
-            else break;
-        } else break;
+        }
+        else
+        {
+            printf("cant get addrtxi.%d of num.%d max.%d\n",addrtxi,L->numaddrtx,L->maxaddrtx);
+            break;
+        }
     }
     L->numaddrtx = addrtxi;
     if ( dispflag != 0 )
