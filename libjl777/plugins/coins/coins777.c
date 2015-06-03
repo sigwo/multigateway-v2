@@ -345,7 +345,7 @@ int32_t coin777_queueDB(struct coin777 *coin,struct db777 *DB,void *key,int32_t 
 }
 
 // coin777 MM funcs
-void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
+void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint64_t ind)
 {
     char fname[1024]; long needed,prevsize = 0; int32_t rwflag = 1;
     needed = (ind + 2) * sp->itemsize;
@@ -369,8 +369,8 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
         {
             sp->MEM.size = sp->M.allocsize;
             sp->maxitems = (sp->MEM.size / sp->itemsize);
-            if ( 0 && prevsize > sp->MEM.size )
-                memset((void *)((long)sp->M.fileptr + prevsize),0,(sp->MEM.size - prevsize));
+            if ( 1 && prevsize > sp->MEM.size )
+                memset((void *)((uint64_t)sp->M.fileptr + prevsize),0,(sp->MEM.size - prevsize));
             printf("%p %s maxitems.%llu (MEMsize.%ld / itemsize.%d) prevsize.%ld needed.%ld\n",sp->MEM.ptr,sp->name,(long long)sp->maxitems,sp->MEM.size,sp->itemsize,prevsize,needed);
         }
     }
@@ -379,19 +379,19 @@ void *coin777_ensure(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
     return(sp->table);
 }
 
-void *coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint32_t ind)
+void *coin777_itemptr(struct coin777 *coin,struct coin777_state *sp,uint64_t rawind)
 {
     void *ptr = sp->table;
-    if ( ptr == 0 || ind >= sp->maxitems )
+    if ( ptr == 0 || rawind >= sp->maxitems )
     {
-        sp->table = coin777_ensure(coin,sp,ind);
+        sp->table = coin777_ensure(coin,sp,rawind);
         if ( (ptr= sp->table) == 0 )
         {
-            printf("SECOND ERROR %s overflow? %p addrind.%u vs max.%llu\n",sp->name,ptr,ind,(long long)sp->maxitems);
+            printf("SECOND ERROR %s overflow? %p rawind.%llu vs max.%llu\n",sp->name,ptr,(long long)rawind,(long long)sp->maxitems);
             return(0);
         }
     }
-    ptr = (void *)((long)ptr + sp->itemsize*ind);
+    ptr = (void *)((uint64_t)ptr + sp->itemsize*rawind);
     return(ptr);
 }
 
@@ -457,7 +457,7 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
                     memcpy(ptr,value,sp->itemsize);
                 else // all ready for rb+ fp and readonly mapping, but need to init properly
                 {
-                    fseek(sp->fp,(long)sp->itemsize * rawind,SEEK_SET);
+                    fseek(sp->fp,(uint64_t)sp->itemsize * rawind,SEEK_SET);
                     fwrite(value,1,sp->itemsize,sp->fp);
                     if ( memcmp(ptr,value,sp->itemsize) != 0 )
                         printf("FATAL: write mmap error\n"), debugstop();
@@ -678,7 +678,7 @@ int32_t coin777_RWaddrtx(int32_t writeflag,struct coin777 *coin,uint32_t addrind
     if ( L->insideA != 0 )
     {
         coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,addrind);
-        atxA = (struct addrtx_info *)((long)&A + (long)L->first_addrtxi), atxA += addrtxi;
+        atxA = (struct addrtx_info *)((uint64_t)&A + L->first_addrtxi), atxA += addrtxi;
         if ( writeflag == 0 )
             *ATX = *atxA;
         else *atxA = *ATX, coin777_RWmmap(2,&A,coin,&coin->ramchain.addrinfos,addrind);
@@ -991,7 +991,7 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
     }
     coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind);
     memset(&L,0,sizeof(L));
-    offset = (uint32_t)((long)&A.coinaddr[len] - (long)&A);
+    offset = (uint32_t)((uint64_t)&A.coinaddr[len] - (uint64_t)&A);
     if ( (offset & 3) != 0 )
         offset += 4 - (offset & 3), len += (4 - (offset & 3));
     L.first_addrtxi = offset; //(struct addrtx_info *)(long)
@@ -999,12 +999,14 @@ int32_t coin777_add_addrinfo(struct coin777 *coin,uint32_t addrind,char *coinadd
         L.insideA = 1;
     else
     {
+        A.root_addrtxi = *totaladdrtxp;
         coin777_addrtxalloc(coin,&L,16,totaladdrtxp);
         printf("not enough space for embedded addrtx A%u \n",addrind);
     }
     coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind);
-    coin777_RWmmap(0,&tmpA,coin,&coin->ramchain.addrinfos,addrind);
-    memcpy(&tmpA,&A,sizeof(A) - sizeof(A.coinaddr) + len);
+    //coin777_RWmmap(0,&tmpA,coin,&coin->ramchain.addrinfos,addrind);
+    //memcpy(&tmpA,&A,sizeof(A) - sizeof(A.coinaddr) + len);
+    //coin777_RWmmap(1,&tmpA,coin,&coin->ramchain.addrinfos,addrind);
     coin777_RWmmap(1,&A,coin,&coin->ramchain.addrinfos,addrind);
     coin->ramchain.totalsize += sizeof(A);
     return(coin777_scriptptr(&A) != 0 );
@@ -1237,7 +1239,7 @@ uint64_t coin777_ledgerhash(char *ledgerhash,struct coin777_hashes *H)
     bits256 hashbits;
     if ( H != 0 )
     {
-        calc_sha256(0,hashbits.bytes,(uint8_t *)(void *)((long)H + sizeof(H->ledgerhash)),sizeof(*H) - sizeof(H->ledgerhash));
+        calc_sha256(0,hashbits.bytes,(uint8_t *)(void *)((uint64_t)H + sizeof(H->ledgerhash)),sizeof(*H) - sizeof(H->ledgerhash));
         H->ledgerhash = hashbits.txid;
         if ( ledgerhash != 0 )
             ledgerhash[0] = 0, init_hexbytes_noT(ledgerhash,hashbits.bytes,sizeof(hashbits));
@@ -1461,7 +1463,7 @@ int32_t coin777_MMbackup(char *dirname,struct coin777_state *sp,uint32_t firstin
                 errs++;
             if ( fwrite(&lastind,1,sizeof(lastind),fp) != sizeof(lastind) )
                 errs++;
-            if ( fwrite((void *)((long)sp->M.fileptr + firstind*sp->itemsize),1,(lastind - firstind + 1)*sp->itemsize,fp) != (lastind - firstind + 1)*sp->itemsize )
+            if ( fwrite((void *)((uint64_t)sp->M.fileptr + firstind*sp->itemsize),1,(lastind - firstind + 1)*sp->itemsize,fp) != (lastind - firstind + 1)*sp->itemsize )
                 errs++;
         }
         fclose(fp);
@@ -1805,7 +1807,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
 uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind,uint32_t *totaladdrtxp)
 {
     int32_t i,retval = 0; struct coin777_hashes H;
-    if ( 1 || blocknum == coin->ramchain.startblocknum || blocknum > coin->ramchain.RTblocknum-1000 || numsyncs > 0 )
+    if ( blocknum == 4057 || blocknum == coin->ramchain.startblocknum || blocknum > coin->ramchain.RTblocknum-1000 || numsyncs > 0 )
     {
         if ( coin777_verify(coin,numrawvouts,numrawvins,credits,debits,addrind,1,totaladdrtxp) != 0 )
             printf("cant verify at block.%u\n",blocknum), debugstop();
