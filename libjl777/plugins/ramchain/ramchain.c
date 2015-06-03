@@ -83,7 +83,7 @@ int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct coin777 *coin,struct 
     {
         printf("t%u u%u s%u a%u c%u x%u\n",txidind,numrawvouts,numrawvins,addrind,scriptind,totaladdrtx);
         coin777_initmmap(coin,ramchain->startblocknum,txidind,addrind,scriptind,numrawvouts,numrawvins,totaladdrtx);
-        coin777_verify(coin,ramchain->startblocknum,credits,debits,addrind,1,&totaladdrtx);
+        coin777_verify(coin,numrawvouts,credits,debits,addrind,1,&totaladdrtx);
     }
     ramchain->paused = 0;
     return(0);

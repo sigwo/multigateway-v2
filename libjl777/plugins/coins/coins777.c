@@ -879,8 +879,8 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
             atx_value = coin777_Uvalue(&U,coin,ATX.unspentind);
             if ( dispflag != 0 && atx_value != 0 )
                 fprintf(stderr,"(%u %.8f).s%u ",ATX.unspentind,dstr(atx_value),ATX.spendind);
-            if ( ATX.spendind == 0 && ATX.unspentind < maxunspentind )
-                balance += atx_value;
+            if ( ATX.unspentind < maxunspentind )
+                balance += ((ATX.spendind == 0) ? -1 : 1) * atx_value;
         }
         else
         {
