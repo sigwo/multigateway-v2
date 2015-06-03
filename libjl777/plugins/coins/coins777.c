@@ -747,7 +747,7 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
                 printf("coin777_addrtx FATAL datastructure size mismatch %ld vs %ld\n",sizeof(ATX),sizeof(PTR)), debugstop();
             if ( (L->maxaddrtx << 1) > incr )
                 incr = (L->maxaddrtx << 1);
-            if ( L->L->first_addrtxi != 0 )
+            if ( L->first_addrtxi != 0 )
             {
                 memset(&PTR,0,sizeof(PTR)), PTR.maxunspentind = maxunspentind, PTR.next_addrtxi = (*totaladdrtxp);
                 coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,&oldL,oldL.maxaddrtx);
