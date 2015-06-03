@@ -1755,7 +1755,7 @@ int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_
 int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t totalspends,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
 {
     struct coin777_Lentry L; struct unspent_info U; struct spend_info S; struct addrtx_info ATX;
-    int32_t errs = 0; uint32_t unspentind,spendind; uint64_t Ucredits,Udebits;
+    int32_t errs = 0; uint32_t unspentind,spendind; uint64_t Ucredits,Udebits; int64_t correction = 0;
     if ( maxunspentind > 1 )
     {
         Ucredits = Udebits = 0;
@@ -1764,7 +1764,10 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
             Ucredits += coin777_Uvalue(&U,coin,unspentind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
             if ( coin777_bsearch(&ATX,coin,U.addrind,&L,unspentind,U.value) < 0  )
-                printf("U cant find addrind.%u U.%u %.8f\n",U.addrind,unspentind,dstr(U.value));
+            {
+                correction += U.value;
+                printf("U cant find addrind.%u U.%u %.8f | correction %.8f\n",U.addrind,unspentind,dstr(U.value),dstr(correction));
+            }
         }
         for (spendind=1; spendind<totalspends; spendind++)
         {
@@ -1772,7 +1775,10 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
             coin777_Uvalue(&U,coin,S.unspentind);
             coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
             if ( coin777_bsearch(&ATX,coin,U.addrind,&L,S.unspentind,U.value) < 0 || ATX.spendind != spendind )
-                printf("S cant find addrind.%u U.%u %.8f || spendind mismatch %u vs %u\n",U.addrind,S.unspentind,dstr(U.value),ATX.spendind,spendind);
+            {
+                correction -= U.value;
+                printf("S cant find addrind.%u U.%u %.8f || spendind mismatch %u vs %u | correction %.8f\n",U.addrind,S.unspentind,dstr(U.value),ATX.spendind,spendind,dstr(correction));
+            }
        }
         printf("VERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f)\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits));
         coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,forceflag,totaladdrtxp);
