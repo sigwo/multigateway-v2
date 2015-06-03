@@ -747,14 +747,12 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
                 printf("coin777_addrtx FATAL datastructure size mismatch %ld vs %ld\n",sizeof(ATX),sizeof(PTR)), debugstop();
             if ( (L->maxaddrtx << 1) > incr )
                 incr = (L->maxaddrtx << 1);
-            if ( 1 )
+            if ( L->L->first_addrtxi != 0 )
             {
                 memset(&PTR,0,sizeof(PTR)), PTR.maxunspentind = maxunspentind, PTR.next_addrtxi = (*totaladdrtxp);
                 coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,&oldL,oldL.maxaddrtx);
-                if ( coin777_addrtxalloc(coin,L,incr,totaladdrtxp) != PTR.next_addrtxi )
-                    printf("coin777_addrtx WARNING linkage unexpected value %u != %u\n",(uint32_t)L->first_addrtxi,PTR.next_addrtxi);
             }
-            //else coin777_addrtxalloc(coin,L,incr,totaladdrtxp);
+            coin777_addrtxalloc(coin,L,incr,totaladdrtxp);
             L->numaddrtx = 0;
             if ( oldL.numaddrtx > 0 )
             {
@@ -791,7 +789,6 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
 {
     static long numsearches,numprobes,rangetotal;
     uint32_t floor,ceiling,probe,lastprobe,iter,start,end; int32_t i; uint64_t atx_value; struct unspent_info U;
-    //struct addrtx_info *ATX = L->first_addrtxi;
     if ( L->numaddrtx == 0 )
         return(-1);
     floor = 0, ceiling = L->numaddrtx-1;
@@ -836,7 +833,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
          }*/
     }
     if ( 1 && L->numaddrtx > 1 )
-        printf("end search %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)numprobes/numsearches);
+        printf("SEARCH FAILURE %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)numprobes/numsearches);
     for (iter=0; iter<2; iter++)
     {
         if ( iter == 0 )
@@ -870,17 +867,16 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
 
 uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t *totaladdrtxp,uint32_t maxunspentind)
 {
-    struct addrtx_info ATX; int32_t addrtxi; uint64_t atx_value; struct unspent_info U; int64_t balance = 0;
+    struct addrtx_info ATX; int32_t addrtxi; struct unspent_info U; int64_t balance = 0;
     for (addrtxi=0; addrtxi<L->numaddrtx; addrtxi++)
     {
         memset(&ATX,0,sizeof(ATX));
         if ( coin777_RWaddrtx(0,coin,addrind,&ATX,L,addrtxi) == 0 && ATX.unspentind < maxunspentind )
         {
-            atx_value = coin777_Uvalue(&U,coin,ATX.unspentind);
-            if ( dispflag != 0 && atx_value != 0 )
-                fprintf(stderr,"(%u %.8f).s%u ",ATX.unspentind,dstr(atx_value),ATX.spendind);
-            if ( ATX.unspentind < maxunspentind )
-                balance += ((ATX.spendind == 0) ? -1 : 1) * atx_value;
+            if ( dispflag != 0 )
+                fprintf(stderr,"(%u %.8f).s%u ",ATX.unspentind,dstr(coin777_Uvalue(&U,coin,ATX.unspentind)),ATX.spendind);
+            if ( ATX.spendind == 0 )
+                balance += coin777_Uvalue(&U,coin,ATX.unspentind);
         }
         else
         {
@@ -890,7 +886,7 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
     }
     L->numaddrtx = addrtxi;
     if ( dispflag != 0 )
-        printf("-> balance %.8f\n",dstr(balance));
+        printf("-> balance %.8f numaddrtx.%d max.%d\n",dstr(balance),L->numaddrtx,L->maxaddrtx);
     return(balance);
 }
 
@@ -906,18 +902,16 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
             if ( (addrtxi= coin777_bsearch(&ATX,coin,addrind,&L,unspentind,value)) >= 0  )
             {
                 ATX.spendind = spendind;
-                if ( coin777_RWaddrtx(1,coin,addrind,&ATX,&L,addrtxi) == 0 )
-                {
-                    L.balance -= value;
-                    return(coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind));
-                }
+                coin777_RWaddrtx(1,coin,addrind,&ATX,&L,addrtxi);
+                L.balance -= value;
+                return(coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind));
             }
             else
             {
                 for (i=0; i<L.numaddrtx; i++)
                     if ( coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i) == 0 )
                         printf("(U%u %.8f).S%u ",ATX.unspentind,dstr(coin777_Uvalue(&U,coin,ATX.unspentind)),ATX.spendind);
-                printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d insideA.%d firsti.%u\n",unspentind,addrind,dstr(value),L.numaddrtx,L.maxaddrtx,L.insideA,L.first_addrtxi), debugstop();
+                printf("coin777_update_Lentry: couldnt find unspentind.%u %.8f addrind.%u %.8f num.%d max.%d insideA.%d firsti.%u\n",unspentind,dstr(value),addrind,dstr(value),L.numaddrtx,L.maxaddrtx,L.insideA,L.first_addrtxi), debugstop();
             }
         }
         else
