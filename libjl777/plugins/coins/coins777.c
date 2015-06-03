@@ -97,7 +97,7 @@ struct coin777_Lentry { int64_t balance; uint32_t first_addrtxi,numaddrtx:31,ins
 struct addrtx_linkptr { uint32_t next_addrtxi,maxunspentind; };
 
 #ifndef ADDRINFO_SIZE
-#define ADDRINFO_SIZE (128)
+#define ADDRINFO_SIZE (168)
 #endif
 
 struct coin777_addrinfo
