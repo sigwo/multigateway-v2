@@ -1378,6 +1378,17 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
     ramchain->ledger.table = coin777_ensure(coin,&ramchain->ledger,addrind);
     ramchain->spends.table = coin777_ensure(coin,&ramchain->spends,totalspends);
     ramchain->addrtx.table = coin777_ensure(coin,&ramchain->addrtx,totaladdrtx);
+    if ( 1 )
+    {
+        uint64_t calcbalance;
+        for (i=1; i<addrind; i++)
+        {
+            //fprintf(stderr,"patch %d of %d: ",i,addrind);
+            coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,i);
+            if ( (calcbalance= coin777_recalc_addrinfo(1,coin,i,&L,0,unspentind)) != L.balance )
+                fprintf(stderr,"calcbalance %.8f vs %.8f firsti.%u\n",dstr(calcbalance),dstr(L.balance),L.first_addrtxi);
+        }
+    }
     if ( 0 )
     {
         db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx"), os_compatible_path(fname);
@@ -1400,7 +1411,7 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
                     //    L.first_addrtxi = (struct addrtx_info *)((long)ptr + (long)L.first_addrtxi);
                     //printf("i.%d %.8f first %p %ld num.%d max.%d\n",i,dstr(L.balance),L.first_addrtxi,((long)L.first_addrtxi - (long)ptr)/sizeof(*atx),L.numaddrtx,L.maxaddrtx);
                     //fprintf(stderr,"%p num.%d max.%d ",L.first_addrtxi,L.numaddrtx,L.maxaddrtx);
-                    if ( (calcbalance= coin777_recalc_addrinfo(0,coin,i,&L,0,blocknum)) != L.balance )
+                    if ( (calcbalance= coin777_recalc_addrinfo(0,coin,i,&L,0,unspentind)) != L.balance )
                         fprintf(stderr,"calcbalance %.8f vs %.8f\n",dstr(calcbalance),dstr(L.balance));
                     coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,i);
                 }
