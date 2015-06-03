@@ -708,10 +708,10 @@ int32_t mgw_unspentstatus(struct coin777 *coin,struct multisig_addr *msig,char *
 
 int32_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
 {
-    int32_t i,status,vout; uint32_t unspentind,txidind; char txidstr[512]; struct multisig_addr *msig = args;
+    int32_t i,status,vout; uint32_t unspentind,txidind; char txidstr[512]; uint64_t atx_value; struct unspent_info U; struct multisig_addr *msig = args;
     for (i=0; i<num; i++)
     {
-        unspentind = unspents[i].rawind;
+        unspentind = unspents[i].unspentind;
         if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
         {
             if ( mgw_unspentstatus(coin,msig,txidstr,vout) != 0 )
@@ -722,7 +722,8 @@ int32_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct
                     mgw_markunspent(coin,msig,txidstr,vout,status);
                 else
                 {
-                    printf("pretend pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(unspents[i].value),msig->multisigaddr);
+                    atx_value = coin777_Uvalue(&U,coin,unspents[i].unspentind);
+                    printf("pretend pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
                     mgw_markunspent(coin,msig,txidstr,vout,MGW_PENDINGXFER);
                 }
             }

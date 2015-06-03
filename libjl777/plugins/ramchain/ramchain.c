@@ -288,19 +288,6 @@ int32_t ramchain_balance(char *retbuf,int32_t maxlen,struct coin777 *coin,struct
     return(0);
 }
 
-int _increasing_rawind(const void *a,const void *b)
-{
-#define uint_a (((struct addrtx_info *)a)->rawind)
-#define uint_b (((struct addrtx_info *)b)->rawind)
-	if ( uint_b > uint_a )
-		return(-1);
-	else if ( uint_b < uint_a )
-		return(1);
-	return(0);
-#undef uint_a
-#undef uint_b
-}
-
 struct addrtx_info *coin777_acctunspents(uint64_t *sump,int32_t *nump,struct coin777 *coin,uint32_t *addrinds,int32_t num)
 {
     uint64_t balance; int32_t i,j,n; struct coin777_Lentry L; struct addrtx_info *unspents,*allunspents = 0;
@@ -310,7 +297,7 @@ struct addrtx_info *coin777_acctunspents(uint64_t *sump,int32_t *nump,struct coi
         if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrinds[i]) == 0 && (unspents= coin777_compact(&balance,&n,coin,addrinds[i],&L)) != 0 )
         {
             for (j=0; j<n; j++)
-                unspents[j].num31 = addrinds[i];
+                unspents[j].spendind = addrinds[i];
             allunspents = realloc(allunspents,sizeof(*allunspents) * (n + (*nump)));
             memcpy(&allunspents[*nump],unspents,n * sizeof(*unspents));
             free(unspents);
@@ -318,8 +305,6 @@ struct addrtx_info *coin777_acctunspents(uint64_t *sump,int32_t *nump,struct coi
             (*nump) += n;
         }
     }
-    if ( *nump != 0 )
-       	qsort(allunspents,*nump,sizeof(*allunspents),_increasing_rawind);
     return(allunspents);
 }
 
@@ -341,22 +326,24 @@ uint32_t *conv_addrjson(int32_t *nump,struct coin777 *coin,cJSON *addrjson)
     return(addrinds);
 }
 
-struct addrtx_info *coin777_bestfit(struct addrtx_info *unspents,int32_t numunspents,uint64_t value)
+struct addrtx_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struct addrtx_info *unspents,int32_t numunspents,uint64_t value)
 {
-    uint64_t above,below,gap;
+    uint64_t above,below,gap,atx_value; struct unspent_info U;
     int32_t i;
     struct addrtx_info *vin,*abovevin,*belowvin;
     abovevin = belowvin = 0;
+    *valuep = 0;
     for (above=below=i=0; i<numunspents; i++)
     {
         vin = &unspents[i];
-        if ( vin->flag != 0 )
+        if ( vin->spendind != 0 )
             continue;
-        if ( vin->value == value )
+        *valuep = atx_value = coin777_Uvalue(&U,coin,vin->unspentind);
+        if ( atx_value == value )
             return(vin);
-        else if ( vin->value > value )
+        else if ( atx_value > value )
         {
-            gap = (vin->value - value);
+            gap = (atx_value - value);
             if ( above == 0 || gap < above )
             {
                 above = gap;
@@ -365,7 +352,7 @@ struct addrtx_info *coin777_bestfit(struct addrtx_info *unspents,int32_t numunsp
         }
         else
         {
-            gap = (value - vin->value);
+            gap = (value - atx_value);
             if ( below == 0 || gap < below )
             {
                 below = gap;
@@ -376,17 +363,17 @@ struct addrtx_info *coin777_bestfit(struct addrtx_info *unspents,int32_t numunsp
     return((abovevin != 0) ? abovevin : belowvin);
 }
 
-int64_t coin777_inputs(int64_t *changep,int32_t *nump,struct addrtx_info *inputs,int32_t max,struct addrtx_info *unspents,int32_t numunspents,struct cointx_info *cointx,uint64_t amount,uint64_t txfee)
+int64_t coin777_inputs(int64_t *changep,int32_t *nump,struct coin777 *coin,struct addrtx_info *inputs,int32_t max,struct addrtx_info *unspents,int32_t numunspents,struct cointx_info *cointx,uint64_t amount,uint64_t txfee)
 {
-    int64_t remainder,sum = 0; int32_t i,numinputs = 0; struct addrtx_info *vin;
+    int64_t remainder,sum = 0; int32_t i,numinputs = 0; struct addrtx_info *vin; uint64_t atx_value;
     remainder = amount + txfee;
     for (i=0; i<numunspents&&i<max-1; i++)
     {
-        if ( (vin= coin777_bestfit(unspents,numunspents,remainder)) != 0 )
+        if ( (vin= coin777_bestfit(&atx_value,coin,unspents,numunspents,remainder)) != 0 )
         {
-            sum += vin->value;
-            remainder -= vin->value;
-            vin->flag = 1;
+            sum += atx_value;
+            remainder -= atx_value;
+            vin->spendind = 1;
             inputs[numinputs++] = *vin;
             if ( sum >= (amount + txfee) )
             {

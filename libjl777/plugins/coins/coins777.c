@@ -90,9 +90,10 @@ struct coin_offsets { bits256 blockhash,merkleroot; uint64_t credits,debits; uin
 struct unspent_info { uint64_t value; uint32_t addrind,rawind_or_blocknum:31,isblocknum:1; };
 struct spend_info { uint32_t unspentind,addrind,spending_txidind; uint16_t spending_vin; };
 
-struct addrtx_info { int64_t value; uint32_t rawind,num31:31,flag:1; };
+struct oldaddrtx_info { int64_t value; uint32_t rawind,num31:31,flag:1; };
+struct addrtx_info { uint32_t unspentind,spendind; };
 struct coin777_Lentry { struct addrtx_info *first_addrtxi; int64_t balance; uint32_t numaddrtx:30,insideA:1,pending:1,maxaddrtx:30,MGW:1,tbd:1; };
-struct addrtx_linkptr { int64_t balance; uint32_t next_addrtxi,blocknum; };
+struct addrtx_linkptr { int64_t balance; uint32_t next_addrtxi,maxunspentind; };
 
 #ifndef ADDRINFO_SIZE
 #define ADDRINFO_SIZE 16384
@@ -154,13 +155,14 @@ uint32_t coin777_txidind(uint32_t *firstblocknump,struct coin777 *coin,char *txi
 uint32_t coin777_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr);
 uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr,char *scriptstr);
 int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_t endblocknum,int32_t verifyflag);
-uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag,uint32_t *totaladdrtxp);
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t maxunspentind,int32_t recalcflag,uint32_t *totaladdrtxp);
 int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp);
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H);
 int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct coin777_state *sp,uint32_t rawind);
 struct addrtx_info *coin777_compact(uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL);
 uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args);
 int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin,uint32_t unspentind);
+uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t unspentind);
 
 #endif
 #else
@@ -558,15 +560,22 @@ int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin
     return(-1);
 }
 
+uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t unspentind)
+{
+    ;
+    if ( coin777_RWmmap(0,U,coin,&coin->ramchain.unspents,unspentind) == 0 )
+        return(U->value);
+    else printf("error getting unspents[%u]\n",unspentind);
+    return(0);
+}
+
 uint64_t coin777_value(struct coin777 *coin,uint32_t *unspentindp,struct unspent_info *U,uint32_t txidind,int16_t vout)
 {
     uint32_t unspentind,txoffsets[2];
     if ( coin777_RWmmap(0,txoffsets,coin,&coin->ramchain.txoffsets,txidind) == 0  )
     {
         (*unspentindp) = unspentind = txoffsets[0] + vout;
-        if ( coin777_RWmmap(0,U,coin,&coin->ramchain.unspents,unspentind) == 0 )
-            return(U->value);
-        else printf("error getting unspents[%u]\n",unspentind);
+        return(coin777_Uvalue(U,coin,unspentind));
     } else printf("error getting txoffsets for txidind.%u\n",txidind);
     return(0);
 }
@@ -694,223 +703,141 @@ uint32_t coin777_addrtxalloc(struct coin777 *coin,struct coin777_Lentry *L,int32
     return((uint32_t)L->first_addrtxi);
 }
 
-struct addrtx_info *coin777_compact(uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL)
+struct addrtx_info *coin777_compact(uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L)
 {
-    int32_t i,j,addrtxi,flag; uint32_t unspentind; struct addrtx_info *actives; int64_t refvalue; uint64_t balance; struct spend_info S;
-    actives = calloc(oldL->numaddrtx,sizeof(*actives));
-    for (i=0; i<oldL->numaddrtx; i++)
-        coin777_RWaddrtx(0,coin,addrind,&actives[i],oldL,i);
-    for (balance=i=addrtxi=0; i<oldL->numaddrtx; i++)
+    int32_t i,num,addrtxi,iter; struct unspent_info U; struct addrtx_info ATX,*actives = 0; uint64_t balance = 0;
+    for (iter=num=addrtxi=0; iter<2; iter++)
     {
-        flag = 0;
-        if ( actives[i].value < 0 )
-            printf("coin777_addrtx unmatched spend in slot.%d of %d: %.8f spend.%u blocknum.%u\n",i,oldL->numaddrtx,dstr(actives[i].value),actives[i].rawind,actives[i].num31), debugstop();
-        else if ( i < oldL->numaddrtx-1 && actives[i].value != 0 && actives[i].rawind != 0 )
+        for (i=0; i<L->numaddrtx; i++)
         {
-            refvalue = -actives[i].value, unspentind = actives[i].rawind;
-            for (j=i+1; j<oldL->numaddrtx; j++)
+            coin777_RWaddrtx(0,coin,addrind,&ATX,L,i);
+            if ( ATX.spendind == 0 )
             {
-                if ( actives[j].value == refvalue )
+                if ( iter == 0 )
+                    num++;
+                else
                 {
-                    coin777_RWmmap(0,&S,coin,&coin->ramchain.spends,actives[j].rawind);
-                    if ( S.addrind != addrind )
-                        printf("coin777_addrtx mismatched addrind A%u vs A%u in (S%u %.8f U%u).%d of %d\n",S.addrind,addrind,actives[j].rawind,dstr(actives[j].value),S.unspentind,j,oldL->numaddrtx), debugstop();
-                    else if ( S.unspentind == unspentind )
-                    {
-                        if ( Debuglevel > 2 )
-                            printf("clear.(S%u %.8f U%u).%d ",actives[j].rawind,dstr(actives[j].value),S.unspentind,j);
-                        memset(&actives[j],0,sizeof(actives[j]));
-                        flag = 1;
-                        break;
-                    }
+                    actives[addrtxi++] = ATX;
+                    balance += coin777_Uvalue(&U,coin,ATX.unspentind);
                 }
             }
         }
-        if ( flag == 0 && actives[i].rawind != 0 && actives[i].value != 0 )
-        {
-            if ( Debuglevel > 2 )
-                printf("+(u%u %.8f).%d ",actives[i].rawind,dstr(actives[i].value),i);
-            /*if ( fp == 0 && L != 0 )
-                coin777_RWaddrtx(1,coin,addrind,&actives[i],L,addrtxi);
-            else
-            {
-                if ( fp != 0 )
-                    fwrite(&actives[i],1,sizeof(actives[i]),fp);
-                if ( fp2 != 0 )
-                    fwrite(&actives[i],1,sizeof(actives[i]),fp2);
-            }*/
-            balance += actives[i].value;
-            if ( i != addrtxi )
-                actives[addrtxi] = actives[i];
-            addrtxi++;
-        }
+        if ( iter == 0 && num > 0 )
+            actives = calloc(num,sizeof(*actives));
     }
-    if ( (*numaddrtxp = addrtxi) == 0 )
-        free(actives), actives = 0;
-    else actives = realloc(actives,sizeof(*actives) * addrtxi);
     if ( addrtxi != 0 && Debuglevel > 2 )
         printf("-> balance %.8f ",dstr(balance));
+    *numaddrtxp = addrtxi;
     if ( balancep != 0 )
         *balancep = balance;
     return(actives);
 }
 
-struct addrtx_info *coin777_update_addrtx(struct coin777 *coin,uint32_t addrind,struct addrtx_info *atx,struct coin777_Lentry *L,int32_t addrtxi,uint32_t blocknum,uint32_t *totaladdrtxp)
+struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,struct addrtx_info *atx,struct coin777_Lentry *L,uint32_t maxunspentind,uint32_t *totaladdrtxp)
 {
-    struct addrtx_linkptr PTR; struct coin777_Lentry oldL; struct addrtx_info ATX,*actives;
-    int32_t i,incr = 16; uint64_t balance;
-    if ( (totaladdrtxp == 0 && addrtxi >= L->maxaddrtx-1*0) || (totaladdrtxp != 0 && addrtxi != L->numaddrtx) )
-    {
-        printf("addrtx_info error trying to load past num.%d of max.%d || %p trying to write noncontinuous %d\n",L->numaddrtx,L->maxaddrtx,totaladdrtxp,addrtxi);
-        return(0);
-    }
+    struct addrtx_linkptr PTR; struct coin777_Lentry oldL; struct addrtx_info ATX,*actives; struct unspent_info U;
+    int32_t i,n,incr = 16; uint64_t balance,atx_value;
     if ( totaladdrtxp != 0 )
     {
-        if ( L->maxaddrtx == 0 )
-        {
-            coin777_addrtxalloc(coin,L,incr,totaladdrtxp);
-            if ( L->numaddrtx != 0 )
-                printf("coin777_addrtx unexpected nonz numaddtx.%d for A.%u asking addrtxi.%d max.%d\n",L->numaddrtx,addrind,addrtxi,incr);
-        }
-        /*else if ( addrtxi >= L->maxaddrtx )
-        {
-            printf("coin777_addrtx error, skipped past last entry of active set addrtxi.%d vs max %d\n",addrtxi,L->maxaddrtx);
-            return(0);
-        }*/
-        else if ( addrtxi == L->maxaddrtx-1*0 )
+        if ( L->numaddrtx >= L->maxaddrtx )
         {
             oldL = *L;
             if ( sizeof(ATX) != sizeof(PTR) )
                 printf("coin777_addrtx FATAL datastructure size mismatch %ld vs %ld\n",sizeof(ATX),sizeof(PTR)), debugstop();
             if ( (L->maxaddrtx << 1) > incr )
                 incr = (L->maxaddrtx << 1);
-            if ( incr > 65536 )
-                incr = 65536;
             if ( 0 )
             {
-                incr += L->maxaddrtx;
-                memset(&PTR,0,sizeof(PTR)), PTR.balance = L->balance, PTR.blocknum = blocknum, PTR.next_addrtxi = (*totaladdrtxp);
-                coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,&oldL,addrtxi);
+                memset(&PTR,0,sizeof(PTR)), PTR.balance = L->balance, PTR.maxunspentind = maxunspentind, PTR.next_addrtxi = (*totaladdrtxp);
+                coin777_RWaddrtx(1,coin,addrind,(struct addrtx_info *)&PTR,&oldL,oldL.maxaddrtx);
                 if ( coin777_addrtxalloc(coin,L,incr,totaladdrtxp) != PTR.next_addrtxi )
                     printf("coin777_addrtx WARNING linkage unexpected value %u != %u\n",(uint32_t)L->first_addrtxi,PTR.next_addrtxi);
-                addrtxi = L->numaddrtx = 0;
-                if ( oldL.numaddrtx > 0 )
-                {
-                    actives = coin777_compact(&balance,&addrtxi,coin,addrind,&oldL);
-                    L->numaddrtx = addrtxi;
-                    if ( balance != L->balance)
-                    {
-                        L->balance = balance, printf("coin777_addrtx A.%u num %d -> %d warning recalc unspent %llu != %llu | firsti.%u\n",addrind,oldL.numaddrtx,addrtxi,(long long)balance,(long long)L->balance,(uint32_t)L->first_addrtxi);
-                    }
-                    else
-                    {
-                        for (i=0; i<addrtxi; i++)
-                            coin777_RWaddrtx(1,coin,addrind,&actives[i],L,i);
-                    }
-                    if ( actives != 0 )
-                        free(actives);
-                }
-                if ( Debuglevel > 2 )
-                    printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f | firsti.%ld\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,L->numaddrtx,incr,dstr(L->balance),dstr(atx->value),(long)L->first_addrtxi);
             }
             else
             {
-                L->numaddrtx = addrtxi, L->maxaddrtx += incr;
-                coin777_addrtxalloc(coin,L,L->maxaddrtx,totaladdrtxp);
-                for (i=0; i<addrtxi; i++)
-                {
-                    coin777_RWaddrtx(0,coin,addrind,&ATX,&oldL,i);
-                    coin777_RWaddrtx(1,coin,addrind,&ATX,L,i);
-                }
+                coin777_addrtxalloc(coin,L,incr,totaladdrtxp);
             }
+            L->numaddrtx = 0;
+            if ( oldL.numaddrtx > 0 )
+            {
+                actives = coin777_compact(&balance,&n,coin,addrind,&oldL);
+                L->numaddrtx = n;
+                if ( balance != L->balance)
+                {
+                    L->balance = balance, printf("coin777_addrtx A.%u num %d -> %d warning recalc unspent %llu != %llu | firsti.%u\n",addrind,oldL.numaddrtx,L->numaddrtx,(long long)balance,(long long)L->balance,(uint32_t)L->first_addrtxi);
+                }
+                else
+                {
+                    for (i=0; i<L->numaddrtx; i++)
+                        coin777_RWaddrtx(1,coin,addrind,&actives[i],L,i);
+                }
+                if ( actives != 0 )
+                    free(actives);
+            }
+            if ( Debuglevel > 2 )
+                printf("coin777_addrtx COMPACTED A.%u num %d/%d -> %d/%d balance %.8f with %.8f | firsti.%ld\n",addrind,oldL.numaddrtx,oldL.maxaddrtx,L->numaddrtx,incr,dstr(L->balance),dstr(coin777_Uvalue(&U,coin,atx->unspentind)),(long)L->first_addrtxi);
         }
-    }
-    if ( addrtxi >= L->maxaddrtx-1*0 )
-    {
-        printf("coin777_addrtx INVALID addrtxi.%d when max %d\n",addrtxi,L->maxaddrtx);
-        return(0);
-    }
-    if ( totaladdrtxp != 0 )
-    {
-        coin777_RWaddrtx(1,coin,addrind,atx,L,L->numaddrtx++), L->balance += atx->value;
+        coin777_RWaddrtx(1,coin,addrind,atx,L,L->numaddrtx++);
+        atx_value = coin777_Uvalue(&U,coin,atx->unspentind), L->balance += atx_value;
         if ( Debuglevel > 2 )
-            printf("rawind.%u block.%u updated addrind.%u addrtxi.%d %.8f -> %.8f num.%d of %d\n",atx->rawind,atx->num31,addrind,addrtxi,dstr(atx->value),dstr(L->balance),L->numaddrtx,L->maxaddrtx);
+            printf("rawind.%u updated addrind.%u L->numaddrtx.%d %.8f -> %.8f num.%d of %d\n",atx->unspentind,addrind,L->numaddrtx,dstr(atx_value),dstr(L->balance),L->numaddrtx,L->maxaddrtx);
         coin777_RWmmap(1,L,coin,&coin->ramchain.ledger,addrind);
-        update_ledgersha256(coin->ramchain.ledger.sha256,&coin->ramchain.ledger.state,atx->value,addrind,atx->num31);
+        update_ledgersha256(coin->ramchain.ledger.sha256,&coin->ramchain.ledger.state,atx_value,addrind,maxunspentind);
         update_sha256(coin->ramchain.addrtx.sha256,&coin->ramchain.addrtx.state,(uint8_t *)atx,sizeof(*atx));
     }
-    else coin777_RWaddrtx(0,coin,addrind,atx,L,addrtxi);
+    else printf("coin777_add_addrtx illegal mode\n"), debugstop();
     return(atx);
 }
 
-int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t unspentind,uint64_t value,uint32_t blocknum)
+int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t unspentind,uint64_t value)
 {
-    static long numsearches,numprobes;
-    uint32_t floor,ceiling,probe,iter,start,end; int32_t i,flag;
+    static long numsearches,numprobes,rangetotal;
+    uint32_t floor,ceiling,probe,iter,start,end; int32_t i; uint64_t atx_value; struct unspent_info U;
     //struct addrtx_info *ATX = L->first_addrtxi;
-    floor = 0, ceiling = L->numaddrtx-1;
     if ( L->numaddrtx == 0 )
         return(-1);
+    floor = 0, ceiling = L->numaddrtx-1;
     numsearches++;
+    rangetotal += L->numaddrtx;
     if ( 1 )
     {
-        while ( floor != ceiling )
+        while ( floor < ceiling-1 )
         {
             probe = (floor + ceiling) >> 1;
-            flag = 0;
-            for (i=probe; i<=ceiling; i++)
+            coin777_RWaddrtx(0,coin,addrind,atx,L,probe);
+            if ( Debuglevel > 2 )
+                printf("search %u %.8f, probe.%u u%u floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->unspentind,floor,ceiling);
+            if ( unspentind < atx->unspentind )
+                ceiling = probe;
+            else if ( unspentind > atx->unspentind )
+                floor = probe;
+            else
             {
-                numprobes++;
-                //atx = &ATX[i];
-                if ( coin777_RWaddrtx(0,coin,addrind,atx,L,i) == 0 && atx->value > 0 )
+                atx_value = coin777_Uvalue(&U,coin,atx->unspentind);
+                if ( atx_value == value )
                 {
-                    flag = 1;
+                    if ( Debuglevel > 2 || (rand() % 10000) == 0 )
+                        printf("FOUND MATCH end search %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld averange %.1f %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)rangetotal/numsearches,(double)numprobes/numsearches);
+                    return(probe);
+                }
+                else
+                {
+                    printf("unexpected value mismatch %.8f vs %.8f at probe.%u floor.%u ceiling.%u num.%u\n",dstr(atx_value),dstr(value),probe,floor,ceiling,L->numaddrtx);
                     break;
                 }
             }
-            if ( flag == 0 )
-            {
-                for (i=probe; i>=floor; i--)
-                {
-                    numprobes++;
-                    //atx = &ATX[i];
-                    if ( coin777_RWaddrtx(0,coin,addrind,atx,L,i) == 0 && atx->value > 0 )
-                    {
-                        flag = 1;
-                        break;
-                    }
-                }
-            }
-            if ( i < 0 || i >= L->numaddrtx || flag == 0 )
-                break;
-            if ( Debuglevel > 2 )
-                printf("search %u %.8f, probe.%u u%u (%.8f) floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->rawind,dstr(atx->value),floor,ceiling);
-            if ( unspentind < atx->rawind )
-                ceiling = probe;
-            else if ( unspentind > atx->rawind )
-                floor = probe;
-            else if ( atx->value == value )
-            {
-                printf("FOUND MATCH end search %u, probe.%u floor.%u ceiling.%u i.%d flag.%d numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,i,flag,numsearches,numprobes,(double)numprobes/numsearches);
-                return(i);
-            }
-            else
-            {
-                printf("unexpected value mismatch %.8f vs %.8f\n",dstr(atx->value),dstr(value));
-                break;
-            }
-            if ( floor+1 == ceiling )
+            /*if ( floor+1 == ceiling )
             {
                 //atx = &ATX[ceiling];
-                if ( coin777_RWaddrtx(0,coin,addrind,atx,L,ceiling) == 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
+                if ( coin777_RWaddrtx(0,coin,addrind,atx,L,ceiling) == 0 && atx->num31 <= blocknum && atx_value > 0 && unspentind == atx->rawind )
                     return(ceiling);
-                else if ( coin777_RWaddrtx(0,coin,addrind,atx,L,floor) == 0 && atx->num31 <= blocknum && atx->value > 0 && unspentind == atx->rawind )
+                else if ( coin777_RWaddrtx(0,coin,addrind,atx,L,floor) == 0 && atx->num31 <= blocknum && atx_value > 0 && unspentind == atx->rawind )
                     return(floor);
                 break;
-            }
+            }*/
         }
         if ( 1 && L->numaddrtx > 1 )
-            printf("end search %u, probe.%u floor.%u ceiling.%u i.%d flag.%d numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,i,flag,numsearches,numprobes,(double)numprobes/numsearches);
+            printf("end search %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)numprobes/numsearches);
     }
     for (iter=0; iter<2; iter++)
     {
@@ -920,18 +847,18 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
         for (i=start; i<=end; i++)
         {
             numprobes++;
-            if ( coin777_RWaddrtx(0,coin,addrind,atx,L,i) == 0 )//&& atx->num31 <= blocknum )
+            if ( coin777_RWaddrtx(0,coin,addrind,atx,L,i) == 0 )
             {
-                if ( atx->value > 0 && unspentind == atx->rawind )
+                if ( unspentind == atx->unspentind )
                 {
-                    if ( atx->value != value )
+                    if ( (atx_value= coin777_Uvalue(&U,coin,atx->unspentind)) != value )
                     {
-                        printf("coin777_update_Lentry %d of %d value mismatch uspentind.%u %.8f %.8f blocknum.%u\n",i,L->numaddrtx,unspentind,dstr(value),dstr(atx->value),blocknum);
+                        printf("coin777_bsearch %d of %d value mismatch uspentind.%u %.8f %.8f\n",i,L->numaddrtx,unspentind,dstr(value),dstr(atx_value));
                         break;
                     }
                     else
                     {
-                        if ( 1 && L->numaddrtx > 1 )
+                        if ( L->numaddrtx > 1 )
                             printf("linear search found u%d in  slot.%d when bsearch missed it?\n",unspentind,i);
                         return(i);
                     }
@@ -943,45 +870,19 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
     return(-1);
 }
 
-int64_t coin777_update_Lentry(struct coin777 *coin,struct coin777_Lentry *L,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
+uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t *totaladdrtxp,uint32_t maxunspentind)
 {
-    int32_t i,flag = 0; struct addrtx_info ATX;
-    if ( spendind != 0 ) //RAMCHAINS.verifyspends != 0 &&
-    {
-        if ( (i= coin777_bsearch(&ATX,coin,addrind,L,unspentind,value,blocknum)) >= 0 && ATX.num31 <= blocknum && ATX.value > 0 && unspentind == ATX.rawind )
-            flag = 1;
-        if ( flag == 0 )
-        {
-            for (i=0; i<L->numaddrtx; i++)
-                if ( coin777_update_addrtx(coin,addrind,&ATX,L,i,blocknum,0) != 0 )
-                    if ( ATX.num31 != 0 )
-                        printf("(%u %.8f).b%u ",ATX.rawind,dstr(ATX.value),ATX.num31);
-            printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d insideA.%d firsti.%u\n",unspentind,addrind,dstr(value),L->numaddrtx,L->maxaddrtx,L->insideA,(uint32_t)L->first_addrtxi), debugstop();
-        }
-    }
-    memset(&ATX,0,sizeof(ATX));
-    if ( spendind == 0 )
-        ATX.value = value, ATX.rawind = unspentind;
-    else ATX.value = -value, ATX.rawind = spendind;
-    ATX.num31 = blocknum;
-    coin777_update_addrtx(coin,addrind,&ATX,L,L->numaddrtx,blocknum,totaladdrtxp);
-   // printf("updated %.8f -> balance %.8f\n",dstr(value),dstr(L->balance));
-    return(L->balance);
-}
-
-uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t *totaladdrtxp,uint32_t blocknum)
-{
-    struct addrtx_info ATX; int32_t addrtxi; int64_t balance = 0;
+    struct addrtx_info ATX; int32_t addrtxi; uint64_t atx_value; struct unspent_info U; int64_t balance = 0;
     for (addrtxi=0; addrtxi<L->numaddrtx; addrtxi++)
     {
-        if ( coin777_update_addrtx(coin,addrind,&ATX,L,addrtxi,blocknum,0) != 0 )
+        if ( coin777_RWaddrtx(0,coin,addrind,&ATX,L,addrtxi) == 0 )
         {
-            if ( dispflag != 0 && ATX.value != 0 )
-                fprintf(stderr,"(%u %.8f).b%d ",ATX.rawind,dstr(ATX.value),ATX.num31);
-            if ( ATX.num31 < blocknum )
-                balance += ATX.value;
-            else if ( ATX.num31 == 0 || ATX.num31 >= blocknum )
-                break;
+            atx_value = coin777_Uvalue(&U,coin,ATX.unspentind);
+            if ( dispflag != 0 && atx_value != 0 )
+                fprintf(stderr,"(%u %.8f).s%u ",ATX.unspentind,dstr(atx_value),ATX.spendind);
+            if ( ATX.spendind == 0 && ATX.unspentind < maxunspentind )
+                balance += atx_value;
+            else break;
         } else break;
     }
     L->numaddrtx = addrtxi;
@@ -990,21 +891,43 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
     return(balance);
 }
 
-int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t blocknum,uint32_t *totaladdrtxp)
+int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t unspentind,uint64_t value,uint32_t spendind,uint32_t maxunspentind,uint32_t *totaladdrtxp)
 {
-    struct coin777_Lentry L;
+    int32_t i,addrtxi; struct addrtx_info ATX; struct unspent_info U; struct coin777_Lentry L;
     if ( value == 0 )
         return(0);
     if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
     {
-        coin777_update_Lentry(coin,&L,addrind,unspentind,value,spendind,blocknum,totaladdrtxp);
+        if ( spendind != 0 )
+        {
+            if ( (addrtxi= coin777_bsearch(&ATX,coin,addrind,&L,unspentind,value)) >= 0  )
+            {
+                ATX.spendind = spendind;
+                if ( coin777_RWaddrtx(1,coin,addrind,&ATX,&L,addrtxi) == 0 )
+                    return(coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind));
+            }
+            else
+            {
+                for (i=0; i<L.numaddrtx; i++)
+                    if ( coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i) == 0 )
+                        printf("(U%u %.8f).S%u ",ATX.unspentind,dstr(coin777_Uvalue(&U,coin,ATX.unspentind)),ATX.spendind);
+                printf("coin777_update_Lentry: couldnt find unspentind.%u addrind.%u %.8f num.%d max.%d insideA.%d firsti.%u\n",unspentind,addrind,dstr(value),L.numaddrtx,L.maxaddrtx,L.insideA,(uint32_t)L.first_addrtxi), debugstop();
+            }
+        }
+        else
+        {
+            memset(&ATX,0,sizeof(ATX)), ATX.unspentind = unspentind;
+            coin777_add_addrtx(coin,addrind,&ATX,&L,maxunspentind,totaladdrtxp);
+            if ( addrind == 13045 )
+                printf("addrind.%u U.%u updated %.8f -> balance %.8f num.%d max.%d\n",addrind,unspentind,dstr(value),dstr(L.balance),L.numaddrtx,L.maxaddrtx);
+        }
         return(0);
     }
     else printf("coin777_unspent cant find addrinfo for addrind.%u\n",addrind);
     return(-1);
 }
 
-uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t blocknum,int32_t recalcflag,uint32_t *totaladdrtxp)
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t maxunspentind,int32_t recalcflag,uint32_t *totaladdrtxp)
 {
     struct coin777_addrinfo A; struct coin777_Lentry L;
     int64_t sum = 0; uint32_t addrind; int32_t errs = 0; int64_t calcbalance;
@@ -1014,10 +937,10 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
         {
             if ( recalcflag != 0 )
             {
-                if ( (calcbalance= coin777_recalc_addrinfo(0,coin,addrind,&L,totaladdrtxp,blocknum)) != L.balance )
+                if ( (calcbalance= coin777_recalc_addrinfo(0,coin,addrind,&L,totaladdrtxp,maxunspentind)) != L.balance )
                 {
-                    coin777_recalc_addrinfo(1,coin,addrind,&L,totaladdrtxp,blocknum);
-                    printf("found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d | firsti %u blocknum.%u\n",dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx,(uint32_t)L.first_addrtxi,blocknum);
+                    coin777_recalc_addrinfo(1,coin,addrind,&L,totaladdrtxp,maxunspentind);
+                    printf("found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d | firsti %u maxunspentind.%u\n",dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx,(uint32_t)L.first_addrtxi,maxunspentind);
                     L.balance = calcbalance;
                     errs++, coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind);
                 }
@@ -1026,7 +949,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
         } else printf("error loading addrinfo or ledger entry for addrind.%u\n",addrind);
     }
     if ( errs != 0 || syncflag < 0 )
-        printf("addrinfos_sum @ blocknum.%u errs.%d -> sum %.8f\n",blocknum,errs,dstr(sum));
+        printf("addrinfos_sum @ maxunspentind.%u errs.%d -> sum %.8f\n",maxunspentind,errs,dstr(sum));
     return(sum);
 }
 
@@ -1801,18 +1724,18 @@ int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_
     return(0);
 }
 
-int32_t coin777_verify(struct coin777 *coin,uint32_t blocknum,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
+int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
 {
     int32_t errs = 0;
-    if ( blocknum > 0 )
+    if ( maxunspentind > 1 )
     {
-        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,blocknum,forceflag,totaladdrtxp);
+        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,forceflag,totaladdrtxp);
         if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
         {
             if ( coin->ramchain.addrsum != (credits - debits) )
                 printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->ramchain.addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
             if ( forceflag == 0 )
-                coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,blocknum,1,totaladdrtxp);
+                coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,1,totaladdrtxp);
             if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
             {
                 if ( coin->ramchain.addrsum != (credits - debits) )
@@ -1829,13 +1752,13 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
     int32_t i,retval = 0; struct coin777_hashes H;
     if ( blocknum == coin->ramchain.startblocknum || blocknum > coin->ramchain.RTblocknum-1000 || numsyncs > 0 )
     {
-        if ( coin777_verify(coin,blocknum,credits,debits,addrind,1,totaladdrtxp) != 0 )
+        if ( coin777_verify(coin,numrawvouts,credits,debits,addrind,1,totaladdrtxp) != 0 )
             printf("cant verify at block.%u\n",blocknum), debugstop();
     }
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
     H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind, H.totaladdrtx = *totaladdrtxp;
     if ( numsyncs >= 0 )
-        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,1,blocknum,0,totaladdrtxp);
+        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,1,numrawvouts,0,totaladdrtxp);
     for (i=0; i<=coin->ramchain.num; i++)
     {
         if ( numsyncs >= 0 )
