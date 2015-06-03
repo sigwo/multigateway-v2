@@ -97,7 +97,7 @@ struct coin777_Lentry { int64_t balance; uint32_t first_addrtxi,numaddrtx:31,ins
 struct addrtx_linkptr { uint32_t next_addrtxi,maxunspentind; };
 
 #ifndef ADDRINFO_SIZE
-#define ADDRINFO_SIZE 16384
+#define ADDRINFO_SIZE (1024 * 1024)
 #endif
 
 struct coin777_addrinfo
@@ -1805,7 +1805,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
 uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind,uint32_t *totaladdrtxp)
 {
     int32_t i,retval = 0; struct coin777_hashes H;
-    if ( 1 || blocknum == coin->ramchain.startblocknum || blocknum > coin->ramchain.RTblocknum-1000 || numsyncs > 0 )
+    if ( blocknum == coin->ramchain.startblocknum || blocknum > coin->ramchain.RTblocknum-1000 || numsyncs > 0 )
     {
         if ( coin777_verify(coin,numrawvouts,numrawvins,credits,debits,addrind,1,totaladdrtxp) != 0 )
             printf("cant verify at block.%u\n",blocknum), debugstop();
