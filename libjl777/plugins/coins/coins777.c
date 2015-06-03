@@ -777,7 +777,7 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
         }
         coin777_RWaddrtx(1,coin,addrind,atx,L,L->numaddrtx++);
         atx_value = coin777_Uvalue(&U,coin,atx->unspentind), L->balance += atx_value;
-        if ( Debuglevel > 1 )
+        if ( Debuglevel > 2 )
             printf("rawind.%u updated addrind.%u L->numaddrtx.%d %.8f -> %.8f num.%d of %d\n",atx->unspentind,addrind,L->numaddrtx,dstr(atx_value),dstr(L->balance),L->numaddrtx,L->maxaddrtx);
         coin777_RWmmap(1,L,coin,&coin->ramchain.ledger,addrind);
         update_ledgersha256(coin->ramchain.ledger.sha256,&coin->ramchain.ledger.state,atx_value,addrind,maxunspentind);
@@ -804,8 +804,8 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             probe++;
         lastprobe = probe;
         coin777_RWaddrtx(0,coin,addrind,atx,L,probe);
-        //if ( Debuglevel > 2 )
-        printf("search %u %.8f, probe.%u u%u floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->unspentind,floor,ceiling);
+        if ( Debuglevel > 2 )
+            printf("search %u %.8f, probe.%u u%u floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->unspentind,floor,ceiling);
         if ( unspentind < atx->unspentind )
             ceiling = probe;
         else if ( unspentind > atx->unspentind )
@@ -873,7 +873,8 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
     struct addrtx_info ATX; int32_t addrtxi; uint64_t atx_value; struct unspent_info U; int64_t balance = 0;
     for (addrtxi=0; addrtxi<L->numaddrtx; addrtxi++)
     {
-        if ( coin777_RWaddrtx(0,coin,addrind,&ATX,L,addrtxi) == 0 )
+        memset(&ATX,0,sizeof(ATX));
+        if ( coin777_RWaddrtx(0,coin,addrind,&ATX,L,addrtxi) == 0 && ATX.unspentind < maxunspentind )
         {
             atx_value = coin777_Uvalue(&U,coin,ATX.unspentind);
             if ( dispflag != 0 && atx_value != 0 )
@@ -883,7 +884,7 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
         }
         else
         {
-            printf("cant get addrtxi.%d of num.%d max.%d\n",addrtxi,L->numaddrtx,L->maxaddrtx);
+            printf("cant get addrtxi.%d of num.%d max.%d unspentind.%u maxunspentind.%u\n",addrtxi,L->numaddrtx,L->maxaddrtx,ATX.unspentind,maxunspentind);
             break;
         }
     }
