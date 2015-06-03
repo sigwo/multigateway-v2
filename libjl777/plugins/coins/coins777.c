@@ -803,7 +803,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
         {
             probe = (floor + ceiling) >> 1;
             coin777_RWaddrtx(0,coin,addrind,atx,L,probe);
-            if ( Debuglevel > 2 )
+            //if ( Debuglevel > 2 )
                 printf("search %u %.8f, probe.%u u%u floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->unspentind,floor,ceiling);
             if ( unspentind < atx->unspentind )
                 ceiling = probe;
