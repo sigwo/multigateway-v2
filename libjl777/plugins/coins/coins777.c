@@ -790,53 +790,53 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
 int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t unspentind,uint64_t value)
 {
     static long numsearches,numprobes,rangetotal;
-    uint32_t floor,ceiling,probe,iter,start,end; int32_t i; uint64_t atx_value; struct unspent_info U;
+    uint32_t floor,ceiling,probe,lastprobe,iter,start,end; int32_t i; uint64_t atx_value; struct unspent_info U;
     //struct addrtx_info *ATX = L->first_addrtxi;
     if ( L->numaddrtx == 0 )
         return(-1);
     floor = 0, ceiling = L->numaddrtx-1;
     numsearches++;
     rangetotal += L->numaddrtx;
-    if ( 1 )
+    lastprobe = -2;
+    while ( floor < ceiling )
     {
-        while ( floor < ceiling )
+        if ( (probe= (floor + ceiling) >> 1) == lastprobe )
+            probe++;
+        lastprobe = probe;
+        coin777_RWaddrtx(0,coin,addrind,atx,L,probe);
+        //if ( Debuglevel > 2 )
+        printf("search %u %.8f, probe.%u u%u floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->unspentind,floor,ceiling);
+        if ( unspentind < atx->unspentind )
+            ceiling = probe;
+        else if ( unspentind > atx->unspentind )
+            floor = probe;
+        else
         {
-            probe = (floor + ceiling) >> 1;
-            coin777_RWaddrtx(0,coin,addrind,atx,L,probe);
-            //if ( Debuglevel > 2 )
-                printf("search %u %.8f, probe.%u u%u floor.%u ceiling.%u\n",unspentind,dstr(value),probe,atx->unspentind,floor,ceiling);
-            if ( unspentind < atx->unspentind )
-                ceiling = probe;
-            else if ( unspentind > atx->unspentind )
-                floor = probe;
+            atx_value = coin777_Uvalue(&U,coin,atx->unspentind);
+            if ( atx_value == value )
+            {
+                if ( Debuglevel > 2 || (rand() % 10000) == 0 )
+                    printf("FOUND MATCH end search %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld averange %.1f %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)rangetotal/numsearches,(double)numprobes/numsearches);
+                return(probe);
+            }
             else
             {
-                atx_value = coin777_Uvalue(&U,coin,atx->unspentind);
-                if ( atx_value == value )
-                {
-                    if ( Debuglevel > 2 || (rand() % 10000) == 0 )
-                        printf("FOUND MATCH end search %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld averange %.1f %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)rangetotal/numsearches,(double)numprobes/numsearches);
-                    return(probe);
-                }
-                else
-                {
-                    printf("unexpected value mismatch %.8f vs %.8f at probe.%u floor.%u ceiling.%u num.%u\n",dstr(atx_value),dstr(value),probe,floor,ceiling,L->numaddrtx);
-                    break;
-                }
-            }
-            /*if ( floor+1 == ceiling )
-            {
-                //atx = &ATX[ceiling];
-                if ( coin777_RWaddrtx(0,coin,addrind,atx,L,ceiling) == 0 && atx->num31 <= blocknum && atx_value > 0 && unspentind == atx->rawind )
-                    return(ceiling);
-                else if ( coin777_RWaddrtx(0,coin,addrind,atx,L,floor) == 0 && atx->num31 <= blocknum && atx_value > 0 && unspentind == atx->rawind )
-                    return(floor);
+                printf("unexpected value mismatch %.8f vs %.8f at probe.%u floor.%u ceiling.%u num.%u\n",dstr(atx_value),dstr(value),probe,floor,ceiling,L->numaddrtx);
                 break;
-            }*/
+            }
         }
-        if ( 1 && L->numaddrtx > 1 )
-            printf("end search %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)numprobes/numsearches);
+        /*if ( floor+1 == ceiling )
+         {
+         //atx = &ATX[ceiling];
+         if ( coin777_RWaddrtx(0,coin,addrind,atx,L,ceiling) == 0 && atx->num31 <= blocknum && atx_value > 0 && unspentind == atx->rawind )
+         return(ceiling);
+         else if ( coin777_RWaddrtx(0,coin,addrind,atx,L,floor) == 0 && atx->num31 <= blocknum && atx_value > 0 && unspentind == atx->rawind )
+         return(floor);
+         break;
+         }*/
     }
+    if ( 1 && L->numaddrtx > 1 )
+        printf("end search %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)numprobes/numsearches);
     for (iter=0; iter<2; iter++)
     {
         if ( iter == 0 )
