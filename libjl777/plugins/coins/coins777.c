@@ -94,7 +94,7 @@ struct coin777_Lentry { struct addrtx_info *first_addrtxi; int64_t balance; uint
 struct addrtx_linkptr { int64_t balance; uint32_t next_addrtxi,blocknum; };
 
 #ifndef ADDRINFO_SIZE
-#define ADDRINFO_SIZE 256
+#define ADDRINFO_SIZE 16384
 #endif
 
 struct coin777_addrinfo
@@ -445,7 +445,7 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
                             printf("existing.%s %d <-- overwritten\n",sp->name,sp->itemsize);
                             for (i=0; i<sp->itemsize; i++)
                                 printf("%02x ",((uint8_t *)value)[i]);
-                            printf("new value.%s %d rawind.%u\n",sp->name,sp->itemsize,rawind);
+                            printf("new value.%s %d rawind.%u fileptr.%p ptr.%p\n",sp->name,sp->itemsize,rawind,sp->M.fileptr,ptr);
                         }
                     }
                 }
