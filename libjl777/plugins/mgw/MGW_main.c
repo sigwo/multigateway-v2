@@ -676,10 +676,19 @@ char *NXT_assettxid(uint64_t assettxid)
 
 char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
 {
-    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; char *txidjsonstr = 0;
+    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; char *txidjsonstr = 0; cJSON *json;
     if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
     {
         flag = writeflag;
+        if ( (json= cJSON_Parse(txidjsonstr)) != 0 )
+        {
+            free(txidjsonstr);
+            cJSON_DeleteItemFromObject(json,"requestProcessingTime");
+            cJSON_DeleteItemFromObject(json,"confirmations");
+            cJSON_DeleteItemFromObject(json,"transactionIndex");
+            txidjsonstr = cJSON_Print(json);
+            free_json(json);
+        }
         _stripwhite(txidjsonstr,' ');
         slen = (int32_t)strlen(txidjsonstr)+1;
         txidbits = calc_nxt64bits(txid);
@@ -691,7 +700,7 @@ char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
                 if ( value != 0 )
                 {
                     if ( len != slen || strcmp(value,txidjsonstr) != 0 )
-                        printf("mismatched NXT_txid for %llu: (%s) vs (%s)\n",(long long)txidbits,txidjsonstr,value);
+                        printf("mismatched NXT_txidstr ind.%d for %llu: (%s) vs (%s)\n",ind,(long long)txidbits,txidjsonstr,value);
                     else flag = 0;
                 }
                 sp_destroy(result);
@@ -757,7 +766,6 @@ int32_t update_NXT_assettransfers(char *assetidstr)
 {
     uint64_t txids[100],assetidbits,mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr;
     assetidbits = calc_nxt64bits(assetidstr);
-    printf("update_NXT_assettransfers.(%s)\n",assetidstr);
     if ( (count= (int32_t)NXT_revassettxid(assetidbits,0)) != 0 )
     {
         mostrecent = NXT_revassettxid(assetidbits,count);
