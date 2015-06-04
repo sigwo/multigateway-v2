@@ -766,7 +766,7 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
             L->numaddrtx = 0;
             if ( oldL.numaddrtx > 0 )
             {
-                actives = coin777_compact(1,&balance,&n,coin,addrind,&oldL);
+                actives = coin777_compact(0,&balance,&n,coin,addrind,&oldL);
                 L->numaddrtx = n;
                 if ( balance != L->balance)
                 {
