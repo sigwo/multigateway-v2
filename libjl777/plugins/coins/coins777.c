@@ -118,15 +118,28 @@ struct ramchain
     struct env777 DBs;
     struct coin777_state *sps[16],txidDB,addrDB,scriptDB,hashDB,ledger,addrtx,blocks,txoffsets,txidbits,unspents,spends,addrinfos;
     struct alloc_space tmpMEM;
-    
-    uint32_t marker_rawind,marker2_rawind;
+};
+
+#define NUM_GATEWAYS 3
+struct mgw777
+{
+    char coinstr[16];
+    uint32_t marker_rawind,marker2_rawind,use_addmultisig;
+    /*uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;
+     int32_t numgateways,nummsigs,depositconfirms,withdrawconfirms,remotemode,numpendingsends,min_NXTconfirms,numspecials;
+     uint32_t firsttime,NXTtimestamp,marker_rawind,marker2_rawind;
+     double NXTconvrate;
+     struct MGWstate S,otherS[16],remotesrcs[16];
+     struct NXT_asset *ap;
+     char multisigchar,*srvNXTADDR,**special_NXTaddrs,*MGWredemption,*backups,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];*/
 };
 
 struct coin777
 {
     char name[16],serverport[512],userpass[4096],*jsonstr; cJSON *argjson;
     struct ramchain ramchain;
-    int32_t use_addmultisig,minconfirms;
+    struct mgw777 mgw;
+    int32_t minconfirms;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
@@ -1606,7 +1619,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
         coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,forceflag,totaladdrtxp);
         if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
         {
-            if ( coin->ramchain.addrsum != (credits - debits) )
+            if ( 1 )//coin->ramchain.addrsum != (credits - debits) )
             {
                 Ucredits = Udebits = 0;
                 for (unspentind=1; unspentind<maxunspentind; unspentind++)
