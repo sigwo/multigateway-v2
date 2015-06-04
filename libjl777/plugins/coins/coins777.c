@@ -869,14 +869,14 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
 uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t *totaladdrtxp,uint32_t maxunspentind)
 {
     struct addrtx_info ATX; int32_t addrtxi; struct unspent_info U; int64_t balance = 0;
-    for (addrtxi=0; addrtxi<L->numaddrtx; addrtxi++)
+    for (addrtxi=0; addrtxi<L->maxaddrtx-1; addrtxi++)
     {
         memset(&ATX,0,sizeof(ATX));
         if ( coin777_RWaddrtx(0,coin,addrind,&ATX,L,addrtxi) == 0 && ATX.unspentind < maxunspentind )
         {
             if ( dispflag != 0 )
                 fprintf(stderr,"(%u %.8f).s%u ",ATX.unspentind,dstr(coin777_Uvalue(&U,coin,ATX.unspentind)),ATX.spendind);
-            if ( ATX.spendind == 0 )
+            if ( ATX.spendind == 0 && ATX.unspentind != 0 )
                 balance += coin777_Uvalue(&U,coin,ATX.unspentind);
         }
         else
