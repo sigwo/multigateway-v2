@@ -711,7 +711,7 @@ char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
             savedbits = NXT_revassettxid(refbits,ind);
             if ( savedbits != txidbits )
             {
-                if ( savedbits != 0 )
+                //if ( savedbits != 0 )
                     printf("for %llu.%d oldval.%llu -> newval %llu\n",(long long)refbits,ind,(long long)savedbits,(long long)txidbits);
                 NXT_add_assettxid(refbits,txidbits,txidjsonstr,slen,ind);
             }
@@ -765,6 +765,9 @@ int32_t update_NXT_assettransfers(char *assetidstr)
     assetidbits = calc_nxt64bits(assetidstr);
     if ( (count= (int32_t)NXT_revassettxid(assetidbits,0)) != 0 )
     {
+        for (i=1; i<=count; i++)
+            printf("%llu ",NXT_revassettxid(assetidbits,i));
+        printf("sequential tx\n");
         mostrecent = NXT_revassettxid(assetidbits,count);
         for (i=1; i<100; i++)
         {
