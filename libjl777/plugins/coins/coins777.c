@@ -338,7 +338,7 @@ int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,v
         Added++;
         coin->ramchain.totalsize += valuelen;
         retval = sp_set((transactions != 0 ? transactions : db),obj);
-        if ( 0 && valuelen < 8192 )
+        if ( 1 && valuelen < 8192 )
         {
             void *check; char dest[8192]; int32_t len = sizeof(dest);
             check = coin777_getDB(dest,&len,transactions,DB,key,keylen);
@@ -1041,9 +1041,9 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
             newflag = 1, addrind = (*addrindp)++;
             update_sha256(coin->ramchain.addrDB.sha256,&coin->ramchain.addrDB.state,(uint8_t *)coinaddr,len);
             coin777_addDB(coin,coin->ramchain.DBs.transactions,coin->ramchain.addrDB.DB,coinaddr,len,&addrind,sizeof(addrind));
-            uint32_t checkind; tmp = sizeof(checkind);
+            /*uint32_t checkind; tmp = sizeof(checkind);
             if ( (ptr= coin777_getDB(&checkind,&tmp,coin->ramchain.DBs.transactions,coin->ramchain.addrDB.DB,coinaddr,len)) == 0 || checkind != addrind )
-                printf("ERROR ptr.%p checkind.%u vs addrind.%u\n",ptr,checkind,addrind);
+                printf("ERROR ptr.%p checkind.%u vs addrind.%u\n",ptr,checkind,addrind);*/
         }
         else
         {

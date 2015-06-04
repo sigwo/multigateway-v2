@@ -713,18 +713,18 @@ char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
 
 int32_t NXT_assettransfers(uint64_t *txids,long max,char *assetidstr,uint32_t firstindex,uint32_t lastindex)
 {
-    static void *cHandle;
-    void *curl_post(void **cHandlep,char *url,char *userpass,char *postfields,char *hdr0,char *hdr1,char *hdr2);
+    //static void *cHandle;
+    //void *curl_post(void **cHandlep,char *url,char *userpass,char *postfields,char *hdr0,char *hdr1,char *hdr2);
     char cmd[1024],txid[64],*jsonstr,*txidstr; cJSON *transfers,*array;
     int32_t i,n = 0; uint64_t assetidbits,txidbits,revkey[2];
-    sprintf(cmd,"nxt?requestType=getAssetTransfers&asset=%s",assetidstr);
+    sprintf(cmd,"requestType=getAssetTransfers&asset=%s",assetidstr);
     if ( firstindex != 0 && lastindex != 0 )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     assetidbits = calc_nxt64bits(assetidstr);
     revkey[0] = assetidbits;
     printf("issue.(%s)\n",cmd);
-    jsonstr = curl_post(&cHandle,SUPERNET.NXTAPIURL,"",cmd,0,0,0);
-    //jsonstr = issue_NXT(cmd);
+    //jsonstr = curl_post(&cHandle,SUPERNET.NXTAPIURL,"",cmd,0,0,0);
+    jsonstr = issue_NXTPOST(cmd);
     if ( jsonstr != 0 )
     {
         if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
