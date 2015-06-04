@@ -1078,6 +1078,11 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
             }
             coin777_addind(coin,&coin->ramchain.scriptDB,script,scriptlen,scriptind);
         }
+        else
+        {
+            if ( scriptind == (*scriptindp) )
+                (*scriptindp)++;
+        }
     }
     if ( Debuglevel > 2 )
         printf("UNSPENT.%u addrind.%u T%u vo%-3d U%u %.8f %s %llx %s\n",unspentind,addrind,txidind,vout,unspentind,dstr(value),coinaddr,*(long long *)script,scriptstr);
