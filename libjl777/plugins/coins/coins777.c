@@ -486,15 +486,18 @@ int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct
 void coin777_addind(struct coin777 *coin,struct coin777_state *sp,void *key,int32_t keylen,uint32_t ind)
 {
     struct hashed_uint32 *entry,*table; void *ptr;
-    ptr = tmpalloc(coin->name,&coin->ramchain.tmpMEM,keylen), memcpy(ptr,key,keylen);
-    entry = tmpalloc(coin->name,&coin->ramchain.tmpMEM,sizeof(*entry)), entry->ind = ind;
-    table = sp->table; HASH_ADD_KEYPTR(hh,table,ptr,keylen,entry); sp->table = table;
+    if ( 0 && RAMCHAINS.fastmode != 0 )
+    {
+        ptr = tmpalloc(coin->name,&coin->ramchain.tmpMEM,keylen), memcpy(ptr,key,keylen);
+        entry = tmpalloc(coin->name,&coin->ramchain.tmpMEM,sizeof(*entry)), entry->ind = ind;
+        table = sp->table; HASH_ADD_KEYPTR(hh,table,ptr,keylen,entry); sp->table = table;
+    }
 }
 
 uint32_t coin777_findind(struct coin777 *coin,struct coin777_state *sp,uint8_t *data,int32_t datalen)
 {
     struct hashed_uint32 *entry; extern int32_t Duplicate;
-    if ( RAMCHAINS.fastmode != 0 )
+    if ( 0 && RAMCHAINS.fastmode != 0 )
     {
         HASH_FIND(hh,(struct hashed_uint32 *)sp->table,data,datalen,entry);
         if ( entry != 0 )
@@ -1047,7 +1050,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
             }
             else if ( addrind > (*addrindp) )
             {
-                printf("DB returned addrind.%u vs (*addrindp).%u\n",addrind,(*addrindp));
+                printf("DB returned addrind.%u vs (*addrindp).%u\n",addrind,(*addrindp)), debugstop();
                 (*addrindp) = (addrind + 1);
             }
         }
@@ -1071,7 +1074,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         }
         else if ( addrind > (*addrindp) )
         {
-            printf("DB returned addrind.%u vs (*addrindp).%u\n",addrind,(*addrindp));
+            printf("DB returned addrind.%u vs (*addrindp).%u\n",addrind,(*addrindp)), debugstop();
             (*addrindp) = (addrind + 1);
         }
     }
@@ -1091,7 +1094,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
                     (*scriptindp)++;
                 else if ( scriptind > (*scriptindp) )
                 {
-                    printf("DB returned scriptind.%u vs (*scriptindp).%u\n",scriptind,(*scriptindp));
+                    printf("DB returned scriptind.%u vs (*scriptindp).%u\n",scriptind,(*scriptindp)), debugstop();
                     (*scriptindp) = scriptind + 1;
                 }
             }
@@ -1103,7 +1106,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
                 (*scriptindp)++;
             else if ( scriptind > (*scriptindp) )
             {
-                printf("DB returned scriptind.%u vs (*scriptindp).%u\n",scriptind,(*scriptindp));
+                printf("DB returned scriptind.%u vs (*scriptindp).%u\n",scriptind,(*scriptindp)), debugstop();
                 (*scriptindp) = scriptind + 1;
             }
         }

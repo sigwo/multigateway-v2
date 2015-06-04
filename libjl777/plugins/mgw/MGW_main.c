@@ -659,12 +659,12 @@ uint64_t NXT_revassettxid(uint64_t assetidbits,uint32_t ind)
     return(retbits);
 }
 
-char *NXT_assettxid(uint64_t assetidbits)
+char *NXT_assettxid(uint64_t assettxid)
 {
     void *obj,*result,*value; int32_t len; char *retstr = 0;
     if ( (obj= sp_object(NXT_txids->db)) != 0 )
     {
-        if ( sp_set(obj,"key",&assetidbits,sizeof(assetidbits)) == 0 && (result= sp_get(NXT_txids->db,obj)) != 0 )
+        if ( sp_set(obj,"key",&assettxid,sizeof(assettxid)) == 0 && (result= sp_get(NXT_txids->db,obj)) != 0 )
         {
             value = sp_get(result,"value",&len);
             retstr = clonestr(value);
@@ -676,7 +676,7 @@ char *NXT_assettxid(uint64_t assetidbits)
 
 char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
 {
-    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits; char *txidjsonstr = 0;
+    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; char *txidjsonstr = 0;
     if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
     {
         flag = writeflag;
@@ -698,21 +698,33 @@ char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
             } else sp_destroy(obj);
         }
         if ( flag != 0 )
-            NXT_add_assettxid(refbits,txidbits,txidjsonstr,slen,ind);
+        {
+            savedbits = NXT_revassettxid(refbits,ind);
+            if ( savedbits != txidbits )
+            {
+                if ( savedbits != 0 )
+                    printf("for %llu.%d oldval.%llu -> newval %llu\n",(long long)refbits,ind,(long long)savedbits,(long long)txidbits);
+                NXT_add_assettxid(refbits,txidbits,txidjsonstr,slen,ind);
+            }
+        }
     }
     return(txidjsonstr);
 }
 
 int32_t NXT_assettransfers(uint64_t *txids,long max,char *assetidstr,uint32_t firstindex,uint32_t lastindex)
 {
+    static void *cHandle;
+    void *curl_post(void **cHandlep,char *url,char *userpass,char *postfields,char *hdr0,char *hdr1,char *hdr2);
     char cmd[1024],txid[64],*jsonstr,*txidstr; cJSON *transfers,*array;
     int32_t i,n = 0; uint64_t assetidbits,txidbits,revkey[2];
-    sprintf(cmd,"requestType=getAssetTransfers&asset=%s",assetidstr);
+    sprintf(cmd,"nxt?requestType=getAssetTransfers&asset=%s",assetidstr);
     if ( firstindex != 0 && lastindex != 0 )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     assetidbits = calc_nxt64bits(assetidstr);
     revkey[0] = assetidbits;
-    jsonstr = issue_NXTPOST(cmd);
+    printf("issue.(%s)\n",cmd);
+    jsonstr = curl_post(&cHandle,SUPERNET.NXTAPIURL,"",cmd,0,0,0);
+    //jsonstr = issue_NXT(cmd);
     if ( jsonstr != 0 )
     {
         if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
@@ -736,28 +748,34 @@ int32_t NXT_assettransfers(uint64_t *txids,long max,char *assetidstr,uint32_t fi
             } free_json(transfers);
         } free(jsonstr);
     }
+    if ( firstindex == 0 && lastindex == 0 )
+        printf("assetid.(%s) -> %d entries\n",assetidstr,n);
     return(n);
 }
 
 int32_t update_NXT_assettransfers(char *assetidstr)
 {
-    uint64_t txids[100],assetidbits; int32_t i,n,count = 0; char *txidjsonstr;
+    uint64_t txids[100],assetidbits,mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr;
     assetidbits = calc_nxt64bits(assetidstr);
-    if ( (count= (int32_t)NXT_revassettxid(assetidbits,0)) == 0 )
+    if ( (count= (int32_t)NXT_revassettxid(assetidbits,0)) != 0 )
     {
-        count = NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,0,0);
-        NXT_add_assettxid(assetidbits,count,0,0,0);
-    }
-    else
-    {
-        n = NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,1,sizeof(txids)/sizeof(*txids));
-        for (i=0; i<n; i++)
-            if ( (txidjsonstr= NXT_assettxid(txids[i])) != 0 )
+        mostrecent = NXT_revassettxid(assetidbits,count);
+        for (i=1; i<100; i++)
+        {
+            if ( NXT_assettransfers(&txids[i],1,assetidstr,i,i) == 1 && txids[i] == mostrecent )
             {
-                free(txidjsonstr);
-                break;
+                while ( --i > 0 )
+                {
+                    expand_nxt64bits(txidstr,txids[i]);
+                    if ( (txidjsonstr= NXT_txidstr(assetidbits,txidstr,1,++count)) != 0 )
+                        free(txidjsonstr);
+                }
             }
+        }
     }
+    else count = NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,0,0);
+    NXT_add_assettxid(assetidbits,count,0,0,0);
+    NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,0,0);
     return(count);
 }
 
@@ -1010,8 +1028,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         if ( DB_MGW == 0 )
             DB_MGW = db777_create(0,0,"MGW",0,0);
-        if ( NXT_txids == 0 )
-            NXT_txids = db777_create(0,0,"NXT_txids",0,0);
         MGW.readyflag = 1;
         plugin->allowremote = 1;
     }

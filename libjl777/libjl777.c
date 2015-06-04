@@ -1396,6 +1396,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             DB_nodestats = db777_create(0,0,"nodestats",0,0);
         if ( DB_busdata == 0 )
             DB_busdata = db777_create(0,0,"busdata",0,0);
+        if ( NXT_txids == 0 )
+            NXT_txids = db777_create(0,0,"NXT_txids",0,0);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {
