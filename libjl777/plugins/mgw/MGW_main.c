@@ -720,12 +720,12 @@ char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
     return(txidjsonstr);
 }
 
-int32_t NXT_assettransfers(uint64_t *txids,long max,char *assetidstr,uint32_t firstindex,uint32_t lastindex)
+int32_t NXT_assettransfers(uint64_t *txids,long max,char *assetidstr,int32_t firstindex,int32_t lastindex)
 {
     char cmd[1024],txid[64],*jsonstr,*txidstr; cJSON *transfers,*array;
     int32_t i,n = 0; uint64_t assetidbits,txidbits,revkey[2];
     sprintf(cmd,"requestType=getAssetTransfers&asset=%s",assetidstr);
-    if ( firstindex != 0 && lastindex != 0 )
+    if ( firstindex >= 0 && lastindex >= firstindex )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     assetidbits = calc_nxt64bits(assetidstr);
     revkey[0] = assetidbits;
@@ -787,9 +787,9 @@ int32_t update_NXT_assettransfers(char *assetidstr)
             count = 0;
     }
     if ( count == 0 )
-        count = NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,0,0);
+        count = NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,-1,-1);
     NXT_add_assettxid(assetidbits,count,0,0,0);
-    NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,0,0);
+    NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,-1,-1);
     return(count);
 }
 
