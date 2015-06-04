@@ -757,6 +757,7 @@ int32_t update_NXT_assettransfers(char *assetidstr)
 {
     uint64_t txids[100],assetidbits,mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr;
     assetidbits = calc_nxt64bits(assetidstr);
+    printf("update_NXT_assettransfers.(%s)\n",assetidstr);
     if ( (count= (int32_t)NXT_revassettxid(assetidbits,0)) != 0 )
     {
         mostrecent = NXT_revassettxid(assetidbits,count);
@@ -770,10 +771,14 @@ int32_t update_NXT_assettransfers(char *assetidstr)
                     if ( (txidjsonstr= NXT_txidstr(assetidbits,txidstr,1,++count)) != 0 )
                         free(txidjsonstr);
                 }
+                break;
             }
         }
+        if ( i == 100 )
+            count = 0;
     }
-    else count = NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,0,0);
+    if ( count == 0 )
+        count = NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,0,0);
     NXT_add_assettxid(assetidbits,count,0,0,0);
     NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,0,0);
     return(count);
