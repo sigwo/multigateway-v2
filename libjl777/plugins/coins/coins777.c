@@ -1046,7 +1046,10 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
                 newflag = 1, (*addrindp)++;
             }
             else if ( addrind > (*addrindp) )
+            {
                 printf("DB returned addrind.%u vs (*addrindp).%u\n",addrind,(*addrindp));
+                (*addrindp) = (addrind + 1);
+            }
         }
         coin777_addind(coin,&coin->ramchain.addrDB,coinaddr,len,addrind);
         if ( newflag != 0 )
@@ -1057,6 +1060,19 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
                 coin777_addscript(coin,scriptindp,script,scriptlen,script0flag);
                 coin777_addind(coin,&coin->ramchain.scriptDB,script,scriptlen,scriptind);
             }
+        }
+    }
+    else
+    {
+        if ( addrind == (*addrindp) )
+        {
+            update_sha256(coin->ramchain.addrDB.sha256,&coin->ramchain.addrDB.state,(uint8_t *)coinaddr,len);
+            newflag = 1, (*addrindp)++;
+        }
+        else if ( addrind > (*addrindp) )
+        {
+            printf("DB returned addrind.%u vs (*addrindp).%u\n",addrind,(*addrindp));
+            (*addrindp) = (addrind + 1);
         }
     }
     if ( (script0flag + scriptind) == 0 && (script0flag= coin777_script0(coin,addrind,script,scriptlen)) == 0 )
@@ -1074,7 +1090,10 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
                 if ( scriptind == (*scriptindp) )
                     (*scriptindp)++;
                 else if ( scriptind > (*scriptindp) )
+                {
                     printf("DB returned scriptind.%u vs (*scriptindp).%u\n",scriptind,(*scriptindp));
+                    (*scriptindp) = scriptind + 1;
+                }
             }
             coin777_addind(coin,&coin->ramchain.scriptDB,script,scriptlen,scriptind);
         }
@@ -1082,6 +1101,11 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
         {
             if ( scriptind == (*scriptindp) )
                 (*scriptindp)++;
+            else if ( scriptind > (*scriptindp) )
+            {
+                printf("DB returned scriptind.%u vs (*scriptindp).%u\n",scriptind,(*scriptindp));
+                (*scriptindp) = scriptind + 1;
+            }
         }
     }
     if ( Debuglevel > 2 )
