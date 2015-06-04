@@ -876,7 +876,7 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
         {
             if ( dispflag != 0 )
                 fprintf(stderr,"(%u %.8f).s%u ",ATX.unspentind,dstr(coin777_Uvalue(&U,coin,ATX.unspentind)),ATX.spendind);
-            if ( ATX.unspentind != 0 && (ATX.spendind == 0 || ATX.spendind < maxspendind) )
+            if ( ATX.unspentind != 0 && (ATX.spendind == 0 || ATX.spendind >= maxspendind) )
                 balance += coin777_Uvalue(&U,coin,ATX.unspentind);
         }
         else
@@ -941,7 +941,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
                 if ( (calcbalance= coin777_recalc_addrinfo(0,coin,addrind,&L,totaladdrtxp,maxunspentind,maxspendind)) != L.balance )
                 {
                     coin777_recalc_addrinfo(1,coin,addrind,&L,totaladdrtxp,maxunspentind,maxspendind);
-                    printf("found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d | firsti %u maxunspentind.%u\n",dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx,L.first_addrtxi,maxunspentind);
+                    printf("found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d | firsti %u maxunspentind.%u maxspend.%u\n",dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx,L.first_addrtxi,maxunspentind,maxspendind);
                     L.balance = calcbalance;
                     errs++, coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind);
                 }
