@@ -169,7 +169,7 @@ uint32_t coin777_txidind(uint32_t *firstblocknump,struct coin777 *coin,char *txi
 uint32_t coin777_addrind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr);
 uint32_t coin777_scriptind(uint32_t *firstblocknump,struct coin777 *coin,char *coinaddr,char *scriptstr);
 int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_t endblocknum,int32_t verifyflag);
-uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t maxunspentind,int32_t recalcflag,uint32_t *totaladdrtxp);
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t maxunspentind,uint32_t maxspendind,int32_t recalcflag,uint32_t *totaladdrtxp);
 int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t maxspendind,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp);
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H);
 int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct coin777_state *sp,uint32_t rawind);
@@ -866,7 +866,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
     return(-1);
 }
 
-uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t *totaladdrtxp,uint32_t maxunspentind)
+uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t *totaladdrtxp,uint32_t maxunspentind,uint32_t maxspendind)
 {
     struct addrtx_info ATX; int32_t addrtxi; struct unspent_info U; int64_t balance = 0;
     for (addrtxi=0; addrtxi<L->numaddrtx; addrtxi++)
@@ -876,12 +876,12 @@ uint64_t coin777_recalc_addrinfo(int32_t dispflag,struct coin777 *coin,uint32_t 
         {
             if ( dispflag != 0 )
                 fprintf(stderr,"(%u %.8f).s%u ",ATX.unspentind,dstr(coin777_Uvalue(&U,coin,ATX.unspentind)),ATX.spendind);
-            if ( ATX.spendind == 0 && ATX.unspentind != 0 )
+            if ( ATX.unspentind != 0 && (ATX.spendind == 0 || ATX.spendind < maxspendind) )
                 balance += coin777_Uvalue(&U,coin,ATX.unspentind);
         }
         else
         {
-            printf("cant get addrtxi.%d of num.%d max.%d unspentind.%u maxunspentind.%u\n",addrtxi,L->numaddrtx,L->maxaddrtx,ATX.unspentind,maxunspentind);
+            printf("cant get addrtxi.%d of num.%d max.%d unspentind.%u maxunspentind.%u maxspendind.%u balance %.8f -> %.8f\n",addrtxi,L->numaddrtx,L->maxaddrtx,ATX.unspentind,maxunspentind,maxspendind,dstr(L->balance),dstr(balance));
             break;
         }
     }
@@ -928,7 +928,7 @@ int32_t coin777_update_addrinfo(struct coin777 *coin,uint32_t addrind,uint32_t u
     return(-1);
 }
 
-uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t maxunspentind,int32_t recalcflag,uint32_t *totaladdrtxp)
+uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag,uint32_t maxunspentind,uint32_t maxspendind,int32_t recalcflag,uint32_t *totaladdrtxp)
 {
     struct coin777_addrinfo A; struct coin777_Lentry L;
     int64_t sum = 0; uint32_t addrind; int32_t errs = 0; int64_t calcbalance;
@@ -938,9 +938,9 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
         {
             if ( recalcflag != 0 )
             {
-                if ( (calcbalance= coin777_recalc_addrinfo(0,coin,addrind,&L,totaladdrtxp,maxunspentind)) != L.balance )
+                if ( (calcbalance= coin777_recalc_addrinfo(0,coin,addrind,&L,totaladdrtxp,maxunspentind,maxspendind)) != L.balance )
                 {
-                    coin777_recalc_addrinfo(1,coin,addrind,&L,totaladdrtxp,maxunspentind);
+                    coin777_recalc_addrinfo(1,coin,addrind,&L,totaladdrtxp,maxunspentind,maxspendind);
                     printf("found mismatch: (%.8f -> %.8f) addrind.%d num.%d of %d | firsti %u maxunspentind.%u\n",dstr(L.balance),dstr(calcbalance),addrind,L.numaddrtx,L.maxaddrtx,L.first_addrtxi,maxunspentind);
                     L.balance = calcbalance;
                     errs++, coin777_RWmmap(1,&L,coin,&coin->ramchain.ledger,addrind);
@@ -1509,7 +1509,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
     {
         sprintf(fname,"%s/addrtx",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
     }
-    sum = addrinfos_sum(coin,H->addrind,0,H->unspentind,0,0);
+    sum = addrinfos_sum(coin,H->addrind,0,H->unspentind,H->numspends,0,0);
     printf("finished Backup.(%s) supply %.8f in %.0f millis | errs.%d\n",dirname,dstr(sum),milliseconds() - startmilli,errs);
     return(-errs);
 }
@@ -1623,7 +1623,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
     int32_t errs = 0; uint32_t unspentind,spendind; uint64_t Ucredits,Udebits; int64_t correction = 0;
     if ( maxunspentind > 1 )
     {
-        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,forceflag,totaladdrtxp);
+        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,totalspends,forceflag,totaladdrtxp);
         if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
         {
             if ( 1 )//coin->ramchain.addrsum != (credits - debits) )
@@ -1655,7 +1655,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
             if ( coin->ramchain.addrsum != (credits - debits) )
                 printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->ramchain.addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
             if ( forceflag == 0 )
-                coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,1,totaladdrtxp);
+                coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,totalspends,1,totaladdrtxp);
             if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
             {
                 if ( coin->ramchain.addrsum != (credits - debits) )
@@ -1678,7 +1678,7 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
     H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind, H.totaladdrtx = *totaladdrtxp;
     if ( numsyncs >= 0 )
-        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,1,numrawvouts,0,totaladdrtxp);
+        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,1,numrawvouts,numrawvins,0,totaladdrtxp);
     for (i=0; i<=coin->ramchain.num; i++)
     {
         if ( numsyncs >= 0 )
