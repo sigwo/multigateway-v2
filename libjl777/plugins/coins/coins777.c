@@ -1362,14 +1362,9 @@ void coin777_initDBenv(struct coin777 *coin)
 int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind,uint32_t addrind,uint32_t scriptind,uint32_t unspentind,uint32_t totalspends,uint32_t totaladdrtx)
 {
     char fname[1024],srcfname[1024]; struct ramchain *ramchain = &coin->ramchain;
-    if ( 0 )
-    {
-        printf("initmmap unspentind.%u\n",unspentind);
-        db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx"), sprintf(srcfname,"%s.sync",fname);
-        os_compatible_path(fname), os_compatible_path(srcfname), copy_file(srcfname,fname);
-    }
-    db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"ledger"), sprintf(srcfname,"%s.sync",fname);
-    os_compatible_path(fname), os_compatible_path(srcfname), copy_file(srcfname,fname);
+    db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrinfos"), sprintf(srcfname,"%s.sync",fname), copy_file(srcfname,fname);
+    db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx"), sprintf(srcfname,"%s.sync",fname), copy_file(srcfname,fname);
+    db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"ledger"), sprintf(srcfname,"%s.sync",fname), copy_file(srcfname,fname);
     ramchain->blocks.table = coin777_ensure(coin,&ramchain->blocks,blocknum);
     ramchain->txoffsets.table = coin777_ensure(coin,&ramchain->txoffsets,txidind);
     ramchain->txidbits.table = coin777_ensure(coin,&ramchain->txidbits,txidind);
@@ -1505,10 +1500,9 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
     if ( errs != 0 )
         printf("errs.%d after scripts\n",errs);
     sprintf(fname,"%s/ledger",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
-    if ( 0 )
-    {
-        sprintf(fname,"%s/addrtx",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
-    }
+    sprintf(fname,"%s/addrtx",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
+    sprintf(fname,"%s/addrinfos",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
+    
     sum = addrinfos_sum(coin,H->addrind,0,H->unspentind,H->numspends,0,0);
     printf("finished Backup.(%s) supply %.8f in %.0f millis | errs.%d\n",dirname,dstr(sum),milliseconds() - startmilli,errs);
     return(-errs);
