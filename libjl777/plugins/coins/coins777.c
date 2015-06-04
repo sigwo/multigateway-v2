@@ -173,7 +173,7 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
 int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t maxspendind,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp);
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H);
 int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct coin777_state *sp,uint32_t rawind);
-struct addrtx_info *coin777_compact(uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL);
+struct addrtx_info *coin777_compact(int32_t compactflag,uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL);
 uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args);
 int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin,uint32_t unspentind);
 uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t unspentind);
@@ -713,7 +713,7 @@ uint32_t coin777_addrtxalloc(struct coin777 *coin,struct coin777_Lentry *L,int32
     return((uint32_t)L->first_addrtxi);
 }
 
-struct addrtx_info *coin777_compact(uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L)
+struct addrtx_info *coin777_compact(int32_t compactflag,uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L)
 {
     int32_t i,num,addrtxi,iter; struct unspent_info U; struct addrtx_info ATX,*actives = 0; uint64_t balance = 0;
     for (iter=num=addrtxi=0; iter<2; iter++)
@@ -721,14 +721,15 @@ struct addrtx_info *coin777_compact(uint64_t *balancep,int32_t *numaddrtxp,struc
         for (i=0; i<L->numaddrtx; i++)
         {
             coin777_RWaddrtx(0,coin,addrind,&ATX,L,i);
-            if ( ATX.spendind == 0 )
+            if ( compactflag == 0 || ATX.spendind == 0 )
             {
                 if ( iter == 0 )
                     num++;
                 else
                 {
                     actives[addrtxi++] = ATX;
-                    balance += coin777_Uvalue(&U,coin,ATX.unspentind);
+                    if ( ATX.spendind == 0 )
+                        balance += coin777_Uvalue(&U,coin,ATX.unspentind);
                 }
             }
         }
@@ -765,7 +766,7 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
             L->numaddrtx = 0;
             if ( oldL.numaddrtx > 0 )
             {
-                actives = coin777_compact(&balance,&n,coin,addrind,&oldL);
+                actives = coin777_compact(0,&balance,&n,coin,addrind,&oldL);
                 L->numaddrtx = n;
                 if ( balance != L->balance)
                 {
@@ -958,7 +959,7 @@ uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *ar
     uint32_t addrind,firstblocknum; struct coin777_Lentry L; struct addrtx_info *unspents; uint64_t balance = 0; int32_t n,retval = -1;
     if ( (addrind= coin777_addrind(&firstblocknum,coin,coinaddr)) != 0 )
     {
-        if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 && (unspents= coin777_compact(&balance,&n,coin,addrind,&L)) != 0 )
+        if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 && (unspents= coin777_compact(1,&balance,&n,coin,addrind,&L)) != 0 )
         {
             retval = (*unspentsfuncp)(coin,args,addrind,unspents,n,balance);
             free(unspents);

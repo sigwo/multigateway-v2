@@ -295,7 +295,7 @@ struct addrtx_info *coin777_acctunspents(uint64_t *sump,int32_t *nump,struct coi
     *sump = *nump = 0;
     for (i=0; i<num; i++)
     {
-        if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrinds[i]) == 0 && (unspents= coin777_compact(&balance,&n,coin,addrinds[i],&L)) != 0 )
+        if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrinds[i]) == 0 && (unspents= coin777_compact(1,&balance,&n,coin,addrinds[i],&L)) != 0 )
         {
             for (j=0; j<n; j++)
                 unspents[j].spendind = addrinds[i];
