@@ -1040,6 +1040,7 @@ int32_t coin777_addvout(void *state,uint64_t *creditsp,uint32_t txidind,uint16_t
             newflag = 1, addrind = (*addrindp)++;
             update_sha256(coin->ramchain.addrDB.sha256,&coin->ramchain.addrDB.state,(uint8_t *)coinaddr,len);
             coin777_addDB(coin,coin->ramchain.DBs.transactions,coin->ramchain.addrDB.DB,coinaddr,len,&addrind,sizeof(addrind));
+            printf("addrind.%u (%s)\n",addrind,coinaddr);
         }
         else
         {
