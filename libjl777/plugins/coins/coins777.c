@@ -798,14 +798,14 @@ struct addrtx_info *coin777_add_addrtx(struct coin777 *coin,uint32_t addrind,str
 int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *L,uint32_t unspentind,uint64_t value)
 {
     static long numsearches,numprobes,rangetotal;
-    uint32_t floor,ceiling,probe,lastprobe,iter,start,end; int32_t i; uint64_t atx_value; struct unspent_info U;
+    uint32_t floor,ceiling,probe,lastprobe,iter,start,end; int32_t i,n = 0; uint64_t atx_value; struct unspent_info U;
     if ( L->numaddrtx == 0 )
         return(-1);
     floor = 0, ceiling = L->numaddrtx-1;
     numsearches++;
     rangetotal += L->numaddrtx;
     lastprobe = -2;
-    while ( floor < ceiling )
+    while ( floor < ceiling && n++ < 30 )
     {
         if ( (probe= (floor + ceiling) >> 1) == lastprobe )
             probe++;
@@ -834,7 +834,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
         }
     }
     if ( 1 && L->numaddrtx > 1 )
-        printf("SEARCH FAILURE %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)numprobes/numsearches);
+        printf("SEARCH FAILURE %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld %.1f | numiters %d\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)numprobes/numsearches,n);
     for (iter=0; iter<2; iter++)
     {
         if ( iter == 0 )
@@ -1367,9 +1367,9 @@ int32_t coin777_initmmap(struct coin777 *coin,uint32_t blocknum,uint32_t txidind
         printf("initmmap unspentind.%u\n",unspentind);
         db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"addrtx"), sprintf(srcfname,"%s.sync",fname);
         os_compatible_path(fname), os_compatible_path(srcfname), copy_file(srcfname,fname);
-        db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"ledger"), sprintf(srcfname,"%s.sync",fname);
-        os_compatible_path(fname), os_compatible_path(srcfname), copy_file(srcfname,fname);
     }
+    db777_path(fname,coin->name,"",0), strcat(fname,"/"), strcat(fname,"ledger"), sprintf(srcfname,"%s.sync",fname);
+    os_compatible_path(fname), os_compatible_path(srcfname), copy_file(srcfname,fname);
     ramchain->blocks.table = coin777_ensure(coin,&ramchain->blocks,blocknum);
     ramchain->txoffsets.table = coin777_ensure(coin,&ramchain->txoffsets,txidind);
     ramchain->txidbits.table = coin777_ensure(coin,&ramchain->txidbits,txidind);
@@ -1504,9 +1504,9 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
     }
     if ( errs != 0 )
         printf("errs.%d after scripts\n",errs);
+    sprintf(fname,"%s/ledger",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
     if ( 0 )
     {
-        sprintf(fname,"%s/ledger",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
         sprintf(fname,"%s/addrtx",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
     }
     sum = addrinfos_sum(coin,H->addrind,0,H->unspentind,0,0);
