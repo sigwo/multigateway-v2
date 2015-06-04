@@ -769,7 +769,7 @@ int32_t update_NXT_assettransfers(char *assetidstr)
             printf("%llu ",NXT_revassettxid(assetidbits,i));
         printf("sequential tx\n");
         mostrecent = NXT_revassettxid(assetidbits,count);
-        for (i=1; i<100; i++)
+        for (i=0; i<100; i++)
         {
             if ( NXT_assettransfers(&txids[i],1,assetidstr,i,i) == 1 && txids[i] == mostrecent )
             {
