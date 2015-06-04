@@ -688,7 +688,7 @@ char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
             cJSON_DeleteItemFromObject(json,"transactionIndex");
             txidjsonstr = cJSON_Print(json);
             free_json(json);
-        }
+        } else printf("PARSE ERROR.(%s)\n",txidjsonstr);
         _stripwhite(txidjsonstr,' ');
         slen = (int32_t)strlen(txidjsonstr)+1;
         txidbits = calc_nxt64bits(txid);
