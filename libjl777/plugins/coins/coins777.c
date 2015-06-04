@@ -822,7 +822,7 @@ int32_t coin777_bsearch(struct addrtx_info *atx,struct coin777 *coin,uint32_t ad
             atx_value = coin777_Uvalue(&U,coin,atx->unspentind);
             if ( atx_value == value )
             {
-                if ( Debuglevel > 2 || (rand() % 10000) == 0 )
+                if ( Debuglevel > 2 )
                     printf("FOUND MATCH end search %u, probe.%u floor.%u ceiling.%u numsearches.%ld numprobes.%ld averange %.1f %.1f\n",unspentind,probe,floor,ceiling,numsearches,numprobes,(double)rangetotal/numsearches,(double)numprobes/numsearches);
                 return(probe);
             }
@@ -1625,11 +1625,14 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
                 for (unspentind=1; unspentind<maxunspentind; unspentind++)
                 {
                     Ucredits += coin777_Uvalue(&U,coin,unspentind);
-                    coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
-                    if ( coin777_bsearch(&ATX,coin,U.addrind,&L,unspentind,U.value) < 0  )
+                    if ( U.value != 0 )
                     {
-                        correction += U.value;
-                        printf("U cant find addrind.%u U.%u %.8f | correction %.8f\n",U.addrind,unspentind,dstr(U.value),dstr(correction));
+                        coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
+                        if ( coin777_bsearch(&ATX,coin,U.addrind,&L,unspentind,U.value) < 0  )
+                        {
+                            correction += U.value;
+                            printf("U cant find addrind.%u U.%u %.8f | correction %.8f\n",U.addrind,unspentind,dstr(U.value),dstr(correction));
+                        }
                     }
                 }
                 for (spendind=1; spendind<totalspends; spendind++)
