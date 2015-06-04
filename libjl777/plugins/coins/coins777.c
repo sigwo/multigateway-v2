@@ -1499,10 +1499,9 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
     }
     if ( errs != 0 )
         printf("errs.%d after scripts\n",errs);
-    sprintf(fname,"%s/ledger",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
-    sprintf(fname,"%s/addrtx",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
-    sprintf(fname,"%s/addrinfos",dirname), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
-    
+    db777_path(fname,coin->name,"",0), strcat(fname,"/ledger"), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
+    db777_path(fname,coin->name,"",0), strcat(fname,"/addrtx"), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
+    db777_path(fname,coin->name,"",0), strcat(fname,"/addrinfos"), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
     sum = addrinfos_sum(coin,H->addrind,0,H->unspentind,H->numspends,0,0);
     printf("finished Backup.(%s) supply %.8f in %.0f millis | errs.%d\n",dirname,dstr(sum),milliseconds() - startmilli,errs);
     return(-errs);
