@@ -141,18 +141,21 @@ int32_t compare_files(char *fname,char *fname2)
 
 long copy_file(char *src,char *dest)
 {
-    long len = -1;
-    char buf[8192];
+    long allocsize,len = -1;
+    char *buf;
     FILE *srcfp,*destfp;
     if ( (srcfp= fopen(os_compatible_path(src),"rb")) != 0 )
     {
         if ( (destfp= fopen(os_compatible_path(dest),"wb")) != 0 )
         {
-            while ( (len= fread(buf,1,sizeof(buf),srcfp)) > 0 )
+            allocsize = 1024 * 1024 * 128L;
+            buf = malloc(allocsize);
+            while ( (len= fread(buf,1,allocsize,srcfp)) > 0 )
                 if ( (long)fwrite(buf,1,len,destfp) != len )
                     printf("write error at (%s) src.%ld vs. (%s) dest.%ld\n",src,ftell(srcfp),dest,ftell(destfp));
             len = ftell(destfp);
             fclose(destfp);
+            free(buf);
         }
         fclose(srcfp);
     }
