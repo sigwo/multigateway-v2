@@ -700,7 +700,7 @@ char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
                 if ( value != 0 )
                 {
                     if ( len != slen || strcmp(value,txidjsonstr) != 0 )
-                        printf("mismatched NXT_txidstr ind.%d for %llu: (%s) vs (%s)\n",ind,(long long)txidbits,txidjsonstr,value);
+                        printf("mismatched NXT_txidstr ind.%d for %llu: lens %d vs %d (%s) vs (%s)\n",ind,(long long)txidbits,len,slen,txidjsonstr,value);
                     else flag = 0;
                 }
                 sp_destroy(result);
