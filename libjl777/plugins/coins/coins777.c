@@ -1639,11 +1639,14 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
                 {
                     Udebits += coin777_Svalue(&S,coin,spendind);
                     coin777_Uvalue(&U,coin,S.unspentind);
-                    coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
-                    if ( coin777_bsearch(&ATX,coin,U.addrind,&L,S.unspentind,U.value) < 0 || ATX.spendind != spendind )
+                    if ( U.value != 0 )
                     {
-                        correction -= U.value;
-                        printf("S cant find addrind.%u U.%u %.8f || spendind mismatch %u vs %u | correction %.8f\n",U.addrind,S.unspentind,dstr(U.value),ATX.spendind,spendind,dstr(correction));
+                        coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,U.addrind);
+                        if ( coin777_bsearch(&ATX,coin,U.addrind,&L,S.unspentind,U.value) < 0 || ATX.spendind != spendind )
+                        {
+                            correction -= U.value;
+                            printf("S cant find addrind.%u U.%u %.8f || spendind mismatch %u vs %u | correction %.8f\n",U.addrind,S.unspentind,dstr(U.value),ATX.spendind,spendind,dstr(correction));
+                        }
                     }
                 }
                 printf("VERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f) correction %.8f\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits),dstr(correction));
