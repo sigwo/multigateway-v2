@@ -956,7 +956,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     } else printf("cant get count len.%d\n",len);
     if ( count == 0 )
         count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
-    //if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) && extra.ind != count )
+    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) != sizeof(extra) || extra.ind != count )
     {
         memset(&extra,0,sizeof(extra));
         extra.ind = count;

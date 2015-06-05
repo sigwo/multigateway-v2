@@ -392,14 +392,14 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
     return(retval);
 }
 
-cJSON *acctpubkey_json(char *coinstr)
+cJSON *acctpubkey_json(char *coinstr,char *NXTaddr,int32_t gatewayid)
 {
     cJSON *json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("myacctpubkeys"));
     cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
-    cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(SUPERNET.NXTADDR));
-    cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
+    cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(NXTaddr));
+    cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(gatewayid));
     return(json);
 }
 
@@ -413,7 +413,7 @@ void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
         get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
         get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
         printf("new address.(%s) -> (%s) (%s)\n",NXTaddr,coinaddr,pubkey);
-        if ( (msigjson= acctpubkey_json(coin->name)) != 0 )
+        if ( (msigjson= acctpubkey_json(coin->name,SUPERNET.NXTADDR,SUPERNET.gatewayid)) != 0 )
         {
             array = cJSON_CreateArray();
             cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey,1));
@@ -513,7 +513,7 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
     cJSON *json,*array;
     if ( SUPERNET.gatewayid >= 0 && (array= cJSON_Parse(str)) != 0 )
     {
-        if ( (json= acctpubkey_json(coinstr)) != 0 )
+        if ( (json= acctpubkey_json(coinstr,SUPERNET.NXTADDR,SUPERNET.gatewayid)) != 0 )
         {
             cJSON_AddItemToObject(json,"pubkeys",array);
             MGW_publishjson(retbuf,json);
