@@ -619,7 +619,7 @@ int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info
     if ( (obj= sp_object(NXT_txids->db)) != 0 )
     {
         revkey[0] = assetidbits, revkey[1] = ind;
-        printf("set ind.%d <- txid.%llu\n",ind,(long long)extra->txidbits);
+        //printf("set ind.%d <- txid.%llu\n",ind,(long long)extra->txidbits);
         if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && sp_set(obj,"value",extra,sizeof(*extra)) == 0 )
             return(sp_set(NXT_txids->db,obj));
         else
@@ -955,9 +955,12 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     } else printf("cant get count\n");
     if ( count == 0 )
         count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
-    memset(&extra,0,sizeof(extra));
-    extra.ind = count;
-    NXT_set_revassettxid(mgw->assetidbits,0,&extra);
+    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) && extra.ind != count )
+    {
+        memset(&extra,0,sizeof(extra));
+        extra.ind = count;
+        NXT_set_revassettxid(mgw->assetidbits,0,&extra);
+    }
     if ( verifyflag != 0 )
         NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
     return(count);
