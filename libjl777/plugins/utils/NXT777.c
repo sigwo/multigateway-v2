@@ -833,7 +833,7 @@ int32_t process_assettransfer(uint64_t *amountp,int32_t *flagp,char *coindata,in
 char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
 {
     void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; struct extra_info extra; char *txidjsonstr = 0; cJSON *json,*txobj;
-    //printf("NXT_txidstr.(%s) write.%d ind.%d\n",txid,writeflag,ind);
+    printf("NXT_txidstr.(%s) write.%d ind.%d\n",txid,writeflag,ind);
     if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
     {
         flag = writeflag;
@@ -891,7 +891,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
     if ( firstindex >= 0 && lastindex >= firstindex )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     revkey[0] = mgw->assetidbits;
-    //printf("issue.(%s) max.%ld\n",cmd,max);
+    printf("issue.(%s) max.%ld\n",cmd,max);
     jsonstr = issue_NXTPOST(cmd);
     if ( jsonstr != 0 )
     {
