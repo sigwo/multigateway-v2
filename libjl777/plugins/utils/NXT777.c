@@ -746,7 +746,6 @@ int32_t _process_NXTtransaction(char *cointxid,int32_t confirmed,struct mgw777 *
                 copy_cJSON(comment,commentobj);
                 unstringify(comment);
                 copy_cJSON(assetidstr,cJSON_GetObjectItem(attachment,"asset"));
-                printf("%s %s txid.(%s) (%s)\n",mgw->coinstr,assetidstr,txid,comment);
                 if ( assetidstr[0] != 0 && mgw->assetidbits == calc_nxt64bits(assetidstr) )
                 {
                     assetoshis = get_cJSON_int(attachment,"quantityQNT");
@@ -768,6 +767,7 @@ int32_t _process_NXTtransaction(char *cointxid,int32_t confirmed,struct mgw777 *
                                 obj = cJSON_GetObjectItem(json,"vout");
                             coinv = (uint32_t)get_API_int(obj,0);
                             copy_cJSON(cointxid,cJSON_GetObjectItem(json,"cointxid"));
+                            printf("%s %s txid.(%s) (%s) -> %.8f T.%s vout%d estNXT %.8f\n",mgw->coinstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),cointxid,coinv,dstr(estNXT));
                             //if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0  )
                             //    _add_pendingxfer(ram,height,1,tp->redeemtxid);
                         }
@@ -859,9 +859,9 @@ char *NXT_txidstr(struct mgw777 *mgw,uint64_t refbits,char *txid,int32_t writefl
                 {
                     extra.vout = _process_NXTtransaction(extra.cointxid,0,mgw,txobj);
                     free_json(txobj);
-                }
+                } else extra.vout = -1;
                 //if ( savedbits != 0 )
-                printf("for %llu.%d oldval.%llu -> newval %llu\n",(long long)refbits,ind,(long long)savedbits,(long long)txidbits);
+                printf("for %llu.%d oldval.%llu -> newval %llu (%s v%d)\n",(long long)refbits,ind,(long long)savedbits,(long long)txidbits,extra.cointxid,extra.vout);
                 NXT_add_assettxid(refbits,txidbits,txidjsonstr,slen,ind,&extra);
             }
         }
