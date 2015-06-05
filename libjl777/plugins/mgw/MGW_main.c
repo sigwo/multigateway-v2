@@ -400,6 +400,7 @@ cJSON *acctpubkey_json(char *coinstr,char *NXTaddr,int32_t gatewayid)
     cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
     cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(NXTaddr));
     cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(gatewayid));
+    //printf("acctpubkey.(%s)\n",cJSON_Print(json));
     return(json);
 }
 
