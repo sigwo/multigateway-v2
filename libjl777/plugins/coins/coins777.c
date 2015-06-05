@@ -359,9 +359,9 @@ int32_t coin777_addDB(struct coin777 *coin,void *transactions,struct db777 *DB,v
             void *check; char dest[8192]; int32_t len = sizeof(dest);
             check = coin777_getDB(dest,&len,transactions,DB,key,keylen);
             if ( check == 0 )
-                printf("cant find just added key.%x val.%d\n",*(int *)key,*(int *)value), debugstop();
+                printf("cant find just added key.%x val.%d %s\n",*(int *)key,*(int *)value,db777_errstr(coin->ramchain.DBs.ctl)), debugstop();
             else if ( memcmp(dest,value,valuelen) != 0 && len == valuelen )
-                printf("cmp error just added key.%x len.%d valuelen.%d val.%d\n",*(int *)key,len,valuelen,*(int *)value), debugstop();
+                printf("cmp error just added key.%x len.%d valuelen.%d val.%d %s\n",*(int *)key,len,valuelen,*(int *)value,db777_errstr(coin->ramchain.DBs.ctl)), debugstop();
             //else printf("cmp success!\n");
         }
     }
