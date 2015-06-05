@@ -518,7 +518,7 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
             cJSON_AddItemToObject(json,"pubkeys",array);
             MGW_publishjson(retbuf,json);
             free_json(json);
-            printf("processed.(%s)\n",retbuf);
+            printf("processed.(%s) SUPERNET.gatewayid %d %s\n",retbuf,SUPERNET.gatewayid,SUPERNET.NXTADDR);
             return(0);
         }
     }
