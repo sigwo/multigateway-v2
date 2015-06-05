@@ -648,7 +648,7 @@ int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int
         if ( (obj= sp_object(NXT_txids->db)) != 0 )
         {
             extra->assetidbits = assetidbits, extra->txidbits = txidbits, extra->ind = ind;
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",extra,sizeof(*extra)) == 0 )
+            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
                 sp_set(NXT_txids->db,obj);
             else
             {
@@ -675,7 +675,7 @@ char *NXT_assettxid(uint64_t assettxid)
             value = sp_get(result,"value",&len);
             retstr = clonestr(value);
             sp_destroy(result);
-        } else sp_destroy(obj);
+        }// else sp_destroy(obj);
     }
     return(retstr);
 }
@@ -756,7 +756,7 @@ int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mg
                 if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
                     estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * assetoshis / SATOSHIDEN);
                 else estNXT = 0;
-                printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json,(long long)mgw->assetidbits,(long long)calc_nxt64bits(assetidstr));
+                printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json);
                 if ( assetidstr[0] != 0 && strcmp(mgw->assetidstr,assetidstr) == 0 )
                 {
                     if ( json != 0 )
@@ -850,7 +850,7 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
                 if ( value != 0 )
                 {
                     if ( len != slen || strcmp(value,txidjsonstr) != 0 )
-                        printf("mismatched NXT_txidstr ind.%d for %llu: lens %d vs %d (%s) vs (%s)\n",ind,(long long)txidbits,len,slen,txidjsonstr,value);
+                        printf("mismatched NXT_txidstr ind.%d for %llu: lens %d vs %d (%s) vs (%s)\n",ind,(long long)txidbits,slen,len,txidjsonstr,value);
                     else flag = 0;
                 }
                 sp_destroy(result);
