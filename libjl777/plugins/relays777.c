@@ -1078,6 +1078,11 @@ void serverloop(void *_args)
             }
         }
     } else conv_busdata(&i,cJSON_Parse("{\"key\":\"foo\",\"data\":\"deadbeef\"}"));
+    if ( SUPERNET.gatewayid >= 0 )
+    {
+        int32_t make_MGWbus(uint16_t port,char *bindaddr,char serverips[MAX_MGWSERVERS][64],int32_t n);
+        MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1*0);
+    }
     while ( 1 )
     {
         //void coin777_pulldata(struct packedblock *packed,int32_t len);

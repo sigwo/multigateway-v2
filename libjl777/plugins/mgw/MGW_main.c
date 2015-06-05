@@ -784,9 +784,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 sprintf(retbuf+1,"{\"warning\":\"mismatched servers\",\"details\":\"n.%d j.%d vs M.%d N.%d\",",n,j,MGW.M,SUPERNET.numgateways);
             else if ( SUPERNET.gatewayid >= 0 )
             {
-                strcpy(MGW.serverips[SUPERNET.numgateways],MGW.bridgeipaddr);
-                MGW.srv64bits[SUPERNET.numgateways] = calc_nxt64bits(MGW.bridgeacct);
-                MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1);
+                //strcpy(MGW.serverips[SUPERNET.numgateways],MGW.bridgeipaddr);
+                //MGW.srv64bits[SUPERNET.numgateways] = calc_nxt64bits(MGW.bridgeacct);
+                //MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1*0);
             }
         }
         if ( DB_MGW == 0 )
