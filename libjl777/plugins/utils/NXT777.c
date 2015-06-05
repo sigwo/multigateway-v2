@@ -666,7 +666,7 @@ int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int
             }
         }
     }
-    if ( NXT_revassettxid(&zextra,assetidbits,0) == sizeof(zextra) && ind > zextra.ind )
+    if ( NXT_revassettxid(&zextra,assetidbits,0) == sizeof(zextra) && (ind == 0 || ind > zextra.ind) )
     {
         zextra.ind = ind;
         NXT_set_revassettxid(assetidbits,0,&zextra);
