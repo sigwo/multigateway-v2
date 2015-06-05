@@ -620,7 +620,7 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
 #define MGW_DEPOSITDONE 4
 #define MGW_PENDINGREDEEM 8
 #define MGW_WITHDRAWDONE 16
-#define MGW_IRRELEVANT 128
+#define MGW_IGNORE 128
 #define MGW_ERRORSTATUS 0x8000
 
 int32_t _valid_txamount(struct mgw777 *mgw,uint64_t value,char *coinaddr)
@@ -649,7 +649,7 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
     {
         if ( (assettxid= NXT_revassettxid(&extra,coin->mgw.assetidbits,i)) != 0 )
         {
-            if ( extra.flags == 0 || (extra.flags & MGW_IRRELEVANT) == 0 ) // move to onetime processing
+            if ( extra.flags == 0 || (extra.flags & MGW_IGNORE) == 0 ) // move to onetime processing
             {
                 if ( (jsonstr= NXT_assettxid(assettxid)) != 0 )
                 {
@@ -663,7 +663,7 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
                         {
                             
                         }
-                        else extra.flags |= MGW_IRRELEVANT;*/
+                        else extra.flags |= MGW_IGNORE;*/
                         free_json(json);
                     }
                     free(jsonstr);
