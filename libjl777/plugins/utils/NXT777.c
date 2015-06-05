@@ -635,7 +635,7 @@ int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t 
                 memcpy(extra,value,len);
             else printf("NXT_revassettxid mismatched len.%d vs %ld\n",len,sizeof(*extra));
             sp_destroy(result);
-        } else sp_destroy(obj);
+        } //else sp_destroy(obj);
     }
     return(len);
 }
@@ -756,7 +756,7 @@ int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mg
                 if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
                     estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * assetoshis / SATOSHIDEN);
                 else estNXT = 0;
-                printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p cmp.%d\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json,mgw->assetidbits == calc_nxt64bits(assetidstr));
+                printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p (%llu %llu)\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json,(long long)mgw->assetidbits,(long long)calc_nxt64bits(assetidstr));
                 if ( assetidstr[0] != 0 && mgw->assetidbits == calc_nxt64bits(assetidstr) )
                 {
                     if ( json != 0 )
@@ -826,6 +826,7 @@ int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mg
 char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
 {
     void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; struct extra_info extra; char *txidjsonstr = 0; cJSON *json,*txobj;
+    printf("NXT_txidstr.(%s) write.%d ind.%d\n",txid,writeflag,ind);
     if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
     {
         flag = writeflag;
@@ -853,10 +854,11 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
                     else flag = 0;
                 }
                 sp_destroy(result);
-            } else sp_destroy(obj);
+            } //else sp_destroy(obj);
         }
         if ( flag != 0 )
         {
+            printf("flag != 0\n");
             NXT_revassettxid(&extra,mgw->assetidbits,ind);
             savedbits = extra.txidbits;
             memset(&extra,0,sizeof(extra));
