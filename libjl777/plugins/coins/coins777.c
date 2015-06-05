@@ -1401,12 +1401,12 @@ void coin777_initDBenv(struct coin777 *coin)
     if ( n == COIN777_TXIDS )
         ramchain->sps[n++] = coin777_stateinit(&ramchain->DBs,&ramchain->txidDB,coinstr,subdir,"txids",0,DB777_HDD,sizeof(uint32_t));
     if ( n == COIN777_ADDRS )
-        ramchain->sps[n++] = coin777_stateinit(&ramchain->DBs,&ramchain->addrDB,coinstr,subdir,"addrs","zstd",DB777_HDD,sizeof(uint32_t));
+        ramchain->sps[n++] = coin777_stateinit(&ramchain->DBs,&ramchain->addrDB,coinstr,subdir,"addrs",0,DB777_HDD,sizeof(uint32_t));
     if ( n == COIN777_SCRIPTS )
-        ramchain->sps[n++] = coin777_stateinit(&ramchain->DBs,&ramchain->scriptDB,coinstr,subdir,"scripts","zstd",DB777_HDD,sizeof(uint32_t));
+        ramchain->sps[n++] = coin777_stateinit(&ramchain->DBs,&ramchain->scriptDB,coinstr,subdir,"scripts",0,DB777_HDD,sizeof(uint32_t));
     ramchain->num = n;
     if ( n == COIN777_HASHES )
-        ramchain->sps[n] = coin777_stateinit(&ramchain->DBs,&ramchain->hashDB,coinstr,subdir,"hashes","zstd",DB777_HDD,sizeof(struct coin777_hashes));
+        ramchain->sps[n] = coin777_stateinit(&ramchain->DBs,&ramchain->hashDB,coinstr,subdir,"hashes",0,DB777_HDD,sizeof(struct coin777_hashes));
     else printf("coin777_initDBenv mismatched COIN777_HASHES.%d vs n.%d\n",COIN777_HASHES,n), exit(-1);
     env777_start(0,&ramchain->DBs,0);
 }
