@@ -756,8 +756,8 @@ int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mg
                 if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
                     estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * assetoshis / SATOSHIDEN);
                 else estNXT = 0;
-                printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p (%llu %llu)\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json,(long long)mgw->assetidbits,(long long)calc_nxt64bits(assetidstr));
-                if ( assetidstr[0] != 0 && mgw->assetidbits == calc_nxt64bits(assetidstr) )
+                printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json,(long long)mgw->assetidbits,(long long)calc_nxt64bits(assetidstr));
+                if ( assetidstr[0] != 0 && strcmp(mgw->assetidstr,assetidstr) == 0 )
                 {
                     if ( json != 0 )
                     {
@@ -919,6 +919,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
 {
     int32_t verifyflag = 1;
     uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr; struct extra_info extra;
+    mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
     if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) )
     {
         printf("got extra ind.%d\n",extra.ind);

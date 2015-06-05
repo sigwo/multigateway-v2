@@ -206,13 +206,10 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
         
         copy_cJSON(coin->mgw.assetidstr,cJSON_GetObjectItem(argjson,"assetid"));
-        if ( coin->mgw.assetidstr[0] != 0 )
-        {
-            coin->mgw.assetidbits = calc_nxt64bits(coin->mgw.assetidstr);
-            coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
-        }
+        coin->mgw.assetidbits = calc_nxt64bits(coin->mgw.assetidstr);
+        coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
         strcpy(coin->mgw.coinstr,coinstr);
-        printf("coin777_create %s: %s %llu\n",coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits);
+        printf("coin777_create %s: %s %llu mult.%llu\n",coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult);
         coin->mgw.special = cJSON_GetObjectItem(argjson,"special");
         coin->mgw.limbo = cJSON_GetObjectItem(argjson,"limbo");
         coin->mgw.dust = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"dust"));
