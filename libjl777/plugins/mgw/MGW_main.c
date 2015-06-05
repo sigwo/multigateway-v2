@@ -64,7 +64,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     key[1] = srvbits;
     key[2] = nxt64bits;
     flag = 1;
-//printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
+printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
     if ( (coinaddr= db777_read(buf,&len,0,DB_NXTaccts,key,sizeof(key),0)) != 0 )
     {
         if ( strcmp(coinaddr,newcoinaddr) == 0 )
@@ -82,7 +82,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
         if ( strcmp(pubkey,newpubkey) == 0 )
             flag = 0;
     }
-    //printf("oldpubkey.(%s) new.(%s)\n",pubkey,newpubkey);
+printf("oldpubkey.(%s) new.(%s)\n",pubkey,newpubkey);
     if ( flag != 0 )
     {
         if ( db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
