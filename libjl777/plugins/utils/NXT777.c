@@ -920,10 +920,10 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
 
 int32_t update_NXT_assettransfers(struct mgw777 *mgw)
 {
-    int32_t verifyflag = 0;
+    int32_t len,verifyflag = 0;
     uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr; struct extra_info extra;
     mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
-    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) )
+    if ( (len= NXT_revassettxid(&extra,mgw->assetidbits,0)) == sizeof(extra) )
     {
         //printf("got extra ind.%d\n",extra.ind);
         count = extra.ind;
@@ -940,7 +940,8 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
         {
             if ( NXT_assettransfers(mgw,&txids[i],1,i,i) == 1 && txids[i] == mostrecent )
             {
-                printf("asset.(%s) count.%d i.%d mostrecent.%llu vs %llu\n",mgw->assetidstr,count,i,(long long)mostrecent,(long long)txids[i]);
+                if ( i != 0 )
+                    printf("asset.(%s) count.%d i.%d mostrecent.%llu vs %llu\n",mgw->assetidstr,count,i,(long long)mostrecent,(long long)txids[i]);
                 while ( --i > 0 )
                 {
                     expand_nxt64bits(txidstr,txids[i]);
@@ -952,10 +953,10 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
         }
         if ( i == 100 )
             count = 0;
-    } else printf("cant get count\n");
+    } else printf("cant get count len.%d\n",len);
     if ( count == 0 )
         count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
-    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) && extra.ind != count )
+    //if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) && extra.ind != count )
     {
         memset(&extra,0,sizeof(extra));
         extra.ind = count;
