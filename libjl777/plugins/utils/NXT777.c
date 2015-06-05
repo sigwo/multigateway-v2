@@ -893,7 +893,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,char *ass
                     {
                         if ( i < max )
                             txids[i] = txidbits;
-                        if ( firstindex == 0 && lastindex == 0 )
+                        if ( firstindex < 0 && lastindex <= firstindex )
                         {
                             if ( (txidstr= NXT_txidstr(mgw,assetidbits,txid,1,n - i)) != 0 )
                                 free(txidstr);
@@ -903,7 +903,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,char *ass
             } free_json(transfers);
         } free(jsonstr);
     }
-    if ( firstindex < 0 || lastindex < firstindex )
+    if ( firstindex < 0 || lastindex <= firstindex )
         printf("assetid.(%s) -> %d entries\n",assetidstr,n);
     return(n);
 }
