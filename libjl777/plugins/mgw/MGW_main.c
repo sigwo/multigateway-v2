@@ -400,7 +400,7 @@ cJSON *acctpubkey_json(char *coinstr,char *NXTaddr,int32_t gatewayid)
     cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
     cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(NXTaddr));
     cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(gatewayid));
-    //printf("acctpubkey.(%s)\n",cJSON_Print(json));
+    printf("acctpubkey.(%s)\n",cJSON_Print(json));
     return(json);
 }
 
@@ -518,6 +518,7 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
         {
             cJSON_AddItemToObject(json,"pubkeys",array);
             MGW_publishjson(retbuf,json);
+            sleep(10);
             free_json(json);
             printf("processed.(%s) SUPERNET.gatewayid %d %s\n",retbuf,SUPERNET.gatewayid,SUPERNET.NXTADDR);
             return(0);
