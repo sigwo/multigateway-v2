@@ -34,8 +34,11 @@ int32_t coins_idle(struct plugin_info *plugin)
         {
             if ( (coin= COINS.LIST[i]) != 0 )
             {
-                if ( coin->mgw.assetidstr[0] != 0 )
+                if ( coin->mgw.assetidstr[0] != 0 && milliseconds() > coin->mgw.lastupdate+10000 )
+                {
                     update_NXT_assettransfers(&coin->mgw,coin->mgw.assetidstr);
+                    coin->mgw.lastupdate = milliseconds();
+                }
             }
         }
     }
@@ -200,6 +203,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         coin->minconfirms = get_API_int(cJSON_GetObjectItem(argjson,"minconfirms"),(strcmp("BTC",coinstr) == 0) ? 3 : 10);
         path = cJSON_str(cJSON_GetObjectItem(argjson,"path"));
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
+        
         copy_cJSON(coin->mgw.assetidstr,cJSON_GetObjectItem(argjson,"assetid"));
         if ( coin->mgw.assetidstr[0] != 0 )
         {

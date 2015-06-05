@@ -138,6 +138,7 @@ struct mgw777
     uint32_t marker_addrind,marker2_addrind,use_addmultisig;
     uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust;
     cJSON *limbo,*special;
+    double lastupdate;
     struct MGWstate S,otherS[16],remotesrcs[16];
     /*uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;
      int32_t numgateways,nummsigs,depositconfirms,withdrawconfirms,remotemode,numpendingsends,min_NXTconfirms,numspecials;
