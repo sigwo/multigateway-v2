@@ -318,7 +318,7 @@ struct multisig_addr *get_NXT_msigaddr(struct multisig_addr *msig,uint64_t *srv6
         msig->buyNXT = buyNXT;
         for (i=0; i<msig->n; i++)
         {
-            //printf("i.%d n.%d msig->n.%d NXT.(%s) (%s) (%s)\n",i,n,msig->n,msig->NXTaddr,coinaddrs[i],pubkeys[i]);
+            printf("i.%d n.%d msig->n.%d NXT.(%s) (%s) (%s)\n",i,n,msig->n,msig->NXTaddr,coinaddrs[i],pubkeys[i]);
             strcpy(msig->pubkeys[i].coinaddr,coinaddrs[i]);
             strcpy(msig->pubkeys[i].pubkey,pubkeys[i]);
             msig->pubkeys[i].nxt64bits = srv64bits[i];
