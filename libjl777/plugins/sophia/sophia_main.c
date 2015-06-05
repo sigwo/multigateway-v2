@@ -390,7 +390,7 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
     strcpy(DB->name,dbname);
     DB->env = sp_env();
     DB->ctl = sp_ctl(DB->env);
-    if ( SOPHIA.PATH[0] == '.' && SOPHIA.PATH[1] == '/' )
+    if ( SOPHIA.PATH[0] == '.' && (SOPHIA.PATH[1] == '/' || SOPHIA.PATH[1] == '\\') )
         strcpy(path,SOPHIA.PATH+2);
     else strcpy(path,SOPHIA.PATH);
     ensure_directory(path);

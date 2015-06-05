@@ -18,6 +18,7 @@
 #include "cJSON.h"
 #include "../plugin777.c"
 #include "files777.c"
+#include "NXT777.c"
 #include "coins777.c"
 #include "gen1auth.c"
 #include "msig.c"
@@ -25,10 +26,18 @@
 
 int32_t coins_idle(struct plugin_info *plugin)
 {
-    int32_t i,flag = 0; // len uint32_t width = 10000;
-    //struct coin777 *coin; struct ledger_info *ledger; struct packedblock *packed;
-    for (i=0; i<COINS.num; i++)
+    int32_t i,flag = 0;
+    struct coin777 *coin;
+    if ( COINS.num > 0 )
     {
+        for (i=0; i<COINS.num; i++)
+        {
+            if ( (coin= COINS.LIST[i]) != 0 )
+            {
+                if ( coin->mgw.assetidstr[0] != 0 )
+                    update_NXT_assettransfers(&coin->mgw,coin->mgw.assetidstr);
+            }
+        }
     }
     return(flag);
 }
@@ -188,10 +197,30 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         coin->argjson = cJSON_Duplicate(argjson,1);
         if ( (serverport= cJSON_str(cJSON_GetObjectItem(argjson,"rpc"))) != 0 )
             safecopy(coin->serverport,serverport,sizeof(coin->serverport));
-        coin->mgw.use_addmultisig = get_API_int(cJSON_GetObjectItem(argjson,"useaddmultisig"),(strcmp("BTC",coinstr) != 0));
         coin->minconfirms = get_API_int(cJSON_GetObjectItem(argjson,"minconfirms"),(strcmp("BTC",coinstr) == 0) ? 3 : 10);
         path = cJSON_str(cJSON_GetObjectItem(argjson,"path"));
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
+        copy_cJSON(coin->mgw.assetidstr,cJSON_GetObjectItem(argjson,"assetid"));
+        if ( coin->mgw.assetidstr[0] != 0 )
+        {
+            coin->mgw.assetidbits = calc_nxt64bits(coin->mgw.assetidstr);
+            coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
+        }
+        strcpy(coin->mgw.coinstr,coinstr);
+        coin->mgw.special = cJSON_GetObjectItem(argjson,"special");
+        coin->mgw.limbo = cJSON_GetObjectItem(argjson,"limbo");
+        coin->mgw.dust = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"dust"));
+        coin->mgw.txfee = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"txfee_satoshis"));
+        if ( coin->mgw.txfee == 0 )
+            coin->mgw.txfee = (uint64_t)(SATOSHIDEN * get_API_float(cJSON_GetObjectItem(argjson,"txfee")));
+        if ( coin->mgw.txfee == 0 )
+            coin->mgw.txfee = 10000;
+        coin->mgw.NXTfee_equiv = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"NXTfee_equiv_satoshis"));
+        if ( coin->mgw.NXTfee_equiv == 0 )
+            coin->mgw.NXTfee_equiv = (uint64_t)(SATOSHIDEN * get_API_float(cJSON_GetObjectItem(argjson,"NXTfee_equiv")));
+        copy_cJSON(coin->mgw.marker,cJSON_GetObjectItem(argjson,"marker"));
+        copy_cJSON(coin->mgw.marker2,cJSON_GetObjectItem(argjson,"marker2"));
+        coin->mgw.use_addmultisig = get_API_int(cJSON_GetObjectItem(argjson,"useaddmultisig"),(strcmp("BTC",coinstr) != 0));
     }
     else coin->minconfirms = (strcmp("BTC",coinstr) == 0) ? 3 : 10;
     extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);

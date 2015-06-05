@@ -612,209 +612,65 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
 
 */
 
-int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int32_t valuelen,uint32_t ind)
-{
-    void *obj; uint64_t revkey[2];
-    if ( value != 0 )
-    {
-        if ( (obj= sp_object(NXT_txids->db)) != 0 )
-        {
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
-                sp_set(NXT_txids->db,obj);
-            else
-            {
-                sp_destroy(obj);
-                printf("error NXT_add_assettxid %llu ind.%d\n",(long long)txidbits,ind);
-            }
-        }
-    }
-    if ( (obj= sp_object(NXT_txids->db)) != 0 )
-    {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && sp_set(obj,"value",&txidbits,sizeof(txidbits)) == 0 )
-            sp_set(NXT_txids->db,obj);
-        else
-        {
-            sp_destroy(obj);
-            printf("error NXT_add_assettxid rev %llu ind.%d\n",(long long)txidbits,ind);
-        }
-    }
-    return(0);
-}
-
-uint64_t NXT_revassettxid(uint64_t assetidbits,uint32_t ind)
-{
-    void *obj,*result,*value; uint64_t revkey[2],retbits = 0; int32_t len;
-    if ( (obj= sp_object(NXT_txids->db)) != 0 )
-    {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(NXT_txids->db,obj)) != 0 )
-        {
-            value = sp_get(result,"value",&len);
-            if ( len == sizeof(retbits) )
-                memcpy(&retbits,value,len);
-            sp_destroy(result);
-        } else sp_destroy(obj);
-    }
-    return(retbits);
-}
-
-char *NXT_assettxid(uint64_t assettxid)
-{
-    void *obj,*result,*value; int32_t len; char *retstr = 0;
-    if ( (obj= sp_object(NXT_txids->db)) != 0 )
-    {
-        if ( sp_set(obj,"key",&assettxid,sizeof(assettxid)) == 0 && (result= sp_get(NXT_txids->db,obj)) != 0 )
-        {
-            value = sp_get(result,"value",&len);
-            retstr = clonestr(value);
-            sp_destroy(result);
-        } else sp_destroy(obj);
-    }
-    return(retstr);
-}
-
-char *NXT_txidstr(uint64_t refbits,char *txid,int32_t writeflag,uint32_t ind)
-{
-    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; char *txidjsonstr = 0; cJSON *json;
-    if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
-    {
-        flag = writeflag;
-        if ( (json= cJSON_Parse(txidjsonstr)) != 0 )
-        {
-            free(txidjsonstr);
-            cJSON_DeleteItemFromObject(json,"requestProcessingTime");
-            cJSON_DeleteItemFromObject(json,"confirmations");
-            cJSON_DeleteItemFromObject(json,"transactionIndex");
-            txidjsonstr = cJSON_Print(json);
-            free_json(json);
-        } else printf("PARSE ERROR.(%s)\n",txidjsonstr);
-        _stripwhite(txidjsonstr,' ');
-        slen = (int32_t)strlen(txidjsonstr)+1;
-        txidbits = calc_nxt64bits(txid);
-        if ( (obj= sp_object(NXT_txids->db)) != 0 )
-        {
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && (result= sp_get(NXT_txids->db,obj)) != 0 )
-            {
-                value = sp_get(result,"value",&len);
-                if ( value != 0 )
-                {
-                    if ( len != slen || strcmp(value,txidjsonstr) != 0 )
-                        printf("mismatched NXT_txidstr ind.%d for %llu: lens %d vs %d (%s) vs (%s)\n",ind,(long long)txidbits,len,slen,txidjsonstr,value);
-                    else flag = 0;
-                }
-                sp_destroy(result);
-            } else sp_destroy(obj);
-        }
-        if ( flag != 0 )
-        {
-            savedbits = NXT_revassettxid(refbits,ind);
-            if ( savedbits != txidbits )
-            {
-                //if ( savedbits != 0 )
-                    printf("for %llu.%d oldval.%llu -> newval %llu\n",(long long)refbits,ind,(long long)savedbits,(long long)txidbits);
-                NXT_add_assettxid(refbits,txidbits,txidjsonstr,slen,ind);
-            }
-        }
-    }
-    return(txidjsonstr);
-}
-
-int32_t NXT_assettransfers(uint64_t *txids,long max,char *assetidstr,int32_t firstindex,int32_t lastindex)
-{
-    char cmd[1024],txid[64],*jsonstr,*txidstr; cJSON *transfers,*array;
-    int32_t i,n = 0; uint64_t assetidbits,txidbits,revkey[2];
-    sprintf(cmd,"requestType=getAssetTransfers&asset=%s",assetidstr);
-    if ( firstindex >= 0 && lastindex >= firstindex )
-        sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
-    assetidbits = calc_nxt64bits(assetidstr);
-    revkey[0] = assetidbits;
-    printf("issue.(%s)\n",cmd);
-    jsonstr = issue_NXTPOST(cmd);
-    if ( jsonstr != 0 )
-    {
-        if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
-        {
-            if ( (array= cJSON_GetObjectItem(transfers,"transfers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    copy_cJSON(txid,cJSON_GetObjectItem(cJSON_GetArrayItem(array,i),"assetTransfer"));
-                    if ( txid[0] != 0 && (txidbits= calc_nxt64bits(txid)) != 0 )
-                    {
-                        if ( i < max )
-                            txids[i] = txidbits;
-                        if ( firstindex == 0 && lastindex == 0 )
-                        {
-                            if ( (txidstr= NXT_txidstr(assetidbits,txid,1,n - i)) != 0 )
-                                free(txidstr);
-                        }
-                    }
-                }
-            } free_json(transfers);
-        } free(jsonstr);
-    }
-    if ( firstindex == 0 && lastindex == 0 )
-        printf("assetid.(%s) -> %d entries\n",assetidstr,n);
-    return(n);
-}
-
-int32_t update_NXT_assettransfers(char *assetidstr)
-{
-    uint64_t txids[100],assetidbits,mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr;
-    assetidbits = calc_nxt64bits(assetidstr);
-    if ( (count= (int32_t)NXT_revassettxid(assetidbits,0)) != 0 )
-    {
-        for (i=1; i<=count; i++)
-            printf("%llu ",NXT_revassettxid(assetidbits,i));
-        printf("sequential tx\n");
-        mostrecent = NXT_revassettxid(assetidbits,count);
-        for (i=0; i<100; i++)
-        {
-            if ( NXT_assettransfers(&txids[i],1,assetidstr,i,i) == 1 && txids[i] == mostrecent )
-            {
-                while ( --i > 0 )
-                {
-                    expand_nxt64bits(txidstr,txids[i]);
-                    if ( (txidjsonstr= NXT_txidstr(assetidbits,txidstr,1,++count)) != 0 )
-                        free(txidjsonstr);
-                }
-                break;
-            }
-            printf("count.%d i.%d mostrecent.%llu vs %llu\n",count,i,(long long)mostrecent,(long long)txids[i]);
-        }
-        if ( i == 100 )
-            count = 0;
-    }
-    if ( count == 0 )
-        count = NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,-1,-1);
-    NXT_add_assettxid(assetidbits,count,0,0,0);
-    NXT_assettransfers(txids,sizeof(txids)/sizeof(*txids),assetidstr,-1,-1);
-    return(count);
-}
-
 #define DEPOSIT_XFER_DURATION 5
 #define MIN_DEPOSIT_FACTOR 5
-
-struct MGWstate
-{
-    char name[64];
-    uint64_t nxt64bits;
-    int64_t MGWbalance,supply;
-    uint64_t totalspends,numspends,totaloutputs,numoutputs;
-    uint64_t boughtNXT,circulation,sentNXT,MGWpendingredeems,orphans,MGWunspent,MGWpendingdeposits,NXT_ECblock;
-    int32_t gatewayid;
-    uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,enable_withdraws,NXT_ECheight,permblocks;
-};
 
 #define MGW_ISINTERNAL 1
 #define MGW_PENDINGXFER 2
 #define MGW_DEPOSITDONE 4
+#define MGW_PENDINGREDEEM 8
+#define MGW_WITHDRAWDONE 16
+#define MGW_IRRELEVANT 128
 #define MGW_ERRORSTATUS 0x8000
 
+int32_t _valid_txamount(struct mgw777 *mgw,uint64_t value,char *coinaddr)
+{
+    if ( value >= MIN_DEPOSIT_FACTOR * (mgw->txfee + mgw->NXTfee_equiv) )
+    {
+        if ( coinaddr == 0 || (strcmp(coinaddr,mgw->marker) != 0 && strcmp(coinaddr,mgw->marker2) != 0) )
+            return(1);
+    }
+    return(0);
+}
+
+int32_t _is_limbo_redeem(struct mgw777 *mgw,uint64_t redeemtxidbits)
+{
+    char str[64];
+    expand_nxt64bits(str,redeemtxidbits);
+    return(in_jsonarray(mgw->limbo,str));
+}
+    
 int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout)
 {
-    // check NXT asset transfers
+    int32_t i,n; uint64_t assettxid; char *jsonstr; cJSON *json; struct extra_info extra; uint32_t unspentind;
+    n = (int32_t)NXT_revassettxid(0,coin->mgw.assetidbits,0);
+    unspentind = 0;//xxx();
+    for (i=1; i<=n; i++)
+    {
+        if ( (assettxid= NXT_revassettxid(&extra,coin->mgw.assetidbits,i)) != 0 )
+        {
+            if ( extra.flags == 0 || (extra.flags & MGW_IRRELEVANT) == 0 ) // move to onetime processing
+            {
+                if ( (jsonstr= NXT_assettxid(assettxid)) != 0 )
+                {
+                    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+                    {
+                        /*if ( mgw_isdeposit() != 0 )
+                        {
+                            
+                        }
+                        else if ( mgw_iswithdraw() == 0 )
+                        {
+                            
+                        }
+                        else extra.flags |= MGW_IRRELEVANT;*/
+                        free_json(json);
+                    }
+                    free(jsonstr);
+                }
+            }
+        }
+    }
     return(0);
 }
 
@@ -829,7 +685,7 @@ int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t 
         {
             if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,unspentind - vout) == 0 )
             {
-                if ( U.addrind == coin->mgw.marker_rawind || U.addrind == coin->mgw.marker2_rawind )
+                if ( U.addrind == coin->mgw.marker_addrind || U.addrind == coin->mgw.marker2_addrind )
                 {
                     printf("U.%u -> (%s).v%u is internal\n",unspentind,txidstr,vout);
                     return(MGW_ISINTERNAL);
@@ -848,14 +704,6 @@ int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t 
         return(-1);
     }
     return(-1);
-}
-
-int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
-{
-    int32_t slen;
-    slen = (int32_t)strlen(txidstr) + 1;
-    memcpy(key,&vout,sizeof(vout)), memcpy((char *)((long)key + sizeof(vout)),txidstr,slen), slen += sizeof(vout);
-    return(slen);
 }
 
 int32_t mgw_markunspent(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout,int32_t status)
@@ -878,7 +726,8 @@ int32_t mgw_unspentstatus(struct coin777 *coin,struct multisig_addr *msig,char *
 
 int32_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
 {
-    int32_t i,status,vout; uint32_t unspentind,txidind; char txidstr[512]; uint64_t atx_value; struct unspent_info U; struct multisig_addr *msig = args;
+    struct multisig_addr *msig = args;
+    int32_t i,status,vout; uint32_t unspentind,txidind; char txidstr[512]; uint64_t atx_value; struct unspent_info U;
     for (i=0; i<num; i++)
     {
         unspentind = unspents[i].unspentind;
@@ -889,7 +738,13 @@ int32_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct
                 if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout)) != 0 )
                     mgw_markunspent(coin,msig,txidstr,vout,status);
                 else if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) != 0 )
+                {
                     mgw_markunspent(coin,msig,txidstr,vout,status);
+                    if ( (status & MGW_DEPOSITDONE) != 0 && (status & (MGW_PENDINGREDEEM | MGW_WITHDRAWDONE)) == 0 )
+                    {
+                        
+                    }
+                }
                 else
                 {
                     atx_value = coin777_Uvalue(&U,coin,unspents[i].unspentind);
@@ -902,18 +757,19 @@ int32_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct
     return(0);
 }
 
-uint64_t mgw_calc_unspent(uint64_t *pendingp,char *smallestaddr,char *smallestaddrB,struct mgw777 *mgw)
+uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
-    struct multisig_addr **msigs; struct coin777 *coin = coin777_find(mgw->coinstr,0);
-    int32_t i,n,m;
-    uint64_t pending,smallest,val,unspent = 0;
+    struct multisig_addr **msigs; int32_t i,n,m; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0;
     smallestaddr[0] = smallestaddrB[0] = 0;
     if ( coin == 0 )
     {
-        printf("mgw_calc_MGWunspent: no coin777 for %s\n",mgw->coinstr);
+        printf("mgw_calc_MGWunspent: no coin777\n");
         return(0);
     }
-    pending = 0;
+    if ( coin->mgw.marker_addrind == 0 && coin->mgw.marker != 0 )
+        coin->mgw.marker_addrind = coin777_addrind(&firstblocknum,coin,coin->mgw.marker);
+    if ( coin->mgw.marker2_addrind == 0 && coin->mgw.marker2 != 0 )
+        coin->mgw.marker2_addrind = coin777_addrind(&firstblocknum,coin,coin->mgw.marker2);
     if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,DB_msigs,"value",0)) != 0 )
     {
         for (smallest=i=m=0; i<n; i++)
@@ -936,7 +792,8 @@ uint64_t mgw_calc_unspent(uint64_t *pendingp,char *smallestaddr,char *smallestad
         if ( Debuglevel > 2 )
             printf("smallest (%s %.8f)\n",smallestaddr,dstr(smallest));
     }
-    *pendingp = pending;
+    circulation = calc_circulation(0,&coin->mgw,0);
+    printf("circulation %.8f vs unspents %.8f [%.8f]\n",dstr(circulation),dstr(unspent),dstr(circulation)-dstr(unspent));
     return(unspent);
 }
 

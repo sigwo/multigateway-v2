@@ -120,16 +120,29 @@ struct ramchain
     struct alloc_space tmpMEM;
 };
 
+struct MGWstate
+{
+    char name[64];
+    uint64_t nxt64bits;
+    int64_t MGWbalance,supply;
+    uint64_t totalspends,numspends,totaloutputs,numoutputs;
+    uint64_t boughtNXT,circulation,sentNXT,MGWpendingredeems,orphans,MGWunspent,MGWpendingdeposits,NXT_ECblock;
+    int32_t gatewayid;
+    uint32_t blocknum,RTblocknum,NXT_RTblocknum,NXTblocknum,is_realtime,NXT_is_realtime,enable_deposits,enable_withdraws,NXT_ECheight,permblocks;
+};
+
 #define NUM_GATEWAYS 3
 struct mgw777
 {
-    char coinstr[16];
-    uint32_t marker_rawind,marker2_rawind,use_addmultisig;
+    char coinstr[16],assetidstr[32],assetname[32],marker[128],marker2[128];
+    uint32_t marker_addrind,marker2_addrind,use_addmultisig;
+    uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust;
+    cJSON *limbo,*special;
+    struct MGWstate S,otherS[16],remotesrcs[16];
     /*uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;
      int32_t numgateways,nummsigs,depositconfirms,withdrawconfirms,remotemode,numpendingsends,min_NXTconfirms,numspecials;
      uint32_t firsttime,NXTtimestamp,marker_rawind,marker2_rawind;
      double NXTconvrate;
-     struct MGWstate S,otherS[16],remotesrcs[16];
      struct NXT_asset *ap;
      char multisigchar,*srvNXTADDR,**special_NXTaddrs,*MGWredemption,*backups,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];*/
 };
@@ -177,6 +190,8 @@ struct addrtx_info *coin777_compact(int32_t compactflag,uint64_t *balancep,int32
 uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args);
 int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin,uint32_t unspentind);
 uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t unspentind);
+int32_t update_NXT_assettransfers(struct mgw777 *mgw,char *assetidstr);
+uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height);
 
 #endif
 #else
@@ -1351,9 +1366,9 @@ struct coin777_state *coin777_stateinit(struct env777 *DBs,struct coin777_state 
 #define COIN777_BLOCKS 1 //
 #define COIN777_TXOFFSETS 2 // matches
 #define COIN777_TXIDBITS 3 // matches
-#define COIN777_UNSPENTS 4 // matches
+#define COIN777_UNSPENTS 4 // ?
 #define COIN777_SPENDS 5 // matches
-#define COIN777_LEDGER 6 // matches
+#define COIN777_LEDGER 6 // ?
 #define COIN777_ADDRTX 7 // matches
 #define COIN777_TXIDS 8 // matches
 #define COIN777_ADDRS 9 // matches
@@ -1483,61 +1498,64 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
     ensure_directory(dirname);
     printf("start Backup.(%s)\n",dirname);
     startmilli = milliseconds();
-    if ( prevH.blocknum != 0 )
+    if ( 0 )
     {
-        sprintf(fname,"%s/blocks",dirname);
+        if ( prevH.blocknum != 0 )
+        {
+            sprintf(fname,"%s/blocks",dirname);
+            if ( (fp= fopen(fname,"wb")) != 0 )
+            {
+                if ( fwrite(H,1,sizeof(*H),fp) != sizeof(*H) )
+                    errs++;
+                if ( fwrite(&prevH,1,sizeof(prevH),fp) != sizeof(prevH) )
+                    errs++;
+                for (i=prevH.blocknum; i<=H->blocknum; i++)
+                {
+                    coin777_RWmmap(0,&B,coin,&coin->ramchain.blocks,i);
+                    if ( fwrite(&B,1,sizeof(B),fp) != sizeof(B) )
+                        errs++;
+                }
+                fclose(fp);
+            }
+            if ( errs != 0 )
+                printf("errs.%d after blocks\n",errs);
+        }
+        else errs += coin777_MMbackup(dirname,&coin->ramchain.blocks,0,H->blocknum);
+        errs += coin777_MMbackup(dirname,&coin->ramchain.addrinfos,prevH.addrind,H->addrind);
+        errs += coin777_MMbackup(dirname,&coin->ramchain.txoffsets,prevH.txidind,H->txidind);
+        errs += coin777_MMbackup(dirname,&coin->ramchain.txidbits,prevH.txidind,H->txidind);
+        errs += coin777_MMbackup(dirname,&coin->ramchain.unspents,prevH.unspentind,H->unspentind);
+        errs += coin777_MMbackup(dirname,&coin->ramchain.spends,prevH.numspends,H->numspends);
+        if ( errs != 0 )
+            printf("errs.%d after coin777_MMbackups\n",errs);
+        sprintf(fname,"%s/scripts",dirname);
         if ( (fp= fopen(fname,"wb")) != 0 )
         {
-            if ( fwrite(H,1,sizeof(*H),fp) != sizeof(*H) )
-                errs++;
-            if ( fwrite(&prevH,1,sizeof(prevH),fp) != sizeof(prevH) )
-                errs++;
-            for (i=prevH.blocknum; i<=H->blocknum; i++)
+            for (i=prevH.scriptind; i<=H->scriptind; i++)
             {
-                coin777_RWmmap(0,&B,coin,&coin->ramchain.blocks,i);
-                if ( fwrite(&B,1,sizeof(B),fp) != sizeof(B) )
-                    errs++;
+                if ( coin777_getDB(script,&len,coin->ramchain.DBs.transactions,coin->ramchain.scriptDB.DB,&i,sizeof(i)) != 0 )
+                {
+                    scriptlen = len;
+                    if ( fwrite(&scriptlen,1,sizeof(scriptlen),fp) != sizeof(scriptlen) )
+                        errs++;
+                    if ( fwrite(script,1,scriptlen,fp) != scriptlen )
+                        errs++;
+                }
+                else
+                {
+                    scriptlen = 0;
+                    if ( fwrite(&scriptlen,1,sizeof(scriptlen),fp) != sizeof(scriptlen) )
+                        errs++;
+                }
             }
             fclose(fp);
         }
         if ( errs != 0 )
-            printf("errs.%d after blocks\n",errs);
+            printf("errs.%d after scripts\n",errs);
     }
-    else errs += coin777_MMbackup(dirname,&coin->ramchain.blocks,0,H->blocknum);
-    errs += coin777_MMbackup(dirname,&coin->ramchain.addrinfos,prevH.addrind,H->addrind);
-    errs += coin777_MMbackup(dirname,&coin->ramchain.txoffsets,prevH.txidind,H->txidind);
-    errs += coin777_MMbackup(dirname,&coin->ramchain.txidbits,prevH.txidind,H->txidind);
-    errs += coin777_MMbackup(dirname,&coin->ramchain.unspents,prevH.unspentind,H->unspentind);
-    errs += coin777_MMbackup(dirname,&coin->ramchain.spends,prevH.numspends,H->numspends);
-    if ( errs != 0 )
-        printf("errs.%d after coin777_MMbackups\n",errs);
-    sprintf(fname,"%s/scripts",dirname);
-    if ( (fp= fopen(fname,"wb")) != 0 )
-    {
-        for (i=prevH.scriptind; i<=H->scriptind; i++)
-        {
-            if ( coin777_getDB(script,&len,coin->ramchain.DBs.transactions,coin->ramchain.scriptDB.DB,&i,sizeof(i)) != 0 )
-            {
-                scriptlen = len;
-                if ( fwrite(&scriptlen,1,sizeof(scriptlen),fp) != sizeof(scriptlen) )
-                    errs++;
-                if ( fwrite(script,1,scriptlen,fp) != scriptlen )
-                    errs++;
-            }
-            else
-            {
-                scriptlen = 0;
-                if ( fwrite(&scriptlen,1,sizeof(scriptlen),fp) != sizeof(scriptlen) )
-                    errs++;
-            }
-        }
-        fclose(fp);
-    }
-    if ( errs != 0 )
-        printf("errs.%d after scripts\n",errs);
-    db777_path(fname,coin->name,"",0), strcat(fname,"/ledger"), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
-    db777_path(fname,coin->name,"",0), strcat(fname,"/addrtx"), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
-    db777_path(fname,coin->name,"",0), strcat(fname,"/addrinfos"), sprintf(destfname,"%s.sync",fname), copy_file(fname,destfname);
+    db777_path(fname,coin->name,"",0), strcat(fname,"/ledger"), sprintf(destfname,"cp %s %s.sync",fname,fname), system(destfname);//copy_file(fname,destfname);
+    db777_path(fname,coin->name,"",0), strcat(fname,"/addrtx"), sprintf(destfname,"cp %s %s.sync",fname,fname), system(destfname);//copy_file(fname,destfname);
+    db777_path(fname,coin->name,"",0), strcat(fname,"/addrinfos"), sprintf(destfname,"cp %s %s.sync",fname,fname), system(destfname);//copy_file(fname,destfname);
     sum = addrinfos_sum(coin,H->addrind,0,H->unspentind,H->numspends,0,0);
     printf("finished Backup.(%s) supply %.8f in %.0f millis | errs.%d\n",dirname,dstr(sum),milliseconds() - startmilli,errs);
     return(-errs);
