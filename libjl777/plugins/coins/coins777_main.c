@@ -212,6 +212,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
             coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
         }
         strcpy(coin->mgw.coinstr,coinstr);
+        printf("coin777_create %s: %s %llu\n",coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits);
         coin->mgw.special = cJSON_GetObjectItem(argjson,"special");
         coin->mgw.limbo = cJSON_GetObjectItem(argjson,"limbo");
         coin->mgw.dust = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"dust"));

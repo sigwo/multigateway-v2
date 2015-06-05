@@ -826,7 +826,7 @@ int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mg
 char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
 {
     void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; struct extra_info extra; char *txidjsonstr = 0; cJSON *json,*txobj;
-    printf("NXT_txidstr.(%s) write.%d ind.%d\n",txid,writeflag,ind);
+    //printf("NXT_txidstr.(%s) write.%d ind.%d\n",txid,writeflag,ind);
     if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
     {
         flag = writeflag;
@@ -858,7 +858,6 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
         }
         if ( flag != 0 )
         {
-            printf("flag != 0\n");
             NXT_revassettxid(&extra,mgw->assetidbits,ind);
             savedbits = extra.txidbits;
             memset(&extra,0,sizeof(extra));
@@ -897,7 +896,6 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
                 for (i=0; i<n; i++)
                 {
                     copy_cJSON(txid,cJSON_GetObjectItem(cJSON_GetArrayItem(array,i),"assetTransfer"));
-                    printf("i.%d of %d: %s\n",i,n,txid);
                     if ( txid[0] != 0 && (txidbits= calc_nxt64bits(txid)) != 0 )
                     {
                         if ( i < max )
