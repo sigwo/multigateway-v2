@@ -1675,9 +1675,12 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
         {
             if ( 1 )//coin->ramchain.addrsum != (credits - debits) )
             {
+                fprintf(stderr,"Verify unspents: ");
                 Ucredits = Udebits = 0;
                 for (unspentind=1; unspentind<maxunspentind; unspentind++)
                 {
+                    if ( (unspentind % 1000000) == 0 )
+                        fprintf(stderr,".");
                     Ucredits += coin777_Uvalue(&U,coin,unspentind);
                     if ( U.value != 0 )
                     {
@@ -1689,8 +1692,11 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
                         }
                     }
                 }
+                fprintf(stderr,"\nVerify spends: ");
                 for (spendind=1; spendind<totalspends; spendind++)
                 {
+                    if ( (spendind % 1000000) == 0 )
+                        fprintf(stderr,".");
                     Udebits += coin777_Svalue(&S,coin,spendind);
                     coin777_Uvalue(&U,coin,S.unspentind);
                     if ( U.value != 0 )
@@ -1703,7 +1709,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
                         }
                     }
                 }
-                printf("VERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f) correction %.8f\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits),dstr(correction));
+                printf("\nVERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f) correction %.8f\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits),dstr(correction));
             }
             if ( coin->ramchain.addrsum != (credits - debits) )
                 printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->ramchain.addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
