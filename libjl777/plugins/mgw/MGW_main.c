@@ -480,6 +480,7 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     retstr = cJSON_Print(json);
     _stripwhite(retstr,' ');
     nn_send(MGW.all.socks.both.bus,retstr,(int32_t)strlen(retstr)+1,0);//  nn_publish(retstr,1);
+    sleep(10);
     retval = process_acctpubkeys(retbuf,retstr,json);
     free(retstr);
     return(retval);
@@ -518,7 +519,6 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
         {
             cJSON_AddItemToObject(json,"pubkeys",array);
             MGW_publishjson(retbuf,json);
-            sleep(10);
             free_json(json);
             printf("processed.(%s) SUPERNET.gatewayid %d %s\n",retbuf,SUPERNET.gatewayid,SUPERNET.NXTADDR);
             return(0);
