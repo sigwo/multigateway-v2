@@ -1673,7 +1673,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
         coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,maxunspentind,totalspends,forceflag,totaladdrtxp);
         if ( forceflag != 0 || coin->ramchain.addrsum != (credits - debits) )
         {
-            if ( 1 )//coin->ramchain.addrsum != (credits - debits) )
+            if ( RAMCHAINS.fastmode == 0 || coin->ramchain.addrsum != (credits - debits) )
             {
                 startmilli = milliseconds();
                 fprintf(stderr,"Verify unspents: ");
