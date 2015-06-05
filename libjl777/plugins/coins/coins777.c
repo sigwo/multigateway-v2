@@ -188,7 +188,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t maxs
 int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsynci,struct coin777_hashes *H);
 int32_t coin777_RWmmap(int32_t writeflag,void *value,struct coin777 *coin,struct coin777_state *sp,uint32_t rawind);
 struct addrtx_info *coin777_compact(int32_t compactflag,uint64_t *balancep,int32_t *numaddrtxp,struct coin777 *coin,uint32_t addrind,struct coin777_Lentry *oldL);
-uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args);
+uint64_t coin777_unspents(uint64_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args);
 int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin,uint32_t unspentind);
 uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t unspentind);
 int32_t update_NXT_assettransfers(struct mgw777 *mgw);
@@ -973,18 +973,18 @@ uint64_t addrinfos_sum(struct coin777 *coin,uint32_t maxaddrind,int32_t syncflag
     return(sum);
 }
 
-uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args)
+uint64_t coin777_unspents(uint64_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args)
 {
-    uint32_t addrind,firstblocknum; struct coin777_Lentry L; struct addrtx_info *unspents; uint64_t balance = 0; int32_t n,retval = -1;
+    uint32_t addrind,firstblocknum; struct coin777_Lentry L; struct addrtx_info *unspents; uint64_t balance,sum = 0; int32_t n;
     if ( (addrind= coin777_addrind(&firstblocknum,coin,coinaddr)) != 0 )
     {
         if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 && (unspents= coin777_compact(1,&balance,&n,coin,addrind,&L)) != 0 )
         {
-            retval = (*unspentsfuncp)(coin,args,addrind,unspents,n,balance);
+            sum += (*unspentsfuncp)(coin,args,addrind,unspents,n,balance);
             free(unspents);
         }
     }
-    return(balance);
+    return(sum);
 }
 
 // coin777 add funcs
@@ -1456,7 +1456,7 @@ int32_t coin777_MMbackup(char *dirname,struct coin777_state *sp,uint32_t firstin
     {
         if ( firstind == 0 )
         {
-            if ( fwrite(sp->M.fileptr,1,lastind*sp->itemsize,fp) != lastind*sp->itemsize )
+            if ( fwrite(sp->M.fileptr,1,(long)lastind*sp->itemsize,fp) != lastind*sp->itemsize )
                 errs++;
         }
         else
@@ -1465,7 +1465,7 @@ int32_t coin777_MMbackup(char *dirname,struct coin777_state *sp,uint32_t firstin
                 errs++;
             if ( fwrite(&lastind,1,sizeof(lastind),fp) != sizeof(lastind) )
                 errs++;
-            if ( fwrite((void *)((uint64_t)sp->M.fileptr + firstind*sp->itemsize),1,(lastind - firstind + 1)*sp->itemsize,fp) != (lastind - firstind + 1)*sp->itemsize )
+            if ( fwrite((void *)((uint64_t)sp->M.fileptr + firstind*sp->itemsize),1,((long)lastind - firstind + 1)*sp->itemsize,fp) != (lastind - firstind + 1)*sp->itemsize )
                 errs++;
         }
         fclose(fp);

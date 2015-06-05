@@ -117,6 +117,7 @@ struct NXT_acct
 #define MGW_DEPOSITDONE 4
 #define MGW_PENDINGREDEEM 8
 #define MGW_WITHDRAWDONE 16
+#define MGW_COMPLETED 64
 #define MGW_IGNORE 128
 #define MGW_ERRORSTATUS 0x8000
 struct extra_info { uint64_t assetidbits,txidbits,amount; int32_t ind,vout,flags; char coindata[128]; };

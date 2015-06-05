@@ -478,7 +478,7 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     char *retstr; int32_t retval;
     retstr = cJSON_Print(json);
     _stripwhite(retstr,' ');
-    nn_publish(retstr,1);
+    nn_send(MGW.all.socks.both.bus,retstr,(int32_t)strlen(retstr)+1,0);//  nn_publish(retstr,1);
     retval = process_acctpubkeys(retbuf,retstr,json);
     free(retstr);
     return(retval);
@@ -529,88 +529,6 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
 // set of unspents - deposit completed - pending transfer -> start transfer
 // deposit completed -> pool for withdraws
 
-/*
-uint64_t calc_addr_unspent(struct ramchain *ramchain,struct multisig_addr *msig,char *addr,struct rampayload *addrpayload)
-{
-    uint64_t nxt64bits,pending = 0;
-    char txidstr[4096];
-    struct NXT_asset *ap = ramchain->ap;
-    struct NXT_assettxid *tp;
-    int32_t j;
-    if ( ap != 0 )
-    {
-        ramchain_txid(txidstr,ramchain,addrpayload->otherind);
-        for (j=0; j<ap->num; j++)
-        {
-            tp = ap->txids[j];
-            if ( tp->cointxid != 0 && strcmp(tp->cointxid,txidstr) == 0 )
-            {
-                if ( ramchain_mark_depositcomplete(ramchain,tp,tp->coinblocknum) != 0 )
-                    _complete_assettxid(tp);
-                break;
-            }
-        }
-        //if ( strcmp("9908a63216f866650f81949684e93d62d543bdb06a23b6e56344e1c419a70d4f",txidstr) == 0 )
-        //    printf("calc_addr_unspent.(%s) j.%d of apnum.%d valid.%d msig.%p\n",txidstr,j,ap->num,_valid_txamount(ram,addrpayload->value),msig);
-        if ( (addrpayload->pendingdeposit != 0 || j == ap->num) && _valid_txamount(ramchain,addrpayload->value,msig->multisigaddr) > 0 && msig != 0 )
-        {
-            //printf("addr_unspent.(%s)\n",msig->NXTaddr);
-            if ( (nxt64bits= calc_nxt64bits(msig->NXTaddr)) != 0 )
-            {
-                printf("deposit.(%s/%d %d,%d %s %.8f)rt%d_%d_%d_%d.g%d -> NXT.%s %d\n",txidstr,addrpayload->B.v,addrpayload->B.blocknum,addrpayload->B.txind,addr,dstr(addrpayload->value),ramchain->S.NXT_is_realtime,ramchain->S.enable_deposits,(addrpayload->B.blocknum + ramchain->depositconfirms) <= ramchain->S.RTblocknum,ramchain->S.MGWbalance >= 0,(int32_t)(nxt64bits % NUM_GATEWAYS),msig->NXTaddr,ramchain->S.NXT_is_realtime != 0 && (addrpayload->B.blocknum + ramchain->depositconfirms) <= ramchain->S.RTblocknum && ramchain->S.enable_deposits != 0);
-                pending += addrpayload->value;
-                if ( ram_MGW_ready(ram,addrpayload->B.blocknum,0,nxt64bits,0) > 0 )
-                {
-                    if ( ram_verify_txstillthere(ramchain->DBs.coinstr,ramchain->serverport,ramchain->userpass,txidstr,addrpayload->B.v) != addrpayload->value )
-                    {
-                        printf("ram_calc_unspent: tx gone due to a fork. (%d %d %d) txid.%s %.8f\n",addrpayload->B.blocknum,addrpayload->B.txind,addrpayload->B.v,txidstr,dstr(addrpayload->value));
-                        exit(1); // seems the best thing to do
-                    }
-                    if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,ap,addrpayload->value,msig->multisigaddr,txidstr,&addrpayload-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             >B,&msig->buyNXT,ramchain->srvNXTADDR,ramchain->srvNXTACCTSECRET,ramchain->DEPOSIT_XFER_DURATION) == addrpayload->value )
-                        addrpayload->pendingdeposit = 0;
-                }
-            }
-        }
-    }
-    return(pending);
-}
-
-uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ramchain_hashptr **addrptrp,struct ramchain *ramchain,char *addr,int32_t MGWflag)
-{
-    //char redeemScript[8192],normaladdr[8192];
-    uint64_t pending,unspent = 0;
-    struct multisig_addr *msig;
-    int32_t i,len,numpayloads,n = 0;
-    struct rampayload *payloads;
-    if ( calc_numunspentp != 0 )
-        *calc_numunspentp = 0;
-    pending = 0;
-    if ( (payloads= ram_addrpayloads(addrptrp,&numpayloads,ram,addr)) != 0 && numpayloads > 0 )
-    {
-        msig = find_msigaddr(&len,ram->name,0,addr);
-        for (i=0; i<numpayloads; i++)
-        {
-            if ( payloads[i].B.spent == 0 )
-            {
-                unspent += payloads[i].value, n++;
-                if ( MGWflag != 0 && payloads[i].pendingsend == 0 )
-                {
-                    if ( strcmp(addr,"bYjsXxENs4u7raX3EPyrgqPy46MUrq4k8h") != 0 && strcmp(addr,"bKzDfRnGGTDwqNZWGCXa42DRdumAGskqo4") != 0 ) // addresses made with different third dev MGW server for BTCD only
-                        ram_update_MGWunspents(ram,addr,payloads[i].B.v,payloads[i].otherind,payloads[i].extra,payloads[i].value);
-                }
-            }
-            if ( payloads[i].pendingdeposit != 0 )
-                pending += calc_addr_unspent(ram,msig,addr,&payloads[i]);
-        }
-    }
-    if ( calc_numunspentp != 0 )
-        *calc_numunspentp = n;
-    if ( pendingp != 0 )
-        (*pendingp) += pending;
-    return(unspent);
-}
-
-*/
 
 #define DEPOSIT_XFER_DURATION 5
 #define MIN_DEPOSIT_FACTOR 5
@@ -634,36 +552,17 @@ int32_t _is_limbo_redeem(struct mgw777 *mgw,uint64_t redeemtxidbits)
     
 int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout)
 {
-    int32_t i,n; char *jsonstr; cJSON *json; struct extra_info extra; uint32_t unspentind;
+    int32_t i,n,flag = MGW_IGNORE; struct extra_info extra;
     NXT_revassettxid(&extra,coin->mgw.assetidbits,0), n = extra.ind;
-    unspentind = 0;//xxx();
     for (i=1; i<=n; i++)
     {
         if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == 0 )
         {
-            if ( extra.flags == 0 || (extra.flags & MGW_IGNORE) == 0 ) // move to onetime processing
-            {
-                if ( (jsonstr= NXT_assettxid(extra.txidbits)) != 0 )
-                {
-                    if ( (json= cJSON_Parse(jsonstr)) != 0 )
-                    {
-                        /*if ( mgw_isdeposit() != 0 )
-                        {
-                            
-                        }
-                        else if ( mgw_iswithdraw() == 0 )
-                        {
-                            
-                        }
-                        else extra.flags |= MGW_IGNORE;*/
-                        free_json(json);
-                    }
-                    free(jsonstr);
-                }
-            }
+            if ( (extra.flags & MGW_DEPOSITDONE) != 0 )
+                flag = MGW_DEPOSITDONE;
         }
     }
-    return(0);
+    return(flag);
 }
 
 int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t addrind,uint32_t unspentind,char *txidstr,int32_t vout)
@@ -716,37 +615,37 @@ int32_t mgw_unspentstatus(struct coin777 *coin,struct multisig_addr *msig,char *
     return(-1);
 }
 
-int32_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
+uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
 {
     struct multisig_addr *msig = args;
-    int32_t i,status,vout; uint32_t unspentind,txidind; char txidstr[512]; uint64_t atx_value; struct unspent_info U;
+    int32_t i,status,vout; uint32_t unspentind,txidind; char txidstr[512]; uint64_t atx_value,sum = 0; struct unspent_info U;
     for (i=0; i<num; i++)
     {
-        unspentind = unspents[i].unspentind;
+        unspentind = unspents[i].unspentind, unspents[i].spendind = 1;
+        atx_value = coin777_Uvalue(&U,coin,unspentind);
         if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
         {
-            if ( mgw_unspentstatus(coin,msig,txidstr,vout) != 0 )
+            status = mgw_unspentstatus(coin,msig,txidstr,vout);
+            if ( (status & (MGW_DEPOSITDONE | MGW_ISINTERNAL)) == 0 )
             {
-                if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout)) != 0 )
+                if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout)) >= 0 && (status & MGW_ISINTERNAL) != 0 )
                     mgw_markunspent(coin,msig,txidstr,vout,status);
-                else if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) != 0 )
-                {
+                else if ( ((status= mgw_depositstatus(coin,msig,txidstr,vout)) & MGW_DEPOSITDONE) != 0 )
                     mgw_markunspent(coin,msig,txidstr,vout,status);
-                    if ( (status & MGW_DEPOSITDONE) != 0 && (status & (MGW_PENDINGREDEEM | MGW_WITHDRAWDONE)) == 0 )
-                    {
-                        
-                    }
-                }
                 else
                 {
-                    atx_value = coin777_Uvalue(&U,coin,unspents[i].unspentind);
-                    printf("pretend pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
-                    mgw_markunspent(coin,msig,txidstr,vout,MGW_PENDINGXFER);
+                    printf("pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    mgw_markunspent(coin,msig,txidstr,vout,status | MGW_PENDINGXFER);
                 }
+            }
+            else
+            {
+                fprintf(stderr,"%.8f ",dstr(U.value));
+                sum += U.value;
             }
         } else printf("error getting unspendind.%u\n",unspentind);
     }
-    return(0);
+    return(sum);
 }
 
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
