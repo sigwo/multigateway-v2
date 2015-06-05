@@ -111,7 +111,15 @@ struct NXT_acct
     struct nodestats stats;
 };
 
-struct extra_info { uint64_t assetidbits,txidbits; int32_t ind,vout,flags; char cointxid[128]; };
+
+#define MGW_ISINTERNAL 1
+#define MGW_PENDINGXFER 2
+#define MGW_DEPOSITDONE 4
+#define MGW_PENDINGREDEEM 8
+#define MGW_WITHDRAWDONE 16
+#define MGW_IGNORE 128
+#define MGW_ERRORSTATUS 0x8000
+struct extra_info { uint64_t assetidbits,txidbits; int32_t ind,vout,flags; char coindata[128]; };
 
 struct NXT_AMhdr { uint32_t sig; int32_t size; uint64_t nxt64bits; };
 struct compressed_json { uint32_t complen,sublen,origlen,jsonlen; unsigned char encoded[128]; };
@@ -699,12 +707,13 @@ int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
     return(slen);
 }
 
-int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
+int32_t process_assettransfer(int32_t *flagp,char *coindata,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
 {
     char AMstr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],receiver[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],txid[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],buf[MAX_JSON_FIELD];
     cJSON *attachment,*message,*assetjson,*commentobj,*json = 0,*obj; struct NXT_AMhdr *hdr;
     uint64_t units,estNXT; uint32_t buyNXT,height = 0; int32_t funcid,numconfs,coinv = -1,timestamp=0;
     int64_t type,subtype,n,satoshis,assetoshis = 0;
+    *flagp = 0;
     if ( txobj != 0 )
     {
         hdr = 0, sender[0] = receiver[0] = 0;
@@ -756,27 +765,24 @@ int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mg
                 if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
                     estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * assetoshis / SATOSHIDEN);
                 else estNXT = 0;
-                printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json);
+                //printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json);
                 if ( assetidstr[0] != 0 && strcmp(mgw->assetidstr,assetidstr) == 0 )
                 {
                     if ( json != 0 )
                     {
                         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
-                        //if ( strcmp(coinstr,mgw->coinstr) == 0 )
+                        copy_cJSON(coindata,cJSON_GetObjectItem(json,"withdrawaddr"));
+                        if ( coindata[0] != 0 )
+                            *flagp = MGW_PENDINGREDEEM;
+                        else
                         {
-                            //if ( tp->comment != 0 )
-                            //    free(tp->comment);
-                            //tp->comment = clonestr(commentstr);
-                            //_stripwhite(tp->comment,' ');
-                            //tp->buyNXT = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
-                            //tp->coinblocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"coinblocknum"),0);
-                            //tp->cointxind = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"cointxind"),0);
                             if ( (obj= cJSON_GetObjectItem(json,"coinv")) == 0 )
                                 obj = cJSON_GetObjectItem(json,"vout");
-                            coinv = (uint32_t)get_API_int(obj,0);
-                            copy_cJSON(cointxid,cJSON_GetObjectItem(json,"cointxid"));
-                            //if ( _in_specialNXTaddrs(ram->special_NXTaddrs,ram->numspecials,sender) != 0  )
-                            //    _add_pendingxfer(ram,height,1,tp->redeemtxid);
+                            coinv = (uint32_t)get_API_int(obj,-1);
+                            copy_cJSON(coindata,cJSON_GetObjectItem(json,"cointxid"));
+                            if ( coindata[0] != 0 )
+                                *flagp = MGW_DEPOSITDONE;
+                            else *flagp = MGW_IGNORE;
                         }
                         free_json(json);
                     }
@@ -865,11 +871,10 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
             {
                 if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
                 {
-                    extra.vout = process_assettransfer(extra.cointxid,0,mgw,txobj);
+                    extra.vout = process_assettransfer(&extra.flags,extra.coindata,0,mgw,txobj);
                     free_json(txobj);
                 } else extra.vout = -1;
-                //if ( savedbits != 0 )
-                printf("for %llu.%d oldval.%llu -> newval %llu (%s v%d)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,(long long)txidbits,extra.cointxid,extra.vout);
+                printf("for %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout);
                 NXT_add_assettxid(mgw->assetidbits,txidbits,txidjsonstr,slen,ind,&extra);
             }
         }
@@ -885,7 +890,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
     if ( firstindex >= 0 && lastindex >= firstindex )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     revkey[0] = mgw->assetidbits;
-    printf("issue.(%s) max.%ld\n",cmd,max);
+    //printf("issue.(%s) max.%ld\n",cmd,max);
     jsonstr = issue_NXTPOST(cmd);
     if ( jsonstr != 0 )
     {
@@ -910,7 +915,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
             } free_json(transfers);
         } free(jsonstr);
     }
-    if ( firstindex < 0 || lastindex <= firstindex )
+    ////if ( firstindex < 0 || lastindex <= firstindex )
         printf("assetid.(%s) -> %d entries\n",mgw->assetidstr,n);
     return(n);
 }
@@ -922,14 +927,14 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
     if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) )
     {
-        printf("got extra ind.%d\n",extra.ind);
+        //printf("got extra ind.%d\n",extra.ind);
         count = extra.ind;
-        for (i=0; i<=count; i++)
+        /*for (i=0; i<=count; i++)
         {
             NXT_revassettxid(&extra,mgw->assetidbits,i);
             fprintf(stderr,"%llu ",(long long)extra.txidbits);
         }
-        fprintf(stderr,"sequential tx.%d\n",count);
+        fprintf(stderr,"sequential tx.%d\n",count);*/
         NXT_revassettxid(&extra,mgw->assetidbits,count);
         mostrecent = extra.txidbits;
         for (i=0; i<sizeof(txids)/sizeof(*txids); i++)

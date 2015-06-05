@@ -615,14 +615,6 @@ uint64_t ram_calc_unspent(uint64_t *pendingp,int32_t *calc_numunspentp,struct ra
 #define DEPOSIT_XFER_DURATION 5
 #define MIN_DEPOSIT_FACTOR 5
 
-#define MGW_ISINTERNAL 1
-#define MGW_PENDINGXFER 2
-#define MGW_DEPOSITDONE 4
-#define MGW_PENDINGREDEEM 8
-#define MGW_WITHDRAWDONE 16
-#define MGW_IGNORE 128
-#define MGW_ERRORSTATUS 0x8000
-
 int32_t _valid_txamount(struct mgw777 *mgw,uint64_t value,char *coinaddr)
 {
     if ( value >= MIN_DEPOSIT_FACTOR * (mgw->txfee + mgw->NXTfee_equiv) )
