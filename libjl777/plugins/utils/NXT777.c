@@ -922,7 +922,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
 
 int32_t update_NXT_assettransfers(struct mgw777 *mgw)
 {
-    int32_t verifyflag = 1;
+    int32_t verifyflag = 0;
     uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr; struct extra_info extra;
     mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
     if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) )
