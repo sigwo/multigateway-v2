@@ -730,10 +730,6 @@ int SuperNET_start(char *fname,char *myip)
     if ( jsonstr != 0 )
         free(jsonstr);
     portable_thread_create((void *)SuperNET_loop,myip);
-int32_t update_NXT_assettransfers(char *assetidstr); extern struct db777 *NXT_txids;
-while ( NXT_txids == 0 || NXT_txids->db == 0 )
-    sleep(5);
-update_NXT_assettransfers("15344649963748848799");
     return(0);
 }
 
@@ -789,15 +785,15 @@ int main(int argc,const char *argv[])
         }
         if ( n == 0 && SUPERNET.APISLEEP != 0 )
             msleep(SUPERNET.APISLEEP);
-    }*/
+    }
     int32_t update_NXT_assettransfers(char *assetidstr); extern struct db777 *NXT_txids;
     while ( NXT_txids == 0 || NXT_txids->db == 0 )
         sleep(5);
-    update_NXT_assettransfers("15344649963748848799");
+    update_NXT_assettransfers("15344649963748848799");*/
     while ( 1 )
     {
         sleep(60);
-        update_NXT_assettransfers("15344649963748848799");
+        //update_NXT_assettransfers("15344649963748848799");
     }
     return(0);
 }
