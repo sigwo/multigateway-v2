@@ -1557,7 +1557,7 @@ int32_t coin777_incrbackup(struct coin777 *coin,uint32_t blocknum,int32_t prevsy
     db777_path(fname,coin->name,"",0), strcat(fname,"/addrtx"), sprintf(destfname,"cp %s %s.sync",fname,fname), system(destfname);//copy_file(fname,destfname);
     db777_path(fname,coin->name,"",0), strcat(fname,"/addrinfos"), sprintf(destfname,"cp %s %s.sync",fname,fname), system(destfname);//copy_file(fname,destfname);
     sum = addrinfos_sum(coin,H->addrind,0,H->unspentind,H->numspends,0,0);
-    printf("finished Backup.(%s) supply %.8f in %.0f millis | errs.%d\n",dirname,dstr(sum),milliseconds() - startmilli,errs);
+    printf("finished Backup.(%s) supply %.8f in %.3f seconds | errs.%d\n",dirname,dstr(sum),(milliseconds() - startmilli)/1000.,errs);
     return(-errs);
 }
 
@@ -1666,7 +1666,7 @@ int32_t coin777_replayblocks(struct coin777 *coin,uint32_t startblocknum,uint32_
 
 int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t totalspends,uint64_t credits,uint64_t debits,uint32_t addrind,int32_t forceflag,uint32_t *totaladdrtxp)
 {
-    struct coin777_Lentry L; struct unspent_info U; struct spend_info S; struct addrtx_info ATX;
+    struct coin777_Lentry L; struct unspent_info U; struct spend_info S; struct addrtx_info ATX; double startmilli;
     int32_t errs = 0; uint32_t unspentind,spendind; uint64_t Ucredits,Udebits; int64_t correction = 0;
     if ( maxunspentind > 1 )
     {
@@ -1675,6 +1675,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
         {
             if ( 1 )//coin->ramchain.addrsum != (credits - debits) )
             {
+                startmilli = milliseconds();
                 fprintf(stderr,"Verify unspents: ");
                 Ucredits = Udebits = 0;
                 for (unspentind=1; unspentind<maxunspentind; unspentind++)
@@ -1709,7 +1710,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
                         }
                     }
                 }
-                printf("\nVERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f) correction %.8f\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits),dstr(correction));
+                printf("\nVERIFY maxunspentind.%u Usum %.8f (%.8f - %.8f) correction %.8f | elapsed %.3f seconds\n",maxunspentind,dstr(Ucredits)-dstr(Udebits),dstr(Ucredits),dstr(Udebits),dstr(correction),(milliseconds() - startmilli)/1000.);
             }
             if ( coin->ramchain.addrsum != (credits - debits) )
                 printf("addrinfos_sum %.8f != supply %.8f (%.8f - %.8f) -> recalc\n",dstr(coin->ramchain.addrsum),dstr(credits)-dstr(debits),dstr(credits),dstr(debits));
