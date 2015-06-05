@@ -38,6 +38,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                 {
                     update_NXT_assettransfers(&coin->mgw);
                     coin->mgw.lastupdate = milliseconds();
+                    printf("FINISHED update_NXT_assettransfers\n");
                 }
             }
         }
