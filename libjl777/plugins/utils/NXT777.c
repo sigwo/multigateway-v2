@@ -888,7 +888,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
     if ( firstindex >= 0 && lastindex >= firstindex )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     revkey[0] = mgw->assetidbits;
-    printf("issue.(%s) max.%ld\n",cmd,max);
+    //printf("issue.(%s) max.%ld\n",cmd,max);
     jsonstr = issue_NXTPOST(cmd);
     if ( jsonstr != 0 )
     {
@@ -925,7 +925,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
     if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) )
     {
-        printf("got extra ind.%d\n",extra.ind);
+        //printf("got extra ind.%d\n",extra.ind);
         count = extra.ind;
         /*for (i=0; i<=count; i++)
         {
@@ -935,7 +935,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
         fprintf(stderr,"sequential tx.%d\n",count);*/
         NXT_revassettxid(&extra,mgw->assetidbits,count);
         mostrecent = extra.txidbits;
-        printf("mostrecent.%llu count.%d\n",(long long)mostrecent,count);
+        //printf("mostrecent.%llu count.%d\n",(long long)mostrecent,count);
         for (i=0; i<sizeof(txids)/sizeof(*txids); i++)
         {
             if ( NXT_assettransfers(mgw,&txids[i],1,i,i) == 1 && txids[i] == mostrecent )
