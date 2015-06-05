@@ -439,7 +439,7 @@ int32_t process_acctpubkey(cJSON *item,int32_t gatewayid,uint64_t gatewaybits)
     {
         if ( g != gatewayid || (gbits != 0 && gbits != gatewaybits) )
         {
-            printf("SKIP: g.%d vs gatewayid.%d gbits.%llu vs %llu %s\n",g,gatewayid,(long long)gbits,(long long)gatewaybits,cJSON_Print(item));
+            printf("SKIP: SUPERNET.gatewayid %d g.%d vs gatewayid.%d gbits.%llu vs %llu %s\n",SUPERNET.gatewayid,g,gatewayid,(long long)gbits,(long long)gatewaybits,cJSON_Print(item));
             return(0);
         }
     }
