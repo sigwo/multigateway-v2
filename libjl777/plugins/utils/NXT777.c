@@ -651,7 +651,7 @@ int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t 
 
 int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int32_t valuelen,uint32_t ind,struct extra_info *extra)
 {
-    void *obj; struct extra_info zextra;
+    void *obj;
     if ( value != 0 )
     {
         if ( (obj= sp_object(NXT_txids->db)) != 0 )
@@ -665,11 +665,6 @@ int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int
                 printf("error NXT_add_assettxid %llu ind.%d\n",(long long)txidbits,ind);
             }
         }
-    }
-    if ( NXT_revassettxid(&zextra,assetidbits,0) == sizeof(zextra) && (ind == 0 || ind > zextra.ind) )
-    {
-        zextra.ind = ind;
-        NXT_set_revassettxid(assetidbits,0,&zextra);
     }
     return(0);
 }
@@ -959,7 +954,8 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     if ( count == 0 )
         count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
     memset(&extra,0,sizeof(extra));
-    NXT_add_assettxid(mgw->assetidbits,count,0,0,0,&extra);
+    extra.ind = count;
+    NXT_set_revassettxid(mgw->assetidbits,0,&extra);
     if ( verifyflag != 0 )
         NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
     return(count);
