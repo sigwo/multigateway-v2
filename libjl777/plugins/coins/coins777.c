@@ -1730,7 +1730,7 @@ int32_t coin777_verify(struct coin777 *coin,uint32_t maxunspentind,uint32_t tota
 uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,uint64_t credits,uint64_t debits,uint32_t timestamp,uint32_t txidind,uint32_t numrawvouts,uint32_t numrawvins,uint32_t addrind,uint32_t scriptind,uint32_t *totaladdrtxp)
 {
     int32_t i,retval = 0; struct coin777_hashes H;
-    if ( 0 || blocknum == coin->ramchain.startblocknum || blocknum > coin->ramchain.RTblocknum-1000 || numsyncs > 0 )
+    if ( blocknum > coin->ramchain.RTblocknum-1000 || numsyncs > 0 )
     {
         if ( coin777_verify(coin,numrawvouts,numrawvins,credits,debits,addrind,1,totaladdrtxp) != 0 )
             printf("cant verify at block.%u\n",blocknum), debugstop();
@@ -1792,7 +1792,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
                 coin->ramchain.DBs.transactions = 0;//sp_begin(coin->DBs.env);
             supply = (credits - debits), origsize = coin->ramchain.totalsize;
             oldsupply = supply;
-            if ( syncflag != 0 && blocknum > (coin->ramchain.startblocknum + 1) )
+            if ( syncflag != 0 && blocknum != coin->ramchain.startblocknum )
                 ledgerhash = (uint32_t)coin777_flush(coin,blocknum,++coin->ramchain.numsyncs,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,&totaladdrtx);
             else ledgerhash = (uint32_t)coin777_flush(coin,blocknum,-1,credits,debits,timestamp,txidind,numrawvouts,numrawvins,addrind,scriptind,&totaladdrtx);
             numtx = parse_block(coin,&credits,&debits,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx,coin->name,coin->serverport,coin->userpass,blocknum,coin777_addblock,coin777_addvin,coin777_addvout,coin777_addtx);
