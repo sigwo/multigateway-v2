@@ -748,13 +748,13 @@ int32_t _process_NXTtransaction(char *cointxid,int32_t confirmed,struct mgw777 *
                 copy_cJSON(comment,commentobj);
                 unstringify(comment);
                 copy_cJSON(assetidstr,cJSON_GetObjectItem(attachment,"asset"));
+                assetoshis = get_cJSON_int(attachment,"quantityQNT");
+                if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
+                    estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * assetoshis / SATOSHIDEN);
+                else estNXT = 0;
+                printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT));
                 if ( assetidstr[0] != 0 && mgw->assetidbits == calc_nxt64bits(assetidstr) )
                 {
-                    assetoshis = get_cJSON_int(attachment,"quantityQNT");
-                    if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
-                        estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * assetoshis / SATOSHIDEN);
-                    else estNXT = 0;
-                    printf("%s %s txid.(%s) (%s) -> %.8f estNXT %.8f\n",mgw->coinstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT));
                     if ( comment[0] != 0 && (json= cJSON_Parse(comment)) != 0 )
                     {
                         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
@@ -880,7 +880,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
     if ( firstindex >= 0 && lastindex >= firstindex )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     revkey[0] = mgw->assetidbits;
-    printf("issue.(%s)\n",cmd);
+    printf("issue.(%s) max.%ld\n",cmd,max);
     jsonstr = issue_NXTPOST(cmd);
     if ( jsonstr != 0 )
     {
