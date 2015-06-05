@@ -865,7 +865,7 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
             NXT_revassettxid(&extra,mgw->assetidbits,ind);
             savedbits = extra.txidbits;
             memset(&extra,0,sizeof(extra));
-            if ( savedbits != txidbits )
+            //if ( savedbits != txidbits )
             {
                 if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
                 {
