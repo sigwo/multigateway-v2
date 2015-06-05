@@ -642,16 +642,16 @@ int32_t _is_limbo_redeem(struct mgw777 *mgw,uint64_t redeemtxidbits)
     
 int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout)
 {
-    int32_t i,n; uint64_t assettxid; char *jsonstr; cJSON *json; struct extra_info extra; uint32_t unspentind;
-    n = (int32_t)NXT_revassettxid(0,coin->mgw.assetidbits,0);
+    int32_t i,n; char *jsonstr; cJSON *json; struct extra_info extra; uint32_t unspentind;
+    NXT_revassettxid(&extra,coin->mgw.assetidbits,0), n = extra.ind;
     unspentind = 0;//xxx();
     for (i=1; i<=n; i++)
     {
-        if ( (assettxid= NXT_revassettxid(&extra,coin->mgw.assetidbits,i)) != 0 )
+        if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == 0 )
         {
             if ( extra.flags == 0 || (extra.flags & MGW_IGNORE) == 0 ) // move to onetime processing
             {
-                if ( (jsonstr= NXT_assettxid(assettxid)) != 0 )
+                if ( (jsonstr= NXT_assettxid(extra.txidbits)) != 0 )
                 {
                     if ( (json= cJSON_Parse(jsonstr)) != 0 )
                     {

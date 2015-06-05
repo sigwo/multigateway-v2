@@ -36,7 +36,7 @@ int32_t coins_idle(struct plugin_info *plugin)
             {
                 if ( coin->mgw.assetidstr[0] != 0 && milliseconds() > coin->mgw.lastupdate+10000 )
                 {
-                    update_NXT_assettransfers(&coin->mgw,coin->mgw.assetidstr);
+                    update_NXT_assettransfers(&coin->mgw);
                     coin->mgw.lastupdate = milliseconds();
                 }
             }

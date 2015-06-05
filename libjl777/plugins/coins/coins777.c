@@ -191,7 +191,7 @@ struct addrtx_info *coin777_compact(int32_t compactflag,uint64_t *balancep,int32
 uint64_t coin777_unspents(int32_t (*unspentsfuncp)(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance),struct coin777 *coin,char *coinaddr,void *args);
 int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin,uint32_t unspentind);
 uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t unspentind);
-int32_t update_NXT_assettransfers(struct mgw777 *mgw,char *assetidstr);
+int32_t update_NXT_assettransfers(struct mgw777 *mgw);
 uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height);
 
 #endif
