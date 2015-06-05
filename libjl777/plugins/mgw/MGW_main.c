@@ -480,7 +480,6 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     retstr = cJSON_Print(json);
     _stripwhite(retstr,' ');
     nn_send(MGW.all.socks.both.bus,retstr,(int32_t)strlen(retstr)+1,0);//  nn_publish(retstr,1);
-//sleep(10);
     retval = process_acctpubkeys(retbuf,retstr,json);
     free(retstr);
     return(retval);
