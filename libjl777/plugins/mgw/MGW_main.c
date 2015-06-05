@@ -400,7 +400,7 @@ cJSON *acctpubkey_json(char *coinstr,char *NXTaddr,int32_t gatewayid)
     cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
     cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(NXTaddr));
     cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(gatewayid));
-    printf("acctpubkey.(%s)\n",cJSON_Print(json));
+    //printf("acctpubkey.(%s)\n",cJSON_Print(json));
     return(json);
 }
 
@@ -480,7 +480,7 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     retstr = cJSON_Print(json);
     _stripwhite(retstr,' ');
     nn_send(MGW.all.socks.both.bus,retstr,(int32_t)strlen(retstr)+1,0);//  nn_publish(retstr,1);
-sleep(10);
+//sleep(10);
     retval = process_acctpubkeys(retbuf,retstr,json);
     free(retstr);
     return(retval);

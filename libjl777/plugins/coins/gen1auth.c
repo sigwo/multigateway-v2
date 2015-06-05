@@ -95,7 +95,7 @@ cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey,int32_t allfields
         cJSON_AddItemToObject(item,"gatewayNXT",cJSON_CreateString(SUPERNET.NXTADDR));
         cJSON_AddItemToObject(item,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
     }
-    printf("(%s)\n",cJSON_Print(item));
+    //printf("(%s)\n",cJSON_Print(item));
     return(item);
 }
 
