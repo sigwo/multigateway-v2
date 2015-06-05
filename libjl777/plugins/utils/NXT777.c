@@ -619,6 +619,7 @@ int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info
     if ( (obj= sp_object(NXT_txids->db)) != 0 )
     {
         revkey[0] = assetidbits, revkey[1] = ind;
+        printf("set ind.%d <- txid.%llu\n",ind,(long long)extra->txidbits);
         if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && sp_set(obj,"value",extra,sizeof(*extra)) == 0 )
             return(sp_set(NXT_txids->db,obj));
         else
@@ -665,6 +666,7 @@ int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int
                 printf("error NXT_add_assettxid %llu ind.%d\n",(long long)txidbits,ind);
             }
         }
+        NXT_set_revassettxid(assetidbits,ind,extra);
     }
     return(0);
 }
