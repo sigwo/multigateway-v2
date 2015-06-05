@@ -1081,7 +1081,8 @@ void serverloop(void *_args)
     while ( 1 )
     {
         //void coin777_pulldata(struct packedblock *packed,int32_t len);
-        //int32_t len; struct coin777 *coin;
+        int32_t len; char retbuf[8192],*jsonstr; cJSON *json;
+        //struct coin777 *coin;
 #ifdef STANDALONE
         char line[1024];
         if ( getline777(line,sizeof(line)-1) > 0 )
@@ -1090,6 +1091,18 @@ void serverloop(void *_args)
         int32_t poll_daemons();
         if ( poll_daemons() == 0 && poll_direct(1) == 0 && SUPERNET.APISLEEP > 0 )
             msleep(SUPERNET.APISLEEP);
+        if ( (len= nn_recv(MGW.all.socks.both.bus,&jsonstr,NN_MSG,0)) > 0 )
+        {
+            int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json);
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                process_acctpubkeys(retbuf,jsonstr,json);
+                free_json(json);
+            }
+            printf("MGW bus recv.%d json.%p\n",len,json);
+            nn_freemsg(jsonstr);
+        }
+
         /*while ( RELAYS.pullsock >= 0 && (nn_socket_status(RELAYS.pullsock,1) & NN_POLLIN) != 0 &&  (len= nn_recv(RELAYS.pullsock,&retstr,NN_MSG,0)) > 0 )
             coin777_pulldata((void *)retstr,len);
         if ( 0 && SUPERNET.iamrelay != 0 )
