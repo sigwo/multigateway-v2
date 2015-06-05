@@ -702,7 +702,7 @@ int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
 int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
 {
     char AMstr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],receiver[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],txid[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],buf[MAX_JSON_FIELD];
-    cJSON *attachment,*message,*assetjson,*commentobj,*json,*obj; struct NXT_AMhdr *hdr;
+    cJSON *attachment,*message,*assetjson,*commentobj,*json = 0,*obj; struct NXT_AMhdr *hdr;
     uint64_t units,estNXT; uint32_t buyNXT,height = 0; int32_t funcid,numconfs,coinv = -1,timestamp=0;
     int64_t type,subtype,n,satoshis,assetoshis = 0;
     if ( txobj != 0 )
@@ -754,9 +754,11 @@ int32_t process_assettransfer(char *cointxid,int32_t confirmed,struct mgw777 *mg
                 else estNXT = 0;
                 if ( assetidstr[0] != 0 && mgw->assetidbits == calc_nxt64bits(assetidstr) )
                 {
-                    if ( comment[0] != 0 && (json= cJSON_Parse(comment)) != 0 )
+                    if ( comment[0] != 0 )
+                        json = cJSON_Parse(comment);
+                    printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json);
+                    if ( json != 0 )
                     {
-                        printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT));
                         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
                         //if ( strcmp(coinstr,mgw->coinstr) == 0 )
                         {
@@ -945,11 +947,11 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
             count = 0;
     }
     if ( count == 0 )
-        count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids),-1,-1);
+        count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
     memset(&extra,0,sizeof(extra));
     NXT_add_assettxid(mgw->assetidbits,count,0,0,0,&extra);
     if ( verifyflag != 0 )
-        NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids),-1,-1);
+        NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
     return(count);
 }
 
