@@ -46,10 +46,10 @@ int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain)
         ramchain->syncfreq = DB777_MATRIXROW;
     else if ( lag < DB777_MATRIXROW && ramchain->syncfreq > DB777_MATRIXROW/10 )
         ramchain->syncfreq = DB777_MATRIXROW/10;
-    else if ( lag < DB777_MATRIXROW/10 && ramchain->syncfreq > DB777_MATRIXROW/100 )
-        ramchain->syncfreq = DB777_MATRIXROW/100;
-    else if ( strcmp(ramchain->DBs.coinstr,"BTC") == 0 && lag < DB777_MATRIXROW/100 && ramchain->syncfreq > DB777_MATRIXROW/1000 )
-        ramchain->syncfreq = DB777_MATRIXROW/1000;
+    //else if ( lag < DB777_MATRIXROW/10 && ramchain->syncfreq > DB777_MATRIXROW/100 )
+    //    ramchain->syncfreq = DB777_MATRIXROW/100;
+    //else if ( strcmp(ramchain->DBs.coinstr,"BTC") == 0 && lag < DB777_MATRIXROW/100 && ramchain->syncfreq > DB777_MATRIXROW/1000 )
+    //    ramchain->syncfreq = DB777_MATRIXROW/1000;
     if ( ramchain->paused < 10 )
     {
         syncflag = (((blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0) || (blocknum % DB777_MATRIXROW) == 0);
@@ -130,7 +130,7 @@ int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ra
             sleep(1);
     }*/
     printf("(%s %s %s) vs (%s %s %s)\n",coinstr,serverport,userpass,coin->name,coin->serverport,coin->userpass);
-    ramchain->syncfreq = 1000;
+    ramchain->syncfreq = 10000;
     ramchain->startblocknum = startblocknum, ramchain->endblocknum = endblocknum;
     ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coin->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
     if ( endblocknum == 0 )
