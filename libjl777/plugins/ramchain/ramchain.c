@@ -57,6 +57,8 @@ int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain)
                 ramchain->paused = 3, syncflag = 2;
             printf("ramchain.%s blocknum.%d <<< PAUSING paused.%d |  endblocknum.%u\n",ramchain->DBs.coinstr,blocknum,ramchain->paused,ramchain->endblocknum);
         }
+        if ( coin->minconfirms == 0 )
+            coin->minconfirms = (strcmp("BTC",coin->name) == 0) ? 3 : 10;
         if ( blocknum <= (ramchain->RTblocknum - coin->minconfirms) )
              flag = coin777_parse(coin,ramchain->RTblocknum,syncflag * (blocknum != 0),coin->minconfirms);
         if ( ramchain->paused == 3 )

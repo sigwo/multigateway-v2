@@ -508,7 +508,7 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
 
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
-    int32_t i,buyNXT; uint64_t nxt64bits; char nxtaddr[64],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr; struct coin777 *coin;
+    int32_t i,buyNXT; uint64_t nxt64bits; char nxtaddr[64],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024]; struct coin777 *coin;
     if ( SUPERNET.gatewayid >= 0 )
     {
         copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
@@ -517,11 +517,12 @@ char *devMGW_command(char *jsonstr,cJSON *json)
             nxt64bits = conv_acctstr(NXTaddr);
             expand_nxt64bits(nxtaddr,nxt64bits);
         } else nxt64bits = 0;
-        printf("NXTaddr.(%s) %llu\n",NXTaddr,(long long)nxt64bits);
-        coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
+        printf("NXTaddr.(%s) %llu\n",nxtaddr,(long long)nxt64bits);
+        copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
         copy_cJSON(userNXTpubkey,cJSON_GetObjectItem(json,"userpubkey"));
         buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
-        if ( NXTaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr,0)) != 0 )
+        printf("NXTaddr.(%s) %llu %s\n",nxtaddr,(long long)nxt64bits,coinstr);
+        if ( nxtaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr,0)) != 0 )
         {
             for (i=0; i<3; i++)
             {
@@ -686,6 +687,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     }
                     else
                     {
+                        //11364111978695678059
                         printf("pending deposit (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         //mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
                     }
