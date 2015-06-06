@@ -666,7 +666,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
         {
             Ustatus = mgw_unspentstatus(coin,msig,txidstr,vout);
             //printf("{%d} ",Ustatus);
-            if ( (status & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
+            if ( (Ustatus & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
             {
                 if ( mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout) > 0 )
                 {
@@ -678,14 +678,15 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) != 0 )
                     {
                         if ( (status & MGW_DEPOSITDONE) != 0 )
-                            printf("DEPOSIT DONE (%s).v%d %.8f -> %s Ustatus.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus);
+                            printf("DEPOSIT DONE (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         else if ( (status & MGW_IGNORE) != 0 )
-                            printf("MGW_IGNORE (%s).v%d %.8f -> %s Ustatus.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus);
+                            printf("MGW_IGNORE (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                       else  printf("UNKNOWN (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         mgw_markunspent(coin,msig,txidstr,vout,Ustatus | status);
                     }
                     else
                     {
-                        printf("pending deposit (%s).v%d %.8f -> %s | Ustatus.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus);
+                        printf("pending deposit (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         //mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
                     }
                 }
