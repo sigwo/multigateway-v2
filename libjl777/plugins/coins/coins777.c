@@ -569,7 +569,7 @@ int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin
         {
             if ( (firstvout= txoffsets[0]) == 0 || (lastvout= nexttxoffsets[0]) == 0 )
                 break;
-            printf("search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
+            //printf("search %u, probe.%u (%u %u) floor.%u ceiling.%u\n",unspentind,probe,firstvout,lastvout,floor,ceiling);
             if ( unspentind < firstvout )
                 ceiling = probe;
             else if ( unspentind >= lastvout )
@@ -577,7 +577,7 @@ int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin
             else
             {
                 *txidindp = probe;
-                printf("found match! txidind.%u\n",probe);
+                //printf("found match! txidind.%u\n",probe);
                 if ( coin777_txidstr(coin,txidstr,255,probe,0) == 0 )
                     return(unspentind - firstvout);
                 else break;

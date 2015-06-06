@@ -714,7 +714,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
             printf("smallest (%s %.8f)\n",smallestaddr,dstr(smallest));
     }
     circulation = calc_circulation(0,&coin->mgw,0);
-    printf("%s circulation %.8f vs unspents %.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(circulation)-dstr(unspent),m);
+    printf("%s circulation %.8f vs unspents %.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(unspent) - dstr(circulation),m);
     return(unspent);
 }
 
