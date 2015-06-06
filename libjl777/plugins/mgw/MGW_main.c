@@ -647,9 +647,9 @@ int32_t mgw_unspentstatus(struct coin777 *coin,struct multisig_addr *msig,char *
 {
     uint8_t key[1024]; int32_t status,keylen,len = sizeof(status);
     keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
-    if ( db777_read(&status,&len,0,DB_MGW,key,keylen,0) == 0 )
+    if ( db777_read(&status,&len,0,DB_MGW,key,keylen,0) != 0 )
         return(status);
-    return(-1);
+    return(0);
 }
 
 uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
