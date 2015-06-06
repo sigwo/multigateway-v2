@@ -597,8 +597,9 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
                     break;
                 }
             }
-        }
+        } else printf("error loading assettxid[%d] for %llu\n",i,(long long)coin->mgw.assetidbits);
     }
+    printf("n.%d ",n);
     return(flag);
 }
 
