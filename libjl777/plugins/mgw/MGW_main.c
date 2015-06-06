@@ -591,7 +591,7 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
             {
                 if ( extra.vout == vout && strcmp(txidstr,extra.coindata) == 0 )
                 {
-                    printf("pendingxfer.(%s).v%d vs (%s).v%d\n",extra.coindata,extra.vout,txidstr,vout);
+                    //  printf("pendingxfer.(%s).v%d vs (%s).v%d\n",extra.coindata,extra.vout,txidstr,vout);
                     flag = MGW_DEPOSITDONE;
                     break;
                 }
@@ -665,7 +665,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
         if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
         {
             Ustatus = mgw_unspentstatus(coin,msig,txidstr,vout);
-            printf("{%d} ",Ustatus);
+            //printf("{%d} ",Ustatus);
             if ( (status & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
             {
                 if ( mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout) > 0 )
@@ -690,16 +690,16 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     }
                 }
             }
-            /*else
+            else
             {
-                if ( (status & MGW_PENDINGXFER) != 0 )
+                /*if ( (status & MGW_PENDINGXFER) != 0 )
                     printf("pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else if ( (status & MGW_ISINTERNAL) != 0 )
                     printf("ISINTERNAL (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else if ( (status & MGW_DEPOSITDONE) != 0 )
-                    printf("DEPOSIT DONE (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    printf("DEPOSIT DONE (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);*/
                 sum += U.value;
-            }*/
+            }
         } else printf("error getting unspendind.%u\n",unspentind);
     }
     return(sum);
