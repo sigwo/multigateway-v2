@@ -70,7 +70,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
         if ( strcmp(coinaddr,newcoinaddr) == 0 )
             flag = 0;
     }
-    if ( flag != 0 )
+    //if ( flag != 0 )
     {
         if ( db777_write(0,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
             updated = 1;
@@ -83,7 +83,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
             flag = 0;
     }
     printf("(%llu %llu) add.(%s) -> (%s) flag.%d\n",(long long)srvbits,(long long)nxt64bits,newcoinaddr,newpubkey,flag);
-    if ( flag != 0 )
+    //if ( flag != 0 )
     {
         if ( db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
             updated = 1;//, printf("added (%s)\n",newpubkey);
