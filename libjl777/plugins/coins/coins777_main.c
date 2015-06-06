@@ -214,7 +214,8 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
         strcpy(coin->mgw.coinstr,coinstr);
         printf("coin777_create %s: %s %llu mult.%llu\n",coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult);
-        coin->mgw.special = cJSON_GetObjectItem(argjson,"special");
+        if ( (coin->mgw.special= cJSON_GetObjectItem(argjson,"special")) == 0 )
+            coin->mgw.special = cJSON_GetObjectItem(COINS.argjson,"special");
         coin->mgw.limbo = cJSON_GetObjectItem(argjson,"limbo");
         coin->mgw.dust = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"dust"));
         coin->mgw.txfee = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"txfee_satoshis"));
