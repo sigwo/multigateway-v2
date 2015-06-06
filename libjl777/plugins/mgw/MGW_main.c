@@ -21,6 +21,7 @@
 #include "storage.c"
 #include "system777.c"
 #include "NXT777.c"
+#include "ramchain.c"
 #undef DEFINES_ONLY
 
 int32_t MGW_idle(struct plugin_info *plugin)
@@ -672,6 +673,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
     struct multisig_addr **msigs; int32_t i,n,m; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0;
+    ramchain_prepare(coin,&coin->ramchain);
     smallestaddr[0] = smallestaddrB[0] = 0;
     if ( coin == 0 )
     {
@@ -686,6 +688,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     {
         for (smallest=i=m=0; i<n; i++)
         {
+            printf("i.%d msigs[i] %p\n",i,msigs[i]);
             if ( (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
             {
                 unspent += val;

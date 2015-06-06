@@ -23,6 +23,7 @@ int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ra
 int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain);
 int32_t ramchain_func(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,char *method);
 int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,uint32_t startblocknum,uint32_t endblocknum);
+uint32_t ramchain_prepare(struct coin777 *coin,struct ramchain *ramchain);
 
 #endif
 #else
@@ -71,20 +72,32 @@ int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain)
     return(flag);
 }
 
-int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,uint32_t startblocknum,uint32_t endblocknum)
+uint32_t ramchain_prepare(struct coin777 *coin,struct ramchain *ramchain)
 {
     uint32_t txidind,addrind,scriptind,numrawvouts,numrawvins,timestamp,totaladdrtx; uint64_t credits,debits;
     ramchain->startmilli = milliseconds();
-    ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coin->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
-    coin777_initDBenv(coin);
-    ramchain->startblocknum = coin777_startblocknum(coin,-1);
-    printf("startblocknum.%u\n",ramchain->startblocknum);
-    if ( coin777_getinds(coin,ramchain->startblocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx) == 0 )
+    if ( ramchain->DBs.ctl == 0 )
     {
-        printf("t%u u%u s%u a%u c%u x%u\n",txidind,numrawvouts,numrawvins,addrind,scriptind,totaladdrtx);
-        coin777_initmmap(coin,ramchain->startblocknum,txidind,addrind,scriptind,numrawvouts,numrawvins,totaladdrtx);
-        coin777_verify(coin,numrawvouts,numrawvins,credits,debits,addrind,1,&totaladdrtx);
+        ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coin->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
+        coin777_initDBenv(coin);
+        ramchain->startblocknum = coin777_startblocknum(coin,-1);
+        printf("startblocknum.%u\n",ramchain->startblocknum);
+        ramchain->paused = 1;
+        if ( coin777_getinds(coin,ramchain->startblocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx) == 0 )
+        {
+            coin777_initmmap(coin,ramchain->startblocknum,txidind,addrind,scriptind,numrawvouts,numrawvins,totaladdrtx);
+            printf("t%u u%u s%u a%u c%u x%u initialized in %.3f seconds\n",txidind,numrawvouts,numrawvins,addrind,scriptind,totaladdrtx,(milliseconds() - ramchain->startmilli)/1000.);
+            coin777_verify(coin,numrawvouts,numrawvins,credits,debits,addrind,1,&totaladdrtx);
+        }
     }
+    return(ramchain->startblocknum);
+}
+
+int32_t ramchain_resume(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,uint32_t startblocknum,uint32_t endblocknum)
+{
+    ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coin->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
+    if ( ramchain->DBs.ctl == 0 )
+        ramchain_prepare(coin,ramchain);
     ramchain->paused = 0;
     return(0);
 }
