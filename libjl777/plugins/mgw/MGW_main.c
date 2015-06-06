@@ -580,12 +580,13 @@ int32_t _is_limbo_redeem(struct mgw777 *mgw,uint64_t redeemtxidbits)
     
 int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout)
 {
-    int32_t i,n,flag = MGW_IGNORE; struct extra_info extra;
+    int32_t i,n,flag = 0; struct extra_info extra;
     NXT_revassettxid(&extra,coin->mgw.assetidbits,0), n = extra.ind;
     for (i=1; i<=n; i++)
     {
         if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == 0 )
         {
+            flag = extra.flags;
             if ( (extra.flags & MGW_PENDINGXFER) != 0 )
             {
                 printf("pendingxfer.(%s).v%d vs (%s).v%d\n",extra.coindata,extra.vout,txidstr,vout);
