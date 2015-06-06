@@ -793,7 +793,6 @@ int32_t in_jsonarray(cJSON *array,char *value)
             if ( array == 0 || n == 0 )
                 break;
             copy_cJSON(remote,cJSON_GetArrayItem(array,i));
-            printf("(%s vs %s) ",remote,value);
             if ( strcmp(remote,value) == 0 )
                 return(1);
         }
