@@ -150,6 +150,7 @@ char *NXT_assettxid(uint64_t assettxid);
 uint64_t assetmult(char *assetname,char *assetidstr);
 int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra);
 int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout);
+cJSON *NXT_convjson(cJSON *array);
 
 #endif
 #else
@@ -457,6 +458,27 @@ uint64_t conv_acctstr(char *acctstr)
     else if ( strncmp("NXT-",acctstr,4) == 0 )
         nxt64bits = conv_rsacctstr(acctstr,0);
     return(nxt64bits);
+}
+
+cJSON *NXT_convjson(cJSON *array)
+{
+    char acctstr[1024],nxtaddr[64]; int32_t i,n; uint64_t nxt64bits; cJSON *json = cJSON_CreateArray();
+    if ( is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        for (i=0; i<n; i++)
+        {
+            copy_cJSON(acctstr,cJSON_GetArrayItem(array,i));
+            if ( acctstr[0] != 0 )
+            {
+                nxt64bits = conv_acctstr(acctstr);
+                expand_nxt64bits(nxtaddr,nxt64bits);
+                printf("%s ",nxtaddr);
+                cJSON_AddItemToArray(json,cJSON_CreateString(nxtaddr));
+            }
+        }
+        printf("converted.%d\n",n);
+    }
+    return(json);
 }
 
 int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *randfilename)
