@@ -736,7 +736,7 @@ void **db777_copy_all(int32_t *nump,struct db777 *DB,char *field,int32_t size)
     if ( ptrs != 0 )
         ptrs[n] = 0;
     *nump = n;
-    printf("ptrs.%p [0] %p numdb.%d\n",ptrs,ptrs[0],n);
+    //printf("ptrs.%p [0] %p numdb.%d\n",ptrs,ptrs[0],n);
     return(ptrs);
 }
 
