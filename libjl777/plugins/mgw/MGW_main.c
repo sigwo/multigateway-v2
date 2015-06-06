@@ -508,10 +508,15 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
 
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
-    int32_t i,buyNXT; char userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr; struct coin777 *coin;
+    int32_t i,buyNXT; uint64_t nxt64bits; char userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],*coinstr; struct coin777 *coin;
     if ( SUPERNET.gatewayid >= 0 )
     {
         copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
+        if ( NXTaddr[0] != 0 )
+        {
+            nxt64bits = conv_acctstr(NXTaddr);
+            expand_nxt64bits(NXTaddr,nxt64bits);
+        }
         coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
         copy_cJSON(userNXTpubkey,cJSON_GetObjectItem(json,"userpubkey"));
         buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
