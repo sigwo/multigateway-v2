@@ -23,14 +23,17 @@
 #include "NXT777.c"
 #undef DEFINES_ONLY
 
-int32_t MGW_idle(struct plugin_info *plugin) { return(0); }
+int32_t MGW_idle(struct plugin_info *plugin)
+{
+    return(0);
+}
 
 struct db777 *DB_MGW;
 
 STRUCTNAME MGW;
-char *PLUGNAME(_methods)[] = { "myacctpubkeys" };
-char *PLUGNAME(_pubmethods)[] = { "myacctpubkeys" };
-char *PLUGNAME(_authmethods)[] = { "myacctpubkeys" };
+char *PLUGNAME(_methods)[] = { "myacctpubkeys", "msigaddr" };
+char *PLUGNAME(_pubmethods)[] = { "myacctpubkeys", "msigaddr" };
+char *PLUGNAME(_authmethods)[] = { "myacctpubkeys", "msigaddr" };
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
@@ -313,7 +316,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
     len = msig->size;
     if ( db777_read(msig,&len,0,DB_msigs,key,keylen,0) != 0 )
     {
-        printf("found msig for NXT.%llu -> (%s)\n",(long long)nxt64bits,msig->multisigaddr);
+        //printf("found msig for NXT.%llu -> (%s)\n",(long long)nxt64bits,msig->multisigaddr);
         return(msig);
     }
     if ( (coin= coin777_find(coinstr,0)) != 0 )
@@ -368,7 +371,7 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
         sprintf(jsontxt,"{%s\"sender\":\"%llu\",\"buyNXT\":%u,\"created\":%u,\"M\":%d,\"N\":%d,\"NXTaddr\":\"%s\",\"NXTpubkey\":\"%s\",\"RS\":\"%s\",\"address\":\"%s\",\"redeemScript\":\"%s\",\"coin\":\"%s\",\"gatewayid\":\"%d\",\"pubkey\":[%s]}",truncated==0?"\"requestType\":\"plugin\",\"plugin\":\"coins\",\"method\":\"setmultisig\",":"",(long long)msig->sender,msig->buyNXT,msig->created,msig->m,msig->n,msig->NXTaddr,msig->NXTpubkey,rsacct,msig->multisigaddr,msig->redeemScript,msig->coinstr,gatewayid,pubkeyjsontxt);
         //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
         //    printf("(%s) pubkeys len.%ld msigjsonlen.%ld\n",jsontxt,len,strlen(jsontxt));
-        printf("-> (%s)\n",jsontxt);
+        //printf("-> (%s)\n",jsontxt);
         return(clonestr(jsontxt));
     }
     else return(0);
@@ -394,7 +397,7 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
         {
             strcpy(msigjsonstr,str);
             _stripwhite(msigjsonstr,' ');
-            printf("ENSURE.(%s)\n",msigjsonstr);
+            //printf("ENSURE.(%s)\n",msigjsonstr);
             retval = 1;
             free(str);
         }
@@ -830,6 +833,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
+        }
+        else if ( strcmp(methodstr,"msigaddr") == 0 )
+        {
+            if ( SUPERNET.gatewayid >= 0 )
+                retstr = devMGW_command(jsonstr,json);
         }
         else if ( strcmp(methodstr,"myacctpubkeys") == 0 )
             process_acctpubkeys(retbuf,jsonstr,json);

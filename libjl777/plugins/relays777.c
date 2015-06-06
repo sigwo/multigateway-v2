@@ -23,9 +23,9 @@
 int32_t relay_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME RELAYS;
-char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
-char *PLUGNAME(_pubmethods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
-char *PLUGNAME(_authmethods)[] = { "list", "add", "direct", "join", "busdata", "devMGW" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr" }; // list of supported methods
+char *PLUGNAME(_pubmethods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr" }; // list of supported methods
+char *PLUGNAME(_authmethods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr" }; // list of supported methods
 
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
 char *nn_transports[] = { "tcp", "ws", "ipc", "inproc", "tcpmux", "tbd1", "tbd2", "tbd3" };
@@ -1174,7 +1174,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-        else if ( strcmp(methodstr,"devMGW") == 0 )
+        else if ( strcmp(methodstr,"msigaddr") == 0 )
         {
             char *devMGW_command(char *jsonstr,cJSON *json);
             if ( SUPERNET.gatewayid >= 0 )
