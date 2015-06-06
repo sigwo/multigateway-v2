@@ -587,6 +587,7 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
         if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == 0 )
         {
             flag = extra.flags;
+            printf("(%d) ",flag);
             if ( (extra.flags & MGW_PENDINGXFER) != 0 )
             {
                 printf("pendingxfer.(%s).v%d vs (%s).v%d\n",extra.coindata,extra.vout,txidstr,vout);
@@ -666,17 +667,17 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
             {
                 if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout)) >= 0 && (status & MGW_ISINTERNAL) != 0 )
                 {
-                    printf("ISINTERNAL (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    printf("ISINTERNAL (%s).v%d %.8f -> %s | status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,status);
                     mgw_markunspent(coin,msig,txidstr,vout,status);
                 }
                 else if ( ((status= mgw_depositstatus(coin,msig,txidstr,vout)) & MGW_DEPOSITDONE) != 0 )
                 {
-                    printf("DEPOSIT DONE (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    printf("DEPOSIT DONE (%s).v%d %.8f -> %s  status %d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,status);
                     mgw_markunspent(coin,msig,txidstr,vout,status);
                 }
                 else
                 {
-                    printf("pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    printf("pending deposit (%s).v%d %.8f -> %s | status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,status);
                     mgw_markunspent(coin,msig,txidstr,vout,status | MGW_PENDINGXFER);
                 }
             }
