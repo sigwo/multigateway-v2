@@ -298,7 +298,8 @@ struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char
 struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,uint64_t nxt64bits,char *coinstr,char coinaddrs[][256],char pubkeys[][1024],char *userNXTpubkey,int32_t buyNXT)
 {
     uint64_t key[16]; char NXTpubkey[128],NXTaddr[64]; int32_t flag,i,keylen,len; struct coin777 *coin;
-    struct multisig_addr *msig;
+    struct multisig_addr *msig = 0;
+    printf("get_NXT_msig %llu %s\n",(long long)nxt64bits,coinstr);
     expand_nxt64bits(NXTaddr,nxt64bits);
     set_NXTpubkey(NXTpubkey,NXTaddr);
     if ( NXTpubkey[0] == 0 && userNXTpubkey != 0 && userNXTpubkey[0] != 0 )
@@ -311,7 +312,10 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
     keylen = (int32_t)(sizeof(*key) * (i+2));
     len = msig->size;
     if ( db777_read(msig,&len,0,DB_msigs,key,keylen,0) != 0 )
+    {
+        printf("found msig for NXT.%llu -> (%s)\n",(long long)nxt64bits,msig->multisigaddr);
         return(msig);
+    }
     if ( (coin= coin777_find(coinstr,0)) != 0 )
     {
         if ( buyNXT > 100 )
@@ -333,7 +337,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
         save_msigaddr(coinstr,NXTaddr,msig,msig->size);
         if ( db777_write(0,DB_msigs,key,keylen,msig,msig->size) != 0 )
             printf("error saving msig.(%s)\n",msig->multisigaddr);
-    }
+    } else printf("cant find coin.(%s)\n",coinstr);
     return(msig);
 }
 
@@ -799,6 +803,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         if ( DB_MGW == 0 )
             DB_MGW = db777_create(0,0,"MGW",0,0);
+        if ( DB_msigs == 0 )
+            DB_msigs = db777_create(0,0,"msigs",0,0);
         MGW.readyflag = 1;
         plugin->allowremote = 1;
     }
