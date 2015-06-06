@@ -788,9 +788,12 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 copy_cJSON(ipaddr,cJSON_GetArrayItem(array,i<<1));
                 copy_cJSON(nxtaddr,cJSON_GetArrayItem(array,(i<<1)+1));
+                if ( nxtaddr[0] != 0 )
+                    nxt64bits = conv_acctstr(nxtaddr);
+                else nxt64bits = 0;
                 if ( strcmp(ipaddr,MGW.bridgeipaddr) != 0 )
                 {
-                    MGW.srv64bits[j] = calc_nxt64bits(nxtaddr);//conv_rsacctstr(nxtaddr,0);
+                    MGW.srv64bits[j] = nxt64bits;
                     strcpy(MGW.serverips[j],ipaddr);
                     printf("%d.(%s).%llu ",j,ipaddr,(long long)MGW.srv64bits[j]);
                     j++;
