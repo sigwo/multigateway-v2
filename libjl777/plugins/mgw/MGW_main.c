@@ -457,7 +457,7 @@ int32_t process_acctpubkey(cJSON *item,int32_t gatewayid,uint64_t gatewaybits)
         }
     }
     nxt64bits = calc_nxt64bits(NXTaddr);
-    printf("G%d +(%s %s): ",g,coinaddr,pubkey);
+    printf("%s.G%d +(%s %s): ",coinstr,g,coinaddr,pubkey);
     updated = add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
     count = ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr,userNXTpubkey,buyNXT);
     return(updated);
@@ -532,7 +532,7 @@ int32_t MGW_publish_acctpubkeys(char *coinstr,char *str)
             cJSON_AddItemToObject(json,"pubkeys",array);
             MGW_publishjson(retbuf,json);
             free_json(json);
-            printf("processed.(%s) SUPERNET.gatewayid %d %s\n",retbuf,SUPERNET.gatewayid,SUPERNET.NXTADDR);
+            printf("%s processed.(%s) SUPERNET.gatewayid %d %s\n",coinstr,retbuf,SUPERNET.gatewayid,SUPERNET.NXTADDR);
             return(0);
         }
     }
