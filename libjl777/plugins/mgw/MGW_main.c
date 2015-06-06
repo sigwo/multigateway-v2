@@ -54,7 +54,7 @@ int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     }
     if ( coinaddr[0] != 0 )
         db777_findstr(pubkey,512,DB_NXTaccts,coinaddr);
-printf("get.(%s) -> (%s)\n",coinaddr,pubkey);
+printf("(%llu %llu) get.(%s) -> (%s)\n",(long long)srvbits,(long long)nxt64bits,coinaddr,pubkey);
     return(coinaddr[0] != 0 && pubkey[0] != 0);
 }
 
@@ -82,8 +82,7 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
         if ( strcmp(pubkey,newpubkey) == 0 )
             flag = 0;
     }
-    printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
-//printf("oldpubkey.(%s) new.(%s)\n",pubkey,newpubkey);
+    printf("(%llu %llu) add.(%s) -> (%s) flag.%d\n",(long long)srvbits,(long long)nxt64bits,newcoinaddr,newpubkey,flag);
     if ( flag != 0 )
     {
         if ( db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
@@ -381,7 +380,7 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
     nxt64bits = calc_nxt64bits(NXTaddr);
     for (g=m=0; g<SUPERNET.numgateways; g++)
     {
-        printf("g%d: ",g);
+        printf("NXT.%llu g%d: ",(long long)nxt64bits,g);
         m += get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
     }
     printf("m.%d\n",m);
