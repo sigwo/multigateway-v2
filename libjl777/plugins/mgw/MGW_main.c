@@ -54,7 +54,7 @@ int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     }
     if ( coinaddr[0] != 0 )
         db777_findstr(pubkey,512,DB_NXTaccts,coinaddr);
-    printf("get.(%s) -> (%s)\n",coinaddr,pubkey);
+printf("get.(%s) -> (%s)\n",coinaddr,pubkey);
     return(coinaddr[0] != 0 && pubkey[0] != 0);
 }
 
@@ -83,7 +83,7 @@ printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
         if ( strcmp(pubkey,newpubkey) == 0 )
             flag = 0;
     }
-printf("oldpubkey.(%s) new.(%s)\n",pubkey,newpubkey);
+//printf("oldpubkey.(%s) new.(%s)\n",pubkey,newpubkey);
     if ( flag != 0 )
     {
         if ( db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
@@ -296,24 +296,25 @@ struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char
     return(msig);
 }
 
-struct multisig_addr *get_NXT_msigaddr(struct multisig_addr *msig,uint64_t *srv64bits,int32_t m,int32_t n,uint64_t nxt64bits,char *coinstr,char coinaddrs[][256],char pubkeys[][1024],char *userNXTpubkey,int32_t buyNXT)
+struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,uint64_t nxt64bits,char *coinstr,char coinaddrs[][256],char pubkeys[][1024],char *userNXTpubkey,int32_t buyNXT)
 {
     uint64_t key[16]; char NXTpubkey[128],NXTaddr[64]; int32_t flag,i,keylen,len; struct coin777 *coin;
+    struct multisig_addr *msig;
+    expand_nxt64bits(NXTaddr,nxt64bits);
+    set_NXTpubkey(NXTpubkey,NXTaddr);
+    if ( NXTpubkey[0] == 0 && userNXTpubkey != 0 && userNXTpubkey[0] != 0 )
+        strcpy(NXTpubkey,userNXTpubkey);
+    msig = alloc_multisig_addr(coinstr,m,n,NXTaddr,NXTpubkey,0);
     key[0] = stringbits(coinstr);
     for (i=0; i<n; i++)
         key[i+1] = srv64bits[i];
     key[i+1] = nxt64bits;
     keylen = (int32_t)(sizeof(*key) * (i+2));
-    len = sizeof(*msig) + 16*sizeof(struct pubkey_info);
-    if ( (msig= db777_read(msig,&len,0,DB_msigs,key,keylen,0)) != 0 )
+    len = msig->size;
+    if ( db777_read(msig,&len,0,DB_msigs,key,keylen,0) != 0 )
         return(msig);
     if ( (coin= coin777_find(coinstr,0)) != 0 )
     {
-        expand_nxt64bits(NXTaddr,nxt64bits);
-        set_NXTpubkey(NXTpubkey,NXTaddr);
-        if ( NXTpubkey[0] == 0 && userNXTpubkey[0] != 0 )
-            strcpy(NXTpubkey,userNXTpubkey);
-        msig = alloc_multisig_addr(coinstr,m,n,NXTaddr,NXTpubkey,0);
         if ( buyNXT > 100 )
             buyNXT = 100;
         msig->buyNXT = buyNXT;
@@ -350,7 +351,7 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
     long i,len = 0;
     struct coin777 *coin;
     int32_t gatewayid = -1;
-    char jsontxt[65536],pubkeyjsontxt[65536],rsacct[64];
+    char jsontxt[8192],pubkeyjsontxt[8192],rsacct[64];
     if ( msig != 0 )
     {
         if ( (coin= coin777_find(msig->coinstr,0)) != 0 )
@@ -370,16 +371,19 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
 
 int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *userNXTpubkey,int32_t buyNXT)
 {
-    char buf[8192],coinaddrs[16][256],pubkeys[16][1024],*str;
+    char coinaddrs[16][256],pubkeys[16][1024],*str;
     int32_t g,m,retval = 0;
     uint64_t nxt64bits;
     struct multisig_addr *msig;
     msigjsonstr[0] = 0;
     nxt64bits = calc_nxt64bits(NXTaddr);
     for (g=m=0; g<SUPERNET.numgateways; g++)
+    {
+        printf("g%d: ",g);
         m += get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
+    }
     printf("m.%d\n",m);
-    if ( m == SUPERNET.numgateways && (msig= get_NXT_msigaddr((struct multisig_addr *)buf,MGW.srv64bits,MGW.M,SUPERNET.numgateways,nxt64bits,coinstr,coinaddrs,pubkeys,userNXTpubkey,buyNXT)) != 0 )
+    if ( m == SUPERNET.numgateways && (msig= get_NXT_msigaddr(MGW.srv64bits,MGW.M,SUPERNET.numgateways,nxt64bits,coinstr,coinaddrs,pubkeys,userNXTpubkey,buyNXT)) != 0 )
     {
         if ( (str= create_multisig_jsonstr(msig,0)) != 0 )
         {
@@ -389,7 +393,7 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
             retval = 1;
             free(str);
         }
-        //free(msig);
+        free(msig);
     }
     return(retval);
 }
@@ -447,6 +451,7 @@ int32_t process_acctpubkey(cJSON *item,int32_t gatewayid,uint64_t gatewaybits)
         }
     }
     nxt64bits = calc_nxt64bits(NXTaddr);
+    printf("G%d: ",g);
     updated = add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
     count = ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr,userNXTpubkey,buyNXT);
     return(updated);
