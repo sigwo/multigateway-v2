@@ -65,7 +65,6 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     key[1] = srvbits;
     key[2] = nxt64bits;
     flag = 1;
-printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
     if ( (coinaddr= db777_read(buf,&len,0,DB_NXTaccts,key,sizeof(key),0)) != 0 )
     {
         if ( strcmp(coinaddr,newcoinaddr) == 0 )
@@ -83,6 +82,7 @@ printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
         if ( strcmp(pubkey,newpubkey) == 0 )
             flag = 0;
     }
+    printf("add.(%s) -> (%s)\n",newcoinaddr,newpubkey);
 //printf("oldpubkey.(%s) new.(%s)\n",pubkey,newpubkey);
     if ( flag != 0 )
     {
@@ -354,6 +354,7 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
     char jsontxt[8192],pubkeyjsontxt[8192],rsacct[64];
     if ( msig != 0 )
     {
+        printf("create_multisig %s\n",msig->coinstr);
         if ( (coin= coin777_find(msig->coinstr,0)) != 0 )
             gatewayid = SUPERNET.gatewayid;
         rsacct[0] = 0;
@@ -364,6 +365,7 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
         sprintf(jsontxt,"{%s\"sender\":\"%llu\",\"buyNXT\":%u,\"created\":%u,\"M\":%d,\"N\":%d,\"NXTaddr\":\"%s\",\"NXTpubkey\":\"%s\",\"RS\":\"%s\",\"address\":\"%s\",\"redeemScript\":\"%s\",\"coin\":\"%s\",\"gatewayid\":\"%d\",\"pubkey\":[%s]}",truncated==0?"\"requestType\":\"plugin\",\"plugin\":\"coins\",\"method\":\"setmultisig\",":"",(long long)msig->sender,msig->buyNXT,msig->created,msig->m,msig->n,msig->NXTaddr,msig->NXTpubkey,rsacct,msig->multisigaddr,msig->redeemScript,msig->coinstr,gatewayid,pubkeyjsontxt);
         //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
         //    printf("(%s) pubkeys len.%ld msigjsonlen.%ld\n",jsontxt,len,strlen(jsontxt));
+        printf("-> (%s)\n",jsontxt);
         return(clonestr(jsontxt));
     }
     else return(0);
@@ -451,7 +453,7 @@ int32_t process_acctpubkey(cJSON *item,int32_t gatewayid,uint64_t gatewaybits)
         }
     }
     nxt64bits = calc_nxt64bits(NXTaddr);
-    printf("G%d: ",g);
+    printf("G%d +(%s %s): ",g,coinaddr,pubkey);
     updated = add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
     count = ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr,userNXTpubkey,buyNXT);
     return(updated);
