@@ -657,9 +657,15 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
             if ( (status & (MGW_DEPOSITDONE | MGW_ISINTERNAL)) == 0 )
             {
                 if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout)) >= 0 && (status & MGW_ISINTERNAL) != 0 )
+                {
+                    printf("ISINTERNAL (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
                     mgw_markunspent(coin,msig,txidstr,vout,status);
+                }
                 else if ( ((status= mgw_depositstatus(coin,msig,txidstr,vout)) & MGW_DEPOSITDONE) != 0 )
+                {
+                    printf("DEPOSIT DONE (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
                     mgw_markunspent(coin,msig,txidstr,vout,status);
+                }
                 else
                 {
                     printf("pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
@@ -668,7 +674,8 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
             }
             else
             {
-                fprintf(stderr,"%.8f ",dstr(U.value));
+                if ( (status & MGW_PENDINGXFER) != 0 )
+                    fprintf(stderr,"%.8f ",dstr(U.value));
                 sum += U.value;
             }
         } else printf("error getting unspendind.%u\n",unspentind);

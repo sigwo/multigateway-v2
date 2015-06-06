@@ -597,7 +597,7 @@ uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t uns
 {
     if ( coin777_RWmmap(0,U,coin,&coin->ramchain.unspents,unspentind) == 0 )
         return(U->value);
-    else printf("error getting unspents[%u]\n",unspentind);
+    else printf("error getting unspents[%u] when %d\n",unspentind,coin->ramchain.latest.unspentind);
     return(0);
 }
 
@@ -606,7 +606,7 @@ uint64_t coin777_Svalue(struct spend_info *S,struct coin777 *coin,uint32_t spend
     struct unspent_info U;
     if ( coin777_RWmmap(0,S,coin,&coin->ramchain.spends,spendind) == 0 )
         return(coin777_Uvalue(&U,coin,S->unspentind));
-    else printf("error getting spendind[%u]\n",spendind);
+    else printf("error getting spendind[%u] when %d\n",spendind,coin->ramchain.latest.numspends);
     return(0);
 }
 
