@@ -299,7 +299,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
 {
     uint64_t key[16]; char NXTpubkey[128],NXTaddr[64]; int32_t flag,i,keylen,len; struct coin777 *coin;
     struct multisig_addr *msig = 0;
-    printf("get_NXT_msig %llu %s\n",(long long)nxt64bits,coinstr);
+    printf("get_NXT_msig %llu (%s)\n",(long long)nxt64bits,coinstr);
     expand_nxt64bits(NXTaddr,nxt64bits);
     set_NXTpubkey(NXTpubkey,NXTaddr);
     if ( NXTpubkey[0] == 0 && userNXTpubkey != 0 && userNXTpubkey[0] != 0 )
@@ -387,7 +387,7 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
         printf("(%llu NXT.%llu) g%d: ",(long long)MGW.srv64bits[g],(long long)nxt64bits,g);
         m += get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
     }
-    printf("m.%d\n",m);
+    printf("m.%d ensure.(%s)\n",m,coinstr);
     if ( m == SUPERNET.numgateways && (msig= get_NXT_msigaddr(MGW.srv64bits,MGW.M,SUPERNET.numgateways,nxt64bits,coinstr,coinaddrs,pubkeys,userNXTpubkey,buyNXT)) != 0 )
     {
         if ( (str= create_multisig_jsonstr(msig,0)) != 0 )
@@ -440,6 +440,7 @@ int32_t process_acctpubkey(cJSON *item,int32_t gatewayid,uint64_t gatewaybits)
 {
     uint64_t gbits,nxt64bits; int32_t buyNXT,g,count,updated;
     char msigjsonstr[MAX_JSON_FIELD],userNXTpubkey[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
+    copy_cJSON(coinstr,cJSON_GetObjectItem(item,"coin"));
     copy_cJSON(NXTaddr,cJSON_GetObjectItem(item,"userNXT"));
     copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"coinaddr"));
     copy_cJSON(pubkey,cJSON_GetObjectItem(item,"pubkey"));
