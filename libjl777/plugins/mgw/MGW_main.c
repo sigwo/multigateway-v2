@@ -584,7 +584,7 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
     NXT_revassettxid(&extra,coin->mgw.assetidbits,0), n = extra.ind;
     for (i=1; i<=n; i++)
     {
-        if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == 0 )
+        if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == sizeof(extra) )
         {
             flag = extra.flags;
             printf("(%d) ",flag);
