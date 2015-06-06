@@ -688,7 +688,6 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     {
         for (smallest=i=m=0; i<n; i++)
         {
-            printf("i.%d msigs[i] %p\n",i,msigs[i]);
             if ( (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
             {
                 unspent += val;
