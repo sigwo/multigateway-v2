@@ -678,7 +678,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
 
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
-    struct multisig_addr **msigs; int32_t i,n = 0,m; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0;
+    struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0;
     ramchain_prepare(coin,&coin->ramchain);
     smallestaddr[0] = smallestaddrB[0] = 0;
     if ( coin == 0 )
@@ -694,8 +694,9 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     {
         for (smallest=i=m=0; i<n; i++)
         {
-            if ( (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
+            if ( strcmp(msigs[i]->coinstr,coin->name) == 0 && (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
             {
+                m++;
                 unspent += val;
                 if ( smallest == 0 || val < smallest )
                 {
@@ -713,7 +714,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
             printf("smallest (%s %.8f)\n",smallestaddr,dstr(smallest));
     }
     circulation = calc_circulation(0,&coin->mgw,0);
-    printf("%s circulation %.8f vs unspents %.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(circulation)-dstr(unspent),n);
+    printf("%s circulation %.8f vs unspents %.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(circulation)-dstr(unspent),m);
     return(unspent);
 }
 
