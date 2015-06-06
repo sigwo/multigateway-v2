@@ -46,10 +46,8 @@ int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain)
         ramchain->syncfreq = DB777_MATRIXROW;
     else if ( lag < DB777_MATRIXROW && ramchain->syncfreq > DB777_MATRIXROW/10 )
         ramchain->syncfreq = DB777_MATRIXROW/10;
-    //else if ( lag < DB777_MATRIXROW/10 && ramchain->syncfreq > DB777_MATRIXROW/100 )
-    //    ramchain->syncfreq = DB777_MATRIXROW/100;
-    //else if ( strcmp(ramchain->DBs.coinstr,"BTC") == 0 && lag < DB777_MATRIXROW/100 && ramchain->syncfreq > DB777_MATRIXROW/1000 )
-    //    ramchain->syncfreq = DB777_MATRIXROW/1000;
+    else if ( strcmp(ramchain->DBs.coinstr,"BTC") == 0 && lag < DB777_MATRIXROW/10 && ramchain->syncfreq > DB777_MATRIXROW/100 )
+        ramchain->syncfreq = DB777_MATRIXROW/100;
     if ( ramchain->paused < 10 )
     {
         syncflag = (((blocknum % ramchain->syncfreq) == 0) || (ramchain->needbackup != 0) || (blocknum % DB777_MATRIXROW) == 0);
