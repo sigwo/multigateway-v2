@@ -586,8 +586,15 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
     {
         if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == 0 )
         {
-            if ( (extra.flags & MGW_DEPOSITDONE) != 0 )
-                flag = MGW_DEPOSITDONE;
+            if ( (extra.flags & MGW_PENDINGXFER) != 0 )
+            {
+                printf("pendingxfer.(%s).v%d vs (%s).v%d\n",extra.coindata,extra.vout,txidstr,vout);
+                if ( extra.vout == vout && strcmp(txidstr,extra.coindata) == 0 )
+                {
+                    flag = MGW_DEPOSITDONE;
+                    break;
+                }
+            }
         }
     }
     return(flag);
