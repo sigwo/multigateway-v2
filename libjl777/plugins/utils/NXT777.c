@@ -971,7 +971,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
                             coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
                             if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,ATX.unspentind) == 0 )
                             {
-                                coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),U.isblocknum * U.rawind_or_blocknum,U.addrind);
+                                coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),!U.isblocknum * U.rawind_or_blocknum,U.addrind);
                                 printf("%s\n",scriptstr);
                             } else printf("(%llu %.8f -> %s) cant find unspentind.%u addrind.%u\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata,ATX.unspentind,addrind);
                         }
