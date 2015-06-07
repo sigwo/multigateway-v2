@@ -1133,6 +1133,7 @@ int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
         status = MGW_ERRORSTATUS;
     status |= mgw_unspentstatus(txidstr,vout);
     keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
+    printf("(%s v%d) <- MGW status.%d\n",txidstr,vout,status);
     return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
 }
 
