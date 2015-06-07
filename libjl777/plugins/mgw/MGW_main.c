@@ -719,7 +719,6 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
         if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
         {
             Ustatus = mgw_unspentstatus(coin,msig,txidstr,vout);
-            //printf("{%d} ",Ustatus);
             if ( (Ustatus & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
             {
                 if ( mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout) != 0 )
@@ -772,6 +771,10 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                         sum += U.value;
                         mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_DEPOSITDONE);
                     }
+                }
+                else
+                {
+                    printf("UNKNOWN.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                 }
             }
         } else printf("error getting unspendind.%u\n",unspentind);
