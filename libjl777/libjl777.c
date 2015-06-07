@@ -1326,7 +1326,7 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json);
-    char *retstr,*resultstr,*methodstr,*destplugin;
+    char *retstr,*resultstr,*methodstr,*destplugin,buf[1024];
     FILE *fp;
     int32_t i;
     retbuf[0] = 0;
@@ -1393,6 +1393,11 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( MGW.PATH[0] == 0 )
             strcpy(MGW.PATH,"/var/www/html/MGW");
         ensure_directory(MGW.PATH);
+        sprintf(buf,"%s/msig",MGW.PATH), ensure_directory(buf);
+        sprintf(buf,"%s/status",MGW.PATH), ensure_directory(buf);
+        sprintf(buf,"%s/sent",MGW.PATH), ensure_directory(buf);
+        sprintf(buf,"%s/deposit",MGW.PATH), ensure_directory(buf);
+
         printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d pullnode.(%s)\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay,RAMCHAINS.pullnode);
         if ( DB_NXTaccts == 0 )
             DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);

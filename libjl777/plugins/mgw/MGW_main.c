@@ -1117,22 +1117,23 @@ int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t 
     return(-1);
 }
 
-int32_t mgw_markunspent(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout,int32_t status)
-{
-    if ( status < 0 )
-        status = MGW_ERRORSTATUS;
-    uint8_t key[1024]; int32_t keylen;
-    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
-    return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
-}
-
-int32_t mgw_unspentstatus(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,uint16_t vout)
+int32_t mgw_unspentstatus(char *txidstr,uint16_t vout)
 {
     uint8_t key[1024]; int32_t status,keylen,len = sizeof(status);
     keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
     if ( db777_read(&status,&len,0,DB_MGW,key,keylen,0) != 0 )
         return(status);
     return(0);
+}
+
+int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
+{
+    uint8_t key[1024]; int32_t keylen;
+    if ( status < 0 )
+        status = MGW_ERRORSTATUS;
+    status |= mgw_unspentstatus(txidstr,vout);
+    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
+    return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
 }
 
 uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
@@ -1145,13 +1146,13 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
         atx_value = coin777_Uvalue(&U,coin,unspentind);
         if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
         {
-            Ustatus = mgw_unspentstatus(coin,msig,txidstr,vout);
+            Ustatus = mgw_unspentstatus(txidstr,vout);
             if ( (Ustatus & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
             {
                 if ( mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout) != 0 )
                 {
                     printf("ISINTERNAL.%u (%s).v%d %.8f -> %s | Ustatus.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus);
-                    mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_ISINTERNAL);
+                    mgw_markunspent(txidstr,vout,Ustatus | MGW_ISINTERNAL);
                 }
                 else
                 {
@@ -1160,12 +1161,12 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                         if ( (status & MGW_DEPOSITDONE) != 0 )
                         {
                             printf("DEPOSIT DONE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                            mgw_markunspent(coin,msig,txidstr,vout,Ustatus | status);
+                            mgw_markunspent(txidstr,vout,Ustatus | status);
                         }
                         else if ( (status & MGW_IGNORE) != 0 )
                         {
                             printf("MGW_IGNORE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                            mgw_markunspent(coin,msig,txidstr,vout,Ustatus | status);
+                            mgw_markunspent(txidstr,vout,Ustatus | status);
                         }
                         else printf("UNKNOWN.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                     }
@@ -1188,7 +1189,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                 {
                     printf("G%d PENDINGXFER.%u (%s).v%d %.8f -> %s\n",(int32_t)(nxt64bits % msig->n),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                     if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) == MGW_DEPOSITDONE )
-                        mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_DEPOSITDONE);
+                        mgw_markunspent(txidstr,vout,Ustatus | MGW_DEPOSITDONE);
                 }
                 else if ( (Ustatus & MGW_DEPOSITDONE) == 0 )
                 {
@@ -1198,13 +1199,13 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                         if ( (nxt64bits % msig->n) == SUPERNET.gatewayid )
                         {
                             if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,coin,atx_value,msig->multisigaddr,txidstr,vout,&msig->buyNXT,DEPOSIT_XFER_DURATION) != 0 )
-                                mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
-                        } else mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
+                                mgw_markunspent(txidstr,vout,Ustatus | MGW_PENDINGXFER);
+                        } else mgw_markunspent(txidstr,vout,Ustatus | MGW_PENDINGXFER);
                     }
                     else
                     {
                         sum += U.value;
-                        mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_DEPOSITDONE);
+                        mgw_markunspent(txidstr,vout,Ustatus | MGW_DEPOSITDONE);
                     }
                 }
                 else if ( (Ustatus & MGW_DEPOSITDONE) != 0 )
