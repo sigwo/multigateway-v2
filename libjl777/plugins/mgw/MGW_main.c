@@ -756,7 +756,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                 else if ( (status & MGW_DEPOSITDONE) != 0 )
                     printf("%.8f DEPOSITDONE.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else
-                    printf("%.8f UNKNOWN.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    printf("%.8f UNKNOWN.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
             }
         } else printf("error getting unspendind.%u\n",unspentind);
     }
