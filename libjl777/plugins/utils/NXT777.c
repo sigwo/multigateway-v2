@@ -959,8 +959,9 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
             NXT_revassettxid(&extra,mgw->assetidbits,i);
             if ( (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
             {
-                uint32_t addrind = 0,firstblocknum; int32_t i;
-                struct coin777_Lentry L; struct addrtx_info ATX; struct coin777 *coin = coin777_find(mgw->coinstr,0);
+                uint32_t addrind = 0,firstblocknum; int32_t i; char scriptstr[8192];
+                struct coin777_Lentry L; struct addrtx_info ATX; struct unspent_info U;
+                struct coin777 *coin = coin777_find(mgw->coinstr,0);
                 if ( coin != 0 && coin->ramchain.readyflag != 0 && (addrind= coin777_addrind(&firstblocknum,coin,extra.coindata)) != 0 )
                 {
                     if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
@@ -968,7 +969,11 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
                         for (i=0; i<L.numaddrtx; i++)
                         {
                             coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
-                            printf("[%u %u] ",ATX.unspentind,ATX.spendind);
+                            if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,ATX.unspentind) == 0 )
+                            {
+                                coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),U.isblocknum * U.rawind_or_blocknum,U.addrind);
+                                printf("%s\n",scriptstr);
+                            } else printf("(%llu %.8f -> %s) cant find unspentind.%u addrind.%u\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata,ATX.unspentind,addrind);
                         }
                         printf("PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata,addrind,L.numaddrtx);
                     }
