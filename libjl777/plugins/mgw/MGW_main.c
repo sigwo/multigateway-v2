@@ -740,9 +740,9 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     }
                     else
                     {
-                        //11364111978695678059
+                        // withdraw 11364111978695678059
                         printf("pending deposit.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                        //mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
+                        mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
                     }
                 }
             }
@@ -753,8 +753,8 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     printf("%.8f pending deposit.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else if ( (Ustatus & MGW_ISINTERNAL) != 0 )
                     printf("%.8f ISINTERNAL.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
-                else if ( (Ustatus & MGW_DEPOSITDONE) != 0 )
-                    printf("%.8f DEPOSITDONE.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                //else if ( (Ustatus & MGW_DEPOSITDONE) != 0 )
+                //    printf("%.8f DEPOSITDONE.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else if ( (Ustatus & MGW_PENDINGXFER) != 0 )
                     printf("%.8f PENDINGXFER.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else
@@ -789,7 +789,6 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
                 free(msigs[i]);
                 continue;
             }
-            printf("%s ",msigs[i]->multisigaddr);
             if ( strcmp(msigs[i]->coinstr,coin->name) == 0 && (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
             {
                 m++;
