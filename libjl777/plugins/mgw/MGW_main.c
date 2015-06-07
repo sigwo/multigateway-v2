@@ -497,7 +497,7 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     _stripwhite(retstr,' ');
     nn_send(MGW.all.socks.both.bus,retstr,(int32_t)strlen(retstr)+1,0);//  nn_publish(retstr,1);
     retval = process_acctpubkeys(retbuf,retstr,json);
-    printf("MGW publish.(%s) -> (%s)\n",retstr,retbuf);
+    //printf("MGW publish.(%s) -> (%s)\n",retstr,retbuf);
     free(retstr);
     return(retval);
 }
@@ -516,7 +516,7 @@ void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
             array = cJSON_CreateArray();
             cJSON_AddItemToArray(array,msig_itemjson(coin->name,NXTaddr,coinaddr,pubkey,1));
             cJSON_AddItemToObject(msigjson,"pubkeys",array);
-            printf("send.(%s)\n",cJSON_Print(msigjson));
+            //printf("send.(%s)\n",cJSON_Print(msigjson));
             MGW_publishjson(retbuf,msigjson);
             free_json(msigjson);
         }
@@ -574,7 +574,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
             nxt64bits = conv_acctstr(NXTaddr);
             expand_nxt64bits(nxtaddr,nxt64bits);
         } else nxt64bits = 0;
-        printf("NXTaddr.(%s) %llu\n",nxtaddr,(long long)nxt64bits);
+        //printf("NXTaddr.(%s) %llu\n",nxtaddr,(long long)nxt64bits);
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
         copy_cJSON(userNXTpubkey,cJSON_GetObjectItem(json,"userpubkey"));
         buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
@@ -728,7 +728,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
             {
                 if ( mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout) > 0 )
                 {
-                    printf("ISINTERNAL (%s).v%d %.8f -> %s | Ustatus.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus);
+                    printf("ISINTERNAL.%u (%s).v%d %.8f -> %s | Ustatus.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus);
                     mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_ISINTERNAL);
                 }
                 else
@@ -736,16 +736,16 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) != 0 )
                     {
                         if ( (status & MGW_DEPOSITDONE) != 0 )
-                            printf("DEPOSIT DONE (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                            printf("DEPOSIT DONE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         else if ( (status & MGW_IGNORE) != 0 )
-                            printf("MGW_IGNORE (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                       else  printf("UNKNOWN (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                            printf("MGW_IGNORE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                       else  printf("UNKNOWN.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         mgw_markunspent(coin,msig,txidstr,vout,Ustatus | status);
                     }
                     else
                     {
                         //11364111978695678059
-                        printf("pending deposit (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                        printf("pending deposit.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         //mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
                     }
                 }
