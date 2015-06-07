@@ -1096,23 +1096,19 @@ int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t 
             {
                 if ( U.addrind == coin->mgw.marker_addrind || U.addrind == coin->mgw.marker2_addrind )
                 {
-                    printf("U.%u -> (%s).v%u is internal\n",unspentind,txidstr,vout);
+                    printf("U.%u -> (%s).v%u is mgw_isinternal\n",unspentind,txidstr,vout);
                     return(MGW_ISINTERNAL);
                 }
                 else return(0);
             }
             printf("mgw_isinternal error loading unspent_info %u - v%d\n",unspentind,vout);
-            return(-1);
+            return(0);
         }
         printf("mgw_isinternal mismatched txidstr.(%s) vs (%s)\n",txidstr,txidstr0);
-        return(-1);
+        return(0);
     }
-    else
-    {
-        printf("got vout.%d instead of expected 0 from unspentind.%d - %d\n",vout0,unspentind,vout);
-        return(-1);
-    }
-    return(-1);
+    else printf("got vout.%d instead of expected 0 from unspentind.%d - %d\n",vout0,unspentind,vout);
+    return(0);
 }
 
 int32_t mgw_unspentstatus(char *txidstr,uint16_t vout)
@@ -1148,9 +1144,9 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
             Ustatus = mgw_unspentstatus(txidstr,vout);
             if ( (Ustatus & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
             {
-                if ( mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout) != 0 )
+                if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout)) != 0 )
                 {
-                    printf("ISINTERNAL.%u (%s).v%d %.8f -> %s | Ustatus.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus);
+                    printf("ISINTERNAL.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                     mgw_markunspent(txidstr,vout,Ustatus | MGW_ISINTERNAL);
                 }
                 else
