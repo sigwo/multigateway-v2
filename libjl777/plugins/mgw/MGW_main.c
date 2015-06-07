@@ -739,7 +739,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                             printf("DEPOSIT DONE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         else if ( (status & MGW_IGNORE) != 0 )
                             printf("MGW_IGNORE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                       else  printf("UNKNOWN.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                        else  printf("UNKNOWN.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         mgw_markunspent(coin,msig,txidstr,vout,Ustatus | status);
                     }
                     else
@@ -752,13 +752,15 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
             }
             else
             {
-                /*if ( (status & MGW_PENDINGXFER) != 0 )
-                    printf("pending deposit (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
-                else if ( (status & MGW_ISINTERNAL) != 0 )
-                    printf("ISINTERNAL (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);
-                else if ( (status & MGW_DEPOSITDONE) != 0 )
-                    printf("DEPOSIT DONE (%s).v%d %.8f -> %s\n",txidstr,vout,dstr(atx_value),msig->multisigaddr);*/
                 sum += U.value;
+                if ( (status & MGW_PENDINGXFER) != 0 )
+                    printf("%.8f pending deposit.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                else if ( (status & MGW_ISINTERNAL) != 0 )
+                    printf("%.8f ISINTERNAL.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                else if ( (status & MGW_DEPOSITDONE) != 0 )
+                    printf("%.8f DEPOSITDONE.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                else
+                    printf("%.8f UNKNOWN.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
             }
         } else printf("error getting unspendind.%u\n",unspentind);
     }
