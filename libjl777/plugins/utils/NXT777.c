@@ -895,7 +895,11 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
                     extra.vout = process_assettransfer(&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
                     free_json(txobj);
                     if ( extra.vout >= 0 )
+                    {
                         mgw_markunspent(extra.coindata,extra.vout,MGW_DEPOSITDONE);
+                        printf("MARK DEPOSITDONE %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
+                        sleep(60);
+                    }
                 } else extra.vout = -1;
                 printf("for %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
                 NXT_add_assettxid(mgw->assetidbits,txidbits,txidjsonstr,slen,ind,&extra);
