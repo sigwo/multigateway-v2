@@ -961,9 +961,9 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
             {
                 printf("PENDING WITHDRAW: (%llu %.8f -> %s)\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata);
             }
-            //fprintf(stderr,"%llu ",(long long)extra.txidbits);
+            fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
         }
-        //fprintf(stderr,"sequential tx.%d\n",count);
+        fprintf(stderr,"sequential tx.%d\n",count);
         NXT_revassettxid(&extra,mgw->assetidbits,count);
         mostrecent = extra.txidbits;
         //printf("mostrecent.%llu count.%d\n",(long long)mostrecent,count);
