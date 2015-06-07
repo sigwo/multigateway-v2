@@ -193,6 +193,7 @@ int32_t coin777_unspentmap(uint32_t *txidindp,char *txidstr,struct coin777 *coin
 uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t unspentind);
 int32_t update_NXT_assettransfers(struct mgw777 *mgw);
 uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height);
+int32_t coin777_RWaddrtx(int32_t writeflag,struct coin777 *coin,uint32_t addrind,struct addrtx_info *ATX,struct coin777_Lentry *L,int32_t addrtxi);
 
 #endif
 #else
@@ -984,7 +985,9 @@ uint64_t coin777_unspents(uint64_t (*unspentsfuncp)(struct coin777 *coin,void *a
     {
         if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 && (unspents= coin777_compact(1,&balance,&n,coin,addrind,&L)) != 0 )
         {
-            sum += (*unspentsfuncp)(coin,args,addrind,unspents,n,balance);
+            if ( unspentsfuncp != 0 )
+                sum = (*unspentsfuncp)(coin,args,addrind,unspents,n,balance);
+            else sum = balance;
             //printf("{%.8f} ",dstr(sum));
             free(unspents);
         }
