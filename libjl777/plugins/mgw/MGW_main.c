@@ -1184,15 +1184,15 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     sum += U.value;
                     printf("ISINTERNAL.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 }
-                else if ( (Ustatus & MGW_PENDINGXFER) != 0 )
-                {
-                    printf("G%d PENDINGXFER.%u (%s).v%d %.8f -> %s\n",(int32_t)(nxt64bits % msig->n),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
-                    if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) == MGW_DEPOSITDONE )
-                        mgw_markunspent(txidstr,vout,Ustatus | MGW_DEPOSITDONE);
-                }
                 else if ( (Ustatus & MGW_DEPOSITDONE) == 0 )
                 {
-                    if ( coin->mgw.firstunspentind == 0 || unspentind >= coin->mgw.firstunspentind )
+                    if ( (Ustatus & MGW_PENDINGXFER) != 0 )
+                    {
+                        printf("G%d PENDINGXFER.%u (%s).v%d %.8f -> %s\n",(int32_t)(nxt64bits % msig->n),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                        if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) == MGW_DEPOSITDONE )
+                            mgw_markunspent(txidstr,vout,Ustatus | MGW_DEPOSITDONE);
+                    }
+                    else if ( coin->mgw.firstunspentind == 0 || unspentind >= coin->mgw.firstunspentind )
                     {
                         printf("pending deposit.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         if ( (nxt64bits % msig->n) == SUPERNET.gatewayid )
