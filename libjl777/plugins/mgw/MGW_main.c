@@ -313,7 +313,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
         len = sizeof(databuf);
         if ( (msig= find_msigaddr((void *)databuf,&len,coinstr,multisigaddr)) != 0 )
         {
-            //printf("found msig for NXT.%llu -> (%s)\n",(long long)nxt64bits,msig->multisigaddr);
+            printf("found msig for NXT.%llu -> (%s)\n",(long long)nxt64bits,msig->multisigaddr);
             return(msig);
         }
     }
@@ -335,7 +335,7 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
         if ( flag == 0 )
             return(0);
         save_msigaddr(coinstr,NXTaddr,msig);
-        if ( db777_write(0,DB_msigs,key,keylen,msig,msig->size) != 0 )
+        if ( db777_write(0,DB_msigs,key,keylen,msig->multisigaddr,(int32_t)strlen(msig->multisigaddr)+1) != 0 )
             printf("error saving msig.(%s)\n",msig->multisigaddr);
     } else printf("cant find coin.(%s)\n",coinstr);
     return(msig);
