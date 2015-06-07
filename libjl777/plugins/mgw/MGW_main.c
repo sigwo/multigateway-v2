@@ -1187,6 +1187,8 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                 else if ( (Ustatus & MGW_PENDINGXFER) != 0 )
                 {
                     printf("G%d PENDINGXFER.%u (%s).v%d %.8f -> %s\n",(int32_t)(nxt64bits % msig->n),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) == MGW_DEPOSITDONE )
+                        mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_DEPOSITDONE);
                 }
                 else if ( (Ustatus & MGW_DEPOSITDONE) == 0 )
                 {
@@ -1197,7 +1199,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                         {
                             if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,coin,atx_value,msig->multisigaddr,txidstr,vout,&msig->buyNXT,DEPOSIT_XFER_DURATION) != 0 )
                                 mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
-                        }
+                        } else mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
                     }
                     else
                     {
