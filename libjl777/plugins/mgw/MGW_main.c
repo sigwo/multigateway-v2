@@ -434,6 +434,7 @@ void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
             array = cJSON_CreateArray();
             cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey,1));
             cJSON_AddItemToObject(msigjson,"pubkeys",array);
+    printf("send.(%s)\n",cJSON_Print(msigjson));
             MGW_publishjson(retbuf,msigjson);
             free_json(msigjson);
         }
@@ -502,6 +503,7 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     _stripwhite(retstr,' ');
     nn_send(MGW.all.socks.both.bus,retstr,(int32_t)strlen(retstr)+1,0);//  nn_publish(retstr,1);
     retval = process_acctpubkeys(retbuf,retstr,json);
+    printf("MGW publish.(%s) -> (%s)\n",retstr,retbuf);
     free(retstr);
     return(retval);
 }
@@ -868,9 +870,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
         coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
-        if ( methodstr == 0 || methodstr[0] == 0 )
+        if ( methodstr == 0 || methodstr[0] == 0 || SUPERNET.gatewayid < 0 )
         {
-            printf("(%s) has not method\n",jsonstr);
+            printf("(%s) has not method or not a gateway node %d\n",jsonstr,SUPERNET.gatewayid);
             return(0);
         }
         printf("MGW.(%s) for (%s)\n",methodstr,coinstr!=0?coinstr:"");
