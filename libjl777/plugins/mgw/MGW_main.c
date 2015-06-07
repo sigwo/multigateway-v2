@@ -732,11 +732,24 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) != 0 )
                     {
                         if ( (status & MGW_DEPOSITDONE) != 0 )
+                        {
                             printf("DEPOSIT DONE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                            mgw_markunspent(coin,msig,txidstr,vout,Ustatus | status);
+                        }
                         else if ( (status & MGW_IGNORE) != 0 )
-                            printf("MGW_IGNORE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                        {
+                            if ( coin->mgw.firstunspentind != 0 && unspentind < coin->mgw.firstunspentind )
+                            {
+                                printf("mark as done early MGW_IGNORE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                                mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_DEPOSITDONE);
+                            }
+                            else
+                            {
+                                printf("MGW_IGNORE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                                mgw_markunspent(coin,msig,txidstr,vout,Ustatus | status);
+                            }
+                        }
                         else printf("UNKNOWN.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                        mgw_markunspent(coin,msig,txidstr,vout,Ustatus | status);
                     }
                     else
                     {
@@ -758,7 +771,11 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                 else if ( (Ustatus & MGW_PENDINGXFER) != 0 )
                     printf("PENDINGXFER.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else if ( (Ustatus & MGW_DEPOSITDONE) == 0 )
-                    printf("UNKNOWN.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                {
+                    if ( coin->mgw.firstunspentind == 0 || unspentind >= coin->mgw.firstunspentind )
+                        printf("UNKNOWN.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                    else mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_DEPOSITDONE);
+                }
             }
         } else printf("error getting unspendind.%u\n",unspentind);
     }
