@@ -985,7 +985,7 @@ uint64_t coin777_unspents(uint64_t (*unspentsfuncp)(struct coin777 *coin,void *a
         if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 && (unspents= coin777_compact(1,&balance,&n,coin,addrind,&L)) != 0 )
         {
             sum += (*unspentsfuncp)(coin,args,addrind,unspents,n,balance);
-            printf("{%.8f} ",dstr(sum));
+            //printf("{%.8f} ",dstr(sum));
             free(unspents);
         }
     }
