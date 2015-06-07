@@ -9,6 +9,10 @@
 // 17638509709909095430 ~170
 // http://chain.explorebtcd.info/tx/1dc0faf122e64aa46393291f00483f7779b73504573c1776301347545b760ea9
 
+
+#define DEPOSIT_XFER_DURATION 30
+#define MIN_DEPOSIT_FACTOR 5
+
 #define BUNDLED
 #define PLUGINSTR "MGW"
 #define PLUGNAME(NAME) MGW ## NAME
@@ -785,8 +789,8 @@ int32_t jsonstrcmp(void *ref,void *item) { return(strcmp(ref,item)); }
 void set_MGW_fname(char *fname,char *dirname,char *NXTaddr)
 {
     if ( NXTaddr == 0 )
-        sprintf(fname,"%s/MGW/%s/ALL",MGW.PATH,dirname);
-    else sprintf(fname,"%s/MGW/%s/%s",MGW.PATH,dirname,NXTaddr);
+        sprintf(fname,"%s/%s/ALL",MGW.PATH,dirname);
+    else sprintf(fname,"%s/%s/%s",MGW.PATH,dirname,NXTaddr);
 }
 
 void set_MGW_msigfname(char *fname,char *NXTaddr) { set_MGW_fname(fname,"msig",NXTaddr); }
@@ -950,7 +954,7 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
     //sprintf(comment,"{\"coin\":\"%s\",\"coinaddr\":\"%s\",\"cointxid\":\"%s\",\"coinv\":%u,\"amount\":\"%.8f\",\"sender\":\"%s\",\"receiver\":\"%llu\",\"timestamp\":%u,\"quantity\":\"%llu\"}",coin->name,coinaddr,txidstr,vout,dstr(value),SUPERNET.NXTADDR,(long long)nxt64bits,(uint32_t)time(NULL),(long long)(value/coin->mgw.ap_mult));
     sprintf(comment,"{\"coin\":\"%s\",\"coinaddr\":\"%s\",\"cointxid\":\"%s\",\"coinv\":%u,\"amount\":\"%.8f\"}",coin->name,coinaddr,txidstr,vout,dstr(value));//,SUPERNET.NXTADDR,(long long)nxt64bits,(uint32_t)time(NULL),(long long)(value/coin->mgw.ap_mult));
     pair = cJSON_Parse(comment);
-    cJSON_AddItemToObject(pair,"NXT",cJSON_CreateString(NXTaddr));
+    //cJSON_AddItemToObject(pair,"NXT",cJSON_CreateString(NXTaddr));
     printf("forceflag.%d haspubkey.%d >>>>>>>>>>>>>> Need to transfer %.8f %ld assetoshis | %s to %llu for (%s) %s\n",forceflag,haspubkey,dstr(value),(long)(value/coin->mgw.ap_mult),coin->name,(long long)nxt64bits,txidstr,comment);
     total += value;
     convamount = 0;
@@ -1037,10 +1041,6 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
 // transfer approved, transfer pending, transfer completed, added to virtual balance, selected, spent
 // set of unspents - deposit completed - pending transfer -> start transfer
 // deposit completed -> pool for withdraws
-
-
-#define DEPOSIT_XFER_DURATION 5
-#define MIN_DEPOSIT_FACTOR 5
 
 int32_t _valid_txamount(struct mgw777 *mgw,uint64_t value,char *coinaddr)
 {

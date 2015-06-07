@@ -1389,6 +1389,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( SOPHIA.PATH[0] == 0 )
             strcpy(SOPHIA.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH);
+        copy_cJSON(MGW.PATH,cJSON_GetObjectItem(json,"MGWPATH"));
+        if ( MGW.PATH[0] == 0 )
+            strcpy(MGW.PATH,"/var/www/html/MGW");
+        ensure_directory(MGW.PATH);
         printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d pullnode.(%s)\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay,RAMCHAINS.pullnode);
         if ( DB_NXTaccts == 0 )
             DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
