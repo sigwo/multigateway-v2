@@ -934,7 +934,7 @@ double get_current_rate(char *base,char *rel)
 uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt64bits,char *depositors_pubkey,struct coin777 *coin,uint64_t value,char *coinaddr,char *txidstr,uint16_t vout,int32_t *buyNXTp,int32_t deadline)
 {
     char buf[MAX_JSON_FIELD],nxtassetidstr[64],numstr[64],assetidstr[64],rsacct[64],NXTaddr[64],comment[MAX_JSON_FIELD],*errjsontxt,*str;
-    uint64_t depositid,convamount,total = 0;
+    uint64_t depositid = 0,convamount,total = 0;
     int32_t haspubkey,iter,flag,buyNXT = *buyNXTp;
     double rate;
     cJSON *pair,*errjson,*item;
@@ -1031,7 +1031,7 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
     if ( transferjsonp != 0 )
         cJSON_AddItemToArray(*transferjsonp,pair);
     else free_json(pair);
-    return(total);
+    return(depositid);
 }
 
 // transfer approved, transfer pending, transfer completed, added to virtual balance, selected, spent
@@ -1195,8 +1195,8 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                         printf("pending deposit.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                         if ( (nxt64bits % msig->n) == SUPERNET.gatewayid )
                         {
-                            MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,coin,atx_value,msig->multisigaddr,txidstr,vout,&msig->buyNXT,DEPOSIT_XFER_DURATION);
-                            mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
+                            if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,coin,atx_value,msig->multisigaddr,txidstr,vout,&msig->buyNXT,DEPOSIT_XFER_DURATION) != 0 )
+                                mgw_markunspent(coin,msig,txidstr,vout,Ustatus | MGW_PENDINGXFER);
                         }
                     }
                     else
