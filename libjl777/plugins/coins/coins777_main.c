@@ -213,7 +213,6 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         coin->mgw.assetidbits = calc_nxt64bits(coin->mgw.assetidstr);
         coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
         strcpy(coin->mgw.coinstr,coinstr);
-        printf("coin777_create %s: %s %llu mult.%llu\n",coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult);
         if ( (coin->mgw.special= cJSON_GetObjectItem(argjson,"special")) == 0 )
             coin->mgw.special = cJSON_GetObjectItem(COINS.argjson,"special");
         if ( coin->mgw.special != 0 )
@@ -232,8 +231,14 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         copy_cJSON(coin->mgw.marker2,cJSON_GetObjectItem(argjson,"marker2"));
         coin->mgw.use_addmultisig = get_API_int(cJSON_GetObjectItem(argjson,"useaddmultisig"),(strcmp("BTC",coinstr) != 0));
         coin->mgw.firstunspentind = get_API_int(cJSON_GetObjectItem(argjson,"firstunspent"),(strcmp("BTCD",coinstr) == 0) ? 2500000 : 0);
+        if ( (coin->mgw.NXTconvrate = get_API_float(cJSON_GetObjectItem(argjson,"NXTconvrate"))) == 0 )
+        {
+            if ( coin->mgw.NXTfee_equiv != 0 && coin->mgw.txfee != 0 )
+                coin->mgw.NXTconvrate = ((double)coin->mgw.NXTfee_equiv / coin->mgw.txfee);
+        }
     }
     else coin->minconfirms = (strcmp("BTC",coinstr) == 0) ? 3 : 10;
+    printf("coin777_create %s: %s %llu mult.%llu NXTconvrate %.8f minconfirms.%d\n",coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms);
     extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
     printf("COIN.%s (%s)\n",coin->name,coin->userpass);
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
