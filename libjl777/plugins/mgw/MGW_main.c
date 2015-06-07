@@ -96,27 +96,20 @@ int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char 
     return(updated);
 }
 
-void multisig_keystr(char *keystr,char *coinstr,char *NXTaddr,char *msigaddr)
-{
-    if ( msigaddr == 0 || msigaddr[0] == 0 )
-        sprintf(keystr,"%s.%s",coinstr,NXTaddr);
-    else sprintf(keystr,"%s.%s",coinstr,msigaddr);
-}
-
-struct multisig_addr *find_msigaddr(struct multisig_addr *msig,int32_t *lenp,char *coinstr,char *NXTaddr,char *msigaddr)
+struct multisig_addr *find_msigaddr(struct multisig_addr *msig,int32_t *lenp,char *coinstr,char *multisigaddr)
 {
     char keystr[1024];
-    multisig_keystr(keystr,coinstr,NXTaddr,msigaddr);
+    sprintf(keystr,"%s.%s",coinstr,multisigaddr);
     printf("search_msig.(%s)\n",keystr);
     return(db777_read(msig,lenp,0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,0));
 }
 
-int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig,int32_t len)
+int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig)
 {
     char keystr[1024];
-    multisig_keystr(keystr,coinstr,NXTaddr,msig->multisigaddr);
+    sprintf(keystr,"%s.%s",coinstr,msig->multisigaddr);
     printf("save_msig.(%s)\n",keystr);
-    return(db777_write(0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,len));
+    return(db777_write(0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,msig->size));
 }
 
 int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr)
@@ -166,7 +159,7 @@ int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *us
 {
     int32_t ismine,len; char buf[8192]; struct multisig_addr *msig;
     redeemScript[0] = normaladdr[0] = 0;
-    if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coinstr,0,msigaddr)) == 0 )
+    if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coinstr,msigaddr)) == 0 )
     {
         strcpy(normaladdr,msigaddr);
         printf("cant find_msigaddr.(%s)\n",msigaddr);
@@ -286,6 +279,7 @@ struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char
     struct multisig_addr *msig;
     int32_t size = (int32_t)(sizeof(*msig) + n*sizeof(struct pubkey_info));
     msig = calloc(1,size);
+    msig->sig = stringbits("multisig");
     msig->size = size;
     msig->n = n;
     msig->created = (uint32_t)time(NULL);
@@ -301,25 +295,30 @@ struct multisig_addr *alloc_multisig_addr(char *coinstr,int32_t m,int32_t n,char
 
 struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,uint64_t nxt64bits,char *coinstr,char coinaddrs[][256],char pubkeys[][1024],char *userNXTpubkey,int32_t buyNXT)
 {
-    uint64_t key[16]; char NXTpubkey[128],NXTaddr[64]; int32_t flag,i,keylen,len; struct coin777 *coin;
+    uint64_t key[16]; char NXTpubkey[128],NXTaddr[64],multisigaddr[128],databuf[8192]; int32_t flag,i,keylen,len; struct coin777 *coin;
     struct multisig_addr *msig = 0;
     //printf("get_NXT_msig %llu (%s)\n",(long long)nxt64bits,coinstr);
     expand_nxt64bits(NXTaddr,nxt64bits);
     set_NXTpubkey(NXTpubkey,NXTaddr);
     if ( NXTpubkey[0] == 0 && userNXTpubkey != 0 && userNXTpubkey[0] != 0 )
         strcpy(NXTpubkey,userNXTpubkey);
-    msig = alloc_multisig_addr(coinstr,m,n,NXTaddr,NXTpubkey,0);
     key[0] = stringbits(coinstr);
     for (i=0; i<n; i++)
         key[i+1] = srv64bits[i];
     key[i+1] = nxt64bits;
     keylen = (int32_t)(sizeof(*key) * (i+2));
-    len = msig->size;
-    if ( db777_read(msig,&len,0,DB_msigs,key,keylen,0) != 0 )
+    len = sizeof(multisigaddr);
+    if ( db777_read(multisigaddr,&len,0,DB_msigs,key,keylen,0) != 0 )
     {
-        //printf("found msig for NXT.%llu -> (%s)\n",(long long)nxt64bits,msig->multisigaddr);
-        return(msig);
+        len = sizeof(databuf);
+        if ( (msig= find_msigaddr((void *)databuf,&len,coinstr,multisigaddr)) != 0 )
+        {
+            //printf("found msig for NXT.%llu -> (%s)\n",(long long)nxt64bits,msig->multisigaddr);
+            return(msig);
+        }
     }
+    msig = alloc_multisig_addr(coinstr,m,n,NXTaddr,NXTpubkey,0);
+    memset(databuf,0,sizeof(databuf)), memcpy(databuf,msig,msig->size), free(msig), msig = (struct multisig_addr *)databuf;
     if ( (coin= coin777_find(coinstr,0)) != 0 )
     {
         if ( buyNXT > 100 )
@@ -334,11 +333,8 @@ struct multisig_addr *get_NXT_msigaddr(uint64_t *srv64bits,int32_t m,int32_t n,u
         }
         flag = issue_createmultisig(msig->multisigaddr,msig->redeemScript,coinstr,coin->serverport,coin->userpass,coin->mgw.use_addmultisig,msig);
         if ( flag == 0 )
-        {
-            free(msig);
             return(0);
-        }
-        save_msigaddr(coinstr,NXTaddr,msig,msig->size);
+        save_msigaddr(coinstr,NXTaddr,msig);
         if ( db777_write(0,DB_msigs,key,keylen,msig,msig->size) != 0 )
             printf("error saving msig.(%s)\n",msig->multisigaddr);
     } else printf("cant find coin.(%s)\n",coinstr);
@@ -402,7 +398,7 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
             retval = 1;
             free(str);
         }
-        free(msig);
+        //free(msig);
     }
     return(retval);
 }
@@ -785,10 +781,13 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,DB_msigs,"value",0)) != 0 )
     {
         for (smallest=i=m=0; i<n; i++)
-            printf("%s ",msigs[i]->multisigaddr);
-        printf("%d msigs\n",n);
-        for (smallest=i=m=0; i<n; i++)
         {
+            if ( msigs[i]->sig != stringbits("multisig") )
+            {
+                free(msigs[i]);
+                continue;
+            }
+            printf("%s ",msigs[i]->multisigaddr);
             if ( strcmp(msigs[i]->coinstr,coin->name) == 0 && (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
             {
                 m++;
