@@ -748,7 +748,10 @@ struct addrtx_info *coin777_compact(int32_t compactflag,uint64_t *balancep,int32
                 {
                     actives[addrtxi++] = ATX;
                     if ( ATX.spendind == 0 )
+                    {
+                        printf("(%d) ",ATX.unspentind);
                         balance += coin777_Uvalue(&U,coin,ATX.unspentind);
+                    }
                 }
             }
         }
@@ -757,6 +760,7 @@ struct addrtx_info *coin777_compact(int32_t compactflag,uint64_t *balancep,int32
     }
     if ( addrtxi != 0 && Debuglevel > 2 )
         printf("-> balance %.8f ",dstr(balance));
+    printf("-> balance %.8f numaddrtx.%d -> %d\n",dstr(balance),L->numaddrtx,addrtxi);
     *numaddrtxp = addrtxi;
     if ( balancep != 0 )
         *balancep = balance;
@@ -981,6 +985,7 @@ uint64_t coin777_unspents(uint64_t (*unspentsfuncp)(struct coin777 *coin,void *a
         if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 && (unspents= coin777_compact(1,&balance,&n,coin,addrind,&L)) != 0 )
         {
             sum += (*unspentsfuncp)(coin,args,addrind,unspents,n,balance);
+            printf("{%.8f} ",dstr(sum));
             free(unspents);
         }
     }

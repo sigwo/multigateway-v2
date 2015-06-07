@@ -78,17 +78,18 @@ uint32_t ramchain_prepare(struct coin777 *coin,struct ramchain *ramchain)
     ramchain->startmilli = milliseconds();
     if ( ramchain->DBs.ctl == 0 )
     {
+        ramchain->paused = 1;
         ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coin->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
         coin777_initDBenv(coin);
         ramchain->startblocknum = coin777_startblocknum(coin,-1);
         printf("startblocknum.%u\n",ramchain->startblocknum);
-        ramchain->paused = 1;
         if ( coin777_getinds(coin,ramchain->startblocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx) == 0 )
         {
             coin777_initmmap(coin,ramchain->startblocknum,txidind,addrind,scriptind,numrawvouts,numrawvins,totaladdrtx);
             printf("t%u u%u s%u a%u c%u x%u initialized in %.3f seconds\n",txidind,numrawvouts,numrawvins,addrind,scriptind,totaladdrtx,(milliseconds() - ramchain->startmilli)/1000.);
             coin777_verify(coin,numrawvouts,numrawvins,credits,debits,addrind,1,&totaladdrtx);
         }
+        ramchain->paused = 0;
     }
     return(ramchain->startblocknum);
 }
