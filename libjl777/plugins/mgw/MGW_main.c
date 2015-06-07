@@ -750,15 +750,15 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
             {
                 sum += U.value;
                 if ( (Ustatus & MGW_PENDINGXFER) != 0 )
-                    printf("%.8f pending deposit.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    printf("pending deposit.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else if ( (Ustatus & MGW_ISINTERNAL) != 0 )
-                    printf("%.8f ISINTERNAL.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    printf("ISINTERNAL.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 //else if ( (Ustatus & MGW_DEPOSITDONE) != 0 )
-                //    printf("%.8f DEPOSITDONE.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                //    printf("DEPOSITDONE.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 else if ( (Ustatus & MGW_PENDINGXFER) != 0 )
-                    printf("%.8f PENDINGXFER.%u (%s).v%d %.8f -> %s\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
-                else
-                    printf("%.8f UNKNOWN.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",dstr(sum),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                    printf("PENDINGXFER.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                else if ( (Ustatus & MGW_DEPOSITDONE) == 0 )
+                    printf("UNKNOWN.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
             }
         } else printf("error getting unspendind.%u\n",unspentind);
     }
