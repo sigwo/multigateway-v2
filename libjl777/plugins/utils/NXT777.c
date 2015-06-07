@@ -638,12 +638,12 @@ uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height
 int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra)
 {
     uint64_t revkey[2]; void *obj;
-    if ( (obj= sp_object(NXT_txids->db)) != 0 )
+    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
     {
         revkey[0] = assetidbits, revkey[1] = ind;
         //printf("set ind.%d <- txid.%llu\n",ind,(long long)extra->txidbits);
         if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && sp_set(obj,"value",extra,sizeof(*extra)) == 0 )
-            return(sp_set(NXT_txids->db,obj));
+            return(sp_set(DB_NXTtxids->db,obj));
         else
         {
             sp_destroy(obj);
@@ -657,10 +657,10 @@ int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t 
 {
     void *obj,*result,*value; uint64_t revkey[2]; int32_t len = 0;
     memset(extra,0,sizeof(*extra));
-    if ( (obj= sp_object(NXT_txids->db)) != 0 )
+    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
     {
         revkey[0] = assetidbits, revkey[1] = ind;
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(NXT_txids->db,obj)) != 0 )
+        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
         {
             value = sp_get(result,"value",&len);
             if ( len == sizeof(*extra) )
@@ -677,11 +677,11 @@ int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int
     void *obj;
     if ( value != 0 )
     {
-        if ( (obj= sp_object(NXT_txids->db)) != 0 )
+        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
         {
             extra->assetidbits = assetidbits, extra->txidbits = txidbits, extra->ind = ind;
             if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
-                sp_set(NXT_txids->db,obj);
+                sp_set(DB_NXTtxids->db,obj);
             else
             {
                 sp_destroy(obj);
@@ -696,9 +696,9 @@ int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int
 char *NXT_assettxid(uint64_t assettxid)
 {
     void *obj,*result,*value; int32_t len; char *retstr = 0;
-    if ( (obj= sp_object(NXT_txids->db)) != 0 )
+    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
     {
-        if ( sp_set(obj,"key",&assettxid,sizeof(assettxid)) == 0 && (result= sp_get(NXT_txids->db,obj)) != 0 )
+        if ( sp_set(obj,"key",&assettxid,sizeof(assettxid)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
         {
             value = sp_get(result,"value",&len);
             retstr = clonestr(value);
@@ -868,9 +868,9 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
         _stripwhite(txidjsonstr,' ');
         slen = (int32_t)strlen(txidjsonstr)+1;
         txidbits = calc_nxt64bits(txid);
-        if ( (obj= sp_object(NXT_txids->db)) != 0 )
+        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
         {
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && (result= sp_get(NXT_txids->db,obj)) != 0 )
+            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
             {
                 value = sp_get(result,"value",&len);
                 if ( value != 0 )

@@ -33,8 +33,6 @@ int32_t MGW_idle(struct plugin_info *plugin)
     return(0);
 }
 
-struct db777 *DB_MGW;
-
 STRUCTNAME MGW;
 char *PLUGNAME(_methods)[] = { "myacctpubkeys", "msigaddr" };
 char *PLUGNAME(_pubmethods)[] = { "myacctpubkeys", "msigaddr" };
@@ -1368,10 +1366,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 //MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1*0);
             }
         }
-        if ( DB_MGW == 0 )
-            DB_MGW = db777_create(0,0,"MGW",0,0);
-        if ( DB_msigs == 0 )
-            DB_msigs = db777_create(0,0,"msigs",0,0);
         MGW.readyflag = 1;
         plugin->allowremote = 1;
     }
