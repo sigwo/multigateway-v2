@@ -1741,6 +1741,8 @@ uint64_t coin777_flush(struct coin777 *coin,uint32_t blocknum,int32_t numsyncs,u
         if ( coin777_verify(coin,numrawvouts,numrawvins,credits,debits,addrind,1,totaladdrtxp) != 0 )
             printf("cant verify at block.%u\n",blocknum), debugstop();
     }
+    else if ( (coin->ramchain.RTblocknum - blocknum) < coin->minconfirms*2 )
+        coin->ramchain.addrsum = addrinfos_sum(coin,addrind,0,numrawvouts,numrawvins,1,totaladdrtxp);
     memset(&H,0,sizeof(H)); H.blocknum = blocknum, H.numsyncs = numsyncs, H.credits = credits, H.debits = debits;
     H.timestamp = timestamp, H.txidind = txidind, H.unspentind = numrawvouts, H.numspends = numrawvins, H.addrind = addrind, H.scriptind = scriptind, H.totaladdrtx = *totaladdrtxp;
     if ( numsyncs >= 0 )
