@@ -117,7 +117,6 @@ struct NXT_acct
 #define MGW_DEPOSITDONE 4
 #define MGW_PENDINGREDEEM 8
 #define MGW_WITHDRAWDONE 16
-#define MGW_COMPLETED 64
 #define MGW_IGNORE 128
 #define MGW_ERRORSTATUS 0x8000
 struct extra_info { uint64_t assetidbits,txidbits,amount; int32_t ind,vout,flags; char coindata[128]; };
@@ -955,12 +954,16 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     {
         //printf("got extra ind.%d\n",extra.ind);
         count = extra.ind;
-        /*for (i=0; i<=count; i++)
+        for (i=1; i<=count; i++)
         {
             NXT_revassettxid(&extra,mgw->assetidbits,i);
-            fprintf(stderr,"%llu ",(long long)extra.txidbits);
+            if ( (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) != 0 )
+            {
+                printf("PENDING WITHDRAW: (%llu %.8f -> %s)\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata);
+            }
+            //fprintf(stderr,"%llu ",(long long)extra.txidbits);
         }
-        fprintf(stderr,"sequential tx.%d\n",count);*/
+        //fprintf(stderr,"sequential tx.%d\n",count);
         NXT_revassettxid(&extra,mgw->assetidbits,count);
         mostrecent = extra.txidbits;
         //printf("mostrecent.%llu count.%d\n",(long long)mostrecent,count);
