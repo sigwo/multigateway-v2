@@ -961,7 +961,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
             {
                 uint32_t addrind = 0,firstblocknum; int32_t i;
                 struct coin777_Lentry L; struct addrtx_info ATX; struct coin777 *coin = coin777_find(mgw->coinstr,0);
-                if ( coin != 0 && (addrind= coin777_addrind(&firstblocknum,coin,extra.coindata)) != 0 )
+                if ( coin != 0 && coin->ramchain.readyflag != 0 && (addrind= coin777_addrind(&firstblocknum,coin,extra.coindata)) != 0 )
                 {
                     if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
                     {
