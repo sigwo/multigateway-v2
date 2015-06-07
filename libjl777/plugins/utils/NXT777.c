@@ -974,8 +974,10 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
                                 if ( U.isblocknum == 0 )
                                 {
                                     coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),!U.isblocknum * U.rawind_or_blocknum,U.addrind);
-                                    printf("%s\n",scriptstr);
+                                    //printf("%s\n",scriptstr);
                                 }
+                                if ( U.value > 0.99*extra.amount && U.value <= extra.amount )
+                                    printf("[u%u %.8f] ",ATX.unspentind,dstr(U.value));
                             } else printf("(%llu %.8f -> %s) cant find unspentind.%u addrind.%u\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata,ATX.unspentind,addrind);
                         }
                         printf("PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata,addrind,L.numaddrtx);
