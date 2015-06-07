@@ -24,7 +24,7 @@
 int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 #define NXT_ASSETID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
 #define MAX_BUYNXT 10
-#define MIN_NQTFEE 10000000
+#define MIN_NQTFEE 100000000
 
 #define NXT_ASSETLIST_INCR 16
 #define MAX_COINTXID_LEN 128
