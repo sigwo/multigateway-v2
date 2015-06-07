@@ -119,17 +119,8 @@ int32_t ramchain_stop(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ra
 
 int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum,uint32_t minconfirms)
 {
-    //strcpy(ramchain->name,coinstr);
-    //strcpy(ramchain->serverport,serverport);
-    //strcpy(ramchain->userpass,userpass);
     ramchain->readyflag = 1;
     coin->minconfirms = minconfirms;
-    /*if ( ramchain->activeledger != 0 )
-    {
-        ramchain_stop(retbuf,maxlen,coin,ramchain,argjson);
-        while ( ramchain->activeledger != 0 )
-            sleep(1);
-    }*/
     printf("(%s %s %s) vs (%s %s %s)\n",coinstr,serverport,userpass,coin->name,coin->serverport,coin->userpass);
     ramchain->syncfreq = 10000;
     ramchain->startblocknum = startblocknum, ramchain->endblocknum = endblocknum;

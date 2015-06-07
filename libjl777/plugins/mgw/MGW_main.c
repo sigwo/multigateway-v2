@@ -785,6 +785,9 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,DB_msigs,"value",0)) != 0 )
     {
         for (smallest=i=m=0; i<n; i++)
+            printf("%s ",msigs[i]->multisigaddr);
+        printf("%d msigs\n",n);
+        for (smallest=i=m=0; i<n; i++)
         {
             if ( strcmp(msigs[i]->coinstr,coin->name) == 0 && (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
             {

@@ -39,7 +39,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                     uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin);
                     char smallestaddr[128],smallestaddrB[128];
                     update_NXT_assettransfers(&coin->mgw);
-                    if ( SUPERNET.gatewayid >= 0 )
+                    if ( SUPERNET.gatewayid >= 0 && coin->ramchain.readyflag != 0 )
                         mgw_calc_unspent(smallestaddr,smallestaddrB,coin);
                     coin->mgw.lastupdate = milliseconds();
                    // nn_send(MGW.all.socks.both.bus,"FINISHED update_NXT_assettransfers\n",(int32_t)strlen("FINISHED update_NXT_assettransfers\n"),0);
