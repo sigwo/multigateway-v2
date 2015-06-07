@@ -711,7 +711,7 @@ int32_t mgw_unspentstatus(struct coin777 *coin,struct multisig_addr *msig,char *
 uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
 {
     struct multisig_addr *msig = args;
-    int32_t i,Ustatus,status,vout; uint32_t unspentind,txidind; char txidstr[512]; uint64_t atx_value,sum = 0; struct unspent_info U;
+    int32_t i,Ustatus,status,vout; uint32_t unspentind,txidind; char txidstr[512]; uint64_t nxt64bits,atx_value,sum = 0; struct unspent_info U;
     for (i=0; i<num; i++)
     {
         unspentind = unspents[i].unspentind, unspents[i].spendind = 1;
@@ -758,7 +758,10 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     printf("ISINTERNAL.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 }
                 else if ( (Ustatus & MGW_PENDINGXFER) != 0 )
-                    printf("PENDINGXFER.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                {
+                    nxt64bits = calc_nxt64bits(msig->NXTaddr);
+                    printf("G%d PENDINGXFER.%u (%s).v%d %.8f -> %s\n",(int32_t)(nxt64bits % msig->n),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                }
                 else if ( (Ustatus & MGW_DEPOSITDONE) == 0 )
                 {
                     if ( coin->mgw.firstunspentind == 0 || unspentind >= coin->mgw.firstunspentind )
