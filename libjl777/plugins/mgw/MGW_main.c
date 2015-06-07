@@ -407,40 +407,6 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
     return(retval);
 }
 
-cJSON *acctpubkey_json(char *coinstr,char *NXTaddr,int32_t gatewayid)
-{
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
-    cJSON_AddItemToObject(json,"method",cJSON_CreateString("myacctpubkeys"));
-    cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
-    cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(NXTaddr));
-    cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(gatewayid));
-    //printf("acctpubkey.(%s)\n",cJSON_Print(json));
-    return(json);
-}
-
-void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
-{
-    int32_t MGW_publishjson(char *retbuf,cJSON *json);
-    cJSON *msig_itemjson(char *account,char *coinaddr,char *pubkey,int32_t allfields);
-    cJSON *msigjson,*array; char retbuf[1024],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD];
-    if ( SUPERNET.gatewayid >= 0 )
-    {
-        get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
-        get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
-        printf("new address.(%s) -> (%s) (%s)\n",NXTaddr,coinaddr,pubkey);
-        if ( (msigjson= acctpubkey_json(coin->name,SUPERNET.NXTADDR,SUPERNET.gatewayid)) != 0 )
-        {
-            array = cJSON_CreateArray();
-            cJSON_AddItemToArray(array,msig_itemjson(NXTaddr,coinaddr,pubkey,1));
-            cJSON_AddItemToObject(msigjson,"pubkeys",array);
-    printf("send.(%s)\n",cJSON_Print(msigjson));
-            MGW_publishjson(retbuf,msigjson);
-            free_json(msigjson);
-        }
-    }
-}
-
 int32_t process_acctpubkey(int32_t *havemsigp,cJSON *item,int32_t gatewayid,uint64_t gatewaybits)
 {
     uint64_t gbits,nxt64bits; int32_t buyNXT,g,updated;
@@ -496,6 +462,34 @@ int32_t process_acctpubkeys(char *retbuf,char *jsonstr,cJSON *json)
     return(updated);
 }
 
+cJSON *acctpubkey_json(char *coinstr,char *NXTaddr,int32_t gatewayid)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
+    cJSON_AddItemToObject(json,"method",cJSON_CreateString("myacctpubkeys"));
+    cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
+    cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(NXTaddr));
+    cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(gatewayid));
+    printf("acctpubkey.(%s)\n",cJSON_Print(json));
+    return(json);
+}
+
+cJSON *msig_itemjson(char *coinstr,char *account,char *coinaddr,char *pubkey,int32_t allfields)
+{
+    cJSON *item = cJSON_CreateObject();
+    cJSON_AddItemToObject(item,"coin",cJSON_CreateString(coinstr));
+    cJSON_AddItemToObject(item,"userNXT",cJSON_CreateString(account));
+    cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
+    cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
+    if ( allfields != 0 && SUPERNET.gatewayid >= 0 )
+    {
+        cJSON_AddItemToObject(item,"gatewayNXT",cJSON_CreateString(SUPERNET.NXTADDR));
+        cJSON_AddItemToObject(item,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
+    }
+    //printf("(%s)\n",cJSON_Print(item));
+    return(item);
+}
+
 int32_t MGW_publishjson(char *retbuf,cJSON *json)
 {
     char *retstr; int32_t retval;
@@ -506,6 +500,67 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     printf("MGW publish.(%s) -> (%s)\n",retstr,retbuf);
     free(retstr);
     return(retval);
+}
+
+void fix_msigaddr(struct coin777 *coin,char *NXTaddr)
+{
+    int32_t MGW_publishjson(char *retbuf,cJSON *json);
+    cJSON *msigjson,*array; char retbuf[1024],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD];
+    if ( SUPERNET.gatewayid >= 0 )
+    {
+        get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
+        get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
+        printf("%s new address.(%s) -> (%s) (%s)\n",coin->name,NXTaddr,coinaddr,pubkey);
+        if ( (msigjson= acctpubkey_json(coin->name,SUPERNET.NXTADDR,SUPERNET.gatewayid)) != 0 )
+        {
+            array = cJSON_CreateArray();
+            cJSON_AddItemToArray(array,msig_itemjson(coin->name,NXTaddr,coinaddr,pubkey,1));
+            cJSON_AddItemToObject(msigjson,"pubkeys",array);
+            printf("send.(%s)\n",cJSON_Print(msigjson));
+            MGW_publishjson(retbuf,msigjson);
+            free_json(msigjson);
+        }
+    }
+}
+
+char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
+{
+    char pubkey[512],NXTaddr[64],account[512],coinaddr[512],*retstr = 0;
+    cJSON *json,*item,*array = cJSON_CreateArray();
+    uint64_t nxt64bits;
+    int32_t i,n;
+    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listreceivedbyaddress","[1, true]")) != 0 )
+    {
+        //printf("listaccounts.(%s)\n",retstr);
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    item = cJSON_GetArrayItem(json,i);
+                    copy_cJSON(account,cJSON_GetObjectItem(item,"account"));
+                    if ( is_decimalstr(account) > 0 )
+                    {
+                        nxt64bits = calc_nxt64bits(account);
+                        expand_nxt64bits(NXTaddr,nxt64bits);
+                        if ( strcmp(account,NXTaddr) == 0 )
+                        {
+                            copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
+                            if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
+                                cJSON_AddItemToArray(array,msig_itemjson(coinstr,account,coinaddr,pubkey,1));
+                        }
+                        else printf("decimal.%d (%s) -> (%s)? ",is_decimalstr(account),account,NXTaddr);
+                    }
+                }
+            }
+            free_json(json);
+        } else printf("couldnt parse.(%s)\n",retstr);
+        free(retstr);
+    } else printf("listreceivedbyaddress doesnt return any accounts\n");
+    retstr = cJSON_Print(array);
+    _stripwhite(retstr,' ');
+    return(retstr);
 }
 
 char *devMGW_command(char *jsonstr,cJSON *json)

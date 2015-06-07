@@ -84,62 +84,6 @@ int32_t get_pubkey(char pubkey[512],char *coinstr,char *serverport,char *userpas
     return((int32_t)len);
 }
 
-cJSON *msig_itemjson(char *coinstr,char *account,char *coinaddr,char *pubkey,int32_t allfields)
-{
-    cJSON *item = cJSON_CreateObject();
-    cJSON_AddItemToObject(item,"coin",cJSON_CreateString(coinstr));
-    cJSON_AddItemToObject(item,"userNXT",cJSON_CreateString(account));
-    cJSON_AddItemToObject(item,"coinaddr",cJSON_CreateString(coinaddr));
-    cJSON_AddItemToObject(item,"pubkey",cJSON_CreateString(pubkey));
-    if ( allfields != 0 && SUPERNET.gatewayid >= 0 )
-    {
-        cJSON_AddItemToObject(item,"gatewayNXT",cJSON_CreateString(SUPERNET.NXTADDR));
-        cJSON_AddItemToObject(item,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
-    }
-    //printf("(%s)\n",cJSON_Print(item));
-    return(item);
-}
-
-char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
-{
-    char pubkey[512],NXTaddr[64],account[512],coinaddr[512],*retstr = 0;
-    cJSON *json,*item,*array = cJSON_CreateArray();
-    uint64_t nxt64bits;
-    int32_t i,n;
-    if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listreceivedbyaddress","[1, true]")) != 0 )
-    {
-        //printf("listaccounts.(%s)\n",retstr);
-        if ( (json= cJSON_Parse(retstr)) != 0 )
-        {
-            if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    item = cJSON_GetArrayItem(json,i);
-                    copy_cJSON(account,cJSON_GetObjectItem(item,"account"));
-                    if ( is_decimalstr(account) > 0 )
-                    {
-                        nxt64bits = calc_nxt64bits(account);
-                        expand_nxt64bits(NXTaddr,nxt64bits);
-                        if ( strcmp(account,NXTaddr) == 0 )
-                        {
-                            copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
-                            if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
-                                cJSON_AddItemToArray(array,msig_itemjson(coinstr,account,coinaddr,pubkey,1));
-                        }
-                        else printf("decimal.%d (%s) -> (%s)? ",is_decimalstr(account),account,NXTaddr);
-                    }
-                }
-            }
-            free_json(json);
-        } else printf("couldnt parse.(%s)\n",retstr);
-        free(retstr);
-    } else printf("listreceivedbyaddress doesnt return any accounts\n");
-    retstr = cJSON_Print(array);
-    _stripwhite(retstr,' ');
-    return(retstr);
-}
-
 cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass)
 {
     char *retstr;
