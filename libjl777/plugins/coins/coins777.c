@@ -165,7 +165,7 @@ struct coin777
     char name[16],serverport[512],userpass[4096],*jsonstr; cJSON *argjson;
     struct ramchain ramchain;
     struct mgw777 mgw;
-    int32_t minconfirms,minoutput;
+    int32_t minconfirms; uint64_t minoutput;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
