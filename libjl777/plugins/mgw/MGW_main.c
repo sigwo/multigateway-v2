@@ -1471,22 +1471,16 @@ cJSON *mgw_create_vins_json_params(cJSON **keysobjp,char *coinstr,char *serverpo
 
 struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format)
 {
-    struct cointx_info *rettx = 0; char *txbytes,*signedtx,*txbytes2,*rawbytes,*paramstr,*paramstr2; cJSON *array,*vinsobj=0,*keysobj=0;
+    struct cointx_info *rettx = 0; char *txbytes,*signedtx,*txbytes2,*paramstr; cJSON *array,*vinsobj=0,*keysobj=0;
     int32_t allocsize,isBTC,len = 65536;
-    rawbytes = calloc(1,len);
-    if ( _emit_cointx(rawbytes,len,cointx,oldtx_format) < 0 )
+    txbytes = calloc(1,len);
+    if ( _emit_cointx(txbytes,len,cointx,oldtx_format) < 0 )
     {
-        free(rawbytes);
+        free(txbytes);
         return(0);
     }
     vinsobj = mgw_create_vins_json_params(&keysobj,coinstr,serverport,userpass,cointx,gatewayid,numgateways);
-    array = cJSON_CreateArray();
-    cJSON_AddItemToArray(array,cJSON_CreateString(rawbytes)), free(rawbytes);
-    cJSON_AddItemToArray(array,vinsobj);
-    paramstr = cJSON_Print(array);
-    if ( keysobj != 0 )
-        cJSON_AddItemToArray(array,keysobj);
-    if ( vinsobj != 0 && keysobj != 0 && (txbytes= bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr)) != 0 )
+    if ( vinsobj != 0 && keysobj != 0 && txbytes != 0 )//(txbytes= bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr)) != 0 )
     {
         fprintf(stderr,"len.%ld calc_rawtransaction retstr.(%s)\n",strlen(txbytes),txbytes);
         if ( opreturn >= 0 )
@@ -1495,15 +1489,18 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
             if ( (txbytes2= mgw_OP_RETURN(&cointx->outputs[opreturn],txbytes,isBTC,&redeemtxid,1,isBTC)) == 0 )
             {
                 fprintf(stderr,"error replacing with OP_RETURN.%s txout.%d (%s)\n",coinstr,opreturn,txbytes);
-                free(txbytes), free(rawbytes), free_json(array);
+                free(txbytes);
                 return(0);
             }
             free(txbytes);
             txbytes = txbytes2;
         }
-        cJSON_ReplaceItemInArray(array,0,cJSON_CreateString(txbytes)), free(txbytes);
-        paramstr2 = cJSON_Print(array);
-        if ( (signedtx= mgw_sign_localtx(&cointx->batchcrc,coinstr,serverport,userpass,paramstr2,gatewayid,numgateways)) != 0 )
+        array = cJSON_CreateArray();
+        cJSON_AddItemToArray(array,cJSON_CreateString(txbytes));
+        cJSON_AddItemToArray(array,vinsobj);
+        cJSON_AddItemToArray(array,keysobj);
+        paramstr = cJSON_Print(array);
+        if ( (signedtx= mgw_sign_localtx(&cointx->batchcrc,coinstr,serverport,userpass,paramstr,gatewayid,numgateways)) != 0 )
         {
             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
             printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
@@ -1513,11 +1510,16 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
             rettx->isallocated = allocsize;
             strcpy(rettx->signedtx,signedtx);
             free(signedtx);
-            cointx = 0;
         } else fprintf(stderr,"error _sign_localtx.(%s)\n",txbytes);
-        free(paramstr2);
-    } else fprintf(stderr,"error creating rawtransaction.(%s)\n",paramstr);
-    free_json(array);
+        free(paramstr);
+        free_json(array);
+    }
+    else
+    {
+        fprintf(stderr,"error creating rawtransaction.(%s)\n",txbytes);
+        if ( vinsobj != 0 )
+            free_json(vinsobj);
+    }
     return(rettx);
 }
 
