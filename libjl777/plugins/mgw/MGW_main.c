@@ -1170,7 +1170,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
             for (i=0; i<L.numaddrtx; i++)
             {
                 coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
-                if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,ATX.unspentind)) >= 0 && extra->vout == vout && strcmp(txidstr,extra->coindata) == 0 )
+                if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,ATX.unspentind)) >= 0 )
                 {
                     if ( mgw_is_mgwtx(coin,txidind) != 0 )
                     {
