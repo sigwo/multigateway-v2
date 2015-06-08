@@ -252,7 +252,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
 
 struct coin777 *coin777_find(char *coinstr,int32_t autocreate)
 {
-    int32_t i;
+    int32_t i,j,n; cJSON *item,*array; char *str;
     if ( COINS.num > 0 )
     {
         for (i=0; i<COINS.num; i++)
@@ -262,7 +262,21 @@ struct coin777 *coin777_find(char *coinstr,int32_t autocreate)
         }
     }
     if ( autocreate != 0 )
-        return(coin777_create(coinstr,0));
+    {
+        if ( (array= cJSON_GetObjectItem(COINS.argjson,"coins")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+        {
+            for (i=j=0; i<n; i++)
+            {
+                item = cJSON_GetArrayItem(array,i);
+                str = cJSON_str(cJSON_GetObjectItem(item,"name"));
+                if ( str != 0 && strcmp(str,coinstr) == 0 )
+                {
+                    printf("CALL coin777_create.(%s) (%s)\n",coinstr,cJSON_Print(item));
+                    return(coin777_create(coinstr,item));
+                }
+            }
+        }
+    }
     return(0);
 }
 
