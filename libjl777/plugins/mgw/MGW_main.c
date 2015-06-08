@@ -160,7 +160,7 @@ int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char 
 int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *userpass,char *normaladdr,char *msigaddr,int32_t gatewayid,int32_t numgateways) //could map to rawind, but this is rarely called
 {
     int32_t ismine,len; char buf[8192]; struct multisig_addr *msig;
-    redeemScript[0] = normaladdr[0] = 0;
+    redeemScript[0] = normaladdr[0] = 0; len = sizeof(buf);
     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coinstr,msigaddr)) == 0 )
     {
         strcpy(normaladdr,msigaddr);
@@ -1497,8 +1497,8 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
         cJSON_AddItemToArray(array,cJSON_Duplicate(vinsobj,1));
         cJSON_AddItemToArray(array,cJSON_Duplicate(voutsobj,1));
         paramstr = cJSON_Print(array), free_json(array), _stripwhite(paramstr,' ');
+        fprintf(stderr,"len.%ld calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
-        fprintf(stderr,"len.%ld calc_rawtransaction txbytes.(%s) params.(%s)\n",strlen(txbytes),txbytes,paramstr);
         free(paramstr);
         if ( opreturn >= 0 )
         {
