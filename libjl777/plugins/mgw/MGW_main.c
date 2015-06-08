@@ -1472,12 +1472,12 @@ cJSON *mgw_create_vins(cJSON **keysobjp,char *coinstr,char *serverport,char *use
 cJSON *mgw_create_vouts(struct cointx_info *cointx)
 {
     int32_t i;
-    cJSON *json,*array = cJSON_CreateArray();
+    cJSON *json;//,*array = cJSON_CreateArray();
     json = cJSON_CreateObject();
     for (i=0; i<cointx->numoutputs; i++)
         cJSON_AddItemToObject(json,cointx->outputs[0].coinaddr, cJSON_CreateNumber(dstr(cointx->outputs[i].value)));
-    cJSON_AddItemToArray(array,json);
-    return(array);
+    //cJSON_AddItemToArray(array,json);
+    return(json);
 }
 
 struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format)
@@ -1494,7 +1494,6 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
     if ( vinsobj != 0 && (voutsobj= mgw_create_vouts(cointx)) != 0 && keysobj != 0 && txbytes != 0 )
     {
         array = cJSON_CreateArray();
-        cJSON_AddItemToArray(array,cJSON_CreateString(txbytes));
         cJSON_AddItemToArray(array,cJSON_Duplicate(vinsobj,1));
         cJSON_AddItemToArray(array,cJSON_Duplicate(voutsobj,1));
         paramstr = cJSON_Print(array), free_json(array), _stripwhite(paramstr,' ');
