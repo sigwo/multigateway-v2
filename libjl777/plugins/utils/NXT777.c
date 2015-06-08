@@ -937,7 +937,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
 int32_t update_NXT_assettransfers(struct mgw777 *mgw)
 {
     int32_t len,verifyflag = 0;
-    uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr; struct extra_info extra;
+    uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],nxt_txid[64],*txidjsonstr; struct extra_info extra;
     mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
     mgw->withdrawsum = mgw->numwithdraws = 0;
     if ( (len= NXT_revassettxid(&extra,mgw->assetidbits,0)) == sizeof(extra) )
@@ -950,7 +950,8 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
             if ( (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
             {
                 int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra);
-                if ( mgw_update_redeem(mgw,&extra) != 0 )
+                expand_nxt64bits(nxt_txid,extra.txidbits);
+                if ( in_jsonarray(mgw->limbo,nxt_txid) == 0 && mgw_update_redeem(mgw,&extra) != 0 )
                 {
                     extra.flags |= MGW_WITHDRAWDONE;
                     NXT_set_revassettxid(mgw->assetidbits,i,&extra);
