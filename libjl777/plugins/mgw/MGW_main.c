@@ -1111,13 +1111,14 @@ int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t 
     return(0);
 }
 
-int32_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
+uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
 {
     struct unspent_info U; struct coin777_addrinfo A; struct spend_info S; bits256 txid; struct multisig_addr *msig;
     uint8_t script[4096],*scriptptr; char scriptstr[8192],txidstr[128],buf[8192],zero12[12];
-    uint32_t txoffsets[2],nexttxoffsets[2],unspentind,spendind; uint64_t redeemtxid; int32_t j,scriptlen,len,flag = 0;
+    uint32_t txoffsets[2],nexttxoffsets[2],unspentind,spendind; uint64_t redeemtxid = 0; int32_t j,scriptlen,vout,len;
     if ( coin777_RWmmap(0,txoffsets,coin,&coin->ramchain.txoffsets,txidind) == 0 && coin777_RWmmap(0,nexttxoffsets,coin,&coin->ramchain.txoffsets,txidind+1) == 0 )
     {
+        coin777_RWmmap(0,&txid,coin,&coin->ramchain.txidbits,txidind);
         init_hexbytes_noT(txidstr,txid.bytes,sizeof(txid));
         for (spendind=txoffsets[1]; spendind<nexttxoffsets[1]; spendind++)
         {
@@ -1126,17 +1127,14 @@ int32_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                 if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,S.unspentind) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 )
                 {
                     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coin->name,A.coinaddr)) == 0 )
-                    {
-                        printf("cant find (%s) %.8f\n",A.coinaddr,dstr(U.value));
                         return(0);
-                    }
                 } else printf("couldnt find spend ind.%u\n",S.unspentind);
             } else printf("error getting spendind.%u\n",spendind);
         }
         printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
-        flag = 1;
+        redeemtxid = 1;
         memset(zero12,0,sizeof(zero12));
-        for (unspentind=txoffsets[0]; unspentind<nexttxoffsets[0]; unspentind++)
+        for (unspentind=txoffsets[0],vout=0; unspentind<nexttxoffsets[0]; unspentind++,vout++)
         {
             if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,unspentind) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 )
             {
@@ -1150,18 +1148,18 @@ int32_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                     scriptptr = &script[3];
                     for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
                         redeemtxid <<= 8, redeemtxid |= (*scriptptr++ & 0xff);
-                    printf("REDEEMTXID.(%llu) ",(long long)redeemtxid);
+                    printf("(v%d %.8f REDEEMTXID.%llu) ",vout,dstr(U.value),(long long)redeemtxid);
                 }
                 printf("[a%d %.8f] ",U.addrind,dstr(U.value));
             } else printf("couldnt find unspentind.%u\n",unspentind);
         }
     } else printf("cant find txoffsets[txidind.%u]\n",txidind);
-    return(flag);
+    return(redeemtxid);
 }
 
 int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
 {
-    uint32_t txidind,addrind = 0,firstblocknum; int32_t i,vout; char txidstr[256];
+    uint32_t txidind,addrind = 0,firstblocknum; int32_t i,vout; uint64_t redeemtxid; char txidstr[256];
     struct coin777_Lentry L; struct addrtx_info ATX; struct coin777 *coin = coin777_find(mgw->coinstr,0);
     if ( coin != 0 && coin->ramchain.readyflag != 0 && (extra->flags & MGW_PENDINGREDEEM) != 0 )
     {
@@ -1172,11 +1170,13 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                 coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
                 if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,ATX.unspentind)) >= 0 )
                 {
-                    if ( mgw_is_mgwtx(coin,txidind) != 0 )
+                    if ( (redeemtxid= mgw_is_mgwtx(coin,txidind)) == extra->txidbits )
                     {
-                    } else printf("cant find txidind.%u\n",txidind);
+                        printf("MATCHED REDEEM!\n");
+                        return(MGW_WITHDRAWDONE);
+                    }
                     break;
-                } else printf("(%s.v%d != %s.v%d)\n",txidstr,vout,extra->coindata,extra->vout);
+                } else printf("(%s.v%d != %s)\n",txidstr,vout,extra->coindata);
             }
             printf("PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
         } else printf("skip flag.%d (%s).v%d\n",extra->flags,extra->coindata,extra->vout);

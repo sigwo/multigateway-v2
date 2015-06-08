@@ -913,8 +913,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     revkey[0] = mgw->assetidbits;
     //printf("issue.(%s) max.%ld\n",cmd,max);
-    jsonstr = issue_NXTPOST(cmd);
-    if ( jsonstr != 0 )
+    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
         if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
         {
