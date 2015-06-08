@@ -1389,6 +1389,9 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     int32_t opreturn_output,numoutputs = 0;
     struct cointx_info *cointx,TX,*rettx = 0; struct mgw777 *mgw = &coin->mgw;
     cointx = &TX;
+    printf("minoutput.%llu\n",(long long)coin->minoutput);
+    if ( coin->minoutput == 0 )
+        coin->minoutput = 1;
     memset(cointx,0,sizeof(*cointx));
     strcpy(cointx->coinstr,coin->name);
     cointx->redeemtxid = redeemtxid;
