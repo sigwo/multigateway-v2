@@ -1087,7 +1087,7 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
 {
     struct unspent_info U; struct coin777_addrinfo A; struct spend_info S; bits256 txid; struct multisig_addr *msig;
     uint8_t script[4096],*scriptptr; char scriptstr[8192],txidstr[128],buf[8192],zero12[12];
-    uint32_t txoffsets[2],nexttxoffsets[2],unspentind,spendind; uint64_t redeemtxid = 0; int32_t j,scriptlen,vout,len;
+    uint32_t txoffsets[2],nexttxoffsets[2],unspentind,spendind; uint64_t redeemtxid = 0; int32_t j,scriptlen,vout,len,missing = 0;
     if ( coin777_RWmmap(0,txoffsets,coin,&coin->ramchain.txoffsets,txidind) == 0 && coin777_RWmmap(0,nexttxoffsets,coin,&coin->ramchain.txoffsets,txidind+1) == 0 )
     {
         if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,txoffsets[0]) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 && (U.addrind == coin->mgw.marker_addrind || U.addrind == coin->mgw.marker2_addrind) )
@@ -1100,15 +1100,18 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
             {
                 if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,S.unspentind) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 )
                 {
+                    printf("-(%s %.8f) ",A.coinaddr,dstr(U.value));
                     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coin->name,A.coinaddr)) == 0 )
                     {
                         if ( strcmp(A.coinaddr,"bNbTjgpLmwj5Pjmz87GSFY4dyzHaxQkLhh") == 0 )
                             printf("false negative should have.(%s)\n",A.coinaddr);
-                        return(redeemtxid);
+                        missing++;
                     }
                 } else printf("couldnt find spend ind.%u\n",S.unspentind);
             } else printf("error getting spendind.%u\n",spendind);
         }
+        if ( missing != 0 )
+            return(redeemtxid);
         if ( strcmp(A.coinaddr,"bNbTjgpLmwj5Pjmz87GSFY4dyzHaxQkLhh") == 0 )
             printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
         redeemtxid |= 2;
@@ -1130,8 +1133,7 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                     if ( strcmp(A.coinaddr,"bNbTjgpLmwj5Pjmz87GSFY4dyzHaxQkLhh") == 0 )
                         printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
                 }
-                if ( strcmp(A.coinaddr,"bNbTjgpLmwj5Pjmz87GSFY4dyzHaxQkLhh") == 0 )
-                    printf("[a%d %.8f] ",U.addrind,dstr(U.value));
+                printf("+[a%d %.8f] ",U.addrind,dstr(U.value));
             } else printf("couldnt find unspentind.%u\n",unspentind);
         }
     } else printf("cant find txoffsets[txidind.%u]\n",txidind);
