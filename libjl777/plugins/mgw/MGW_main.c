@@ -102,7 +102,7 @@ struct multisig_addr *find_msigaddr(struct multisig_addr *msig,int32_t *lenp,cha
 {
     char keystr[1024];
     sprintf(keystr,"%s.%s",coinstr,multisigaddr);
-    printf("search_msig.(%s)\n",keystr);
+    //printf("search_msig.(%s)\n",keystr);
     return(db777_read(msig,lenp,0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,0));
 }
 
@@ -1131,7 +1131,7 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                 } else printf("couldnt find spend ind.%u\n",S.unspentind);
             } else printf("error getting spendind.%u\n",spendind);
         }
-        printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
+        //printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
         redeemtxid = 1;
         memset(zero12,0,sizeof(zero12));
         for (unspentind=txoffsets[0],vout=0; unspentind<nexttxoffsets[0]; unspentind++,vout++)
@@ -1148,9 +1148,9 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                     scriptptr = &script[3];
                     for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
                         redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
-                    printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
+                    //printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
                 }
-                printf("[a%d %.8f] ",U.addrind,dstr(U.value));
+                //printf("[a%d %.8f] ",U.addrind,dstr(U.value));
             } else printf("couldnt find unspentind.%u\n",unspentind);
         }
     } else printf("cant find txoffsets[txidind.%u]\n",txidind);
