@@ -1418,6 +1418,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
         cointx->outputs[numoutputs++].value = value - MGWfee - coin->minoutput - mgw->txfee;
     }
     opreturn_output = numoutputs;
+    printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
     strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
     cointx->outputs[numoutputs++].value = coin->minoutput;
     cointx->numoutputs = numoutputs;
