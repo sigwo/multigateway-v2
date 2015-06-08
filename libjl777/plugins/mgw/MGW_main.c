@@ -1678,7 +1678,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
     struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
-    struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
+    cJSON *json; char numstr[64],*jsonstr; struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
     ramchain_prepare(coin,&coin->ramchain);
     if ( mgw->unspents != 0 )
         free(mgw->unspents);
@@ -1737,7 +1737,15 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
             printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(cointx->inputsum),cointx->numinputs,dstr(cointx->change),dstr(cointx->inputsum)-dstr(cointx->change));
             if ( cointx != 0 )
             {
+                json = cJSON_CreateObject();
+                sprintf(numstr,"%llu",(long long)extra->txidbits), cJSON_AddItemToObject(json,"redeemtxid",cJSON_CreateString(numstr));
+                cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
+                cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
+                cJSON_AddItemToObject(json,"signedtx",cJSON_CreateString(cointx->signedtx));
                 free(cointx);
+                jsonstr = cJSON_Print(json), free_json(json), _stripwhite(jsonstr,' ');
+                printf("send.(%s)\n",jsonstr);
+                free(jsonstr);
             }
         }
     }
