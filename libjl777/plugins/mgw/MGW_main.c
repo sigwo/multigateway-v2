@@ -1110,7 +1110,7 @@ uint64_t mgw_decode_OP_RETURN(uint8_t *script,int32_t scriptlen)
         scriptptr = &script[4];
     else return(0);
     for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
-        redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
+        redeemtxid <<= 8, redeemtxid |= (scriptptr[j] & 0xff);
 printf("(REDEEMTXID.%llx %llu) ",(long long)redeemtxid,(long long)redeemtxid);
     return(redeemtxid);
 }
