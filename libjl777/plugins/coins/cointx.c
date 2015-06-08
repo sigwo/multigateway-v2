@@ -444,7 +444,7 @@ cJSON *_create_vins_json_params(char **localcoinaddrs,char *coinstr,char *server
         else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript,normaladdr,vin->coinaddr);
         if ( localcoinaddrs != 0 )
             localcoinaddrs[i] = vin->coinaddr;
-        printf("vin.(%s)\n",cJSON_Print(json));
+        //printf("vin.(%s)\n",cJSON_Print(json));
         cJSON_AddItemToArray(array,json);
     }
     return(array);
