@@ -1360,6 +1360,7 @@ int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,str
 {
     int64_t remainder,sum = 0; int32_t i,numinputs = 0; uint32_t txidind; uint64_t value;
     struct unspent_info *vin; struct cointx_input I; struct coin777_addrinfo A; struct mgw777 *mgw = &coin->mgw;
+    *nump = 0;
     remainder = amount + txfee;
     for (i=0; i<mgw->numunspents&&i<max-1; i++)
     {
@@ -1372,7 +1373,7 @@ int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,str
             memset(&I,0,sizeof(I));
             strcpy(I.coinaddr,A.coinaddr);
             I.tx.vout = coin777_unspentmap(&txidind,I.tx.txidstr,coin,vin->rawind_or_blocknum);
-            printf("{%s %s} ",I.coinaddr,I.tx.txidstr);
+            printf("{%s %s}.i%d ",I.coinaddr,I.tx.txidstr,numinputs);
             I.value = vin->value;
             inputs[numinputs++] = I;
             memset(vin,0,sizeof(*vin));
@@ -1451,7 +1452,7 @@ fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
                 if (  SUPERNET.gatewayid >= 0 )
                     rettx = createrawtransaction(coin->name,coin->serverport,coin->userpass,rawparams,cointx,opreturn_output,redeemtxid,SUPERNET.gatewayid,NUM_GATEWAYS);
                 free(rawparams);
-            } else fprintf(stderr,"error creating rawparams\n");
+            } else fprintf(stderr,"error creating rawparams (%s)\n",cointx->inputs[0].tx.txidstr);
         } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(cointx->inputsum),dstr(cointx->amount),dstr(mgw->txfee));
     } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",coin->name,dstr(mgw->balance),dstr(cointx->amount),dstr(mgw->txfee));
     return(rettx);

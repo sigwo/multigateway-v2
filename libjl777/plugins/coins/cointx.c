@@ -516,7 +516,7 @@ char *_createrawtxid_json_params(char *coinstr,char *serverport,char *userpass,s
         }
         else free_json(vinsobj);
     } else printf("_error create_vins_json_params\n");
-printf("_createrawtxid_json_params.%s\n",paramstr);
+//printf("_createrawtxid_json_params.%s\n",paramstr);
     return(paramstr);
 }
 
