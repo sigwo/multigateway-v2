@@ -1239,8 +1239,9 @@ int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
 
 uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
 {
-    struct multisig_addr *msig = args;
+    struct mgw777 *mgw; struct multisig_addr *msig = args;
     int32_t i,Ustatus,status,vout; uint32_t unspentind,txidind; char txidstr[512]; uint64_t nxt64bits,atx_value,sum = 0; struct unspent_info U;
+    mgw = &coin->mgw;
     for (i=0; i<num; i++)
     {
         unspentind = unspents[i].unspentind, unspents[i].spendind = 1;
@@ -1284,6 +1285,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                 if ( (Ustatus & MGW_ISINTERNAL) != 0 )
                 {
                     sum += U.value;
+                    mgw->unspents = realloc(mgw->unspents,sizeof(*mgw->unspents) * (mgw->numunspents + 1)), mgw->unspents[mgw->numunspents++] = U;
                     //printf("ISINTERNAL.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 }
                 else if ( (Ustatus & MGW_DEPOSITDONE) == 0 )
@@ -1306,22 +1308,88 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     else
                     {
                         sum += U.value;
+                        mgw->unspents = realloc(mgw->unspents,sizeof(*mgw->unspents) * (mgw->numunspents + 1)), mgw->unspents[mgw->numunspents++] = U;
                         mgw_markunspent(txidstr,vout,Ustatus | MGW_DEPOSITDONE);
                     }
                 }
                 else if ( (Ustatus & MGW_DEPOSITDONE) != 0 )
+                {
                     sum += U.value;
+                    mgw->unspents = realloc(mgw->unspents,sizeof(*mgw->unspents) * (mgw->numunspents + 1)), mgw->unspents[mgw->numunspents++] = U;
+                }
             }
         } else printf("error getting unspendind.%u\n",unspentind);
     }
     return(sum);
 }
 
+struct unspent_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struct unspent_info *unspents,int32_t numunspents,uint64_t value)
+{
+    int32_t i; uint64_t above,below,gap,atx_value; struct unspent_info *vin,*abovevin,*belowvin;
+    abovevin = belowvin = 0;
+    *valuep = 0;
+    for (above=below=i=0; i<numunspents; i++)
+    {
+        vin = &unspents[i];
+        *valuep = atx_value = vin->value;
+        if ( atx_value == value )
+            return(vin);
+        else if ( atx_value > value )
+        {
+            gap = (atx_value - value);
+            if ( above == 0 || gap < above )
+            {
+                above = gap;
+                abovevin = vin;
+            }
+        }
+        else
+        {
+            gap = (value - atx_value);
+            if ( below == 0 || gap < below )
+            {
+                below = gap;
+                belowvin = vin;
+            }
+        }
+    }
+    return((abovevin != 0) ? abovevin : belowvin);
+}
+
+int64_t coin777_inputs(int64_t *changep,int32_t *nump,struct coin777 *coin,struct unspent_info *inputs,int32_t max,uint64_t amount,uint64_t txfee)
+{
+    int64_t remainder,sum = 0; int32_t i,numinputs = 0; uint64_t value; struct unspent_info *vin; struct mgw777 *mgw = &coin->mgw;
+    remainder = amount + txfee;
+    for (i=0; i<mgw->numunspents&&i<max-1; i++)
+    {
+        if ( (vin= coin777_bestfit(&value,coin,mgw->unspents,mgw->numunspents,remainder)) != 0 )
+        {
+            sum += vin->value;
+            remainder -= vin->value;
+            inputs[numinputs++] = *vin;
+            memset(vin,0,sizeof(*vin));
+            if ( sum >= (amount + txfee) )
+            {
+                *nump = numinputs;
+                *changep = (sum - amount - txfee);
+                fprintf(stderr,"numinputs %d sum %.8f vs amount %.8f change %.8f -> miners %.8f\n",numinputs,dstr(sum),dstr(amount),dstr(*changep),dstr(sum - *changep - amount));
+                return(sum);
+            }
+        } else printf("no bestfit found i.%d of %d\n",i,mgw->numunspents);
+    }
+    fprintf(stderr,"error numinputs %d sum %.8f\n",numinputs,dstr(sum));
+    return(0);
+}
+
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
     struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
-    struct extra_info *extra;
+    struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
     ramchain_prepare(coin,&coin->ramchain);
+    if ( mgw->unspents != 0 )
+        free(mgw->unspents);
+    mgw->unspents = 0;
+    mgw->numunspents = 0;
     coin->ramchain.paused = 0;
     smallestaddr[0] = smallestaddrB[0] = 0;
     if ( coin == 0 )
@@ -1329,10 +1397,10 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         printf("mgw_calc_MGWunspent: no coin777\n");
         return(0);
     }
-    if ( coin->mgw.marker_addrind == 0 && coin->mgw.marker != 0 )
-        coin->mgw.marker_addrind = coin777_addrind(&firstblocknum,coin,coin->mgw.marker);
-    if ( coin->mgw.marker2_addrind == 0 && coin->mgw.marker2 != 0 )
-        coin->mgw.marker2_addrind = coin777_addrind(&firstblocknum,coin,coin->mgw.marker2);
+    if ( mgw->marker_addrind == 0 && mgw->marker != 0 )
+        mgw->marker_addrind = coin777_addrind(&firstblocknum,coin,mgw->marker);
+    if ( mgw->marker2_addrind == 0 && mgw->marker2 != 0 )
+        mgw->marker2_addrind = coin777_addrind(&firstblocknum,coin,mgw->marker2);
     if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,DB_msigs,"value",0)) != 0 )
     {
         for (smallest=i=m=0; i<n; i++)
@@ -1361,16 +1429,18 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         if ( Debuglevel > 2 )
             printf("smallest (%s %.8f)\n",smallestaddr,dstr(smallest));
     }
-    coin->mgw.circulation = circulation = calc_circulation(0,&coin->mgw,0);
-    coin->mgw.unspent = unspent;
-    balance = (unspent - circulation - coin->mgw.withdrawsum);
-    printf("%s circulation %.8f vs unspents %.8f withdrawsum -%.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(coin->mgw.withdrawsum),dstr(balance),m);
-    if ( balance >= 0 && coin->mgw.numwithdraws > 0 )
+    mgw->circulation = circulation = calc_circulation(0,mgw,0);
+    mgw->unspent = unspent;
+    balance = (unspent - circulation - mgw->withdrawsum);
+    printf("%s circulation %.8f vs unspents %.8f withdrawsum -%.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(mgw->withdrawsum),dstr(balance),m);
+    if ( balance >= 0 && mgw->numwithdraws > 0 )
     {
-        for (i=0; i<coin->mgw.numwithdraws; i++)
+        int64_t inputsum,change; int32_t numinputs;
+        for (i=0; i<mgw->numwithdraws; i++)
         {
-            extra = &coin->mgw.withdraws[i];
-            printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s)\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata);
+            extra = &mgw->withdraws[i];
+            inputsum = coin777_inputs(&change,&numinputs,coin,mgw->inputs,sizeof(mgw->inputs)/sizeof(*mgw->inputs),extra->amount,mgw->txfee);
+            printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(inputsum),numinputs,dstr(change),dstr(inputsum)-dstr(change));
         }
     }
     return(unspent);

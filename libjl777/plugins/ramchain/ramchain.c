@@ -332,68 +332,6 @@ uint32_t *conv_addrjson(int32_t *nump,struct coin777 *coin,cJSON *addrjson)
     return(addrinds);
 }
 
-struct addrtx_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struct addrtx_info *unspents,int32_t numunspents,uint64_t value)
-{
-    uint64_t above,below,gap,atx_value; struct unspent_info U;
-    int32_t i;
-    struct addrtx_info *vin,*abovevin,*belowvin;
-    abovevin = belowvin = 0;
-    *valuep = 0;
-    for (above=below=i=0; i<numunspents; i++)
-    {
-        vin = &unspents[i];
-        if ( vin->spendind != 0 )
-            continue;
-        *valuep = atx_value = coin777_Uvalue(&U,coin,vin->unspentind);
-        if ( atx_value == value )
-            return(vin);
-        else if ( atx_value > value )
-        {
-            gap = (atx_value - value);
-            if ( above == 0 || gap < above )
-            {
-                above = gap;
-                abovevin = vin;
-            }
-        }
-        else
-        {
-            gap = (value - atx_value);
-            if ( below == 0 || gap < below )
-            {
-                below = gap;
-                belowvin = vin;
-            }
-        }
-    }
-    return((abovevin != 0) ? abovevin : belowvin);
-}
-
-int64_t coin777_inputs(int64_t *changep,int32_t *nump,struct coin777 *coin,struct addrtx_info *inputs,int32_t max,struct addrtx_info *unspents,int32_t numunspents,struct cointx_info *cointx,uint64_t amount,uint64_t txfee)
-{
-    int64_t remainder,sum = 0; int32_t i,numinputs = 0; struct addrtx_info *vin; uint64_t atx_value;
-    remainder = amount + txfee;
-    for (i=0; i<numunspents&&i<max-1; i++)
-    {
-        if ( (vin= coin777_bestfit(&atx_value,coin,unspents,numunspents,remainder)) != 0 )
-        {
-            sum += atx_value;
-            remainder -= atx_value;
-            vin->spendind = 1;
-            inputs[numinputs++] = *vin;
-            if ( sum >= (amount + txfee) )
-            {
-                *nump = numinputs;
-                *changep = (sum - amount - txfee);
-                fprintf(stderr,"numinputs %d sum %.8f vs amount %.8f change %.8f -> miners %.8f\n",numinputs,dstr(sum),dstr(amount),dstr(*changep),dstr(sum - *changep - amount));
-                return(sum);
-            }
-        } else printf("no bestfit found i.%d of %d\n",i,numunspents);
-    }
-    fprintf(stderr,"error numinputs %d sum %.8f\n",numinputs,dstr(sum));
-    return(0);
-}
-
 int32_t ramchain_unspents(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson)
 {
     //int32_t ledger_unspentmap(char *txidstr,struct ledger_info *ledger,uint32_t unspentind);
