@@ -1164,7 +1164,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                     {
                         printf("MATCHED REDEEM!\n");
                         return(MGW_WITHDRAWDONE);
-                    } else printf(" %s.v%d for %s\n",txidstr,vout,extra->coindata);
+                    } //else printf(" %s.v%d for %s\n",txidstr,vout,extra->coindata);
                 } else printf("(%s.v%d != %s)\n",txidstr,vout,extra->coindata);
             }
             printf("PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
