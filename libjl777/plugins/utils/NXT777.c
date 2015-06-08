@@ -119,7 +119,7 @@ struct NXT_acct
 #define MGW_WITHDRAWDONE 16
 #define MGW_IGNORE 128
 #define MGW_ERRORSTATUS 0x8000
-struct extra_info { uint64_t assetidbits,txidbits,amount; int32_t ind,vout,flags; char coindata[128]; };
+struct extra_info { uint64_t assetidbits,txidbits,senderbits,receiverbits,amount; int32_t ind,vout,flags; char coindata[128]; };
 
 struct NXT_AMhdr { uint32_t sig; int32_t size; uint64_t nxt64bits; };
 struct compressed_json { uint32_t complen,sublen,origlen,jsonlen; unsigned char encoded[128]; };
@@ -148,7 +148,6 @@ int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t 
 char *NXT_assettxid(uint64_t assettxid);
 uint64_t assetmult(char *assetname,char *assetidstr);
 int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra);
-int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout);
 cJSON *NXT_convjson(cJSON *array);
 
 #endif
@@ -707,7 +706,7 @@ char *NXT_assettxid(uint64_t assettxid)
     return(retstr);
 }
 
-void _set_NXT_sender(char *sender,cJSON *txobj)
+uint64_t _set_NXT_sender(char *sender,cJSON *txobj)
 {
     cJSON *senderobj;
     senderobj = cJSON_GetObjectItem(txobj,"sender");
@@ -716,23 +715,18 @@ void _set_NXT_sender(char *sender,cJSON *txobj)
     else if ( senderobj == 0 )
         senderobj = cJSON_GetObjectItem(txobj,"account");
     copy_cJSON(sender,senderobj);
+    if ( sender[0] != 0 )
+        return(calc_nxt64bits(sender));
+    else return(0);
 }
 
-int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
-{
-    int32_t slen;
-    slen = (int32_t)strlen(txidstr) >> 1;
-    memcpy(key,&vout,sizeof(vout)), decode_hex(&key[sizeof(vout)],slen,txidstr), slen += sizeof(vout);
-    return(slen);
-}
-
-int32_t process_assettransfer(uint64_t *amountp,int32_t *flagp,char *coindata,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
+int32_t process_assettransfer(uint64_t *senderbitsp,uint64_t *receiverbitsp,uint64_t *amountp,int32_t *flagp,char *coindata,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
 {
     char AMstr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],receiver[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],txid[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],buf[MAX_JSON_FIELD];
     cJSON *attachment,*message,*assetjson,*commentobj,*json = 0,*obj; struct NXT_AMhdr *hdr;
     uint64_t units,estNXT; uint32_t buyNXT,height = 0; int32_t funcid,numconfs,coinv = -1,timestamp=0;
     int64_t type,subtype,n,satoshis,assetoshis = 0;
-    *flagp = MGW_IGNORE, *amountp = 0;
+    *flagp = MGW_IGNORE, *amountp = *senderbitsp = *receiverbitsp = 0;
     if ( txobj != 0 )
     {
         hdr = 0, sender[0] = receiver[0] = 0;
@@ -746,8 +740,10 @@ int32_t process_assettransfer(uint64_t *amountp,int32_t *flagp,char *coindata,in
         type = get_cJSON_int(txobj,"type");
         subtype = get_cJSON_int(txobj,"subtype");
         timestamp = (int32_t)get_cJSON_int(txobj,"blockTimestamp");
-        _set_NXT_sender(sender,txobj);
+        *senderbitsp = _set_NXT_sender(sender,txobj);
         copy_cJSON(receiver,cJSON_GetObjectItem(txobj,"recipient"));
+        if ( receiver[0] != 0 )
+            *receiverbitsp = calc_nxt64bits(receiver);
         attachment = cJSON_GetObjectItem(txobj,"attachment");
         if ( attachment != 0 )
         {
@@ -793,7 +789,10 @@ int32_t process_assettransfer(uint64_t *amountp,int32_t *flagp,char *coindata,in
                         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
                         copy_cJSON(coindata,cJSON_GetObjectItem(json,"withdrawaddr"));
                         if ( coindata[0] != 0 )
-                            *flagp = MGW_PENDINGREDEEM;
+                        {
+                            if ( *receiverbitsp == mgw->issuerbits )
+                                *flagp = MGW_PENDINGREDEEM;
+                        }
                         else
                         {
                             if ( (obj= cJSON_GetObjectItem(json,"coinv")) == 0 )
@@ -883,25 +882,22 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
         }
         if ( flag != 0 )
         {
+            int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status);
             NXT_revassettxid(&extra,mgw->assetidbits,ind);
             savedbits = extra.txidbits;
             memset(&extra,0,sizeof(extra));
-            //if ( savedbits != txidbits )
+            if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
             {
-                int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status);
-                if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
+                extra.vout = process_assettransfer(&extra.senderbits,&extra.receiverbits,&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
+                free_json(txobj);
+                if ( extra.vout >= 0 )
                 {
-                    extra.vout = process_assettransfer(&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
-                    free_json(txobj);
-                    if ( extra.vout >= 0 )
-                    {
-                        mgw_markunspent(extra.coindata,extra.vout,MGW_DEPOSITDONE);
-                        printf("MARK DEPOSITDONE %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
-                    }
-                } else extra.vout = -1;
-                printf("for %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
-                NXT_add_assettxid(mgw->assetidbits,txidbits,txidjsonstr,slen,ind,&extra);
-            }
+                    mgw_markunspent(extra.coindata,extra.vout,MGW_DEPOSITDONE);
+                    printf("MARK DEPOSITDONE %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
+                }
+            } else extra.vout = -1;
+            printf("for %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
+            NXT_add_assettxid(mgw->assetidbits,txidbits,txidjsonstr,slen,ind,&extra);
         }
     }
     return(txidjsonstr);
@@ -959,30 +955,12 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
             NXT_revassettxid(&extra,mgw->assetidbits,i);
             if ( (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
             {
-                uint32_t addrind = 0,firstblocknum; int32_t i; char scriptstr[8192];
-                struct coin777_Lentry L; struct addrtx_info ATX; struct unspent_info U;
-                struct coin777 *coin = coin777_find(mgw->coinstr,0);
-                if ( coin != 0 && coin->ramchain.readyflag != 0 && (addrind= coin777_addrind(&firstblocknum,coin,extra.coindata)) != 0 )
+                int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra);
+                if ( mgw_update_redeem(mgw,&extra) != 0 )
                 {
-                    if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
-                    {
-                        for (i=0; i<L.numaddrtx; i++)
-                        {
-                            coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
-                            if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,ATX.unspentind) == 0 )
-                            {
-                                if ( U.isblocknum == 0 )
-                                {
-                                    coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),!U.isblocknum * U.rawind_or_blocknum,U.addrind);
-                                    //printf("%s\n",scriptstr);
-                                }
-                                if ( U.value > 0.99*extra.amount && U.value <= extra.amount )
-                                    printf("[u%u %.8f] ",ATX.unspentind,dstr(U.value));
-                            } else printf("(%llu %.8f -> %s) cant find unspentind.%u addrind.%u\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata,ATX.unspentind,addrind);
-                        }
-                        printf("PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",(long long)extra.txidbits,dstr(extra.amount),extra.coindata,addrind,L.numaddrtx);
-                    }
-                } else printf("cant find addrind (%s) coin.%p (%llu %.8f)\n",extra.coindata,coin,(long long)extra.txidbits,dstr(extra.amount));
+                    extra.flags |= MGW_WITHDRAWDONE;
+                    NXT_set_revassettxid(mgw->assetidbits,i,&extra);
+                }
             }
             //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
         }

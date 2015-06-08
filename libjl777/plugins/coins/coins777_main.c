@@ -208,9 +208,11 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         coin->minconfirms = get_API_int(cJSON_GetObjectItem(argjson,"minconfirms"),(strcmp("BTC",coinstr) == 0) ? 3 : 10);
         path = cJSON_str(cJSON_GetObjectItem(argjson,"path"));
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
-        
+
         copy_cJSON(coin->mgw.assetidstr,cJSON_GetObjectItem(argjson,"assetid"));
-        coin->mgw.assetidbits = calc_nxt64bits(coin->mgw.assetidstr);
+        coin->mgw.assetidbits = conv_acctstr(coin->mgw.assetidstr);
+        copy_cJSON(coin->mgw.issuer,cJSON_GetObjectItem(argjson,"issuer"));
+        coin->mgw.issuerbits = conv_acctstr(coin->mgw.issuer);
         coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
         strcpy(coin->mgw.coinstr,coinstr);
         if ( (coin->mgw.special= cJSON_GetObjectItem(argjson,"special")) == 0 )

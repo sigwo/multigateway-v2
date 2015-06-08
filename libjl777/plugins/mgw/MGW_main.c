@@ -1111,6 +1111,43 @@ int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t 
     return(0);
 }
 
+int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
+{
+    uint32_t addrind = 0,firstblocknum; int32_t i; char scriptstr[8192];
+    struct coin777_Lentry L; struct addrtx_info ATX; struct unspent_info U;
+    struct coin777 *coin = coin777_find(mgw->coinstr,0);
+    if ( coin != 0 && coin->ramchain.readyflag != 0 && (addrind= coin777_addrind(&firstblocknum,coin,extra->coindata)) != 0 )
+    {
+        if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
+        {
+            for (i=0; i<L.numaddrtx; i++)
+            {
+                coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
+                if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,ATX.unspentind) == 0 )
+                {
+                    if ( U.isblocknum == 0 )
+                    {
+                        coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),!U.isblocknum * U.rawind_or_blocknum,U.addrind);
+                        //printf("%s\n",scriptstr);
+                    }
+                    if ( U.value > 0.99*extra->amount && U.value <= extra->amount )
+                        printf("[u%u %.8f] ",ATX.unspentind,dstr(U.value));
+                } else printf("(%llu %.8f -> %s) cant find unspentind.%u addrind.%u\n",(long long)extra->txidbits,dstr(extra->amount),extra->coindata,ATX.unspentind,addrind);
+            }
+            printf("PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+        }
+    } else printf("cant find addrind (%s) coin.%p (%llu %.8f)\n",extra->coindata,coin,(long long)extra->txidbits,dstr(extra->amount));
+    return(0);
+}
+
+int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
+{
+    int32_t slen;
+    slen = (int32_t)strlen(txidstr) >> 1;
+    memcpy(key,&vout,sizeof(vout)), decode_hex(&key[sizeof(vout)],slen,txidstr), slen += sizeof(vout);
+    return(slen);
+}
+
 int32_t mgw_unspentstatus(char *txidstr,uint16_t vout)
 {
     uint8_t key[1024]; int32_t status,keylen,len = sizeof(status);
