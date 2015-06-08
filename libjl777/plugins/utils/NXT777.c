@@ -561,7 +561,7 @@ void set_NXTpubkey(char *NXTpubkey,char *NXTacct)
 
 int32_t _in_specialNXTaddrs(struct mgw777 *mgw,char *NXTaddr)
 {
-    printf("%s -> %d\n",NXTaddr,in_jsonarray(mgw->special,NXTaddr));
+    //printf("%s -> %d\n",NXTaddr,in_jsonarray(mgw->special,NXTaddr));
     return(in_jsonarray(mgw->special,NXTaddr));
 }
 
