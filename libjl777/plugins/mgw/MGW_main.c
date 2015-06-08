@@ -1360,7 +1360,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     coin->mgw.circulation = circulation = calc_circulation(0,&coin->mgw,0);
     coin->mgw.unspent = unspent;
     printf("%s circulation %.8f vs unspents %.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(unspent) - dstr(circulation),m);
-    if ( circulation < unspent && coin->mgw.numwithdraws > 0 )
+    //if ( circulation < unspent && coin->mgw.numwithdraws > 0 )
     {
         for (i=0; i<coin->mgw.numwithdraws; i++)
         {
