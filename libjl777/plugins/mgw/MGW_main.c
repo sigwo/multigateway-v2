@@ -1358,8 +1358,8 @@ struct unspent_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struc
 
 int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,struct cointx_input *inputs,int32_t max,uint64_t amount,uint64_t txfee)
 {
-    int64_t remainder,sum = 0; int32_t i,numinputs = 0; uint32_t txidind; uint64_t value;
-    struct unspent_info *vin; struct cointx_input I; struct coin777_addrinfo A; struct mgw777 *mgw = &coin->mgw;
+    int64_t remainder,sum = 0; int32_t i,numinputs = 0; uint32_t txidind,unspentind; uint64_t value;
+    struct unspent_info *vin,U; struct cointx_input I; struct coin777_addrinfo A; struct mgw777 *mgw = &coin->mgw;
     *nump = 0;
     remainder = amount + txfee;
     for (i=0; i<mgw->numunspents&&i<max-1; i++)
@@ -1372,8 +1372,11 @@ int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,str
             coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,vin->addrind);
             memset(&I,0,sizeof(I));
             strcpy(I.coinaddr,A.coinaddr);
-            I.tx.vout = coin777_unspentmap(&txidind,I.tx.txidstr,coin,vin->rawind_or_blocknum);
-            printf("{%s %s}.i%d ",I.coinaddr,I.tx.txidstr,numinputs);
+            unspentind = vin->rawind_or_blocknum;
+            coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,unspentind);
+            coin777_scriptstr(coin,I.sigs,sizeof(I.sigs),U.rawind_or_blocknum,U.addrind);
+            I.tx.vout = coin777_unspentmap(&txidind,I.tx.txidstr,coin,unspentind);
+            printf("{%s %s %s}.i%d ",I.coinaddr,I.tx.txidstr,I.sigs,numinputs);
             I.value = vin->value;
             inputs[numinputs++] = I;
             memset(vin,0,sizeof(*vin));
