@@ -1147,8 +1147,8 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                 {
                     scriptptr = &script[3];
                     for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
-                        redeemtxid <<= 8, redeemtxid |= (*scriptptr++ & 0xff);
-                    printf("(v%d %.8f REDEEMTXID.%llu) ",vout,dstr(U.value),(long long)redeemtxid);
+                        redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
+                    printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
                 }
                 printf("[a%d %.8f] ",U.addrind,dstr(U.value));
             } else printf("couldnt find unspentind.%u\n",unspentind);
