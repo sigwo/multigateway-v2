@@ -149,7 +149,8 @@ struct mgw777
     uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust,issuerbits,circulation,unspent,withdrawsum; int64_t balance;
     cJSON *limbo,*special;
     double lastupdate,NXTconvrate;
-    struct unspent_info *unspents,inputs[256];
+    struct unspent_info *unspents;
+    struct cointx_input inputs[256];
     struct MGWstate S,otherS[16],remotesrcs[16];
     struct extra_info withdraws[128];
     /*uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;

@@ -1245,7 +1245,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
     for (i=0; i<num; i++)
     {
         unspentind = unspents[i].unspentind, unspents[i].spendind = 1;
-        atx_value = coin777_Uvalue(&U,coin,unspentind);
+        atx_value = coin777_Uvalue(&U,coin,unspentind), U.rawind_or_blocknum = unspentind;
         if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
         {
             Ustatus = mgw_unspentstatus(txidstr,vout);
@@ -1356,9 +1356,10 @@ struct unspent_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struc
     return((abovevin != 0) ? abovevin : belowvin);
 }
 
-int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,struct unspent_info *inputs,int32_t max,uint64_t amount,uint64_t txfee)
+int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,struct cointx_input *inputs,int32_t max,uint64_t amount,uint64_t txfee)
 {
-    int64_t remainder,sum = 0; int32_t i,numinputs = 0; uint64_t value; struct unspent_info *vin; struct mgw777 *mgw = &coin->mgw;
+    int64_t remainder,sum = 0; int32_t i,numinputs = 0; uint32_t txidind; uint64_t value;
+    struct unspent_info *vin; struct cointx_input I; struct mgw777 *mgw = &coin->mgw;
     remainder = amount + txfee;
     for (i=0; i<mgw->numunspents&&i<max-1; i++)
     {
@@ -1366,7 +1367,11 @@ int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,str
         {
             sum += vin->value;
             remainder -= vin->value;
-            inputs[numinputs++] = *vin;
+            // struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t value; uint32_t sequence; char used; };
+            memset(&I,0,sizeof(I));
+            I.tx.vout = coin777_unspentmap(&txidind,I.tx.txidstr,coin,vin->rawind_or_blocknum);
+            I.value = vin->value;
+            inputs[numinputs++] = I;
             memset(vin,0,sizeof(*vin));
             if ( sum >= (amount + txfee) )
             {
@@ -1389,7 +1394,6 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     int32_t opreturn_output,numoutputs = 0;
     struct cointx_info *cointx,TX,*rettx = 0; struct mgw777 *mgw = &coin->mgw;
     cointx = &TX;
-    printf("minoutput.%llu\n",(long long)coin->minoutput);
     if ( coin->minoutput == 0 )
         coin->minoutput = 1;
     memset(cointx,0,sizeof(*cointx));
