@@ -1419,9 +1419,9 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
         cointx->outputs[numoutputs++].value = value - MGWfee - coin->minoutput - mgw->txfee;
     }
     opreturn_output = numoutputs;
-    printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
-    //strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
-   // cointx->outputs[numoutputs++].value = coin->minoutput;
+    //printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
+    strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
+    cointx->outputs[numoutputs++].value = coin->minoutput;
     cointx->numoutputs = numoutputs;
     cointx->amount = amount = (MGWfee + value + coin->minoutput + mgw->txfee);
     if ( mgw->balance >= 0 )
@@ -1446,7 +1446,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
             }
             if ( (rawparams= _createrawtxid_json_params(coin->name,coin->serverport,coin->userpass,cointx,SUPERNET.gatewayid,NUM_GATEWAYS)) != 0 )
             {
-                //fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
+fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
                 _stripwhite(rawparams,0);
                 if (  SUPERNET.gatewayid >= 0 )
                     rettx = createrawtransaction(coin->name,coin->serverport,coin->userpass,rawparams,cointx,opreturn_output,redeemtxid,SUPERNET.gatewayid,NUM_GATEWAYS);

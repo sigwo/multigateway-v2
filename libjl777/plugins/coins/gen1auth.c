@@ -200,7 +200,7 @@ printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
             cointx = 0;
         } else fprintf(stderr,"error _sign_localtx.(%s)\n",txbytes);
         free(txbytes);
-    } else fprintf(stderr,"error creating rawtransaction\n");
+    } else fprintf(stderr,"error creating rawtransaction.(%s)\n",rawparams);
     return(rettx);
 }
 

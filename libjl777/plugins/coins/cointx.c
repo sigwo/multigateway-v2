@@ -444,6 +444,7 @@ cJSON *_create_vins_json_params(char **localcoinaddrs,char *coinstr,char *server
         else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript,normaladdr,vin->coinaddr);
         if ( localcoinaddrs != 0 )
             localcoinaddrs[i] = vin->coinaddr;
+        printf("vin.(%s)\n",cJSON_Print(json));
         cJSON_AddItemToArray(array,json);
     }
     return(array);
@@ -515,7 +516,7 @@ char *_createrawtxid_json_params(char *coinstr,char *serverport,char *userpass,s
         }
         else free_json(vinsobj);
     } else printf("_error create_vins_json_params\n");
-    //printf("_createrawtxid_json_params.%s\n",paramstr);
+printf("_createrawtxid_json_params.%s\n",paramstr);
     return(paramstr);
 }
 
