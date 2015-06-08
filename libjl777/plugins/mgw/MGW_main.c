@@ -1187,7 +1187,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                     } //else printf(" %s.v%d for %s\n",txidstr,vout,extra->coindata);
                 } else printf("(%s.v%d != %s)\n",txidstr,vout,extra->coindata);
             }
-        } else printf("skip flag.%d (%s).v%d %.8f\n",extra->flags,extra->coindata,extra->vout,dstr(extra->amount));
+        } //else printf("skip flag.%d (%s).v%d %.8f\n",extra->flags,extra->coindata,extra->vout,dstr(extra->amount));
         if ( coin->mgw.redeemheight == 0 || extra->height >= coin->mgw.redeemheight )
         {
             if ( validate_coinaddr(mgw->coinstr,coin->serverport,coin->userpass,extra->coindata) == 0 )
