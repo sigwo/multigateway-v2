@@ -210,9 +210,10 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
 
         copy_cJSON(coin->mgw.assetidstr,cJSON_GetObjectItem(argjson,"assetid"));
-        coin->mgw.assetidbits = conv_acctstr(coin->mgw.assetidstr);
+        coin->mgw.assetidbits = calc_nxt64bits(coin->mgw.assetidstr);
         copy_cJSON(coin->mgw.issuer,cJSON_GetObjectItem(argjson,"issuer"));
         coin->mgw.issuerbits = conv_acctstr(coin->mgw.issuer);
+        printf(">>>>>>>>>>>> issuer.%s %llu assetid.%llu\n",coin->mgw.issuer,(long long)coin->mgw.issuerbits,(long long)coin->mgw.assetidbits);
         coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
         strcpy(coin->mgw.coinstr,coinstr);
         if ( (coin->mgw.special= cJSON_GetObjectItem(argjson,"special")) == 0 )
@@ -288,7 +289,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     item = cJSON_GetArrayItem(array,i);
                     coinstr = cJSON_str(cJSON_GetObjectItem(item,"name"));
                     if ( coinstr != 0 && coinstr[0] != 0 && (coin= coin777_find(coinstr,0)) == 0 )
+                    {
+                        printf("CALL coin777_create.(%s) (%s)\n",coinstr,cJSON_Print(item));
                         coin777_create(coinstr,item);
+                    }
                 }
             }
         } else strcpy(retbuf,"{\"result\":\"no JSON for init\"}");
