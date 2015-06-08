@@ -1472,11 +1472,12 @@ cJSON *mgw_create_vins(cJSON **keysobjp,char *coinstr,char *serverport,char *use
 cJSON *mgw_create_vouts(struct cointx_info *cointx)
 {
     int32_t i;
-    cJSON *json;
+    cJSON *json,*array = cJSON_CreateArray();
     json = cJSON_CreateObject();
     for (i=0; i<cointx->numoutputs; i++)
         cJSON_AddItemToObject(json,cointx->outputs[0].coinaddr, cJSON_CreateNumber(dstr(cointx->outputs[i].value)));
-    return(json);
+    cJSON_AddItemToArray(array,json);
+    return(array);
 }
 
 struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format)
