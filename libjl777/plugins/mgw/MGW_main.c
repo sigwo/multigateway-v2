@@ -1126,7 +1126,10 @@ int32_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                 if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,S.unspentind) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 )
                 {
                     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coin->name,A.coinaddr)) == 0 )
+                    {
+                        printf("cant find (%s) %.8f\n",A.coinaddr,dstr(U.value));
                         return(0);
+                    }
                 } else printf("couldnt find spend ind.%u\n",S.unspentind);
             } else printf("error getting spendind.%u\n",spendind);
         }
