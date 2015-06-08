@@ -1249,7 +1249,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                 if ( (Ustatus & MGW_ISINTERNAL) != 0 )
                 {
                     sum += U.value;
-                    printf("ISINTERNAL.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                    //printf("ISINTERNAL.%u (%s).v%d %.8f -> %s\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                 }
                 else if ( (Ustatus & MGW_DEPOSITDONE) == 0 )
                 {
