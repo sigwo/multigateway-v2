@@ -1155,7 +1155,7 @@ int32_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                 printf("[a%d %.8f] ",U.addrind,dstr(U.value));
             } else printf("couldnt find unspentind.%u\n",unspentind);
         }
-    }
+    } else printf("cant find txoffsets[txidind.%u]\n",txidind);
     return(flag);
 }
 
@@ -1163,9 +1163,9 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
 {
     uint32_t txidind,addrind = 0,firstblocknum; int32_t i,vout; char txidstr[256];
     struct coin777_Lentry L; struct addrtx_info ATX; struct coin777 *coin = coin777_find(mgw->coinstr,0);
-    if ( coin != 0 && coin->ramchain.readyflag != 0 && (addrind= coin777_addrind(&firstblocknum,coin,extra->coindata)) != 0 )
+    if ( coin != 0 && coin->ramchain.readyflag != 0 && (extra->flags & MGW_PENDINGXFER) != 0 )
     {
-        if ( coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
+        if ( (addrind= coin777_addrind(&firstblocknum,coin,extra->coindata)) != 0 && coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
         {
             for (i=0; i<L.numaddrtx; i++)
             {
@@ -1176,10 +1176,10 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                     {
                     } else printf("cant find txidind.%u\n",txidind);
                     break;
-                }
+                } else printf("(%s.v%d != %s.v%d)\n",txidstr,vout,extra->coindata,extra->vout);
             }
             printf("PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
-        }
+        } else printf("skip flag.%d (%s).v%d\n",extra->flags,extra->coindata,extra->vout);
     } else printf("cant find addrind (%s) coin.%p (%llu %.8f)\n",extra->coindata,coin,(long long)extra->txidbits,dstr(extra->amount));
     return(0);
 }
