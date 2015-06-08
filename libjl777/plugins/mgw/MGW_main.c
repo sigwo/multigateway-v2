@@ -1501,7 +1501,7 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
         free(paramstr);
         if ( opreturn >= 0 )
         {
-            if ( (txbytes2= mgw_OP_RETURN(opreturn,txbytes,do_opreturn,redeemtxid,1 || do_opreturn)) == 0 )
+            if ( (txbytes2= mgw_OP_RETURN(opreturn,txbytes,do_opreturn,redeemtxid,0 || do_opreturn)) == 0 )
             {
                 fprintf(stderr,"error replacing with OP_RETURN.%s txout.%d (%s)\n",coinstr,opreturn,txbytes);
                 free(txbytes);
