@@ -804,6 +804,8 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
                                 *flagp = MGW_DEPOSITDONE;
                         }
                         free_json(json);
+                        if ( coindata[0] != 0 )
+                            unstringify(coindata);
                     }
                 }
             }
