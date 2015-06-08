@@ -380,7 +380,7 @@ uint64_t issue_transferAsset(char **retstrp,void *deprecated,char *secret,char *
     assetidbits = calc_nxt64bits(asset);
     if ( assetidbits == NXT_ASSETID )
         sprintf(cmd,"%s=sendMoney&amountNQT=%lld",_NXTSERVER,(long long)quantity);
-    else sprintf(cmd,"%s=transferAsset&asset=%s&quantityQNT=%lld",_NXTSERVER,asset,(long long)quantity);
+    else sprintf(cmd,"%s=transferAsset&asset=%s&quantityQNT=%lld&messageIsPrunable=false",_NXTSERVER,asset,(long long)quantity);
     sprintf(cmd+strlen(cmd),"&secretPhrase=%s&recipient=%s&feeNQT=%lld&deadline=%d",secret,recipient,(long long)feeNQT,deadline);
     if ( destpubkey != 0 )
         sprintf(cmd+strlen(cmd),"&recipientPublicKey=%s",destpubkey);
@@ -792,6 +792,7 @@ int32_t process_assettransfer(uint64_t *senderbitsp,uint64_t *receiverbitsp,uint
                         {
                             if ( *receiverbitsp == mgw->issuerbits )
                                 *flagp = MGW_PENDINGREDEEM;
+                            else printf("%llu != issuer.%llu ",(long long)*receiverbitsp,(long long)mgw->issuerbits);
                         }
                         else
                         {
