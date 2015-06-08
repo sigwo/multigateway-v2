@@ -950,7 +950,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
             if ( (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
             {
                 int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra);
-                if ( mgw_update_redeem(mgw,&extra) != 0 )
+                if ( 0 && mgw_update_redeem(mgw,&extra) != 0 )
                 {
                     extra.flags |= MGW_WITHDRAWDONE;
                     NXT_set_revassettxid(mgw->assetidbits,i,&extra);
