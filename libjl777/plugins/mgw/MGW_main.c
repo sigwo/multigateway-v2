@@ -1083,34 +1083,6 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
     return(flag);
 }
 
-int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t addrind,uint32_t unspentind,char *txidstr,int32_t vout)
-{
-    char txidstr0[1024]; int32_t vout0; uint32_t txidind0,addrind0; struct unspent_info U;
-    if ( vout == 0 )
-        addrind0 = addrind;
-    else if ( (vout0= coin777_unspentmap(&txidind0,txidstr0,coin,unspentind - vout)) == 0 )
-    {
-        if ( strcmp(txidstr,txidstr0) == 0 )
-        {
-            if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,unspentind - vout) == 0 )
-            {
-                if ( U.addrind == coin->mgw.marker_addrind || U.addrind == coin->mgw.marker2_addrind )
-                {
-                    printf("U.%u -> (%s).v%u is mgw_isinternal\n",unspentind,txidstr,vout);
-                    return(MGW_ISINTERNAL);
-                }
-                else return(0);
-            }
-            printf("mgw_isinternal error loading unspent_info %u - v%d\n",unspentind,vout);
-            return(0);
-        }
-        printf("mgw_isinternal mismatched txidstr.(%s) vs (%s)\n",txidstr,txidstr0);
-        return(0);
-    }
-    else printf("got vout.%d instead of expected 0 from unspentind.%d - %d\n",vout0,unspentind,vout);
-    return(0);
-}
-
 uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
 {
     struct unspent_info U; struct coin777_addrinfo A; struct spend_info S; bits256 txid; struct multisig_addr *msig;
@@ -1155,6 +1127,17 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
         }
     } else printf("cant find txoffsets[txidind.%u]\n",txidind);
     return(redeemtxid);
+}
+
+int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t addrind,uint32_t unspentind,char *txidstr,int32_t vout)
+{
+    char txidstr0[1024]; int32_t vout0; uint32_t txidind0;
+    if ( (vout0= coin777_unspentmap(&txidind0,txidstr0,coin,unspentind - vout)) == 0 )
+    {
+        if ( mgw_is_mgwtx(coin,txidind0) != 0 )
+            return(MGW_ISINTERNAL);
+    }
+    return(0);
 }
 
 int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
