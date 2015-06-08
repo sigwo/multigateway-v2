@@ -232,6 +232,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         if ( coin->mgw.NXTfee_equiv == 0 )
             coin->mgw.NXTfee_equiv = (uint64_t)(SATOSHIDEN * get_API_float(cJSON_GetObjectItem(argjson,"NXTfee_equiv")));
         copy_cJSON(coin->mgw.marker,cJSON_GetObjectItem(argjson,"marker"));
+        copy_cJSON(coin->mgw.opreturnmarker,cJSON_GetObjectItem(argjson,"opreturnmarker"));
         copy_cJSON(coin->mgw.marker2,cJSON_GetObjectItem(argjson,"marker2"));
         coin->mgw.redeemheight = get_API_int(cJSON_GetObjectItem(argjson,"redeemheight"),430000);
         coin->mgw.use_addmultisig = get_API_int(cJSON_GetObjectItem(argjson,"useaddmultisig"),(strcmp("BTC",coinstr) != 0));

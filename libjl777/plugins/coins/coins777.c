@@ -144,9 +144,9 @@ struct extra_info { uint64_t assetidbits,txidbits,senderbits,receiverbits,amount
 
 struct mgw777
 {
-    char coinstr[16],assetidstr[32],assetname[32],issuer[32],marker[128],marker2[128];
+    char coinstr[16],assetidstr[32],assetname[32],issuer[32],marker[128],marker2[128],opreturnmarker[128];
     uint32_t marker_addrind,marker2_addrind,use_addmultisig,firstunspentind,redeemheight,numwithdraws,numunspents;
-    uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust,issuerbits,circulation,unspent,withdrawsum;
+    uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust,issuerbits,circulation,unspent,withdrawsum; int64_t balance;
     cJSON *limbo,*special;
     double lastupdate,NXTconvrate;
     struct unspent_info *unspents,inputs[256];
@@ -165,7 +165,7 @@ struct coin777
     char name[16],serverport[512],userpass[4096],*jsonstr; cJSON *argjson;
     struct ramchain ramchain;
     struct mgw777 mgw;
-    int32_t minconfirms;
+    int32_t minconfirms,minoutput;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);

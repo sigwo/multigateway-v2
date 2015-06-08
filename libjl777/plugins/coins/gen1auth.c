@@ -190,7 +190,7 @@ struct cointx_info *createrawtransaction(char *coinstr,char *serverport,char *us
         if ( (signedtx= _sign_localtx(coinstr,serverport,userpass,cointx,txbytes,gatewayid,numgateways)) != 0 )
         {
             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
-            // printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
+printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
             rettx = calloc(1,allocsize);
             *rettx = *cointx;
             rettx->allocsize = allocsize;

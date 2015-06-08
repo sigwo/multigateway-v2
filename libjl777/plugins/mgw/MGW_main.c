@@ -1356,7 +1356,7 @@ struct unspent_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struc
     return((abovevin != 0) ? abovevin : belowvin);
 }
 
-int64_t coin777_inputs(int64_t *changep,int32_t *nump,struct coin777 *coin,struct unspent_info *inputs,int32_t max,uint64_t amount,uint64_t txfee)
+int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,struct unspent_info *inputs,int32_t max,uint64_t amount,uint64_t txfee)
 {
     int64_t remainder,sum = 0; int32_t i,numinputs = 0; uint64_t value; struct unspent_info *vin; struct mgw777 *mgw = &coin->mgw;
     remainder = amount + txfee;
@@ -1379,6 +1379,71 @@ int64_t coin777_inputs(int64_t *changep,int32_t *nump,struct coin777 *coin,struc
     }
     fprintf(stderr,"error numinputs %d sum %.8f\n",numinputs,dstr(sum));
     return(0);
+}
+
+struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint64_t value,uint64_t redeemtxid,char *smallest,char *smallestB)
+{
+    //int64 nPayFee = nTransactionFee * (1 + (int64)nBytes / 1000);
+    char *rawparams,*changeaddr;
+    int64_t MGWfee,amount;
+    int32_t opreturn_output,numoutputs = 0;
+    struct cointx_info *cointx,TX,*rettx = 0; struct mgw777 *mgw = &coin->mgw;
+    cointx = &TX;
+    memset(cointx,0,sizeof(*cointx));
+    strcpy(cointx->coinstr,coin->name);
+    cointx->redeemtxid = redeemtxid;
+    cointx->gatewayid = SUPERNET.gatewayid;
+    MGWfee = (value >> 13) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - coin->minoutput - mgw->txfee;
+    if ( value <= MGWfee + coin->minoutput + mgw->txfee )
+    {
+        printf("%s redeem.%llu withdraw %.8f < MGWfee %.8f + minoutput %.8f + txfee %.8f\n",coin->name,(long long)redeemtxid,dstr(value),dstr(MGWfee),dstr(coin->minoutput),dstr(mgw->txfee));
+        return(0);
+    }
+    strcpy(cointx->outputs[numoutputs].coinaddr,mgw->marker);
+    if ( strcmp(destaddr,mgw->marker) == 0 )
+        cointx->outputs[numoutputs++].value = value - coin->minoutput - mgw->txfee;
+    else
+    {
+        cointx->outputs[numoutputs++].value = MGWfee;
+        strcpy(cointx->outputs[numoutputs].coinaddr,destaddr);
+        cointx->outputs[numoutputs++].value = value - MGWfee - coin->minoutput - mgw->txfee;
+    }
+    opreturn_output = numoutputs;
+    strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
+    cointx->outputs[numoutputs++].value = coin->minoutput;
+    cointx->numoutputs = numoutputs;
+    cointx->amount = amount = (MGWfee + value + coin->minoutput + mgw->txfee);
+    if ( mgw->balance >= 0 )
+    {
+        cointx->inputsum = coin777_inputs(&cointx->change,&cointx->numinputs,coin,mgw->inputs,sizeof(mgw->inputs)/sizeof(*mgw->inputs),amount,mgw->txfee);
+        if ( cointx->inputsum >= (cointx->amount + mgw->txfee) )
+        {
+            if ( cointx->change != 0 )
+            {
+                changeaddr = (strcmp(smallest,destaddr) != 0) ? smallest : smallestB;
+                if ( changeaddr[0] == 0 )
+                {
+                    printf("Need to create more deposit addresses, need to have at least 2 available\n");
+                    exit(1);
+                }
+                if ( strcmp(cointx->outputs[0].coinaddr,changeaddr) != 0 )
+                {
+                    strcpy(cointx->outputs[cointx->numoutputs].coinaddr,changeaddr);
+                    cointx->outputs[cointx->numoutputs].value = cointx->change;
+                    cointx->numoutputs++;
+                } else cointx->outputs[0].value += cointx->change;
+            }
+            if ( (rawparams= _createrawtxid_json_params(coin->name,coin->serverport,coin->userpass,cointx,SUPERNET.gatewayid,NUM_GATEWAYS)) != 0 )
+            {
+                //fprintf(stderr,"len.%ld rawparams.(%s)\n",strlen(rawparams),rawparams);
+                _stripwhite(rawparams,0);
+                if (  SUPERNET.gatewayid >= 0 )
+                    rettx = createrawtransaction(coin->name,coin->serverport,coin->userpass,rawparams,cointx,opreturn_output,redeemtxid,SUPERNET.gatewayid,NUM_GATEWAYS);
+                free(rawparams);
+            } else fprintf(stderr,"error creating rawparams\n");
+        } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(cointx->inputsum),dstr(cointx->amount),dstr(mgw->txfee));
+    } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",coin->name,dstr(mgw->balance),dstr(cointx->amount),dstr(mgw->txfee));
+    return(rettx);
 }
 
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
@@ -1435,12 +1500,12 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     printf("%s circulation %.8f vs unspents %.8f withdrawsum -%.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(mgw->withdrawsum),dstr(balance),m);
     if ( balance >= 0 && mgw->numwithdraws > 0 )
     {
-        int64_t inputsum,change; int32_t numinputs;
+        struct cointx_info *cointx;
         for (i=0; i<mgw->numwithdraws; i++)
         {
             extra = &mgw->withdraws[i];
-            inputsum = coin777_inputs(&change,&numinputs,coin,mgw->inputs,sizeof(mgw->inputs)/sizeof(*mgw->inputs),extra->amount,mgw->txfee);
-            printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(inputsum),numinputs,dstr(change),dstr(inputsum)-dstr(change));
+            cointx = mgw_cointx_withdraw(coin,extra->coindata,extra->amount,extra->txidbits,smallestaddr,smallestaddrB);
+            printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(cointx->inputsum),cointx->numinputs,dstr(cointx->change),dstr(cointx->inputsum)-dstr(cointx->change));
         }
     }
     return(unspent);
