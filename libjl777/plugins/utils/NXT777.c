@@ -119,7 +119,7 @@ struct NXT_acct
 #define MGW_WITHDRAWDONE 16
 #define MGW_IGNORE 128
 #define MGW_ERRORSTATUS 0x8000
-struct extra_info { uint64_t assetidbits,txidbits,senderbits,receiverbits,amount; int32_t ind,vout,flags; char coindata[128]; };
+struct extra_info { uint64_t assetidbits,txidbits,senderbits,receiverbits,amount; int32_t ind,vout,flags; uint32_t height; char coindata[128]; };
 
 struct NXT_AMhdr { uint32_t sig; int32_t size; uint64_t nxt64bits; };
 struct compressed_json { uint32_t complen,sublen,origlen,jsonlen; unsigned char encoded[128]; };
@@ -720,7 +720,7 @@ uint64_t _set_NXT_sender(char *sender,cJSON *txobj)
     else return(0);
 }
 
-int32_t process_assettransfer(uint64_t *senderbitsp,uint64_t *receiverbitsp,uint64_t *amountp,int32_t *flagp,char *coindata,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
+int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *receiverbitsp,uint64_t *amountp,int32_t *flagp,char *coindata,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
 {
     char AMstr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],receiver[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],txid[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],buf[MAX_JSON_FIELD];
     cJSON *attachment,*message,*assetjson,*commentobj,*json = 0,*obj; struct NXT_AMhdr *hdr;
@@ -732,7 +732,7 @@ int32_t process_assettransfer(uint64_t *senderbitsp,uint64_t *receiverbitsp,uint
         hdr = 0, sender[0] = receiver[0] = 0;
         if ( confirmed != 0 )
         {
-            height = (uint32_t)get_cJSON_int(txobj,"height");
+            *heightp = height = (uint32_t)get_cJSON_int(txobj,"height");
             if ( (numconfs= (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"confirmations"),0)) == 0 )
                 numconfs = (_get_NXTheight(0) - height);
         } else numconfs = 0;
@@ -889,7 +889,7 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
             memset(&extra,0,sizeof(extra));
             if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
             {
-                extra.vout = process_assettransfer(&extra.senderbits,&extra.receiverbits,&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
+                extra.vout = process_assettransfer(&extra.height,&extra.senderbits,&extra.receiverbits,&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
                 free_json(txobj);
                 if ( extra.vout >= 0 )
                 {
