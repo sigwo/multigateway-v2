@@ -1431,6 +1431,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     if ( mgw->balance >= 0 )
     {
         cointx->inputsum = coin777_inputs(&cointx->change,&cointx->numinputs,coin,cointx->inputs,sizeof(cointx->inputs)/sizeof(*cointx->inputs),amount,mgw->txfee);
+return(cointx);
         if ( cointx->inputsum >= (cointx->amount + mgw->txfee) )
         {
             if ( cointx->change != 0 )
