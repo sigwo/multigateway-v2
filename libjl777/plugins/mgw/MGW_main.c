@@ -518,6 +518,7 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     char *jsonstr; int32_t retval;
     jsonstr = cJSON_Print(json);
     _stripwhite(jsonstr,' ');
+    printf("MGW PUBLISH.(%s)\n",jsonstr);
     nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
     retval = mgw_processbus(retbuf,jsonstr,json);
     //printf("MGW publish.(%s) -> (%s)\n",retstr,retbuf);
@@ -1765,9 +1766,9 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
                     cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
                     cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
                     cJSON_AddItemToObject(json,"signedtx",cJSON_CreateString(cointx->signedtx));
-                    jsonstr = cJSON_Print(json), free_json(json), _stripwhite(jsonstr,' ');
-                    retbuf = malloc(65536), MGW_publishjson(retbuf,json), free(retbuf);
-                    free(jsonstr);
+                    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+                    retbuf = malloc(65536), MGW_publishjson(retbuf,json);
+                    free(retbuf), free(jsonstr), free_json(json);
                 }
                 free(cointx);
             }
