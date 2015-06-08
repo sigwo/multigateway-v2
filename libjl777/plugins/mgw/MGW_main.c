@@ -1372,6 +1372,7 @@ int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,str
             memset(&I,0,sizeof(I));
             strcpy(I.coinaddr,A.coinaddr);
             I.tx.vout = coin777_unspentmap(&txidind,I.tx.txidstr,coin,vin->rawind_or_blocknum);
+            printf("{%s %s} ",I.coinaddr,I.tx.txidstr);
             I.value = vin->value;
             inputs[numinputs++] = I;
             memset(vin,0,sizeof(*vin));
@@ -1419,8 +1420,8 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     }
     opreturn_output = numoutputs;
     printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
-    strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
-    cointx->outputs[numoutputs++].value = coin->minoutput;
+    //strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
+   // cointx->outputs[numoutputs++].value = coin->minoutput;
     cointx->numoutputs = numoutputs;
     cointx->amount = amount = (MGWfee + value + coin->minoutput + mgw->txfee);
     if ( mgw->balance >= 0 )

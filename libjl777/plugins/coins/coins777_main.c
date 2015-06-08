@@ -244,6 +244,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
             if ( coin->mgw.NXTfee_equiv != 0 && coin->mgw.txfee != 0 )
                 coin->mgw.NXTconvrate = ((double)coin->mgw.NXTfee_equiv / coin->mgw.txfee);
         }
+        printf("OPRETURN.(%s)\n",coin->mgw.opreturnmarker);
     }
     else coin->minconfirms = (strcmp("BTC",coinstr) == 0) ? 3 : 10;
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits);
