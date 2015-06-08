@@ -146,7 +146,7 @@ struct mgw777
 {
     char coinstr[16],assetidstr[32],assetname[32],issuer[32],marker[128],marker2[128];
     uint32_t marker_addrind,marker2_addrind,use_addmultisig,firstunspentind,redeemheight,numwithdraws;
-    uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust,issuerbits,circulation,unspent;
+    uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust,issuerbits,circulation,unspent,withdrawsum;
     cJSON *limbo,*special;
     double lastupdate,NXTconvrate;
     struct MGWstate S,otherS[16],remotesrcs[16];

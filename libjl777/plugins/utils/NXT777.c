@@ -939,7 +939,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     int32_t len,verifyflag = 0;
     uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr; struct extra_info extra;
     mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
-    mgw->numwithdraws = 0;
+    mgw->withdrawsum = mgw->numwithdraws = 0;
     if ( (len= NXT_revassettxid(&extra,mgw->assetidbits,0)) == sizeof(extra) )
     {
         //printf("got extra ind.%d\n",extra.ind);

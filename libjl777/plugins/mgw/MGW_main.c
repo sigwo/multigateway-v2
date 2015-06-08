@@ -1199,7 +1199,10 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
             {
                 //printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
                 if ( coin->mgw.numwithdraws < sizeof(coin->mgw.withdraws)/sizeof(*coin->mgw.withdraws) )
+                {
+                    coin->mgw.withdrawsum += extra->amount;
                     memcpy(&coin->mgw.withdraws[coin->mgw.numwithdraws++],extra,sizeof(*extra));
+                }
             }
         }
     } else printf("cant find MGW_PENDINGREDEEM (%s) (%llu %.8f)\n",extra->coindata,(long long)extra->txidbits,dstr(extra->amount));
@@ -1316,7 +1319,8 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
 
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
-    struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; struct extra_info *extra;
+    struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
+    struct extra_info *extra;
     ramchain_prepare(coin,&coin->ramchain);
     coin->ramchain.paused = 0;
     smallestaddr[0] = smallestaddrB[0] = 0;
@@ -1359,8 +1363,9 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     }
     coin->mgw.circulation = circulation = calc_circulation(0,&coin->mgw,0);
     coin->mgw.unspent = unspent;
-    printf("%s circulation %.8f vs unspents %.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(unspent) - dstr(circulation),m);
-    //if ( circulation < unspent && coin->mgw.numwithdraws > 0 )
+    balance = (unspent - circulation - coin->mgw.withdrawsum);
+    printf("%s circulation %.8f vs unspents %.8f withdrawsum -%.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(coin->mgw.withdrawsum),dstr(balance),m);
+    if ( balance >= 0 && coin->mgw.numwithdraws > 0 )
     {
         for (i=0; i<coin->mgw.numwithdraws; i++)
         {
