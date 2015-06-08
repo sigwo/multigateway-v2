@@ -194,6 +194,7 @@ uint64_t coin777_Uvalue(struct unspent_info *U,struct coin777 *coin,uint32_t uns
 int32_t update_NXT_assettransfers(struct mgw777 *mgw);
 uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height);
 int32_t coin777_RWaddrtx(int32_t writeflag,struct coin777 *coin,uint32_t addrind,struct addrtx_info *ATX,struct coin777_Lentry *L,int32_t addrtxi);
+#define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)&(A)->coinaddr[(A)->addrlen])
 
 #endif
 #else
