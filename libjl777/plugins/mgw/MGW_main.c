@@ -1167,9 +1167,9 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                     } //else printf(" %s.v%d for %s\n",txidstr,vout,extra->coindata);
                 } else printf("(%s.v%d != %s)\n",txidstr,vout,extra->coindata);
             }
-            if ( coin->mgw.redeemheight == 0 || extra->height >= coin->mgw.redeemheight )
-                printf("PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
-        } else printf("skip flag.%d (%s).v%d\n",extra->flags,extra->coindata,extra->vout);
+        } else printf("skip flag.%d (%s).v%d %.8f\n",extra->flags,extra->coindata,extra->vout,dstr(extra->amount));
+        //if ( coin->mgw.redeemheight == 0 || extra->height >= coin->mgw.redeemheight )
+            printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
     } else printf("cant find MGW_PENDINGREDEEM (%s) (%llu %.8f)\n",extra->coindata,(long long)extra->txidbits,dstr(extra->amount));
     return(0);
 }
