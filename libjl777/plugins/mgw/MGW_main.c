@@ -1475,7 +1475,7 @@ cJSON *mgw_create_vouts(struct cointx_info *cointx)
     cJSON *json;//,*array = cJSON_CreateArray();
     json = cJSON_CreateObject();
     for (i=0; i<cointx->numoutputs; i++)
-        cJSON_AddItemToObject(json,cointx->outputs[0].coinaddr, cJSON_CreateNumber(dstr(cointx->outputs[i].value)));
+        cJSON_AddItemToObject(json,cointx->outputs[i].coinaddr, cJSON_CreateNumber(dstr(cointx->outputs[i].value)));
     //cJSON_AddItemToArray(array,json);
     return(json);
 }
