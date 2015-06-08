@@ -41,7 +41,7 @@ struct rawblock
     struct rawvout voutspace[MAX_BLOCKTX];
 };
 
-#define MAX_COINTX_INPUTS 16
+#define MAX_COINTX_INPUTS 64
 #define MAX_COINTX_OUTPUTS 8
 struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t value; uint32_t sequence; char used; };
 struct cointx_info
@@ -150,7 +150,6 @@ struct mgw777
     cJSON *limbo,*special;
     double lastupdate,NXTconvrate;
     struct unspent_info *unspents;
-    struct cointx_input inputs[256];
     struct MGWstate S,otherS[16],remotesrcs[16];
     struct extra_info withdraws[128];
     /*uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;
