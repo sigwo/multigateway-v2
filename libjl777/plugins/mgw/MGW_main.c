@@ -1083,7 +1083,7 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
     return(flag);
 }
 
-uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
+uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind,uint64_t value)
 {
     struct unspent_info U; struct coin777_addrinfo A; struct spend_info S; bits256 txid; struct multisig_addr *msig;
     uint8_t script[4096],*scriptptr; char scriptstr[8192],txidstr[128],buf[8192],zero12[12];
@@ -1102,13 +1102,13 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                 {
                     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coin->name,A.coinaddr)) == 0 )
                         missing++;
-                    printf("-(%s %.8f m%d).%llu ",A.coinaddr,dstr(U.value),missing,(long long)redeemtxid);
+                    //printf("-(%s %.8f m%d).%llu ",A.coinaddr,dstr(U.value),missing,(long long)redeemtxid);
                 } else printf("couldnt find spend ind.%u\n",S.unspentind);
             } else printf("error getting spendind.%u\n",spendind);
         }
         if ( missing != 0 )
             return(redeemtxid);
-        printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
+        //printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
         redeemtxid |= 2;
         memset(zero12,0,sizeof(zero12));
         for (unspentind=txoffsets[0],vout=0; unspentind<nexttxoffsets[0]; unspentind++,vout++)
@@ -1125,21 +1125,23 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                     scriptptr = &script[3];
                     for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
                         redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
-                    printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
+                    //printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
                 }
-                printf("+[a%d %.8f].%llu ",U.addrind,dstr(U.value),(long long)redeemtxid);
+                else if ( U.value <= value && U.value >= value*.99 )
+                    redeemtxid |= 4;
+                //printf("+[a%d %.8f].%llu ",U.addrind,dstr(U.value),(long long)redeemtxid);
             } else printf("couldnt find unspentind.%u\n",unspentind);
         }
     } else printf("cant find txoffsets[txidind.%u]\n",txidind);
     return(redeemtxid);
 }
 
-int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t addrind,uint32_t unspentind,char *txidstr,int32_t vout)
+int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t addrind,uint32_t unspentind,char *txidstr,int32_t vout,uint64_t value)
 {
     char txidstr0[1024]; int32_t vout0; uint32_t txidind0;
     if ( (vout0= coin777_unspentmap(&txidind0,txidstr0,coin,unspentind - vout)) == 0 )
     {
-        if ( mgw_is_mgwtx(coin,txidind0) != 0 )
+        if ( mgw_is_mgwtx(coin,txidind0,value) != 0 )
             return(MGW_ISINTERNAL);
     }
     return(0);
@@ -1158,7 +1160,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                 coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
                 if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,ATX.unspentind)) >= 0 )
                 {
-                    if ( (redeemtxid= mgw_is_mgwtx(coin,txidind)) == extra->txidbits )
+                    if ( (redeemtxid= mgw_is_mgwtx(coin,txidind,extra->amount)) == extra->txidbits )
                     {
                         printf("MATCHED REDEEM!\n");
                         return(MGW_WITHDRAWDONE);
@@ -1212,7 +1214,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
             Ustatus = mgw_unspentstatus(txidstr,vout);
             if ( (Ustatus & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
             {
-                if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout)) != 0 )
+                if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout,0)) != 0 )
                 {
                     printf("ISINTERNAL.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                     mgw_markunspent(txidstr,vout,Ustatus | MGW_ISINTERNAL);
