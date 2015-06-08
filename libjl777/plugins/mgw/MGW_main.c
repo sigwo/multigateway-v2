@@ -1617,7 +1617,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     cointx = &TX, memset(cointx,0,sizeof(*cointx));
     if ( coin->minoutput == 0 )
         coin->minoutput = 1;
-    opreturn_amount = (coin->mgw.do_opreturn != 0) ? 0 : coin->minoutput;
+    opreturn_amount = 1;//(coin->mgw.do_opreturn != 0) ? 0 : coin->minoutput;
     memset(cointx,0,sizeof(*cointx));
     strcpy(cointx->coinstr,coin->name);
     cointx->redeemtxid = redeemtxid;
