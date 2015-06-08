@@ -1100,15 +1100,15 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
             {
                 if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,S.unspentind) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 )
                 {
-                    //printf("-(%s %.8f).%llu ",A.coinaddr,dstr(U.value),(long long)redeemtxid);
                     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coin->name,A.coinaddr)) == 0 )
                         missing++;
+                    printf("-(%s %.8f m%d).%llu ",A.coinaddr,dstr(U.value),missing,(long long)redeemtxid);
                 } else printf("couldnt find spend ind.%u\n",S.unspentind);
             } else printf("error getting spendind.%u\n",spendind);
         }
         if ( missing != 0 )
             return(redeemtxid);
-        //printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
+        printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
         redeemtxid |= 2;
         memset(zero12,0,sizeof(zero12));
         for (unspentind=txoffsets[0],vout=0; unspentind<nexttxoffsets[0]; unspentind++,vout++)
@@ -1125,9 +1125,9 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                     scriptptr = &script[3];
                     for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
                         redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
-                    //printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
+                    printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
                 }
-                //printf("+[a%d %.8f].%llu ",U.addrind,dstr(U.value),(long long)redeemtxid);
+                printf("+[a%d %.8f].%llu ",U.addrind,dstr(U.value),(long long)redeemtxid);
             } else printf("couldnt find unspentind.%u\n",unspentind);
         }
     } else printf("cant find txoffsets[txidind.%u]\n",txidind);
