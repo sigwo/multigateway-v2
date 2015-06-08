@@ -1090,6 +1090,8 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
     uint32_t txoffsets[2],nexttxoffsets[2],unspentind,spendind; uint64_t redeemtxid = 0; int32_t j,scriptlen,vout,len;
     if ( coin777_RWmmap(0,txoffsets,coin,&coin->ramchain.txoffsets,txidind) == 0 && coin777_RWmmap(0,nexttxoffsets,coin,&coin->ramchain.txoffsets,txidind+1) == 0 )
     {
+        if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,txoffsets[0]) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 && (U.addrind == coin->mgw.marker_addrind || U.addrind == coin->mgw.marker2_addrind) )
+            redeemtxid = 1;
         coin777_RWmmap(0,&txid,coin,&coin->ramchain.txidbits,txidind);
         init_hexbytes_noT(txidstr,txid.bytes,sizeof(txid));
         for (spendind=txoffsets[1]; spendind<nexttxoffsets[1]; spendind++)
@@ -1099,12 +1101,12 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind)
                 if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,S.unspentind) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 )
                 {
                     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coin->name,A.coinaddr)) == 0 )
-                        return(0);
+                        return(redeemtxid);
                 } else printf("couldnt find spend ind.%u\n",S.unspentind);
             } else printf("error getting spendind.%u\n",spendind);
         }
         //printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
-        redeemtxid = 1;
+        redeemtxid |= 2;
         memset(zero12,0,sizeof(zero12));
         for (unspentind=txoffsets[0],vout=0; unspentind<nexttxoffsets[0]; unspentind++,vout++)
         {
