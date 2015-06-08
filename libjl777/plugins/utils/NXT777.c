@@ -594,7 +594,7 @@ uint64_t assetmult(char *assetname,char *assetidstr)
                 decimals = (int32_t)get_cJSON_int(json,"decimals");
                 if ( decimals >= 0 && decimals <= 8 )
                     mult = calc_decimals_mult(decimals);
-                if ( extract_cJSON_str(assetname,MAX_JSON_FIELD,json,"name") <= 0 )
+                if ( extract_cJSON_str(assetname,16,json,"name") <= 0 )
                     decimals = -1;
             }
             free_json(json);
