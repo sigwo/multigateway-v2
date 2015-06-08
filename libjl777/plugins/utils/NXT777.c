@@ -951,7 +951,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
             {
                 int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra);
                 expand_nxt64bits(nxt_txid,extra.txidbits);
-                if ( in_jsonarray(mgw->limbo,nxt_txid) == 0 && mgw_update_redeem(mgw,&extra) != 0 )
+                if ( in_jsonarray(mgw->limbo,nxt_txid) != 0 || mgw_update_redeem(mgw,&extra) != 0 )
                 {
                     extra.flags |= MGW_WITHDRAWDONE;
                     NXT_set_revassettxid(mgw->assetidbits,i,&extra);
