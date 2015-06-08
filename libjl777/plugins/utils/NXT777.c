@@ -19,6 +19,7 @@
 #include "bits777.c"
 #include "utils777.c"
 #include "system777.c"
+#include "coins777.c"
 
 #include "tweetnacl.h"
 int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
@@ -112,15 +113,6 @@ struct NXT_acct
 };
 
 
-#define MGW_ISINTERNAL 1
-#define MGW_PENDINGXFER 2
-#define MGW_DEPOSITDONE 4
-#define MGW_PENDINGREDEEM 8
-#define MGW_WITHDRAWDONE 16
-#define MGW_IGNORE 128
-#define MGW_ERRORSTATUS 0x8000
-struct extra_info { uint64_t assetidbits,txidbits,senderbits,receiverbits,amount; int32_t ind,vout,flags; uint32_t height; char coindata[128]; };
-
 struct NXT_AMhdr { uint32_t sig; int32_t size; uint64_t nxt64bits; };
 struct compressed_json { uint32_t complen,sublen,origlen,jsonlen; unsigned char encoded[128]; };
 union _json_AM_data { unsigned char binarydata[sizeof(struct compressed_json)]; char jsonstr[sizeof(struct compressed_json)]; struct compressed_json jsn; };
@@ -144,10 +136,8 @@ uint64_t conv_acctstr(char *acctstr);
 int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *randfilename);
 void set_NXTpubkey(char *NXTpubkey,char *NXTacct);
 
-int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind);
 char *NXT_assettxid(uint64_t assettxid);
 uint64_t assetmult(char *assetname,char *assetidstr);
-int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra);
 cJSON *NXT_convjson(cJSON *array);
 
 #endif
@@ -948,6 +938,7 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     int32_t len,verifyflag = 0;
     uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr; struct extra_info extra;
     mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
+    mgw->numwithdraws = 0;
     if ( (len= NXT_revassettxid(&extra,mgw->assetidbits,0)) == sizeof(extra) )
     {
         //printf("got extra ind.%d\n",extra.ind);

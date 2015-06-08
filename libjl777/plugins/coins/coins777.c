@@ -132,14 +132,25 @@ struct MGWstate
 };
 
 #define NUM_GATEWAYS 3
+
+#define MGW_ISINTERNAL 1
+#define MGW_PENDINGXFER 2
+#define MGW_DEPOSITDONE 4
+#define MGW_PENDINGREDEEM 8
+#define MGW_WITHDRAWDONE 16
+#define MGW_IGNORE 128
+#define MGW_ERRORSTATUS 0x8000
+struct extra_info { uint64_t assetidbits,txidbits,senderbits,receiverbits,amount; int32_t ind,vout,flags; uint32_t height; char coindata[128]; };
+
 struct mgw777
 {
     char coinstr[16],assetidstr[32],assetname[32],issuer[32],marker[128],marker2[128];
-    uint32_t marker_addrind,marker2_addrind,use_addmultisig,firstunspentind,redeemheight;
-    uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust,issuerbits;
+    uint32_t marker_addrind,marker2_addrind,use_addmultisig,firstunspentind,redeemheight,numwithdraws;
+    uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust,issuerbits,circulation,unspent;
     cJSON *limbo,*special;
     double lastupdate,NXTconvrate;
     struct MGWstate S,otherS[16],remotesrcs[16];
+    struct extra_info withdraws[128];
     /*uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;
      int32_t numgateways,nummsigs,depositconfirms,withdrawconfirms,remotemode,numpendingsends,min_NXTconfirms,numspecials;
      uint32_t firsttime,NXTtimestamp,marker_rawind,marker2_rawind;
@@ -195,6 +206,8 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw);
 uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height);
 int32_t coin777_RWaddrtx(int32_t writeflag,struct coin777 *coin,uint32_t addrind,struct addrtx_info *ATX,struct coin777_Lentry *L,int32_t addrtxi);
 #define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)&(A)->coinaddr[(A)->addrlen])
+int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra);
+int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind);
 
 #endif
 #else
