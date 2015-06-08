@@ -793,8 +793,6 @@ int32_t in_jsonarray(cJSON *array,char *value)
             if ( array == 0 || n == 0 )
                 break;
             copy_cJSON(remote,cJSON_GetArrayItem(array,i));
-            if ( strcmp(value,"7117166754336896747") == 0 )
-                printf("(v %s) ",remote);
             if ( strcmp(remote,value) == 0 )
                 return(1);
         }

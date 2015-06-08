@@ -220,6 +220,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
             coin->mgw.special = cJSON_GetObjectItem(COINS.argjson,"special");
         if ( coin->mgw.special != 0 )
             coin->mgw.special = NXT_convjson(coin->mgw.special);
+        printf("CONVERTED.(%s)\n",cJSON_Print(coin->mgw.special));
         coin->mgw.limbo = cJSON_GetObjectItem(argjson,"limbo");
         coin->mgw.dust = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"dust"));
         coin->mgw.txfee = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"txfee_satoshis"));
