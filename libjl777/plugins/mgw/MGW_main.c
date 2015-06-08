@@ -1147,6 +1147,26 @@ int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t 
     return(0);
 }
 
+int32_t validate_coinaddr(char *coinstr,char *serverport,char *userpass,char *coinaddr)
+{
+    char quotes[512],*retstr; int32_t retval = 0; cJSON *validobj,*json;
+    if ( coinaddr[0] != '"' )
+        sprintf(quotes,"\"%s\"",coinaddr);
+    else safecopy(quotes,coinaddr,sizeof(quotes));
+    if ( (retstr= bitcoind_RPC(0,coinstr,serverport,userpass,"validateaddress",quotes)) != 0 )
+    {
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            validobj = cJSON_GetObjectItem(json,"isvalid");
+            if ( is_cJSON_True(validobj) != 0 )
+                retval = 1;
+            free_json(json);
+        }
+        free(retstr);
+    }
+    return(retval);
+}
+
 int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
 {
     uint32_t txidind,addrind = 0,firstblocknum; int32_t i,vout; uint64_t redeemtxid; char txidstr[256];
@@ -1162,7 +1182,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                 {
                     if ( (redeemtxid= mgw_is_mgwtx(coin,txidind,extra->amount)) == extra->txidbits )
                     {
-                        printf("MATCHED REDEEM!\n");
+                        printf("height.%u MATCHED REDEEM: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
                         return(MGW_WITHDRAWDONE);
                     } //else printf(" %s.v%d for %s\n",txidstr,vout,extra->coindata);
                 } else printf("(%s.v%d != %s)\n",txidstr,vout,extra->coindata);
@@ -1170,7 +1190,12 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
         } else printf("skip flag.%d (%s).v%d %.8f\n",extra->flags,extra->coindata,extra->vout,dstr(extra->amount));
         if ( coin->mgw.redeemheight == 0 || extra->height >= coin->mgw.redeemheight )
         {
-            printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+            if ( validate_coinaddr(mgw->coinstr,coin->serverport,coin->userpass,extra->coindata) == 0 )
+            {
+                printf("height.%u ILLEGAL WITHDRAW ADDR: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+                return(MGW_WITHDRAWDONE);
+            }
+            else printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
         }
     } else printf("cant find MGW_PENDINGREDEEM (%s) (%llu %.8f)\n",extra->coindata,(long long)extra->txidbits,dstr(extra->amount));
     return(0);
