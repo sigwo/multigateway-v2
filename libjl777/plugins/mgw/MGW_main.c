@@ -1083,11 +1083,43 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
     return(flag);
 }
 
+int32_t mgw_encode_OP_RETURN(char *scriptstr,uint64_t redeemtxid)
+{
+    long _emit_uint32(uint8_t *data,long offset,uint32_t x);
+    uint8_t script[256],revbuf[8]; int32_t j; long offset;
+    scriptstr[0] = 0;
+    script[0] = OP_RETURN_OPCODE;
+    script[1] = 'M', script[2] = 'G', script[3] = 'W';
+    offset = 4;
+    for (j=0; j<sizeof(uint64_t); j++)
+        revbuf[j] = ((uint8_t *)&redeemtxid)[7-j];
+    memcpy(&redeemtxid,revbuf,sizeof(redeemtxid));
+    offset = _emit_uint32(script,offset,(uint32_t)redeemtxid);
+    offset = _emit_uint32(script,offset,(uint32_t)(redeemtxid >> 32));
+    init_hexbytes_noT(scriptstr,script,offset);
+    return((int32_t)offset);
+}
+
+uint64_t mgw_decode_OP_RETURN(uint8_t *script,int32_t scriptlen)
+{
+    uint8_t *scriptptr,zero12[12]; int32_t j; uint64_t redeemtxid = 0;
+    memset(zero12,0,sizeof(zero12));
+    if ( scriptlen >= 23 && script[0] == 0x76 && script[1] == 0xa9 && script[2] == 0x14 && memcmp(&script[11],zero12,12) == 0 )
+        scriptptr = &script[3];
+    else if ( script[0] == OP_RETURN_OPCODE && script[1] == 'M' && script[2] == 'G' && script[3] == 'W' )
+        scriptptr = &script[4];
+    else return(0);
+    for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
+        redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
+printf("(REDEEMTXID.%llx %llu) ",(long long)redeemtxid,(long long)redeemtxid);
+    return(redeemtxid);
+}
+
 uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind,uint64_t value)
 {
     struct unspent_info U; struct coin777_addrinfo A; struct spend_info S; bits256 txid; struct multisig_addr *msig;
-    uint8_t script[4096],*scriptptr; char scriptstr[8192],txidstr[128],buf[8192],zero12[12];
-    uint32_t txoffsets[2],nexttxoffsets[2],unspentind,spendind; uint64_t redeemtxid = 0; int32_t j,scriptlen,vout,len,missing = 0;
+    uint8_t script[4096],*scriptptr; char scriptstr[8192],txidstr[128],buf[8192];
+    uint32_t txoffsets[2],nexttxoffsets[2],unspentind,spendind; uint64_t tmp,redeemtxid = 0; int32_t scriptlen,vout,len,missing = 0;
     if ( coin777_RWmmap(0,txoffsets,coin,&coin->ramchain.txoffsets,txidind) == 0 && coin777_RWmmap(0,nexttxoffsets,coin,&coin->ramchain.txoffsets,txidind+1) == 0 )
     {
         if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,txoffsets[0]) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 && (U.addrind == coin->mgw.marker_addrind || U.addrind == coin->mgw.marker2_addrind) )
@@ -1110,7 +1142,6 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind,uint64_t value)
             return(redeemtxid);
         //printf("MGW tx (%s) numvouts.%d: ",txidstr,nexttxoffsets[0] - txoffsets[0]);
         redeemtxid |= 2;
-        memset(zero12,0,sizeof(zero12));
         for (unspentind=txoffsets[0],vout=0; unspentind<nexttxoffsets[0]; unspentind++,vout++)
         {
             if ( coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,unspentind) == 0 && coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,U.addrind) == 0 )
@@ -1120,13 +1151,8 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind,uint64_t value)
                 else coin777_scriptstr(coin,scriptstr,sizeof(scriptstr),U.rawind_or_blocknum,U.addrind);
                 scriptlen = ((int32_t)strlen(scriptstr) >> 1);
                 decode_hex(script,scriptlen,scriptstr);
-                if ( script[0] == 0x76 && script[1] == 0xa9 && script[2] == 0x14 && memcmp(&script[11],zero12,12) == 0 )
-                {
-                    scriptptr = &script[3];
-                    for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
-                        redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
-                    //printf("(v%d %.8f REDEEMTXID.%llx %llu) ",vout,dstr(U.value),(long long)redeemtxid,(long long)redeemtxid);
-                }
+                if ( (tmp= mgw_decode_OP_RETURN(script,scriptlen)) != 0 )
+                    redeemtxid  = tmp;
                 else if ( U.value <= value && U.value >= value*.99 )
                     redeemtxid |= 4;
                 //printf("+[a%d %.8f].%llu ",U.addrind,dstr(U.value),(long long)redeemtxid);
@@ -1378,59 +1404,32 @@ int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char
     return(completed);
 }
 
-int32_t mgw_make_OP_RETURN(char *scriptstr,uint64_t *redeems,int32_t numredeems)
+char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t redeemtxid,int32_t oldtx_format)
 {
-    long _emit_uint32(uint8_t *data,long offset,uint32_t x);
-    uint8_t hashdata[256],revbuf[8]; uint64_t redeemtxid; int32_t i,j,size; long offset;
-    scriptstr[0] = 0;
-    if ( numredeems >= (sizeof(hashdata)/sizeof(uint64_t))-1 )
+    char scriptstr[1024],str40[41],*retstr = 0; long len,i; struct cointx_info *cointx; struct rawvout *vout;
+    if ( mgw_encode_OP_RETURN(scriptstr,redeemtxid) > 0 && (cointx= _decode_rawtransaction(rawtx,oldtx_format)) != 0 )
     {
-        printf("ram_make_OP_RETURN numredeems.%d is crazy\n",numredeems);
-        return(-1);
-    }
-    hashdata[1] = OP_RETURN_OPCODE;
-    hashdata[2] = 'M', hashdata[3] = 'G', hashdata[4] = 'W';
-    hashdata[5] = numredeems;
-    offset = 6;
-    for (i=0; i<numredeems; i++)
-    {
-        redeemtxid = redeems[i];
-        for (j=0; j<sizeof(uint64_t); j++)
-            revbuf[j] = ((uint8_t *)&redeemtxid)[7-j];
-        memcpy(&redeemtxid,revbuf,sizeof(redeemtxid));
-        offset = _emit_uint32(hashdata,offset,(uint32_t)redeemtxid);
-        offset = _emit_uint32(hashdata,offset,(uint32_t)(redeemtxid >> 32));
-    }
-    hashdata[0] = size = (int32_t)(5 + sizeof(uint64_t)*numredeems);
-    init_hexbytes_noT(scriptstr,hashdata+1,hashdata[0]);
-    if ( size > 0xfc )
-    {
-        printf("ram_make_OP_RETURN numredeems.%d -> size.%d too big\n",numredeems,size);
-        return(-1);
-    }
-    return(size);
-}
-
-char *mgw_OP_RETURN(struct rawvout *vout,char *rawtx,int32_t do_opreturn,uint64_t *redeems,int32_t numredeems,int32_t oldtx)
-{
-    char scriptstr[1024],str40[41],*retstr = 0; long len,i; struct cointx_info *cointx;
-    if ( mgw_make_OP_RETURN(scriptstr,redeems,numredeems) > 0 && (cointx= _decode_rawtransaction(rawtx,oldtx)) != 0 )
-    {
+        vout = &cointx->outputs[opreturn];
         if ( do_opreturn != 0 )
             safecopy(vout->script,scriptstr,sizeof(vout->script));
         else
         {
-            init_hexbytes_noT(str40,(void *)&redeems[0],sizeof(redeems[0]));
+            init_hexbytes_noT(str40,(void *)&redeemtxid,sizeof(redeemtxid));
             for (i=strlen(str40); i<40; i++)
                 str40[i] = '0';
             str40[i] = 0;
             sprintf(scriptstr,"76a914%s88ac",str40);
             strcpy(vout->script,scriptstr);
         }
+        {
+            uint8_t script[128];
+            decode_hex(script,(int32_t)strlen(scriptstr)>>1,scriptstr);
+            printf("redeemtxid.%llx -> opreturn.%llx\n",(long long)redeemtxid,(long long)mgw_decode_OP_RETURN(script,(int32_t)strlen(scriptstr)>>1));
+        }
         len = strlen(rawtx) * 2;
         retstr = calloc(1,len + 1);
         disp_cointx(cointx);
-        if ( _emit_cointx(retstr,len,cointx,oldtx) < 0 )
+        if ( _emit_cointx(retstr,len,cointx,oldtx_format) < 0 )
             free(retstr), retstr = 0;
         free(cointx);
     }
@@ -1480,10 +1479,10 @@ cJSON *mgw_create_vouts(struct cointx_info *cointx)
     return(json);
 }
 
-struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format)
+struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format,int32_t do_opreturn)
 {
     struct cointx_info *rettx = 0; char *txbytes,*signedtx,*txbytes2,*paramstr; cJSON *array,*voutsobj=0,*vinsobj=0,*keysobj=0;
-    int32_t allocsize,isBTC,len = 65536;
+    int32_t allocsize,len = 65536;
     txbytes = calloc(1,len);
     if ( _emit_cointx(txbytes,len,cointx,oldtx_format) < 0 )
     {
@@ -1502,8 +1501,7 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
         free(paramstr);
         if ( opreturn >= 0 )
         {
-            isBTC = (strcmp("BTC",coinstr) == 0);
-            if ( (txbytes2= mgw_OP_RETURN(&cointx->outputs[opreturn],txbytes,isBTC,&redeemtxid,1,isBTC)) == 0 )
+            if ( (txbytes2= mgw_OP_RETURN(opreturn,txbytes,do_opreturn,redeemtxid,1 || do_opreturn)) == 0 )
             {
                 fprintf(stderr,"error replacing with OP_RETURN.%s txout.%d (%s)\n",coinstr,opreturn,txbytes);
                 free(txbytes);
@@ -1614,36 +1612,37 @@ int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,str
 struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint64_t value,uint64_t redeemtxid,char *smallest,char *smallestB)
 {
     //int64 nPayFee = nTransactionFee * (1 + (int64)nBytes / 1000);
-    char *changeaddr; int64_t MGWfee,amount; int32_t opreturn_output,numoutputs = 0; struct cointx_info *cointx,TX,*rettx = 0; struct mgw777 *mgw;
+    char *changeaddr; int64_t MGWfee,amount,opreturn_amount; int32_t opreturn_output,numoutputs = 0; struct cointx_info *cointx,TX,*rettx = 0; struct mgw777 *mgw;
     mgw = &coin->mgw;
     cointx = &TX, memset(cointx,0,sizeof(*cointx));
     if ( coin->minoutput == 0 )
         coin->minoutput = 1;
+    opreturn_amount = (coin->mgw.do_opreturn != 0) ? 0 : coin->minoutput;
     memset(cointx,0,sizeof(*cointx));
     strcpy(cointx->coinstr,coin->name);
     cointx->redeemtxid = redeemtxid;
     cointx->gatewayid = SUPERNET.gatewayid;
-    MGWfee = (value >> 12) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - coin->minoutput - mgw->txfee;
-    if ( value <= MGWfee + coin->minoutput + mgw->txfee )
+    MGWfee = (value >> 12) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - opreturn_amount - mgw->txfee;
+    if ( value <= MGWfee + opreturn_amount + mgw->txfee )
     {
-        printf("%s redeem.%llu withdraw %.8f < MGWfee %.8f + minoutput %.8f + txfee %.8f\n",coin->name,(long long)redeemtxid,dstr(value),dstr(MGWfee),dstr(coin->minoutput),dstr(mgw->txfee));
+        printf("%s redeem.%llu withdraw %.8f < MGWfee %.8f + minoutput %.8f + txfee %.8f\n",coin->name,(long long)redeemtxid,dstr(value),dstr(MGWfee),dstr(opreturn_amount),dstr(mgw->txfee));
         return(0);
     }
     strcpy(cointx->outputs[numoutputs].coinaddr,mgw->marker);
     if ( strcmp(destaddr,mgw->marker) == 0 )
-        cointx->outputs[numoutputs++].value = value - coin->minoutput - mgw->txfee;
+        cointx->outputs[numoutputs++].value = value - opreturn_amount - mgw->txfee;
     else
     {
         cointx->outputs[numoutputs++].value = MGWfee;
         strcpy(cointx->outputs[numoutputs].coinaddr,destaddr);
-        cointx->outputs[numoutputs++].value = value - MGWfee - coin->minoutput - mgw->txfee;
+        cointx->outputs[numoutputs++].value = value - MGWfee - opreturn_amount - mgw->txfee;
     }
     opreturn_output = numoutputs;
     //printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
     strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
-    cointx->outputs[numoutputs++].value = coin->minoutput;
+    cointx->outputs[numoutputs++].value = opreturn_amount;
     cointx->numoutputs = numoutputs;
-    cointx->amount = amount = (MGWfee + value + coin->minoutput + mgw->txfee);
+    cointx->amount = amount = (MGWfee + value + opreturn_amount + mgw->txfee);
     if ( mgw->balance >= 0 )
     {
         cointx->inputsum = coin777_inputs(&cointx->change,&cointx->numinputs,coin,cointx->inputs,sizeof(cointx->inputs)/sizeof(*cointx->inputs),amount,mgw->txfee);
@@ -1668,7 +1667,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
             {
                 //for (i=0; i<cointx->numoutputs; i++)
                 //    coin777_scriptstr(coin,cointx->outputs[i].script,sizeof(cointx->outputs[i].script),U.rawind_or_blocknum,U.addrind);
-                rettx = mgw_createrawtransaction(coin->name,coin->serverport,coin->userpass,cointx,opreturn_output,redeemtxid,SUPERNET.gatewayid,NUM_GATEWAYS,coin->mgw.oldtx_format);
+                rettx = mgw_createrawtransaction(coin->name,coin->serverport,coin->userpass,cointx,opreturn_output,redeemtxid,SUPERNET.gatewayid,NUM_GATEWAYS,coin->mgw.oldtx_format,coin->mgw.do_opreturn);
             }
         } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(cointx->inputsum),dstr(cointx->amount),dstr(mgw->txfee));
     } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",coin->name,dstr(mgw->balance),dstr(cointx->amount),dstr(mgw->txfee));

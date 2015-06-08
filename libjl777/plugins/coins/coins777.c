@@ -145,7 +145,7 @@ struct extra_info { uint64_t assetidbits,txidbits,senderbits,receiverbits,amount
 struct mgw777
 {
     char coinstr[16],assetidstr[32],assetname[32],issuer[32],marker[128],marker2[128],opreturnmarker[128];
-    uint32_t marker_addrind,marker2_addrind,use_addmultisig,firstunspentind,redeemheight,numwithdraws,numunspents,oldtx_format;
+    uint32_t marker_addrind,marker2_addrind,use_addmultisig,firstunspentind,redeemheight,numwithdraws,numunspents,oldtx_format,do_opreturn;
     uint64_t assetidbits,ap_mult,NXTfee_equiv,txfee,dust,issuerbits,circulation,unspent,withdrawsum; int64_t balance;
     cJSON *limbo,*special;
     double lastupdate,NXTconvrate;
