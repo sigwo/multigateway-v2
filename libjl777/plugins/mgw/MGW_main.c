@@ -1436,7 +1436,10 @@ char *mgw_sign_localtx_plus2(uint32_t *completedp,char *coinstr,char *serverport
     batchsigned[0] = '[';
     batchsigned[1] = '"';
     if ( (retstr= mgw_sign_rawbytes(completedp,batchsigned+2,batchsize*16 + 512,coinstr,serverport,userpass,signparams)) != 0 )
+    {
+        printf("mgw_sign_localtx_plus2.(%s) -> (%s)\n",signparams,retstr);
         free(retstr);
+    }
     return(batchsigned+2);
 }
 
@@ -1457,11 +1460,11 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
             sprintf(scriptstr,"76a914%s88ac",str40);
             strcpy(vout->script,scriptstr);
         }
-        if ( do_opreturn != 0 )
+        if ( 1 )
         {
             uint8_t script[128];
             decode_hex(script,(int32_t)strlen(scriptstr)>>1,scriptstr);
-            if ( (checktxid= mgw_decode_OP_RETURN(script,(int32_t)strlen(scriptstr)>>1)) != redeemtxid || 1 )
+            if ( (checktxid= mgw_decode_OP_RETURN(script,(int32_t)strlen(scriptstr)>>1)) != redeemtxid )
                 printf("redeemtxid.%llx -> opreturn.%llx\n",(long long)redeemtxid,(long long)checktxid);
         }
         len = strlen(rawtx) * 2;
