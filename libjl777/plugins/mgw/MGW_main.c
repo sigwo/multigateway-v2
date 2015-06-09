@@ -518,7 +518,10 @@ int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char
         if ( (cointxid= cJSON_str(cJSON_GetObjectItem(json,"cointxid"))) != 0 )
         {
             if ( (coin= coin777_find(coinstr,0)) != 0 )
+            {
                 NXT_mark_withdrawdone(&coin->mgw,redeemtxid);
+                mgw_other_redeem(jsonstr,redeemtxid,0);
+            }
         }
         if ( (signedtx= cJSON_str(cJSON_GetObjectItem(json,"signedtx"))) != 0 )
         {
@@ -526,7 +529,7 @@ int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char
             {
                 mgw_other_redeem(signedtx,redeemtxid,gatewaybits);
                 sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"redeemtxid\":\"%llu\",\"gatewayid\":%d,\"gatewayNXT\":\"%llu\",\"signedtx\":\"%s\"}",coinstr,(long long)redeemtxid,gatewayid,(long long)gatewaybits,signedtx!=0?signedtx:"");
-                printf("G%d NEW REDEEM.(%s)\n",gatewayid,retbuf);
+                //printf("G%d NEW REDEEM.(%s)\n",gatewayid,retbuf);
             }
             if ( buf != 0 )
                 free(buf);
@@ -1590,7 +1593,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
             if ( cointx->completed != 0 )
             {
                 strcat(signedtx,"\"]");
-                if ( (cointxid = 0/*bitcoind_passthru(coinstr,serverport,userpass,"sendrawtransaction",signedtx)*/) != 0 )
+                if ( (cointxid= bitcoind_passthru(coinstr,serverport,userpass,"sendrawtransaction",signedtx)) != 0 )
                 {
                     strcpy(rettx->cointxid,cointxid);
                     free(cointxid);
@@ -1824,7 +1827,8 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
                 free(cointx);
             }
         }
-    }
+    } else if ( mgw->numwithdraws == 0 )
+        coin->mgw.lastupdate = (milliseconds() + 60000);
     return(unspent);
 }
 
