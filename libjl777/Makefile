@@ -92,6 +92,9 @@ install_eth: doesntexist; \
     sudo apt-get update; \
     sudo apt-get install geth;
 
+start_eth: doesntexist; \
+    geth --rpc --rpcport "8545";
+
 stockfish: lib/stockfish; \
  	cd plugins; $(_stockfish); cd ..
 
