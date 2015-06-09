@@ -86,6 +86,12 @@ echodemo: plugins/lib/echodemo; \
 eth: plugins/lib/eth; \
         cd plugins; $(_eth); cd ..
 
+install_eth: doesntexist; \
+    sudo add-apt-repository -y ppa:ethereum/ethereum-dev; \
+    sudo add-apt-repository -y ppa:ethereum/ethereum; \
+    sudo apt-get update; \
+    sudo apt-get install geth;
+
 stockfish: lib/stockfish; \
  	cd plugins; $(_stockfish); cd ..
 
