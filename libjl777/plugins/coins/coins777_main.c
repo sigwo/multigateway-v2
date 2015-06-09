@@ -248,7 +248,6 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         }
         printf("OPRETURN.(%s)\n",coin->mgw.opreturnmarker);
     }
-    else coin->minconfirms = (strcmp("BTC",coinstr) == 0) ? 3 : 10;
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits);
     extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
     printf("COIN.%s (%s)\n",coin->name,coin->userpass);
@@ -284,7 +283,7 @@ struct coin777 *coin777_find(char *coinstr,int32_t autocreate)
                 }
             }
         }
-        return(coin777_create(coinstr,0));
+        return(coin777_create(coinstr,COINS.argjson));
     }
     return(0);
 }
