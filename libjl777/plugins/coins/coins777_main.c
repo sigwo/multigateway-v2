@@ -199,16 +199,16 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     struct coin777 *coin = calloc(1,sizeof(*coin));
     char *serverport,*path=0,*conf=0;
     safecopy(coin->name,coinstr,sizeof(coin->name));
+    coin->minoutput = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"minoutput"));
+    coin->minconfirms = get_API_int(cJSON_GetObjectItem(argjson,"minconfirms"),(strcmp("BTC",coinstr) == 0) ? 3 : 10);
     if ( argjson != 0 )
     {
         coin->jsonstr = cJSON_Print(argjson);
         coin->argjson = cJSON_Duplicate(argjson,1);
         if ( (serverport= cJSON_str(cJSON_GetObjectItem(argjson,"rpc"))) != 0 )
             safecopy(coin->serverport,serverport,sizeof(coin->serverport));
-        coin->minconfirms = get_API_int(cJSON_GetObjectItem(argjson,"minconfirms"),(strcmp("BTC",coinstr) == 0) ? 3 : 10);
         path = cJSON_str(cJSON_GetObjectItem(argjson,"path"));
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
-        coin->minoutput = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"minoutput"));
 
         copy_cJSON(coin->mgw.assetidstr,cJSON_GetObjectItem(argjson,"assetid"));
         coin->mgw.assetidbits = calc_nxt64bits(coin->mgw.assetidstr);
@@ -284,6 +284,7 @@ struct coin777 *coin777_find(char *coinstr,int32_t autocreate)
                 }
             }
         }
+        return(coin777_create(coinstr,0));
     }
     return(0);
 }
