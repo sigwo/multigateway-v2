@@ -493,7 +493,11 @@ char *mgw_other_redeem(char *signedtx,uint64_t redeemtxid,uint64_t gatewaybits)
             return(signedtx);
         free(signedtx);
     }
-    else db777_write(0,DB_redeems,key,sizeof(key),signedtx,(int32_t)strlen(signedtx)+1);
+    else
+    {
+        printf("WRITE.(%s) %llu G.%llu\n",signedtx,(long long)redeemtxid,(long long)gatewaybits);
+        db777_write(0,DB_redeems,key,sizeof(key),signedtx,(int32_t)strlen(signedtx)+1);
+    }
     return(0);
 }
 
@@ -514,19 +518,16 @@ int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char
     {
         if ( (signedtx= cJSON_str(cJSON_GetObjectItem(json,"signedtx"))) != 0 )
         {
-            if ( (buf= mgw_other_redeem(0,redeemtxid,gatewaybits)) != 0 )
+            if ( (buf= mgw_other_redeem(0,redeemtxid,gatewaybits)) == 0 || strcmp(signedtx,buf) != 0 )
             {
-                if ( strcmp(signedtx,buf) != 0 )
-                {
-                    mgw_other_redeem(signedtx,redeemtxid,gatewaybits);
-                    sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"redeemtxid\":\"%llu\",\"gatewayid\":%d,\"gatewayNXT\":\"%llu\",\"signedtx\":\"%s\"}",coinstr,(long long)redeemtxid,gatewayid,(long long)gatewaybits,signedtx!=0?signedtx:"");
-                    printf("G%d NEW REDEEM.(%s)\n",gatewayid,retbuf);
-                }
-                free(buf);
+                mgw_other_redeem(signedtx,redeemtxid,gatewaybits);
+                sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"redeemtxid\":\"%llu\",\"gatewayid\":%d,\"gatewayNXT\":\"%llu\",\"signedtx\":\"%s\"}",coinstr,(long long)redeemtxid,gatewayid,(long long)gatewaybits,signedtx!=0?signedtx:"");
+                printf("G%d NEW REDEEM.(%s)\n",gatewayid,retbuf);
             }
-        }
-    }
-    else sprintf(retbuf,"{\"error\":\"no redeemtxid\",\"coin\":\"%s\"}",coinstr);
+            if ( buf != 0 )
+                free(buf);
+        } else sprintf(retbuf,"{\"error\":\"no signedtx\",\"coin\":\"%s\"}",coinstr), printf("%s\n",retbuf);
+    } else sprintf(retbuf,"{\"error\":\"no redeemtxid\",\"coin\":\"%s\"}",coinstr), printf("%s\n",retbuf);
     return(0);
 }
 
