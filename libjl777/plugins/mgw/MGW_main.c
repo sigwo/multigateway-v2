@@ -1285,7 +1285,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
             }
             else
             {
-                printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+                printf("[numconfs.%d] height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",mgw->RTNXT_height-extra->height,extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
                 if ( coin->mgw.numwithdraws < sizeof(coin->mgw.withdraws)/sizeof(*coin->mgw.withdraws) )
                 {
                     coin->mgw.withdrawsum += extra->amount;
@@ -1808,23 +1808,28 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         for (i=0; i<mgw->numwithdraws; i++)
         {
             extra = &mgw->withdraws[i];
-            cointx = mgw_cointx_withdraw(coin,extra->coindata,extra->amount,extra->txidbits,smallestaddr,smallestaddrB);
-            printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(cointx->inputsum),cointx->numinputs,dstr(cointx->change),dstr(cointx->inputsum)-dstr(cointx->change));
-            if ( cointx != 0 )
+            if ( (mgw->RTNXT_height - extra->height) < SUPERNET.NXTconfirms )
+                printf("numconfs.%d of %d for redeemtxid.%llu -> (%s) %.8f\n",(mgw->RTNXT_height - extra->height),SUPERNET.NXTconfirms,(long long)extra->txidbits,extra->coindata,dstr(extra->amount));
+            else
             {
-                if ( (json= mgw_stdjson(coin->name,SUPERNET.NXTADDR,SUPERNET.gatewayid,"redeemtxid")) != 0 )
+                cointx = mgw_cointx_withdraw(coin,extra->coindata,extra->amount,extra->txidbits,smallestaddr,smallestaddrB);
+                printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(cointx->inputsum),cointx->numinputs,dstr(cointx->change),dstr(cointx->inputsum)-dstr(cointx->change));
+                if ( cointx != 0 )
                 {
-                    sprintf(numstr,"%llu",(long long)extra->txidbits), cJSON_AddItemToObject(json,"redeemtxid",cJSON_CreateString(numstr));
-                    cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
-                    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
-                    cJSON_AddItemToObject(json,"signedtx",cJSON_CreateString(cointx->signedtx));
-                    if ( cointx->cointxid[0] != 0 )
-                        cJSON_AddItemToObject(json,"cointxid",cJSON_CreateString(cointx->cointxid));
-                    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-                    retbuf = malloc(65536), MGW_publishjson(retbuf,json);
-                    free(retbuf), free(jsonstr), free_json(json);
+                    if ( (json= mgw_stdjson(coin->name,SUPERNET.NXTADDR,SUPERNET.gatewayid,"redeemtxid")) != 0 )
+                    {
+                        sprintf(numstr,"%llu",(long long)extra->txidbits), cJSON_AddItemToObject(json,"redeemtxid",cJSON_CreateString(numstr));
+                        cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
+                        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
+                        cJSON_AddItemToObject(json,"signedtx",cJSON_CreateString(cointx->signedtx));
+                        if ( cointx->cointxid[0] != 0 )
+                            cJSON_AddItemToObject(json,"cointxid",cJSON_CreateString(cointx->cointxid));
+                        jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+                        retbuf = malloc(65536), MGW_publishjson(retbuf,json);
+                        free(retbuf), free(jsonstr), free_json(json);
+                    }
+                    free(cointx);
                 }
-                free(cointx);
             }
         }
     } else if ( mgw->numwithdraws == 0 )

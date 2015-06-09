@@ -598,8 +598,9 @@ uint64_t assetmult(char *assetname,char *assetidstr)
 uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height)
 {
     uint64_t quantity,circulation = 0; char cmd[4096],acct[MAX_JSON_FIELD],*retstr = 0; cJSON *json,*array,*item; uint32_t i,n;
+    mgw->RTNXT_height = _get_NXTheight(0);
     if ( minconfirms != 0 )
-        height = _get_NXTheight(0) - minconfirms;
+        height = mgw->RTNXT_height - minconfirms;
     sprintf(cmd,"requestType=getAssetAccounts&asset=%llu",(long long)mgw->assetidbits);
     if ( height > 0 )
         sprintf(cmd+strlen(cmd),"&height=%u",height);
