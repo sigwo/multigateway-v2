@@ -164,14 +164,16 @@ int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *us
     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coinstr,msigaddr)) == 0 )
     {
         strcpy(normaladdr,msigaddr);
-        printf("cant find_msigaddr.(%s %s)\n",coinstr,msigaddr);
+        if ( Debuglevel > 2 )
+            printf("cant find_msigaddr.(%s %s)\n",coinstr,msigaddr);
         return(0);
     }
     if ( msig->redeemScript[0] != 0 && gatewayid >= 0 && gatewayid < numgateways )
     {
         strcpy(normaladdr,msig->pubkeys[gatewayid].coinaddr);
         strcpy(redeemScript,msig->redeemScript);
-        printf("_map_msigaddr.(%s) -> return (%s) redeem.(%s)\n",msigaddr,normaladdr,redeemScript);
+        if ( Debuglevel > 2 )
+            printf("_map_msigaddr.(%s) -> return (%s) redeem.(%s)\n",msigaddr,normaladdr,redeemScript);
         return(1);
     }
     ismine = get_redeemscript(redeemScript,normaladdr,coinstr,serverport,userpass,msig->multisigaddr);
@@ -519,8 +521,8 @@ int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char
                     sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"redeemtxid\":\"%llu\",\"gatewayid\":%d,\"gatewayNXT\":\"%llu\",\"signedtx\":\"%s\"}",coinstr,(long long)redeemtxid,gatewayid,(long long)gatewaybits,signedtx!=0?signedtx:"");
                     printf("G%d NEW REDEEM.(%s)\n",gatewayid,retbuf);
                 }
+                free(buf);
             }
-            free(buf);
         }
     }
     else sprintf(retbuf,"{\"error\":\"no redeemtxid\",\"coin\":\"%s\"}",coinstr);
@@ -1479,7 +1481,8 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
         }
         len = strlen(rawtx) * 2;
         retstr = calloc(1,len + 1);
-        disp_cointx(cointx);
+        if ( Debuglevel > 2 )
+            disp_cointx(cointx);
         if ( _emit_cointx(retstr,len,cointx,oldtx_format) < 0 )
             free(retstr), retstr = 0;
         free(cointx);
@@ -1546,7 +1549,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         cJSON_AddItemToArray(array,cJSON_Duplicate(vinsobj,1));
         cJSON_AddItemToArray(array,cJSON_Duplicate(voutsobj,1));
         paramstr = cJSON_Print(array), free_json(array), _stripwhite(paramstr,' ');
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             fprintf(stderr,"len.%ld calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
         free(paramstr);

@@ -1104,7 +1104,7 @@ void serverloop(void *_args)
                 mgw_processbus(retbuf,jsonstr,json);
                 free_json(json);
             }
-            printf("MGW bus recv.%d json.%p\n",len,json);
+            //printf("MGW bus recv.%d json.%p\n",len,json);
             nn_freemsg(jsonstr);
         }
 
