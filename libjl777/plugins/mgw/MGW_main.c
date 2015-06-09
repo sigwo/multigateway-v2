@@ -1444,11 +1444,15 @@ char *mgw_sign_localtx_plus2(uint32_t *completedp,char *coinstr,char *serverport
 char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t redeemtxid,int32_t oldtx_format)
 {
     char scriptstr[1024],str40[41],*retstr = 0; uint64_t checktxid; long len,i; struct cointx_info *cointx; struct rawvout *vout;
-    if ( mgw_encode_OP_RETURN(scriptstr,redeemtxid) > 0 && (cointx= _decode_rawtransaction(rawtx,oldtx_format)) != 0 )
+    if ( (cointx= _decode_rawtransaction(rawtx,oldtx_format)) != 0 )
     {
         vout = &cointx->outputs[opreturn];
         if ( do_opreturn != 0 )
+        {
+            mgw_encode_OP_RETURN(scriptstr,redeemtxid);
             safecopy(vout->script,scriptstr,sizeof(vout->script));
+            printf("opreturn vout.%d (%s)\n",opreturn,scriptstr);
+        }
         else
         {
             init_hexbytes_noT(str40,(void *)&redeemtxid,sizeof(redeemtxid));
@@ -1457,6 +1461,7 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
             str40[i] = 0;
             sprintf(scriptstr,"76a914%s88ac",str40);
             strcpy(vout->script,scriptstr);
+            printf("vout.%d (%s)\n",opreturn,scriptstr);
         }
         if ( 1 )
         {
