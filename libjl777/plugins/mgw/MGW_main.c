@@ -480,13 +480,48 @@ int32_t process_acctpubkeys(char *coinstr,int32_t gatewayid,uint64_t gatewaybits
     return(updated);
 }
 
+char *mgw_other_redeem(char *signedtx,uint64_t redeemtxid,uint64_t gatewaybits)
+{
+    uint64_t key[2]; int32_t len = 65536;
+    key[0] = redeemtxid, key[1] = gatewaybits;
+    if ( signedtx == 0 )
+    {
+        signedtx = malloc(len);
+        if ( db777_read(signedtx,&len,0,DB_redeems,key,sizeof(key),0) != 0 )
+            return(signedtx);
+        free(signedtx);
+    }
+    else db777_write(0,DB_redeems,key,sizeof(key),signedtx,(int32_t)strlen(signedtx)+1);
+    return(0);
+}
+
+int32_t mgw_other_redeems(char *signedtxs[NUM_GATEWAYS],uint64_t redeemtxid)
+{
+    int32_t gatewayid,flags = 0;
+    for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
+        if ( (signedtxs[gatewayid]= mgw_other_redeem(0,redeemtxid,MGW.srv64bits[gatewayid])) != 0 )
+            flags |= (1 << gatewayid);
+    return(flags);
+}
+
 int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char *retbuf,char *jsonstr,cJSON *json)
 {
-    uint64_t redeemtxid; char *signedtx;
+    uint64_t redeemtxid; char *signedtx,*buf;
     if ( (redeemtxid= get_API_nxt64bits(cJSON_GetObjectItem(json,"redeemtxid"))) != 0 )
     {
-        signedtx = cJSON_str(cJSON_GetObjectItem(json,"signedtx"));
-        sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"redeemtxid\":\"%llu\",\"gatewayid\":%d,\"gatewayNXT\":\"%llu\",\"signedtx\":\"%s\"}",coinstr,(long long)redeemtxid,gatewayid,(long long)gatewaybits,signedtx!=0?signedtx:"");
+        if ( (signedtx= cJSON_str(cJSON_GetObjectItem(json,"signedtx"))) != 0 )
+        {
+            if ( (buf= mgw_other_redeem(0,redeemtxid,gatewaybits)) != 0 )
+            {
+                if ( strcmp(signedtx,buf) != 0 )
+                {
+                    mgw_other_redeem(signedtx,redeemtxid,gatewaybits);
+                    sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"redeemtxid\":\"%llu\",\"gatewayid\":%d,\"gatewayNXT\":\"%llu\",\"signedtx\":\"%s\"}",coinstr,(long long)redeemtxid,gatewayid,(long long)gatewaybits,signedtx!=0?signedtx:"");
+                    printf("G%d NEW REDEEM.(%s)\n",gatewayid,retbuf);
+                }
+            }
+            free(buf);
+        }
     }
     else sprintf(retbuf,"{\"error\":\"no redeemtxid\",\"coin\":\"%s\"}",coinstr);
     return(0);
@@ -505,10 +540,7 @@ int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json)
         if ( strcmp(methodstr,"myacctpubkeys") == 0 )
             retval = process_acctpubkeys(coinstr,gatewayid,gatewaybits,retbuf,jsonstr,json);
         else if ( strcmp(methodstr,"redeemtxid") == 0 )
-        {
             retval = process_redeem(coinstr,gatewayid,gatewaybits,retbuf,jsonstr,json);
-            printf("process_mgwbus.(%s)\n",retbuf);
-        }
     }
     return(retval);
 }
@@ -518,7 +550,6 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     char *jsonstr; int32_t retval;
     jsonstr = cJSON_Print(json);
     _stripwhite(jsonstr,' ');
-    printf("MGW PUBLISH.(%s)\n",jsonstr);
     nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
     retval = mgw_processbus(retbuf,jsonstr,json);
     //printf("MGW publish.(%s) -> (%s)\n",retstr,retbuf);
@@ -1369,7 +1400,7 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
     return(sum);
 }
 
-char *mgw_sign_rawbytes(int32_t *completedp,char *signedbytes,int32_t max,char *coinstr,char *serverport,char *userpass,char *rawbytes)
+char *mgw_sign_rawbytes(uint32_t *completedp,char *signedbytes,int32_t max,char *coinstr,char *serverport,char *userpass,char *rawbytes)
 {
     char *retstr = 0;
     cJSON *json,*hexobj,*compobj;
@@ -1391,20 +1422,22 @@ char *mgw_sign_rawbytes(int32_t *completedp,char *signedbytes,int32_t max,char *
     return(retstr);
 }
 
-char *mgw_sign_localtx(uint32_t *batchcrcp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
+char *mgw_sign_localtx(uint32_t *completedp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
 {
-    char *batchsigned,*retstr; int32_t completed,batchsize;
+    char *batchsigned,*retstr; int32_t batchcrc,batchsize;
     if ( Debuglevel > 2 )
         printf("sign localtx.(%s)\n",signparams);
     batchsize = (uint32_t)strlen(signparams) + 1;
-    *batchcrcp = _crc32(0,signparams+12,batchsize-12); // skip past timediff
+    batchcrc = _crc32(0,signparams+12,batchsize-12); // skip past timediff
     batchsigned = malloc(batchsize*16 + 512);
-    if ( (retstr= mgw_sign_rawbytes(&completed,batchsigned,batchsize*16 + 512,coinstr,serverport,userpass,signparams)) != 0 )
+    batchsigned[0] = '[';
+    batchsigned[1] = '"';
+    if ( (retstr= mgw_sign_rawbytes(completedp,batchsigned+2,batchsize*16 + 512,coinstr,serverport,userpass,signparams)) != 0 )
         free(retstr);
     return(batchsigned);
 }
 
-int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
+/*int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
 {
     char *signed2transaction,*retstr; int32_t completed,len;
     *cosignedtxp = *cointxidp = 0;
@@ -1414,15 +1447,12 @@ int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char
         free(retstr);
     if ( completed > 0 )
     {
-        signed2transaction[0] = '[';
-        signed2transaction[1] = '"';
-        strcat(signed2transaction,"\"]");
-        printf("sendrawtransaction.(%s)\n",signed2transaction);
+         printf(">>>>>>>>>>>>> BROADCAST.(%s)\n",signed2transaction);
         *cointxidp = 0;//bitcoind_passthru(coinstr,serverport,userpass,"sendrawtransaction",signed2transaction);
         *cosignedtxp = signed2transaction;
     }
     return(completed);
-}
+}*/
 
 char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t redeemtxid,int32_t oldtx_format)
 {
@@ -1498,10 +1528,10 @@ cJSON *mgw_create_vouts(struct cointx_info *cointx)
     return(json);
 }
 
-struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format,int32_t do_opreturn)
+struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format,int32_t do_opreturn)
 {
-    struct cointx_info *rettx = 0; char *txbytes,*signedtx,*txbytes2,*paramstr; cJSON *array,*voutsobj=0,*vinsobj=0,*keysobj=0;
-    int32_t allocsize,len = 65536;
+    struct cointx_info *rettx = 0; char *signedtxs[NUM_GATEWAYS],*txbytes,*signedtx,*txbytes2,*paramstr,*cointxid;
+    cJSON *array,*voutsobj=0,*vinsobj=0,*keysobj=0; int32_t flags,allocsize,len = 65536;
     txbytes = calloc(1,len);
     if ( _emit_cointx(txbytes,len,cointx,oldtx_format) < 0 )
     {
@@ -1528,14 +1558,21 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
                 return(0);
             }
             free(txbytes);
-            txbytes = txbytes2;
+            txbytes = txbytes2, txbytes2 = 0;
         }
         array = cJSON_CreateArray();
+        if ( (flags= mgw_other_redeems(signedtxs,redeemtxid)) != 0 )
+        {
+            if ( (txbytes2= signedtxs[(SUPERNET.gatewayid + 1) % NUM_GATEWAYS]) != 0 )
+                free(txbytes), txbytes = txbytes2, txbytes2 = 0;
+            if ( (txbytes2= signedtxs[(SUPERNET.gatewayid - 1 + NUM_GATEWAYS) % NUM_GATEWAYS]) != 0 )
+                free(txbytes), txbytes = txbytes2, txbytes2 = 0;
+        }
         cJSON_AddItemToArray(array,cJSON_CreateString(txbytes));
         cJSON_AddItemToArray(array,vinsobj);
         cJSON_AddItemToArray(array,keysobj);
         paramstr = cJSON_Print(array), free_json(array);
-        if ( (signedtx= mgw_sign_localtx(&cointx->batchcrc,coinstr,serverport,userpass,paramstr,gatewayid,numgateways)) != 0 )
+        if ( (signedtx= mgw_sign_localtx(&cointx->completed,coinstr,serverport,userpass,paramstr,gatewayid,numgateways)) != 0 )
         {
             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
             //printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
@@ -1544,6 +1581,19 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
             rettx->allocsize = allocsize;
             rettx->isallocated = allocsize;
             strcpy(rettx->signedtx,signedtx);
+            signedtx -= 2;
+            if ( cointx->completed != 0 )
+            {
+                strcat(signedtx,"\"]");
+                printf(">>>>>>>>>>>>> BROADCAST.(%s)\n",signedtx);
+                if ( (cointxid = 0/*bitcoind_passthru(coinstr,serverport,userpass,"sendrawtransaction",signedtx)*/) != 0 )
+                {
+                    strcpy(rettx->cointxid,cointxid);
+                    free(cointxid);
+                }
+                NXT_mark_withdrawdone(mgw,redeemtxid);
+                printf("COMPLETED.(%s) -> cointxid.(%s)\n",signedtx,rettx->cointxid);
+            }
             free(signedtx);
         } else fprintf(stderr,"error _sign_localtx.(%s)\n",txbytes);
         free(paramstr);
@@ -1638,7 +1688,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     cointx = &TX, memset(cointx,0,sizeof(*cointx));
     if ( coin->minoutput == 0 )
         coin->minoutput = 1;
-    opreturn_amount = 1;//(coin->mgw.do_opreturn != 0) ? 0 : coin->minoutput;
+    opreturn_amount = (coin->mgw.do_opreturn != 0) ? 0 : coin->minoutput;
     memset(cointx,0,sizeof(*cointx));
     strcpy(cointx->coinstr,coin->name);
     cointx->redeemtxid = redeemtxid;
@@ -1684,9 +1734,9 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
                     cointx->numoutputs++;
                 } else cointx->outputs[0].value += cointx->change;
             }
-            if (  SUPERNET.gatewayid >= 0 )
+            if ( SUPERNET.gatewayid >= 0 )
             {
-                rettx = mgw_createrawtransaction(coin->name,coin->serverport,coin->userpass,cointx,opreturn_output,redeemtxid,SUPERNET.gatewayid,NUM_GATEWAYS,coin->mgw.oldtx_format,coin->mgw.do_opreturn);
+                rettx = mgw_createrawtransaction(mgw,coin->name,coin->serverport,coin->userpass,cointx,opreturn_output,redeemtxid,SUPERNET.gatewayid,NUM_GATEWAYS,coin->mgw.oldtx_format,mgw->do_opreturn);
             }
         } else fprintf(stderr,"error calculating rawinputs.%.8f or outputs.%.8f | txfee %.8f\n",dstr(cointx->inputsum),dstr(cointx->amount),dstr(mgw->txfee));
     } else fprintf(stderr,"not enough %s balance %.8f for withdraw %.8f txfee %.8f\n",coin->name,dstr(mgw->balance),dstr(cointx->amount),dstr(mgw->txfee));

@@ -1397,7 +1397,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         sprintf(buf,"%s/status",MGW.PATH), ensure_directory(buf);
         sprintf(buf,"%s/sent",MGW.PATH), ensure_directory(buf);
         sprintf(buf,"%s/deposit",MGW.PATH), ensure_directory(buf);
-
         printf(">>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d pullnode.(%s)\n",SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay,RAMCHAINS.pullnode);
         if ( DB_NXTaccts == 0 )
             DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
@@ -1407,6 +1406,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             DB_busdata = db777_create(0,0,"busdata",0,0);
         if ( DB_NXTtxids == 0 )
             DB_NXTtxids = db777_create(0,0,"NXT_txids",0,0);
+        if ( DB_redeems == 0 )
+            DB_redeems = db777_create(0,0,"redeems",0,0);
         if ( DB_MGW == 0 )
             DB_MGW = db777_create(0,0,"MGW",0,0);
         if ( DB_msigs == 0 )

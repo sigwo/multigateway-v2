@@ -47,9 +47,9 @@ struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t v
 struct cointx_info
 {
     uint32_t crc; // MUST be first
-    char coinstr[16];
+    char coinstr[16],cointxid[128];
     uint64_t inputsum,amount,change,redeemtxid;
-    uint32_t allocsize,batchsize,batchcrc,gatewayid,isallocated;
+    uint32_t allocsize,batchsize,batchcrc,gatewayid,isallocated,completed;
     // bitcoin tx order
     uint32_t version,timestamp,numinputs;
     uint32_t numoutputs;
@@ -209,6 +209,7 @@ int32_t coin777_RWaddrtx(int32_t writeflag,struct coin777 *coin,uint32_t addrind
 #define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)&(A)->coinaddr[(A)->addrlen])
 int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra);
 int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind);
+int32_t NXT_mark_withdrawdone(struct mgw777 *mgw,uint64_t redeemtxid);
 
 #endif
 #else

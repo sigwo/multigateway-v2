@@ -934,6 +934,29 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
     return(n);
 }
 
+int32_t NXT_mark_withdrawdone(struct mgw777 *mgw,uint64_t redeemtxid)
+{
+    int32_t i,count; struct extra_info extra;
+    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) )
+    {
+        //printf("got extra ind.%d\n",extra.ind);
+        count = extra.ind;
+        for (i=1; i<=count; i++)
+        {
+            NXT_revassettxid(&extra,mgw->assetidbits,i);
+            if ( extra.txidbits == redeemtxid != 0 && (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
+            {
+                extra.flags |= MGW_WITHDRAWDONE;
+                printf("NXT_mark_withdrawdone %s.%llu %.8f\n",mgw->coinstr,(long long)redeemtxid,dstr(extra.amount));
+                NXT_set_revassettxid(mgw->assetidbits,i,&extra);
+                return(i);
+            }
+            //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
+        }
+    }
+    return(-1);
+}
+
 int32_t update_NXT_assettransfers(struct mgw777 *mgw)
 {
     int32_t len,verifyflag = 0;
