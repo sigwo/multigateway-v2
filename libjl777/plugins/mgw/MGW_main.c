@@ -1428,8 +1428,6 @@ char *mgw_sign_rawbytes(uint32_t *completedp,char *signedbytes,int32_t max,char 
 char *mgw_sign_localtx_plus2(uint32_t *completedp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
 {
     char *batchsigned,*retstr; int32_t batchcrc,batchsize;
-    if ( Debuglevel > 2 )
-        printf("sign localtx.(%s)\n",signparams);
     batchsize = (uint32_t)strlen(signparams) + 1;
     batchcrc = _crc32(0,signparams+12,batchsize-12); // skip past timediff
     batchsigned = malloc(batchsize*16 + 512);
@@ -1469,12 +1467,12 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
         }
         len = strlen(rawtx) * 2;
         retstr = calloc(1,len + 1);
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             disp_cointx(cointx);
         if ( _emit_cointx(retstr,len,cointx,oldtx_format) < 0 )
             free(retstr), retstr = 0;
         free(cointx);
-    }
+    } else printf("error mgw_encode_OP_RETURN\n");
     return(retstr);
 }
 
@@ -1537,13 +1535,13 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         cJSON_AddItemToArray(array,cJSON_Duplicate(vinsobj,1));
         cJSON_AddItemToArray(array,cJSON_Duplicate(voutsobj,1));
         paramstr = cJSON_Print(array), free_json(array), _stripwhite(paramstr,' ');
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             fprintf(stderr,"len.%ld calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
         free(paramstr);
         if ( opreturn >= 0 )
         {
-            if ( (txbytes2= mgw_OP_RETURN(opreturn,txbytes,1||do_opreturn,redeemtxid,oldtx_format)) == 0 )
+            if ( (txbytes2= mgw_OP_RETURN(opreturn,txbytes,do_opreturn,redeemtxid,oldtx_format)) == 0 )
             {
                 fprintf(stderr,"error replacing with OP_RETURN.%s txout.%d (%s)\n",coinstr,opreturn,txbytes);
                 free(txbytes);
