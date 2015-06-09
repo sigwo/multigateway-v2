@@ -503,6 +503,7 @@ int32_t mgw_other_redeems(char *signedtxs[NUM_GATEWAYS],uint64_t redeemtxid)
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
         if ( (signedtxs[gatewayid]= mgw_other_redeem(0,redeemtxid,MGW.srv64bits[gatewayid])) != 0 )
             flags |= (1 << gatewayid);
+    printf("flags.%d\n",flags);
     return(flags);
 }
 
@@ -1451,7 +1452,7 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
         {
             mgw_encode_OP_RETURN(scriptstr,redeemtxid);
             safecopy(vout->script,scriptstr,sizeof(vout->script));
-            printf("opreturn vout.%d (%s)\n",opreturn,vout->script);
+            //printf("opreturn vout.%d (%s)\n",opreturn,vout->script);
         }
         else
         {
@@ -1461,7 +1462,7 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
             str40[i] = 0;
             sprintf(scriptstr,"76a914%s88ac",str40);
             strcpy(vout->script,scriptstr);
-            printf("vout.%d (%s)\n",opreturn,vout->script);
+            //printf("vout.%d (%s)\n",opreturn,vout->script);
         }
         if ( 1 )
         {
@@ -1474,7 +1475,7 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
         retstr = calloc(1,len + 1);
         if ( Debuglevel > 2 )
             disp_cointx(cointx);
-        printf("vout.%d %p (%s) (%s)\n",opreturn,vout,vout->script,cointx->outputs[opreturn].script);
+        //printf("vout.%d %p (%s) (%s)\n",opreturn,vout,vout->script,cointx->outputs[opreturn].script);
         if ( _emit_cointx(retstr,len,cointx,oldtx_format) < 0 )
             free(retstr), retstr = 0;
         free(cointx);
@@ -1527,7 +1528,7 @@ cJSON *mgw_create_vouts(struct cointx_info *cointx)
 struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format,int32_t do_opreturn)
 {
     struct cointx_info *rettx = 0; char *signedtxs[NUM_GATEWAYS],*txbytes,*signedtx,*txbytes2,*paramstr,*cointxid;
-    cJSON *array,*voutsobj=0,*vinsobj=0,*keysobj=0; int32_t flags,allocsize,len = 65536;
+    cJSON *array,*voutsobj=0,*vinsobj=0,*keysobj=0; int32_t i,flags,allocsize,len = 65536;
     txbytes = calloc(1,len);
     if ( _emit_cointx(txbytes,len,cointx,oldtx_format) < 0 )
     {
@@ -1560,9 +1561,12 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         if ( (flags= mgw_other_redeems(signedtxs,redeemtxid)) != 0 )
         {
             if ( (txbytes2= signedtxs[(SUPERNET.gatewayid + 1) % NUM_GATEWAYS]) != 0 )
-                free(txbytes), txbytes = txbytes2, txbytes2 = 0;
+                free(txbytes), txbytes = txbytes2, signedtxs[(SUPERNET.gatewayid + 1) % NUM_GATEWAYS] = 0;
             if ( (txbytes2= signedtxs[(SUPERNET.gatewayid - 1 + NUM_GATEWAYS) % NUM_GATEWAYS]) != 0 )
-                free(txbytes), txbytes = txbytes2, txbytes2 = 0;
+                free(txbytes), txbytes = txbytes2, signedtxs[(SUPERNET.gatewayid - 1 + NUM_GATEWAYS) % NUM_GATEWAYS] = 0;
+            for (i=0; i<NUM_GATEWAYS; i++)
+                if ( signedtxs[i] != 0 )
+                    free(signedtxs[i]);
         }
         cJSON_AddItemToArray(array,cJSON_CreateString(txbytes));
         cJSON_AddItemToArray(array,vinsobj);
