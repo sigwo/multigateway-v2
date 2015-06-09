@@ -1515,7 +1515,7 @@ struct cointx_info *mgw_createrawtransaction(char *coinstr,char *serverport,char
         cJSON_AddItemToArray(array,cJSON_Duplicate(vinsobj,1));
         cJSON_AddItemToArray(array,cJSON_Duplicate(voutsobj,1));
         paramstr = cJSON_Print(array), free_json(array), _stripwhite(paramstr,' ');
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             fprintf(stderr,"len.%ld calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
         free(paramstr);
