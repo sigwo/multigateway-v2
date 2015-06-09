@@ -249,7 +249,8 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         printf("OPRETURN.(%s)\n",coin->mgw.opreturnmarker);
     }
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits);
-    extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
+    if ( path != 0 && conf != 0 )
+        extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
     printf("COIN.%s (%s)\n",coin->name,coin->userpass);
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
     COINS.LIST[COINS.num] = coin, COINS.num++;
