@@ -1402,27 +1402,28 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
 
 char *mgw_sign_rawbytes(uint32_t *completedp,char *signedbytes,int32_t max,char *coinstr,char *serverport,char *userpass,char *rawbytes)
 {
-    char *retstr = 0;
-    cJSON *json,*hexobj,*compobj;
+    char *hexstr,*retstr = 0;
+    cJSON *json,*compobj;
+    *completedp = 0;
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"signrawtransaction",rawbytes)) != 0 )
     {
-        json = cJSON_Parse(retstr);
-        if ( json != 0 )
+        if ( (json= cJSON_Parse(retstr)) != 0 )
         {
-            hexobj = cJSON_GetObjectItem(json,"hex");
-            compobj = cJSON_GetObjectItem(json,"complete");
-            if ( compobj != 0 )
+            if ( (compobj= cJSON_GetObjectItem(json,"complete")) != 0 )
                 *completedp = ((compobj->type&0xff) == cJSON_True);
-            copy_cJSON(signedbytes,hexobj);
-            if ( strlen(signedbytes) > max )
-                printf("sign_rawbytes: strlen(deststr) %ld > %d destize\n",strlen(signedbytes),max);
+            if ( (hexstr = cJSON_str(cJSON_GetObjectItem(json,"hex"))) != 0 )
+            {
+                if ( strlen(hexstr) > max )
+                    printf("sign_rawbytes: strlen(hexstr) %ld > %d destize (%s)\n",strlen(hexstr),max,retstr), free(retstr), retstr = 0;
+                else strcpy(signedbytes,hexstr);
+            }
             free_json(json);
         } else printf("json parse error.(%s)\n",retstr);
     } else printf("error signing rawtx\n");
     return(retstr);
 }
 
-char *mgw_sign_localtx(uint32_t *completedp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
+char *mgw_sign_localtx_plus2(uint32_t *completedp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
 {
     char *batchsigned,*retstr; int32_t batchcrc,batchsize;
     if ( Debuglevel > 2 )
@@ -1434,7 +1435,7 @@ char *mgw_sign_localtx(uint32_t *completedp,char *coinstr,char *serverport,char 
     batchsigned[1] = '"';
     if ( (retstr= mgw_sign_rawbytes(completedp,batchsigned+2,batchsize*16 + 512,coinstr,serverport,userpass,signparams)) != 0 )
         free(retstr);
-    return(batchsigned);
+    return(batchsigned+2);
 }
 
 /*int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
@@ -1572,7 +1573,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         cJSON_AddItemToArray(array,vinsobj);
         cJSON_AddItemToArray(array,keysobj);
         paramstr = cJSON_Print(array), free_json(array);
-        if ( (signedtx= mgw_sign_localtx(&cointx->completed,coinstr,serverport,userpass,paramstr,gatewayid,numgateways)) != 0 )
+        if ( (signedtx= mgw_sign_localtx_plus2(&cointx->completed,coinstr,serverport,userpass,paramstr,gatewayid,numgateways)) != 0 )
         {
             allocsize = (int32_t)(sizeof(*rettx) + strlen(signedtx) + 1);
             //printf("signedtx returns.(%s) allocsize.%d\n",signedtx,allocsize);
