@@ -686,7 +686,6 @@ int32_t msigcmp(struct multisig_addr *ref,struct multisig_addr *msig)
     return(0);
 }
 
-
 #define BTC_COINID 1
 #define LTC_COINID 2
 #define DOGE_COINID 4
@@ -1061,10 +1060,6 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
     return(depositid);
 }
 
-// transfer approved, transfer pending, transfer completed, added to virtual balance, selected, spent
-// set of unspents - deposit completed - pending transfer -> start transfer
-// deposit completed -> pool for withdraws
-
 int32_t _valid_txamount(struct mgw777 *mgw,uint64_t value,char *coinaddr)
 {
     if ( value >= MIN_DEPOSIT_FACTOR * (mgw->txfee + mgw->NXTfee_equiv) )
@@ -1248,7 +1243,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
             }
             else
             {
-                //printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+                printf("height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
                 if ( coin->mgw.numwithdraws < sizeof(coin->mgw.withdraws)/sizeof(*coin->mgw.withdraws) )
                 {
                     coin->mgw.withdrawsum += extra->amount;
@@ -1749,7 +1744,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     mgw->circulation = circulation = calc_circulation(0,mgw,0);
     mgw->unspent = unspent;
     balance = (unspent - circulation - mgw->withdrawsum);
-    printf("%s circulation %.8f vs unspents %.8f withdrawsum -%.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),dstr(mgw->withdrawsum),dstr(balance),m);
+    printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),m);
     if ( balance >= 0 && mgw->numwithdraws > 0 )
     {
         struct cointx_info *cointx;
