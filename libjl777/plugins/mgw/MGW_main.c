@@ -1457,10 +1457,11 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
             sprintf(scriptstr,"76a914%s88ac",str40);
             strcpy(vout->script,scriptstr);
         }
+        if ( do_opreturn != 0 )
         {
             uint8_t script[128];
             decode_hex(script,(int32_t)strlen(scriptstr)>>1,scriptstr);
-            if ( (checktxid= mgw_decode_OP_RETURN(script,(int32_t)strlen(scriptstr)>>1)) != redeemtxid )
+            if ( (checktxid= mgw_decode_OP_RETURN(script,(int32_t)strlen(scriptstr)>>1)) != redeemtxid || 1 )
                 printf("redeemtxid.%llx -> opreturn.%llx\n",(long long)redeemtxid,(long long)checktxid);
         }
         len = strlen(rawtx) * 2;
@@ -1539,7 +1540,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         free(paramstr);
         if ( opreturn >= 0 )
         {
-            if ( (txbytes2= mgw_OP_RETURN(opreturn,txbytes,do_opreturn,redeemtxid,oldtx_format)) == 0 )
+            if ( (txbytes2= mgw_OP_RETURN(opreturn,txbytes,1||do_opreturn,redeemtxid,oldtx_format)) == 0 )
             {
                 fprintf(stderr,"error replacing with OP_RETURN.%s txout.%d (%s)\n",coinstr,opreturn,txbytes);
                 free(txbytes);
