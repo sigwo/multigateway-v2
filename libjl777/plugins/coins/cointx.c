@@ -182,7 +182,7 @@ long _decode_vout(struct rawvout *vout,uint8_t *data,long offset,long len)
 
 void disp_cointx_output(struct rawvout *vout)
 {
-    printf("(%s %s %.8f) ",vout->coinaddr,vout->script,dstr(vout->value));
+    printf("%p.(%s %s %.8f) ",vout,vout->coinaddr,vout->script,dstr(vout->value));
 }
 
 void disp_cointx_input(struct cointx_input *vin)

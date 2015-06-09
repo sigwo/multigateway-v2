@@ -1474,7 +1474,7 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
         retstr = calloc(1,len + 1);
         //if ( Debuglevel > 2 )
             disp_cointx(cointx);
-        printf("vout.%d (%s) (%s)\n",opreturn,vout->script,cointx->outputs[opreturn].script);
+        printf("vout.%d %p (%s) (%s)\n",opreturn,vout,vout->script,cointx->outputs[opreturn].script);
         if ( _emit_cointx(retstr,len,cointx,oldtx_format) < 0 )
             printf("EMIT.(%s)\n",retstr), free(retstr), retstr = 0;
         free(cointx);
