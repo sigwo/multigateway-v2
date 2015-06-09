@@ -507,15 +507,19 @@ int32_t mgw_other_redeems(char *signedtxs[NUM_GATEWAYS],uint64_t redeemtxid)
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
         if ( (signedtxs[gatewayid]= mgw_other_redeem(0,redeemtxid,MGW.srv64bits[gatewayid])) != 0 )
             flags |= (1 << gatewayid);
-    printf("flags.%d\n",flags);
     return(flags);
 }
 
 int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char *retbuf,char *jsonstr,cJSON *json)
 {
-    uint64_t redeemtxid; char *signedtx,*buf;
+    uint64_t redeemtxid; char *signedtx,*buf,*cointxid; struct coin777 *coin;
     if ( (redeemtxid= get_API_nxt64bits(cJSON_GetObjectItem(json,"redeemtxid"))) != 0 )
     {
+        if ( (cointxid= cJSON_str(cJSON_GetObjectItem(json,"cointxid"))) != 0 )
+        {
+            if ( (coin= coin777_find(coinstr,0)) != 0 )
+                NXT_mark_withdrawdone(&coin->mgw,redeemtxid);
+        }
         if ( (signedtx= cJSON_str(cJSON_GetObjectItem(json,"signedtx"))) != 0 )
         {
             if ( (buf= mgw_other_redeem(0,redeemtxid,gatewaybits)) == 0 || strcmp(signedtx+12,buf+12) != 0 )
@@ -1437,7 +1441,7 @@ char *mgw_sign_localtx_plus2(uint32_t *completedp,char *coinstr,char *serverport
     batchsigned[1] = '"';
     if ( (retstr= mgw_sign_rawbytes(completedp,batchsigned+2,batchsize*16 + 512,coinstr,serverport,userpass,signparams)) != 0 )
     {
-        printf("mgw_sign_localtx_plus2.(%s) -> (%s)\n",signparams,retstr);
+        //printf("mgw_sign_localtx_plus2.(%s) -> (%s)\n",signparams,retstr);
         free(retstr);
     }
     return(batchsigned+2);
@@ -1543,7 +1547,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         cJSON_AddItemToArray(array,cJSON_Duplicate(vinsobj,1));
         cJSON_AddItemToArray(array,cJSON_Duplicate(voutsobj,1));
         paramstr = cJSON_Print(array), free_json(array), _stripwhite(paramstr,' ');
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             fprintf(stderr,"len.%ld calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
         free(paramstr);
@@ -1586,14 +1590,13 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
             if ( cointx->completed != 0 )
             {
                 strcat(signedtx,"\"]");
-                printf(">>>>>>>>>>>>> BROADCAST.(%s)\n",signedtx);
                 if ( (cointxid = 0/*bitcoind_passthru(coinstr,serverport,userpass,"sendrawtransaction",signedtx)*/) != 0 )
                 {
                     strcpy(rettx->cointxid,cointxid);
                     free(cointxid);
                 }
                 NXT_mark_withdrawdone(mgw,redeemtxid);
-                printf("COMPLETED.(%s) -> cointxid.(%s)\n",signedtx,rettx->cointxid);
+                printf(">>>>>>>>>>>>> BROADCAST.(%s) (%s) cointxid.%s\n",signedtx,paramstr,rettx->cointxid);
             }
             free(signedtx);
         } else fprintf(stderr,"error _sign_localtx.(%s)\n",txbytes);
@@ -1694,7 +1697,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     strcpy(cointx->coinstr,coin->name);
     cointx->redeemtxid = redeemtxid;
     cointx->gatewayid = SUPERNET.gatewayid;
-    MGWfee = (value >> 12) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - opreturn_amount - mgw->txfee;
+    MGWfee = (value >> 11) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - opreturn_amount - mgw->txfee;
     if ( value <= MGWfee + opreturn_amount + mgw->txfee )
     {
         printf("%s redeem.%llu withdraw %.8f < MGWfee %.8f + minoutput %.8f + txfee %.8f\n",coin->name,(long long)redeemtxid,dstr(value),dstr(MGWfee),dstr(opreturn_amount),dstr(mgw->txfee));
@@ -1812,6 +1815,8 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
                     cJSON_AddItemToObject(json,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
                     cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
                     cJSON_AddItemToObject(json,"signedtx",cJSON_CreateString(cointx->signedtx));
+                    if ( cointx->cointxid[0] != 0 )
+                        cJSON_AddItemToObject(json,"cointxid",cJSON_CreateString(cointx->cointxid));
                     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
                     retbuf = malloc(65536), MGW_publishjson(retbuf,json);
                     free(retbuf), free(jsonstr), free_json(json);
