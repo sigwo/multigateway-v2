@@ -1145,7 +1145,7 @@ int32_t mgw_encode_OP_RETURN(char *scriptstr,uint64_t redeemtxid)
     script[1] = 'M', script[2] = 'G', script[3] = 'W';
     offset = 4;
     for (j=0; j<sizeof(uint64_t); j++)
-        revbuf[j] = ((uint8_t *)&redeemtxid)[7-j];
+        revbuf[j] = ((uint8_t *)&redeemtxid)[j];
     memcpy(&redeemtxid,revbuf,sizeof(redeemtxid));
     offset = _emit_uint32(script,offset,(uint32_t)redeemtxid);
     offset = _emit_uint32(script,offset,(uint32_t)(redeemtxid >> 32));
@@ -1163,7 +1163,7 @@ uint64_t mgw_decode_OP_RETURN(uint8_t *script,int32_t scriptlen)
         scriptptr = &script[4];
     else return(0);
     for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
-        redeemtxid <<= 8, redeemtxid |= (scriptptr[j] & 0xff);
+        redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
 //printf("(REDEEMTXID.%llx %llu) ",(long long)redeemtxid,(long long)redeemtxid);
     return(redeemtxid);
 }
@@ -1440,26 +1440,9 @@ char *mgw_sign_localtx_plus2(uint32_t *completedp,char *coinstr,char *serverport
     return(batchsigned+2);
 }
 
-/*int32_t cosigntransaction(char **cointxidp,char **cosignedtxp,char *coinstr,char *serverport,char *userpass,char *signparams,int32_t gatewayid,int32_t numgateways)
-{
-    char *signed2transaction,*retstr; int32_t completed,len;
-    *cosignedtxp = *cointxidp = 0;
-    len = (int32_t)strlen(signparams);
-    signed2transaction = calloc(1,2*len);
-    if ( (retstr= mgw_sign_rawbytes(&completed,signed2transaction+2,2*len-4,coinstr,serverport,userpass,signparams)) != 0 )
-        free(retstr);
-    if ( completed > 0 )
-    {
-         printf(">>>>>>>>>>>>> BROADCAST.(%s)\n",signed2transaction);
-        *cointxidp = 0;//bitcoind_passthru(coinstr,serverport,userpass,"sendrawtransaction",signed2transaction);
-        *cosignedtxp = signed2transaction;
-    }
-    return(completed);
-}*/
-
 char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t redeemtxid,int32_t oldtx_format)
 {
-    char scriptstr[1024],str40[41],*retstr = 0; long len,i; struct cointx_info *cointx; struct rawvout *vout;
+    char scriptstr[1024],str40[41],*retstr = 0; uint64_t checktxid; long len,i; struct cointx_info *cointx; struct rawvout *vout;
     if ( mgw_encode_OP_RETURN(scriptstr,redeemtxid) > 0 && (cointx= _decode_rawtransaction(rawtx,oldtx_format)) != 0 )
     {
         vout = &cointx->outputs[opreturn];
@@ -1477,7 +1460,8 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
         {
             uint8_t script[128];
             decode_hex(script,(int32_t)strlen(scriptstr)>>1,scriptstr);
-            printf("redeemtxid.%llx -> opreturn.%llx\n",(long long)redeemtxid,(long long)mgw_decode_OP_RETURN(script,(int32_t)strlen(scriptstr)>>1));
+            if ( (checktxid= mgw_decode_OP_RETURN(script,(int32_t)strlen(scriptstr)>>1)) != redeemtxid )
+                printf("redeemtxid.%llx -> opreturn.%llx\n",(long long)redeemtxid,(long long)checktxid);
         }
         len = strlen(rawtx) * 2;
         retstr = calloc(1,len + 1);
