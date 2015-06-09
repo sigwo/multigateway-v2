@@ -1720,11 +1720,11 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
     cointx->outputs[numoutputs++].value = opreturn_amount;
     cointx->numoutputs = numoutputs;
-    cointx->amount = amount = (MGWfee + value + opreturn_amount + mgw->txfee);
+    cointx->amount = amount = value;//(MGWfee + value + opreturn_amount + mgw->txfee);
     if ( mgw->balance >= 0 )
     {
         cointx->inputsum = coin777_inputs(&cointx->change,&cointx->numinputs,coin,cointx->inputs,sizeof(cointx->inputs)/sizeof(*cointx->inputs),amount,mgw->txfee);
-        if ( cointx->inputsum >= (cointx->amount + mgw->txfee) )
+        if ( cointx->inputsum >= cointx->amount )
         {
             if ( cointx->change != 0 )
             {
