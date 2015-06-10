@@ -24,9 +24,9 @@ STRUCTNAME
 {
     int32_t pad;
 };
-char *PLUGNAME(_methods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost" }; // list of supported methods approved for public (Internet) access
-char *PLUGNAME(_authmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost" }; // list of supported methods that require authentication
+char *PLUGNAME(_methods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost", "xcpcall" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost", "xcpcall" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_authmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost", "xcpcall"  }; // list of supported methods that require authentication
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -52,6 +52,16 @@ char *nxtcall(char *method){
     strcat(qurl, qurl2);
     char *nxtresp = issue_curl(qurl);
     return nxtresp;
+}
+
+char *xcpcall(char *method){
+    char *qurl1 = "http://localhost:4000/";
+    char *qurl2 = method;
+    char *qurl = (char *) malloc(1 + strlen(qurl1)+ strlen(qurl2) );
+    strcpy(qurl, qurl1);
+    strcat(qurl, qurl2);
+    char *xcpresp = issue_curl(qurl);
+    return xcpresp;
 }
 
 char *crypticall(char *method){
@@ -116,6 +126,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         else if ( strcmp(methodstr,"ripplepost") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s\"}",issue_RIPPLEPOST(callstr));
+        }
+        else if ( strcmp(methodstr,"xcpcall") == 0 )
+        {
+            sprintf(retbuf,"{\"result\":\"%s\"}",xcpcall(callstr));
         }
     }
     return((int32_t)strlen(retbuf));
