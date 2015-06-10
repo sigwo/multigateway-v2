@@ -58,30 +58,30 @@ void process_json(cJSON *json)
 
 int main(int argc, char **argv)
 {
-    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i; cJSON *json;
-    fputs("Access-Control-Allow-Origin: 127.0.0.1\r\n",stdout);
+    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,iter; cJSON *json;
+    fputs("Access-Control-Allow-Origin: null\r\n",stdout);
     fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
     fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
     fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
     fputs("Content-type: text/plain\r\n",stdout);
-    if ((varlist = CGI_get_all(0)) == 0) {
-        printf("No CGI data received\r\n");
-        return 0;
-    }
-    /* output all values of all variables and cookies */
     json = cJSON_CreateObject();
-    for (name = CGI_first_name(varlist); name != 0; name = CGI_next_name(varlist))
+    for (iter=0; iter<2; iter++)
     {
-        value = CGI_lookup_all(varlist, 0);
-        /* CGI_lookup_all(varlist, name) could also be used */
-        for (i = 0; value[i] != 0; i++)
+        if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : CGI_get_query(0))) != 0 )
         {
-            //printf("%s [%d] = %s\r\n", name, i, value[i]);
-            if ( i == 0 )
-                cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
+            for (name=CGI_first_name(varlist); name!=0; name=CGI_next_name(varlist))
+            {
+                value = CGI_lookup_all(varlist,0);
+                for (i=0; value[i]!=0; i++)
+                {
+                    //printf("%s [%d] = %s\r\n", name, i, value[i]);
+                    if ( i == 0 )
+                        cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
+                }
+            }
         }
+        CGI_free_varlist(varlist);
     }
-    CGI_free_varlist(varlist);
     process_json(json);
     return 0;
 }
