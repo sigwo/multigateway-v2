@@ -727,13 +727,16 @@ void SuperNET_loop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    int32_t sock,pushsock,len,checklen; cJSON *json; char apitag[1024],*retstr,*jsonstr,*endpoint = "tcp://127.0.0.1:7776";
+    int32_t sock,len,ind,checklen,recvtimeout; cJSON *json; char apitag[1024],*retstr,*jsonstr,*endpoint = "tcp://127.0.0.1:7776";
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,endpoint) < 0 )
             fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_PAIR,endpoint,nn_errstr());
         else
         {
+            recvtimeout = 1000;
+            if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             fprintf(stderr,"BIND.(%s)\n",endpoint);
             while ( 1 )
             {
@@ -744,14 +747,13 @@ void SuperNET_apiloop(void *ipaddr)
                         copy_cJSON(apitag,cJSON_GetObjectItem(json,"apitag"));
                         printf("API RECV.(%s)\n",jsonstr);
                         retstr = clonestr(jsonstr);
-                        pushsock = sock;
-                        //if ( (pushsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
+                        if ( (ind= nn_connect(sock,apitag)) < 0 )
+                            fprintf(stderr,"error connecting to (%s) for (%s)\n",apitag,jsonstr);
+                        else
                         {
-                            if ( nn_connect(pushsock,apitag) < 0 )
-                                fprintf(stderr,"error connecting to (%s) for (%s)\n",apitag,jsonstr);
-                            else if ( (checklen= nn_send(pushsock,retstr,len,0)) != len )
+                            if ( (checklen= nn_send(sock,retstr,len,0)) != len )
                                 fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,len,endpoint);
-                            nn_shutdown(pushsock,0);
+                            nn_shutdown(sock,ind);
                         }
                         free_json(json);
                         free(retstr);
