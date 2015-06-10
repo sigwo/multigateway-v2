@@ -13,7 +13,36 @@ uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 long _stripwhite(char *buf,int accept);
 #define nn_errstr() nn_strerror(nn_errno())
 
-int main(int argc, char **argv)
+int main(int argc, char **argv) {
+    CGI_varlist *varlist;
+    const char *name;
+    CGI_value  *value;
+    int i;
+    
+    fputs("Content-type: text/plain\r\n\r\n", stdout);
+    if ((varlist = CGI_get_all(0)) == 0) {
+        printf("No CGI data received\r\n");
+        return 0;
+    }
+    
+    /* output all values of all variables and cookies */
+    
+    for (name = CGI_first_name(varlist); name != 0;
+         name = CGI_next_name(varlist))
+    {
+        value = CGI_lookup_all(varlist, 0);
+        
+        /* CGI_lookup_all(varlist, name) could also be used */
+        
+        for (i = 0; value[i] != 0; i++) {
+            printf("%s [%d] = %s\r\n", name, i, value[i]);
+        }
+    }
+    CGI_free_varlist(varlist);  /* free variable list */
+    return 0;
+}
+
+int oldmain(int argc, char **argv)
 {
     CGI_varlist *varlist; const char *name; CGI_value  *value; int32_t pushsock,pullsock,i,len,checklen; uint32_t tag; cJSON *json,*argjson;
     char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "ipc://SuperNET.api";
