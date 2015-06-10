@@ -12,7 +12,7 @@ else
 endif
 endif
 
-PLIBS := ../../libs/libjl777.a ../../libs/libminiupnpc.a ../../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
+PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
 
 LIBS= libs/libjl777.a nanomsg/.libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lanl -lm #-lssl -lcrypto
 
