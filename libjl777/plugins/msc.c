@@ -33,13 +33,13 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 }
 
 char *msccall(char *method,char *params){
-    char *retstr = bitcoind_RPC(0,(char *)"MSC","http://localhost:8332":,"mscserver:publicpass",method,params);
+    char *retstr = bitcoind_RPC(0,0,"http://localhost:8332","mscserver:publicpass",method,params);
     return retstr;
 }
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char callstr[MAX_JSON_FIELD],*resultstr,*methodstr;
+    char callstr[MAX_JSON_FIELD],params[MAX_JSON_FIELD],*resultstr,*methodstr;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -54,7 +54,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             return((int32_t)strlen(retbuf));
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
-        copy_cJSON(userpass,cJSON_GetObjectItem(json,"userpass"));
         copy_cJSON(callstr,cJSON_GetObjectItem(json,"callstr"));
         copy_cJSON(params,cJSON_GetObjectItem(json,"params"));
         retbuf[0] = 0;

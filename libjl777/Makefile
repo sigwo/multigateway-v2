@@ -64,7 +64,9 @@ PINCLUDES := -Iincludes -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libto
 
 _echodemo := rm lib/echodemo; gcc -o lib/echodemo -O2 $(PINCLUDES) echodemo.c $(PLIBS)
 
-_eth := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
+_msc := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
+
+_msc := rm lib/msc; gcc -o lib/msc -O2 $(PINCLUDES) msc.c $(PLIBS)
 
 _nxt := rm lib/nxt; gcc -o lib/nxt -O2 $(PINCLUDES) nxt.c $(PLIBS)
 
@@ -89,6 +91,9 @@ echodemo: plugins/lib/echodemo; \
 
 eth: plugins/lib/eth; \
         cd plugins; $(_eth); cd ..
+
+msc: plugins/lib/msc; \
+        cd plugins; $(_msc); cd ..
 
 nxt: plugins/lib/nxt; \
         cd plugins; $(_nxt); cd ..
@@ -323,5 +328,6 @@ plugins/lib/echodemo: plugins/echodemo.c
 plugins/lib/eth: plugins/eth.c
 plugins/lib/nxt: plugins/nxt.c
 plugins/lib/two: plugins/two.c
+plugins/lib/msc: plugins/msc.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/storage.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
