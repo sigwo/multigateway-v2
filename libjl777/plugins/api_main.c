@@ -31,7 +31,7 @@ int main(int argc, char **argv)
             for (i=0; value[i]!=0; i++)
             {
                 if ( i == 0 )
-                    cJSON_AddItemToObject(json,name,value[i]);
+                    cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
                 printf("%s [%d] = %s\r\n",name,i,value[i]);
             }
         }
