@@ -8,10 +8,10 @@
 #define STRUCTNAME struct PLUGNAME(_info)
 #define STRINGIFY(NAME) #NAME
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
-#include "utils/bitcoind_RPC.c"
+#include "../utils/bitcoind_RPC.c"
 #include <stdio.h>
 #define DEFINES_ONLY
-#include "plugin777.c"
+#include "../plugin777.c"
 #undef DEFINES_ONLY
 #define issue_curl(cmdstr) bitcoind_RPC(0,"curl",cmdstr,0,0,0)
 #define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl","http://localhost:7876",0,0,cmdstr)
@@ -142,5 +142,5 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     }
     return(retcode);
 }
-#include "plugin777.c"
+#include "../plugin777.c"
 

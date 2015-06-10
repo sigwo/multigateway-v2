@@ -8,10 +8,10 @@
 #define STRUCTNAME struct PLUGNAME(_info)
 #define STRINGIFY(NAME) #NAME
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
-#include "utils/bitcoind_RPC.c"
+#include "../utils/bitcoind_RPC.c"
 #include <stdio.h>
 #define DEFINES_ONLY
-#include "plugin777.c"
+#include "../plugin777.c"
 #undef DEFINES_ONLY
 
 int32_t msc_idle(struct plugin_info *plugin) { return(0); }
@@ -82,5 +82,5 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     }
     return(retcode);
 }
-#include "plugin777.c"
+#include "../plugin777.c"
 
