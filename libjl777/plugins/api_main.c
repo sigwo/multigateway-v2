@@ -46,7 +46,7 @@ void process_json(cJSON *json)
                 if ( nn_recv(sock,&resultstr,NN_MSG,0) > 0 )
                 {
                     fputs("Content-type: text/plain\r\n",stdout);
-                    printf("Content-Length: %ld\r\n",strlen(resultstr));
+                    //printf("Content-Length: %ld\r\n",strlen(resultstr));
                     printf("%s\r\n",resultstr);
                     nn_freemsg(resultstr);
                 } else printf("error getting results %s\r\n",nn_errstr());
