@@ -14,6 +14,8 @@ endif
 
 PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
 
+TLIBS := ../../libs/libjl777.a ../../libs/libminiupnpc.a ../../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
+
 LIBS= libs/libjl777.a nanomsg/.libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lanl -lm #-lssl -lcrypto
 
 CC=clang
@@ -60,19 +62,17 @@ test:	all
 clean: doesntexist
 	rm libs/libjl777.a SuperNET; rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
-PINCLUDES := -Iincludes -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp -I. -Iutils -Iramchain -Imgw -I ../includes -I../..
+PINCLUDES := -Iincludes -I../nanomsg/src -I../../nanomsg/src -I../nanomsg/src/utils -I../../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp -I. -Iutils -Iramchain -Imgw -I ../includes -I../.. -I../../includes -I../utils
 
 _echodemo := rm lib/echodemo; gcc -o lib/echodemo -O2 $(PINCLUDES) echodemo.c $(PLIBS)
 
-_msc := rm ../lib/eth; gcc -o ../lib/msc -O2 $(PINCLUDES) msc.c $(PLIBS)
+_msc := rm ../lib/msc; gcc -o ../lib/msc -O2 $(PINCLUDES) msc.c $(TLIBS)
 
 _api := rm lib/api; gcc -o lib/api -O2 $(PINCLUDES) api_main.c ccgi.c prefork.c $(PLIBS)
 
-_eth := rm ../lib/eth; gcc -o ../lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
+_eth := rm ../lib/eth; gcc -o ../lib/eth -O2 $(PINCLUDES) eth.c $(TLIBS)
 
-_msc := rm ../lib/msc; gcc -o ../lib/msc -O2 $(PINCLUDES) msc.c $(PLIBS)
-
-_two := rm ../lib/two; gcc -o ../lib/two -O2 $(PINCLUDES) two.c $(PLIBS)
+_two := rm ../lib/two; gcc -o ../lib/two -O2 $(PINCLUDES) two.c $(TLIBS)
 
 MGW :=    rm lib/MGW; gcc -o lib/MGW $(PINCLUDES) mgw/main.c mgw/mgw.c mgw/state.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c  ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bitcoind_RPC.c utils/bitcoind.c  $(PLIBS) -lcurl
 
