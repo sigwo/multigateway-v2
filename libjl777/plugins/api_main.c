@@ -53,7 +53,7 @@ void process_json(cJSON *json)
             }
         }
         free_json(json), free(jsonstr);
-    } else printf("JSON parse error.(%s)\n",name);
+    }
 }
 
 int main(int argc, char **argv)
