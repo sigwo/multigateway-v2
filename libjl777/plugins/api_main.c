@@ -59,6 +59,10 @@ int main(int argc, char **argv)
 {
     CGI_varlist *varlist; const char *name; CGI_value  *value;  int i; cJSON *json;
     fputs("Content-type: text/plain\r\n\r\n", stdout);
+    fputs("Access-Control-Allow-Origin: 127.0.0.1\r\n",stdout);
+    fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
+    fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
+    fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
     if ((varlist = CGI_get_all(0)) == 0) {
         printf("No CGI data received\r\n");
         return 0;
