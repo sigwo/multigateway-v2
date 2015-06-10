@@ -728,10 +728,10 @@ void SuperNET_loop(void *ipaddr)
 void SuperNET_apiloop(void *ipaddr)
 {
     int32_t sock,pushsock,len,checklen; cJSON *json; char apitag[1024],*retstr,*jsonstr,*endpoint = "ipc://SuperNET.api";
-    if ( (sock= nn_socket(AF_SP,NN_PULL)) >= 0 )
+    if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,endpoint) < 0 )
-            fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_PULL,endpoint,nn_errstr());
+            fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_PAIR,endpoint,nn_errstr());
         else
         {
             fprintf(stderr,"BIND.(%s)\n",endpoint);
@@ -744,7 +744,7 @@ void SuperNET_apiloop(void *ipaddr)
                         copy_cJSON(apitag,cJSON_GetObjectItem(json,"apitag"));
                         printf("API RECV.(%s)\n",jsonstr);
                         retstr = clonestr(jsonstr);
-                        if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
+                        if ( (pushsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
                         {
                             if ( nn_connect(pushsock,apitag) < 0 )
                                 fprintf(stderr,"error connecting to (%s) for (%s)\n",apitag,jsonstr);

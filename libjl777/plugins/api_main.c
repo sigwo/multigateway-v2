@@ -30,7 +30,7 @@ void process_json(cJSON *json)
     if ( 1 && json != 0 )
     {
         recvtimeout = sendtimeout = 1000;
-        if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
+        if ( (pushsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
         {
             if ( sendtimeout > 0 && nn_setsockopt(pushsock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
@@ -42,7 +42,7 @@ void process_json(cJSON *json)
             else
             {
                 printf("sent\r\n");
-                if ( (pullsock= nn_socket(AF_SP,NN_PULL)) >= 0 )
+                if ( (pullsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
                 {
                     if ( recvtimeout > 0 && nn_setsockopt(pullsock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                         fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
