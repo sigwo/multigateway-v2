@@ -725,7 +725,7 @@ void SuperNET_loop(void *ipaddr)
     serverloop(0);
 }
 
-#define SUPERNET_APIENDPOINT "ipc://SuperNET.api"
+#define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
 void SuperNET_apiloop(void *ipaddr)
 {
     int32_t sock,len,ind,checklen,recvtimeout; cJSON *json; char apitag[1024],*retstr,*jsonstr;

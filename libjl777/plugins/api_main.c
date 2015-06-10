@@ -13,7 +13,7 @@
 uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 long _stripwhite(char *buf,int accept);
 #define nn_errstr() nn_strerror(nn_errno())
-#define SUPERNET_APIENDPOINT "ipc://SuperNET.api"
+#define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
 
 void process_json(cJSON *json)
 {
