@@ -45,7 +45,7 @@ void process_json(cJSON *json)
                     fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
                 if ( nn_recv(sock,&resultstr,NN_MSG,0) > 0 )
                 {
-                    printf("Content-Length: %ld\r\n\r\n",strlen(resultstr));
+                    printf("Content-Length: %ld\r\n\r\n",strlen(resultstr)+60);
                     printf("%s\r\n",resultstr);
                     nn_freemsg(resultstr);
                 } else printf("error getting results %s\r\n",nn_errstr());
