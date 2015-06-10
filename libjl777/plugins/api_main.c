@@ -63,6 +63,7 @@ int main(int argc, char **argv)
                             }
                             nn_shutdown(pushsock,0);
                         }
+                    }
                     free_json(json), free(jsonstr);
                 } else printf("JSON parse error.(%s)\n",name);
             }

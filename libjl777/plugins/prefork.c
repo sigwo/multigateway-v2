@@ -467,7 +467,8 @@ CGI_prefork_server(const char *host, int port, const char *pidfile,
         /* notify parent we are idle */
 
         message.state = SCORE_IDLE;
-        write(pfd[1], &message, sizeof(message));
+       if ( write(pfd[1], &message, sizeof(message)) != sizeof(message) )
+           printf("write2 error\n");
     }
     _exit(0);
 }
