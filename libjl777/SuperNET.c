@@ -725,19 +725,20 @@ void SuperNET_loop(void *ipaddr)
     serverloop(0);
 }
 
+#define SUPERNET_APIENDPOINT "ipc://SuperNET.api"
 void SuperNET_apiloop(void *ipaddr)
 {
-    int32_t sock,len,ind,checklen,recvtimeout; cJSON *json; char apitag[1024],*retstr,*jsonstr,*endpoint = "tcp://127.0.0.1:7776";
+    int32_t sock,len,ind,checklen,recvtimeout; cJSON *json; char apitag[1024],*retstr,*jsonstr;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
-        if ( nn_bind(sock,endpoint) < 0 )
-            fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_PAIR,endpoint,nn_errstr());
+        if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
+            fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_PAIR,SUPERNET_APIENDPOINT,nn_errstr());
         else
         {
             recvtimeout = 1000;
             if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            fprintf(stderr,"BIND.(%s)\n",endpoint);
+            fprintf(stderr,"BIND.(%s)\n",SUPERNET_APIENDPOINT);
             while ( 1 )
             {
                 if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
@@ -752,7 +753,7 @@ void SuperNET_apiloop(void *ipaddr)
                         else
                         {
                             if ( (checklen= nn_send(sock,retstr,len,0)) != len )
-                                fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,len,endpoint);
+                                fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,len,apitag);
                             nn_shutdown(sock,ind);
                         }
                         free_json(json);

@@ -13,11 +13,12 @@
 uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 long _stripwhite(char *buf,int accept);
 #define nn_errstr() nn_strerror(nn_errno())
+#define SUPERNET_APIENDPOINT "ipc://SuperNET.api"
 
 void process_json(cJSON *json)
 {
     int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t tag;
-    char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "tcp://127.0.0.1:7776";
+    char endpoint[128],*resultstr,*jsonstr;
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     //printf("jsonstr.(%s)\r\n",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
@@ -34,10 +35,10 @@ void process_json(cJSON *json)
         {
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            if ( nn_connect(sock,apiendpoint) < 0 )
-                printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\r\n",sock,NN_PUSH,apiendpoint,nn_errstr());
+            if ( nn_connect(sock,SUPERNET_APIENDPOINT) < 0 )
+                printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\r\n",sock,NN_PUSH,SUPERNET_APIENDPOINT,nn_errstr());
             else if ( (checklen= nn_send(sock,jsonstr,len,0)) != len )
-                printf("checklen.%d != len.%d for nn_send to (%s)\r\n",checklen,len,apiendpoint);
+                printf("checklen.%d != len.%d for nn_send to (%s)\r\n",checklen,len,SUPERNET_APIENDPOINT);
             else
             {
                 if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
