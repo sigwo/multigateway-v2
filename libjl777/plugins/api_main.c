@@ -32,7 +32,7 @@ void process_json(cJSON *json)
         recvtimeout = sendtimeout = 1000;
         if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
         {
-            if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+            if ( sendtimeout > 0 && nn_setsockopt(pushsock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             printf("pushsock.%d\r\n",pushsock);
             if ( nn_connect(pushsock,apiendpoint) < 0 )
@@ -44,7 +44,7 @@ void process_json(cJSON *json)
                 printf("sent\r\n");
                 if ( (pullsock= nn_socket(AF_SP,NN_PULL)) >= 0 )
                 {
-                    if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+                    if ( recvtimeout > 0 && nn_setsockopt(pullsock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                         fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
                     printf("pullsock.%d\r\n",pullsock);
                     if ( nn_bind(pullsock,endpoint) < 0 )
@@ -59,8 +59,8 @@ void process_json(cJSON *json)
                     }
                     nn_shutdown(pullsock,0);
                 } else printf("error getting pullsock\r\n");
-                nn_shutdown(pushsock,0);
             }
+            nn_shutdown(pushsock,0);
         } else printf("error getting pushsock.%s\r\n",nn_errstr());
     }
     free(jsonstr);
