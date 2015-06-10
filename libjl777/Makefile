@@ -333,6 +333,7 @@ plugins/lib/echodemo: plugins/echodemo.c
 plugins/lib/eth: plugins/two/eth.c
 plugins/lib/msc: plugins/two/msc.c
 plugins/lib/nxt: plugins/two/nxt.c
+plugins/lib/two: plugins/two/two.c
 plugins/lib/api: plugins/api_main.c plugins/ccgi.c plugins/prefork.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/storage.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
