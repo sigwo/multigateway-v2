@@ -13,7 +13,6 @@ endif
 endif
 
 PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
-PLIBS2 := ../../libs/libjl777.a ../../libs/libminiupnpc.a ../../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
 
 LIBS= libs/libjl777.a nanomsg/.libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lanl -lm #-lssl -lcrypto
 
@@ -68,6 +67,8 @@ _echodemo := rm lib/echodemo; gcc -o lib/echodemo -O2 $(PINCLUDES) echodemo.c $(
 _api := rm lib/api; gcc -o lib/api -O2 $(PINCLUDES) api_main.c ccgi.c prefork.c utils/bits777.c utils/utils777.c utils/cJSON.c ../nanomsg/.libs/libnanomsg.a -lpthread -lanl -lm
 
 _msc := rm lib/msc; gcc -o lib/msc -O2 $(PINCLUDES) two/msc.c $(PLIBS)
+
+_nxt := rm lib/msc; gcc -o lib/nxt -O2 $(PINCLUDES) two/nxt.c $(PLIBS)
 
 _eth := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) two/eth.c $(PLIBS)
 
