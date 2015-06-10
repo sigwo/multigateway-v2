@@ -45,6 +45,8 @@ void process_json(cJSON *json)
                     fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
                 if ( nn_recv(sock,&resultstr,NN_MSG,0) > 0 )
                 {
+                    printf("Content-Length: %ld\r\n",strlen(resultstr));
+                    fputs("Content-type: text/plain\r\n\r\n",stdout);
                     printf("%s\r\n",resultstr);
                     nn_freemsg(resultstr);
                 } else printf("error getting results %s\r\n",nn_errstr());
@@ -62,7 +64,6 @@ int main(int argc, char **argv)
     fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
     fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
     fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
-    fputs("Content-type: text/plain\r\n\r\n", stdout);
     if ((varlist = CGI_get_all(0)) == 0) {
         printf("No CGI data received\r\n");
         return 0;
