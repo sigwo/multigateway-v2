@@ -40,7 +40,7 @@ void process_json(cJSON *json)
                 if ( (pullsock= nn_socket(AF_SP,NN_PULL)) >= 0 )
                 {
                     if ( nn_bind(pullsock,endpoint) < 0 )
-                        fprintf("error binding to sock.%d type.%d (%s) %s\n",pullsock,NN_PULL,endpoint,nn_errstr());
+                        printf("error binding to sock.%d type.%d (%s) %s\n",pullsock,NN_PULL,endpoint,nn_errstr());
                     else
                     {
                         if ( nn_recv(pullsock,&resultstr,NN_MSG,0) > 0 )
