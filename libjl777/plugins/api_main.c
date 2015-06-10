@@ -31,9 +31,9 @@ int main(int argc, char **argv)
             ///CGI_lookup_all(varlist, name) could also be used
             for (i=0; value[i]!=0; i++)
             {
-                if ( i == 0 )
-                    cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
                 printf("%s [%d] = %s\r\n",name,i,value[i]);
+                //if ( i == 0 )
+                //    cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
             }
         }
         CGI_free_varlist(varlist);
