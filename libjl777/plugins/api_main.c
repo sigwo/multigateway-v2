@@ -60,7 +60,7 @@ void process_json(cJSON *json)
                         } else printf("error getting results %s\r\n",nn_errstr());
                     }
                     nn_shutdown(pullsock,0);
-                } else printf("error getting pullsock\r\n");
+                } //else printf("error getting pullsock\r\n");
             }
             nn_shutdown(pushsock,0);
         } else printf("error getting pushsock.%s\r\n",nn_errstr());
