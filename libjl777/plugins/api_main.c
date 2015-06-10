@@ -29,10 +29,10 @@ void process_json(cJSON *json)
     printf("jsonstr.(%s)\r\n",jsonstr);
     if ( 1 && json != 0 )
     {
-        if ( 0 && (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
+        if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
         {
             printf("pushsock.%d\r\n",pushsock);
-            if ( nn_connect(pushsock,apiendpoint) < 0 )
+            if ( 1 || nn_connect(pushsock,apiendpoint) < 0 )
                 printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\r\n",pushsock,NN_PUSH,apiendpoint,nn_errstr());
             else if ( (checklen= nn_send(pushsock,jsonstr,len,0)) != len )
                 printf("checklen.%d != len.%d for nn_send to (%s)\r\n",checklen,len,apiendpoint);
