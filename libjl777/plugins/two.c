@@ -1,3 +1,4 @@
+//
 //  two.c
 //
 
@@ -15,6 +16,7 @@
 #define issue_curl(cmdstr) bitcoind_RPC(0,"curl",cmdstr,0,0,0)
 #define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl","http://localhost:7876",0,0,cmdstr)
 #define issue_CRYPTIPOST(cmdstr) bitcoind_RPC(0,"curl","http://localhost:6040",0,0,cmdstr)
+#define issue_RIPPLEPOST(cmdstr) bitcoind_RPC(0,"curl","http://s1.ripple.com:51234",0,0,cmdstr)
 
 int32_t two_idle(struct plugin_info *plugin) { return(0); }
 
@@ -22,9 +24,9 @@ STRUCTNAME
 {
     int32_t pad;
 };
-char *PLUGNAME(_methods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost" }; // list of supported methods approved for public (Internet) access
-char *PLUGNAME(_authmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost" }; // list of supported methods that require authentication
+char *PLUGNAME(_methods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_authmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost", "ripplepost" }; // list of supported methods that require authentication
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -110,6 +112,10 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         else if ( strcmp(methodstr,"qoracall") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s\"}",qoracall(callstr));
+        }
+        else if ( strcmp(methodstr,"ripplepost") == 0 )
+        {
+            sprintf(retbuf,"{\"result\":\"%s\"}",issue_RIPPLEPOST(callstr));
         }
     }
     return((int32_t)strlen(retbuf));
