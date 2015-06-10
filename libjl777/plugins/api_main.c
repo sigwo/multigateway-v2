@@ -27,9 +27,9 @@ void process_json(cJSON *json)
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
     printf("jsonstr.(%s)\r\n",jsonstr);
-    if ( 0 && json != 0 )
+    if ( 1 && json != 0 )
     {
-        if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
+        if ( 0 && (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
         {
             printf("pushsock.%d\r\n",pushsock);
             if ( nn_connect(pushsock,apiendpoint) < 0 )
