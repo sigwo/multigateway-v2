@@ -66,6 +66,10 @@ _echodemo := rm lib/echodemo; gcc -o lib/echodemo -O2 $(PINCLUDES) echodemo.c $(
 
 _msc := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
 
+_api := rm lib/api; gcc -o lib/api -O2 $(PINCLUDES) api_main.c ccgi.c prefork.c $(PLIBS)
+
+_eth := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
+
 _msc := rm lib/msc; gcc -o lib/msc -O2 $(PINCLUDES) msc.c $(PLIBS)
 
 _nxt := rm lib/nxt; gcc -o lib/nxt -O2 $(PINCLUDES) nxt.c $(PLIBS)
@@ -88,6 +92,9 @@ plugins: lib/echo lib/MGW lib/stockfish lib/sophia; \
 
 echodemo: plugins/lib/echodemo; \
  	cd plugins; $(_echodemo); cd ..
+
+api: plugins/lib/api; \
+ 	cd plugins; $(_api); cd ..
 
 eth: plugins/lib/eth; \
         cd plugins; $(_eth); cd ..
@@ -329,5 +336,6 @@ plugins/lib/eth: plugins/eth.c
 plugins/lib/nxt: plugins/nxt.c
 plugins/lib/two: plugins/two.c
 plugins/lib/msc: plugins/msc.c
+plugins/lib/api: plugins/api_main.c plugins/ccgi.c plugins/prefork.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/storage.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
