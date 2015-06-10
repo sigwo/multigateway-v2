@@ -31,29 +31,30 @@ void process_json(cJSON *json)
     {
         if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
         {
+            printf("pushsock.%d\r\n",pushsock);
             if ( nn_connect(pushsock,apiendpoint) < 0 )
-                printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\n",pushsock,NN_PUSH,apiendpoint,nn_errstr());
+                printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\r\n",pushsock,NN_PUSH,apiendpoint,nn_errstr());
             else if ( (checklen= nn_send(pushsock,jsonstr,len,0)) != len )
-                printf("checklen.%d != len.%d for nn_send to (%s)\n",checklen,len,apiendpoint);
+                printf("checklen.%d != len.%d for nn_send to (%s)\r\n",checklen,len,apiendpoint);
             else
             {
                 if ( (pullsock= nn_socket(AF_SP,NN_PULL)) >= 0 )
                 {
                     if ( nn_bind(pullsock,endpoint) < 0 )
-                        printf("error binding to sock.%d type.%d (%s) %s\n",pullsock,NN_PULL,endpoint,nn_errstr());
+                        printf("error binding to sock.%d type.%d (%s) %s\r\n",pullsock,NN_PULL,endpoint,nn_errstr());
                     else
                     {
                         if ( nn_recv(pullsock,&resultstr,NN_MSG,0) > 0 )
                         {
-                            printf("%s\n",resultstr);
+                            printf("%s\r\n",resultstr);
                             nn_freemsg(resultstr);
-                        } else printf("error getting results\n");
+                        } else printf("error getting results\r\n");
                     }
                     nn_shutdown(pullsock,0);
-                } else printf("error getting pullsock\n");
+                } else printf("error getting pullsock\r\n");
                 nn_shutdown(pushsock,0);
             }
-        } else printf("error getting pushsock.%s\n",nn_errstr());
+        } else printf("error getting pushsock.%s\r\n",nn_errstr());
     }
     free(jsonstr);
 }
