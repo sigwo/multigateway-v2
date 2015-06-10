@@ -12,7 +12,7 @@ else
 endif
 endif
 
-PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
+PLIBS := ../../libs/libjl777.a ../../libs/libminiupnpc.a ../../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
 
 LIBS= libs/libjl777.a nanomsg/.libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lanl -lm #-lssl -lcrypto
 
@@ -60,21 +60,19 @@ test:	all
 clean: doesntexist
 	rm libs/libjl777.a SuperNET; rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
-PINCLUDES := -Iincludes -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp -I. -Iutils -Iramchain -Imgw -I ../includes -I../..
+PINCLUDES := -Iincludes -I../../nanomsg/src -I../../nanomsg/src/utils -I../includes/libtom -I../includes/miniupnp -I. -I../utils -I../ramchain -Imgw -I ../../includes -I../..
 
 _echodemo := rm lib/echodemo; gcc -o lib/echodemo -O2 $(PINCLUDES) echodemo.c $(PLIBS)
 
-_msc := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
+_msc := rm ../lib/eth; gcc -o ../lib/msc -O2 $(PINCLUDES) msc.c $(PLIBS)
 
 _api := rm lib/api; gcc -o lib/api -O2 $(PINCLUDES) api_main.c ccgi.c prefork.c $(PLIBS)
 
-_eth := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
+_eth := rm ../lib/eth; gcc -o ../lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
 
-_msc := rm lib/msc; gcc -o lib/msc -O2 $(PINCLUDES) msc.c $(PLIBS)
+_msc := rm ../lib/msc; gcc -o ../lib/msc -O2 $(PINCLUDES) msc.c $(PLIBS)
 
-_nxt := rm lib/nxt; gcc -o lib/nxt -O2 $(PINCLUDES) nxt.c $(PLIBS)
-
-_two := rm lib/two; gcc -o lib/two -O2 $(PINCLUDES) two.c $(PLIBS)
+_two := rm ../lib/two; gcc -o ../lib/two -O2 $(PINCLUDES) two.c $(PLIBS)
 
 MGW :=    rm lib/MGW; gcc -o lib/MGW $(PINCLUDES) mgw/main.c mgw/mgw.c mgw/state.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c  ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bitcoind_RPC.c utils/bitcoind.c  $(PLIBS) -lcurl
 
@@ -97,13 +95,13 @@ api: plugins/lib/api; \
  	cd plugins; $(_api); cd ..
 
 eth: plugins/lib/eth; \
-        cd plugins; $(_eth); cd ..
+        cd plugins/two; $(_eth); cd ../..
 
 msc: plugins/lib/msc; \
-        cd plugins; $(_msc); cd ..
+        cd plugins/two; $(_msc); cd ../..
 
 nxt: plugins/lib/nxt; \
-        cd plugins; $(_nxt); cd ..
+        cd plugins/two; $(_nxt); cd ../..
 
 two: plugins/lib/two; \
         cd plugins; $(_two); cd ..
@@ -332,10 +330,9 @@ plugins/lib/sophia: plugins/sophia/sophia.c plugins/sophia/sophia_main.c
 plugins/lib/echodemo: plugins/echodemo.c
 #plugins/nonportable/$(OS)/files.o: plugins/nonportable/$(OS)/files.c
 #plugins/nonportable/$(OS)/random.o: plugins/nonportable/$(OS)/random.c
-plugins/lib/eth: plugins/eth.c
-plugins/lib/nxt: plugins/nxt.c
-plugins/lib/two: plugins/two.c
-plugins/lib/msc: plugins/msc.c
+plugins/lib/eth: plugins/two/eth.c
+plugins/lib/two: plugins/two/two.c
+plugins/lib/msc: plugins/two/msc.c
 plugins/lib/api: plugins/api_main.c plugins/ccgi.c plugins/prefork.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/storage.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
