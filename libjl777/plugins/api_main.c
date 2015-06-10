@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
     }
     CGI_free_varlist(varlist);  /* free variable list */
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+    printf("%s\r\n",jsonstr);
     return 0;
 }
 
