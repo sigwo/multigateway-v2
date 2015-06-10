@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     CGI_varlist *varlist;
     const char *name;
     CGI_value  *value;
-    int i;
+    int i; char *jsonstr; cJSON *json;
     
     fputs("Content-type: text/plain\r\n\r\n", stdout);
     if ((varlist = CGI_get_all(0)) == 0) {
@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     }
     
     /* output all values of all variables and cookies */
-    
+    json = cJSON_CreateObject();
     for (name = CGI_first_name(varlist); name != 0;
          name = CGI_next_name(varlist))
     {
@@ -34,11 +34,15 @@ int main(int argc, char **argv) {
         
         /* CGI_lookup_all(varlist, name) could also be used */
         
-        for (i = 0; value[i] != 0; i++) {
+        for (i = 0; value[i] != 0; i++)
+        {
             printf("%s [%d] = %s\r\n", name, i, value[i]);
+            if ( i == 0 )
+                cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
         }
     }
     CGI_free_varlist(varlist);  /* free variable list */
+    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     return 0;
 }
 
