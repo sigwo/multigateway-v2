@@ -67,11 +67,11 @@ _echodemo := rm lib/echodemo; gcc -o lib/echodemo -O2 $(PINCLUDES) echodemo.c $(
 
 _api := rm lib/api; gcc -o lib/api -O2 $(PINCLUDES) api_main.c ccgi.c prefork.c utils/bits777.c utils/utils777.c utils/cJSON.c ../nanomsg/.libs/libnanomsg.a -lpthread -lanl -lm
 
-_msc := rm ../lib/msc; gcc -o ../lib/msc -O2 $(PINCLUDES) msc.c $(PLIBS2)
+_msc := rm lib/msc; gcc -o lib/msc -O2 $(PINCLUDES) two/msc.c $(PLIBS)
 
-_eth := rm ../lib/eth; gcc -o ../lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS2)
+_eth := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) two/eth.c $(PLIBS)
 
-_two := rm ../lib/two; gcc -o ../lib/two -O2 $(PINCLUDES) two.c $(PLIBS2)
+_two := rm lib/two; gcc -o lib/two -O2 $(PINCLUDES) two/two.c $(PLIBS)
 
 _MGW :=    rm lib/MGW; gcc -o lib/MGW $(PINCLUDES) mgw/main.c mgw/mgw.c mgw/state.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c  ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bitcoind_RPC.c utils/bitcoind.c  $(PLIBS) -lcurl
 
@@ -94,13 +94,13 @@ api: plugins/lib/api; \
  	cd plugins; $(_api); cd ..
 
 eth: plugins/lib/eth; \
-       cd plugins/two; $(_eth); cd ../..
+       cd plugins; $(_eth); cd ..
 
 msc: plugins/lib/msc; \
-        cd plugins/two; $(_msc); cd ../..
+        cd plugins; $(_msc); cd ..
 
 nxt: plugins/lib/nxt; \
-        cd plugins/two; $(_nxt); cd ../..
+        cd plugins; $(_nxt); cd ..
 
 two: plugins/lib/two; \
         cd plugins; $(_two); cd ..
