@@ -22,9 +22,9 @@ STRUCTNAME
 {
     int32_t pad;
 };
-char *PLUGNAME(_methods)[] = { "nxtcall", "qoracall" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "nxtcall", "qoracall" }; // list of supported methods approved for public (Internet) access
-char *PLUGNAME(_authmethods)[] = { "nxtcall", "qoracall" }; // list of supported methods that require authentication
+char *PLUGNAME(_methods)[] = { "nxtcall", "qoracall", "nxtpost" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "nxtcall", "qoracall", "nxtpost" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_authmethods)[] = { "nxtcall", "qoracall", "nxtpost" }; // list of supported methods that require authentication
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -109,3 +109,4 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     return(retcode);
 }
 #include "plugin777.c"
+
