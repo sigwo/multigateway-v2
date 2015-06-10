@@ -15,7 +15,7 @@ long _stripwhite(char *buf,int accept);
 
 void process_json(cJSON *json)
 {
-    int32_t pushsock,pullsock,i,len,checklen; uint32_t tag;
+    int32_t pushsock,pullsock,i,len,checklen,sendtimeout,recvtimeout; uint32_t tag;
     char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "ipc://SuperNET.api";
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     printf("jsonstr.(%s)\r\n",jsonstr);
@@ -29,8 +29,11 @@ void process_json(cJSON *json)
     printf("jsonstr.(%s)\r\n",jsonstr);
     if ( 1 && json != 0 )
     {
+        recvtimeout = sendtimeout = 1000;
         if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
         {
+            if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             printf("pushsock.%d\r\n",pushsock);
             if ( nn_connect(pushsock,apiendpoint) < 0 )
                 printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\r\n",pushsock,NN_PUSH,apiendpoint,nn_errstr());
@@ -41,6 +44,8 @@ void process_json(cJSON *json)
                 printf("sent\r\n");
                 if ( (pullsock= nn_socket(AF_SP,NN_PULL)) >= 0 )
                 {
+                    if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+                        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
                     printf("pullsock.%d\r\n",pullsock);
                     if ( nn_bind(pullsock,endpoint) < 0 )
                         printf("error binding to sock.%d type.%d (%s) %s\r\n",pullsock,NN_PULL,endpoint,nn_errstr());
@@ -50,7 +55,7 @@ void process_json(cJSON *json)
                         {
                             printf("%s\r\n",resultstr);
                             nn_freemsg(resultstr);
-                        } else printf("error getting results\r\n");
+                        } else printf("error getting results %s\r\n",nn_errstr());
                     }
                     nn_shutdown(pullsock,0);
                 } else printf("error getting pullsock\r\n");
