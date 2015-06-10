@@ -1,4 +1,3 @@
-//
 //  two.c
 //
 
@@ -15,6 +14,7 @@
 #undef DEFINES_ONLY
 #define issue_curl(cmdstr) bitcoind_RPC(0,"curl",cmdstr,0,0,0)
 #define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl","http://localhost:7876",0,0,cmdstr)
+#define issue_CRYPTIPOST(cmdstr) bitcoind_RPC(0,"curl","http://localhost:6040",0,0,cmdstr)
 
 int32_t two_idle(struct plugin_info *plugin) { return(0); }
 
@@ -22,9 +22,9 @@ STRUCTNAME
 {
     int32_t pad;
 };
-char *PLUGNAME(_methods)[] = { "nxtcall", "qoracall", "nxtpost" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "nxtcall", "qoracall", "nxtpost" }; // list of supported methods approved for public (Internet) access
-char *PLUGNAME(_authmethods)[] = { "nxtcall", "qoracall", "nxtpost" }; // list of supported methods that require authentication
+char *PLUGNAME(_methods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_authmethods)[] = { "nxtcall", "qoracall", "nxtpost", "crypticall", "cryptipost" }; // list of supported methods that require authentication
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -52,10 +52,16 @@ char *nxtcall(char *method){
     return nxtresp;
 }
 
-char *nxtpost(char *method){
-    char *nxtresp = issue_NXTPOST(method);
-    return nxtresp;
+char *crypticall(char *method){
+    char *qurl1 = "http://localhost:6040/api/";
+    char *qurl2 = method;
+    char *qurl = (char *) malloc(1 + strlen(qurl1)+ strlen(qurl2) );
+    strcpy(qurl, qurl1);
+    strcat(qurl, qurl2);
+    char *cryptiresp = issue_curl(qurl);
+    return cryptiresp;
 }
+
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char callstr[MAX_JSON_FIELD],*resultstr,*methodstr;
@@ -91,7 +97,15 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         }
         else if ( strcmp(methodstr,"nxtpost") == 0 )
         {
-            sprintf(retbuf,"{\"result\":\"%s\"}",nxtpost(callstr));
+            sprintf(retbuf,"{\"result\":\"%s\"}",issue_NXTPOST(callstr));
+        }
+        else if ( strcmp(methodstr,"crypticall") == 0 )
+        {
+            sprintf(retbuf,"{\"result\":\"%s\"}",crypticall(callstr));
+        }
+        else if ( strcmp(methodstr,"cryptipost") == 0 )
+        {
+            sprintf(retbuf,"{\"result\":\"%s\"}",issue_CRYPTIPOST(callstr));
         }
         else if ( strcmp(methodstr,"qoracall") == 0 )
         {
