@@ -17,11 +17,11 @@ void process_json(cJSON *json)
 {
     int32_t pushsock,pullsock,i,len,checklen; uint32_t tag;
     char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "ipc://SuperNET.api";
-    if ( json != 0 )
+    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+    printf("jsonstr.(%s)\r\n",jsonstr);
+    if ( 0 && json != 0 )
     {
-        jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-        printf("jsonstr.(%s)\r\n",jsonstr);
-        len = (int32_t)strlen(jsonstr)+1;
+         len = (int32_t)strlen(jsonstr)+1;
         tag = _crc32(0,jsonstr,len);
         sprintf(endpoint,"ipc://api.%u",tag);
         cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
@@ -52,7 +52,7 @@ void process_json(cJSON *json)
                 nn_shutdown(pushsock,0);
             }
         }
-        free_json(json), free(jsonstr);
+        free(jsonstr);
     }
 }
 
