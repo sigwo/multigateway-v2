@@ -17,9 +17,9 @@ long _stripwhite(char *buf,int accept);
 void process_json(cJSON *json)
 {
     int32_t pushsock,pullsock,i,len,checklen,sendtimeout,recvtimeout; uint32_t tag;
-    char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "tcp://127.0.0.1:7777";
+    char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "tcp://127.0.0.1:7776";
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-    printf("jsonstr.(%s)\r\n",jsonstr);
+    //printf("jsonstr.(%s)\r\n",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
     tag = _crc32(0,jsonstr,len);
     sprintf(endpoint,"ipc://api.%u",tag);
@@ -27,7 +27,7 @@ void process_json(cJSON *json)
     cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
-    printf("jsonstr.(%s)\r\n",jsonstr);
+    //printf("jsonstr.(%s)\r\n",jsonstr);
     if ( 1 && json != 0 )
     {
         recvtimeout = sendtimeout = 1000;
@@ -35,20 +35,20 @@ void process_json(cJSON *json)
         {
             if ( sendtimeout > 0 && nn_setsockopt(pushsock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            printf("pushsock.%d\r\n",pushsock);
+            //printf("pushsock.%d\r\n",pushsock);
             if ( nn_connect(pushsock,apiendpoint) < 0 )
                 printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\r\n",pushsock,NN_PUSH,apiendpoint,nn_errstr());
             else if ( (checklen= nn_send(pushsock,jsonstr,len,0)) != len )
                 printf("checklen.%d != len.%d for nn_send to (%s)\r\n",checklen,len,apiendpoint);
             else
             {
-                printf("sent\r\n");
+                //printf("sent\r\n");
                 pullsock = pushsock;
                 //if ( (pullsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
                 {
                     if ( recvtimeout > 0 && nn_setsockopt(pullsock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                         fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-                    printf("pullsock.%d\r\n",pullsock);
+                    //printf("pullsock.%d\r\n",pullsock);
                     //if ( nn_bind(pullsock,endpoint) < 0 )
                     //    printf("error binding to sock.%d type.%d (%s) %s\r\n",pullsock,NN_PULL,endpoint,nn_errstr());
                     //else
