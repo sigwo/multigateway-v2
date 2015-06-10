@@ -27,35 +27,35 @@ void process_json(cJSON *json)
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
     printf("jsonstr.(%s)\r\n",jsonstr);
-    if ( 0 && json != 0 )
+    if ( 1 && json != 0 )
     {
         if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
         {
             if ( nn_connect(pushsock,apiendpoint) < 0 )
-                fprintf(stderr,"error connecting to apiendpoint sock.%d type.%d (%s) %s\n",pushsock,NN_PUSH,apiendpoint,nn_errstr());
+                printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\n",pushsock,NN_PUSH,apiendpoint,nn_errstr());
             else if ( (checklen= nn_send(pushsock,jsonstr,len,0)) != len )
-                fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,len,apiendpoint);
+                printf("checklen.%d != len.%d for nn_send to (%s)\n",checklen,len,apiendpoint);
             else
             {
                 if ( (pullsock= nn_socket(AF_SP,NN_PULL)) >= 0 )
                 {
                     if ( nn_bind(pullsock,endpoint) < 0 )
-                        fprintf(stderr,"error binding to sock.%d type.%d (%s) %s\n",pullsock,NN_PULL,endpoint,nn_errstr());
+                        fprintf("error binding to sock.%d type.%d (%s) %s\n",pullsock,NN_PULL,endpoint,nn_errstr());
                     else
                     {
                         if ( nn_recv(pullsock,&resultstr,NN_MSG,0) > 0 )
                         {
                             printf("%s\n",resultstr);
                             nn_freemsg(resultstr);
-                        }
+                        } else printf("error getting results\n");
                     }
                     nn_shutdown(pullsock,0);
-                }
+                } else printf("error getting pullsock\n");
                 nn_shutdown(pushsock,0);
             }
-        }
-        free(jsonstr);
+        } else printf("error getting pushsock.%s\n",nn_errstr());
     }
+    free(jsonstr);
 }
 
 int main(int argc, char **argv)
