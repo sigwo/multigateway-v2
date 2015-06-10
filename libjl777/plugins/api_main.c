@@ -26,6 +26,7 @@ void process_json(cJSON *json)
     cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
+    printf("jsonstr.(%s)\r\n",jsonstr);
     if ( 0 && json != 0 )
     {
         if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
