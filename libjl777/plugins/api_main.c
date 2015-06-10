@@ -5,6 +5,7 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 #include <stdint.h>
+#include "ccgi.h"
 #include "nn.h"
 #include "cJSON.h"
 #include "pipeline.h"
@@ -18,7 +19,6 @@ int main(int argc, char **argv)
     fputs("Content-type: text/plain\r\n\r\n", stdout);
     if ( (varlist= CGI_get_all(0)) == 0 )
         printf("No CGI data received\r\n");
-        return 0;
     else
     {
         // output all values of all variables and cookies
