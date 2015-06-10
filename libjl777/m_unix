@@ -11,7 +11,7 @@ make api
 if make btcd; then
 	rm ~/.BitcoinDark/debug.log
 	./BitcoinDarkd
-	websocketd --cgidir=plugins/lib --port=7777
+	websocketd --cgidir=plugins/lib --port=7776
 else
 	echo "error building"
 fi
