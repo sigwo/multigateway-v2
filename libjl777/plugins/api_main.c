@@ -19,14 +19,15 @@ void process_json(cJSON *json)
     char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "ipc://SuperNET.api";
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     printf("jsonstr.(%s)\r\n",jsonstr);
+    len = (int32_t)strlen(jsonstr)+1;
+    tag = _crc32(0,jsonstr,len);
+    sprintf(endpoint,"ipc://api.%u",tag);
+    free(jsonstr);
+    cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
+    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+    len = (int32_t)strlen(jsonstr)+1;
     if ( 0 && json != 0 )
     {
-         len = (int32_t)strlen(jsonstr)+1;
-        tag = _crc32(0,jsonstr,len);
-        sprintf(endpoint,"ipc://api.%u",tag);
-        cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
-        jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-        len = (int32_t)strlen(jsonstr)+1;
         if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
         {
             if ( nn_connect(pushsock,apiendpoint) < 0 )
@@ -58,26 +59,18 @@ void process_json(cJSON *json)
 
 int main(int argc, char **argv)
 {
-    CGI_varlist *varlist;
-    const char *name;
-    CGI_value  *value;
-    int i; cJSON *json;
-    
+    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i; cJSON *json;
     fputs("Content-type: text/plain\r\n\r\n", stdout);
     if ((varlist = CGI_get_all(0)) == 0) {
         printf("No CGI data received\r\n");
         return 0;
     }
-    
     /* output all values of all variables and cookies */
     json = cJSON_CreateObject();
-    for (name = CGI_first_name(varlist); name != 0;
-         name = CGI_next_name(varlist))
+    for (name = CGI_first_name(varlist); name != 0; name = CGI_next_name(varlist))
     {
         value = CGI_lookup_all(varlist, 0);
-        
         /* CGI_lookup_all(varlist, name) could also be used */
-        
         for (i = 0; value[i] != 0; i++)
         {
             printf("%s [%d] = %s\r\n", name, i, value[i]);
@@ -85,37 +78,8 @@ int main(int argc, char **argv)
                 cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
         }
     }
-    CGI_free_varlist(varlist);  /* free variable list */
+    CGI_free_varlist(varlist);
     process_json(json);
     return 0;
 }
-
-int oldmain(int argc, char **argv)
-{
-    CGI_varlist *varlist; const char *name; CGI_value  *value; int32_t pushsock,pullsock,i,len,checklen; uint32_t tag; cJSON *json,*argjson;
-    char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "ipc://SuperNET.api";
-    fputs("Content-type: text/plain\r\n\r\n", stdout);
-    if ( (varlist= CGI_get_all(0)) == 0 )
-        printf("No CGI data received\r\n");
-    else
-    {
-        json = cJSON_CreateObject();
-        printf("json.%p\n",json);
-        // output all values of all variables and cookies
-        for (name=CGI_first_name(varlist); name!=0; name=CGI_next_name(varlist))
-        {
-            value = CGI_lookup_all(varlist,0);
-            ///CGI_lookup_all(varlist, name) could also be used
-            for (i=0; value[i]!=0; i++)
-            {
-                printf("%s [%d] = %s\r\n",name,i,value[i]);
-                //if ( i == 0 )
-                //    cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
-            }
-        }
-        CGI_free_varlist(varlist);
-    }
-    return(0);
-}
-
 
