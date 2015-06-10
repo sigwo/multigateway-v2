@@ -5,11 +5,13 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 #include <stdint.h>
+#include "ccgi.h"
 #include "nn.h"
 #include "cJSON.h"
 #include "pipeline.h"
 uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 long _stripwhite(char *buf,int accept);
+#define nn_errstr() nn_strerror(nn_errno())
 
 int main(int argc, char **argv)
 {
@@ -18,7 +20,6 @@ int main(int argc, char **argv)
     fputs("Content-type: text/plain\r\n\r\n", stdout);
     if ( (varlist= CGI_get_all(0)) == 0 )
         printf("No CGI data received\r\n");
-        return 0;
     else
     {
         // output all values of all variables and cookies
@@ -62,6 +63,7 @@ int main(int argc, char **argv)
                             }
                             nn_shutdown(pushsock,0);
                         }
+                    }
                     free_json(json), free(jsonstr);
                 } else printf("JSON parse error.(%s)\n",name);
             }
