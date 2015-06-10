@@ -34,7 +34,7 @@ void process_json(cJSON *json)
         {
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            if ( nn_connect(pushsock,apiendpoint) < 0 )
+            if ( nn_connect(sock,apiendpoint) < 0 )
                 printf("error connecting to apiendpoint sock.%d type.%d (%s) %s\r\n",sock,NN_PUSH,apiendpoint,nn_errstr());
             else if ( (checklen= nn_send(sock,jsonstr,len,0)) != len )
                 printf("checklen.%d != len.%d for nn_send to (%s)\r\n",checklen,len,apiendpoint);
