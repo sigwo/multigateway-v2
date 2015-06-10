@@ -17,7 +17,7 @@ long _stripwhite(char *buf,int accept);
 void process_json(cJSON *json)
 {
     int32_t pushsock,pullsock,i,len,checklen,sendtimeout,recvtimeout; uint32_t tag;
-    char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "ipc://SuperNET.api";
+    char endpoint[128],*resultstr,*jsonstr,*apiendpoint = "tcp://127.0.0.1:7777";
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     printf("jsonstr.(%s)\r\n",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;

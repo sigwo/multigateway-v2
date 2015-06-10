@@ -727,7 +727,7 @@ void SuperNET_loop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    int32_t sock,pushsock,len,checklen; cJSON *json; char apitag[1024],*retstr,*jsonstr,*endpoint = "ipc://SuperNET.api";
+    int32_t sock,pushsock,len,checklen; cJSON *json; char apitag[1024],*retstr,*jsonstr,*endpoint = "tcp://127.0.0.1:7777";
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,endpoint) < 0 )
@@ -744,7 +744,8 @@ void SuperNET_apiloop(void *ipaddr)
                         copy_cJSON(apitag,cJSON_GetObjectItem(json,"apitag"));
                         printf("API RECV.(%s)\n",jsonstr);
                         retstr = clonestr(jsonstr);
-                        if ( (pushsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
+                        pushsock = sock;
+                        //if ( (pushsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
                         {
                             if ( nn_connect(pushsock,apitag) < 0 )
                                 fprintf(stderr,"error connecting to (%s) for (%s)\n",apitag,jsonstr);
