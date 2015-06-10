@@ -23,6 +23,7 @@ int main(int argc, char **argv)
     else
     {
         json = cJSON_CreateObject();
+        printf("json.%p\n",json);
         // output all values of all variables and cookies
         for (name=CGI_first_name(varlist); name!=0; name=CGI_next_name(varlist))
         {
@@ -43,7 +44,7 @@ int main(int argc, char **argv)
             sprintf(endpoint,"ipc://api.%u",tag);
             cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
             jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-            printf("jsonstr.(%s)\n",jsonstr);
+            printf("jsonstr.(%s)\r\n",jsonstr);
             len = (int32_t)strlen(jsonstr)+1;
             if ( (pushsock= nn_socket(AF_SP,NN_PUSH)) >= 0 )
             {
