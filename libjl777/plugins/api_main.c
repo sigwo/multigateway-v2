@@ -43,14 +43,15 @@ void process_json(cJSON *json)
             else
             {
                 printf("sent\r\n");
-                if ( (pullsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
+                pullsock = pushsock;
+                //if ( (pullsock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
                 {
                     if ( recvtimeout > 0 && nn_setsockopt(pullsock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                         fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
                     printf("pullsock.%d\r\n",pullsock);
-                    if ( nn_bind(pullsock,endpoint) < 0 )
-                        printf("error binding to sock.%d type.%d (%s) %s\r\n",pullsock,NN_PULL,endpoint,nn_errstr());
-                    else
+                    //if ( nn_bind(pullsock,endpoint) < 0 )
+                    //    printf("error binding to sock.%d type.%d (%s) %s\r\n",pullsock,NN_PULL,endpoint,nn_errstr());
+                    //else
                     {
                         if ( nn_recv(pullsock,&resultstr,NN_MSG,0) > 0 )
                         {
