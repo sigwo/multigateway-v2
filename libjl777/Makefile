@@ -68,7 +68,7 @@ _eth := rm lib/eth; gcc -o lib/eth -O2 $(PINCLUDES) eth.c $(PLIBS)
 
 _nxt := rm lib/nxt; gcc -o lib/nxt -O2 $(PINCLUDES) nxt.c $(PLIBS)
 
-_qora := rm lib/qora; gcc -o lib/qora -O2 $(PINCLUDES) qora.c $(PLIBS)
+_two := rm lib/two; gcc -o lib/two -O2 $(PINCLUDES) two.c $(PLIBS)
 
 MGW :=    rm lib/MGW; gcc -o lib/MGW $(PINCLUDES) mgw/main.c mgw/mgw.c mgw/state.c mgw/huff.c  ramchain/ramchain.c ramchain/init.c  ramchain/search.c ramchain/blocks.c ramchain/api.c ramchain/tokens.c utils/bitcoind_RPC.c utils/bitcoind.c  $(PLIBS) -lcurl
 
@@ -93,8 +93,8 @@ eth: plugins/lib/eth; \
 nxt: plugins/lib/nxt; \
         cd plugins; $(_nxt); cd ..
 
-qora: plugins/lib/qora; \
-        cd plugins; $(_qora); cd ..
+two: plugins/lib/two; \
+        cd plugins; $(_two); cd ..
 
 install_eth: doesntexist; \
     sudo add-apt-repository -y ppa:ethereum/ethereum-dev; \
@@ -322,6 +322,6 @@ plugins/lib/echodemo: plugins/echodemo.c
 #plugins/nonportable/$(OS)/random.o: plugins/nonportable/$(OS)/random.c
 plugins/lib/eth: plugins/eth.c
 plugins/lib/nxt: plugins/nxt.c
-plugins/lib/qora: plugins/qora.c
+plugins/lib/two: plugins/two.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/storage.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
