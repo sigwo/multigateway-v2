@@ -1480,6 +1480,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
     printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! (%s) initflag.%d process %s\n",plugin->name,jsonstr,initflag,plugin->name);
     if ( initflag > 0 )
     {
+        SUPERNET.argjson = cJSON_Duplicate(json,1);
         SUPERNET.disableNXT = get_API_int(cJSON_GetObjectItem(json,"disableNXT"),0);
         SUPERNET.ismainnet = get_API_int(cJSON_GetObjectItem(json,"MAINNET"),1);
         SUPERNET.usessl = get_API_int(cJSON_GetObjectItem(json,"USESSL"),0);

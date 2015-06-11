@@ -8,7 +8,7 @@
 #ifndef xcode_exchangeparse_h
 #define xcode_exchangeparse_h
 
-struct MemoryStruct { char *memory; size_t size; };
+/*struct MemoryStruct { char *memory; size_t size; };
 
 static size_t WriteMemoryCallback(void *ptr,size_t size,size_t nmemb,void *data)
 {
@@ -59,7 +59,7 @@ void *curl_post(CURL **cHandlep,char *url,char *postfields,char *hdr0,char *hdr1
     if ( headers != 0 )
         curl_slist_free_all(headers);
     return(chunk.memory);
-}
+}*/
 
 int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *oldquotes,int32_t numold)
 {
