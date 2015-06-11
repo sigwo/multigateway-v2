@@ -641,7 +641,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
         n = get_API_int(cJSON_GetObjectItem(json,"iters"),1);
-        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),1000);
+        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),5000);
         return(process_user_json(plugin,method,jsonstr,broadcastflag,timeout));
         //return(plugin_method(0,previpaddr==0,plugin,method,daemonid,instanceid,jsonstr,0,timeout));
     } else return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
@@ -668,9 +668,9 @@ char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
             daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
             instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"instanceid"));
             retstr = register_daemon(name,daemonid,instanceid,cJSON_GetObjectItem(json,"methods"),cJSON_GetObjectItem(json,"pubmethods"),cJSON_GetObjectItem(json,"authmethods"));
-        }
+        } else retstr = process_jl777_msg(0,JSONstr,60);
         free_json(json);
-    } else retstr = process_jl777_msg(0,JSONstr,60);
+    }
     if ( retstr == 0 )
         retstr = clonestr("{\"result\":\"call_SuperNET_JSON no response\"}");
     return(retstr);
@@ -793,7 +793,7 @@ int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { print
 
 int main(int argc,const char *argv[])
 {
-    char _ipaddr[64],*jsonstr = 0,*ipaddr = "127.0.0.1:7777";//,*ipaddr6 = "[2001:16d8:dd24:0:86c9:681e:f931:256]";
+    char _ipaddr[64],*jsonstr = 0,*ipaddr = "127.0.0.1:7777";
     int32_t i;
     cJSON *json = 0;
     uint64_t ipbits,allocsize;

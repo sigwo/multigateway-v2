@@ -30,7 +30,7 @@ void process_json(cJSON *json)
     len = (int32_t)strlen(jsonstr)+1;
     if ( json != 0 )
     {
-        recvtimeout = sendtimeout = 1000;
+        recvtimeout = sendtimeout = 5000;
         if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
         {
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )

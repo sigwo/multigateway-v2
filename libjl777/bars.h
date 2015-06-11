@@ -8,6 +8,7 @@
 
 #ifndef xcode_bars_h
 #define xcode_bars_h
+#define MAX_PRICE 1000000.f
 
 #define BARI_FIRSTBID 0
 #define BARI_FIRSTASK 1

@@ -1493,6 +1493,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                 strcat(SUPERNET.NXTAPIURL,"7876/nxt");
             else strcat(SUPERNET.NXTAPIURL,"6876/nxt");
         }
+        copy_cJSON(SUPERNET.userhome,cJSON_GetObjectItem(json,"userdir"));
+        if ( SUPERNET.userhome[0] == 0 )
+            strcpy(SUPERNET.userhome,"/root");
         copy_cJSON(RAMCHAINS.pullnode,cJSON_GetObjectItem(json,"pullnode"));
         strcpy(SUPERNET.NXTSERVER,SUPERNET.NXTAPIURL);
         strcat(SUPERNET.NXTSERVER,"?requestType");

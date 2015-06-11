@@ -36,6 +36,9 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 
 #define GENESISACCT "1739068987193023818"  // NXT-MRCC-2YLS-8M54-3CMAJ
 #define GENESISBLOCK "2680262203532249785"
+#define NXT_GENESISTIME 1385294400
+#define GENESIS_SECRET "It was a bright cold day in April, and the clocks were striking thirteen."
+
 #define DEFAULT_NXT_DEADLINE 720
 #define _NXTSERVER "requestType"
 #define issue_curl(cmdstr) bitcoind_RPC(0,"curl",cmdstr,0,0,0)
@@ -43,12 +46,28 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 #define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl",SUPERNET.NXTAPIURL,0,0,cmdstr)
 #define fetch_URL(url) bitcoind_RPC(0,"fetch",url,0,0,0)
 
+#define MIN_NQTFEE 100000000
+#define INSTANTDEX_TRIGGERDEADLINE 15
 
+#define NXT_ASSETID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
+#define BTC_ASSETID ('B' + ((uint64_t)'T'<<8) + ((uint64_t)'C'<<16))    // 4412482
+#define LTC_ASSETID ('L' + ((uint64_t)'T'<<8) + ((uint64_t)'C'<<16))
+#define PPC_ASSETID ('P' + ((uint64_t)'P'<<8) + ((uint64_t)'C'<<16))
+#define NMC_ASSETID ('N' + ((uint64_t)'M'<<8) + ((uint64_t)'C'<<16))
+#define DASH_ASSETID ('D' + ((uint64_t)'A'<<8) + ((uint64_t)'S'<<16) + ((uint64_t)'H'<<24))
+#define BTCD_ASSETID ('B' + ((uint64_t)'T'<<8) + ((uint64_t)'C'<<16) + ((uint64_t)'D'<<24))
+
+#define USD_ASSETID ('U' + ((uint64_t)'S'<<8) + ((uint64_t)'D'<<16))
+#define CNY_ASSETID ('C' + ((uint64_t)'N'<<8) + ((uint64_t)'Y'<<16))
+#define EUR_ASSETID ('E' + ((uint64_t)'U'<<8) + ((uint64_t)'R'<<16))
+#define RUR_ASSETID ('R' + ((uint64_t)'U'<<8) + ((uint64_t)'R'<<16))
+
+union NXTtype { uint64_t nxt64bits; uint32_t uval; int32_t val; int64_t lval; double dval; char *str; cJSON *json; };
 union _NXT_str_buf { char txid[24]; char NXTaddr[24];  char assetid[24]; };
 struct NXT_str { uint64_t modified,nxt64bits; union _NXT_str_buf U; };
 union _asset_price { uint64_t assetoshis,price; };
 
-struct NXT_assettxid
+/*struct NXT_assettxid
 {
     UT_hash_handle hh;
     struct NXT_str H;
@@ -63,14 +82,14 @@ struct NXT_assettxid
     int32_t completed,timestamp,numconfs,convexpiration,buyNXT,sentNXT;
 };
 
-struct NXT_assettxid_list { struct NXT_assettxid **txids; int32_t num,max; };
+struct NXT_assettxid_list { struct NXT_assettxid **txids; int32_t num,max; };*/
 struct NXT_asset
 {
     UT_hash_handle hh;
     struct NXT_str H;
     uint64_t issued,mult,assetbits,issuer;
     char *description,*name;
-    struct NXT_assettxid **txids;   // all transactions for this asset
+    //struct NXT_assettxid **txids;   // all transactions for this asset
     int32_t max,num,decimals;
     uint16_t type,subtype;
 };
@@ -99,16 +118,12 @@ struct nodestats
     uint8_t BTCD_p2p,gotencrypted,modified,expired;//,isMM;
 };
 
-//struct acct_coin { uint64_t *srvbits; char name[16],**acctcoinaddrs,**pubkeys; int32_t numsrvbits; };
-//struct acct_coin2 { uint64_t srvbits[64]; char name[16],acctcoinaddrs[128][64],pubkeys[128][128]; int32_t numsrvbits; };
-
 struct NXT_acct
 {
     UT_hash_handle hh;
     char NXTaddr[24];
     uint64_t nxt64bits;
-    //int32_t numcoins;
-    //struct acct_coin2 coins[64];
+    int32_t openorders;
     struct nodestats stats;
 };
 
@@ -126,6 +141,7 @@ int32_t curve25519_donna(uint8_t *mypublic,const uint8_t *secret,const uint8_t *
 uint64_t ram_verify_NXTtxstillthere(uint64_t ap_mult,uint64_t txidbits);
 uint32_t _get_NXTheight(uint32_t *firsttimep);
 char *_issue_getAsset(char *assetidstr);
+char *_issue_getCurrency(char *assetidstr);
 uint64_t _get_NXT_ECblock(uint32_t *ecblockp);
 char *_issue_getTransaction(char *txidstr);
 bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
@@ -139,6 +155,16 @@ void set_NXTpubkey(char *NXTpubkey,char *NXTacct);
 char *NXT_assettxid(uint64_t assettxid);
 uint64_t assetmult(char *assetname,char *assetidstr);
 cJSON *NXT_convjson(cJSON *array);
+char *issue_calculateFullHash(char *unsignedtxbytes,char *sighash);
+char *issue_parseTransaction(char *txbytes);
+int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr);
+
+uint64_t issue_broadcastTransaction(int32_t *errcodep,char **retstrp,char *txbytes,char *NXTACCTSECRET);
+char *issue_signTransaction(char *txbytes,char *NXTACCTSECRET);
+uint32_t get_blockutime(uint32_t blocknum);
+uint64_t get_nxtlowask(uint64_t *sellvolp,uint64_t assetid);
+uint64_t get_nxthighbid(uint64_t *buyvolp,uint64_t assetid);
+uint64_t get_nxtlastprice(uint64_t assetid);
 
 #endif
 #else
@@ -256,6 +282,266 @@ char *_issue_getAsset(char *assetidstr)
     sprintf(cmd,"%s=getAsset&asset=%s",SUPERNET.NXTSERVER,assetidstr);
     printf("_cmd.(%s)\n",cmd);
     return(issue_curl(cmd));
+}
+
+char *_issue_getCurrency(char *assetidstr)
+{
+    char cmd[4096];
+    //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
+    sprintf(cmd,"%s=getCurrency&asset=%s",SUPERNET.NXTSERVER,assetidstr);
+    printf("_cmd.(%s)\n",cmd);
+    return(issue_curl(cmd));
+}
+
+uint64_t _get_bestassetprice(uint64_t *volp,char *assetcmd,char *arrayfield,uint64_t assetid)
+{
+    char cmd[4096],*jsonstr;
+    cJSON *array,*json;
+    uint64_t price = 0;
+    int32_t n;
+    sprintf(cmd,"%s=%s&asset=%llu&firstIndex=0&lastIndex=0",_NXTSERVER,assetcmd,(long long)assetid);
+    if ( (jsonstr= issue_curl(cmd)) != 0 )
+    {
+        //printf("cmd.(%s) -> (%s)\n",cmd,jsonstr);
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( (array= cJSON_GetObjectItem(json,arrayfield)) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) == 1 )
+            {
+                price = get_API_nxt64bits(cJSON_GetObjectItem(cJSON_GetArrayItem(array,0),"priceNQT"));
+                if ( volp != 0 )
+                    *volp = get_API_nxt64bits(cJSON_GetObjectItem(cJSON_GetArrayItem(array,0),"quantityQNT"));
+            }
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(price);
+}
+
+uint64_t get_nxtlowask(uint64_t *sellvolp,uint64_t assetid) { return(_get_bestassetprice(sellvolp,"getAskOrders","askOrders",assetid)); }
+uint64_t get_nxthighbid(uint64_t *buyvolp,uint64_t assetid) { return(_get_bestassetprice(buyvolp,"getBidOrders","bidOrders",assetid)); }
+uint64_t get_nxtlastprice(uint64_t assetid) { return(_get_bestassetprice(0,"getTrades","trades",assetid)); }
+
+union NXTtype extract_NXTfield(void *deprecated,char *origoutput,char *cmd,char *field,int32_t type)
+{
+    char *jsonstr,*output,NXTaddr[MAX_NXTADDR_LEN]; cJSON *json,*obj,*errobj;  union NXTtype retval;
+    retval.nxt64bits = 0;
+    if ( origoutput == 0 )
+        output = NXTaddr;
+    else output = origoutput;
+        jsonstr = issue_NXTPOST(cmd);
+    if ( jsonstr != 0 )
+    {
+        if ( field != 0 && strcmp(field,"transactionId") == 0 )
+            printf("jsonstr.(%s)\n",jsonstr);
+        json = cJSON_Parse(jsonstr);
+        if ( json == 0 ) printf("Error before: (%s) -> [%s]\n",jsonstr,cJSON_GetErrorPtr());
+        else
+        {
+            errobj = cJSON_GetObjectItem(json,"errorCode");
+            if ( errobj != 0 )
+            {
+                printf("cmd.(%s) -> %s\n",cmd,jsonstr);
+            }
+            if ( field == 0 )
+            {
+                if ( origoutput == 0 )
+                    retval.json = json;
+                else
+                {
+                    copy_cJSON(origoutput,json);
+                    retval.str = origoutput;
+                    free_json(json);
+                }
+            }
+            else
+            {
+                obj = cJSON_GetObjectItem(json,field);
+                if ( obj != 0 )
+                {
+                    copy_cJSON(output,obj);
+                    //if ( strcmp(field,"transactionId") == 0 )
+                    //    printf("obj.(%s) type.%d\n",output,type);
+                    switch ( type )
+                    {
+                        case sizeof(double):
+                            retval.dval = atof(output);
+                            break;
+                        case sizeof(uint32_t):
+                            retval.uval = atoi(output);
+                            break;
+                        case -(int32_t)sizeof(int32_t):
+                            retval.val = atoi(output);
+                            break;
+                        case -(int32_t)sizeof(int64_t):
+                            retval.lval = calc_nxt64bits(output);
+                            break;
+                        case 64:
+                            retval.nxt64bits = calc_nxt64bits(output);
+                            //if ( strcmp(field,"transactionId") == 0 )
+                            //    printf("transactionId.%s\n",nxt64str(retval.nxt64bits));
+                            break;
+                        case 0:
+                            if ( origoutput != 0 )
+                                retval.str = origoutput;
+                            else retval.str = 0;
+                            break;
+                        default: printf("extract_NXTfield: warning unknown type.%d\n",type);
+                    }
+                }
+                free_json(json);
+            }
+        }
+        free(jsonstr);
+    }
+    else printf("ERROR submitting cmd.(%s)\n",cmd);
+        return(retval);
+}
+
+uint64_t issue_getBalance(void *deprecated,char *NXTaddr)
+{
+    char cmd[4096];
+    union NXTtype ret;
+    sprintf(cmd,"%s=getBalance&account=%s",_NXTSERVER,NXTaddr);
+    ret = extract_NXTfield(deprecated,0,cmd,"balanceNQT",64);
+    return(ret.nxt64bits);
+}
+
+uint32_t get_blockutime(uint32_t blocknum)
+{
+    cJSON *json;
+    uint32_t timestamp = 0;
+    char cmd[4096],*jsonstr;
+    sprintf(cmd,"%s=getBlock&height=%u",_NXTSERVER,blocknum);
+    if ( (jsonstr= issue_curl(cmd)) != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( (timestamp= (uint32_t)get_API_int(cJSON_GetObjectItem(json,"timestamp"),0)) != 0 )
+                timestamp += NXT_GENESISTIME;
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(timestamp);
+}
+
+int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr)
+{
+    char cmd[2*MAX_JSON_FIELD],assetid[MAX_JSON_FIELD],*jsonstr;
+    union NXTtype retval;
+    int32_t i,n,iter;
+    cJSON *array,*item,*obj,*json;
+    uint64_t assetidbits = calc_nxt64bits(assetidstr);
+    int64_t quantity,qty = 0;
+    quantity = *unconfirmedp = 0;
+    if ( assetidbits == NXT_ASSETID )
+    {
+        sprintf(cmd,"requestType=getBalance&account=%s",NXTaddr);
+        if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
+        {
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                qty = get_API_nxt64bits(cJSON_GetObjectItem(json,"balanceNQT"));
+                *unconfirmedp = get_API_nxt64bits(cJSON_GetObjectItem(json,"unconfirmedBalanceNQT"));
+                printf("(%s)\n",jsonstr);
+                free_json(json);
+            }
+            free(jsonstr);
+        }
+        return(qty);
+    }
+    sprintf(cmd,"%s=getAccount&account=%s",_NXTSERVER,NXTaddr);
+    retval = extract_NXTfield(0,0,cmd,0,0);
+    if ( retval.json != 0 )
+    {
+        for (iter=0; iter<2; iter++)
+        {
+            qty = 0;
+            array = cJSON_GetObjectItem(retval.json,iter==0?"assetBalances":"unconfirmedAssetBalances");
+            if ( is_cJSON_Array(array) != 0 )
+            {
+                n = cJSON_GetArraySize(array);
+                for (i=0; i<n; i++)
+                {
+                    item = cJSON_GetArrayItem(array,i);
+                    obj = cJSON_GetObjectItem(item,"asset");
+                    copy_cJSON(assetid,obj);
+                    //printf("i.%d of %d: %s(%s)\n",i,n,assetid,cJSON_Print(item));
+                    if ( strcmp(assetid,assetidstr) == 0 )
+                    {
+                        qty = get_cJSON_int(item,iter==0?"balanceQNT":"unconfirmedBalanceQNT");
+                        break;
+                    }
+                }
+            }
+            if ( iter == 0 )
+                quantity = qty;
+            else *unconfirmedp = qty;
+        }
+    }
+    return(quantity);
+}
+
+char *issue_calculateFullHash(char *unsignedtxbytes,char *sighash)
+{
+    char cmd[4096];
+    sprintf(cmd,"%s=calculateFullHash&unsignedTransactionBytes=%s&signatureHash=%s",_NXTSERVER,unsignedtxbytes,sighash);
+    return(issue_NXTPOST(cmd));
+}
+
+char *issue_parseTransaction(char *txbytes)
+{
+    char cmd[4096],*retstr = 0;
+    sprintf(cmd,"%s=parseTransaction&transactionBytes=%s",_NXTSERVER,txbytes);
+    retstr = issue_NXTPOST(cmd);
+    //printf("issue_parseTransaction.%s %s\n",txbytes,retstr);
+    if ( retstr != 0 )
+    {
+        //retstr = parse_NXTresults(0,"sender","",results_processor,jsonstr,strlen(jsonstr));
+        //free(jsonstr);
+    } else printf("error getting txbytes.%s\n",txbytes);
+    return(retstr);
+}
+
+uint64_t issue_broadcastTransaction(int32_t *errcodep,char **retstrp,char *txbytes,char *NXTACCTSECRET)
+{
+    cJSON *json,*errjson;
+    uint64_t txid = 0;
+    char cmd[4096],*retstr;
+    sprintf(cmd,"%s=broadcastTransaction&secretPhrase=%s&transactionBytes=%s",_NXTSERVER,NXTACCTSECRET,txbytes);
+    retstr = issue_NXTPOST(cmd);
+    *errcodep = -1;
+    if ( retstrp != 0 )
+        *retstrp = retstr;
+    if ( retstr != 0 )
+    {
+        //printf("broadcast got.(%s)\n",retstr);
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            errjson = cJSON_GetObjectItem(json,"errorCode");
+            if ( errjson != 0 )
+            {
+                //printf("ERROR broadcasting.(%s)\n",retstr);
+                *errcodep = (int32_t)get_cJSON_int(json,"errorCode");
+            }
+            else
+            {
+                if ( (txid = get_satoshi_obj(json,"transaction")) != 0 )
+                    *errcodep = 0;
+            }
+        }
+        if ( retstrp == 0 )
+            free(retstr);
+    }
+    return(txid);
+}
+
+char *issue_signTransaction(char *txbytes,char *NXTACCTSECRET)
+{
+    char cmd[4096];
+    sprintf(cmd,"%s=signTransaction&secretPhrase=%s&unsignedTransactionBytes=%s",_NXTSERVER,NXTACCTSECRET,txbytes);
+    return(issue_NXTPOST(cmd));
 }
 
 uint32_t _get_NXTheight(uint32_t *firsttimep)

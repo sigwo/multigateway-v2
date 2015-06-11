@@ -302,9 +302,6 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             COINS.argjson = cJSON_Duplicate(json,1);
             COINS.slicei = get_API_int(cJSON_GetObjectItem(json,"slice"),0);
-            copy_cJSON(SUPERNET.userhome,cJSON_GetObjectItem(json,"userdir"));
-            if ( SUPERNET.userhome[0] == 0 )
-                strcpy(SUPERNET.userhome,"/root");
             if ( (array= cJSON_GetObjectItem(json,"coins")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=j=0; i<n; i++)
