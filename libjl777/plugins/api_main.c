@@ -65,6 +65,7 @@ int main(int argc, char **argv)
     fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
     fputs("Content-type: text/plain\r\n",stdout);
     json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"agent",cJSON_CreateString(argv[0]));
     for (iter=0; iter<2; iter++)
     {
         if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : CGI_get_query(0))) != 0 )

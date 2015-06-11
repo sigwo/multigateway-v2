@@ -705,7 +705,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     printf("LB PROCESSOR.(%s)\n",msg);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 )
+        if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(json,"agent"))) != 0 )
         {
             if ( strcmp(plugin,"subscriptions") == 0 )
                 retstr = nn_pubsub_processor(args,msg,len);
@@ -776,7 +776,7 @@ char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     cJSON *json; char *plugin,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 )
+        if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(json,"agent"))) != 0 )
         {
             if ( strcmp(plugin,"subscriptions") == 0 )
                 retstr = nn_pubsub_processor(args,msg,len);

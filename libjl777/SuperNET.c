@@ -619,6 +619,8 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
     {
         copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+        if ( plugin[0] == 0 )
+            copy_cJSON(plugin,cJSON_GetObjectItem(json,"agent"));
         if ( strcmp(request,"install") == 0 && plugin[0] != 0 )
         {
             retstr = SuperNET_install(plugin,jsonstr,json);
@@ -659,6 +661,8 @@ char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
     {
         copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
         copy_cJSON(name,cJSON_GetObjectItem(json,"plugin"));
+        if ( name[0] == 0 )
+            copy_cJSON(name,cJSON_GetObjectItem(json,"agent"));
         if ( strcmp(request,"register") == 0 )
         {
             daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));

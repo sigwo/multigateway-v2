@@ -1277,7 +1277,7 @@ int32_t SuperNET_idle(struct plugin_info *plugin) { return(0); }
 STRUCTNAME SUPERNET;
 int32_t Debuglevel;
 
-char *PLUGNAME(_methods)[] = { "install", "plugin" }; // list of supported methods
+char *PLUGNAME(_methods)[] = { "install", "plugin", "agent" }; // list of supported methods
 char *PLUGNAME(_pubmethods)[] = { "ping", "pong" }; // list of supported methods
 char *PLUGNAME(_authmethods)[] = { "setpass" }; // list of supported methods
 

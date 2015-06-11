@@ -233,7 +233,11 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         else obj = json;
         copy_cJSON(name,cJSON_GetObjectItem(obj,"plugin"));
         if ( name[0] == 0 )
+            copy_cJSON(name,cJSON_GetObjectItem(obj,"agent"));
+        else if ( name[0] == 0 )
             copy_cJSON(name,cJSON_GetObjectItem(obj,"destplugin"));
+        else if ( name[0] == 0 )
+            copy_cJSON(name,cJSON_GetObjectItem(obj,"destagent"));
         tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
         if ( strcmp(name,plugin->name) == 0 && (len= PLUGNAME(_process_json)(plugin,tag,retbuf,max,jsonstr,obj,0)) > 0 )
         {
