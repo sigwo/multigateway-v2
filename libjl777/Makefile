@@ -64,7 +64,7 @@ PINCLUDES := -Iincludes -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libto
 
 _echodemo := rm lib/echodemo; gcc -o lib/echodemo -O2 $(PINCLUDES) echodemo.c $(PLIBS)
 
-_api := rm lib/api; gcc -o lib/api -O2 $(PINCLUDES) api_main.c ccgi.c prefork.c utils/bits777.c utils/utils777.c utils/cJSON.c ../nanomsg/.libs/libnanomsg.a -lpthread -lanl -lm
+_api := rm cgi/api; gcc -o cgi/api -O2 $(PINCLUDES) api_main.c ccgi.c prefork.c utils/bits777.c utils/utils777.c utils/cJSON.c ../nanomsg/.libs/libnanomsg.a -lpthread -lanl -lm
 
 _msc := rm lib/msc; gcc -o lib/msc -O2 $(PINCLUDES) two/msc.c $(PLIBS)
 
@@ -86,12 +86,17 @@ plugins: lib/echo lib/MGW lib/stockfish lib/sophia; \
     $(_stockfish); \
     $(_sophia); \
     $(_MGW); \
+    $(_api); \
+    $(_nxt); \
+    $(_two); \
+    $(_eth); \
+    $(_msc); \
     cd ..
 
 echodemo: plugins/lib/echodemo; \
  	cd plugins; $(_echodemo); cd ..
 
-api: plugins/lib/api; \
+api: plugins/cgi/api; \
  	cd plugins; $(_api); cd ..
 
 eth: plugins/lib/eth; \
