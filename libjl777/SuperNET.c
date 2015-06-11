@@ -716,6 +716,9 @@ void SuperNET_loop(void *ipaddr)
     strs[n++] = language_func((char *)"subscriptions","",0,0,1,(char *)"subscriptions",jsonargs,call_system);
     while ( SUBSCRIPTIONS.readyflag == 0 || find_daemoninfo(&ind,"subscriptions",0,0) == 0 )
         poll_daemons();
+    strs[n++] = language_func((char *)"InstantDEX","",0,0,1,(char *)"InstantDEX",jsonargs,call_system);
+    while ( INSTANTDEX.readyflag == 0 || find_daemoninfo(&ind,"InstantDEX",0,0) == 0 )
+        poll_daemons();
     for (i=0; i<n; i++)
     {
         printf("%s ",strs[i]);

@@ -334,7 +334,9 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
         int32_t peers_main(int32_t,char *args[]);
         int32_t subscriptions_main(int32_t,char *args[]);
         int32_t relay_main(int32_t,char *args[]);
+        int32_t InstantDEX_main(int32_t,char *args[]);
         if ( strcmp(dp->name,"coins") == 0 ) return(coins_main(n,args));
+        else if ( strcmp(dp->name,"InstantDEX") == 0 ) return(InstantDEX_main(n,args));
         else if ( strcmp(dp->name,"db777") == 0 ) return(db777_main(n,args));
         else if ( strcmp(dp->name,"relay") == 0 ) return(relay_main(n,args));
         else if ( strcmp(dp->name,"peers") == 0 ) return(peers_main(n,args));
@@ -498,6 +500,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     {
         cJSON_AddItemToObject(json,"local",cJSON_CreateNumber(localaccess));
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+        len += (int32_t)(strlen(jsonstr) - strlen(origargstr));
         free_json(json);
     } else return(0);
     async = (timeout == 0 || retstrp != 0);

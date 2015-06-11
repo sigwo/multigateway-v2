@@ -26,6 +26,7 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 #define NXT_ASSETID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
 #define MAX_BUYNXT 10
 #define MIN_NQTFEE 100000000
+#define NXT_TOKEN_LEN 160
 
 #define NXT_ASSETLIST_INCR 16
 #define MAX_COINTXID_LEN 128
@@ -82,7 +83,7 @@ union _asset_price { uint64_t assetoshis,price; };
     int32_t completed,timestamp,numconfs,convexpiration,buyNXT,sentNXT;
 };
 
-struct NXT_assettxid_list { struct NXT_assettxid **txids; int32_t num,max; };*/
+struct NXT_assettxid_list { struct NXT_assettxid **txids; int32_t num,max; };
 struct NXT_asset
 {
     UT_hash_handle hh;
@@ -92,7 +93,7 @@ struct NXT_asset
     //struct NXT_assettxid **txids;   // all transactions for this asset
     int32_t max,num,decimals;
     uint16_t type,subtype;
-};
+};*/
 
 //struct storage_header { uint32_t size,createtime; uint64_t keyhash; };
 struct pubkey_info { uint64_t nxt64bits; uint32_t ipbits; char pubkey[256],coinaddr[128]; };
@@ -127,13 +128,12 @@ struct NXT_acct
     struct nodestats stats;
 };
 
-
 struct NXT_AMhdr { uint32_t sig; int32_t size; uint64_t nxt64bits; };
 struct compressed_json { uint32_t complen,sublen,origlen,jsonlen; unsigned char encoded[128]; };
 union _json_AM_data { unsigned char binarydata[sizeof(struct compressed_json)]; char jsonstr[sizeof(struct compressed_json)]; struct compressed_json jsn; };
 struct json_AM { struct NXT_AMhdr H; uint32_t funcid,gatewayid,timestamp,jsonflag; union _json_AM_data U; };
 
-struct NXT_assettxid *find_NXT_assettxid(int32_t *createdflagp,struct NXT_asset *ap,char *txid);
+//struct NXT_assettxid *find_NXT_assettxid(int32_t *createdflagp,struct NXT_asset *ap,char *txid);
 
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
 bits256 calc_sharedsecret(uint64_t *nxt64bitsp,int32_t *haspubpeyp,uint8_t *NXTACCTSECRET,int32_t secretlen,uint64_t other64bits);
@@ -165,6 +165,13 @@ uint32_t get_blockutime(uint32_t blocknum);
 uint64_t get_nxtlowask(uint64_t *sellvolp,uint64_t assetid);
 uint64_t get_nxthighbid(uint64_t *buyvolp,uint64_t assetid);
 uint64_t get_nxtlastprice(uint64_t assetid);
+int32_t assetdecimals(char *assetidstr);
+int32_t get_assettype(int32_t *subtypep,char *assetidstr);
+
+int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char encoded[NXT_TOKEN_LEN]);
+int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret);
+int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
+int32_t validate_token(char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
 
 #endif
 #else
@@ -861,7 +868,9 @@ uint64_t calc_decimals_mult(int32_t decimals)
 
 uint64_t assetmult(char *assetname,char *assetidstr)
 {
-    cJSON *json; char *jsonstr; int32_t decimals; uint64_t mult = 0;
+    cJSON *json; char _assetname[16],*jsonstr; int32_t decimals; uint64_t mult = 0;
+    if ( calc_nxt64bits(assetidstr) == NXT_ASSETID )
+        return(1);
     if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -871,7 +880,7 @@ uint64_t assetmult(char *assetname,char *assetidstr)
                 decimals = (int32_t)get_cJSON_int(json,"decimals");
                 if ( decimals >= 0 && decimals <= 8 )
                     mult = calc_decimals_mult(decimals);
-                if ( extract_cJSON_str(assetname,16,json,"name") <= 0 )
+                if ( extract_cJSON_str(assetname!=0?assetname:_assetname,sizeof(_assetname),json,"name") <= 0 )
                     decimals = -1;
             }
             free_json(json);
@@ -879,6 +888,45 @@ uint64_t assetmult(char *assetname,char *assetidstr)
         free(jsonstr);
     }
     return(mult);
+}
+
+int32_t assetdecimals(char *assetidstr)
+{
+    cJSON *json; char *jsonstr; int32_t decimals = 0;
+    if ( calc_nxt64bits(assetidstr) == NXT_ASSETID )
+        return(8);
+    if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( get_cJSON_int(json,"errorCode") == 0 )
+                decimals = (int32_t)get_cJSON_int(json,"decimals");
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(decimals);
+}
+
+int32_t get_assettype(int32_t *subtypep,char *assetidstr)
+{
+    cJSON *json; char *jsonstr; int32_t ap_type = -1;
+    if ( calc_nxt64bits(assetidstr) == NXT_ASSETID )
+        return(8);
+    if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( get_cJSON_int(json,"errorCode") == 0 )
+            {
+                ap_type = (int32_t)get_cJSON_int(json,"type");
+                *subtypep = (int32_t)get_cJSON_int(json,"subtype");
+            }
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(ap_type);
 }
 
 uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height)
@@ -1305,6 +1353,144 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
     if ( verifyflag != 0 )
         NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
     return(count);
+}
+
+int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
+{
+    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1];
+    cJSON *tokenobj;
+    union NXTtype retval;
+    encoded[0] = 0;
+    sprintf(cmd,"%s=generateToken&website=%s&secretPhrase=%s",_NXTSERVER,key,secret);
+    // printf("cmd.(%s)\n",cmd);
+    retval = extract_NXTfield(0,0,cmd,0,0);
+    if ( retval.json != 0 )
+    {
+        //printf("token.(%s)\n",cJSON_Print(retval.json));
+        tokenobj = cJSON_GetObjectItem(retval.json,"token");
+        memset(token,0,sizeof(token));
+        copy_cJSON(token,tokenobj);
+        free_json(retval.json);
+        if ( token[0] != 0 )
+        {
+            memcpy(encoded,token,NXT_TOKEN_LEN);
+            return(0);
+        }
+    }
+    return(-1);
+}
+
+int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET)
+{
+    char encoded[NXT_TOKEN_LEN+1];
+    _stripwhite(cmdjson,' ');
+    issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
+    encoded[NXT_TOKEN_LEN] = 0;
+    sprintf(tokenized,"[%s,{\"token\":\"%s\"}]",cmdjson,encoded);
+    return((int32_t)strlen(tokenized)+1);
+    // printf("(%s) -> (%s) _tokbuf.[%s]\n",NXTaddr,otherNXTaddr,_tokbuf);
+}
+
+int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char encoded[NXT_TOKEN_LEN])
+{
+    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1];
+    cJSON *nxtobj,*validobj;
+    union NXTtype retval;
+    *validp = -1;
+    sender[0] = 0;
+    memcpy(token,encoded,NXT_TOKEN_LEN);
+    token[NXT_TOKEN_LEN] = 0;
+    sprintf(cmd,"%s=decodeToken&website=%s&token=%s",_NXTSERVER,key,token);
+    //printf("cmd.(%s)\n",cmd);
+    retval = extract_NXTfield(0,0,cmd,0,0);
+    if ( retval.json != 0 )
+    {
+        validobj = cJSON_GetObjectItem(retval.json,"valid");
+        if ( validobj != 0 )
+            *validp = ((validobj->type&0xff) == cJSON_True) ? 1 : 0;
+        nxtobj = cJSON_GetObjectItem(retval.json,"account");
+        copy_cJSON(sender,nxtobj);
+        free_json(retval.json);
+        //printf("decoded valid.%d NXT.%s len.%d\n",*validp,sender,(int32_t)strlen(sender));
+        if ( sender[0] != 0 )
+            return((int32_t)strlen(sender));
+        else return(0);
+    }
+    return(-1);
+}
+
+int32_t validate_token(char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag)
+{
+    cJSON *array=0,*firstitem=0,*tokenobj,*obj;
+    int64_t timeval,diff = 0;
+    int32_t valid,retcode = -13;
+    char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*firstjsontxt = 0;
+    unsigned char encoded[4096];
+    array = cJSON_Parse(tokenizedtxt);
+    if ( array == 0 )
+    {
+        printf("couldnt validate.(%s)\n",tokenizedtxt);
+        return(-2);
+    }
+    if ( is_cJSON_Array(array) != 0 && cJSON_GetArraySize(array) == 2 )
+    {
+        firstitem = cJSON_GetArrayItem(array,0);
+        if ( pubkey != 0 )
+        {
+            obj = cJSON_GetObjectItem(firstitem,"pubkey");
+            copy_cJSON(pubkey,obj);
+        }
+        obj = cJSON_GetObjectItem(firstitem,"NXT"), copy_cJSON(buf,obj);
+        if ( NXTaddr[0] != 0 && strcmp(buf,NXTaddr) != 0 )
+            retcode = -3;
+        else
+        {
+            strcpy(NXTaddr,buf);
+            if ( strictflag != 0 )
+            {
+                timeval = get_cJSON_int(firstitem,"time");
+                diff = timeval - time(NULL);
+                if ( diff < 0 )
+                    diff = -diff;
+                if ( diff > strictflag )
+                {
+                    printf("time diff %lld too big %lld vs %ld\n",(long long)diff,(long long)timeval,time(NULL));
+                    retcode = -5;
+                }
+            }
+            if ( retcode != -5 )
+            {
+                firstjsontxt = cJSON_Print(firstitem), _stripwhite(firstjsontxt,' ');
+                tokenobj = cJSON_GetArrayItem(array,1);
+                obj = cJSON_GetObjectItem(tokenobj,"token");
+                copy_cJSON((char *)encoded,obj);
+                memset(sender,0,sizeof(sender));
+                valid = -1;
+                if ( issue_decodeToken(sender,&valid,firstjsontxt,encoded) > 0 )
+                {
+                    if ( NXTaddr[0] == 0 )
+                        strcpy(NXTaddr,sender);
+                    if ( strcmp(sender,NXTaddr) == 0 )
+                    {
+                        printf("signed by valid NXT.%s valid.%d diff.%lld\n",sender,valid,(long long)diff);
+                        retcode = valid;
+                    }
+                    else
+                    {
+                        printf("diff sender.(%s) vs NXTaddr.(%s)\n",sender,NXTaddr);
+                        if ( strcmp(NXTaddr,buf) == 0 )
+                            retcode = valid;
+                    }
+                }
+                if ( retcode < 0 )
+                    printf("err: signed by invalid sender.(%s) NXT.%s valid.%d or timediff too big diff.%lld, buf.(%s)\n",sender,NXTaddr,valid,(long long)diff,buf);
+                free(firstjsontxt);
+            }
+        }
+    }
+    if ( array != 0 )
+        free_json(array);
+    return(retcode);
 }
 
 #endif

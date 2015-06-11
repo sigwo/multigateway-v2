@@ -167,6 +167,10 @@ struct subscriptions_info
     int32_t readyflag,numpubs;
 }; extern struct subscriptions_info SUBSCRIPTIONS;
 
+struct InstantDEX_info
+{
+    int32_t readyflag;
+}; extern struct InstantDEX_info INSTANTDEX;
 
 #define MAX_SERVERNAME 128
 struct relayargs
@@ -238,10 +242,10 @@ void set_endpointaddr(char *transport,char *endpoint,char *domain,uint16_t port,
 int32_t nn_portoffset(int32_t type);
 
 char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout);
-char *nn_direct(char *ipaddr,char *publishstr);
-char *nn_publish(char *publishstr,int32_t nostr);
-char *nn_allpeers(char *jsonquery,int32_t timeoutmillis,char *localresult);
-char *nn_loadbalanced(char *requeststr);
+char *nn_direct(char *ipaddr,uint8_t *data,int32_t len);
+char *nn_publish(uint8_t *data,int32_t len,int32_t nostr);
+char *nn_allpeers(uint8_t *data,int32_t len,int32_t timeoutmillis,char *localresult);
+char *nn_loadbalanced(uint8_t *data,int32_t len);
 char *relays_jsonstr(char *jsonstr,cJSON *argjson);
 struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
 int32_t init_pingpong_queue(struct pingpong_queue *ppq,char *name,int32_t (*action)(),queue_t *destq,queue_t *errorq);
