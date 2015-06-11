@@ -210,18 +210,6 @@ uint32_t _crc32(uint32_t crc,const void *buf,size_t size)
 	return crc ^ ~0U;
 }
 
-uint64_t calc_txid(unsigned char *buf,int32_t len)
-{
-    uint64_t txid,hash[4];
-    calc_sha256(0,(unsigned char *)&hash[0],buf,len);
-    if ( sizeof(hash) >= sizeof(txid) )
-        memcpy(&txid,hash,sizeof(txid));
-    else memcpy(&txid,hash,sizeof(hash));
-    //printf("calc_txid.(%llu)\n",(long long)txid);
-    //return(hash[0] ^ hash[1] ^ hash[2] ^ hash[3]);
-    return(txid);
-}
-
 
 #endif
 #endif
