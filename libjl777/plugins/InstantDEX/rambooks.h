@@ -278,6 +278,7 @@ char *allorderbooks_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t 
 {
     cJSON *json;
     char *jsonstr;
+    printf("all orderbooks\n");
     if ( (json= all_orderbooks()) != 0 )
     {
         jsonstr = cJSON_Print(json);
