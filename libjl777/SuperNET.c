@@ -627,7 +627,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
             free_json(json);
             return(retstr);
         }
-        tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
+        tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
         daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
         instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"instanceid"));
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
@@ -751,7 +751,7 @@ void SuperNET_apiloop(void *ipaddr)
                     {
                         copy_cJSON(apitag,cJSON_GetObjectItem(json,"apitag"));
                         printf("API RECV.(%s)\n",jsonstr);
-                        retstr = clonestr(jsonstr);
+                        retstr = call_SuperNET_JSON(jsonstr);
                         if ( (ind= nn_connect(sock,apitag)) < 0 )
                             fprintf(stderr,"error connecting to (%s) for (%s)\n",apitag,jsonstr);
                         else
