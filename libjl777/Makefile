@@ -80,7 +80,7 @@ _sophia := gcc -c -o ../libs/sophia.o $(PINCLUDES)  -g -O2 -std=c99 -pedantic -W
 
 _stockfish := cd stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../lib; cd ..
 
-plugins: plugins/lib/echodemo plugins/lib/stockfish plugins/cgi/api plugins/lib/nxt plugins/lib/two plugins/lib/eth plugins/lib/msc; \
+agents: plugins/lib/echodemo plugins/lib/stockfish plugins/cgi/api plugins/lib/nxt plugins/lib/two plugins/lib/eth plugins/lib/msc; \
 	cd plugins; \
     $(_echodemo); \
     $(_stockfish); \
@@ -338,6 +338,6 @@ plugins/lib/eth: plugins/two/eth.c
 plugins/lib/msc: plugins/two/msc.c
 plugins/lib/nxt: plugins/two/nxt.c
 plugins/lib/two: plugins/two/two.c
-plugins/lib/api: plugins/api_main.c plugins/ccgi.c plugins/prefork.c
+plugins/cgi/api: plugins/api_main.c plugins/ccgi.c plugins/prefork.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/storage.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
