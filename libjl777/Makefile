@@ -80,12 +80,10 @@ _sophia := gcc -c -o ../libs/sophia.o $(PINCLUDES)  -g -O2 -std=c99 -pedantic -W
 
 _stockfish := cd stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../lib; cd ..
 
-plugins: lib/echodemo lib/MGW lib/stockfish lib/sophia cgi/api lib/nxt lib/two lib/eth lib/eth; \
+plugins: plugins/lib/echodemo plugins/lib/stockfish plugins/cgi/api plugins/lib/nxt plugins/lib/two plugins/lib/eth plugins/lib/msc; \
 	cd plugins; \
-    $(_echo); \
+    $(_echodemo); \
     $(_stockfish); \
-    $(_sophia); \
-    $(_MGW); \
     $(_api); \
     $(_nxt); \
     $(_two); \
