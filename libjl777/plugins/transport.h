@@ -180,7 +180,7 @@ printf("A send_to_daemon.(%s).%d\n",origjsonstr,len);
                 tag = tmp, flag = 1;
             if ( tag == 0 )
                 tag = (((uint64_t)rand() << 32) | rand()), flag = 1;
-printf("tag.%llu flag.%d tmp.%llu\n",(long long)tag,flag,(long long)tmp);
+printf("tag.%llu flag.%d tmp.%llu datalen.%d\n",(long long)tag,flag,(long long)tmp,datalen);
             if ( flag != 0 )
             {
                 sprintf(numstr,"%llu",(long long)tag), ensure_jsonitem(json,"tag",numstr);
