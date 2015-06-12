@@ -224,7 +224,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
     uint64_t tag = 0;
     char name[MAX_JSON_FIELD];
     retbuf[0] = *sendflagp = 0;
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("PLUGIN.(%s) process_plugin_json (%s)\n",plugin->name,jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
@@ -252,7 +252,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
     }
     else
     {
-//printf("couldnt parse.(%s)\n",jsonstr);
+printf("process_plugin_json: couldnt parse.(%s)\n",jsonstr);
         if ( jsonstr[len-1] == '\r' || jsonstr[len-1] == '\n' || jsonstr[len-1] == '\t' || jsonstr[len-1] == ' ' )
             jsonstr[--len] = 0;
         sprintf(retbuf,"{\"result\":\"unparseable\",\"message\":\"%s\"}",jsonstr);
@@ -378,7 +378,7 @@ int32_t main
                             fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                         //nn_send(plugin->sock,retbuf,len+1,0); // send the null terminator too
                     }
-                }
+                } else printf("null return from process_plugin_json\n");
                 free(line);
             }
         }
