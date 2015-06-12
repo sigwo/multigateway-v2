@@ -166,7 +166,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
     int32_t ind,diff,tmplen,origlen,flag = 0;
     uint64_t tmp,tag = 0;
     cJSON *json;
-printf("send_to_daemon.(%s)\n",jsonstr);
+printf("send_to_daemon.(%s)\n",origjsonstr);
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
         jsonstr = origjsonstr;
