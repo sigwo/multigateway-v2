@@ -216,7 +216,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         else if ( instanceid != 0 && (broadcastflag= get_API_int(cJSON_GetObjectItem(json,"broadcast"),0)) > 0 )
         {
             fprintf(stderr,"send to other <<<<<<<<<<<<<<<<<<<<< \n");
-            nn_local_broadcast(&dp->perm.socks,instanceid,broadcastflag,(uint8_t *)str,len), dp->numsent++;
+            nn_local_broadcast(&dp->perm.socks,instanceid,broadcastflag,(uint8_t *)str,(int32_t)strlen(str)+1), dp->numsent++;
         }
         free_json(json);
     } else printf("parse error.(%s)\n",str);
@@ -499,7 +499,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
 printf("origargstr.(%s)\n",origargstr);
     if ( (json= cJSON_Parse(origargstr)) != 0 )
     {
-        cJSON_AddItemToObject(json,"local",cJSON_CreateNumber(localaccess));
+        cJSON_AddItemToObject(json,"localaccess",cJSON_CreateNumber(localaccess));
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
         len += (int32_t)(strlen(jsonstr) - strlen(origargstr));
         free_json(json);

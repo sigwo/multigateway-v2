@@ -205,7 +205,7 @@ printf("tag.%llu flag.%d tmp.%llu\n",(long long)tag,flag,(long long)tmp);
         //printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
-printf("send_to_daemon.(%s) tag.%llu dp.%p\n",jsonstr,(long long)tag,dp);
+printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1);
             if ( len > 0 )
             {
                 if ( Debuglevel > 1 )
