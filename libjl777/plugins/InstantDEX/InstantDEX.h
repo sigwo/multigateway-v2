@@ -845,12 +845,12 @@ char *trollbox_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numob
 
 void init_InstantDEX(uint64_t nxt64bits,int32_t testflag)
 {
-    //printf("NXT-> %llu BTC -> %llu\n",(long long)stringbits("NXT"),(long long)stringbits("BTC")); getchar();
     init_pingpong_queue(&Pending_offersQ,"pending_offers",process_Pending_offersQ,0,0);
     Pending_offersQ.offset = 0;
     init_exchanges();
     if ( find_exchange(INSTANTDEX_NXTAENAME,0,0)->exchangeid != INSTANTDEX_NXTAEID || find_exchange(INSTANTDEX_NAME,0,0)->exchangeid != INSTANTDEX_EXCHANGEID )
         printf("invalid exchangeid %d, %d\n",find_exchange(INSTANTDEX_NXTAENAME,0,0)->exchangeid,find_exchange(INSTANTDEX_NAME,0,0)->exchangeid);
+    printf("NXT-> %llu BTC -> %llu\n",(long long)stringbits("NXT"),(long long)stringbits("BTC")); getchar();
 #ifdef __APPLE__
     if ( 0 && testflag != 0 )
     {
