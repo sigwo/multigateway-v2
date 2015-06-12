@@ -527,7 +527,8 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     }
     else
     {
-        fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess);
+        if ( Debuglevel > 2 )
+            fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess);
         if ( dp->readyflag == 0 )
         {
             fprintf(stderr,"readyflag.%d\n",dp->readyflag);
