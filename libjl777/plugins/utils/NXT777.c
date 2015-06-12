@@ -287,7 +287,7 @@ char *_issue_getAsset(char *assetidstr)
     char cmd[4096];
     //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
     sprintf(cmd,"%s=getAsset&asset=%s",SUPERNET.NXTSERVER,assetidstr);
-    printf("_cmd.(%s)\n",cmd);
+    //printf("_cmd.(%s)\n",cmd);
     return(issue_curl(cmd));
 }
 
@@ -296,7 +296,7 @@ char *_issue_getCurrency(char *assetidstr)
     char cmd[4096];
     //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
     sprintf(cmd,"%s=getCurrency&asset=%s",SUPERNET.NXTSERVER,assetidstr);
-    printf("_cmd.(%s)\n",cmd);
+    //printf("_cmd.(%s)\n",cmd);
     return(issue_curl(cmd));
 }
 
