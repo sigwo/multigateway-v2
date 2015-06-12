@@ -259,7 +259,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else if ( op->baseid == rb->assetids[1] && op->relid == rb->assetids[0] )
                     polarity = -1;
                 else continue;
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     printf(">>>>>> %s numquotes.%d: (%s).%llu (%s).%llu | (%s).%llu (%s).%llu\n",rb->exchange,rb->numquotes,rb->base,(long long)rb->assetids[0],rb->rel,(long long)rb->assetids[1],op->base,(long long)op->baseid,op->rel,(long long)op->relid);
                 if ( 0 && rb->numquotes == 1 )
                 {

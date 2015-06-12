@@ -56,11 +56,11 @@ struct exchange_info *find_exchange(char *exchangestr,void (*ramparse)(struct ra
 {
     int32_t exchangeid;
     struct exchange_info *exchange = 0;
-    printf("FIND.(%s)\n",exchangestr);
+    //printf("FIND.(%s)\n",exchangestr);
     for (exchangeid=0; exchangeid<MAX_EXCHANGES; exchangeid++)
     {
         exchange = &Exchanges[exchangeid];
-        printf("(%s v %s) ",exchangestr,exchange->name);
+        //printf("(%s v %s) ",exchangestr,exchange->name);
         if ( exchange->name[0] == 0 )
         {
             if ( ramparse == 0 )
