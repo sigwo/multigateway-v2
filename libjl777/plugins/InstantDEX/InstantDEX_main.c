@@ -159,7 +159,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         if ( plugin_result(retbuf,json,tag) > 0 )
             return((int32_t)strlen(retbuf));
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
-        methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
+        if ( (methodstr= cJSON_str(cJSON_GetObjectItem(json,"method"))) == 0 )
+            methodstr= cJSON_str(cJSON_GetObjectItem(json,"requestType"));
         copy_cJSON(echostr,cJSON_GetObjectItem(json,"echostr"));
         retbuf[0] = 0;
         if ( methodstr == 0 || methodstr[0] == 0 )
