@@ -496,7 +496,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     cJSON *json;
     struct relayargs *args = 0;
     int32_t ind,async;
-    printf("origargstr.(%s)\n",origargstr);
+printf("origargstr.(%s)\n",origargstr);
     if ( (json= cJSON_Parse(origargstr)) != 0 )
     {
         cJSON_AddItemToObject(json,"local",cJSON_CreateNumber(localaccess));
@@ -530,12 +530,12 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
         fprintf(stderr,"PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess);
         if ( dp->readyflag == 0 )
         {
-            printf("readyflag.%d\n",dp->readyflag);
+            fprintf(stderr,"readyflag.%d\n",dp->readyflag);
             return(clonestr("{\"error\":\"plugin not ready\"}"));
         }
         if ( localaccess == 0 && dp->allowremote == 0 )
         {
-            printf("allowremote.%d isremote.%d\n",dp->allowremote,!localaccess);
+            fprintf(stderr,"allowremote.%d isremote.%d\n",dp->allowremote,!localaccess);
             sprintf(retbuf,"{\"error\":\"cant remote call plugin\",\"ipaddr\":\"%s\",\"plugin\":\"%s\"}",SUPERNET.myipaddr,plugin);
             return(clonestr(retbuf));
         }
@@ -550,16 +550,17 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
         }
         else
         {
-            printf("send_to_daemon.(%s)\n",jsonstr);
+fprintf(stderr,"send_to_daemon.(%s)\n",jsonstr);
             *retstrp = 0;
             if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,jsonstr,len)) == 0 )
             {
-                printf("null tag from send_to_daemon\n");
+fprintf(stderr,"null tag from send_to_daemon\n");
                 free(jsonstr);
                 return(clonestr("{\"error\":\"null tag from send_to_daemon\"}"));
             }
             else if ( async != 0 )
                 return(0);//override == 0 ? clonestr("{\"error\":\"request sent to plugin async\"}") : 0);
+fprintf(stderr,"wait_for_daemon\n");
             if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
             {
                 str = stringifyM(jsonstr);
