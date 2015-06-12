@@ -1013,10 +1013,12 @@ int32_t poll_direct(int32_t timeoutmillis)
 
 void serverloop(void *_args)
 {
+    void init_InstantDEX(uint64_t nxt64bits,int32_t testflag);
     struct relayargs *peerargs,*lbargs,*arg;
     char endpoint[128],request[1024],ipaddr[64],*retstr;
     int32_t i,sendtimeout,recvtimeout,lbsock,bussock,pubsock,pushsock,peersock,n = 0;
-    //start_devices(NN_RESPONDENT);
+    init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0);
+  //start_devices(NN_RESPONDENT);
     sendtimeout = 10, recvtimeout = 10000;
     RELAYS.lb.mytype = NN_REQ, RELAYS.lb.desttype = nn_oppotype(RELAYS.lb.mytype);
     RELAYS.pair.mytype = NN_PAIR, RELAYS.pair.desttype = nn_oppotype(RELAYS.pair.mytype);
