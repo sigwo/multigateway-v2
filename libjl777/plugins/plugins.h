@@ -496,7 +496,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     cJSON *json;
     struct relayargs *args = 0;
     int32_t ind,async;
-printf("origargstr.(%s).%d\n",origargstr,len);
+//printf("origargstr.(%s).%d\n",origargstr,len);
     if ( (json= cJSON_Parse(origargstr)) != 0 )
     {
         cJSON_AddItemToObject(json,"localaccess",cJSON_CreateNumber(localaccess));
@@ -550,17 +550,17 @@ printf("origargstr.(%s).%d\n",origargstr,len);
         }
         else
         {
-fprintf(stderr,"send_to_daemon.(%s).%d\n",jsonstr,len);
+//fprintf(stderr,"send_to_daemon.(%s).%d\n",jsonstr,len);
             *retstrp = 0;
             if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,jsonstr,len)) == 0 )
             {
-fprintf(stderr,"null tag from send_to_daemon\n");
+//fprintf(stderr,"null tag from send_to_daemon\n");
                 free(jsonstr);
                 return(clonestr("{\"error\":\"null tag from send_to_daemon\"}"));
             }
             else if ( async != 0 )
                 return(0);//override == 0 ? clonestr("{\"error\":\"request sent to plugin async\"}") : 0);
-fprintf(stderr,"wait_for_daemon\n");
+//fprintf(stderr,"wait_for_daemon\n");
             if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
             {
                 str = stringifyM(jsonstr);
