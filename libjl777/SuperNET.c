@@ -724,6 +724,9 @@ void SuperNET_loop(void *ipaddr)
         printf("%s ",strs[i]);
         free(strs[i]);
     }
+    uint64_t calc_nxt64bits(const char *NXTaddr);
+    void init_InstantDEX(uint64_t nxt64bits,int32_t testflag);
+    init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0);
     printf("num builtin plugin agents.%d\n",n);
     if ( SUPERNET.gatewayid >= 0 )
         printf("MGW sock = %d\n",MGW.all.socks.both.bus);
