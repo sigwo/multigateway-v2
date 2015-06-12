@@ -390,7 +390,10 @@ char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,ch
 {
     char sender[64];
     if ( validate_sender(sender,origargstr) != 0 )
+    {
+        nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,sender,valid,objs,numobjs,origargstr));
+    }
     else return(clonestr("{\"error\":\"cant validate sender\"}"));
 }
 
@@ -398,7 +401,10 @@ char *ask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,ch
 {
     char sender[64];
     if ( validate_sender(sender,origargstr) != 0 )
+    {
+        nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,sender,valid,objs,numobjs,origargstr));
+    }
     else return(clonestr("{\"error\":\"cant validate sender\"}"));
 }
 
