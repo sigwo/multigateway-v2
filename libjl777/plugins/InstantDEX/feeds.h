@@ -13,7 +13,7 @@
 int Num_price_datas; //Num_raw_orders,Max_raw_orders,
 struct price_data **Price_datas;
 
-#define _issue_curl(curl_handle,label,url) bitcoind_RPC(curl_handle,label,url,0,0,0)
+//#define _issue_curl(curl_handle,label,url) bitcoind_RPC(curl_handle,label,url,0,0,0)
 
 //int32_t create_orderbook_tx(uint32_t timestamp,struct orderbook_tx *tx,int32_t type,uint64_t nxt64bits,uint64_t baseid,uint64_t relid,double price,double volume,uint64_t baseamount,uint64_t relamount);
 //struct orderbook *create_orderbook(uint32_t oldest,uint64_t baseid,uint64_t relid);
@@ -349,7 +349,7 @@ int32_t parse_cryptsy(struct exchange_state *ep,int32_t maxdepth) // "BTC-BTCD"
         sprintf(ep->url,"http://pubapi.cryptsy.com/api.php?method=singleorderdata&marketid=%s",market);
     }
     prep_exchange_state(ep);
-    jsonstr = _issue_curl(0,ep->name,ep->url);
+    jsonstr = issue_curl(ep->url);
     if ( jsonstr != 0 )
     {
         if ( (json = cJSON_Parse(jsonstr)) != 0 )
@@ -375,7 +375,7 @@ int32_t parse_bittrex(struct exchange_state *ep,int32_t maxdepth) // "BTC-BTCD"
         sprintf(market,"%s-%s",ep->rel,ep->base);
         sprintf(ep->url,"https://bittrex.com/api/v1.1/public/getorderbook?market=%s&type=both&depth=%d",market,maxdepth);
     }
-    jsonstr = _issue_curl(0,ep->name,ep->url);
+    jsonstr = issue_curl(ep->url);
     //printf("(%s) -> (%s)\n",ep->url,jsonstr);
    // {"success":true,"message":"","result":{"buy":[{"Quantity":1.69284935,"Rate":0.00122124},{"Quantity":130.39771416,"Rate":0.00122002},{"Quantity":77.31781088,"Rate":0.00122000},{"Quantity":10.00000000,"Rate":0.00120150},{"Quantity":412.23470195,"Rate":0.00119500}],"sell":[{"Quantity":8.58353086,"Rate":0.00123019},{"Quantity":10.93796714,"Rate":0.00127744},{"Quantity":17.96825904,"Rate":0.00128000},{"Quantity":2.80400381,"Rate":0.00129999},{"Quantity":200.00000000,"Rate":0.00130000}]}}
     if ( jsonstr != 0 )
@@ -401,7 +401,7 @@ int32_t parse_poloniex(struct exchange_state *ep,int32_t maxdepth)
         sprintf(market,"%s_%s",ep->rel,ep->base);
         sprintf(ep->url,"https://poloniex.com/public?command=returnOrderBook&currencyPair=%s&depth=%d",market,maxdepth);
     }
-    jsonstr = _issue_curl(0,ep->name,ep->url);
+    jsonstr = issue_curl(ep->url);
     //{"asks":[[7.975e-5,200],[7.98e-5,108.46834002],[7.998e-5,1.2644054],[8.0e-5,1799],[8.376e-5,1.7528442],[8.498e-5,30.25055195],[8.499e-5,570.01953171],[8.5e-5,1399.91458777],[8.519e-5,123.82790941],[8.6e-5,1000],[8.696e-5,1.3914002],[8.7e-5,1000],[8.723e-5,112.26190114],[8.9e-5,181.28118327],[8.996e-5,1.237759],[9.0e-5,270.096],[9.049e-5,2993.99999999],[9.05e-5,3383.48549983],[9.068e-5,2.52582092],[9.1e-5,30],[9.2e-5,40],[9.296e-5,1.177861],[9.3e-5,81.59999998],[9.431e-5,2],[9.58e-5,1.074289],[9.583e-5,3],[9.644e-5,858.48948115],[9.652e-5,3441.55358115],[9.66e-5,15699.9569377],[9.693e-5,23.5665998],[9.879e-5,1.0843656],[9.881e-5,2],[9.9e-5,700],[9.999e-5,123.752],[0.0001,34.04293],[0.00010397,1.742916],[0.00010399,11.24446],[0.00010499,1497.79999999],[0.00010799,1.2782902],[0.000108,1818.80661458],[0.00011,1395.27245417],[0.00011407,0.89460453],[0.00011409,0.89683778],[0.0001141,0.906],[0.00011545,458.09939081],[0.00011599,5],[0.00011798,1.0751625],[0.00011799,5],[0.00011999,5.86],[0.00012,279.64865088]],"bids":[[7.415e-5,4495],[7.393e-5,1.8650999],[7.392e-5,974.53828463],[7.382e-5,896.34272554],[7.381e-5,3000],[7.327e-5,1276.26600246],[7.326e-5,77.32705432],[7.32e-5,190.98472093],[7.001e-5,2.2642602],[7.0e-5,1112.19485714],[6.991e-5,2000],[6.99e-5,5000],[6.951e-5,500],[6.914e-5,91.63013181],[6.9e-5,500],[6.855e-5,500],[6.85e-5,238.86947265],[6.212e-5,5.2800413],[6.211e-5,4254.38737723],[6.0e-5,1697.3335],[5.802e-5,3.1241932],[5.801e-5,4309.60179279],[5.165e-5,20],[5.101e-5,6.2903434],[5.1e-5,100],[5.0e-5,5000],[4.5e-5,15],[3.804e-5,16.67907],[3.803e-5,30],[3.002e-5,1400],[3.001e-5,15.320937],[3.0e-5,10000],[2.003e-5,32.345771],[2.002e-5,50],[2.0e-5,25000],[1.013e-5,79.250137],[1.012e-5,200],[1.01e-5,200000],[2.0e-7,5000],[1.9e-7,5000],[1.4e-7,1644.2107],[1.2e-7,1621.8622],[1.1e-7,10000],[1.0e-7,100000],[6.0e-8,4253.7528],[4.0e-8,3690.3146],[3.0e-8,100000],[1.0e-8,100000]],"isFrozen":"0"}
     if ( jsonstr != 0 )
     {
@@ -422,7 +422,7 @@ int32_t parse_bitfinex(struct exchange_state *ep,int32_t maxdepth)
     prep_exchange_state(ep);
     if ( ep->url[0] == 0 )
         sprintf(ep->url,"https://api.bitfinex.com/v1/book/%s%s",ep->lbase,ep->lrel);
-    jsonstr = _issue_curl(0,ep->name,ep->url);
+    jsonstr = issue_curl(ep->url);
     //{"bids":[{"price":"239.78","amount":"12.0","timestamp":"1424748729.0"},{"p
     if ( jsonstr != 0 )
     {
@@ -550,11 +550,11 @@ int32_t parse_NXT(struct exchange_state *ep,int32_t maxdepth)
     }
     prep_exchange_state(ep);
     if ( ep->url[0] == 0 )
-        sprintf(ep->url,"%s=getBidOrders&asset=%llu&limit=%d",NXTSERVER,(long long)ep->baseid,maxdepth);
+        sprintf(ep->url,"%s=getBidOrders&asset=%llu&limit=%d",SUPERNET.NXTSERVER,(long long)ep->baseid,maxdepth);
     if ( ep->url2[0] == 0 )
-        sprintf(ep->url2,"%s=getAskOrders&asset=%llu&limit=%d",NXTSERVER,(long long)ep->baseid,maxdepth);
-    buystr = _issue_curl(0,ep->name,ep->url);
-    sellstr = _issue_curl(0,ep->name,ep->url2);
+        sprintf(ep->url2,"%s=getAskOrders&asset=%llu&limit=%d",SUPERNET.NXTSERVER,(long long)ep->baseid,maxdepth);
+    buystr = issue_curl(ep->url);
+    sellstr = issue_curl(ep->url2);
     //{"count":3,"type":"BUY","orders":[{"price":"0.00000003","amount":"137066327.96066495","total":"4.11198982"},{"price":"0.00000002","amount":"293181381.39291047","total":"5.86362760"},{"price":"0.00000001","amount":"493836943.18472463","total":"4.93836939"}]}
     if ( buystr != 0 && sellstr != 0 )
     {
@@ -581,7 +581,7 @@ int32_t get_bitstamp_obook(int32_t *numbidsp,uint64_t *bids,int32_t *numasksp,ui
 {
     memset(bids,0,sizeof(*bids) * max);
     memset(asks,0,sizeof(*asks) * max);
-    return(parse_bidasks(numbidsp,bids,numasksp,asks,max,_issue_curl(Global_iDEX->curl_handle,"bitstamp","https://www.bitstamp.net/api/order_book/")));
+    return(parse_bidasks(numbidsp,bids,numasksp,asks,max,issue_curl("https://www.bitstamp.net/api/order_book/")));
 }
 
 int32_t get_btce_obook(char *econtract,int32_t *numbidsp,uint64_t *bids,int32_t *numasksp,uint64_t *asks,int32_t max)
@@ -590,7 +590,7 @@ int32_t get_btce_obook(char *econtract,int32_t *numbidsp,uint64_t *bids,int32_t 
     memset(bids,0,sizeof(*bids) * max);
     memset(asks,0,sizeof(*asks) * max);
     sprintf(url,"https://btc-e.com/api/2/%s/depth",econtract);
-    return(parse_bidasks(numbidsp,bids,numasksp,asks,max,_issue_curl(Global_iDEX->curl_handle,"btce",url)));
+    return(parse_bidasks(numbidsp,bids,numasksp,asks,max,issue_curl(url)));
 }
 
 
@@ -600,7 +600,7 @@ int32_t get_okcoin_obook(char *econtract,int32_t *numbidsp,uint64_t *bids,int32_
     memset(bids,0,sizeof(*bids) * max);
     memset(asks,0,sizeof(*asks) * max);
     sprintf(url,"https://www.okcoin.com/api/depth.do?symbol=%s",econtract);
-    return(parse_bidasks(numbidsp,bids,numasksp,asks,max,_issue_curl(Global_iDEX->curl_handle,"okcoin",url)));
+    return(parse_bidasks(numbidsp,bids,numasksp,asks,max,issue_curl(url)));
 }
 
 void disp_quotepairs(char *base,char *rel,char *label,uint64_t *bids,int32_t numbids,uint64_t *asks,int32_t numasks)

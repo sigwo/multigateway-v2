@@ -198,10 +198,10 @@ void ramparse_NXT(struct rambook_info *bids,struct rambook_info *asks,int32_t ma
         assetid = bids->assetids[1];
         flip = 1;
     }
-    sprintf(bidurl,"%s=getBidOrders&asset=%llu&limit=%d",_NXTSERVER,(long long)bids->assetids[0],maxdepth);
-    sprintf(askurl,"%s=getAskOrders&asset=%llu&limit=%d",_NXTSERVER,(long long)asks->assetids[0],maxdepth);
-    buystr = _issue_curl(0,"ramparse",bidurl);
-    sellstr = _issue_curl(0,"ramparse",askurl);
+    sprintf(bidurl,"%s=getBidOrders&asset=%llu&limit=%d",SUPERNET.NXTSERVER,(long long)bids->assetids[0],maxdepth);
+    sprintf(askurl,"%s=getAskOrders&asset=%llu&limit=%d",SUPERNET.NXTSERVER,(long long)asks->assetids[0],maxdepth);
+    buystr = issue_curl(bidurl);
+    sellstr = issue_curl(askurl);
     //printf("(%s) (%s)\n",buystr,sellstr);
     if ( buystr != 0 && sellstr != 0 )
     {
@@ -287,7 +287,7 @@ void ramparse_bittrex(struct rambook_info *bids,struct rambook_info *asks,int32_
         sprintf(market,"%s-%s",bids->rel,bids->base);
         sprintf(bids->url,"https://bittrex.com/api/v1.1/public/getorderbook?market=%s&type=both&depth=%d",market,maxdepth);
     }
-    jsonstr = _issue_curl(0,"trex",bids->url);
+    jsonstr = issue_curl(bids->url);
     if ( jsonstr != 0 )
     {
         if ( (json = cJSON_Parse(jsonstr)) != 0 )
@@ -306,7 +306,7 @@ void ramparse_bter(struct rambook_info *bids,struct rambook_info *asks,int32_t m
     char resultstr[MAX_JSON_FIELD],*jsonstr;
     if ( bids->url[0] == 0 )
         sprintf(bids->url,"http://data.bter.com/api/1/depth/%s_%s",bids->base,bids->rel);
-    jsonstr = _issue_curl(0,"bter",bids->url);
+    jsonstr = issue_curl(bids->url);
     //printf("(%s) -> (%s)\n",ep->url,jsonstr);
     //{"result":"true","asks":[["0.00008035",100],["0.00008030",2030],["0.00008024",100],["0.00008018",643.41783554],["0.00008012",100]
     if ( jsonstr != 0 )
@@ -334,7 +334,7 @@ void ramparse_standard(char *exchangestr,char *url,struct rambook_info *bids,str
     //static CURL *cHandle;
     char *jsonstr; cJSON *json;
     //if ( (jsonstr= curl_getorpost(&cHandle,url,0,0)) != 0 )
-    if ( (jsonstr= _issue_curl(0,exchangestr,url)) != 0 )
+    if ( (jsonstr= issue_curl(url)) != 0 )
     {
         //if ( strcmp(exchangestr,"btc38") == 0 )
         //    printf("(%s)\n",jsonstr);
