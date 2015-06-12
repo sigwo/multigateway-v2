@@ -483,20 +483,23 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
             {
                 bids = get_rambook(0,baseid,0,relid,(exchangeid<<1));
                 asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1);
-                //fprintf(stderr,"(%llu %llu).%s ",(long long)baseid,(long long)relid,Exchanges[exchangeid].name);
-                if ( exchangeid != INSTANTDEX_EXCHANGEID && bids != 0 && asks != 0 && maxdepth > 0 && exchange->exchangeid == exchangeid )
+                if ( exchangeid != INSTANTDEX_EXCHANGEID )
                 {
-                    if ( exchange->pollgap != 0 )
-                        pollgap = exchange->pollgap;
-                    if ( now >= (bids->lastaccess + pollgap) && now >= (asks->lastaccess + pollgap) )
+                    fprintf(stderr,"(%llu %llu).%s ",(long long)baseid,(long long)relid,Exchanges[exchangeid].name);
+                    if ( bids != 0 && asks != 0 && maxdepth > 0 && exchange->exchangeid == exchangeid )
                     {
-                        prevbids = clone_quotes(&numoldbids,bids), prevasks = clone_quotes(&numoldasks,asks);
-                        if ( exchange->ramparse != 0 && exchange->ramparse != ramparse_stub )
-                            (*exchange->ramparse)(bids,asks,maxdepth,gui);
-                        emit_orderbook_changes(bids,prevbids,numoldbids), emit_orderbook_changes(asks,prevasks,numoldasks);
-                        exchange->lastaccess = now = (uint32_t)time(NULL);
-                    } else printf("wait %u vs %u %u %u\n",now,exchange->lastaccess,bids->lastaccess,asks->lastaccess);
-                } else printf("unexpected %p %p %d %d %d\n",bids,asks,maxdepth,exchangeid,exchange->exchangeid);
+                        if ( exchange->pollgap != 0 )
+                            pollgap = exchange->pollgap;
+                        if ( now >= (bids->lastaccess + pollgap) && now >= (asks->lastaccess + pollgap) )
+                        {
+                            prevbids = clone_quotes(&numoldbids,bids), prevasks = clone_quotes(&numoldasks,asks);
+                            if ( exchange->ramparse != 0 && exchange->ramparse != ramparse_stub )
+                                (*exchange->ramparse)(bids,asks,maxdepth,gui);
+                            emit_orderbook_changes(bids,prevbids,numoldbids), emit_orderbook_changes(asks,prevasks,numoldasks);
+                            exchange->lastaccess = now = (uint32_t)time(NULL);
+                        } else printf("wait %u vs %u %u %u\n",now,exchange->lastaccess,bids->lastaccess,asks->lastaccess);
+                    } else printf("unexpected %p %p %d %d %d\n",bids,asks,maxdepth,exchangeid,exchange->exchangeid);
+                }
             }
         }
     }
