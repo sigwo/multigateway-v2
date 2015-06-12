@@ -93,7 +93,7 @@ struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t
         for (i=0; i<3; i++)
             rb->assetids[i] = assetids[i];
         if ( Debuglevel > 1 )
-            printf("CREATE RAMBOOK.(%llu -> %llu).%d %s (%s) (%s)\n",(long long)baseid,(long long)relid,(int)exchangebits,Exchanges[exchangeid].name,rb->base,rb->rel);
+            printf("CREATE RAMBOOK.(%llu -> %llu).%d name.(%s) (%s) (%s)\n",(long long)baseid,(long long)relid,(int)exchangebits,Exchanges[exchangeid].name,rb->base,rb->rel);
         HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
     return(rb);
