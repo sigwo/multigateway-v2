@@ -496,7 +496,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     cJSON *json;
     struct relayargs *args = 0;
     int32_t ind,async;
-printf("origargstr.(%s)\n",origargstr);
+printf("origargstr.(%s).%d\n",origargstr,len);
     if ( (json= cJSON_Parse(origargstr)) != 0 )
     {
         cJSON_AddItemToObject(json,"localaccess",cJSON_CreateNumber(localaccess));
@@ -550,7 +550,7 @@ printf("origargstr.(%s)\n",origargstr);
         }
         else
         {
-fprintf(stderr,"send_to_daemon.(%s)\n",jsonstr);
+fprintf(stderr,"send_to_daemon.(%s).%d\n",jsonstr,len);
             *retstrp = 0;
             if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,jsonstr,len)) == 0 )
             {
