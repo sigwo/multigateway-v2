@@ -365,7 +365,7 @@ int32_t main
             for (i=0; i<n; i++)
             {
                 line = messages[i], len = (int32_t)strlen(line);
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     printf("(s%d r%d) <<<<<<<<<<<<<< RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
                 if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
                 {
@@ -374,7 +374,7 @@ int32_t main
                     if ( sendflag != 0 )
                     {
                         nn_local_broadcast(&plugin->all.socks,0,0,(uint8_t *)retbuf,(int32_t)strlen(retbuf)+1), plugin->numsent++;
-                        if ( Debuglevel > 1 )
+                        if ( Debuglevel > 2 )
                             fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                         //nn_send(plugin->sock,retbuf,len+1,0); // send the null terminator too
                     }
