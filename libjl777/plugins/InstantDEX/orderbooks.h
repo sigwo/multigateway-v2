@@ -483,9 +483,9 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
             {
                 bids = get_rambook(0,baseid,0,relid,(exchangeid<<1));
                 asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1);
+                fprintf(stderr,"(%llu %llu).%s ",(long long)baseid,(long long)relid,Exchanges[exchangeid].name);
                 if ( exchangeid != INSTANTDEX_EXCHANGEID )
                 {
-                    fprintf(stderr,"(%llu %llu).%s ",(long long)baseid,(long long)relid,Exchanges[exchangeid].name);
                     if ( bids != 0 && asks != 0 && maxdepth > 0 && exchange->exchangeid == exchangeid )
                     {
                         if ( exchange->pollgap != 0 )
