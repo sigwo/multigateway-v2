@@ -102,7 +102,7 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
             strcpy(NXTaddr,SUPERNET.NXTADDR);
             ensure_jsonitem(argjson,"NXT",NXTaddr);
             valid = 1;
-            printf("subsititute NXT.%s\n",NXTaddr);
+            //printf("subsititute NXT.%s\n",NXTaddr);
         }
         copy_cJSON(command,obj);
         copy_cJSON(NXTACCTSECRET,secretobj);

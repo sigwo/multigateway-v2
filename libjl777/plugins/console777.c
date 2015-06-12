@@ -208,8 +208,7 @@ char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,
         cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
         if ( broadcastflag != 0 )
             cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("allpeers"));
-        cmdstr = cJSON_Print(json);
-        _stripwhite(cmdstr,' ');
+        cmdstr = cJSON_Print(json), _stripwhite(cmdstr,' ');
         return(cmdstr);
     }
     else return(clonestr(pubstr));

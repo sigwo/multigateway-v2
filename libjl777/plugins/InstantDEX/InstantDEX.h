@@ -249,8 +249,7 @@ char *submitquote_str(struct InstantDEX_quote *iQ,uint64_t baseid,uint64_t relid
     if ( (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ->isask,iQ,baseid,relid,0)) != 0 )
     {
         cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString((iQ->isask != 0) ? "ask" : "bid"));
-        jsonstr = cJSON_Print(json);
-        _stripwhite(jsonstr,' ');
+        jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
         if ( (str= submit_quote(jsonstr)) != 0 )
             free(str);
         free_json(json);

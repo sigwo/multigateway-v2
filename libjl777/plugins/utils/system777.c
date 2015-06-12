@@ -552,7 +552,7 @@ int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_
         {
             if ( (len= nn_send(sock,(char *)retstr,len,0)) <= 0 )
                 errs++, printf("error %d sending to socket.%d send.%d len.%d (%s)\n",len,sock,i,len,nn_strerror(nn_errno()));
-            else if ( Debuglevel > 1 )
+            else if ( Debuglevel > 2 )
                 printf("nn_local_broadcast SENT.(%s) len.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,strlen((char *)retstr),(long long)instanceid,sock);
         }
     }

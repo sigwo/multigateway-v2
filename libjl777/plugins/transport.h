@@ -193,20 +193,6 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
                     memcpy(&tmpstr[tmplen],data,datalen);
                     free(jsonstr), jsonstr = tmpstr, len = tmplen + datalen;
                 } else len = tmplen;
-                /*if ( len != 0 )
-                {
-                    tmplen = (int32_t)strlen(jsonstr) + 1;
-                    origlen = (int32_t)strlen(origjsonstr) + 1;
-                    diff = (tmplen - origlen);
-                    if ( diff > 0 )
-                    {
-                        tmpstr = malloc(tmplen + diff);
-                        strcpy(tmpstr,jsonstr), free(jsonstr);
-                        memcpy(tmpstr+tmplen,origjsonstr + origlen,diff);
-                        jsonstr = tmpstr;
-                        len += diff;
-                    }
-                }*/
             }
         } else tag = tmp;
         free_json(json);

@@ -521,7 +521,7 @@ char *submit_trades(struct pending_offer *offer,char *NXTACCTSECRET)
         pt = &offer->B;
     }
     offer->endmilli = milliseconds() + 2. * JUMPTRADE_SECONDS * 1000;
-    retstr = cJSON_Print(json);
+    retstr = cJSON_Print(json), _stripwhite(retstr,' ');
     printf("endmilli %f vs %f: offer.%p (%s)\n",offer->endmilli,milliseconds(),offer,retstr);
     queue_enqueue("pending_offer",&Pending_offersQ.pingpong[0],&offer->DL);
     free_json(json);
