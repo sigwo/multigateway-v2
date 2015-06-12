@@ -166,7 +166,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
     int32_t ind,diff,tmplen,origlen,flag = 0;
     uint64_t tmp,tag = 0;
     cJSON *json;
-printf("send_to_daemon.(%s)\n",origjsonstr);
+printf("A send_to_daemon.(%s)\n",origjsonstr);
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
         jsonstr = origjsonstr;
@@ -177,7 +177,7 @@ printf("send_to_daemon.(%s)\n",origjsonstr);
                 tag = tmp, flag = 1;
             if ( tag == 0 )
                 tag = (((uint64_t)rand() << 32) | rand()), flag = 1;
-            //printf("tag.%llu flag.%d tmp.%llu\n",(long long)tag,flag,(long long)tmp);
+printf("tag.%llu flag.%d tmp.%llu\n",(long long)tag,flag,(long long)tmp);
             if ( flag != 0 )
             {
                 sprintf(numstr,"%llu",(long long)tag), ensure_jsonitem(json,"tag",numstr);
@@ -208,7 +208,7 @@ printf("send_to_daemon.(%s)\n",origjsonstr);
 printf("send_to_daemon.(%s) tag.%llu dp.%p\n",jsonstr,(long long)tag,dp);
             if ( len > 0 )
             {
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s)\n",(long long)tag,jsonstr);
                 if ( tag != 0 )
                     add_tagstr(dp,tag,retstrp,args);
