@@ -166,7 +166,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
     int32_t ind,diff,tmplen,origlen,flag = 0;
     uint64_t tmp,tag = 0;
     cJSON *json;
-    //printf("send_to_daemon.(%s)\n",jsonstr);
+printf("send_to_daemon.(%s)\n",jsonstr);
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
         jsonstr = origjsonstr;
@@ -205,7 +205,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
         //printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
-            //printf("send_to_daemon.(%s) tag.%llu dp.%p\n",jsonstr,(long long)tag,dp);
+printf("send_to_daemon.(%s) tag.%llu dp.%p\n",jsonstr,(long long)tag,dp);
             if ( len > 0 )
             {
                 if ( Debuglevel > 2 )
