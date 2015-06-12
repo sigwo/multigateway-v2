@@ -735,7 +735,7 @@ void SuperNET_loop(void *ipaddr)
 #define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
 void SuperNET_apiloop(void *ipaddr)
 {
-    int32_t sock,len,ind,checklen,retlen,recvtimeout; cJSON *json; char apitag[1024],*retstr,*jsonstr;
+    int32_t sock,len,ind,checklen,retlen, recvtimeout; cJSON *json; char apitag[1024],*retstr,*jsonstr;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
