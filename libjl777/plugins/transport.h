@@ -185,9 +185,9 @@ printf("tag.%llu flag.%d tmp.%llu datalen.%d\n",(long long)tag,flag,(long long)t
             {
                 sprintf(numstr,"%llu",(long long)tag), ensure_jsonitem(json,"tag",numstr);
                 jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+                tmplen = (int32_t)strlen(jsonstr) + 1;
                 if ( datalen != 0 )
                 {
-                    tmplen = (int32_t)strlen(jsonstr) + 1;
                     tmpstr = malloc(tmplen + datalen);
                     memcpy(tmpstr,jsonstr,tmplen);
                     memcpy(&tmpstr[tmplen],data,datalen);
