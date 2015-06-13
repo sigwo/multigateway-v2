@@ -242,7 +242,7 @@ char *placequote_str(struct InstantDEX_quote *iQ)
 char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t baseid,uint64_t relid)
 {
     cJSON *json;
-    char *str,*jsonstr = 0;
+    char *jsonstr = 0;
     uint64_t basetmp,reltmp;
     if ( (json= gen_InstantDEX_json(localaccess,&basetmp,&reltmp,0,iQ->isask,iQ,baseid,relid,0)) != 0 )
     {
@@ -250,8 +250,8 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
         ensure_jsonitem(json,"destplugin","InstantDEX");
         ensure_jsonitem(json,"method",(iQ->isask != 0) ? "ask" : "bid");
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-        if ( (str= submit_quote(jsonstr)) != 0 )
-            free(str);
+        //if ( (str= submit_quote(jsonstr)) != 0 )
+        //    free(str);
         free_json(json);
     } else printf("gen_InstantDEX_json returns null\n");
     return(jsonstr);

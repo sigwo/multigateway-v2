@@ -496,17 +496,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     cJSON *json,*argjson;
     struct relayargs *args = 0;
     int32_t ind,async;
-printf("origargstr.(%s).%d\n",origargstr,len);
-    if ( localaccess != 0 )
-    {
-        if ( (json= cJSON_Parse(origargstr)) != 0 )
-        {
-            cJSON_AddItemToObject(json,"localaccess",cJSON_CreateNumber(localaccess));
-            jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-            len += (int32_t)(strlen(jsonstr) - strlen(origargstr));
-            free_json(json);
-        } else return(0);
-    }
+printf("localaccess.%d origargstr.(%s).%d\n",localaccess,origargstr,len);
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
@@ -561,7 +551,7 @@ printf("origargstr.(%s).%d\n",origargstr,len);
         {
 fprintf(stderr,"send_to_daemon.(%s).%d\n",jsonstr,len);
             *retstrp = 0;
-            if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,jsonstr,len)) == 0 )
+            if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,jsonstr,len,localaccess)) == 0 )
             {
 //fprintf(stderr,"null tag from send_to_daemon\n");
                 free(jsonstr);
