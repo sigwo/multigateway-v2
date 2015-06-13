@@ -707,7 +707,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
             argjson = cJSON_GetArrayItem(json,0);
         else argjson = json;
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
+        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
             if ( strcmp(plugin,"subscriptions") == 0 )
                 retstr = nn_pubsub_processor(args,msg,len);
