@@ -386,32 +386,41 @@ char *placeask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numob
     return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,SUPERNET.NXTADDR,valid,objs,numobjs,origargstr));
 }
 
-char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+int32_t should_forward(char *sender,char *origargstr)
 {
-    char sender[64],forwarder[64];
+    char forwarder[64],plugin[MAX_JSON_FIELD]; uint8_t *buf; int32_t len;
+    printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
     if ( validate_sender(forwarder,sender,origargstr) > 0 )
     {
-        printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
         if ( strcmp(forwarder,sender) == 0 )
-            nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
-        return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,sender,valid,objs,numobjs,origargstr));
+        {
+            len = (int32_t)strlen(origargstr) + 1;
+            if ( (buf= replace_forwarder(plugin,(uint8_t *)origargstr,&len)) != 0 )
+            {
+                nn_publish(buf,len,1);
+                if ( buf != (uint8_t *)origargstr )
+                    free(buf);
+            }
+            return(1);
+        }
     }
-    printf("(%s) sender.(%s) forwarder.(%s)\n",origargstr,sender,forwarder);
-    return(clonestr("{\"error\":\"cant validate sender\"}"));
+    return(0);
+}
+
+char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char sender[MAX_JSON_FIELD];
+    if ( should_forward(sender,origargstr) > 0 )
+         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,sender,valid,objs,numobjs,origargstr));
+    else return(0);
 }
 
 char *ask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char sender[64],forwarder[64];
-    if ( validate_sender(forwarder,sender,origargstr) > 0 )
-    {
-        printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
-        if ( strcmp(forwarder,sender) == 0 )
-            nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
+    char sender[MAX_JSON_FIELD];
+    if ( should_forward(sender,origargstr) > 0 )
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,sender,valid,objs,numobjs,origargstr));
-    }
-    printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
-    return(clonestr("{\"error\":\"cant validate sender\"}"));
+    else return(0);
 }
 
 uint64_t PTL_placebid(char *base,char *rel,double price,double volume)

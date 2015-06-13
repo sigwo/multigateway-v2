@@ -251,6 +251,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *argjson);
 struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
 int32_t init_pingpong_queue(struct pingpong_queue *ppq,char *name,int32_t (*action)(),queue_t *destq,queue_t *errorq);
 int32_t process_pingpong_queue(struct pingpong_queue *ppq,void *argptr);
+uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp);
 
 #endif
 #else

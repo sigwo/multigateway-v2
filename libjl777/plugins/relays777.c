@@ -697,52 +697,81 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
     return(jsonstr);
 }
 
+uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
+{
+    cJSON *json,*argjson,*second; char *plugin,*jsonstr; int32_t len,datalen,diff; uint8_t *ptr = data;
+    pluginbuf[0] = 0;
+    if ( (json= cJSON_Parse((char *)data)) != 0 )
+    {
+        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+        {
+            argjson = cJSON_GetArrayItem(json,0);
+            second = cJSON_GetArrayItem(json,1);
+            ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+            cJSON_ReplaceItemInArray(json,1,second);
+            jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+            datalen = (int32_t)strlen((char *)data) + 1;
+            if ( (len= (int32_t)strlen(jsonstr)+1) == datalen )
+                memcpy(data,jsonstr,len);
+            else
+            {
+                diff = *datalenp - datalen;
+                ptr = malloc(diff + len);
+                memcpy(ptr,jsonstr,len);
+                if ( diff > 0 )
+                    memcpy(&ptr[len],&data[datalen],diff);
+            }
+            free(jsonstr);
+        }
+        else argjson = json;
+        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
+        {
+            strcpy(pluginbuf,plugin);
+        }
+    }
+    return(ptr);
+}
+
 char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len);
-    cJSON *json,*argjson; char *jsonstr,*plugin,*retstr = 0;
-    jsonstr = (char *)msg;
+    char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
     printf("LB PROCESSOR.(%s)\n",msg);
-    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+    if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
     {
-        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-            argjson = cJSON_GetArrayItem(json,0);
-        else argjson = json;
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
-        {
-            if ( strcmp(plugin,"subscriptions") == 0 )
-                retstr = nn_pubsub_processor(args,msg,len);
-            else if ( strcmp(plugin,"peers") == 0 )
-                retstr = nn_allpeers_processor(args,msg,len);
-            else retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
-        }
-        else
-        {
-            retstr = plugin_method(0,-1,"relay",(char *)args,0,0,(char *)msg,len,1000);
-            printf("returnpath.(%s) (%s) -> (%s)\n",args->name,jsonstr,retstr);
-        }
-        free_json(json);
+        if ( strcmp(plugin,"relay") == 0 )
+            retstr = nn_pubsub_processor(args,buf,len);
+        else if ( strcmp(plugin,"subscriptions") == 0 )
+            retstr = nn_pubsub_processor(args,buf,len);
+        else if ( strcmp(plugin,"peers") == 0 )
+            retstr = nn_allpeers_processor(args,buf,len);
+        else retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)buf,len,1000);
     } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
+    if ( buf != msg )
+        free(buf);
     return(retstr);
 }
 
 char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
-    char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len);
-    cJSON *json,*argjson; char *plugin,*retstr = 0;
-    if ( (json= cJSON_Parse((char *)msg)) != 0 )
-    {
-        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-            argjson = cJSON_GetArrayItem(json,0);
-        else argjson = json;
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
-        {
-            retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
-        }
-        //else retstr = plugin_method(0,-1,plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,len,1000);
-        free_json(json);
-    } else retstr = clonestr((char *)msg);
+    char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
+    if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
+        retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)buf,len,1000);
+    else retstr = clonestr((char *)msg);
+    if ( buf != msg )
+        free(buf);
+    return(retstr);
+}
+
+char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len)
+{
+    char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
+    if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
+        retstr = plugin_method(0,-1,plugin==0?"peers":plugin,(char *)args,0,0,(char *)buf,len,500);
+    else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
+    if ( buf != msg )
+        free(buf);
     return(retstr);
 }
 
@@ -772,25 +801,6 @@ void nn_direct_processor(int32_t directind,uint8_t *msg,int32_t len)
             free(retstr);
         }
     }
-}
-
-char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len)
-{
-    cJSON *json,*argjson; char *plugin,*retstr = 0;
-    if ( (json= cJSON_Parse((char *)msg)) != 0 )
-    {
-        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-            argjson = cJSON_GetArrayItem(json,0);
-        else argjson = json;
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
-        {
-            if ( strcmp(plugin,"subscriptions") == 0 )
-                retstr = nn_pubsub_processor(args,msg,len);
-            else retstr = plugin_method(0,-1,plugin==0?"peers":plugin,(char *)args,0,0,(char *)msg,len,500);
-        }
-        free_json(json);
-    } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
-    return(retstr);
 }
 
 char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t datalen)
