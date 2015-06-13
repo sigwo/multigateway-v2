@@ -493,17 +493,20 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     struct daemon_info *dp;
     char retbuf[8192],methodbuf[1024],*str,*methodsstr,*jsonstr=0,*retstr = 0;
     uint64_t tag;
-    cJSON *json;
+    cJSON *json,*argjson;
     struct relayargs *args = 0;
     int32_t ind,async;
 printf("origargstr.(%s).%d\n",origargstr,len);
-    if ( (json= cJSON_Parse(origargstr)) != 0 )
+    if ( localaccess != 0 )
     {
-        cJSON_AddItemToObject(json,"localaccess",cJSON_CreateNumber(localaccess));
-        jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-        len += (int32_t)(strlen(jsonstr) - strlen(origargstr));
-        free_json(json);
-    } else return(0);
+        if ( (json= cJSON_Parse(origargstr)) != 0 )
+        {
+            cJSON_AddItemToObject(json,"localaccess",cJSON_CreateNumber(localaccess));
+            jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+            len += (int32_t)(strlen(jsonstr) - strlen(origargstr));
+            free_json(json);
+        } else return(0);
+    }
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
@@ -512,7 +515,12 @@ printf("origargstr.(%s).%d\n",origargstr,len);
         localaccess = 0;
         args = (struct relayargs *)method, method = 0, methodbuf[0] = 0;
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
-            copy_cJSON(methodbuf,cJSON_GetObjectItem(json,"method"));
+        {
+            if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+                argjson = cJSON_GetArrayItem(json,0);
+            else argjson = json;
+            copy_cJSON(methodbuf,cJSON_GetObjectItem(argjson,"method"));
+        }
         method = methodbuf;
     }
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) == 0 )
