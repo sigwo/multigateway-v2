@@ -1506,6 +1506,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         else strcpy(SUPERNET.NXTADDR,SUPERNET.myNXTacct);
         SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
         copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
+        if ( SUPERNET.myipaddr[0] != 0 )
+            SUPERNET.myipbits = calc_ipbits(SUPERNET.myipaddr);
         if ( strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
             SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),1);
         else SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),0);

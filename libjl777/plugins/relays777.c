@@ -149,6 +149,8 @@ struct endpoint find_epbits(struct _relay_info *list,uint32_t ipbits,uint16_t po
 int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbits,uint16_t port,int32_t type)
 {
     char endpoint[1024]; struct endpoint epbits;
+    if ( ipbits == SUPERNET.myipbits )
+        return(-1);
     if ( list->sock < 0 )
     {
         printf("illegal list sock.%d\n",list->sock);
