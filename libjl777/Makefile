@@ -47,7 +47,7 @@ COINS = $(C)/bitcoind_RPC.c $(C)/gen1auth.c $(C)/gen1pub.c $(C)/cointx.c $(C)/co
 CRYPTO = $(U)/sha256.c $(U)/crypt_argchk.c $(U)/hmac_sha512.c $(U)/rmd160.c $(U)/sha512.c
 INSTANTDEX = $(I)/InstantDEX_main.c
 
-SRCS = SuperNET.c libjl777.c $(CRYPTO) $(UTILS) $(SOPHIA) $(COINS) $(NONPORTABLE) $(RAMCHAIN) plugins/mgw/MGW_main.c plugins/relays777.c plugins/peers777.c plugins/subscriptions777.c plugins/console777.c # plugins/echodemo.c
+SRCS = SuperNET.c libjl777.c $(CRYPTO) $(UTILS) $(SOPHIA) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) plugins/mgw/MGW_main.c plugins/relays777.c plugins/peers777.c plugins/subscriptions777.c plugins/console777.c # plugins/echodemo.c
  
 OBJS	:= $(SRCS:%.c=%.o)
 
@@ -55,7 +55,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	rm plugins/InstantDEX/InstantDEX_main.o; ar rcu  libs/libjl777.a  $(OBJS)
+	ar rcu  libs/libjl777.a  $(OBJS)
 
 test:	all
 	(cd tests; make test)
@@ -127,7 +127,7 @@ MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(SRCS) plugins/InstantDEX/InstantDEX_main.c $(LIBS)
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
 
 #-lz -ldl -lutil -lpcre -lexpat
 
