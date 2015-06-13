@@ -185,6 +185,8 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
     strcpy(servers[n++],"89.248.160.241");
     strcpy(servers[n++],"89.248.160.242");
     strcpy(servers[n++],"89.248.160.243");
+    strcpy(servers[n++],"89.248.160.244");
+    strcpy(servers[n++],"89.248.160.245");
     return(n);
 }
 
@@ -697,12 +699,15 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len);
-    cJSON *json; char *jsonstr,*plugin,*retstr = 0;
+    cJSON *json,*argjson; char *jsonstr,*plugin,*retstr = 0;
     jsonstr = (char *)msg;
     printf("LB PROCESSOR.(%s)\n",msg);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(json,"agent"))) != 0 )
+        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+            argjson = cJSON_GetArrayItem(json,0);
+        else argjson = json;
+        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
             if ( strcmp(plugin,"subscriptions") == 0 )
                 retstr = nn_pubsub_processor(args,msg,len);
