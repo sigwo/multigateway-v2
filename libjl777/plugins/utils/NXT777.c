@@ -1357,9 +1357,10 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
 
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 {
-    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json;
+    char cmd[4096],hashstr[65],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json; uint8_t hash[32];
     encoded[0] = 0;
-    sprintf(cmd,"%s=generateToken&website=%s&secretPhrase=%s",SUPERNET.NXTSERVER,key,secret);
+    calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
+    sprintf(cmd,"%s=generateToken&website=%s&secretPhrase=%s",SUPERNET.NXTSERVER,hashstr,secret);
     // printf("cmd.(%s)\n",cmd);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
@@ -1389,14 +1390,15 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
 
 int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char encoded[NXT_TOKEN_LEN])
 {
-    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1];
+    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],hashstr[65]; uint8_t hash[32];
     cJSON *nxtobj,*validobj;
     union NXTtype retval;
     *validp = -1;
     sender[0] = 0;
     memcpy(token,encoded,NXT_TOKEN_LEN);
     token[NXT_TOKEN_LEN] = 0;
-    sprintf(cmd,"%s=decodeToken&website=%s&token=%s",SUPERNET.NXTSERVER,key,token);
+    calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
+    sprintf(cmd,"%s=decodeToken&website=%s&token=%s",SUPERNET.NXTSERVER,hashstr,token);
     //printf("cmd.(%s)\n",cmd);
     retval = extract_NXTfield(0,0,cmd,0,0);
     if ( retval.json != 0 )
