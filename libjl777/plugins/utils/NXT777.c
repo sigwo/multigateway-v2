@@ -1365,15 +1365,11 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
     {
         if ( (json= cJSON_Parse(jsontxt)) != 0 )
         {
-            //printf("token.(%s)\n",cJSON_Print(retval.json));
+printf("token.(%s)\n",cJSON_Print(json));
             tokenobj = cJSON_GetObjectItem(json,"token");
-            memset(token,0,sizeof(token));
             copy_cJSON(token,tokenobj);
-            if ( token[0] != 0 )
-            {
-                memcpy(encoded,token,NXT_TOKEN_LEN);
-                return(0);
-            }
+            if ( encoded != 0 )
+                strcpy(encoded,token);
         }
         free(jsontxt);
     }
@@ -1382,7 +1378,7 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET)
 {
-    char encoded[NXT_TOKEN_LEN+1];
+    char encoded[2*NXT_TOKEN_LEN+1];
     _stripwhite(cmdjson,' ');
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
     encoded[NXT_TOKEN_LEN] = 0;
