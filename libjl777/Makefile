@@ -55,7 +55,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	ar rcu  libs/libjl777.a  $(OBJS)
+	rm plugins/InstantDEX/InstantDEX_main.o; ar rcu  libs/libjl777.a  $(OBJS)
 
 test:	all
 	(cd tests; make test)
@@ -127,7 +127,7 @@ MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(SRCS) plugins/InstantDEX/InstantDEX_main.c $(LIBS)
 
 #-lz -ldl -lutil -lpcre -lexpat
 
