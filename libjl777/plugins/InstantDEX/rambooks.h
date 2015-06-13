@@ -312,7 +312,7 @@ cJSON *openorders_json(char *NXTaddr)
                 if ( strcmp(NXTaddr,nxtaddr) == 0 && iQ->closed == 0 )
                 {
                     baseamount = iQ->baseamount, relamount = iQ->relamount;
-                    if ( (item= gen_InstantDEX_json(&baseamount,&relamount,0,iQ->isask,iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
+                    if ( (item= gen_InstantDEX_json(0,&baseamount,&relamount,0,iQ->isask,iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
                     {
                         ptr = (uint64_t)iQ;
                         sprintf(numstr,"%llu",(long long)ptr), cJSON_AddItemToObject(item,"iQ",cJSON_CreateString(numstr));

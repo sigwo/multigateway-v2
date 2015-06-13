@@ -133,7 +133,7 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
     return(0);
 }
 
-cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t depth,int32_t flip,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset)
+cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,int32_t depth,int32_t flip,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset)
 {
     cJSON *relobj=0,*baseobj=0,*json = 0;
     char numstr[64],base[64],rel[64],exchange[64];
@@ -159,7 +159,8 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
     cJSON_AddItemToObject(json,"askoffer",cJSON_CreateNumber(flip));
     if ( depth == 0 )
     {
-        cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("makeoffer3"));
+        if ( localaccess == 0 )
+            cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("makeoffer3"));
         set_assetname(&mult,base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
         set_assetname(&mult,rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
         cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
@@ -189,12 +190,12 @@ cJSON *gen_InstantDEX_json(uint64_t *baseamountp,uint64_t *relamountp,int32_t de
                     jumpasset = iQ->baseiQ->relid;
                 else printf("mismatched jumpassset: %llu vs %llu\n",(long long)iQ->baseiQ->relid,(long long)iQ->reliQ->relid), getchar();
             }
-            baseobj = gen_InstantDEX_json(&baseamount,&relamount,depth+1,iQ->isask,iQ->baseiQ,refbaseid,jumpasset,0);
+            baseobj = gen_InstantDEX_json(localaccess,&baseamount,&relamount,depth+1,iQ->isask,iQ->baseiQ,refbaseid,jumpasset,0);
             *baseamountp = baseamount;
             if ( (ratio= check_ratios(baseamount,relamount,frombase,fromrel)) < .999 || ratio > 1.001 )
                 printf("WARNING: baseiQ ratio %f (%llu/%llu) -> (%llu/%llu)\n",ratio,(long long)baseamount,(long long)relamount,(long long)frombase,(long long)fromrel);
             baseamount = tobase, relamount = torel;
-            relobj = gen_InstantDEX_json(&baseamount,&relamount,depth+1,!iQ->isask,iQ->reliQ,refrelid,jumpasset,0);
+            relobj = gen_InstantDEX_json(localaccess,&baseamount,&relamount,depth+1,!iQ->isask,iQ->reliQ,refrelid,jumpasset,0);
             *relamountp = baseamount;
             if ( (ratio= check_ratios(baseamount,relamount,tobase,torel)) < .999 || ratio > 1.001 )
                 printf("WARNING: reliQ ratio %f (%llu/%llu) -> (%llu/%llu)\n",ratio,(long long)baseamount,(long long)relamount,(long long)tobase,(long long)torel);
@@ -252,7 +253,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
             printf("gen_orderbook_item: isask.%d %llu/%llu != %llu/%llu\n",iQ->isask,(long long)iQ->baseid,(long long)iQ->relid,(long long)baseid,(long long)relid);
         //return(0);
     }
-    if ( (json= gen_InstantDEX_json(&baseamount,&relamount,0,iQ->isask,iQ,baseid,relid,jumpasset)) != 0 )
+    if ( (json= gen_InstantDEX_json(0,&baseamount,&relamount,0,iQ->isask,iQ,baseid,relid,jumpasset)) != 0 )
     {
         if ( cJSON_GetObjectItem(json,"minbase_error") != 0 || cJSON_GetObjectItem(json,"minrel_error") != 0 )
         {

@@ -239,21 +239,21 @@ char *placequote_str(struct InstantDEX_quote *iQ)
     return(clonestr(buf));
 }
 
-char *submitquote_str(struct InstantDEX_quote *iQ,uint64_t baseid,uint64_t relid)
+char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t baseid,uint64_t relid)
 {
     cJSON *json;
     char *str,*jsonstr = 0;
     uint64_t basetmp,reltmp;
-    if ( (json= gen_InstantDEX_json(&basetmp,&reltmp,0,iQ->isask,iQ,baseid,relid,0)) != 0 )
+    if ( (json= gen_InstantDEX_json(localaccess,&basetmp,&reltmp,0,iQ->isask,iQ,baseid,relid,0)) != 0 )
     {
         ensure_jsonitem(json,"plugin","relay");
         ensure_jsonitem(json,"destplugin","InstantDEX");
-        cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString((iQ->isask != 0) ? "ask" : "bid"));
+        ensure_jsonitem(json,"method",(iQ->isask != 0) ? "ask" : "bid");
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
         if ( (str= submit_quote(jsonstr)) != 0 )
             free(str);
         free_json(json);
-    }
+    } else printf("gen_InstantDEX_json returns null\n");
     return(jsonstr);
 }
 
@@ -351,8 +351,9 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                     if ( Debuglevel > 1 )
                         printf("placequote.(%s) remoteflag.%d\n",retstr,remoteflag);
                 }
-                if ( (jsonstr= submitquote_str(&iQ,baseid,relid)) != 0 )
+                if ( (jsonstr= submitquote_str(localaccess,&iQ,baseid,relid)) != 0 )
                 {
+                    printf("got submitquote_str.(%s)\n",jsonstr);
                     if ( remoteflag == 0 )
                     {
                         if ( (str= submit_quote(jsonstr)) != 0 )
@@ -721,7 +722,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
             quoteid = (long long)calc_quoteid(&iQ);
             if ( orderbook_testpair(items,quoteid,nxt64bits,base,baseid,rel,relid,gui,maxdepth) == 0 )
             {
-                jsonstr = submitquote_str(&iQ,baseid,relid);
+                jsonstr = submitquote_str(1,&iQ,baseid,relid);
                 if ( (retstr= makeoffer3_stub("4077619696739571952",0,jsonstr)) != 0 )
                 {
                     if ( (json= cJSON_Parse(retstr)) != 0 )
@@ -735,7 +736,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
                         if ( 0 && rb->numquotes > 1 )
                         {
                             char *jsonstr2,*retstr2; cJSON *json2;
-                            if ( (jsonstr2= submitquote_str(&rb->quotes[1],baseid,relid)) != 0 )
+                            if ( (jsonstr2= submitquote_str(1,&rb->quotes[1],baseid,relid)) != 0 )
                             {
                                 if ( (retstr2= makeoffer3_stub("4077619696739571952",0,jsonstr2)) != 0 )
                                 {
