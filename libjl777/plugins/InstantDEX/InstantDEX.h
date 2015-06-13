@@ -396,7 +396,8 @@ char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,ch
             nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,sender,valid,objs,numobjs,origargstr));
     }
-    else return(clonestr("{\"error\":\"cant validate sender\"}"));
+    printf("(%s) sender.(%s) forwarder.(%s)\n",origargstr,sender,forwarder);
+    return(clonestr("{\"error\":\"cant validate sender\"}"));
 }
 
 char *ask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -409,7 +410,8 @@ char *ask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,ch
             nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,sender,valid,objs,numobjs,origargstr));
     }
-    else return(clonestr("{\"error\":\"cant validate sender\"}"));
+    printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
+    return(clonestr("{\"error\":\"cant validate sender\"}"));
 }
 
 uint64_t PTL_placebid(char *base,char *rel,double price,double volume)
