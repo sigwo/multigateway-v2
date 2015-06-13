@@ -346,8 +346,8 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                 if ( (quoteid= calc_quoteid(&iQ)) != 0 )
                 {
                     retstr = placequote_str(&iQ);
-                    if ( Debuglevel > 2 )
-                        printf("placequote.(%s)\n",retstr);
+                    if ( Debuglevel > 1 )
+                        printf("placequote.(%s) remoteflag.%d\n",retstr,remoteflag);
                 }
                 if ( (jsonstr= submitquote_str(&iQ,baseid,relid)) != 0 )
                 {
@@ -355,7 +355,6 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                     {
                         if ( (str= submit_quote(jsonstr)) != 0 )
                             free(str);
-                        //free(jsonstr);
                         retstr = jsonstr;
                     }
                     else retstr = check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ,jsonstr);
