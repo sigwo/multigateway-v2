@@ -102,9 +102,9 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
         {
             strcpy(NXTaddr,SUPERNET.NXTADDR);
             ensure_jsonitem(argjson,"NXT",NXTaddr);
-            valid = 1;
             //printf("subsititute NXT.%s\n",NXTaddr);
         }
+        valid = 1;
         copy_cJSON(command,obj);
         copy_cJSON(NXTACCTSECRET,secretobj);
         if ( NXTACCTSECRET[0] == 0 )
@@ -115,7 +115,7 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
                 strcpy(NXTaddr,SUPERNET.NXTADDR);
              }
         }
-        printf("(%s) command.(%s) NXT.(%s)\n",cJSON_Print(argjson),command,NXTaddr);
+        printf("(%s) command.(%s) NXT.(%s) valid.%d\n",cJSON_Print(argjson),command,NXTaddr,valid);
         //fprintf(stderr,"SuperNET_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
         for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
         {
@@ -123,7 +123,6 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
             //printf("needvalid.(%c) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
             if ( strcmp(cmdinfo[1],command) == 0 )
             {
-                //printf("%d %d\n",cmdinfo[2][0],valid);
                 if ( cmdinfo[2][0] != 0 && valid <= 0 )
                     return(0);
                 for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
