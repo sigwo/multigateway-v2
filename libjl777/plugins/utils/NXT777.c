@@ -493,14 +493,14 @@ int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr)
 char *issue_calculateFullHash(char *unsignedtxbytes,char *sighash)
 {
     char cmd[4096];
-    sprintf(cmd,"%s=calculateFullHash&unsignedTransactionBytes=%s&signatureHash=%s",SUPERNET.NXTSERVER,unsignedtxbytes,sighash);
+    sprintf(cmd,"requestType=calculateFullHash&unsignedTransactionBytes=%s&signatureHash=%s",unsignedtxbytes,sighash);
     return(issue_NXTPOST(cmd));
 }
 
 char *issue_parseTransaction(char *txbytes)
 {
     char cmd[4096],*retstr = 0;
-    sprintf(cmd,"%s=parseTransaction&transactionBytes=%s",SUPERNET.NXTSERVER,txbytes);
+    sprintf(cmd,"requestType=parseTransaction&transactionBytes=%s",txbytes);
     retstr = issue_NXTPOST(cmd);
     //printf("issue_parseTransaction.%s %s\n",txbytes,retstr);
     if ( retstr != 0 )
@@ -516,7 +516,7 @@ uint64_t issue_broadcastTransaction(int32_t *errcodep,char **retstrp,char *txbyt
     cJSON *json,*errjson;
     uint64_t txid = 0;
     char cmd[4096],*retstr;
-    sprintf(cmd,"%s=broadcastTransaction&secretPhrase=%s&transactionBytes=%s",SUPERNET.NXTSERVER,NXTACCTSECRET,txbytes);
+    sprintf(cmd,"requestType=broadcastTransaction&secretPhrase=%s&transactionBytes=%s",NXTACCTSECRET,txbytes);
     retstr = issue_NXTPOST(cmd);
     *errcodep = -1;
     if ( retstrp != 0 )
@@ -547,7 +547,7 @@ uint64_t issue_broadcastTransaction(int32_t *errcodep,char **retstrp,char *txbyt
 char *issue_signTransaction(char *txbytes,char *NXTACCTSECRET)
 {
     char cmd[4096];
-    sprintf(cmd,"%s=signTransaction&secretPhrase=%s&unsignedTransactionBytes=%s",SUPERNET.NXTSERVER,NXTACCTSECRET,txbytes);
+    sprintf(cmd,"requestType=signTransaction&secretPhrase=%s&unsignedTransactionBytes=%s",NXTACCTSECRET,txbytes);
     return(issue_NXTPOST(cmd));
 }
 
@@ -662,7 +662,7 @@ uint64_t issue_transferAsset(char **retstrp,void *deprecated,char *secret,char *
     *retstrp = 0;
     assetidbits = calc_nxt64bits(asset);
     if ( assetidbits == NXT_ASSETID )
-        sprintf(cmd,"%s=sendMoney&amountNQT=%lld",SUPERNET.NXTSERVER,(long long)quantity);
+        sprintf(cmd,"requestType=sendMoney&amountNQT=%lld",(long long)quantity);
     else sprintf(cmd,"%s=transferAsset&asset=%s&quantityQNT=%lld&messageIsPrunable=false",SUPERNET.NXTSERVER,asset,(long long)quantity);
     sprintf(cmd+strlen(cmd),"&secretPhrase=%s&recipient=%s&feeNQT=%lld&deadline=%d",secret,recipient,(long long)feeNQT,deadline);
     if ( destpubkey != 0 )
@@ -1360,7 +1360,7 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
     char cmd[4096],hashstr[65],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json; uint8_t hash[32];
     encoded[0] = 0;
     calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
-    sprintf(cmd,"%s=generateToken&website=%s&secretPhrase=%s",SUPERNET.NXTSERVER,hashstr,secret);
+    sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase=%s",hashstr,secret);
     // printf("cmd.(%s)\n",cmd);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
