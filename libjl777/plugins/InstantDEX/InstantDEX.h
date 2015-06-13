@@ -150,7 +150,7 @@ void ramparse_stub(struct rambook_info *bids,struct rambook_info *asks,int32_t m
 
 int32_t validate_sender(char *sender,char *tokenizedtxt)
 {
-    char pubkey[512]; int32_t strictflag = 1;
+    char pubkey[512]; int32_t strictflag = 0;
     return(validate_token(pubkey,sender,tokenizedtxt,strictflag));
 }
 
