@@ -736,13 +736,9 @@ char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len)
         else argjson = json;
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
-            if ( strcmp(plugin,"relay") == 0 )
-                retstr = nn_lb_processor(args,msg,len);
-            else if ( strcmp(plugin,"peers") == 0 )
-                retstr = nn_allpeers_processor(args,msg,len);
-            else retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
+            retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
         }
-        else retstr = plugin_method(0,-1,plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,len,1000);
+        //else retstr = plugin_method(0,-1,plugin==0?"subscriptions":plugin,(char *)args,0,0,(char *)msg,len,1000);
         free_json(json);
     } else retstr = clonestr((char *)msg);
     return(retstr);
