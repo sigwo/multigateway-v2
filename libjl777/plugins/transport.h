@@ -186,6 +186,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
                 if ( flag != 0 )
                 {
                     sprintf(numstr,"%llu",(long long)tag), ensure_jsonitem(json,"tag",numstr);
+                    ensure_jsonitem(json,"NXT",SUPERNET.NXTADDR);
                     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
                     tmplen = (int32_t)strlen(jsonstr) + 1;
                     if ( datalen != 0 )
@@ -207,7 +208,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
 //printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1);
             if ( len > 0 )
             {
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s) args.%p\n",(long long)tag,jsonstr,args);
                 if ( tag != 0 )
                     add_tagstr(dp,tag,retstrp,args);

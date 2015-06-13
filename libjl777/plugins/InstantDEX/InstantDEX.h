@@ -269,7 +269,6 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     int32_t remoteflag,automatch,duration;
     struct rambook_info *rb;
     char buf[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[16],rel[16],*str,*jsonstr,*retstr = 0;
-    printf("placequote\n");
     if ( (xchg= find_exchange(INSTANTDEX_NAME,0,0)) == 0 || xchg->exchangeid != INSTANTDEX_EXCHANGEID )
         return(clonestr("{\"error\":\"unexpected InstantDEX exchangeid\"}"));
     remoteflag = (localaccess == 0);
