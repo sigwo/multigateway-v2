@@ -148,16 +148,16 @@ void ramparse_stub(struct rambook_info *bids,struct rambook_info *asks,int32_t m
     printf("unexpected call to ramparse_stub gui.%s maxdepth.%d\n",gui,maxdepth);
 }
 
-int32_t validate_sender(char *sender,char *tokenizedtxt)
+int32_t validate_sender(char *forwarder,char *sender,char *tokenizedtxt)
 {
     char pubkey[512]; int32_t strictflag = 0;
-    return(validate_token(pubkey,sender,tokenizedtxt,strictflag));
+    return(validate_token(forwarder,pubkey,sender,tokenizedtxt,strictflag));
 }
 
 char *submit_quote(char *quotestr)
 {
     int32_t len; char _tokbuf[4096];
-    printf("submit_quote.(%s)\n",quotestr);
+    //printf("submit_quote.(%s)\n",quotestr);
     len = construct_tokenized_req(_tokbuf,quotestr,SUPERNET.NXTACCTSECRET);
     return(nn_loadbalanced((uint8_t *)_tokbuf,len));
 }
@@ -250,8 +250,6 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
         ensure_jsonitem(json,"destplugin","InstantDEX");
         ensure_jsonitem(json,"method",(iQ->isask != 0) ? "ask" : "bid");
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-        //if ( (str= submit_quote(jsonstr)) != 0 )
-        //    free(str);
         free_json(json);
     } else printf("gen_InstantDEX_json returns null\n");
     return(jsonstr);
@@ -390,10 +388,12 @@ char *placeask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numob
 
 char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char sender[64];
-    if ( validate_sender(sender,origargstr) != 0 )
+    char sender[64],forwarder[64];
+    if ( validate_sender(forwarder,sender,origargstr) > 0 )
     {
-        nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
+        printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
+        if ( strcmp(forwarder,sender) == 0 )
+            nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,sender,valid,objs,numobjs,origargstr));
     }
     else return(clonestr("{\"error\":\"cant validate sender\"}"));
@@ -401,10 +401,12 @@ char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,ch
 
 char *ask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char sender[64];
-    if ( validate_sender(sender,origargstr) != 0 )
+    char sender[64],forwarder[64];
+    if ( validate_sender(forwarder,sender,origargstr) > 0 )
     {
-        nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
+        printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
+        if ( strcmp(forwarder,sender) == 0 )
+            nn_publish((uint8_t *)origargstr,(int32_t)strlen(origargstr)+1,1);
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,sender,valid,objs,numobjs,origargstr));
     }
     else return(clonestr("{\"error\":\"cant validate sender\"}"));
