@@ -248,7 +248,7 @@ char *submitquote_str(struct InstantDEX_quote *iQ,uint64_t baseid,uint64_t relid
     {
         ensure_jsonitem(json,"plugin","relay");
         ensure_jsonitem(json,"destplugin","InstantDEX");
-        cJSON_ReplaceItemInObject(json,"requestType",cJSON_CreateString((iQ->isask != 0) ? "ask" : "bid"));
+        cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString((iQ->isask != 0) ? "ask" : "bid"));
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
         if ( (str= submit_quote(jsonstr)) != 0 )
             free(str);
