@@ -636,17 +636,17 @@ char *find_directconnect(cJSON *retjson)
 char *nn_loadbalanced(uint8_t *data,int32_t len)
 {
     cJSON *json,*retjson,*array,*item;
-    char method[MAX_JSON_FIELD],*msg,*request,*connectstr,*jsonstr = 0;
+    char method[MAX_JSON_FIELD],*msg,*connectstr,*jsonstr = 0;
     int32_t sendlen,i,n,lbsock,recvlen = 0;
     if ( (lbsock= RELAYS.lb.sock) < 0 )
         return(clonestr("{\"error\":\"invalid load balanced socket\"}"));
-    request = malloc(len + 512);
-    memcpy(request,data,len);
-    add_standard_fields(request);
+    //request = malloc(len + 512);
+    //memcpy(request,data,len);
+    //add_standard_fields(request);
     for (i=0; i<10; i++)
         if ( (nn_socket_status(lbsock,1) & NN_POLLOUT) != 0 )
             break;
-    if ( (sendlen= nn_send(lbsock,request,len,0)) == len )
+    if ( (sendlen= nn_send(lbsock,data,len,0)) == len )
     {
         for (i=0; i<1000; i++)
             if ( (nn_socket_status(lbsock,1) & NN_POLLIN) != 0 )
@@ -654,7 +654,7 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
         if ( (recvlen= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
         {
             jsonstr = clonestr((char *)msg);
-            if ( (json= cJSON_Parse(request)) != 0 )
+            if ( (json= cJSON_Parse((char *)data)) != 0 )
             {
                 copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
                 if ( strcmp(method,"direct") == 0 )
@@ -681,7 +681,7 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
                     } else printf("cant parse retjson.(%s)\n",jsonstr);
                 } //else printf("method.(%s) is not direct\n",method);
                 free_json(json);
-            } else printf("couldnt parse request (%s)\n",request);
+            } else printf("couldnt parse request (%s)\n",data);
             nn_freemsg(msg);
         }
         else
@@ -690,7 +690,6 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
             jsonstr = clonestr("{\"error\":\"lb recv error, probably timeout\"}");
         }
     } else printf("got sendlen.%d instead of %d %s\n",sendlen,len,nn_errstr()), jsonstr = clonestr("{\"error\":\"lb send error\"}");
-    free(request);
     return(jsonstr);
 }
 
