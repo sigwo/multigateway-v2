@@ -1366,7 +1366,7 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
     {
         if ( (json= cJSON_Parse(jsontxt)) != 0 )
         {
-printf("(%s) -> token.(%s)\n",cmd,cJSON_Print(json));
+//printf("(%s) -> token.(%s)\n",cmd,cJSON_Print(json));
             tokenobj = cJSON_GetObjectItem(json,"token");
             copy_cJSON(token,tokenobj);
             if ( encoded != 0 )
