@@ -207,9 +207,9 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
 //printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1);
             if ( len > 0 )
             {
-                if ( Debuglevel > 2 )
-                    fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s)\n",(long long)tag,jsonstr);
-                if ( tag != 0 && args != 0 )
+                if ( Debuglevel > 1 )
+                    fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s) args.%p\n",(long long)tag,jsonstr,args);
+                if ( tag != 0 )
                     add_tagstr(dp,tag,retstrp,args);
                 dp->numsent++;
                 if ( nn_local_broadcast(&dp->perm.socks,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
