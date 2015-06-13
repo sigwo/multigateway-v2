@@ -496,7 +496,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     cJSON *json;
     struct relayargs *args = 0;
     int32_t ind,async;
-//printf("origargstr.(%s).%d\n",origargstr,len);
+printf("origargstr.(%s).%d\n",origargstr,len);
     if ( (json= cJSON_Parse(origargstr)) != 0 )
     {
         cJSON_AddItemToObject(json,"localaccess",cJSON_CreateNumber(localaccess));
@@ -527,7 +527,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     }
     else
     {
-        if ( Debuglevel > 2 )
+        if ( Debuglevel > 1 )
             fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess);
         if ( dp->readyflag == 0 )
         {
@@ -551,7 +551,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
         }
         else
         {
-//fprintf(stderr,"send_to_daemon.(%s).%d\n",jsonstr,len);
+fprintf(stderr,"send_to_daemon.(%s).%d\n",jsonstr,len);
             *retstrp = 0;
             if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,jsonstr,len)) == 0 )
             {
