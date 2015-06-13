@@ -1357,10 +1357,10 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
 
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 {
-    char cmd[4096],hashstr[65],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json; uint8_t hash[32];
+    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json; //uint8_t hash[32];
     encoded[0] = 0;
-    calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
-    sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase=%s",hashstr,secret);
+    //calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
+    sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase=%s",key,secret);
     // printf("cmd.(%s)\n",cmd);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
@@ -1390,29 +1390,31 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
 
 int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char encoded[NXT_TOKEN_LEN])
 {
-    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],hashstr[65]; uint8_t hash[32];
-    cJSON *nxtobj,*validobj;
-    union NXTtype retval;
+    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr; //uint8_t hash[32];
+    cJSON *nxtobj,*validobj,*json;
     *validp = -1;
     sender[0] = 0;
     memcpy(token,encoded,NXT_TOKEN_LEN);
     token[NXT_TOKEN_LEN] = 0;
-    calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
-    sprintf(cmd,"%s=decodeToken&website=%s&token=%s",SUPERNET.NXTSERVER,hashstr,token);
-    //printf("cmd.(%s)\n",cmd);
-    retval = extract_NXTfield(0,0,cmd,0,0);
-    if ( retval.json != 0 )
+    //calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
+    sprintf(cmd,"requestType=decodeToken&website=%s&token=%s",key,token);
+    if ( (retstr = issue_NXTPOST(cmd)) != 0 )
     {
-        validobj = cJSON_GetObjectItem(retval.json,"valid");
-        if ( validobj != 0 )
-            *validp = ((validobj->type&0xff) == cJSON_True) ? 1 : 0;
-        nxtobj = cJSON_GetObjectItem(retval.json,"account");
-        copy_cJSON(sender,nxtobj);
-        free_json(retval.json);
-        //printf("decoded valid.%d NXT.%s len.%d\n",*validp,sender,(int32_t)strlen(sender));
-        if ( sender[0] != 0 )
-            return((int32_t)strlen(sender));
-        else return(0);
+        printf("cmd.(%s) -> (%s)\n",cmd,retstr);
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            validobj = cJSON_GetObjectItem(json,"valid");
+            if ( validobj != 0 )
+                *validp = ((validobj->type&0xff) == cJSON_True) ? 1 : 0;
+            nxtobj = cJSON_GetObjectItem(json,"account");
+            copy_cJSON(sender,nxtobj);
+            free_json(json), free(retstr);
+            //printf("decoded valid.%d NXT.%s len.%d\n",*validp,sender,(int32_t)strlen(sender));
+            if ( sender[0] != 0 )
+                return((int32_t)strlen(sender));
+            else return(0);
+        }
+        free(retstr);
     }
     return(-1);
 }
@@ -1425,6 +1427,7 @@ int32_t validate_token(char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t str
     char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*firstjsontxt = 0;
     unsigned char encoded[4096];
     array = cJSON_Parse(tokenizedtxt);
+    NXTaddr[0] = pubkey[0] = 0;
     if ( array == 0 )
     {
         printf("couldnt validate.(%s)\n",tokenizedtxt);
