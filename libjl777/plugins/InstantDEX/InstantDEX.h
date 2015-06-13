@@ -322,7 +322,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                     else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
                 } else return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
             } else return(clonestr("{\"error\":\"illegal parameter baseid or relid not crypto or invalid price\"}\n"));
-        } else printf("alternate else case\n");
+        } else printf("alternate else case.(%s)\n",exchangestr);
     }
     printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
     update_rambooks(baseid,relid,0,0,0);

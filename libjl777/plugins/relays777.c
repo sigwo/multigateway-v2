@@ -728,10 +728,13 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len);
-    cJSON *json; char *plugin,*retstr = 0;
+    cJSON *json,*argjson; char *plugin,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"destplugin"))) != 0 )
+        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+            argjson = cJSON_GetArrayItem(json,0);
+        else argjson = json;
+        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
             if ( strcmp(plugin,"relay") == 0 )
                 retstr = nn_lb_processor(args,msg,len);
@@ -775,10 +778,13 @@ void nn_direct_processor(int32_t directind,uint8_t *msg,int32_t len)
 
 char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
-    cJSON *json; char *plugin,*retstr = 0;
+    cJSON *json,*argjson; char *plugin,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(json,"plugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(json,"agent"))) != 0 )
+        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+            argjson = cJSON_GetArrayItem(json,0);
+        else argjson = json;
+        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
             if ( strcmp(plugin,"subscriptions") == 0 )
                 retstr = nn_pubsub_processor(args,msg,len);
