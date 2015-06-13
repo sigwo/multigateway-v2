@@ -542,7 +542,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
         {
             methodsstr = cJSON_Print(localaccess != 0 ? dp->methodsjson : dp->pubmethods);
            // if ( Debuglevel > 2 )
-                fprintf(stderr,"available methods.(%s)\n",methodsstr);
+                fprintf(stderr,"available methods.(%s) vs (%s)\n",methodsstr,method);
             sprintf(retbuf,"{\"error\":\"method not allowed\",\"plugin\":\"%s\",\"%s\":\"%s\"}",plugin,method,methodsstr);
             free(methodsstr);
             return(clonestr(retbuf));
