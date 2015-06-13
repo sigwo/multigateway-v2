@@ -1357,25 +1357,25 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw)
 
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 {
-    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1];
-    cJSON *tokenobj;
-    union NXTtype retval;
+    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json;
     encoded[0] = 0;
     sprintf(cmd,"%s=generateToken&website=%s&secretPhrase=%s",SUPERNET.NXTSERVER,key,secret);
     // printf("cmd.(%s)\n",cmd);
-    retval = extract_NXTfield(0,0,cmd,0,0);
-    if ( retval.json != 0 )
+    if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
-        //printf("token.(%s)\n",cJSON_Print(retval.json));
-        tokenobj = cJSON_GetObjectItem(retval.json,"token");
-        memset(token,0,sizeof(token));
-        copy_cJSON(token,tokenobj);
-        free_json(retval.json);
-        if ( token[0] != 0 )
+        if ( (json= cJSON_Parse(jsontxt)) != 0 )
         {
-            memcpy(encoded,token,NXT_TOKEN_LEN);
-            return(0);
+            //printf("token.(%s)\n",cJSON_Print(retval.json));
+            tokenobj = cJSON_GetObjectItem(json,"token");
+            memset(token,0,sizeof(token));
+            copy_cJSON(token,tokenobj);
+            if ( token[0] != 0 )
+            {
+                memcpy(encoded,token,NXT_TOKEN_LEN);
+                return(0);
+            }
         }
+        free(jsontxt);
     }
     return(-1);
 }
