@@ -93,7 +93,8 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
     NXTACCTSECRET[0] = 0;
     if ( argjson != 0 )
     {
-        obj = cJSON_GetObjectItem(argjson,"requestType");
+        if ( (obj= cJSON_GetObjectItem(argjson,"requestType")) == 0 )
+            obj = cJSON_GetObjectItem(argjson,"method");
         nxtobj = cJSON_GetObjectItem(argjson,"NXT");
         secretobj = cJSON_GetObjectItem(argjson,"secret");
         copy_cJSON(NXTaddr,nxtobj);
@@ -162,7 +163,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             return((int32_t)strlen(retbuf));
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         if ( (methodstr= cJSON_str(cJSON_GetObjectItem(json,"method"))) == 0 )
-            methodstr= cJSON_str(cJSON_GetObjectItem(json,"requestType"));
+            methodstr = cJSON_str(cJSON_GetObjectItem(json,"requestType"));
         copy_cJSON(echostr,cJSON_GetObjectItem(json,"echostr"));
         retbuf[0] = 0;
         if ( methodstr == 0 || methodstr[0] == 0 )
