@@ -47,7 +47,7 @@ COINS = $(C)/bitcoind_RPC.c $(C)/gen1auth.c $(C)/gen1pub.c $(C)/cointx.c $(C)/co
 CRYPTO = $(U)/sha256.c $(U)/crypt_argchk.c $(U)/hmac_sha512.c $(U)/rmd160.c $(U)/sha512.c
 INSTANTDEX = $(I)/InstantDEX_main.c
 
-SRCS = SuperNET.c libjl777.c $(CRYPTO) $(UTILS) $(SOPHIA) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) plugins/mgw/MGW_main.c plugins/relays777.c plugins/peers777.c plugins/subscriptions777.c plugins/console777.c # plugins/echodemo.c
+SRCS = SuperNET.c libjl777.c $(CRYPTO) $(UTILS) $(SOPHIA) $(COINS) $(NONPORTABLE) $(RAMCHAIN) plugins/mgw/MGW_main.c plugins/relays777.c plugins/peers777.c plugins/subscriptions777.c plugins/console777.c # plugins/echodemo.c
  
 OBJS	:= $(SRCS:%.c=%.o)
 
