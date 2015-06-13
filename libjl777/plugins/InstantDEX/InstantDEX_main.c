@@ -153,6 +153,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         // configure settings
         plugin->allowremote = 1;
         init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0);
+        INSTANTDEX.readyflag = 1;
         strcpy(retbuf,"{\"result\":\"InstantDEX init\"}");
     }
     else
