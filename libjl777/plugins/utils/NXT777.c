@@ -495,7 +495,7 @@ uint32_t _get_NXTheight(uint32_t *firsttimep)
     sprintf(cmd,"requestType=getState");
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
-        printf("(%s) -> (%s)\n",cmd,jsonstr);
+        //printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( firsttimep != 0 )
