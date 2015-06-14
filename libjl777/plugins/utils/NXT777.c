@@ -214,10 +214,8 @@ bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct)
     cJSON *json;
     bits256 pubkey;
     char cmd[4096],pubkeystr[MAX_JSON_FIELD],*jsonstr;
-    //sprintf(cmd,"%s=getTransaction&transaction=%s",_NXTSERVER,txidstr);
-    //jsonstr = issue_NXTPOST(curl_handle,cmd);
-    sprintf(cmd,"requestType=getAccountPublicKey&account=%s",acct);
-    jsonstr = issue_NXTPOST(cmd);
+    sprintf(cmd,"%s?requestType=getAccountPublicKey&account=%s",SUPERNET.NXTAPIURL,acct);
+    jsonstr = issue_curl(cmd);
     pubkeystr[0] = 0;
     if ( haspubkeyp != 0 )
         *haspubkeyp = 0;
@@ -253,6 +251,7 @@ bits256 issue_getpubkey2(int32_t *haspubkeyp,uint64_t nxt64bits)
     memset(&pubkey,0,sizeof(pubkey));
     if ( jsonstr != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json = cJSON_Parse(jsonstr)) != 0 )
         {
             copy_cJSON(pubkeystr,cJSON_GetObjectItem(json,"publicKey"));
@@ -283,11 +282,13 @@ bits256 calc_sharedsecret(uint64_t *nxt64bitsp,int32_t *haspubpeyp,uint8_t *NXTA
 
 char *_issue_getAsset(char *assetidstr)
 {
-    char cmd[4096];
+    char cmd[4096],*jsonstr;
     //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
     sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
     //printf("_cmd.(%s)\n",cmd);
-    return(issue_NXTPOST(cmd));
+    jsonstr = issue_NXTPOST(cmd);
+    printf("(%s) -> (%s)\n",cmd,jsonstr);
+    return(jsonstr);
 }
 
 char *_issue_getCurrency(char *assetidstr)
@@ -308,6 +309,7 @@ uint64_t _get_bestassetprice(uint64_t *volp,char *assetcmd,char *arrayfield,uint
     sprintf(cmd,"requestType=%s&asset=%llu&firstIndex=0&lastIndex=0",assetcmd,(long long)assetid);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         //printf("cmd.(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
@@ -338,6 +340,7 @@ union NXTtype extract_NXTfield(void *deprecated,char *origoutput,char *cmd,char 
         jsonstr = issue_NXTPOST(cmd);
     if ( jsonstr != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( field != 0 && strcmp(field,"transactionId") == 0 )
             printf("jsonstr.(%s)\n",jsonstr);
         json = cJSON_Parse(jsonstr);
@@ -421,6 +424,7 @@ uint32_t get_blockutime(uint32_t blocknum)
     sprintf(cmd,"requestType=getBlock&height=%u",blocknum);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (timestamp= (uint32_t)get_API_int(cJSON_GetObjectItem(json,"timestamp"),0)) != 0 )
@@ -446,6 +450,7 @@ int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr)
         sprintf(cmd,"requestType=getBalance&account=%s",NXTaddr);
         if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
         {
+            printf("(%s) -> (%s)\n",cmd,jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 qty = get_API_nxt64bits(cJSON_GetObjectItem(json,"balanceNQT"));
@@ -504,7 +509,8 @@ char *issue_parseTransaction(char *txbytes)
     //printf("issue_parseTransaction.%s %s\n",txbytes,retstr);
     if ( retstr != 0 )
     {
-        //retstr = parse_NXTresults(0,"sender","",results_processor,jsonstr,strlen(jsonstr));
+        printf("(%s) -> (%s)\n",cmd,retstr);
+     //retstr = parse_NXTresults(0,"sender","",results_processor,jsonstr,strlen(jsonstr));
         //free(jsonstr);
     } else printf("error getting txbytes.%s\n",txbytes);
     return(retstr);
@@ -522,6 +528,7 @@ uint64_t issue_broadcastTransaction(int32_t *errcodep,char **retstrp,char *txbyt
         *retstrp = retstr;
     if ( retstr != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,retstr);
         //printf("broadcast got.(%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
@@ -558,6 +565,7 @@ uint32_t _get_NXTheight(uint32_t *firsttimep)
     sprintf(cmd,"requestType=getState");
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( firsttimep != 0 )
@@ -580,6 +588,7 @@ uint64_t _get_NXT_ECblock(uint32_t *ecblockp)
     sprintf(cmd,"requestType=getECBlock");
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( ecblockp != 0 )
@@ -640,6 +649,7 @@ uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits)
     else printf("conv_rsacctstr: illegal parms %s %llu\n",rsacctstr,(long long)nxt64bits);
     if ( jsonstr != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json = cJSON_Parse(jsonstr)) != 0 )
         {
             copy_cJSON(retstr,cJSON_GetObjectItem(json,field));
@@ -676,7 +686,8 @@ uint64_t issue_transferAsset(char **retstrp,void *deprecated,char *secret,char *
     jsontxt = issue_NXTPOST(cmd);
     if ( jsontxt != 0 )
     {
-        //printf(" transferAsset.(%s) -> %s\n",cmd,jsontxt);
+        printf("(%s) -> (%s)\n",cmd,jsontxt);
+       //printf(" transferAsset.(%s) -> %s\n",cmd,jsontxt);
         //if ( field != 0 && strcmp(field,"transactionId") == 0 )
         //    printf("jsonstr.(%s)\n",jsonstr);
         json = cJSON_Parse(jsontxt);
@@ -940,6 +951,7 @@ uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height
         sprintf(cmd+strlen(cmd),"&height=%u",height);
     if ( (retstr= issue_NXTPOST(cmd)) != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             if ( (array= cJSON_GetObjectItem(json,"accountAssets")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -1243,6 +1255,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
     //printf("issue.(%s) max.%ld\n",cmd,max);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (array= cJSON_GetObjectItem(transfers,"transfers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -1364,6 +1377,7 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
     // printf("cmd.(%s)\n",cmd);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,jsontxt);
         if ( (json= cJSON_Parse(jsontxt)) != 0 )
         {
 //printf("(%s) -> token.(%s)\n",cmd,cJSON_Print(json));
@@ -1400,6 +1414,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
     sprintf(cmd,"requestType=decodeToken&website=%s&token=%s",key,token);
     if ( (retstr = issue_NXTPOST(cmd)) != 0 )
     {
+        printf("(%s) -> (%s)\n",cmd,retstr);
         //printf("cmd.(%s) -> (%s)\n",cmd,retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
