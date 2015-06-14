@@ -157,7 +157,7 @@ int32_t validate_sender(char *forwarder,char *sender,char *tokenizedtxt)
 char *submit_quote(char *quotestr)
 {
     int32_t len; char _tokbuf[4096];
-    printf("submit_quote.(%s)\n",quotestr);
+    //printf("submit_quote.(%s)\n",quotestr);
     len = construct_tokenized_req(_tokbuf,quotestr,SUPERNET.NXTACCTSECRET);
     return(nn_loadbalanced((uint8_t *)_tokbuf,len));
 }
@@ -388,9 +388,9 @@ char *placeask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numob
 int32_t should_forward(char *sender,char *origargstr)
 {
     char forwarder[64],plugin[MAX_JSON_FIELD]; uint8_t *buf; int32_t len;
-    printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
     if ( validate_sender(forwarder,sender,origargstr) > 0 )
     {
+        printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
         if ( strcmp(forwarder,sender) == 0 )
         {
             len = (int32_t)strlen(origargstr) + 1;

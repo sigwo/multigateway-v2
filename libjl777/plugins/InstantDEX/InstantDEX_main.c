@@ -117,7 +117,7 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
                 strcpy(NXTaddr,SUPERNET.NXTADDR);
              }
         }
-    printf("(%s) command.(%s) NXT.(%s) valid.%d\n",cJSON_Print(argjson),command,NXTaddr,valid);
+   /// printf("(%s) command.(%s) NXT.(%s) valid.%d\n",cJSON_Print(argjson),command,NXTaddr,valid);
         //fprintf(stderr,"SuperNET_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
         for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
         {
@@ -149,7 +149,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
 {
     char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*retstr;
     retbuf[0] = 0;
-fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+//fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings

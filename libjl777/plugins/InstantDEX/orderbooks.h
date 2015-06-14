@@ -472,7 +472,6 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
     struct exchange_info *exchange;
     struct InstantDEX_quote *prevbids,*prevasks;
     int32_t i,n,exchangeid,numoldbids,numoldasks,pollgap = DEFAULT_POLLGAP;
-    printf("update maxdepth.%d\n",maxdepth);
     n = gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid);
     for (i=0; i<n; i++)
     {
@@ -526,7 +525,6 @@ char *orderbook_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numo
     else set_assetname(&mult,rel,relid);
     if ( baseid != 0 && relid != 0 )
     {
-        printf("maxdepth.%d\n",maxdepth);
         update_rambooks(baseid,relid,maxdepth,gui,showall);
         op = make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,baseid,rel,relid,maxdepth,oldest,gui);
         retstr = orderbook_jsonstr(nxt64bits,op,base,rel,maxdepth,allflag);

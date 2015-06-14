@@ -699,7 +699,6 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
 {
     cJSON *json,*argjson,*second; char *plugin,*jsonstr; int32_t len,datalen,diff; uint8_t *ptr = data;
     pluginbuf[0] = 0;
-    printf("replace_forwarder.(%s)\n",data);
     if ( (json= cJSON_Parse((char *)data)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -708,7 +707,6 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
             second = cJSON_GetArrayItem(json,1);
             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
             jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-            printf("replaced.(%s)\n",jsonstr);
             datalen = (int32_t)strlen((char *)data) + 1;
             if ( (len= (int32_t)strlen(jsonstr)+1) == datalen )
                 memcpy(data,jsonstr,len);
@@ -726,7 +724,6 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
             strcpy(pluginbuf,plugin);
-            printf("dest.(%s)\n",plugin);
         }
         free_json(json);
     } else printf("cant parse.(%s)\n",data);
@@ -738,10 +735,10 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
-    printf("LB PROCESSOR.(%s)\n",msg);
+    //printf("LB PROCESSOR.(%s)\n",msg);
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
     {
-        printf("NEWLB.(%s)\n",buf);
+        //printf("NEWLB.(%s)\n",buf);
         if ( strcmp(plugin,"relay") == 0 )
             retstr = nn_pubsub_processor(args,buf,len);
         else if ( strcmp(plugin,"subscriptions") == 0 )
