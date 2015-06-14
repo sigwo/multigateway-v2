@@ -747,7 +747,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
             retstr = nn_pubsub_processor(args,buf,len);
         else if ( strcmp(plugin,"peers") == 0 )
             retstr = nn_allpeers_processor(args,buf,len);
-        else retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)buf,len,1000);
+        else retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
     } else { retstr = clonestr("{\"error\":\"couldnt parse LB request\"}"); printf("%s\n",retstr); }
     if ( buf != msg )
         free(buf);
