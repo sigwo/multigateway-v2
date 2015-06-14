@@ -472,6 +472,8 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
     struct exchange_info *exchange;
     struct InstantDEX_quote *prevbids,*prevasks;
     int32_t i,n,exchangeid,numoldbids,numoldasks,pollgap = DEFAULT_POLLGAP;
+    if ( maxdepth < 0 )
+        maxdepth = DEFAULT_MAXDEPTH;
     n = gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid);
     for (i=0; i<n; i++)
     {

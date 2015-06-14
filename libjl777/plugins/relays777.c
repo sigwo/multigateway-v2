@@ -741,12 +741,10 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
     {
         //printf("NEWLB.(%s)\n",buf);
-        if ( strcmp(plugin,"relay") == 0 )
-            retstr = nn_pubsub_processor(args,buf,len);
-        else if ( strcmp(plugin,"subscriptions") == 0 )
-            retstr = nn_pubsub_processor(args,buf,len);
+        if ( strcmp(plugin,"subscriptions") == 0 )
+            retstr = nn_pubsub_processor(args,msg,len);
         else if ( strcmp(plugin,"peers") == 0 )
-            retstr = nn_allpeers_processor(args,buf,len);
+            retstr = nn_allpeers_processor(args,msg,len);
         else retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
     } else { retstr = clonestr("{\"error\":\"couldnt parse LB request\"}"); printf("%s\n",retstr); }
     if ( buf != msg )
@@ -758,7 +756,7 @@ char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
-        retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)buf,len,1000);
+        retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
     else retstr = clonestr((char *)msg);
     if ( buf != msg )
         free(buf);
@@ -769,7 +767,7 @@ char *nn_allpeers_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
-        retstr = plugin_method(0,-1,plugin==0?"peers":plugin,(char *)args,0,0,(char *)buf,len,500);
+        retstr = plugin_method(0,-1,plugin==0?"peers":plugin,(char *)args,0,0,(char *)msg,len,500);
     else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
     if ( buf != msg )
         free(buf);
