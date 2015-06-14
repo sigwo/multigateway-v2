@@ -699,6 +699,7 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
 {
     cJSON *json,*argjson,*second; char *plugin,*jsonstr; int32_t len,datalen,diff; uint8_t *ptr = data;
     pluginbuf[0] = 0;
+    printf("replace_forwarder.(%s)\n",data);
     if ( (json= cJSON_Parse((char *)data)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -749,7 +750,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
         else if ( strcmp(plugin,"peers") == 0 )
             retstr = nn_allpeers_processor(args,buf,len);
         else retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)buf,len,1000);
-    } else retstr = clonestr("{\"error\":\"couldnt parse request\"}");
+    } else { retstr = clonestr("{\"error\":\"couldnt parse LB request\"}"); printf("%s\n",retstr); }
     if ( buf != msg )
         free(buf);
     return(retstr);
