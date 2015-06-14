@@ -157,7 +157,7 @@ int32_t validate_sender(char *forwarder,char *sender,char *tokenizedtxt)
 char *submit_quote(char *quotestr)
 {
     int32_t len; char _tokbuf[4096];
-    //printf("submit_quote.(%s)\n",quotestr);
+    printf("submit_quote.(%s)\n",quotestr);
     len = construct_tokenized_req(_tokbuf,quotestr,SUPERNET.NXTACCTSECRET);
     return(nn_loadbalanced((uint8_t *)_tokbuf,len));
 }

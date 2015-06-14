@@ -644,12 +644,10 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
     int32_t sendlen,i,n,lbsock,recvlen = 0;
     if ( (lbsock= RELAYS.lb.sock) < 0 )
         return(clonestr("{\"error\":\"invalid load balanced socket\"}"));
-    //request = malloc(len + 512);
-    //memcpy(request,data,len);
-    //add_standard_fields(request);
     for (i=0; i<10; i++)
         if ( (nn_socket_status(lbsock,1) & NN_POLLOUT) != 0 )
             break;
+    printf("NN_LBSEND.(%s)\n",data);
     if ( (sendlen= nn_send(lbsock,data,len,0)) == len )
     {
         for (i=0; i<1000; i++)

@@ -516,6 +516,8 @@ char *orderbook_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numo
     baseid = get_API_nxt64bits(objs[0]), relid = get_API_nxt64bits(objs[1]), allflag = get_API_int(objs[2],0), oldest = get_API_int(objs[3],0);
     maxdepth = get_API_int(objs[4],DEFAULT_MAXDEPTH), copy_cJSON(base,objs[5]), copy_cJSON(rel,objs[6]), copy_cJSON(gui,objs[7]), gui[sizeof(iQ->gui)-1] = 0, showall = get_API_int(objs[8],1);
     retstr = 0;
+    if ( maxdepth < 0 )
+        maxdepth = DEFAULT_MAXDEPTH;
     if ( baseid == 0 && base[0] != 0 )
         baseid = stringbits(base);
     else set_assetname(&mult,base,baseid);
