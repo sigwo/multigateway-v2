@@ -104,7 +104,7 @@ int main(int argc, char **argv)
         retstr = (postflag == 1) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
         if ( retstr != 0 )
         {
-            fprintf(stderr,"%s",retstr);
+            //fprintf(stderr,"%s",retstr);
             printf("Content-Length: %ld\r\n\r\n",strlen(retstr)+2);
             printf("%s\r\n",retstr);
             free(retstr);
