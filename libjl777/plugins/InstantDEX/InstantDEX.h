@@ -294,7 +294,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
         duration = ORDERBOOK_EXPIRATION;
     copy_cJSON(exchangestr,objs[11]);
-    printf("placebid localaccess.%d dir.%d\n",localaccess,dir);
+    //printf("placebid localaccess.%d dir.%d\n",localaccess,dir);
     if ( exchangestr[0] == 0 )
         strcpy(exchangestr,INSTANTDEX_NAME);
     else
@@ -306,7 +306,6 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
         }
         else if ( strcmp(exchangestr,"nxtae") != 0 && strcmp(exchangestr,"unconf") != 0 && strcmp(exchangestr,"InstantDEX") != 0 )
         {
-            printf("alternate path\n");
             if ( is_native_crypto(base,baseid) > 0 && is_native_crypto(rel,relid) > 0 && price > 0 && volume > 0 && dir != 0 )
             {
                 if ( (exchange= find_exchange(exchangestr,0,0)) != 0 )
@@ -346,12 +345,12 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                 if ( (quoteid= calc_quoteid(&iQ)) != 0 )
                 {
                     retstr = placequote_str(&iQ);
-                    if ( Debuglevel > 1 )
+                    if ( Debuglevel > 2 )
                         printf("placequote.(%s) remoteflag.%d\n",retstr,remoteflag);
                 }
                 if ( (jsonstr= submitquote_str(localaccess,&iQ,baseid,relid)) != 0 )
                 {
-                    printf("got submitquote_str.(%s)\n",jsonstr);
+                    //printf("got submitquote_str.(%s)\n",jsonstr);
                     if ( remoteflag == 0 )
                     {
                         if ( (str= submit_quote(jsonstr)) != 0 )
