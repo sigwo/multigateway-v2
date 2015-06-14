@@ -410,17 +410,15 @@ int32_t should_forward(char *sender,char *origargstr)
 char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char sender[MAX_JSON_FIELD];
-    if ( should_forward(sender,origargstr) > 0 )
-         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,sender,valid,objs,numobjs,origargstr));
-    else return(0);
+    should_forward(sender,origargstr);
+    return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,sender,valid,objs,numobjs,origargstr));
 }
 
 char *ask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char sender[MAX_JSON_FIELD];
-    if ( should_forward(sender,origargstr) > 0 )
-        return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,sender,valid,objs,numobjs,origargstr));
-    else return(0);
+    should_forward(sender,origargstr);
+    return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,sender,valid,objs,numobjs,origargstr));
 }
 
 uint64_t PTL_placebid(char *base,char *rel,double price,double volume)
