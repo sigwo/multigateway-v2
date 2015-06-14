@@ -654,7 +654,7 @@ int32_t orderbook_verifymatch(int32_t dir,uint64_t baseid,uint64_t relid,double 
     return(retval);
 }
 
-char *call_makeoffer3(char *NXTaddr,char *NXTACCTSECRET,cJSON *objs[])
+char *call_makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,cJSON *objs[])
 {
     uint64_t quoteid,baseid,relid,baseamount,relamount,offerNXT,jumpasset;
     char exchange[MAX_JSON_FIELD];
@@ -673,10 +673,10 @@ char *call_makeoffer3(char *NXTaddr,char *NXTACCTSECRET,cJSON *objs[])
     offerNXT = get_API_nxt64bits(objs[13]);
     minperc = (int32_t)get_API_int(objs[14],INSTANTDEX_MINVOL);
     jumpasset = get_API_nxt64bits(objs[15]);
-    return(makeoffer3(NXTaddr,NXTACCTSECRET,price,volume,flip,perc,baseid,relid,objs[5],objs[6],quoteid,get_API_int(objs[7],0),exchange,baseamount,relamount,offerNXT,minperc,jumpasset));
+    return(makeoffer3(localaccess,NXTaddr,NXTACCTSECRET,price,volume,flip,perc,baseid,relid,objs[5],objs[6],quoteid,get_API_int(objs[7],0),exchange,baseamount,relamount,offerNXT,minperc,jumpasset));
 }
 
-char *makeoffer3_stub(char *NXTaddr,char *NXTACCTSECRET,char *jsonstr)
+char *makeoffer3_stub(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,char *jsonstr)
 {
     static char *makeoffer3_fields[] = { (char *)0, "makeoffer3", "V", "baseid", "relid", "quoteid", "perc", "flip", "baseiQ", "reliQ", "askoffer", "price", "volume", "exchange", "baseamount", "relamount", "offerNXT", "minperc", "jumpasset", 0 };
     cJSON *json,*objs[16];
@@ -686,7 +686,7 @@ char *makeoffer3_stub(char *NXTaddr,char *NXTACCTSECRET,char *jsonstr)
     {
         for (j=3; j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
             objs[j-3] = cJSON_GetObjectItem(json,makeoffer3_fields[j]);
-        retstr = call_makeoffer3(NXTaddr,NXTACCTSECRET,objs);
+        retstr = call_makeoffer3(localaccess,NXTaddr,NXTACCTSECRET,objs);
         free_json(json);
     }
     return(retstr);
@@ -738,7 +738,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
             if ( orderbook_testpair(items,quoteid,nxt64bits,base,baseid,rel,relid,gui,maxdepth) == 0 )
             {
                 jsonstr = submitquote_str(1,&iQ,baseid,relid);
-                if ( (retstr= makeoffer3_stub("4077619696739571952",0,jsonstr)) != 0 )
+                if ( (retstr= makeoffer3_stub(1,"4077619696739571952",0,jsonstr)) != 0 )
                 {
                     if ( (json= cJSON_Parse(retstr)) != 0 )
                     {
@@ -753,7 +753,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
                             char *jsonstr2,*retstr2; cJSON *json2;
                             if ( (jsonstr2= submitquote_str(1,&rb->quotes[1],baseid,relid)) != 0 )
                             {
-                                if ( (retstr2= makeoffer3_stub("4077619696739571952",0,jsonstr2)) != 0 )
+                                if ( (retstr2= makeoffer3_stub(1,"4077619696739571952",0,jsonstr2)) != 0 )
                                 {
                                     if ( (json2= cJSON_Parse(retstr2)) != 0 )
                                     {

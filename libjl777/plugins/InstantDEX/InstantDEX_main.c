@@ -22,7 +22,7 @@ typedef char *(*json_handler)(int32_t localaccess,int32_t valid,cJSON **objs,int
 
 int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
 
-char *PLUGNAME(_methods)[] = { "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory" }; // list of supported methods approved for local access
+char *PLUGNAME(_methods)[] = { "makeoffer3", "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory" }; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { "bid", "ask", "makeoffer3" }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
 
@@ -30,10 +30,8 @@ char *makeoffer3_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t num
 {
     char *retstr = 0;
     printf("makeoffer3 localaccess.%d\n",localaccess);
-    if ( localaccess == 0 )
-        return(0);
     if ( valid > 0 )
-        retstr = call_makeoffer3(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,objs);
+        retstr = call_makeoffer3(localaccess,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,objs);
     return(retstr);
 }
 

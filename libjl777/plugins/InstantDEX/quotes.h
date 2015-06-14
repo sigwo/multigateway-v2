@@ -161,6 +161,7 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t *baseamountp,uint64_t *r
     {
         if ( localaccess == 0 )
             cJSON_AddItemToObject(json,"method",cJSON_CreateString("makeoffer3"));
+        cJSON_AddItemToObject(json,"plugin",cJSON_CreateString("InstantDEX"));
         set_assetname(&mult,base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
         set_assetname(&mult,rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
         cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
