@@ -706,8 +706,8 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
             argjson = cJSON_GetArrayItem(json,0);
             second = cJSON_GetArrayItem(json,1);
             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-            jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
             datalen = (int32_t)strlen((char *)data) + 1;
+            jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
             if ( (len= (int32_t)strlen(jsonstr)+1) == datalen )
                 memcpy(data,jsonstr,len);
             else
@@ -715,12 +715,13 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
                 diff = *datalenp - datalen;
                 ptr = malloc(diff + len);
                 memcpy(ptr,jsonstr,len);
+                printf("ptr.(%s) len.%d diff.%d datalen.%d\n",ptr,len,diff,datalen);
                 if ( diff > 0 )
                     memcpy(&ptr[len],&data[datalen],diff);
             }
             free(jsonstr);
         }
-        else { argjson = json; printf("notarray.(%s)\n",data); }
+        else argjson = json;
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
             strcpy(pluginbuf,plugin);
