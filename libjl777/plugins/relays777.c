@@ -708,6 +708,7 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
             cJSON_ReplaceItemInArray(json,1,second);
             jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+            printf("replaced.(%s)\n",jsonstr);
             datalen = (int32_t)strlen((char *)data) + 1;
             if ( (len= (int32_t)strlen(jsonstr)+1) == datalen )
                 memcpy(data,jsonstr,len);
@@ -725,7 +726,9 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
             strcpy(pluginbuf,plugin);
+            printf("dest.(%s)\n",plugin);
         }
+        free_json(json);
     }
     return(ptr);
 }
@@ -738,6 +741,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     printf("LB PROCESSOR.(%s)\n",msg);
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
     {
+        printf("NEWLB.(%s)\n",buf);
         if ( strcmp(plugin,"relay") == 0 )
             retstr = nn_pubsub_processor(args,buf,len);
         else if ( strcmp(plugin,"subscriptions") == 0 )
