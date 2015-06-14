@@ -69,15 +69,15 @@ int main(int argc, char **argv)
     fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
     fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
     fputs("Content-type: text/plain\r\n",stdout);
-    if ( strcmp("nxt",argv[0]) == 0 )
-        postflag = 1, postbuf[0] = 0, delim = '?';
-    else if ( strcmp("nxts",argv[0]) == 0 )
-        postflag = 2, postbuf[0] = 0, delim = '?';
     json = cJSON_CreateObject();
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
             j = i+1;
     cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
+    if ( strcmp("nxt",&argv[0][j]) == 0 )
+        postflag = 1, postbuf[0] = 0, delim = '?';
+    else if ( strcmp("nxts",&argv[0][j]) == 0 )
+        postflag = 2, postbuf[0] = 0, delim = '?';
     for (iter=0; iter<2; iter++)
     {
         if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : CGI_get_query(0))) != 0 )
