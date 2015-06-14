@@ -99,7 +99,7 @@ int main(int argc, char **argv)
         }
         CGI_free_varlist(varlist);
     }
-    printf("postflag.(%s)\n",argv[0]);
+    printf("postflag.%d (%s)\n",postflag,&argv[0][j]);
     if ( postflag != 0 )
     {
         retstr = (postflag == 1 ) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
