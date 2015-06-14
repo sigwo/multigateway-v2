@@ -29,7 +29,7 @@ char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that r
 char *makeoffer3_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char *retstr = 0;
-    printf("makeoffer3 localaccess.%d\n",localaccess);
+    //printf("makeoffer3 localaccess.%d\n",localaccess);
     if ( valid > 0 )
         retstr = call_makeoffer3(localaccess,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,objs);
     return(retstr);
@@ -37,12 +37,12 @@ char *makeoffer3_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t num
 
 char *respondtx_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char cmdstr[MAX_JSON_FIELD],triggerhash[MAX_JSON_FIELD],utx[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],sig[MAX_JSON_FIELD],*retstr = 0;
+    char cmdstr[MAX_JSON_FIELD],triggerhash[MAX_JSON_FIELD],utx[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD],sig[MAX_JSON_FIELD],*retstr = 0;
     uint64_t quoteid,assetid,qty,priceNQT,otherassetid,otherqty;
     int32_t minperc;
-    printf("got respond_tx\n");
-    //if ( is_remote_access(previpaddr) == 0 )
-    //    return(0);
+    printf("got respond_tx.(%s)\n",origargstr);
+    if ( localaccess == 0 )
+        return(0);
     copy_cJSON(cmdstr,objs[0]);
     assetid = get_API_nxt64bits(objs[1]);
     qty = get_API_nxt64bits(objs[2]);
@@ -52,13 +52,13 @@ char *respondtx_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numo
     copy_cJSON(sig,objs[6]);
     copy_cJSON(utx,objs[7]);
     minperc = (int32_t)get_API_int(objs[8],INSTANTDEX_MINVOL);
-    if ( localaccess != 0 )
-        copy_cJSON(sender,objs[9]);
+    //if ( localaccess != 0 )
+        copy_cJSON(offerNXT,objs[9]);
     otherassetid = get_API_nxt64bits(objs[10]);
     otherqty = get_API_nxt64bits(objs[11]);
-    if ( valid > 0 && triggerhash[0] != 0 )
-        retstr = respondtx(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sender,cmdstr,assetid,qty,priceNQT,triggerhash,quoteid,sig,utx,minperc,otherassetid,otherqty);
-    else retstr = clonestr("{\"result\":\"invalid respondtx_func request\"}");
+    if ( strcmp(offerNXT,SUPERNET.NXTADDR) == 0 && valid > 0 && triggerhash[0] != 0 )
+        retstr = respondtx(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,offerNXT,cmdstr,assetid,qty,priceNQT,triggerhash,quoteid,sig,utx,minperc,otherassetid,otherqty);
+    //else retstr = clonestr("{\"result\":\"invalid respondtx_func request\"}");
     return(retstr);
 }
 
