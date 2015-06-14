@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     }
     if ( postflag != 0 )
     {
-        printf("issue.(%s)\r\n",postbuf);
+        //printf("issue.(%s)\r\n",postbuf);
         return(0);
         retstr = (postflag == 1) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
         if ( retstr != 0 )
