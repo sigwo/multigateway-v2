@@ -390,7 +390,7 @@ int32_t should_forward(char *sender,char *origargstr)
     char forwarder[64],plugin[MAX_JSON_FIELD]; uint8_t *buf; int32_t len;
     if ( validate_sender(forwarder,sender,origargstr) > 0 )
     {
-        printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
+        //printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
         if ( strcmp(forwarder,sender) == 0 )
         {
             len = (int32_t)strlen(origargstr) + 1;

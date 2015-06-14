@@ -472,8 +472,11 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
     struct exchange_info *exchange;
     struct InstantDEX_quote *prevbids,*prevasks;
     int32_t i,n,exchangeid,numoldbids,numoldasks,pollgap = DEFAULT_POLLGAP;
-    if ( maxdepth < 0 )
-        maxdepth = DEFAULT_MAXDEPTH;
+    if ( maxdepth <= 0 )
+    {
+        printf("update_rambooks no point if maxdepth.%d\n",maxdepth);
+        return;
+    }
     n = gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid);
     for (i=0; i<n; i++)
     {
@@ -517,7 +520,7 @@ char *orderbook_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numo
     baseid = get_API_nxt64bits(objs[0]), relid = get_API_nxt64bits(objs[1]), allflag = get_API_int(objs[2],0), oldest = get_API_int(objs[3],0);
     maxdepth = get_API_int(objs[4],DEFAULT_MAXDEPTH), copy_cJSON(base,objs[5]), copy_cJSON(rel,objs[6]), copy_cJSON(gui,objs[7]), gui[sizeof(iQ->gui)-1] = 0, showall = get_API_int(objs[8],1);
     retstr = 0;
-    if ( maxdepth < 0 )
+    if ( maxdepth <= 0 )
         maxdepth = DEFAULT_MAXDEPTH;
     if ( baseid == 0 && base[0] != 0 )
         baseid = stringbits(base);
@@ -527,6 +530,7 @@ char *orderbook_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numo
     else set_assetname(&mult,rel,relid);
     if ( baseid != 0 && relid != 0 )
     {
+        //printf("orderbook_func maxdepth.%d\n",maxdepth);
         update_rambooks(baseid,relid,maxdepth,gui,showall);
         op = make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,baseid,rel,relid,maxdepth,oldest,gui);
         retstr = orderbook_jsonstr(nxt64bits,op,base,rel,maxdepth,allflag);
