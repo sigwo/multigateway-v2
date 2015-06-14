@@ -707,7 +707,6 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
             argjson = cJSON_GetArrayItem(json,0);
             second = cJSON_GetArrayItem(json,1);
             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-            cJSON_ReplaceItemInArray(json,1,second);
             jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
             printf("replaced.(%s)\n",jsonstr);
             datalen = (int32_t)strlen((char *)data) + 1;
