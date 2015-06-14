@@ -251,7 +251,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
                             printf("error: isclosed.%d %llu/%llu != %llu/%llu: iQ.%p quoteid.%llu vs %llu\n",iQ->closed,(long long)iQ->baseid,(long long)iQ->relid,(long long)baseid,(long long)relid,iQ,(long long)calc_quoteid(iQ),(long long)quoteid);
                         else*/
                         if ( iQ->closed == 0 && iQ->baseid == baseid && iQ->relid == relid && calc_quoteid(iQ) == quoteid )
-                            update_openorder(iQ,quoteid,txptrs,NXTblock == prevNXTblock);
+                            update_openorder(iQ,quoteid,txptrs,numtx,NXTblock == prevNXTblock);
                     }
                 }
             }

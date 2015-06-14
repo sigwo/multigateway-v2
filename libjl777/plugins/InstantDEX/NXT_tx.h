@@ -346,6 +346,8 @@ uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,ui
     cJSON *json;
     if ( retjsonstrp != 0 )
         *retjsonstrp = 0;
+    if ( triggerheight != 0 )
+        deadline = DEFAULT_NXT_DEADLINE;
     sprintf(cmd,"requestType=%s&secretPhrase=%s&feeNQT=%llu&deadline=%d",bidask,NXTACCTSECRET,(long long)MIN_NQTFEE,deadline);
     sprintf(cmd+strlen(cmd),"&%s=%llu&%s=%llu",is_MS!=0?"units":"quantityQNT",(long long)qty,is_MS!=0?"currency":"asset",(long long)assetid);
     if ( NXTprice != 0 )

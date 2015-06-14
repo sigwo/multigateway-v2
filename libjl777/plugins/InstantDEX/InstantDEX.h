@@ -196,9 +196,9 @@ int32_t time_to_nextblock(int32_t lookahead)
 #include "NXT_tx.h"
 #include "quotes.h"
 
-void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t updateNXT) // from poll_pending_offers via main
+void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t numtx,int32_t updateNXT) // from poll_pending_offers via main
 {
-    printf("update_openorder iQ.%llu\n",(long long)iQ->quoteid);
+    printf("update_openorder iQ.%llu with numtx.%d updateNXT.%d\n",(long long)iQ->quoteid,numtx,updateNXT);
     // regen orderbook and see if it crosses
     // updatestats
 }
@@ -330,7 +330,6 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
         sprintf(buf,"{\"error\":\"not enough volume\",\"price\":%f,\"volume\":%f,\"minbasevol\":%f,\"minrelvol\":%f,\"relvol\":%f}",price,volume,minbasevol,minrelvol,price*volume);
         return(clonestr(buf));
     }
-
     /*if ( automatch != 0 && remoteflag == 0 && (retstr= auto_makeoffer2(NXTaddr,NXTACCTSECRET,dir,baseid,baseamount,relid,relamount,gui)) != 0 )
      {
      fprintf(stderr,"got (%s) from auto_makeoffer2\n",retstr);
