@@ -8,7 +8,7 @@
 #ifndef xcode_exchangeparse_h
 #define xcode_exchangeparse_h
 #include <curl/curl.h>
-#define DEFAULT_MAXDEPTH 10
+#define DEFAULT_MAXDEPTH 25
 void *curl_post(CURL **cHandlep,char *url,char *postfields,char *hdr0,char *hdr1,char *hdr2);
 
 int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *oldquotes,int32_t numold)
