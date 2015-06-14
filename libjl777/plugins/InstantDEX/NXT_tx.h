@@ -338,7 +338,7 @@ uint32_t get_txhashes(char *sighash,char *fullhash,struct NXT_tx *tx)
     return(calc_expiration(tx));
 }
 
-uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t assetid,uint64_t qty,uint64_t NXTprice,char *triggerhash,char *comment,uint64_t otherNXT)
+uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t assetid,uint64_t qty,uint64_t NXTprice,char *triggerhash,char *comment,uint64_t otherNXT,uint32_t triggerheight)
 {
     int32_t deadline = 1 + time_to_nextblock(2)/60;
     uint64_t txid = 0;
@@ -357,7 +357,11 @@ uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,ui
     if ( otherNXT != 0 )
         sprintf(cmd+strlen(cmd),"&recipient=%llu",(long long)otherNXT);
     if ( triggerhash != 0 && triggerhash[0] != 0 )
-        sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s",triggerhash);
+    {
+        if ( triggerheight == 0 )
+            sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s",triggerhash);
+        else sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s&phased=true&phasingFinishHeight=%u&phasingVotingModel=4&phasingQuorum=1&phasingLinkedFullHash=%s",triggerhash,triggerheight,triggerhash);
+    }
     if ( comment != 0 && comment[0] != 0 )
         sprintf(cmd+strlen(cmd),"&message=%s",comment);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
