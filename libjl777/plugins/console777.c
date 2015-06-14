@@ -32,6 +32,7 @@
 
 int32_t getline777(char *line,int32_t max)
 {
+#ifndef _WIN32
     static char prevline[1024];
     struct timeval timeout;
     fd_set fdset;
@@ -53,6 +54,9 @@ int32_t getline777(char *line,int32_t max)
         }
     }
     return((int32_t)strlen(line));
+#else
+    return(0);
+#endif
 }
 
 int32_t settoken(char *token,char *line)
