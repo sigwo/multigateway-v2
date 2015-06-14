@@ -41,7 +41,6 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 #define GENESIS_SECRET "It was a bright cold day in April, and the clocks were striking thirteen."
 
 #define DEFAULT_NXT_DEADLINE 720
-#define _NXTSERVER "requestType"
 #define issue_curl(cmdstr) bitcoind_RPC(0,"curl",cmdstr,0,0,0)
 #define issue_NXT(cmdstr) bitcoind_RPC(0,"NXT",cmdstr,0,0,0)
 #define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl",SUPERNET.NXTAPIURL,0,0,cmdstr)
@@ -217,8 +216,8 @@ bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct)
     char cmd[4096],pubkeystr[MAX_JSON_FIELD],*jsonstr;
     //sprintf(cmd,"%s=getTransaction&transaction=%s",_NXTSERVER,txidstr);
     //jsonstr = issue_NXTPOST(curl_handle,cmd);
-    sprintf(cmd,"%s=getAccountPublicKey&account=%s",SUPERNET.NXTSERVER,acct);
-    jsonstr = issue_curl(cmd);
+    sprintf(cmd,"requestType=getAccountPublicKey&account=%s",acct);
+    jsonstr = issue_NXTPOST(cmd);
     pubkeystr[0] = 0;
     if ( haspubkeyp != 0 )
         *haspubkeyp = 0;
@@ -246,8 +245,8 @@ bits256 issue_getpubkey2(int32_t *haspubkeyp,uint64_t nxt64bits)
     cJSON *json;
     bits256 pubkey;
     char cmd[4096],pubkeystr[MAX_JSON_FIELD],*jsonstr;
-    sprintf(cmd,"%s=getAccountPublicKey&account=%llu",SUPERNET.NXTSERVER,(long long)nxt64bits);
-    jsonstr = issue_curl(cmd);
+    sprintf(cmd,"requestType=getAccountPublicKey&account=%llu",(long long)nxt64bits);
+    jsonstr = issue_NXTPOST(cmd);
     pubkeystr[0] = 0;
     if ( haspubkeyp != 0 )
         *haspubkeyp = 0;
@@ -286,18 +285,18 @@ char *_issue_getAsset(char *assetidstr)
 {
     char cmd[4096];
     //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
-    sprintf(cmd,"%s=getAsset&asset=%s",SUPERNET.NXTSERVER,assetidstr);
+    sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
     //printf("_cmd.(%s)\n",cmd);
-    return(issue_curl(cmd));
+    return(issue_NXTPOST(cmd));
 }
 
 char *_issue_getCurrency(char *assetidstr)
 {
     char cmd[4096];
     //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
-    sprintf(cmd,"%s=getCurrency&asset=%s",SUPERNET.NXTSERVER,assetidstr);
+    sprintf(cmd,"requestType=getCurrency&asset=%s",assetidstr);
     //printf("_cmd.(%s)\n",cmd);
-    return(issue_curl(cmd));
+    return(issue_NXTPOST(cmd));
 }
 
 uint64_t _get_bestassetprice(uint64_t *volp,char *assetcmd,char *arrayfield,uint64_t assetid)
@@ -306,8 +305,8 @@ uint64_t _get_bestassetprice(uint64_t *volp,char *assetcmd,char *arrayfield,uint
     cJSON *array,*json;
     uint64_t price = 0;
     int32_t n;
-    sprintf(cmd,"%s=%s&asset=%llu&firstIndex=0&lastIndex=0",SUPERNET.NXTSERVER,assetcmd,(long long)assetid);
-    if ( (jsonstr= issue_curl(cmd)) != 0 )
+    sprintf(cmd,"requestType=%s&asset=%llu&firstIndex=0&lastIndex=0",assetcmd,(long long)assetid);
+    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
         //printf("cmd.(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -419,8 +418,8 @@ uint32_t get_blockutime(uint32_t blocknum)
     cJSON *json;
     uint32_t timestamp = 0;
     char cmd[4096],*jsonstr;
-    sprintf(cmd,"%s=getBlock&height=%u",SUPERNET.NXTSERVER,blocknum);
-    if ( (jsonstr= issue_curl(cmd)) != 0 )
+    sprintf(cmd,"requestType=getBlock&height=%u",blocknum);
+    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
@@ -629,14 +628,14 @@ uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits)
     retstr[0] = 0;
     if ( nxt64bits != 0 )
     {
-        sprintf(cmd,"%s=rsConvert&account=%llu",SUPERNET.NXTSERVER,(long long)nxt64bits);
+        sprintf(cmd,"requestType=rsConvert&account=%llu",(long long)nxt64bits);
         strcat(field,"RS");
-        jsonstr = issue_curl(cmd);
+        jsonstr = issue_NXTPOST(cmd);
     }
     else if ( rsacctstr[0] != 0 )
     {
-        sprintf(cmd,"%s=rsConvert&account=%s",SUPERNET.NXTSERVER,rsacctstr);
-        jsonstr = issue_curl(cmd);
+        sprintf(cmd,"requestType=rsConvert&account=%s",rsacctstr);
+        jsonstr = issue_NXTPOST(cmd);
     }
     else printf("conv_rsacctstr: illegal parms %s %llu\n",rsacctstr,(long long)nxt64bits);
     if ( jsonstr != 0 )
@@ -915,6 +914,7 @@ int32_t get_assettype(int32_t *subtypep,char *assetidstr)
         return(8);
     if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
     {
+        printf("assettype.(%s)\n",assetidstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( get_cJSON_int(json,"errorCode") == 0 )

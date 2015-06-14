@@ -339,6 +339,7 @@ uint64_t submit_to_exchange(int32_t exchangeid,char **jsonstrp,uint64_t assetid,
     *jsonstrp = 0;
     expand_nxt64bits(assetidstr,assetid);
     ap_type = get_assettype(&subtype,assetidstr);
+    printf("ap_type.%d subtype.%d\n",ap_type,subtype);
     if ( dir == 0 || priceNQT == 0 )
         cmd = (ap_type == 2 ? "transferAsset" : "transferCurrency"), priceNQT = 0;
     else cmd = ((dir > 0) ? (ap_type == 2 ? "placeBidOrder" : "currencyBuy") : (ap_type == 2 ? "placeAskOrder" : "currencySell")), otherNXT = 0;

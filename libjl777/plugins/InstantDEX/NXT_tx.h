@@ -84,14 +84,14 @@ cJSON *gen_NXT_tx_json(struct NXT_tx *utx,char *reftxid,double myshare,char *NXT
         expand_nxt64bits(destNXTaddr,utx->recipientbits);
         cmd[0] = 0;
         if ( utx->type == 0 && utx->subtype == 0 )
-            sprintf(cmd,"%s=sendMoney&amountNQT=%lld",_NXTSERVER,(long long)(utx->U.amountNQT*myshare));
+            sprintf(cmd,"requestType=sendMoney&amountNQT=%lld",(long long)(utx->U.amountNQT*myshare));
         else
         {
             expand_nxt64bits(assetidstr,utx->assetidbits);
             if ( utx->type == 2 && utx->subtype == 1 )
-                sprintf(cmd,"%s=transferAsset&asset=%s&quantityQNT=%lld",_NXTSERVER,assetidstr,(long long)(utx->U.quantityQNT*myshare));
+                sprintf(cmd,"requestType=transferAsset&asset=%s&quantityQNT=%lld",assetidstr,(long long)(utx->U.quantityQNT*myshare));
             else if ( utx->type == 5 && utx->subtype == 3 )
-                sprintf(cmd,"%s=transferCurrency&currency=%s&units=%lld",_NXTSERVER,assetidstr,(long long)(utx->U.quantityQNT*myshare));
+                sprintf(cmd,"requestType=transferCurrency&currency=%s&units=%lld",assetidstr,(long long)(utx->U.quantityQNT*myshare));
             else
             {
                 printf("unsupported type.%d subtype.%d\n",utx->type,utx->subtype);
@@ -346,7 +346,7 @@ uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,ui
     cJSON *json;
     if ( retjsonstrp != 0 )
         *retjsonstrp = 0;
-    sprintf(cmd,"%s=%s&secretPhrase=%s&feeNQT=%llu&deadline=%d",_NXTSERVER,bidask,NXTACCTSECRET,(long long)MIN_NQTFEE,deadline);
+    sprintf(cmd,"requestType=%s&secretPhrase=%s&feeNQT=%llu&deadline=%d",bidask,NXTACCTSECRET,(long long)MIN_NQTFEE,deadline);
     sprintf(cmd+strlen(cmd),"&%s=%llu&%s=%llu",is_MS!=0?"units":"quantityQNT",(long long)qty,is_MS!=0?"currency":"asset",(long long)assetid);
     if ( NXTprice != 0 )
     {

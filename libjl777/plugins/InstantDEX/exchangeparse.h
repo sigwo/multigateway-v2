@@ -145,10 +145,10 @@ void ramparse_NXT(struct rambook_info *bids,struct rambook_info *asks,int32_t ma
         assetid = bids->assetids[1];
         flip = 1;
     }
-    sprintf(bidurl,"%s=getBidOrders&asset=%llu&limit=%d",SUPERNET.NXTSERVER,(long long)bids->assetids[0],maxdepth);
-    sprintf(askurl,"%s=getAskOrders&asset=%llu&limit=%d",SUPERNET.NXTSERVER,(long long)asks->assetids[0],maxdepth);
-    buystr = issue_curl(bidurl);
-    sellstr = issue_curl(askurl);
+    sprintf(bidurl,"requestType=getBidOrders&asset=%llu&limit=%d",(long long)bids->assetids[0],maxdepth);
+    sprintf(askurl,"requestType=getAskOrders&asset=%llu&limit=%d",(long long)asks->assetids[0],maxdepth);
+    buystr = issue_NXTPOST(bidurl);
+    sellstr = issue_NXTPOST(askurl);
     //printf("(%s) (%s)\n",buystr,sellstr);
     if ( buystr != 0 && sellstr != 0 )
     {
