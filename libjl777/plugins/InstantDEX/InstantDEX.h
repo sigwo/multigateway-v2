@@ -322,7 +322,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
         } else printf("alternate else case.(%s)\n",exchangestr);
     }
     printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
-    update_rambooks(baseid,relid,0,0,0);
+    update_rambooks(baseid,relid,DEFAULT_MAXDEPTH,0,0);
     minbasevol = get_minvolume(baseid), minrelvol = get_minvolume(relid);
     if ( volume < minbasevol || (volume * price) < minrelvol )
     {

@@ -530,7 +530,6 @@ char *orderbook_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numo
     else set_assetname(&mult,rel,relid);
     if ( baseid != 0 && relid != 0 )
     {
-        //printf("orderbook_func maxdepth.%d\n",maxdepth);
         update_rambooks(baseid,relid,maxdepth,gui,showall);
         op = make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,baseid,rel,relid,maxdepth,oldest,gui);
         retstr = orderbook_jsonstr(nxt64bits,op,base,rel,maxdepth,allflag);
