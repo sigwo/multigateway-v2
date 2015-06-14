@@ -286,7 +286,7 @@ char *_issue_getAsset(char *assetidstr)
     sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
     //printf("_cmd.(%s)\n",cmd);
     jsonstr = issue_NXTPOST(cmd);
-    printf("(%s) -> (%s)\n",cmd,jsonstr);
+    //printf("(%s) -> (%s)\n",cmd,jsonstr);
     return(jsonstr);
 }
 
