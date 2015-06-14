@@ -64,11 +64,6 @@ void process_json(cJSON *json)
 int main(int argc, char **argv)
 {
     CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,postflag = 0; cJSON *json; char postbuf[65536],*retstr,*delim;
-    fputs("Access-Control-Allow-Origin: null\r\n",stdout);
-    fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
-    fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
-    fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
-    fputs("Content-type: text/plain\r\n",stdout);
     json = cJSON_CreateObject();
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
@@ -108,7 +103,15 @@ int main(int argc, char **argv)
             free(retstr);
         } else printf("{\"error\":\"null return from issue_NXTPOST\"}\r\n");
     }
-    else process_json(json);
+    else
+    {
+        fputs("Access-Control-Allow-Origin: null\r\n",stdout);
+        fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
+        fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
+        fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
+        fputs("Content-type: text/plain\r\n",stdout);
+        process_json(json);
+    }
     free_json(json);
     return 0;
 }
