@@ -99,7 +99,8 @@ int main(int argc, char **argv)
         retstr = (postflag == 1) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
         if ( retstr != 0 )
         {
-            printf("%s\r\n",retstr);
+            fprintf(stderr,"%s",retstr);
+            printf("%s",retstr);
             free(retstr);
         } else printf("{\"error\":\"null return from issue_NXTPOST\"}\r\n");
     }
