@@ -14,6 +14,10 @@ uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 long _stripwhite(char *buf,int accept);
 #define nn_errstr() nn_strerror(nn_errno())
 #define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
+char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params)
+#define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl","http://127.0.0.1:7876",0,0,cmdstr)
+#define issue_NXTPOSTs(cmdstr) bitcoind_RPC(0,"curl","https://127.0.0.1:7876",0,0,cmdstr)
+
 
 void process_json(cJSON *json)
 {
@@ -67,6 +71,8 @@ int main(int argc, char **argv)
     fputs("Content-type: text/plain\r\n",stdout);
     if ( strcmp("nxt",argv[0]) == 0 )
         postflag = 1, postbuf[0] = 0, delim = '?';
+    else if ( strcmp("nxts",argv[0]) == 0 )
+        postflag = 2, postbuf[0] = 0, delim = '?';
     json = cJSON_CreateObject();
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
@@ -96,7 +102,8 @@ int main(int argc, char **argv)
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
     else
     {
-        if ( (retstr= issue_NXTPOST(postbuf)) != 0 )
+        retstr = (posflag == 1 ) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
+        if ( retstr != 0 )
         {
             printf("%s\r\n",retstr);
             free(retstr);
