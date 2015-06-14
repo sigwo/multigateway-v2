@@ -97,7 +97,7 @@ int main(int argc, char **argv)
                         {
                             if ( portflag != 0 && strncmp(name,"port",strlen("port")) == 0 )
                                 sprintf(urlbuf,"%s:%s",url,value[i]), url = urlbuf, portflag = 0;
-                            else sprintf(postbuf + strlen(uostbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
+                            else sprintf(postbuf + strlen(postbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
                         }
                     }
                 }
