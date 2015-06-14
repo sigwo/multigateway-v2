@@ -77,6 +77,7 @@ int main(int argc, char **argv)
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
             j = i+1;
+    cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
     for (iter=0; iter<2; iter++)
     {
         if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : CGI_get_query(0))) != 0 )
@@ -98,9 +99,8 @@ int main(int argc, char **argv)
         }
         CGI_free_varlist(varlist);
     }
-    if ( postflag == 0 )
-        cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
-    else
+    printf("postflag.(%s)\n",argv[0]);
+    if ( postflag != 0 )
     {
         retstr = (postflag == 1 ) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
         if ( retstr != 0 )
