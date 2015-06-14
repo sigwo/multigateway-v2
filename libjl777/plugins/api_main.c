@@ -99,17 +99,16 @@ int main(int argc, char **argv)
         }
         CGI_free_varlist(varlist);
     }
-    printf("postflag.%d (%s)\n",postflag,&argv[0][j]);
     if ( postflag != 0 )
     {
-        retstr = (postflag == 1 ) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
+        retstr = (postflag == 1) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
         if ( retstr != 0 )
         {
             printf("%s\r\n",retstr);
             free(retstr);
-        }
+        } else printf("{\"error\":\"null return from issue_NXTPOST\"}\r\n");
     }
-    process_json(json);
+    else process_json(json);
     free_json(json);
     return 0;
 }
