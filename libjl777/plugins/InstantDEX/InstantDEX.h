@@ -198,7 +198,7 @@ int32_t time_to_nextblock(int32_t lookahead)
 
 void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t updateNXT) // from poll_pending_offers via main
 {
-    //printf("update_openorder iQ.%llu with tx.%llu\n",(long long)iQ->quoteid,(long long)tx->txid);
+    printf("update_openorder iQ.%llu\n",(long long)iQ->quoteid);
     // regen orderbook and see if it crosses
     // updatestats
 }

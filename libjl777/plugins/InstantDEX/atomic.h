@@ -224,11 +224,13 @@ int32_t process_Pending_offersQ(struct pending_offer **offerp,void **ptrs)
 
 void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
 {
-    static uint32_t prevNXTblock;
+    static uint32_t prevNXTblock; static double lastmilli;
     struct InstantDEX_quote *iQ;
     cJSON *json,*array,*item; struct NXT_tx *txptrs[MAX_TXPTRS]; void *ptrs[2];
     int32_t i,n,numtx,NXTblock; uint64_t quoteid,baseid,relid;
     ptrs[0] = NXTACCTSECRET, ptrs[1] = txptrs;
+    if ( milliseconds() < (lastmilli + 1000) )
+        return;
     NXTblock = _get_NXTheight(0);
     memset(txptrs,0,sizeof(txptrs));
     if ( (numtx= update_iQ_flags(txptrs,(sizeof(txptrs)/sizeof(*txptrs))-1,0)) > 0 )
@@ -248,6 +250,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
                         /*if ( iQ->closed != 0 || iQ->baseid != baseid || iQ->relid != relid || calc_quoteid(iQ) != quoteid )
                             printf("error: isclosed.%d %llu/%llu != %llu/%llu: iQ.%p quoteid.%llu vs %llu\n",iQ->closed,(long long)iQ->baseid,(long long)iQ->relid,(long long)baseid,(long long)relid,iQ,(long long)calc_quoteid(iQ),(long long)quoteid);
                         else*/
+                        if ( iQ->closed == 0 && iQ->baseid == baseid && iQ->relid == relid && calc_quoteid(iQ) == quoteid )
                             update_openorder(iQ,quoteid,txptrs,NXTblock == prevNXTblock);
                     }
                 }
@@ -259,6 +262,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
     }
     if ( NXTblock != prevNXTblock )
         prevNXTblock = NXTblock, printf("New NXTblock.%d\n",NXTblock);
+    lastmilli = milliseconds();
 }
 
 // process sending

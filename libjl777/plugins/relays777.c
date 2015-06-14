@@ -1123,6 +1123,8 @@ void serverloop(void *_args)
             //printf("MGW bus recv.%d json.%p\n",len,json);
             nn_freemsg(jsonstr);
         }
+        void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET);
+        poll_pending_offers(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET);
 
         /*while ( RELAYS.pullsock >= 0 && (nn_socket_status(RELAYS.pullsock,1) & NN_POLLIN) != 0 &&  (len= nn_recv(RELAYS.pullsock,&retstr,NN_MSG,0)) > 0 )
             coin777_pulldata((void *)retstr,len);
