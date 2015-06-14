@@ -715,9 +715,10 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
                 diff = *datalenp - datalen;
                 ptr = malloc(diff + len);
                 memcpy(ptr,jsonstr,len);
-                printf("ptr.(%s) len.%d diff.%d datalen.%d\n",ptr,len,diff,datalen);
+                //printf("ptr.(%s) len.%d diff.%d datalen.%d\n",ptr,len,diff,datalen);
                 if ( diff > 0 )
                     memcpy(&ptr[len],&data[datalen],diff);
+                *datalenp = (diff + len);
             }
             free(jsonstr);
         }
