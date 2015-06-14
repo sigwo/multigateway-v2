@@ -94,23 +94,24 @@ int main(int argc, char **argv)
         }
         CGI_free_varlist(varlist);
     }
+    fputs("Access-Control-Allow-Origin: null\r\n",stdout);
+    fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
+    fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
+    fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
+    fputs("Content-type: text/plain\r\n",stdout);
     if ( postflag != 0 )
     {
         retstr = (postflag == 1) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
         if ( retstr != 0 )
         {
             fprintf(stderr,"%s",retstr);
-            printf("%s",retstr);
+            printf("Content-Length: %ld\r\n\r\n",strlen(retstr)+2);
+            printf("%s\r\n",retstr);
             free(retstr);
         } else printf("{\"error\":\"null return from issue_NXTPOST\"}\r\n");
     }
     else
     {
-        fputs("Access-Control-Allow-Origin: null\r\n",stdout);
-        fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
-        fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
-        fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
-        fputs("Content-type: text/plain\r\n",stdout);
         process_json(json);
     }
     free_json(json);
