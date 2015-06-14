@@ -96,8 +96,8 @@ int main(int argc, char **argv)
                         else
                         {
                             if ( portflag != 0 && strncmp(name,"port",strlen("port")) == 0 )
-                                sprintf(urlbuf,"%s:%d",url,atoi(value[i])), url = urlbuf;
-                            else sprintf(postbuf + strlen(postbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
+                                sprintf(urlbuf,"%s:%s",url,value[i]), url = urlbuf, portflag = 0;
+                            else sprintf(postbuf + strlen(uostbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
                         }
                     }
                 }
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
     fputs("Content-type: text/plain\r\n",stdout);
     if ( url != 0 )
     {
-        fprintf(stderr,"url.(%s) (%s)\n",url,postbuf);
+        //fprintf(stderr,"url.(%s) (%s)\n",url,postbuf);
         if ( (retstr= issue_POST(url,postbuf)) != 0 )
         {
             //fprintf(stderr,"%s",retstr);
