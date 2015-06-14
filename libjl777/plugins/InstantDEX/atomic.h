@@ -541,23 +541,23 @@ void tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double 
     satoshis = (price * SATOSHIDEN);
     besti = bestj = 0;
     bestvolume = refvolume, bestprice = refprice;
-    for (i=-16; i<=16; i++)
+    for (i=-100; i<=100; i++)
     {
-        for (j=-16; j<=16; j++)
+        for (j=-100; j<=100; j++)
         {
             price = calc_price_volume(&volume,offer->baseamount + i,offer->relamount + j);
             satoshis = (price * SATOSHIDEN);
             if ( dir < 0 && satoshis > refsatoshis )
             {
                 dist = (satoshis - refsatoshis);
-                printf("%llu ",(long long)dist);
+                //printf("%llu ",(long long)dist);
                 if ( best == 0 || dist < best )
                     bestprice = refprice, bestvolume = volume, best = dist, besti = i, bestj = j, flag = 1;
             }
             else if ( dir > 0 && satoshis < refsatoshis )
             {
                 dist = (refsatoshis - satoshis);
-                printf("%llu ",(long long)dist);
+                //printf("%llu ",(long long)dist);
                 if ( best == 0 || dist < best )
                     bestprice = refprice, bestvolume = volume, best = dist, besti = i, bestj = j, flag = 1;
             }
@@ -567,9 +567,9 @@ void tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double 
         if ( flag != 0 && best == 0 )
             break;
     }
-    printf("besti.%d bestj.%d ref (%f %f) -> (%f %f)\n",besti,bestj,refprice,refvolume,bestprice,bestvolume);
     if ( flag != 0 )
     {
+        printf("besti.%d bestj.%d ref (%f %f) -> (%f %f)\n",besti,bestj,refprice,refvolume,bestprice,bestvolume);
         offer->baseamount += besti;
         offer->relamount += bestj;
         offer->volume = bestvolume;
