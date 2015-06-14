@@ -63,7 +63,7 @@ void process_json(cJSON *json)
 
 int main(int argc, char **argv)
 {
-    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,delim,postflag = 0; cJSON *json; char postbuf[65536],*retstr;
+    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,postflag = 0; cJSON *json; char postbuf[65536],*retstr,*delim;
     fputs("Access-Control-Allow-Origin: null\r\n",stdout);
     fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
     fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
