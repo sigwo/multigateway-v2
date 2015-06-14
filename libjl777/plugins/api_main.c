@@ -75,9 +75,9 @@ int main(int argc, char **argv)
             j = i+1;
     cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
     if ( strcmp("nxt",&argv[0][j]) == 0 )
-        postflag = 1, postbuf[0] = 0, delim = '?';
+        postflag = 1, postbuf[0] = 0, delim = "";
     else if ( strcmp("nxts",&argv[0][j]) == 0 )
-        postflag = 2, postbuf[0] = 0, delim = '?';
+        postflag = 2, postbuf[0] = 0, delim = "";
     for (iter=0; iter<2; iter++)
     {
         if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : CGI_get_query(0))) != 0 )
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
                     {
                         if ( postflag == 0 )
                             cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
-                        else sprintf(postbuf + strlen(postbuf),"%c%s=%s",delim,name,value[i]), delim = '&';
+                        else sprintf(postbuf + strlen(postbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
                     }
                 }
             }
