@@ -1340,7 +1340,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
     sprintf(cmd,"requestType=decodeToken&website=%s&token=%s",key,token);
     if ( (retstr = issue_NXTPOST(cmd)) != 0 )
     {
-        printf("(%s) -> (%s)\n",cmd,retstr);
+        //printf("(%s) -> (%s)\n",cmd,retstr);
         //printf("cmd.(%s) -> (%s)\n",cmd,retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {

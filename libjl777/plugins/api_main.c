@@ -102,7 +102,7 @@ int main(int argc, char **argv)
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
     else
     {
-        retstr = (posflag == 1 ) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
+        retstr = (postflag == 1 ) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
         if ( retstr != 0 )
         {
             printf("%s\r\n",retstr);
