@@ -412,9 +412,9 @@ int32_t add_relay_connections(char *domain,int32_t skiplb)
     ipbits = (uint32_t)calc_ipbits(domain);
     n = (RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num);
     update_serverbits(&RELAYS.peer,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_SURVEYOR),NN_SURVEYOR);
+    update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB);
     if ( SUPERNET.iamrelay != 0 )
     {
-        update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB);
         if ( skiplb == 2 )
             update_serverbits(&RELAYS.bus,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_BUS);
     }
