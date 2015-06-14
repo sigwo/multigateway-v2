@@ -722,14 +722,14 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
             }
             free(jsonstr);
         }
-        else argjson = json;
+        else { argjson = json; printf("notarray.(%s)\n",data); }
         if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
         {
             strcpy(pluginbuf,plugin);
             printf("dest.(%s)\n",plugin);
         }
         free_json(json);
-    }
+    } else printf("cant parse.(%s)\n",data);
     return(ptr);
 }
 
