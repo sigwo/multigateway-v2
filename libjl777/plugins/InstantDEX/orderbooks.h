@@ -114,11 +114,13 @@ int32_t nonz_and_lesser(int32_t a,int32_t b)
     return(0);
 }
 
-struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,char *rel,uint64_t relid,struct orderbook *to,struct orderbook *from,char *gui,struct orderbook *rawop,int32_t m)
+struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,char *rel,uint64_t relid,struct orderbook *to,struct orderbook *from,char *gui,struct orderbook *rawop,int32_t maxdepth)
 {
     struct orderbook *op = 0;
-    int32_t i,j,n;
+    int32_t i,j,n,m = sqrt(maxdepth);
     uint64_t mult;
+    if ( m < 10 )
+        m = 10;
     if ( 0 && rawop != 0 )
     {
         for (i=0; i<rawop->numbids; i++)
