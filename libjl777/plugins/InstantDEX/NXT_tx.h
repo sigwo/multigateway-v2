@@ -123,7 +123,7 @@ cJSON *gen_NXT_tx_json(struct NXT_tx *utx,char *reftxid,double myshare,char *NXT
 
 uint64_t set_NXTtx(uint64_t nxt64bits,struct NXT_tx *tx,uint64_t assetidbits,int64_t amount,uint64_t other64bits,int32_t feebits)
 {
-    char assetidstr[64];
+    char assetidstr[64]; int32_t decimals;
     uint64_t fee = 0;
     struct NXT_tx U;
     memset(&U,0,sizeof(U));
@@ -139,7 +139,7 @@ uint64_t set_NXTtx(uint64_t nxt64bits,struct NXT_tx *tx,uint64_t assetidbits,int
     if ( assetidbits != NXT_ASSETID )
     {
         expand_nxt64bits(assetidstr,assetidbits);
-        U.type = get_assettype(&U.subtype,assetidstr);
+        U.type = get_assettype(&decimals,assetidstr);
         //U.subtype = ap->subtype;
         U.U.quantityQNT = amount - fee;
     } else U.U.amountNQT = amount - fee;

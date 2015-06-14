@@ -215,7 +215,9 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         copy_cJSON(coin->mgw.issuer,cJSON_GetObjectItem(argjson,"issuer"));
         coin->mgw.issuerbits = conv_acctstr(coin->mgw.issuer);
         printf(">>>>>>>>>>>> a issuer.%s %llu assetid.%llu minoutput.%llu\n",coin->mgw.issuer,(long long)coin->mgw.issuerbits,(long long)coin->mgw.assetidbits,(long long)coin->minoutput);
-        coin->mgw.ap_mult = assetmult(coin->mgw.assetname,coin->mgw.assetidstr);
+        uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits);
+        set_assetname(0,coin->mgw.assetname,calc_nxt64bits(coin->mgw.assetidstr));
+        coin->mgw.ap_mult = assetmult(coin->mgw.assetidstr);
         strcpy(coin->mgw.coinstr,coinstr);
         if ( (coin->mgw.special= cJSON_GetObjectItem(argjson,"special")) == 0 )
             coin->mgw.special = cJSON_GetObjectItem(COINS.argjson,"special");
