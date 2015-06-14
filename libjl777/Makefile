@@ -71,7 +71,7 @@ _api := rm cgi/*; gcc -o cgi/api -O2 $(PINCLUDES) api_main.c ccgi.c prefork.c co
 
 _msc := rm agents/msc; gcc -o agents/msc -O2 $(PINCLUDES) two/msc.c $(PLIBS)
 
-_nxt := rm agents/msc; gcc -o agents/nxt -O2 $(PINCLUDES) two/nxt.c $(PLIBS)
+_nxt := rm agents/nxt; gcc -o agents/nxt -O2 $(PINCLUDES) two/nxt.c $(PLIBS)
 
 _eth := rm agents/eth; gcc -o agents/eth -O2 $(PINCLUDES) two/eth.c $(PLIBS)
 

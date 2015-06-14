@@ -15,8 +15,7 @@ long _stripwhite(char *buf,int accept);
 #define nn_errstr() nn_strerror(nn_errno())
 #define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
-#define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl","http://127.0.0.1:7876/nxt",0,0,cmdstr)
-#define issue_NXTPOSTs(cmdstr) bitcoind_RPC(0,"curl","https://127.0.0.1:7876/nxt",0,0,cmdstr)
+#define issue_POST(url,cmdstr) bitcoind_RPC(0,"curl",url,0,0,cmdstr)
 
 
 void process_json(cJSON *json)
@@ -63,16 +62,23 @@ void process_json(cJSON *json)
 
 int main(int argc, char **argv)
 {
-    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,postflag = 0; cJSON *json; char postbuf[65536],*retstr,*delim;
+    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,portflag = 0; cJSON *json;
+    char urlbuf[512],postbuf[65536],*retstr,*delim,*url = 0;
     json = cJSON_CreateObject();
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
             j = i+1;
     cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
     if ( strcmp("nxt",&argv[0][j]) == 0 )
-        postflag = 1, postbuf[0] = 0, delim = "";
+        url = "http://127.0.0.1:7876/nxt";
     else if ( strcmp("nxts",&argv[0][j]) == 0 )
-        postflag = 2, postbuf[0] = 0, delim = "";
+        url = "https://127.0.0.1:7876/nxt";
+    else if ( strcmp("port",&argv[0][j]) == 0 )
+        url = "http://127.0.0.1", portflag = 1;
+    else if ( strcmp("ports",&argv[0][j]) == 0 )
+        url = "https://127.0.0.1", portflag = 1;
+    if ( url != 0 )
+         postbuf[0] = 0, delim = "";
     for (iter=0; iter<2; iter++)
     {
         if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : CGI_get_query(0))) != 0 )
@@ -85,9 +91,14 @@ int main(int argc, char **argv)
                     //printf("%s [%d] = %s\r\n", name, i, value[i]);
                     if ( i == 0 )
                     {
-                        if ( postflag == 0 )
+                        if ( url == 0 )
                             cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
-                        else sprintf(postbuf + strlen(postbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
+                        else
+                        {
+                            if ( portflag != 0 && strncmp(name,"port",strlen("port")) == 0 )
+                                sprintf(urlbuf,"%s:%d",url,atoi(value[i])), url = urlbuf;
+                            else sprintf(postbuf + strlen(postbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
+                        }
                     }
                 }
             }
@@ -99,10 +110,9 @@ int main(int argc, char **argv)
     fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
     fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
     fputs("Content-type: text/plain\r\n",stdout);
-    if ( postflag != 0 )
+    if ( url != 0 )
     {
-        retstr = (postflag == 1) ? issue_NXTPOST(postbuf) : issue_NXTPOSTs(postbuf);
-        if ( retstr != 0 )
+        if ( (retstr= issue_POST(url,postbuf)) != 0 )
         {
             //fprintf(stderr,"%s",retstr);
             printf("Content-Length: %ld\r\n\r\n",strlen(retstr)+2);
