@@ -112,6 +112,7 @@ int main(int argc, char **argv)
     fputs("Content-type: text/plain\r\n",stdout);
     if ( url != 0 )
     {
+        fprintf(stderr,"url.(%s) (%s)\n",url,postbuf);
         if ( (retstr= issue_POST(url,postbuf)) != 0 )
         {
             //fprintf(stderr,"%s",retstr);
