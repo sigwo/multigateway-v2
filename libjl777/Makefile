@@ -84,10 +84,6 @@ agents: plugins/agents/echodemo plugins/agents/stockfish plugins/cgi/api plugins
     $(_echodemo); \
     $(_stockfish); \
     $(_api); \
-    $(_nxt); \
-    $(_two); \
-    $(_eth); \
-    $(_msc); \
     cd ..
 
 echodemo: plugins/agents/echodemo; \
