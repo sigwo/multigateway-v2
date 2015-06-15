@@ -316,7 +316,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
             else return(clonestr("{\"error\":\"NXT AE order without NXT\"}"));
             if ( (ap_mult= get_assetmult(assetid)) == 0 )
                 return(clonestr("{\"error\":\"assetid not found\"}"));
-            qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,1,assetid,price,volume);
+            qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,0,assetid,price,volume);
             txid = submit_triggered_nxtae(&errstr,0,dir > 0 ? "placeBidOrder" : "placeAskOrder",nxt64bits,SUPERNET.NXTACCTSECRET,assetid,qty,priceNQT,0,0,0,0);
             if ( errstr != 0 )
                 sprintf(retbuf,"{\"error\":\"%s\"}",errstr), free(errstr);
