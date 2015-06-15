@@ -306,7 +306,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
         }
         else if ( strcmp(exchangestr,"nxtae") == 0 )
         {
-            /*uint64_t txid,assetid,qty,priceNQT,ap_mult; char retbuf[512],*errstr;
+            uint64_t txid,assetid,qty,priceNQT,ap_mult; char retbuf[512],*errstr;
             if ( nxt64bits != calc_nxt64bits(SUPERNET.NXTADDR) )
                 return(clonestr("{\"error\":\"must use your NXT address\"}"));
             else if ( baseid == NXT_ASSETID )
@@ -322,7 +322,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
             if ( errstr != 0 )
                 return(errstr);
             sprintf(retbuf,"{\"result\":\"success\",\"txid\":\"%llu\"}",(long long)txid);
-            return(clonestr(retbuf));*/
+            return(clonestr(retbuf));
         }
         else if ( strcmp(exchangestr,"InstantDEX") != 0 )
         {
