@@ -536,7 +536,7 @@ uint64_t _get_AEquote(char *str,uint64_t orderid)
     cJSON *json;
     uint64_t nxt64bits = 0;
     char cmd[256],*jsonstr;
-    sprintf(cmd,"requestType=get%sOrder&orderid=%llu",str,(long long)orderid);
+    sprintf(cmd,"requestType=get%sOrder&order=%llu",str,(long long)orderid);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
         printf("(%s) -> (%s)\n",cmd,jsonstr);
