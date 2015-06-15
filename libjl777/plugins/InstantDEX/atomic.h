@@ -38,7 +38,7 @@ struct pending_offer
     struct queueitem DL;
     char comment[MAX_JSON_FIELD],feeutxbytes[MAX_JSON_FIELD],feesignedtx[MAX_JSON_FIELD],exchange[64],triggerhash[65],feesighash[65],base[16],rel[16];
     struct NXT_tx *feetx;
-    uint64_t actual_feetxid,fee,nxt64bits,baseid,relid,quoteid,baseamount,relamount,srcarg,srcamount,jumpasset;
+    uint64_t actual_feetxid,fee,nxt64bits,baseid,relid,quoteid,baseamount,relamount,srcarg,srcamount,jumpasset,basemult,relmult;
     double ratio,endmilli,price,volume;
     int32_t errcode,sell,numhalves,perc,minperc;
     uint32_t expiration,triggerheight;
@@ -428,9 +428,8 @@ int32_t set_pendinghalf(struct pendingpair *pt,int32_t dir,struct pendinghalf *h
 
 char *set_buyer_seller(struct pendinghalf *seller,struct pendinghalf *buyer,struct pendingpair *pt,struct pending_offer *offer,int32_t dir)
 {
-    char assetidstr[64],NXTaddr[64]; uint64_t basemult,relmult,qty; int64_t balance,unconfirmed; double price,volume;
+    char assetidstr[64],NXTaddr[64]; uint64_t qty; int64_t balance,unconfirmed; double price,volume;
     expand_nxt64bits(NXTaddr,pt->nxt64bits);
-    basemult = get_assetmult(pt->baseid), relmult = get_assetmult(pt->relid);
     pt->ratio = offer->ratio;
     if ( pt->baseid == NXT_ASSETID )
     {
@@ -458,16 +457,16 @@ char *set_buyer_seller(struct pendinghalf *seller,struct pendinghalf *buyer,stru
         set_pendinghalf(pt,dir,seller,pt->baseid,pt->baseamount,pt->relid,pt->relamount,pt->quoteid,pt->offerNXT,pt->nxt64bits,pt->exchange,1);
         set_pendinghalf(pt,-dir,buyer,pt->relid,pt->relamount,pt->baseid,pt->baseamount,pt->quoteid,pt->nxt64bits,pt->offerNXT,pt->exchange,1);
         seller->T.transfer = buyer->T.transfer = 1;
-        seller->T.qty = pt->baseamount / basemult, buyer->T.qty = pt->relamount / relmult;
+        seller->T.qty = pt->baseamount / offer->basemult, buyer->T.qty = pt->relamount / offer->relmult;
         printf("prices.(%f) vol %f dir.%d pt->perc %d baseqty %d relqty %d\n",pt->price,pt->volume,dir,(int)pt->perc,(int)seller->T.qty,(int)buyer->T.qty);
-        price = calc_price_volume(&volume,seller->T.qty * basemult,buyer->T.qty * relmult);
+        price = calc_price_volume(&volume,seller->T.qty * offer->basemult,buyer->T.qty * offer->relmult);
         printf("ratio %f prices.(%f %f) vol %f dir.%d pt->srcqty %d baseqty %d relqty %d\n",pt->ratio,price,pt->price,volume,dir,pt->perc,(int)seller->T.qty,(int)buyer->T.qty);
         if ( price != pt->price )
         {
-            if ( basemult <= relmult )
+            if ( offer->basemult <= offer->relmult )
                 seller->T.qty *= (price / pt->price), printf("b adjust %f\n",(price / pt->price));
             else buyer->T.qty *= (pt->price / price), printf("r adjust %f\n",(pt->price / price));
-            price = calc_price_volume(&volume,seller->T.qty * basemult,buyer->T.qty * relmult);
+            price = calc_price_volume(&volume,seller->T.qty * offer->basemult,buyer->T.qty * offer->relmult);
         }
         if ( dir > 0 )
             expand_nxt64bits(assetidstr,pt->baseid), qty = seller->T.qty;
@@ -542,17 +541,19 @@ void create_offer_comment(struct pending_offer *offer)
 
 void tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double refvolume)
 {
-    double price,volume,bestvolume,bestprice; uint64_t satoshis,refsatoshis,best=0,dist; int32_t i,j,besti,bestj,flag = 0;
+    double price,volume,bestvolume,bestprice; uint64_t baseqty,relqty,satoshis,refsatoshis,best=0,dist; int32_t i,j,besti,bestj,flag = 0;
     refsatoshis = (refprice * SATOSHIDEN);
     price = calc_price_volume(&volume,offer->baseamount,offer->relamount);
     satoshis = (price * SATOSHIDEN);
     besti = bestj = 0;
     bestvolume = refvolume, bestprice = refprice;
-    for (i=-100; i<=100; i++)
+    baseqty = offer->baseamount / offer->basemult;
+    relqty = offer->relamount / offer->relmult;
+    for (i=100; i>=-100&&i>-baseqty; i--)
     {
-        for (j=-100; j<=100; j++)
+        for (j=100; j>=-100&&j>-relqty; j--)
         {
-            price = calc_price_volume(&volume,offer->baseamount + i,offer->relamount + j);
+            price = calc_price_volume(&volume,(baseqty + i) * offer->basemult,(relqty + j) * offer->relmult + j);
             satoshis = (price * SATOSHIDEN);
             if ( dir < 0 && satoshis > refsatoshis )
             {
@@ -577,15 +578,15 @@ void tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double 
     if ( flag != 0 )
     {
         printf("besti.%d bestj.%d ref (%f %f) -> (%f %f)\n",besti,bestj,refprice,refvolume,bestprice,bestvolume);
-        offer->baseamount += besti;
-        offer->relamount += bestj;
+        offer->baseamount += besti * offer->basemult;
+        offer->relamount += bestj * offer->relmult;
         offer->volume = bestvolume;
     }
 }
 
 char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double price,double volume,int32_t deprecated,int32_t perc,uint64_t baseid,uint64_t relid,cJSON *baseobj,cJSON *relobj,uint64_t quoteid,int32_t askoffer,char *exchange,uint64_t baseamount,uint64_t relamount,uint64_t offerNXT,int32_t minperc,uint64_t jumpasset)
 {
-    struct NXT_tx T; char *retstr; int32_t dir; struct pendingpair *pt; uint64_t mult; struct pending_offer *offer = 0;
+    struct NXT_tx T; char *retstr; int32_t dir; struct pendingpair *pt; struct pending_offer *offer = 0;
     if ( minperc == 0 )
         minperc = INSTANTDEX_MINVOL;
     if ( perc == 0 )
@@ -595,8 +596,8 @@ char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double pr
     offer = calloc(1,sizeof(*offer));
     offer->minperc = minperc;
     offer->jumpasset = jumpasset;
-    set_assetname(&mult,offer->base,baseid);
-    set_assetname(&mult,offer->rel,relid);
+    set_assetname(&offer->basemult,offer->base,baseid);
+    set_assetname(&offer->relmult,offer->rel,relid);
     offer->nxt64bits = calc_nxt64bits(NXTaddr);
     if ( offer->nxt64bits == offerNXT )
         return(clonestr("{\"error\":\"cant match your own offer\"}"));
