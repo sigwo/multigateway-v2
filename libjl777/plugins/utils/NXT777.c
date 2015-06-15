@@ -1181,7 +1181,7 @@ int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t f
     //printf("issue.(%s) max.%ld\n",cmd,max);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
-        printf("(%s) -> (%s)\n",cmd,jsonstr);
+        //printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (array= cJSON_GetObjectItem(transfers,"transfers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )

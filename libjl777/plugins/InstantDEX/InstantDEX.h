@@ -306,7 +306,23 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
         }
         else if ( strcmp(exchangestr,"nxtae") == 0 )
         {
-            
+            /*uint64_t txid,assetid,qty,priceNQT,ap_mult; char retbuf[512],*errstr;
+            if ( nxt64bits != calc_nxt64bits(SUPERNET.NXTADDR) )
+                return(clonestr("{\"error\":\"must use your NXT address\"}"));
+            else if ( baseid == NXT_ASSETID )
+                dir = -dir, assetid = relid;
+            else if ( relid == NXT_ASSETID )
+                assetid = baseid;
+            else return(clonestr("{\"error\":\"NXT AE order without NXT\"}"));
+            if ( (ap_mult= get_assetmult(assetid)) == 0 )
+                return(clonestr("{\"error\":\"assetid not found\"}"));
+            priceNQT = (price * SATOSHIDEN / ap_mult);
+            qty = (volume * ap_mult);
+            txid = submit_triggered_nxtae(&errstr,2,dir > 0 ? "placeBidOrder" : "placeAskOrder",nxt64bits,SUPERNET.NXTACCTSECRET,assetid,qty,priceNQT,0,0,0,0);
+            if ( errstr != 0 )
+                return(errstr);
+            sprintf(retbuf,"{\"result\":\"success\",\"txid\":\"%llu\"}",(long long)txid);
+            return(clonestr(retbuf));*/
         }
         else if ( strcmp(exchangestr,"InstantDEX") != 0 )
         {
