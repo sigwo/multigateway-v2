@@ -551,8 +551,10 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
         printf("(%s) -> len.%ld\n",cmd,strlen(jsonstr));
         if ( (transfers= cJSON_Parse(jsonstr)) != 0 )
         {
+            printf("parsed\n");
             if ( (array= cJSON_GetObjectItem(transfers,"trades")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
+                printf("array.%d\n",n);
                 for (i=0; i<n; i++)
                 {
                     if ( (assetidbits= set_assettrade(&T,cJSON_GetArrayItem(array,i))) != 0 )
@@ -563,8 +565,10 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
                             NXT_trade(&T,n - i);
                     }
                 }
-            } free_json(transfers);
-        } free(jsonstr);
+            } else printf("error getting array\n");
+            free_json(transfers);
+        } else printf("couldnt parse trades\n");
+        free(jsonstr);
     }
     if ( firstindex < 0 || lastindex <= firstindex )
         printf(" -> %d entries\n",n);
