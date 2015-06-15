@@ -409,7 +409,7 @@ uint64_t send_feetx(uint64_t assetbits,uint64_t fee,char *fullhash,char *comment
 int32_t NXT_set_revassettrade(uint32_t ind,uint64_t key[2])
 {
     void *obj;
-    if ( (obj= sp_object(DB_NXTtrades->db)) != 0 )
+    if ( DB_NXTtrades != 0 && DB_NXTtrades->db != 0 && (obj= sp_object(DB_NXTtrades->db)) != 0 )
     {
         if ( sp_set(obj,"key",&ind,sizeof(ind)) == 0 && sp_set(obj,"value",key,sizeof(*key)*2) == 0 )
             return(sp_set(DB_NXTtrades->db,obj));
@@ -426,7 +426,7 @@ int32_t NXT_revassettrade(uint64_t key[2],uint32_t ind)
 {
     void *obj,*result,*value; int32_t len = 0;
     memset(key,0,sizeof(*key)*2);
-    if ( (obj= sp_object(DB_NXTtrades->db)) != 0 )
+    if ( DB_NXTtrades != 0 && DB_NXTtrades->db != 0 && (obj= sp_object(DB_NXTtrades->db)) != 0 )
     {
         if ( sp_set(obj,"key",&ind,sizeof(ind)) == 0 && (result= sp_get(DB_NXTtrades->db,obj)) != 0 )
         {
@@ -443,7 +443,7 @@ int32_t NXT_revassettrade(uint64_t key[2],uint32_t ind)
 int32_t NXT_add_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_t ind)
 {
     void *obj; uint64_t key[2];
-    if ( tp != 0 )
+    if ( DB_NXTtrades != 0 && DB_NXTtrades->db != 0 && tp != 0 )
     {
         key[0] = tp->bidorder, key[1] = tp->askorder;
         if ( (obj= sp_object(DB_NXTtrades->db)) != 0 )
@@ -464,7 +464,7 @@ int32_t NXT_add_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_
 int32_t NXT_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_t ind)
 {
     void *obj,*result,*value; int32_t len = 0; uint64_t key[2];
-    if ( (obj= sp_object(DB_NXTtrades->db)) != 0 )
+    if ( DB_NXTtrades != 0 && DB_NXTtrades->db != 0 && (obj= sp_object(DB_NXTtrades->db)) != 0 )
     {
         key[0] = tp->bidorder, key[1] = tp->askorder;
         if ( sp_set(obj,"key",key,sizeof(key)) == 0 && (result= sp_get(DB_NXTtrades->db,obj)) != 0 )
@@ -548,7 +548,7 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
-        //printf("(%s) -> (%s)\n",cmd,jsonstr);
+        printf("(%s) -> len.%ld\n",cmd,strlen(jsonstr));
         if ( (transfers= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (array= cJSON_GetObjectItem(transfers,"trades")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -573,7 +573,7 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
 
 int32_t update_NXT_assettrades()
 {
-    struct assettrade trades[4096];
+    struct assettrade trades[256];
     int32_t len,verifyflag = 1;
     uint64_t key[2]; int32_t i,count = 0;
     if ( (len= NXT_revassettrade(key,0)) == sizeof(key) )
@@ -582,9 +582,9 @@ int32_t update_NXT_assettrades()
         {
             NXT_revassettrade(key,i);
         }
-        //fprintf(stderr,"sequential tx.%d\n",count);
+        fprintf(stderr,"sequential tx.%d\n",count);
         NXT_revassettrade(key,count);
-        //printf("mostrecent.%llu count.%d\n",(long long)mostrecent,count);
+        printf("mostrecent.%llu count.%d\n",(long long)(key[0] ^ key[1]),count);
         for (i=0; i<sizeof(trades)/sizeof(*trades); i++)
         {
             if ( NXT_assettrades(&trades[i],1,i,i) == 1 && trades[i].bidorder == key[0] && trades[i].askorder == key[1] )
@@ -596,7 +596,7 @@ int32_t update_NXT_assettrades()
                 break;
             }
         }
-        if ( i == 100 )
+        if ( i == sizeof(trades)/sizeof(*trades) )
             count = 0;
     } else printf("cant get count len.%d\n",len);
     if ( count == 0 )
