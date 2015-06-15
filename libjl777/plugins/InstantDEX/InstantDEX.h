@@ -304,7 +304,11 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
             printf("remote node (%d) (%s) trying to place quote to exchange (%s)\n",localaccess,sender,exchangestr);
             return(clonestr("{\"error\":\"no remote exchange orders: you cannot submit an order from a remote node\"}"));
         }
-        else if ( strcmp(exchangestr,"nxtae") != 0 && strcmp(exchangestr,"unconf") != 0 && strcmp(exchangestr,"InstantDEX") != 0 )
+        else if ( strcmp(exchangestr,"nxtae") == 0 )
+        {
+            
+        }
+        else if ( strcmp(exchangestr,"InstantDEX") != 0 )
         {
             if ( is_native_crypto(base,baseid) > 0 && is_native_crypto(rel,relid) > 0 && price > 0 && volume > 0 && dir != 0 )
             {

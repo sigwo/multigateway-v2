@@ -515,10 +515,6 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
         //printf("bind\n");
         if ( (err= nn_bind(sock,bindaddr)) < 0 )
             return(report_err(typestr,err,"nn_bind",type,bindaddr,connectaddr));
-        if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
-            return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
-        if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
-            return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
     }
     if ( connectaddr[0] != 0 )
     {
@@ -528,6 +524,10 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
         else if ( type == NN_SUB && (err= nn_setsockopt(sock,NN_SUB,NN_SUB_SUBSCRIBE,"",0)) < 0 )
             return(report_err(typestr,err,"nn_setsockopt subscribe",type,bindaddr,connectaddr));
     }
+    if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
+        return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
+    if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
+        return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
     if ( Debuglevel > 2 )
         printf("%s.%s socket.%d bind.(%s) connect.(%s)\n",typestr,suffix,sock,bindaddr,connectaddr);
     return(sock);
