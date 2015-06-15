@@ -195,9 +195,12 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     int32_t n = 0;
-    strcpy(servers[n++],"192.99.151.160"); //"78.46.137.178");//
-    strcpy(servers[n++],"167.114.96.223"); //"");//
-    strcpy(servers[n++],"167.114.113.197"); //"");
+    strcpy(servers[n++],"192.99.151.160");
+    strcpy(servers[n++],"167.114.96.223");
+    strcpy(servers[n++],"167.114.113.197");
+    strcpy(servers[n++],"5.9.105.170");
+    strcpy(servers[n++],"136.243.5.70");
+    strcpy(servers[n++],"5.9.155.145");
     return(n);
 }
 
