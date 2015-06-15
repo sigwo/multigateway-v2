@@ -406,214 +406,193 @@ uint64_t send_feetx(uint64_t assetbits,uint64_t fee,char *fullhash,char *comment
     return(feetxid);
 }
 
-int32_t NXT_set_revassettrade(uint64_t assetidbits,uint32_t ind,struct extra_info *extra)
+int32_t NXT_set_revassettrade(uint32_t ind,uint64_t key[2])
 {
-    uint64_t revkey[2]; void *obj;
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+    void *obj;
+    if ( (obj= sp_object(DB_NXTtrades->db)) != 0 )
     {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        //printf("set ind.%d <- txid.%llu\n",ind,(long long)extra->txidbits);
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && sp_set(obj,"value",extra,sizeof(*extra)) == 0 )
-            return(sp_set(DB_NXTtxids->db,obj));
+        if ( sp_set(obj,"key",&ind,sizeof(ind)) == 0 && sp_set(obj,"value",key,sizeof(*key)*2) == 0 )
+            return(sp_set(DB_NXTtrades->db,obj));
         else
         {
             sp_destroy(obj);
-            printf("error NXT_set_revassettrade rev %llu ind.%d\n",(long long)extra->txidbits,ind);
+            printf("error NXT_set_revassettrade ind.%d\n",ind);
         }
     }
     return(-1);
 }
 
-int32_t NXT_revassettrade(struct extra_info *extra,uint64_t assetidbits,uint32_t ind)
+int32_t NXT_revassettrade(uint64_t key[2],uint32_t ind)
 {
-    void *obj,*result,*value; uint64_t revkey[2]; int32_t len = 0;
-    memset(extra,0,sizeof(*extra));
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+    void *obj,*result,*value; int32_t len = 0;
+    memset(key,0,sizeof(*key)*2);
+    if ( (obj= sp_object(DB_NXTtrades->db)) != 0 )
     {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
+        if ( sp_set(obj,"key",&ind,sizeof(ind)) == 0 && (result= sp_get(DB_NXTtrades->db,obj)) != 0 )
         {
             value = sp_get(result,"value",&len);
-            if ( len == sizeof(*extra) )
-                memcpy(extra,value,len);
-            else printf("NXT_revassettrade mismatched len.%d vs %ld\n",len,sizeof(*extra));
+            if ( len == sizeof(*key)*2 )
+                memcpy(key,value,len);
+            else printf("NXT_revassettrade mismatched len.%d vs %ld\n",len,sizeof(*key)*2);
             sp_destroy(result);
-        } //else sp_destroy(obj);
+        }
     }
     return(len);
 }
 
-int32_t NXT_add_assettrade(uint64_t assetidbits,uint64_t txidbits,void *value,int32_t valuelen,uint32_t ind,struct extra_info *extra)
+int32_t NXT_add_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_t ind)
 {
-    void *obj;
-    if ( value != 0 )
+    void *obj; uint64_t key[2];
+    if ( tp != 0 )
     {
-        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+        key[0] = tp->bidorder, key[1] = tp->askorder;
+        if ( (obj= sp_object(DB_NXTtrades->db)) != 0 )
         {
-            extra->assetidbits = assetidbits, extra->txidbits = txidbits, extra->ind = ind;
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
-                sp_set(DB_NXTtxids->db,obj);
+            if ( sp_set(obj,"key",key,sizeof(key)) == 0 && sp_set(obj,"value",tp,sizeof(*tp)) == 0 )
+                sp_set(DB_NXTtrades->db,obj);
             else
             {
                 sp_destroy(obj);
-                printf("error NXT_add_assettrade %llu ind.%d\n",(long long)txidbits,ind);
+                printf("error NXT_add_assettrade %llu ind.%d\n",(long long)(tp->bidorder ^ tp->askorder),ind);
             }
         }
-        NXT_set_revassettrade(assetidbits,ind,extra);
+        NXT_set_revassettrade(ind,key);
     }
     return(0);
 }
 
-char *NXT_assettrade(uint64_t assettxid)
+int32_t NXT_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_t ind)
 {
-    void *obj,*result,*value; int32_t len; char *retstr = 0;
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+    void *obj,*result,*value; int32_t len = 0; uint64_t key[2];
+    if ( (obj= sp_object(DB_NXTtrades->db)) != 0 )
     {
-        if ( sp_set(obj,"key",&assettxid,sizeof(assettxid)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
+        key[0] = tp->bidorder, key[1] = tp->askorder;
+        if ( sp_set(obj,"key",key,sizeof(key)) == 0 && (result= sp_get(DB_NXTtrades->db,obj)) != 0 )
         {
             value = sp_get(result,"value",&len);
-            retstr = clonestr(value);
+            if ( len == sizeof(*dest) )
+                memcpy(dest,value,len);
+            else printf("ERROR unexpected len.%d vs %ld\n",len,sizeof(*dest));
             sp_destroy(result);
-        }// else sp_destroy(obj);
+        }
     }
-    return(retstr);
+    return(len);
 }
 
-char *NXT_tradestr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
+int32_t NXT_trade(struct assettrade *tp,uint32_t ind)
 {
-    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits; struct extra_info extra; char *txidjsonstr = 0; cJSON *json;
-    printf("NXT_tradestr.(%s) write.%d ind.%d\n",txid,writeflag,ind);
-    if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
+    struct assettrade T; int32_t flag = 1;
+    if ( NXT_assettrade(&T,tp,ind) == 0 )
     {
-        flag = writeflag;
-        if ( (json= cJSON_Parse(txidjsonstr)) != 0 )
-        {
-            free(txidjsonstr);
-            cJSON_DeleteItemFromObject(json,"requestProcessingTime");
-            cJSON_DeleteItemFromObject(json,"confirmations");
-            cJSON_DeleteItemFromObject(json,"transactionIndex");
-            txidjsonstr = cJSON_Print(json);
-            free_json(json);
-        } else printf("PARSE ERROR.(%s)\n",txidjsonstr);
-        _stripwhite(txidjsonstr,' ');
-        slen = (int32_t)strlen(txidjsonstr)+1;
-        txidbits = calc_nxt64bits(txid);
-        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-        {
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
-            {
-                value = sp_get(result,"value",&len);
-                if ( value != 0 )
-                {
-                    if ( len != slen || strcmp(value,txidjsonstr) != 0 )
-                        printf("mismatched NXT_tradestr ind.%d for %llu: lens %d vs %d (%s) vs (%s)\n",ind,(long long)txidbits,slen,len,txidjsonstr,value);
-                    else flag = 0;
-                }
-                sp_destroy(result);
-            } //else sp_destroy(obj);
-        }
-        if ( flag != 0 )
-        {
-            int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status);
-            NXT_revassettrade(&extra,mgw->assetidbits,ind);
-            /*savedbits = extra.txidbits;
-            memset(&extra,0,sizeof(extra));
-            if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
-            {
-                extra.vout = process_assettransfer(&extra.height,&extra.senderbits,&extra.receiverbits,&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
-                free_json(txobj);
-                if ( extra.vout >= 0 )
-                {
-                    mgw_markunspent(extra.coindata,extra.vout,MGW_DEPOSITDONE);
-                    printf("MARK DEPOSITDONE %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
-                }
-            } else extra.vout = -1;
-            printf("for %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));*/
-            NXT_add_assettrade(mgw->assetidbits,txidbits,txidjsonstr,slen,ind,&extra);
-        }
+        if ( memcmp(&T,tp,sizeof(*tp)) != 0 )
+            printf("mismatched NXT_trade ind.%d for %llu\n",ind,(long long)(tp->bidorder ^ tp->askorder));
+        else flag = 0;
     }
-    return(txidjsonstr);
+    if ( flag != 0 )
+        return(NXT_add_assettrade(&T,tp,ind));
+    return(0);
 }
 
-int32_t NXT_assettrades(struct mgw777 *mgw,uint64_t *txids,long max,int32_t firstindex,int32_t lastindex)
+uint64_t set_assettrade(struct assettrade *tp,cJSON *json)
 {
-    char cmd[1024],txid[64],*jsonstr,*txidstr; cJSON *transfers,*array;
-    int32_t i,n = 0; uint64_t txidbits,revkey[2];
-    sprintf(cmd,"requestType=getAssetTransfers&asset=%s",mgw->assetidstr);
+    uint64_t ap_mult; char type[64],name[16];
+    memset(tp,0,sizeof(*tp));
+    /*
+     "seller": "13507302008315288445",
+     "quantityQNT": "4217933",
+     "bidOrder": "7711071669082465415",
+     "sellerRS": "NXT-V8VX-MLHS-NK94-DMWWQ",
+     "buyer": "1533153801325642313",
+     "priceNQT": "490000",
+     "askOrder": "18381562686533022497",
+     "buyerRS": "NXT-W2LB-ABK2-M37N-3VQKC",
+     "decimals": 4,
+     "name": "SkyNET",
+     "block": "3211297665777998350",
+     "asset": "6854596569382794790",
+     "askOrderHeight": 443292,
+     "bidOrderHeight": 451101,
+     "tradeType": "buy",
+     "timestamp": 49051994,
+     "height": 451101
+     */
+    if ( (tp->assetid= get_satoshi_obj(json,"priceNQT")) != 0 )
+    {
+        ap_mult = get_assetmult(tp->assetid);
+        tp->price = SATOSHIDEN * get_satoshi_obj(json,"priceNQT") / ap_mult;
+        tp->amount = (get_satoshi_obj(json,"quantityQNT") * ap_mult);
+        copy_cJSON(type,cJSON_GetObjectItem(json,"tradeType"));
+        if ( strcmp(type,"sell") == 0 )
+            tp->sellflag = 1;
+        tp->seller = get_satoshi_obj(json,"seller");
+        tp->buyer = get_satoshi_obj(json,"buyer");
+        tp->askorder = get_satoshi_obj(json,"askOrder");
+        tp->bidorder = get_satoshi_obj(json,"bidOrder");
+        tp->bidheight = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"bidOrderHeight"),0);
+        tp->askheight = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"askOrderHeight"),0);
+        if ( 1 )
+        {
+            copy_cJSON(name,cJSON_GetObjectItem(json,"name"));
+            printf("%llu -> %llu %13.8f %13.8f %s | bid.%llu %u | ask.%llu %u\n",(long long)tp->seller,(long long)tp->buyer,(tp->sellflag != 0 ? -1 : 1) * dstr(tp->price),dstr(tp->amount),name,(long long)tp->bidorder,tp->bidheight,(long long)tp->askorder,tp->askheight);
+        }
+    }
+    return(tp->assetid);
+}
+
+int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,int32_t lastindex)
+{
+    char cmd[1024],*jsonstr; cJSON *transfers,*array; struct assettrade T;
+    int32_t i,n = 0; uint64_t assetidbits;
+    sprintf(cmd,"requestType=getAllTrades");
     if ( firstindex >= 0 && lastindex >= firstindex )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
-    revkey[0] = mgw->assetidbits;
-    //printf("issue.(%s) max.%ld\n",cmd,max);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
         //printf("(%s) -> (%s)\n",cmd,jsonstr);
-        if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
+        if ( (transfers= cJSON_Parse(jsonstr)) != 0 )
         {
-            if ( (array= cJSON_GetObjectItem(transfers,"transfers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            if ( (array= cJSON_GetObjectItem(transfers,"trades")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=0; i<n; i++)
                 {
-                    copy_cJSON(txid,cJSON_GetObjectItem(cJSON_GetArrayItem(array,i),"assetTransfer"));
-                    if ( txid[0] != 0 && (txidbits= calc_nxt64bits(txid)) != 0 )
+                    if ( (assetidbits= set_assettrade(&T,cJSON_GetArrayItem(array,i))) != 0 )
                     {
                         if ( i < max )
-                            txids[i] = txidbits;
+                            trades[i] = T;
                         if ( firstindex < 0 && lastindex <= firstindex )
-                        {
-                            if ( (txidstr= NXT_tradestr(mgw,txid,1,n - i)) != 0 )
-                                free(txidstr);
-                        }
+                            NXT_trade(&T,n - i);
                     }
                 }
             } free_json(transfers);
         } free(jsonstr);
     }
-    //if ( firstindex < 0 || lastindex <= firstindex )
-    //    printf("assetid.(%s) -> %d entries\n",mgw->assetidstr,n);
+    if ( firstindex < 0 || lastindex <= firstindex )
+        printf(" -> %d entries\n",n);
     return(n);
 }
 
-int32_t update_NXT_assettrades(struct mgw777 *mgw)
+int32_t update_NXT_assettrades()
 {
-    int32_t len,verifyflag = 0;
-    uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],*txidjsonstr; struct extra_info extra;
-    mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
-    mgw->withdrawsum = mgw->numwithdraws = 0;
-    if ( (len= NXT_revassettrade(&extra,mgw->assetidbits,0)) == sizeof(extra) )
+    struct assettrade trades[4096];
+    int32_t len,verifyflag = 1;
+    uint64_t key[2]; int32_t i,count = 0;
+    if ( (len= NXT_revassettrade(key,0)) == sizeof(key) )
     {
-        //printf("got extra ind.%d\n",extra.ind);
-        count = extra.ind;
         for (i=1; i<=count; i++)
         {
-            NXT_revassettrade(&extra,mgw->assetidbits,i);
-            /*if ( (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
-            {
-                int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra);
-                expand_nxt64bits(nxt_txid,extra.txidbits);
-                if ( in_jsonarray(mgw->limbo,nxt_txid) != 0 || mgw_update_redeem(mgw,&extra) != 0 )
-                {
-                    extra.flags |= MGW_WITHDRAWDONE;
-                    NXT_set_revassettrade(mgw->assetidbits,i,&extra);
-                }
-            }*/
-            //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
+            NXT_revassettrade(key,i);
         }
         //fprintf(stderr,"sequential tx.%d\n",count);
-        NXT_revassettrade(&extra,mgw->assetidbits,count);
-        mostrecent = extra.txidbits;
+        NXT_revassettrade(key,count);
         //printf("mostrecent.%llu count.%d\n",(long long)mostrecent,count);
-        for (i=0; i<sizeof(txids)/sizeof(*txids); i++)
+        for (i=0; i<sizeof(trades)/sizeof(*trades); i++)
         {
-            if ( NXT_assettrades(mgw,&txids[i],1,i,i) == 1 && txids[i] == mostrecent )
+            if ( NXT_assettrades(&trades[i],1,i,i) == 1 && trades[i].bidorder == key[0] && trades[i].askorder == key[1] )
             {
                 if ( i != 0 )
-                    printf("asset.(%s) count.%d i.%d mostrecent.%llu vs %llu\n",mgw->assetidstr,count,i,(long long)mostrecent,(long long)txids[i]);
+                    printf("count.%d i.%d mostrecent.%llu vs %llu\n",count,i,(long long)(key[0] ^ key[1]),(long long)(trades[i].bidorder ^ trades[i].askorder));
                 while ( i-- > 0 )
-                {
-                    expand_nxt64bits(txidstr,txids[i]);
-                    if ( (txidjsonstr= NXT_tradestr(mgw,txidstr,1,++count)) != 0 )
-                        free(txidjsonstr);
-                }
+                    NXT_trade(&trades[i],++count);
                 break;
             }
         }
@@ -621,15 +600,11 @@ int32_t update_NXT_assettrades(struct mgw777 *mgw)
             count = 0;
     } else printf("cant get count len.%d\n",len);
     if ( count == 0 )
-        count = NXT_assettrades(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
-    if ( NXT_revassettrade(&extra,mgw->assetidbits,0) != sizeof(extra) || extra.ind != count )
-    {
-        memset(&extra,0,sizeof(extra));
-        extra.ind = count;
-        NXT_set_revassettrade(mgw->assetidbits,0,&extra);
-    }
+        count = NXT_assettrades(trades,sizeof(trades)/sizeof(*trades) - 1,-1,-1);
+    if ( NXT_revassettrade(key,0) != sizeof(key) || key[0] != count )
+        NXT_set_revassettrade(0,key);
     if ( verifyflag != 0 )
-        NXT_assettrades(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
+        NXT_assettrades(trades,sizeof(trades)/sizeof(*trades) - 1,-1,-1);
     return(count);
 }
 

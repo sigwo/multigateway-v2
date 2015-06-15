@@ -20,7 +20,11 @@
 #include "InstantDEX.h"
 typedef char *(*json_handler)(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr);
 
-int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
+int32_t InstantDEX_idle(struct plugin_info *plugin)
+{
+    poll_pending_offers(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET);
+    return(0);
+}
 
 char *PLUGNAME(_methods)[] = { "makeoffer3", "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory" }; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { "bid", "ask", "makeoffer3" }; // list of supported methods approved for public (Internet) access
@@ -153,6 +157,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         // configure settings
         plugin->allowremote = 1;
         init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0);
+        update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
         strcpy(retbuf,"{\"result\":\"InstantDEX init\"}");
     }

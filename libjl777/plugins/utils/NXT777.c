@@ -64,6 +64,7 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 union _NXT_str_buf { char txid[24]; char NXTaddr[24];  char assetid[24]; };
 struct NXT_str { uint64_t modified,nxt64bits; union _NXT_str_buf U; };
 union _asset_price { uint64_t assetoshis,price; };
+struct assettrade { uint64_t assetid,seller,buyer,askorder,bidorder,price,amount:63,sellflag:1; uint32_t bidheight,askheight; };
 
 /*struct NXT_assettxid
 {

@@ -261,7 +261,10 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
         free_txptrs(txptrs,numtx);
     }
     if ( NXTblock != prevNXTblock )
+    {
         prevNXTblock = NXTblock, printf("New NXTblock.%d\n",NXTblock);
+        update_NXT_assettrades();
+    }
     lastmilli = milliseconds();
 }
 
