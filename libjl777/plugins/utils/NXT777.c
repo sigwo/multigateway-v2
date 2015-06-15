@@ -46,7 +46,6 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 #define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl",SUPERNET.NXTAPIURL,0,0,cmdstr)
 #define fetch_URL(url) bitcoind_RPC(0,"fetch",url,0,0,0)
 
-#define MIN_NQTFEE 100000000
 #define INSTANTDEX_TRIGGERDEADLINE 15
 
 #define NXT_ASSETID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
@@ -170,6 +169,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret);
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
+char *cancel_orderid(char *NXTaddr,uint64_t orderid);
 
 #endif
 #else
@@ -529,6 +529,38 @@ uint64_t _get_NXT_ECblock(uint32_t *ecblockp)
         free(jsonstr);
     }
     return(ecblock);
+}
+
+uint64_t _get_AEquote(char *str,uint64_t orderid)
+{
+    cJSON *json;
+    uint64_t nxt64bits = 0;
+    char cmd[256],*jsonstr;
+    sprintf(cmd,"requestType=get%sOrder&orderid=%llu",str,(long long)orderid);
+    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
+    {
+        //printf("(%s) -> (%s)\n",cmd,jsonstr);
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(json,"account"));
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(nxt64bits);
+}
+
+char *cancel_orderid(char *NXTaddr,uint64_t orderid)
+{
+    uint64_t nxt64bits; char cmd[1025],*str = "Bid",*retstr = 0;
+    if ( (nxt64bits= _get_AEquote(str,orderid)) == 0 )
+        str = "Ask", nxt64bits = _get_AEquote(str,orderid);
+    if ( nxt64bits == calc_nxt64bits(NXTaddr) )
+    {
+        sprintf(cmd,"requestType=cancel%sOrder&secretPhrase=%s&feeNQT=%lld&deadline=%d&order=%llu",str,SUPERNET.NXTACCTSECRET,(long long)MIN_NQTFEE,DEFAULT_NXT_DEADLINE,(long long)orderid);
+        retstr = issue_NXTPOST(cmd);
+    }
+    return(retstr);
 }
 
 char *_issue_getTransaction(char *txidstr)
