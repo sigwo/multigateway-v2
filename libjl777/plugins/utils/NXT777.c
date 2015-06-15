@@ -1303,7 +1303,7 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
     // printf("cmd.(%s)\n",cmd);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
-        printf("(%s) -> (%s)\n",cmd,jsontxt);
+        //printf("(%s) -> (%s)\n",cmd,jsontxt);
         if ( (json= cJSON_Parse(jsontxt)) != 0 )
         {
 //printf("(%s) -> token.(%s)\n",cmd,cJSON_Print(json));
