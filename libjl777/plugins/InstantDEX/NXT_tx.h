@@ -549,6 +549,7 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
     char cmd[1024],*jsonstr; cJSON *transfers,*array; struct assettrade T;
     int32_t i,n = 0; uint64_t assetidbits;
     sprintf(cmd,"requestType=getAllTrades");
+    firstindex = 0, lastindex = 100;
     if ( firstindex >= 0 && lastindex >= firstindex )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
