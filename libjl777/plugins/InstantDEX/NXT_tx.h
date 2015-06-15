@@ -521,11 +521,9 @@ uint64_t set_assettrade(struct assettrade *tp,cJSON *json)
      "timestamp": 49051994,
      "height": 451101
      */
-    if ( (tp->assetid= get_API_nxt64bits(cJSON_GetObjectItem(json,"priceNQT"))) != 0 )
+    if ( (tp->assetid= get_API_nxt64bits(cJSON_GetObjectItem(json,"asset"))) != 0 )
     {
-        printf("assetid.%llu\n",(long long)tp->assetid);
         ap_mult = get_assetmult(tp->assetid);
-        printf("ap_mult.%llu\n",(long long)ap_mult);
         if ( ap_mult != 0 )
         {
             tp->price = SATOSHIDEN * get_API_nxt64bits(cJSON_GetObjectItem(json,"priceNQT")) / ap_mult;
@@ -543,7 +541,7 @@ uint64_t set_assettrade(struct assettrade *tp,cJSON *json)
         if ( 1 )
         {
             copy_cJSON(name,cJSON_GetObjectItem(json,"name"));
-            printf("%llu -> %llu %13.8f %13.8f %s | bid.%llu %u | ask.%llu %u\n",(long long)tp->seller,(long long)tp->buyer,(tp->sellflag != 0 ? -1 : 1) * dstr(tp->price),dstr(tp->amount),name,(long long)tp->bidorder,tp->bidheight,(long long)tp->askorder,tp->askheight);
+            printf("%24llu -> %24llu %13.8f %13.8f %s | bid.%-24llu %u | ask.%-24llu %u\n",(long long)tp->seller,(long long)tp->buyer,(tp->sellflag != 0 ? -1 : 1) * dstr(tp->price),dstr(tp->amount),name,(long long)tp->bidorder,tp->bidheight,(long long)tp->askorder,tp->askheight);
         }
     } else printf("no assetid\n");
     return(tp->assetid);
@@ -561,7 +559,6 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
         printf("(%s) -> len.%ld\n",cmd,strlen(jsonstr));
         if ( (transfers= cJSON_Parse(jsonstr)) != 0 )
         {
-            printf("parsed\n");
             if ( (array= cJSON_GetObjectItem(transfers,"trades")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 printf("array.%d max.%ld %p\n",n,max,cJSON_GetArrayItem(array,0));
@@ -569,7 +566,6 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
                 {
                     if ( (assetidbits= set_assettrade(&T,cJSON_GetArrayItem(array,i))) != 0 )
                     {
-                        printf("i.%d assetid.%llu\n",i,(long long)assetidbits);
                         if ( i < max )
                             trades[i] = T;
                         if ( firstindex < 0 && lastindex <= firstindex )
