@@ -68,7 +68,8 @@ int main(int argc, char **argv)
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
             j = i+1;
-    cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
+    if ( strcmp(&argv[0][j],"api") != 0 )
+        cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
     if ( strcmp("nxt",&argv[0][j]) == 0 )
         url = "http://127.0.0.1:7876/nxt";
     else if ( strcmp("nxts",&argv[0][j]) == 0 )
