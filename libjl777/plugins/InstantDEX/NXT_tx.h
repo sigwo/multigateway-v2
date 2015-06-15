@@ -582,9 +582,10 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
 
 int32_t update_NXT_assettrades()
 {
-    struct assettrade trades[4096];
-    int32_t len,verifyflag = 1;
+    struct assettrade *trades;
+    int32_t max,len,verifyflag = 1;
     uint64_t key[2]; int32_t i,count = 0;
+    max = 20000, trades = calloc(max,sizeof(*trades));
     if ( (len= NXT_revassettrade(key,0)) == sizeof(key) )
     {
         for (i=1; i<=count; i++)
@@ -594,7 +595,7 @@ int32_t update_NXT_assettrades()
         fprintf(stderr,"sequential tx.%d\n",count);
         NXT_revassettrade(key,count);
         printf("mostrecent.%llu count.%d\n",(long long)(key[0] ^ key[1]),count);
-        for (i=0; i<sizeof(trades)/sizeof(*trades); i++)
+        for (i=0; i<max; i++)
         {
             if ( NXT_assettrades(&trades[i],1,i,i) == 1 && trades[i].bidorder == key[0] && trades[i].askorder == key[1] )
             {
@@ -605,15 +606,16 @@ int32_t update_NXT_assettrades()
                 break;
             }
         }
-        if ( i == sizeof(trades)/sizeof(*trades) )
+        if ( i == max )
             count = 0;
     } else printf("cant get count len.%d\n",len);
     if ( count == 0 )
-        count = NXT_assettrades(trades,sizeof(trades)/sizeof(*trades) - 1,-1,-1);
+        count = NXT_assettrades(trades,max - 1,-1,-1);
     if ( NXT_revassettrade(key,0) != sizeof(key) || key[0] != count )
         NXT_set_revassettrade(0,key);
     if ( verifyflag != 0 )
-        NXT_assettrades(trades,sizeof(trades)/sizeof(*trades) - 1,-1,-1);
+        NXT_assettrades(trades,max - 1,-1,-1);
+    free(trades);
     return(count);
 }
 
