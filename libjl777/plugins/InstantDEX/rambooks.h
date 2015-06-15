@@ -364,6 +364,7 @@ int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
 
 char *cancelquote_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
+    struct InstantDEX_quote *iQ;
     uint64_t quoteid; char *retstr;
     printf("inside cancelquote\n");
     if ( localaccess == 0 )
@@ -371,7 +372,11 @@ char *cancelquote_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t nu
     quoteid = get_API_nxt64bits(objs[0]);
     printf("cancelquote %llu\n",(long long)quoteid);
     if ( (retstr= cancel_orderid(SUPERNET.NXTADDR,quoteid)) != 0 )
+    {
+        if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(SUPERNET.NXTADDR) )
+            cancel_InstantDEX_quote(iQ);
         return(retstr);
+    }
     if ( cancelquote(SUPERNET.NXTADDR,quoteid) > 0 )
         return(clonestr("{\"result\":\"quote cancelled\"}"));
     else return(clonestr("{\"result\":\"you can only cancel your InstantDEX orders\"}"));
