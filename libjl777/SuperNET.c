@@ -753,7 +753,7 @@ void SuperNET_apiloop(void *ipaddr)
                     if ( (json= cJSON_Parse(jsonstr)) != 0 )
                     {
                         copy_cJSON(apitag,cJSON_GetObjectItem(json,"apitag"));
-                        printf("API RECV.(%s)\n",jsonstr);
+                        fprintf(stderr,"API RECV.(%s)\n",jsonstr);
                         retstr = call_SuperNET_JSON(jsonstr);
                         retlen = (int32_t)strlen(retstr) + 1;
                         if ( (ind= nn_connect(sock,apitag)) < 0 )

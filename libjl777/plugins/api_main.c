@@ -23,7 +23,7 @@ void process_json(cJSON *json)
     int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t tag;
     char endpoint[128],*resultstr,*jsonstr;
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-    //printf("jsonstr.(%s)\r\n",jsonstr);
+    fprintf(stderr,"jsonstr.(%s)\r\n",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
     tag = _crc32(0,jsonstr,len);
     sprintf(endpoint,"ipc://api.%u",tag);
