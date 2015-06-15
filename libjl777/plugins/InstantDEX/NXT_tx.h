@@ -486,7 +486,7 @@ int32_t NXT_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_t in
 int32_t NXT_trade(struct assettrade *tp,uint32_t ind)
 {
     struct assettrade T; int32_t flag = 1;
-    if ( NXT_assettrade(&T,tp,ind) == 0 )
+    if ( NXT_assettrade(&T,tp,ind) == sizeof(T) )
     {
         if ( memcmp(&T,tp,sizeof(*tp)) != 0 )
             printf("mismatched NXT_trade ind.%d for %llu\n",ind,(long long)(tp->bidorder ^ tp->askorder));
