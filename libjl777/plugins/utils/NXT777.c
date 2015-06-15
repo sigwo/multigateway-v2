@@ -250,7 +250,7 @@ bits256 issue_getpubkey2(int32_t *haspubkeyp,uint64_t nxt64bits)
     memset(&pubkey,0,sizeof(pubkey));
     if ( jsonstr != 0 )
     {
-        printf("(%s) -> (%s)\n",cmd,jsonstr);
+        //printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json = cJSON_Parse(jsonstr)) != 0 )
         {
             copy_cJSON(pubkeystr,cJSON_GetObjectItem(json,"publicKey"));
@@ -390,7 +390,7 @@ int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr)
     sprintf(cmd,"requestType=getAccount&account=%s",NXTaddr);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
-        printf("(%s) -> (%s)\n",cmd,jsonstr);
+        //printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             for (iter=0; iter<2; iter++)
