@@ -409,7 +409,7 @@ uint64_t send_feetx(uint64_t assetbits,uint64_t fee,char *fullhash,char *comment
 int32_t NXT_set_revassettrade(uint32_t ind,uint64_t key[2])
 {
     void *obj;
-    printf("NXT_set_revassettrade\n");
+    //printf("NXT_set_revassettrade\n");
     if ( DB_NXTtrades != 0 && DB_NXTtrades->db != 0 && (obj= sp_object(DB_NXTtrades->db)) != 0 )
     {
         if ( sp_set(obj,"key",&ind,sizeof(ind)) == 0 && sp_set(obj,"value",key,sizeof(*key)*2) == 0 )
@@ -582,7 +582,7 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
 
 int32_t update_NXT_assettrades()
 {
-    struct assettrade trades[256];
+    struct assettrade trades[4096];
     int32_t len,verifyflag = 1;
     uint64_t key[2]; int32_t i,count = 0;
     if ( (len= NXT_revassettrade(key,0)) == sizeof(key) )
