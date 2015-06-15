@@ -630,11 +630,18 @@ char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double pr
         if ( offer->halves[0].T.exchangeid == INSTANTDEX_EXCHANGEID && offer->halves[2].T.exchangeid == INSTANTDEX_EXCHANGEID )
             offer->fee += INSTANTDEX_FEE;
     }
+    else if ( strcmp(exchange,"nxtae") == 0 )
+    {
+        retstr = fill_nxtae(offer->nxt64bits,-dir,price,offer->volume,offer->baseid,offer->relid);
+        free(offer);
+        return(retstr);
+    }
     else
     {
         strcpy(pt->exchange,offer->exchange);
         pt->nxt64bits = offer->nxt64bits, pt->baseid = offer->baseid, pt->baseamount = offer->baseamount, pt->relid = offer->relid, pt->relamount = offer->relamount, pt->quoteid = quoteid, pt->offerNXT = offerNXT, pt->perc = perc, pt->price = price, pt->volume = volume, pt->sell = offer->sell;
-        if ( (retstr= set_buyer_seller(&offer->halves[offer->numhalves++],&offer->halves[offer->numhalves++],&offer->A,offer,dir)) != 0 )
+        offer->numhalves = 2;
+        if ( (retstr= set_buyer_seller(&offer->halves[0],&offer->halves[1],&offer->A,offer,dir)) != 0 )
             return(retstr);
         if ( offer->halves[0].T.exchangeid == INSTANTDEX_EXCHANGEID )
             offer->fee = INSTANTDEX_FEE;

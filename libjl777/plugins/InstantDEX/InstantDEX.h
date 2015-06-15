@@ -203,6 +203,26 @@ void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx
     // updatestats
 }
 
+char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid)
+{
+    uint64_t txid,assetid,avail,qty,priceNQT,ap_mult; char retbuf[512],*errstr;
+    if ( nxt64bits != calc_nxt64bits(SUPERNET.NXTADDR) )
+        return(clonestr("{\"error\":\"must use your NXT address\"}"));
+    else if ( baseid == NXT_ASSETID )
+        dir = -dir, assetid = relid;
+    else if ( relid == NXT_ASSETID )
+        assetid = baseid;
+    else return(clonestr("{\"error\":\"NXT AE order without NXT\"}"));
+    if ( (ap_mult= get_assetmult(assetid)) == 0 )
+        return(clonestr("{\"error\":\"assetid not found\"}"));
+    qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,0,assetid,price,volume);
+    txid = submit_triggered_nxtae(&errstr,0,dir > 0 ? "placeBidOrder" : "placeAskOrder",nxt64bits,SUPERNET.NXTACCTSECRET,assetid,qty,priceNQT,0,0,0,0);
+    if ( errstr != 0 )
+        sprintf(retbuf,"{\"error\":\"%s\"}",errstr), free(errstr);
+    else sprintf(retbuf,"{\"result\":\"success\",\"txid\":\"%llu\"}",(long long)txid);
+    return(clonestr(retbuf));
+}
+
 #include "rambooks.h"
 #include "exchanges.h"
 #include "orderbooks.h"
@@ -305,24 +325,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
             return(clonestr("{\"error\":\"no remote exchange orders: you cannot submit an order from a remote node\"}"));
         }
         else if ( strcmp(exchangestr,"nxtae") == 0 )
-        {
-            uint64_t txid,assetid,avail,qty,priceNQT,ap_mult; char retbuf[512],*errstr;
-            if ( nxt64bits != calc_nxt64bits(SUPERNET.NXTADDR) )
-                return(clonestr("{\"error\":\"must use your NXT address\"}"));
-            else if ( baseid == NXT_ASSETID )
-                dir = -dir, assetid = relid;
-            else if ( relid == NXT_ASSETID )
-                assetid = baseid;
-            else return(clonestr("{\"error\":\"NXT AE order without NXT\"}"));
-            if ( (ap_mult= get_assetmult(assetid)) == 0 )
-                return(clonestr("{\"error\":\"assetid not found\"}"));
-            qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,0,assetid,price,volume);
-            txid = submit_triggered_nxtae(&errstr,0,dir > 0 ? "placeBidOrder" : "placeAskOrder",nxt64bits,SUPERNET.NXTACCTSECRET,assetid,qty,priceNQT,0,0,0,0);
-            if ( errstr != 0 )
-                sprintf(retbuf,"{\"error\":\"%s\"}",errstr), free(errstr);
-            else sprintf(retbuf,"{\"result\":\"success\",\"txid\":\"%llu\"}",(long long)txid);
-            return(clonestr(retbuf));
-        }
+            return(fill_nxtae(nxt64bits,dir,price,volume,baseid,relid));
         else if ( strcmp(exchangestr,"InstantDEX") != 0 )
         {
             if ( is_native_crypto(base,baseid) > 0 && is_native_crypto(rel,relid) > 0 && price > 0 && volume > 0 && dir != 0 )
