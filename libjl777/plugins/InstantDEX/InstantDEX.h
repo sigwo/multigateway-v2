@@ -320,8 +320,8 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
             qty = (volume * ap_mult);
             txid = submit_triggered_nxtae(&errstr,0,dir > 0 ? "placeBidOrder" : "placeAskOrder",nxt64bits,SUPERNET.NXTACCTSECRET,assetid,qty,priceNQT,0,0,0,0);
             if ( errstr != 0 )
-                return(errstr);
-            sprintf(retbuf,"{\"result\":\"success\",\"txid\":\"%llu\"}",(long long)txid);
+                sprintf(retbuf,"{\"error\":\"%s\"}",errstr), free(errstr);
+            else sprintf(retbuf,"{\"result\":\"success\",\"txid\":\"%llu\"}",(long long)txid);
             return(clonestr(retbuf));
         }
         else if ( strcmp(exchangestr,"InstantDEX") != 0 )
