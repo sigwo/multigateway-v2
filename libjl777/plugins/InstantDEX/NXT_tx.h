@@ -583,7 +583,7 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
 int32_t update_NXT_assettrades()
 {
     struct assettrade *trades;
-    int32_t max,len,verifyflag = 1;
+    int32_t max,len,verifyflag = 0;
     uint64_t key[2]; int32_t i,count = 0;
     max = 20000, trades = calloc(max,sizeof(*trades));
     if ( (len= NXT_revassettrade(key,0)) == sizeof(key) )
