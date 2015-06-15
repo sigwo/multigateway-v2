@@ -500,6 +500,7 @@ int32_t NXT_trade(struct assettrade *tp,uint32_t ind)
 uint64_t set_assettrade(struct assettrade *tp,cJSON *json)
 {
     uint64_t ap_mult; char type[64],name[4096];
+    printf("set_assettrade\n");
     memset(tp,0,sizeof(*tp));
     /*
      "seller": "13507302008315288445",
@@ -520,21 +521,21 @@ uint64_t set_assettrade(struct assettrade *tp,cJSON *json)
      "timestamp": 49051994,
      "height": 451101
      */
-    if ( (tp->assetid= get_satoshi_obj(json,"priceNQT")) != 0 )
+    if ( (tp->assetid= get_API_nxt64bits(cJSON_GetObjectItem(json,"priceNQT"))) != 0 )
     {
         ap_mult = get_assetmult(tp->assetid);
-        tp->price = SATOSHIDEN * get_satoshi_obj(json,"priceNQT") / ap_mult;
-        tp->amount = (get_satoshi_obj(json,"quantityQNT") * ap_mult);
+        tp->price = SATOSHIDEN * get_API_nxt64bits(cJSON_GetObjectItem(json,"priceNQT")) / ap_mult;
+        tp->amount = (get_API_nxt64bits(cJSON_GetObjectItem(json,"quantityQNT")) * ap_mult);
         copy_cJSON(type,cJSON_GetObjectItem(json,"tradeType"));
         if ( strcmp(type,"sell") == 0 )
             tp->sellflag = 1;
-        tp->seller = get_satoshi_obj(json,"seller");
-        tp->buyer = get_satoshi_obj(json,"buyer");
-        tp->askorder = get_satoshi_obj(json,"askOrder");
-        tp->bidorder = get_satoshi_obj(json,"bidOrder");
+        tp->seller = get_API_nxt64bits(cJSON_GetObjectItem(json,"seller"));
+        tp->buyer = get_API_nxt64bits(cJSON_GetObjectItem(json,"buyer"));
+        tp->askorder = get_API_nxt64bits(cJSON_GetObjectItem(json,"askOrder"));
+        tp->bidorder = get_API_nxt64bits(cJSON_GetObjectItem(json,"bidOrder"));
         tp->bidheight = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"bidOrderHeight"),0);
         tp->askheight = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"askOrderHeight"),0);
-        if ( 1 )
+        if ( 0 )
         {
             copy_cJSON(name,cJSON_GetObjectItem(json,"name"));
             printf("%llu -> %llu %13.8f %13.8f %s | bid.%llu %u | ask.%llu %u\n",(long long)tp->seller,(long long)tp->buyer,(tp->sellflag != 0 ? -1 : 1) * dstr(tp->price),dstr(tp->amount),name,(long long)tp->bidorder,tp->bidheight,(long long)tp->askorder,tp->askheight);
@@ -558,7 +559,7 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
             printf("parsed\n");
             if ( (array= cJSON_GetObjectItem(transfers,"trades")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
-                printf("array.%d max.%ld\n",n,max);
+                printf("array.%d max.%ld %p\n",n,max,cJSON_GetArrayItem(array,0));
                 for (i=0; i<n; i++)
                 {
                     if ( (assetidbits= set_assettrade(&T,cJSON_GetArrayItem(array,i))) != 0 )
