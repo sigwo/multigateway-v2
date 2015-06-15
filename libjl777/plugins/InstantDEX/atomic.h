@@ -539,16 +539,22 @@ void create_offer_comment(struct pending_offer *offer)
     sprintf(offer->comment,"{\"method\":\"makeoffer3\",\"askoffer\":\"%d\",\"NXT\":\"%llu\",\"ratio\":\"%.8f\",\"perc\":\"%d\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"baseamount\":\"%llu\",\"relamount\":\"%llu\",\"fee\":\"%llu\",\"quoteid\":\"%llu\",\"minperc\":\"%u\",\"jumpasset\":\"%llu\"}",offer->sell,(long long)offer->nxt64bits,offer->ratio,offer->perc,(long long)offer->baseid,(long long)offer->relid,(long long)offer->baseamount,(long long)offer->relamount,(long long)offer->fee,(long long)offer->quoteid,offer->minperc,(long long)offer->jumpasset);
 }
 
-void tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double refvolume)
+char *tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double refvolume)
 {
     double price,volume,bestvolume,bestprice; uint64_t baseqty,relqty,satoshis,refsatoshis,best=0,dist; int32_t i,j,besti,bestj,flag = 0;
     refsatoshis = (refprice * SATOSHIDEN);
+    baseqty = offer->baseamount / offer->basemult;
+    relqty = offer->relamount / offer->relmult;
+    price = calc_price_volume(&volume,baseqty * offer->basemult,relqty * offer->relmult);
+    if ( fabs(price/refprice - 1.) > 0.01 || fabs(volume/refvolume) > 0.1 )
+    {
+        printf("refprice %.8f -> price %.8f, refvolume %.8f -> %.8f\n",refprice,price,refvolume,volume);
+        return(clonestr("{\"error\":\"asset decimals dont allow this\"}"));
+    }
     price = calc_price_volume(&volume,offer->baseamount,offer->relamount);
     satoshis = (price * SATOSHIDEN);
     besti = bestj = 0;
     bestvolume = refvolume, bestprice = refprice;
-    baseqty = offer->baseamount / offer->basemult;
-    relqty = offer->relamount / offer->relmult;
     for (i=100; i>=-100&&i>-baseqty; i--)
     {
         for (j=100; j>=-100&&j>-relqty; j--)
@@ -582,6 +588,7 @@ void tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double 
         offer->relamount += bestj * offer->relmult;
         offer->volume = bestvolume;
     }
+    return(0);
 }
 
 char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double price,double volume,int32_t deprecated,int32_t perc,uint64_t baseid,uint64_t relid,cJSON *baseobj,cJSON *relobj,uint64_t quoteid,int32_t askoffer,char *exchange,uint64_t baseamount,uint64_t relamount,uint64_t offerNXT,int32_t minperc,uint64_t jumpasset)
@@ -618,7 +625,11 @@ char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double pr
     strcpy(offer->exchange,exchange);
     offer->sell = askoffer;
     dir = (askoffer == 0) ? 1 : -1;
-    tweak_offer(offer,dir,price,volume);
+    if ( (retstr= tweak_offer(offer,dir,price,volume)) != 0 )
+    {
+        free(offer);
+        return(retstr);
+    }
     offer->baseid = baseid,  offer->relid = relid, offer->quoteid = quoteid, offer->price = price, offer->A.offerNXT = offerNXT, offer->perc = perc;
     pt = &offer->A;
     if ( baseobj != 0 && relobj != 0 )
