@@ -523,9 +523,14 @@ uint64_t set_assettrade(struct assettrade *tp,cJSON *json)
      */
     if ( (tp->assetid= get_API_nxt64bits(cJSON_GetObjectItem(json,"priceNQT"))) != 0 )
     {
+        printf("assetid.%llu\n",(long long)tp->assetid);
         ap_mult = get_assetmult(tp->assetid);
-        tp->price = SATOSHIDEN * get_API_nxt64bits(cJSON_GetObjectItem(json,"priceNQT")) / ap_mult;
-        tp->amount = (get_API_nxt64bits(cJSON_GetObjectItem(json,"quantityQNT")) * ap_mult);
+        printf("ap_mult.%llu\n",(long long)ap_mult);
+        if ( ap_mult != 0 )
+        {
+            tp->price = SATOSHIDEN * get_API_nxt64bits(cJSON_GetObjectItem(json,"priceNQT")) / ap_mult;
+            tp->amount = (get_API_nxt64bits(cJSON_GetObjectItem(json,"quantityQNT")) * ap_mult);
+        }
         copy_cJSON(type,cJSON_GetObjectItem(json,"tradeType"));
         if ( strcmp(type,"sell") == 0 )
             tp->sellflag = 1;
@@ -535,7 +540,7 @@ uint64_t set_assettrade(struct assettrade *tp,cJSON *json)
         tp->bidorder = get_API_nxt64bits(cJSON_GetObjectItem(json,"bidOrder"));
         tp->bidheight = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"bidOrderHeight"),0);
         tp->askheight = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"askOrderHeight"),0);
-        if ( 0 )
+        if ( 1 )
         {
             copy_cJSON(name,cJSON_GetObjectItem(json,"name"));
             printf("%llu -> %llu %13.8f %13.8f %s | bid.%llu %u | ask.%llu %u\n",(long long)tp->seller,(long long)tp->buyer,(tp->sellflag != 0 ? -1 : 1) * dstr(tp->price),dstr(tp->amount),name,(long long)tp->bidorder,tp->bidheight,(long long)tp->askorder,tp->askheight);
@@ -549,7 +554,6 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
     char cmd[1024],*jsonstr; cJSON *transfers,*array; struct assettrade T;
     int32_t i,n = 0; uint64_t assetidbits;
     sprintf(cmd,"requestType=getAllTrades");
-    firstindex = 0, lastindex = 100;
     if ( firstindex >= 0 && lastindex >= firstindex )
         sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
