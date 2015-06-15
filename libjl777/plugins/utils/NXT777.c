@@ -539,7 +539,7 @@ uint64_t _get_AEquote(char *str,uint64_t orderid)
     sprintf(cmd,"requestType=get%sOrder&orderid=%llu",str,(long long)orderid);
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
-        //printf("(%s) -> (%s)\n",cmd,jsonstr);
+        printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(json,"account"));
@@ -559,6 +559,7 @@ char *cancel_orderid(char *NXTaddr,uint64_t orderid)
     {
         sprintf(cmd,"requestType=cancel%sOrder&secretPhrase=%s&feeNQT=%lld&deadline=%d&order=%llu",str,SUPERNET.NXTACCTSECRET,(long long)MIN_NQTFEE,DEFAULT_NXT_DEADLINE,(long long)orderid);
         retstr = issue_NXTPOST(cmd);
+        printf("(%s) -> (%s)\n",cmd,retstr);
     }
     return(retstr);
 }
