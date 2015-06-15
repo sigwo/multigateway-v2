@@ -233,6 +233,11 @@ char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint6
 
 char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *iQ,char *submitstr) // called by placequote, should autofill
 {
+    struct orderbook *op,*obooks[32]; char base[16],rel[16]; uint64_t mult;
+    update_rambooks(iQ->baseid,iQ->relid,DEFAULT_MAXDEPTH,iQ->gui,1);
+    set_assetname(&mult,base,iQ->baseid), set_assetname(&mult,rel,iQ->relid);
+    op = make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,iQ->baseid,rel,iQ->relid,DEFAULT_MAXDEPTH,0,iQ->gui);
+    free_orderbooks(obooks,sizeof(obooks)/sizeof(*obooks),op);
     return(submitstr);
 }
 

@@ -62,21 +62,25 @@ void process_json(cJSON *json)
 
 int main(int argc, char **argv)
 {
-    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,portflag = 0; cJSON *json;
-    char urlbuf[512],postbuf[65536],*retstr,*delim,*url = 0;
+    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,portflag = 0; cJSON *json; long offset;
+    char urlbuf[512],namebuf[512],postbuf[65536],*retstr,*delim,*url = 0;
     json = cJSON_CreateObject();
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
             j = i+1;
-    if ( strcmp(&argv[0][j],"api") != 0 )
-        cJSON_AddItemToObject(json,"agent",cJSON_CreateString(&argv[0][j]));
-    if ( strcmp("nxt",&argv[0][j]) == 0 )
+    strcpy(namebuf,&argv[0][j]);
+    offset = strlen(namebuf) - 4;
+    if ( offset > 0 && strcmp(".exe",namebuf + offset) == 0 )
+        namebuf[offset] = 0;
+    if ( strcmp(namebuf,"api") != 0 )
+        cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
+    if ( strcmp("nxt",namebuf) == 0 )
         url = "http://127.0.0.1:7876/nxt";
-    else if ( strcmp("nxts",&argv[0][j]) == 0 )
+    else if ( strcmp("nxts",namebuf) == 0 )
         url = "https://127.0.0.1:7876/nxt";
-    else if ( strcmp("port",&argv[0][j]) == 0 )
+    else if ( strcmp("port",namebuf) == 0 )
         url = "http://127.0.0.1", portflag = 1;
-    else if ( strcmp("ports",&argv[0][j]) == 0 )
+    else if ( strcmp("ports",namebuf) == 0 )
         url = "https://127.0.0.1", portflag = 1;
     if ( url != 0 )
          postbuf[0] = 0, delim = "";
@@ -89,7 +93,7 @@ int main(int argc, char **argv)
                 value = CGI_lookup_all(varlist,0);
                 for (i=0; value[i]!=0; i++)
                 {
-                    //printf("%s [%d] = %s\r\n", name, i, value[i]);
+                    fprintf(stderr,"%s [%d] = %s\r\n", name, i, value[i]);
                     if ( i == 0 )
                     {
                         if ( url == 0 )
