@@ -784,6 +784,7 @@ int SuperNET_start(char *fname,char *myip)
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
         jsonstr = clonestr("{}");
     strcpy(SUPERNET.myipaddr,myip);
+    printf("SuperNET_start ipaddr.(%s)\n",myip);
     language_func("SuperNET","",0,0,1,"SuperNET",jsonstr,call_system);
     if ( jsonstr != 0 )
         free(jsonstr);
