@@ -229,7 +229,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
     cJSON *json,*array,*item; struct NXT_tx *txptrs[MAX_TXPTRS]; void *ptrs[2];
     int32_t i,n,numtx,NXTblock; uint64_t quoteid,baseid,relid;
     ptrs[0] = NXTACCTSECRET, ptrs[1] = txptrs;
-    if ( milliseconds() < (lastmilli + 1000) )
+    if ( milliseconds() < (lastmilli + 5000) )
         return;
     NXTblock = _get_NXTheight(0);
     memset(txptrs,0,sizeof(txptrs));
