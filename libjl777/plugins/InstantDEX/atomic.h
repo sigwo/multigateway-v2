@@ -10,6 +10,8 @@
 #ifndef xcode_atomic_h
 #define xcode_atomic_h
 
+#define FINISH_HEIGHT 7
+
 struct tradeinfo
 {
     uint64_t quoteid,assetid,relid,qty,priceNQT,txid;
@@ -678,7 +680,7 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
         }
     }
     create_offer_comment(offer);
-    offer->triggerheight = _get_NXTheight(0) + 2;
+    offer->triggerheight = _get_NXTheight(0) + FINISH_HEIGHT;
     printf("GOT.(%s) triggerheight.%u\n",offer->comment,offer->triggerheight);
     set_NXTtx(offer->nxt64bits,&T,NXT_ASSETID,offer->fee,calc_nxt64bits(INSTANTDEX_ACCT),-1);
     strcpy(T.comment,offer->comment);

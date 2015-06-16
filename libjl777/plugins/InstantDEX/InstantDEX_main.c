@@ -187,7 +187,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             {
                 if ( (retstr= devMGW_command(jsonstr,json)) != 0 )
                     should_forward(sender,retstr);
-            } else retstr = nn_loadbalanced((uint8_t *)jsonstr,(int32_t)strlen(jsonstr)+1);
+            } //else retstr = nn_loadbalanced((uint8_t *)jsonstr,(int32_t)strlen(jsonstr)+1);
         }
         else retstr = InstantDEX_parser(jsonstr,json);
         if ( retstr != 0 )
