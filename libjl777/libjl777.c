@@ -1508,6 +1508,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         copy_cJSON(myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
         if ( SUPERNET.myipaddr[0] == 0 )
             strcpy(SUPERNET.myipaddr,myipaddr);
+        printf("sigwo this is your ipaddr? (%s)\n",SUPERNET.myipaddr);
         if ( SUPERNET.myipaddr[0] != 0 )
             SUPERNET.myipbits = (uint32_t)calc_ipbits(SUPERNET.myipaddr);
         if ( strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
