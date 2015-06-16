@@ -650,7 +650,10 @@ char *devMGW_command(char *jsonstr,cJSON *json)
             {
                 if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,nxtaddr,userNXTpubkey,buyNXT) == 0 )
                     fix_msigaddr(coin,nxtaddr), msleep(250);
-                else return(clonestr(msigjsonstr));
+                else
+                {
+                    return(clonestr(msigjsonstr));
+                }
             }
         }
         sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",nxtaddr);

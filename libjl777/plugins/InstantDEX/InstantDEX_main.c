@@ -26,8 +26,8 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
     return(0);
 }
 
-char *PLUGNAME(_methods)[] = { "makeoffer3", "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "bid", "ask", "makeoffer3" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_methods)[] = { "makeoffer3", "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory", "msigaddr" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "bid", "ask", "makeoffer3", "msigaddr" }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
 
 char *makeoffer3_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -149,7 +149,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*retstr;
+    char sender[MAX_JSON_FIELD],echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
 //fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -180,17 +180,24 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-        else
+        else if ( strcmp(methodstr,"msigaddr") == 0 )
         {
-            if ( (retstr= InstantDEX_parser(jsonstr,json)) != 0 )
+            char *devMGW_command(char *jsonstr,cJSON *json);
+            if ( SUPERNET.gatewayid >= 0 )
             {
-                if ( strlen(retstr) >= maxlen-1 )
-                    retstr[maxlen-1] = 0;
-                strcpy(retbuf,retstr);
-                free(retstr);
+                if ( (retstr= devMGW_command(jsonstr,json)) != 0 )
+                    should_forward(sender,retstr);
             }
-            else sprintf(retbuf,"{\"error\":\"method not found\"}");
         }
+        else retstr = InstantDEX_parser(jsonstr,json);
+        if ( retstr != 0 )
+        {
+            if ( strlen(retstr) >= maxlen-1 )
+                retstr[maxlen-1] = 0;
+            strcpy(retbuf,retstr);
+            free(retstr);
+        }
+        else sprintf(retbuf,"{\"error\":\"method not found\"}");
     }
     return((int32_t)strlen(retbuf));
 }
