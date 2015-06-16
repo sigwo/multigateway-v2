@@ -481,15 +481,27 @@ char *set_buyer_seller(struct pendinghalf *seller,struct pendinghalf *buyer,stru
     return(0);
 }
 
+void set_basereliQ(struct InstantDEX_quote *iQ,cJSON *obj)
+{
+    char exchange[64];
+    iQ->baseamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
+    iQ->relamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
+    iQ->quoteid = get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
+    iQ->nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
+    copy_cJSON(exchange,cJSON_GetObjectItem(obj,"exchange"));
+    iQ->exchangeid = get_exchangeid(exchange);
+}
+
 // phasing! https://nxtforum.org/index.php?topic=6490.msg171048#msg171048
-char *set_combohalf(struct pendingpair *pt,cJSON *obj,struct pending_offer *offer,uint64_t baseid,uint64_t relid,int32_t askoffer,int32_t dir)
+char *set_combohalf(struct pendingpair *pt,struct InstantDEX_quote *iQ,struct pending_offer *offer,uint64_t baseid,uint64_t relid,int32_t askoffer,int32_t dir)
 {
     char *retstr;
-    pt->baseamount = offer->ratio * get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
-    pt->relamount = offer->ratio * get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
-    pt->quoteid = get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
-    pt->offerNXT = get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
-    copy_cJSON(pt->exchange,cJSON_GetObjectItem(obj,"exchange"));
+    pt->baseamount = offer->ratio * iQ->baseamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
+    pt->relamount = offer->ratio * iQ->relamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
+    pt->quoteid = iQ->quoteid;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
+    pt->offerNXT = iQ->nxt64bits;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
+    iQ_exchangestr(pt->exchange,iQ);
+    //copy_cJSON(pt->exchange,cJSON_GetObjectItem(obj,"exchange"));
     pt->nxt64bits = offer->nxt64bits, pt->baseid = baseid, pt->relid = relid, pt->ratio = offer->ratio;
     pt->price = calc_price_volume(&pt->volume,pt->baseamount,pt->relamount);
     pt->sell = askoffer;
@@ -591,7 +603,7 @@ char *tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double
     return(0);
 }
 
-char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double price,double volume,int32_t deprecated,int32_t perc,uint64_t baseid,uint64_t relid,cJSON *baseobj,cJSON *relobj,uint64_t quoteid,int32_t askoffer,char *exchange,uint64_t baseamount,uint64_t relamount,uint64_t offerNXT,int32_t minperc,uint64_t jumpasset)
+char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double price,double volume,int32_t deprecated,int32_t perc,uint64_t baseid,uint64_t relid,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,uint64_t quoteid,int32_t askoffer,char *exchange,uint64_t baseamount,uint64_t relamount,uint64_t offerNXT,int32_t minperc,uint64_t jumpasset)
 {
     struct NXT_tx T; char *retstr; int32_t dir; struct pendingpair *pt; struct pending_offer *offer = 0;
     if ( minperc == 0 )
@@ -632,11 +644,11 @@ char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double pr
     }
     offer->baseid = baseid,  offer->relid = relid, offer->quoteid = quoteid, offer->price = price, offer->A.offerNXT = offerNXT, offer->perc = perc;
     pt = &offer->A;
-    if ( baseobj != 0 && relobj != 0 )
+    if ( baseiQ != 0 && reliQ != 0 )
     {
-        if ( (retstr= set_combohalf(&offer->A,baseobj,offer,baseid,jumpasset,askoffer,-dir)) != 0 )
+        if ( (retstr= set_combohalf(&offer->A,baseiQ,offer,baseid,jumpasset,askoffer,-dir)) != 0 )
             return(retstr);
-        if ( (retstr= set_combohalf(&offer->B,relobj,offer,relid,jumpasset,askoffer,-dir)) != 0 )
+        if ( (retstr= set_combohalf(&offer->B,reliQ,offer,relid,jumpasset,askoffer,-dir)) != 0 )
             return(retstr);
         offer->fee = INSTANTDEX_FEE;
         if ( offer->halves[0].T.exchangeid == INSTANTDEX_EXCHANGEID && offer->halves[2].T.exchangeid == INSTANTDEX_EXCHANGEID )

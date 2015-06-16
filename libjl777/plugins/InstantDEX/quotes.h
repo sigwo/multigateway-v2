@@ -19,6 +19,18 @@ struct InstantDEX_quote
     char exchangeid,gui[9];
 };
 
+uint64_t get_iQ_jumpasset(struct InstantDEX_quote *iQ)
+{
+    if ( iQ->baseiQ != 0 && iQ->reliQ != 0 )
+    {
+        if ( iQ->baseiQ->baseid == iQ->reliQ->baseid || iQ->baseiQ->baseid == iQ->reliQ->relid )
+            return(iQ->baseiQ->baseid);
+        else if ( iQ->baseiQ->relid == iQ->reliQ->relid || iQ->baseiQ->relid == iQ->reliQ->baseid )
+            return(iQ->baseiQ->relid);
+    }
+    return(0);
+}
+
 void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 0; }
 void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 1; }
 
