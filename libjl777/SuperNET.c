@@ -778,13 +778,15 @@ void SuperNET_apiloop(void *ipaddr)
 
 int SuperNET_start(char *fname,char *myip)
 {
-    char *jsonstr = 0;
+    int32_t parse_ipaddr(char *ipaddr,char *ip_port);
+    char ipaddr[256],*jsonstr = 0;
     uint64_t allocsize;
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
         jsonstr = clonestr("{}");
-    strcpy(SUPERNET.myipaddr,myip);
-    printf("SuperNET_start ipaddr.(%s)\n",myip);
+    parse_ipaddr(ipaddr,myip);
+    strcpy(SUPERNET.myipaddr,ipaddr);
+    printf("SuperNET_start ipaddr.(%s)\n",ipaddr);
     language_func("SuperNET","",0,0,1,"SuperNET",jsonstr,call_system);
     if ( jsonstr != 0 )
         free(jsonstr);
