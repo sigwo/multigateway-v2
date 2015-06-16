@@ -603,7 +603,7 @@ char *tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double
     return(0);
 }
 
-char *makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,double price,double volume,int32_t deprecated,int32_t perc,uint64_t baseid,uint64_t relid,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,uint64_t quoteid,int32_t askoffer,char *exchange,uint64_t baseamount,uint64_t relamount,uint64_t offerNXT,int32_t minperc,uint64_t jumpasset)
+char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,int32_t deprecated,int32_t perc,uint64_t baseid,uint64_t relid,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,uint64_t quoteid,int32_t askoffer,char *exchange,uint64_t baseamount,uint64_t relamount,uint64_t offerNXT,int32_t minperc,uint64_t jumpasset)
 {
     struct NXT_tx T; char *retstr; int32_t dir; struct pendingpair *pt; struct pending_offer *offer = 0;
     if ( minperc == 0 )

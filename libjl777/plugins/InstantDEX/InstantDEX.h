@@ -198,9 +198,14 @@ int32_t time_to_nextblock(int32_t lookahead)
 
 void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t numtx,int32_t updateNXT) // from poll_pending_offers via main
 {
+    char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *refiQ);
+    char *retstr;
     printf("update_openorder iQ.%llu with numtx.%d updateNXT.%d | expires in %ld\n",(long long)iQ->quoteid,numtx,updateNXT,iQ->timestamp+iQ->duration-time(NULL));
-    // regen orderbook and see if it crosses
-    // updatestats
+    if ( (SUPERNET.automatch & 2) != 0 && (retstr= check_ordermatch(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,iQ)) != 0 )
+    {
+        printf("automatched order!\n");
+        free(retstr);
+    }
 }
 
 char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid)
@@ -231,7 +236,7 @@ char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint6
 #include "bars.h"
 #include "signals.h"
 
-char *check_ordermatch(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *refiQ,char *submitstr) // called by placequote, should autofill
+char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *refiQ) // called by placequote, should autofill
 {
     struct orderbook *op,*obooks[32]; char base[16],rel[16]; uint64_t mult; int32_t i,besti,n=0,dir = 1; struct InstantDEX_quote *iQ,*quotes;
     uint64_t assetA,amountA,assetB,amountB; char jumpstr[1024],otherNXTaddr[64],exchange[64],*retstr = 0;
@@ -317,7 +322,7 @@ char *check_ordermatch(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,str
             if ( perc == 0 )
                 perc = 1;
             if ( perc >= iQ->minperc )
-                retstr = makeoffer3(localaccess,NXTaddr,NXTACCTSECRET,price,vol,0,perc,refiQ->baseid,refiQ->relid,iQ->baseiQ,iQ->reliQ,iQ->quoteid,dir < 0,exchange,iQ->baseamount,iQ->relamount,iQ->nxt64bits,iQ->minperc,get_iQ_jumpasset(iQ));
+                retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,vol,0,perc,refiQ->baseid,refiQ->relid,iQ->baseiQ,iQ->reliQ,iQ->quoteid,dir < 0,exchange,iQ->baseamount,iQ->relamount,iQ->nxt64bits,iQ->minperc,get_iQ_jumpasset(iQ));
         } else printf("besti.%d\n",besti);
         free_orderbooks(obooks,sizeof(obooks)/sizeof(*obooks),op);
     } else printf("cant make orderbook\n");
@@ -467,7 +472,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                             free(str);
                         retstr = jsonstr;
                     }
-                    else if ( (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(localaccess,NXTaddr,NXTACCTSECRET,&iQ,jsonstr)) != 0 )
+                    else if ( (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ)) != 0 )
                     {
                         free(jsonstr);
                         return(retstr);
@@ -789,7 +794,7 @@ char *call_makeoffer3(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,cJSO
     memset(&baseiQ,0,sizeof(baseiQ));
     memset(&reliQ,0,sizeof(reliQ));
     set_basereliQ(&baseiQ,objs[5]), set_basereliQ(&reliQ,objs[6]);
-    return(makeoffer3(localaccess,NXTaddr,NXTACCTSECRET,price,volume,flip,perc,baseid,relid,&baseiQ,&reliQ,quoteid,get_API_int(objs[7],0),exchange,baseamount,relamount,offerNXT,minperc,jumpasset));
+    return(makeoffer3(NXTaddr,NXTACCTSECRET,price,volume,flip,perc,baseid,relid,&baseiQ,&reliQ,quoteid,get_API_int(objs[7],0),exchange,baseamount,relamount,offerNXT,minperc,jumpasset));
 }
 
 char *makeoffer3_stub(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,char *jsonstr)
