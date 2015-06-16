@@ -1473,7 +1473,7 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json);
-    char *retstr,*resultstr,*methodstr,*destplugin,buf[1024];
+    char *retstr,*resultstr,*methodstr,*destplugin,buf[1024],myipaddr[512];
     FILE *fp;
     int32_t i;
     retbuf[0] = 0;
@@ -1505,7 +1505,9 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
         else strcpy(SUPERNET.NXTADDR,SUPERNET.myNXTacct);
         SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
-        copy_cJSON(SUPERNET.myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
+        copy_cJSON(myipaddr,cJSON_GetObjectItem(json,"myipaddr"));
+        if ( SUPERNET.myipaddr[0] == 0 )
+            strcpy(SUPERNET.myipaddr,myipaddr);
         if ( SUPERNET.myipaddr[0] != 0 )
             SUPERNET.myipbits = (uint32_t)calc_ipbits(SUPERNET.myipaddr);
         if ( strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
