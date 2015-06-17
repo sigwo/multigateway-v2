@@ -496,7 +496,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     cJSON *json,*argjson;
     struct relayargs *args = 0;
     int32_t ind,async;
-//printf("localaccess.%d origargstr.(%s).%d\n",localaccess,origargstr,len);
+printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,len,retstrp);
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
