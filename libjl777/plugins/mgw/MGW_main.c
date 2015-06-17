@@ -438,7 +438,7 @@ int32_t process_acctpubkey(int32_t *havemsigp,cJSON *item,int32_t gatewayid,uint
 cJSON *mgw_stdjson(char *coinstr,char *NXTaddr,int32_t gatewayid,char *method)
 {
     cJSON *json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
+    cJSON_AddItemToObject(json,"agent",cJSON_CreateString("MGW"));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
     cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
     cJSON_AddItemToObject(json,"gatewayNXT",cJSON_CreateString(NXTaddr));
