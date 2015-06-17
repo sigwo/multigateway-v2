@@ -541,6 +541,7 @@ int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char
 int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json)
 {
     char coinstr[MAX_JSON_FIELD],gatewayNXT[MAX_JSON_FIELD],*methodstr; uint64_t gatewaybits; int32_t gatewayid,retval = 0; struct coin777 *coin;
+    printf("MGW PROCESS.(%s)\n",jsonstr);
     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(json,"method"))) != 0 )
     {
         copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
