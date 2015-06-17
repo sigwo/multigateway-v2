@@ -96,12 +96,12 @@ int32_t connect_instanceid(struct daemon_info *dp,uint64_t instanceid)
 int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,struct relayargs *args)
 {
     int32_t i;
-    printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
+    //printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
     for (i=0; i<NUM_PLUGINTAGS; i++)
     {
         if ( dp->tags[i][0] == 0 )
         {
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("slot.%d <- tag.%llu dest.%p\n",i,(long long)tag,dest);
             dp->tags[i][0] = tag, dp->tags[i][1] = (uint64_t)dest, dp->tags[i][2] = (uint64_t)args;
             return(i);
@@ -123,7 +123,7 @@ char **get_tagstr(struct relayargs **argsp,struct daemon_info *dp,uint64_t tag)
             if ( dp->tags[i][2] != 0 )
                 *argsp = (struct relayargs *)dp->tags[i][2];
             dp->tags[i][0] = dp->tags[i][1] = dp->tags[i][2] = 0;
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("slot.%d found tag.%llu dest.%p\n",i,(long long)tag,dest);
             return(dest);
         }
@@ -205,7 +205,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
         //printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
-printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
+//printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
             if ( len > 0 )
             {
                 if ( Debuglevel > 2 )
