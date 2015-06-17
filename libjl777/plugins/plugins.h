@@ -15,7 +15,7 @@
 #include <stdlib.h>
 
 #define DAEMONFREE_MARGIN_SECONDS 13
-#define NUM_PLUGINTAGS 256
+#define NUM_PLUGINTAGS 8192
 
 struct daemon_info
 {
