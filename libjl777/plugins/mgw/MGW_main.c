@@ -589,12 +589,18 @@ int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json)
 
 int32_t MGW_publishjson(char *retbuf,cJSON *json)
 {
-    char *jsonstr; int32_t sendlen,retval = 0;
+    static uint32_t lastcrc,lasttime;
+    char *jsonstr; int32_t sendlen,retval = 0; uint32_t crc;
     jsonstr = cJSON_Print(json);
     _stripwhite(jsonstr,' ');
-    sendlen = nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
-    retval = mgw_processbus(retbuf,jsonstr,json);
-    printf("MGW publish.(%s) -> (%s) sock.%d sendlen.%d\n",jsonstr,retbuf,MGW.all.socks.both.bus,sendlen);
+    crc = _crc32(0,jsonstr,(int32_t)strlen(jsonstr));
+    if ( crc != lastcrc || time(NULL) > (lasttime + 10) )
+    {
+        sendlen = nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+        retval = mgw_processbus(retbuf,jsonstr,json);
+        printf("MGW publish.(%s) -> (%s) sock.%d sendlen.%d crc.%u\n",jsonstr,retbuf,MGW.all.socks.both.bus,sendlen,crc);
+        lastcrc = crc, lasttime = (uint32_t)time(NULL);
+    }
     free(jsonstr);
     return(retval);
 }
