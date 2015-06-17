@@ -757,7 +757,14 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 
 char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
-    char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
+    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf; cJSON *json;
+    if ( (json= cJSON_Parse((char *)msg)) != 0 )
+    {
+        copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
+        free_json(json);
+    } else method[0] = 0;
+    if ( SUPERNET.gatewayid >= 0 && strcmp(method,"gotmsigaddr") == 0 )
+        return(0);
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
         retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
     else retstr = clonestr((char *)msg);
@@ -932,7 +939,7 @@ void responseloop(void *_args)
             {
                 retstr = 0;
                 //if ( Debuglevel > 1 )
-                printf("RECV.%s (%s)\n",args->name,strlen(msg)<1024?msg:"<big message>");
+                printf("RECV.%s (%s).%ld\n",args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
                 if ( (json= cJSON_Parse((char *)msg)) != 0 )
                 {
                     broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));

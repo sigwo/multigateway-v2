@@ -333,7 +333,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        printf("COINS.(%s) for (%s) (%s)\n",methodstr,coinstr!=0?coinstr:"",jsonstr);
+        //printf("COINS.(%s) for (%s) (%s)\n",methodstr,coinstr!=0?coinstr:"",jsonstr);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
@@ -343,7 +343,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         {
             zerobuf[0] = 0;
             str = 0;
-            printf("INSIDE COINS.(%s) methods.%ld\n",jsonstr,sizeof(coins_methods)/sizeof(*coins_methods));
+            //printf("INSIDE COINS.(%s) methods.%ld\n",jsonstr,sizeof(coins_methods)/sizeof(*coins_methods));
             copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
             if ( coinstr == 0 )
                 coinstr = zerobuf;
@@ -378,7 +378,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             }
         }
     }
-    printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s) initflag.%d process %s slice.%d\n",SUPERNET.myNXTaddr,initflag,plugin->name,COINS.slicei);
+    //printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s) initflag.%d process %s slice.%d\n",SUPERNET.myNXTaddr,initflag,plugin->name,COINS.slicei);
     return((int32_t)strlen(retbuf));
 }
 
