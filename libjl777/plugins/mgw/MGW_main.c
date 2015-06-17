@@ -558,12 +558,12 @@ int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json)
 
 int32_t MGW_publishjson(char *retbuf,cJSON *json)
 {
-    char *jsonstr; int32_t retval;
+    char *jsonstr; int32_t retval,sendlen;
     jsonstr = cJSON_Print(json);
     _stripwhite(jsonstr,' ');
-    nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+    sendlen = nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
     retval = mgw_processbus(retbuf,jsonstr,json);
-printf("MGW publish.(%s) -> (%s)\n",jsonstr,retbuf);
+printf("MGW publish.(%s) -> (%s) sock.%d sendlen.%d\n",jsonstr,retbuf,MGW.all.socks.both.bus,sendlen);
     free(jsonstr);
     return(retval);
 }
