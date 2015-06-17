@@ -23,7 +23,7 @@ void process_json(cJSON *json)
     int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
     char endpoint[128],*resultstr,*jsonstr;
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-    fprintf(stderr,"jsonstr.(%s)\r\n",jsonstr);
+    //fprintf(stderr,"jsonstr.(%s)\r\n",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
     apitag = _crc32(0,jsonstr,len);
     sprintf(endpoint,"ipc://api.%u",apitag);
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
                 value = CGI_lookup_all(varlist,0);
                 for (i=0; value[i]!=0; i++)
                 {
-                    fprintf(stderr,"%s [%d] = %s\r\n", name, i, value[i]);
+                    //fprintf(stderr,"%s [%d] = %s\r\n", name, i, value[i]);
                     if ( i == 0 )
                     {
                         if ( url == 0 )
