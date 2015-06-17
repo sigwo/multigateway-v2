@@ -364,7 +364,7 @@ int32_t main
             for (i=0; i<n; i++)
             {
                 line = messages[i], len = (int32_t)strlen(line);
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("(s%d r%d) <<<<<<<<<<<<<< RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
                 if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
                 {
