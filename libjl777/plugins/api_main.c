@@ -29,6 +29,7 @@ void process_json(cJSON *json)
     sprintf(endpoint,"ipc://api.%u",tag);
     free(jsonstr);
     recvtimeout = sendtimeout = 5000;
+    cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(0));
     cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
     cJSON_AddItemToObject(json,"timeout",cJSON_CreateNumber(recvtimeout));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
