@@ -20,16 +20,17 @@ char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *
 
 void process_json(cJSON *json)
 {
-    int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t tag;
+    int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
     char endpoint[128],*resultstr,*jsonstr;
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     fprintf(stderr,"jsonstr.(%s)\r\n",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
-    tag = _crc32(0,jsonstr,len);
-    sprintf(endpoint,"ipc://api.%u",tag);
+    apitag = _crc32(0,jsonstr,len);
+    sprintf(endpoint,"ipc://api.%u",apitag);
     free(jsonstr);
     recvtimeout = sendtimeout = 5000;
-    cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(((uint64_t)rand()<<32)| rand()));
+    randombytes(&tag,sizeof(tag));
+    cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
     cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
     cJSON_AddItemToObject(json,"timeout",cJSON_CreateNumber(recvtimeout));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
