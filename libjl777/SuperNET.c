@@ -779,7 +779,7 @@ void SuperNET_apiloop(void *ipaddr)
                         if ( plugin[0] == 0 )
                             copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
                         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
-                        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),10000);
+                        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
                         fprintf(stderr,"API RECV.(%s)\n",jsonstr);
                         //retstr = call_SuperNET_JSON(jsonstr);
                         //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)

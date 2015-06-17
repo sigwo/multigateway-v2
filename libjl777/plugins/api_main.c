@@ -28,11 +28,12 @@ void process_json(cJSON *json)
     apitag = _crc32(0,jsonstr,len);
     sprintf(endpoint,"ipc://api.%u",apitag);
     free(jsonstr);
-    recvtimeout = sendtimeout = 5000;
+    recvtimeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
+    sendtimeout = 5000;
     randombytes(&tag,sizeof(tag));
     cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
     cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
-    cJSON_AddItemToObject(json,"timeout",cJSON_CreateNumber(recvtimeout));
+    //cJSON_AddItemToObject(json,"timeout",cJSON_CreateNumber(recvtimeout));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
     if ( json != 0 )
