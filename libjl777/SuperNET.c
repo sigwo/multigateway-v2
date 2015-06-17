@@ -753,8 +753,8 @@ int32_t SuperNET_apireturn(int32_t sock,char *apitag,char *retstr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    int32_t sock,len,ind,checklen,retlen,recvtimeout,timeout,iter; cJSON *json,*retjson; struct pending_cgi *ptr;
-    char apitag[1024],errstr[1024],plugin[1024],method[1024],*retstr,*jsonstr,*str;
+    int32_t sock,len,retlen,recvtimeout,timeout,iter; cJSON *json,*retjson; struct pending_cgi *ptr;
+    char apitag[1024],errstr[1024],plugin[1024],method[1024],*jsonstr,*str;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -773,7 +773,9 @@ void SuperNET_apiloop(void *ipaddr)
                     if ( (json= cJSON_Parse(jsonstr)) != 0 )
                     {
                         copy_cJSON(apitag,cJSON_GetObjectItem(json,"apitag"));
-                        copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+                        copy_cJSON(plugin,cJSON_GetObjectItem(json,"agent"));
+                        if ( plugin[0] == 0 )
+                            copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
                         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
                         timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),10000);
                         fprintf(stderr,"API RECV.(%s)\n",jsonstr);
