@@ -205,7 +205,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
         //printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
-//printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1);
+printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1);
             if ( len > 0 )
             {
                 if ( Debuglevel > 2 )

@@ -525,7 +525,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     }
     else
     {
-        if ( Debuglevel > 2 )
+        if ( Debuglevel > 1 )
             fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess);
         if ( dp->readyflag == 0 )
         {
@@ -549,11 +549,11 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
         }
         else
         {
-//fprintf(stderr,"send_to_daemon.(%s).%d\n",origargstr,len);
+fprintf(stderr,"send_to_daemon.(%s).%d\n",origargstr,len);
             *retstrp = 0;
             if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
             {
-//fprintf(stderr,"null tag from send_to_daemon\n");
+fprintf(stderr,"null tag from send_to_daemon\n");
                 return(clonestr("{\"error\":\"null tag from send_to_daemon\"}"));
             }
             else if ( async != 0 )

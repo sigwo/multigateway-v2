@@ -753,7 +753,7 @@ int32_t SuperNET_apireturn(int32_t sock,char *apitag,char *retstr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    int32_t sock,len,retlen,recvtimeout,timeout,iter; cJSON *json,*retjson; struct pending_cgi *ptr;
+    int32_t sock,len,recvtimeout,timeout,iter; cJSON *json,*retjson; struct pending_cgi *ptr;
     char apitag[1024],errstr[1024],plugin[1024],method[1024],*jsonstr,*str;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
