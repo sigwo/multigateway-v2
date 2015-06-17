@@ -630,7 +630,7 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
-    int32_t i,buyNXT; uint64_t nxt64bits; cJSON *msigjson;
+    int32_t i,buyNXT; uint64_t nxt64bits; 
     char nxtaddr[64],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024]; struct coin777 *coin;
     if ( SUPERNET.gatewayid >= 0 )
     {
@@ -651,16 +651,8 @@ char *devMGW_command(char *jsonstr,cJSON *json)
             {
                 if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,nxtaddr,userNXTpubkey,buyNXT) == 0 )
                     fix_msigaddr(coin,nxtaddr), msleep(250);
-                else
-                {
-                    if ( (msigjson= cJSON_Parse(msigjsonstr)) != 0 )
-                    {
-                        MGW_publishjson(msigjsonstr,msigjson);
-                        free_json(msigjson);
-                    }
-                    return(clonestr(msigjsonstr));
-                }
             }
+            fix_msigaddr(coin,nxtaddr);
         }
         sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",nxtaddr);
         return(clonestr(msigjsonstr));
