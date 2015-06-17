@@ -772,7 +772,9 @@ void SuperNET_apiloop(void *ipaddr)
                     errstr[0] = 0; str = 0;
                     if ( (json= cJSON_Parse(jsonstr)) != 0 )
                     {
+                        ptr = calloc(1,sizeof(*ptr));
                         copy_cJSON(apitag,cJSON_GetObjectItem(json,"apitag"));
+                        safecopy(ptr->apitag,apitag,sizeof(ptr->apitag));
                         copy_cJSON(plugin,cJSON_GetObjectItem(json,"agent"));
                         if ( plugin[0] == 0 )
                             copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
@@ -790,14 +792,14 @@ void SuperNET_apiloop(void *ipaddr)
                             }
                         }
                         free_json(json);
+                        if ( str != 0 )
+                        {
+                            if ( errstr[0] != 0 )
+                                SuperNET_apireturn(sock,apitag,str);
+                            free(str);
+                        } else queue_enqueue("cgiQ",&cgiQ[0],&ptr->DL);
                     }
                     nn_freemsg(jsonstr);
-                    if ( str != 0 )
-                    {
-                        if ( errstr[0] != 0 )
-                            SuperNET_apireturn(sock,apitag,str);
-                        free(str);
-                    } else queue_enqueue("cgiQ",&cgiQ[0],&ptr->DL);
                 }
                 for (iter=0; iter<2; iter++)
                 {
