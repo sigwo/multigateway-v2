@@ -592,7 +592,7 @@ int32_t MGW_publishjson(char *retbuf,cJSON *json)
     jsonstr = cJSON_Print(json);
     _stripwhite(jsonstr,' ');
     sendlen = nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
-    //retval = mgw_processbus(retbuf,jsonstr,json);
+    retval = mgw_processbus(retbuf,jsonstr,json);
     printf("MGW publish.(%s) -> (%s) sock.%d sendlen.%d\n",jsonstr,retbuf,MGW.all.socks.both.bus,sendlen);
     free(jsonstr);
     return(retval);
