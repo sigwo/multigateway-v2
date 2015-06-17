@@ -51,8 +51,8 @@ int32_t coins_idle(struct plugin_info *plugin)
 }
 
 STRUCTNAME COINS;
-char *PLUGNAME(_methods)[] = { "acctpubkeys",  "packblocks", "sendrawtransaction" };
-char *PLUGNAME(_pubmethods)[] = { "acctpubkeys" };
+char *PLUGNAME(_methods)[] = { "acctpubkeys",  "packblocks", "sendrawtransaction", "setmultisig" };
+char *PLUGNAME(_pubmethods)[] = { "acctpubkeys", "setmultisig" };
 char *PLUGNAME(_authmethods)[] = { "acctpubkeys" };
 
 cJSON *coins777_json()
@@ -365,6 +365,8 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                     } else sprintf(retbuf,"{\"error\":\"no coin777\",\"method\":\"%s\"}",methodstr);
                 } else sprintf(retbuf,"{\"error\":\"gateway only method\",\"method\":\"%s\"}",methodstr);
             }
+            else if ( strcmp(methodstr,"setmultisig") == 0 )
+                add_MGWaddr(0,sender,1,jsonstr);
             else sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);
             if ( str != 0 )
             {

@@ -26,8 +26,8 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
     return(0);
 }
 
-char *PLUGNAME(_methods)[] = { "makeoffer3", "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory", "msigaddr" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "bid", "ask", "makeoffer3", "msigaddr" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_methods)[] = { "makeoffer3", "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory", "msigaddr", "setmsigaddr" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "bid", "ask", "makeoffer3", "msigaddr", "setmsigaddr" }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
 
 char *makeoffer3_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
