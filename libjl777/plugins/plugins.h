@@ -490,8 +490,9 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
 
 char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
 {
+    static char *retstr = 0;
     struct daemon_info *dp;
-    char retbuf[8192],methodbuf[1024],*str,*methodsstr,*retstr = 0;
+    char retbuf[8192],methodbuf[1024],*str,*methodsstr;
     uint64_t tag;
     cJSON *json,*argjson;
     struct relayargs *args = 0;
@@ -526,7 +527,7 @@ printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,l
     else
     {
         if ( Debuglevel > 1 )
-            fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess);
+            fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d retstrp.%p\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess,retstrp);
         if ( dp->readyflag == 0 )
         {
             fprintf(stderr,"readyflag.%d\n",dp->readyflag);
@@ -551,7 +552,7 @@ printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,l
         {
 fprintf(stderr,"send_to_daemon.(%s).%d\n",origargstr,len);
             *retstrp = 0;
-            if ( (tag= send_to_daemon(args,async==0?retstrp:0,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
+            if ( (tag= send_to_daemon(args,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
             {
 fprintf(stderr,"null tag from send_to_daemon\n");
                 return(clonestr("{\"error\":\"null tag from send_to_daemon\"}"));
