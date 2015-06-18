@@ -869,9 +869,10 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
 {
     int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
     cJSON *json,*argjson; uint32_t timestamp,checklen; int32_t len,valid,datalen = origlen; bits256 hash; uint8_t *msg = origmsg;
-    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],key[MAX_JSON_FIELD],*jsonstr,*retstr = 0;
+    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],key[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
+        len = (int32_t)strlen((char *)msg) + 1;
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
         {
             argjson = cJSON_GetArrayItem(json,0);
@@ -888,12 +889,11 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         }
         copy_cJSON(src,cJSON_GetObjectItem(json,"NXT"));
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
-        copy_cJSON(sha,cJSON_GetObjectItem(json,"s"));
+        copy_cJSON(sha,cJSON_GetObjectItem(json,"h"));
         checklen = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"l"),0);
-        len = (int32_t)strlen((char *)msg) + 1;
         if ( datalen >= len )
             datalen -= len, msg += len;
-        else printf("datalen.%d < len.%d\n",datalen,len);
+        else datalen = checklen;
         free_json(json);
         printf("datalen.%d checklen.%d len.%d\n",datalen,checklen,len);
         if ( datalen == checklen )
@@ -905,6 +905,8 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
                 printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
             } else retstr = clonestr("{\"error\":\"hashes dont match\"}");
         } else retstr = clonestr("{\"error\":\"datalen mismatch\"}");
+        if ( jsonstr != 0 )
+            free(jsonstr);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
     printf("BUSDATA.(%s) (%x)\n",retstr,*(int32_t *)msg);
     return(retstr);
@@ -940,7 +942,7 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
         }
         calc_sha256(hexstr,hash.bytes,data,datalen);
         cJSON_AddItemToObject(datajson,"l",cJSON_CreateNumber(datalen));
-        cJSON_AddItemToObject(datajson,"s",cJSON_CreateString(hexstr));
+        cJSON_AddItemToObject(datajson,"h",cJSON_CreateString(hexstr));
         str = cJSON_Print(datajson), _stripwhite(str,' ');
         if ( mypacket != 0 )
         {
