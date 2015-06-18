@@ -1366,18 +1366,16 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
 
 int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char encoded[NXT_TOKEN_LEN])
 {
-    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr; //uint8_t hash[32];
+    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr;
     cJSON *nxtobj,*validobj,*json;
     *validp = -1;
     sender[0] = 0;
     memcpy(token,encoded,NXT_TOKEN_LEN);
     token[NXT_TOKEN_LEN] = 0;
-    //calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
     sprintf(cmd,"requestType=decodeToken&website=%s&token=%s",key,token);
     if ( (retstr = issue_NXTPOST(cmd)) != 0 )
     {
         //printf("(%s) -> (%s)\n",cmd,retstr);
-        //printf("cmd.(%s) -> (%s)\n",cmd,retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             validobj = cJSON_GetObjectItem(json,"valid");
@@ -1386,7 +1384,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
             nxtobj = cJSON_GetObjectItem(json,"account");
             copy_cJSON(sender,nxtobj);
             free_json(json), free(retstr);
-            //printf("decoded valid.%d NXT.%s len.%d\n",*validp,sender,(int32_t)strlen(sender));
+printf("decoded valid.%d NXT.%s len.%d\n",*validp,sender,(int32_t)strlen(sender));
             if ( sender[0] != 0 )
                 return((int32_t)strlen(sender));
             else return(0);
@@ -1424,6 +1422,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
         else
         {
             strcpy(NXTaddr,buf);
+            printf("decoded.(%s)\n",NXTaddr);
             if ( strictflag != 0 )
             {
                 timeval = get_cJSON_int(firstitem,"time");
@@ -1439,6 +1438,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
             if ( retcode != -5 )
             {
                 firstjsontxt = cJSON_Print(firstitem), _stripwhite(firstjsontxt,' ');
+                printf("(%s)\n",firstjsontxt);
                 tokenobj = cJSON_GetArrayItem(array,1);
                 obj = cJSON_GetObjectItem(tokenobj,"token");
                 copy_cJSON((char *)encoded,obj);
@@ -1461,13 +1461,13 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         if ( strcmp(NXTaddr,buf) == 0 )
                             retcode = valid;
                     }
-                }
+                } else printf("decode error\n");
                 if ( retcode < 0 )
                     printf("err: signed by invalid sender.(%s) NXT.%s valid.%d or timediff too big diff.%lld, buf.(%s)\n",sender,NXTaddr,valid,(long long)diff,buf);
                 free(firstjsontxt);
             }
         }
-    }
+    } else printf("decode arraysize.%d\n",cJSON_GetArraySize(array));
     if ( array != 0 )
         free_json(array);
     return(retcode);
