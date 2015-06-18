@@ -961,8 +961,8 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         datalen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
         msg += len;
         free_json(json);
-        printf("datalen.%d len.%d\n",datalen,len);
-        calc_sha256(hexstr,hash.bytes,msg,datalen);
+        calc_sha256(hexstr,hash.bytes,&origmsg[origlen-datalen],datalen);
+        printf("datalen.%d len.%d %llx\n",datalen,len,(long long)hash.txid);
         if ( strcmp(hexstr,sha) == 0 )
         {
             retstr = busdata(valid,forwarder,src,key,timestamp,msg,datalen,origmsg,origlen);
