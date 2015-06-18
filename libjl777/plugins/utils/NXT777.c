@@ -1357,7 +1357,9 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     _stripwhite(cmdjson,' ');
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
     encoded[NXT_TOKEN_LEN] = 0;
-    sprintf(tokenized,"[%s,{\"token\":\"%s\", \"forwarder\":\"%s\"}]",cmdjson,encoded,SUPERNET.NXTADDR);
+    if ( SUPERNET.iamrelay == 0 )
+        sprintf(tokenized,"[%s, {\"token\":\"%s\"}]",cmdjson,encoded);
+    else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"}]",cmdjson,encoded,SUPERNET.NXTADDR);
     return((int32_t)strlen(tokenized)+1);
     // printf("(%s) -> (%s) _tokbuf.[%s]\n",NXTaddr,otherNXTaddr,_tokbuf);
 }
