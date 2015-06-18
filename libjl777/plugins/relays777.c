@@ -962,7 +962,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         msg += len;
         free_json(json);
         calc_sha256(hexstr,hash.bytes,&origmsg[origlen-datalen],datalen);
-        printf("datalen.%d len.%d %llx\n",datalen,len,(long long)hash.txid);
+        printf("datalen.%d len.%d %llx [%llx]\n",datalen,len,(long long)hash.txid,(long long)&origmsg[origlen-datalen]);
         if ( strcmp(hexstr,sha) == 0 )
         {
             retstr = busdata(valid,forwarder,src,key,timestamp,msg,datalen,origmsg,origlen);
@@ -1017,7 +1017,7 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
             tokbuf = calloc(1,strlen(str) + 1024);
             tlen = construct_tokenized_req(tokbuf,str,SUPERNET.NXTACCTSECRET), free(str);
         } else tokbuf = str, tlen = (int32_t)strlen(tokbuf) + 1;
-        printf("created busdata.(%s) tlen.%d\n",tokbuf,tlen);
+        printf("created busdata.(%s) tlen.%d [%llx]\n",tokbuf,tlen,(long long)data);
         *datalenp = tlen + datalen;
         if ( datalen > 0 )
         {
