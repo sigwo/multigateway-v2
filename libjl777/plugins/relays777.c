@@ -893,7 +893,6 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         checklen = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"l"),0);
         if ( datalen >= len )
             datalen -= len, msg += len;
-        else datalen = checklen;
         free_json(json);
         printf("datalen.%d checklen.%d len.%d\n",datalen,checklen,len);
         if ( datalen == checklen )
@@ -915,7 +914,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
 uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
 {
     int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
-    char key[MAX_JSON_FIELD],hexstr[65],numstr[65],*datastr,*str,*tokbuf; uint8_t *data = 0,*both = 0; bits256 hash;
+    char key[MAX_JSON_FIELD],hexstr[65],numstr[65],*datastr,*str,*tokbuf,*tmp; uint8_t *data = 0,*both = 0; bits256 hash;
     uint64_t nxt64bits; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0,mypacket = 0;
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -939,6 +938,10 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
         {
             data = (void *)clonestr(jsonstr);
             datalen = (int32_t)(strlen(jsonstr) + 1);
+            tmp = malloc(datalen << 1);
+            init_hexbytes_noT(tmp,(uint8_t *)jsonstr,datalen << 1);
+            cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
+            free(tmp);
         }
         calc_sha256(hexstr,hash.bytes,data,datalen);
         cJSON_AddItemToObject(datajson,"l",cJSON_CreateNumber(datalen));
