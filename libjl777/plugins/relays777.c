@@ -938,7 +938,7 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
         {
             data = (void *)clonestr(jsonstr);
             datalen = (int32_t)(strlen(jsonstr) + 1);
-            tmp = malloc(datalen << 1);
+            tmp = malloc((datalen << 1) + 1);
             init_hexbytes_noT(tmp,(uint8_t *)jsonstr,datalen << 1);
             cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
             free(tmp);
