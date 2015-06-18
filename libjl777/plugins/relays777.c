@@ -1045,7 +1045,10 @@ void responseloop(void *_args)
                 if ( (json= cJSON_Parse((char *)msg)) != 0 )
                 {
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(json,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
+                    {
+                        printf("CALL BUSDATA PROCESSOR\n");
                         retstr = nn_busdata_processor(args,(uint8_t *)msg,len);
+                    }
                     else
                     {
                         broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));

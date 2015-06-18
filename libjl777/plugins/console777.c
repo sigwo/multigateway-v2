@@ -225,7 +225,11 @@ char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcast
     len = (int32_t)strlen(cmdstr) + 1;
     //printf("userjson.(%s).%d plugin.(%s)\n",cmdstr,len,plugin);
     if ( broadcastflag != 0 || strcmp(plugin,"relay") == 0 )
-        retstr = nn_loadbalanced((uint8_t *)cmdstr,len);
+    {
+        if ( strcmp(method,"busdata") == 0 )
+            retstr = busdata_sync(cmdstr);
+        else retstr = nn_loadbalanced((uint8_t *)cmdstr,len);
+    }
     else if ( strcmp(plugin,"peers") == 0 )
         retstr = nn_allpeers((uint8_t *)cmdstr,len,timeout,0);
     else if ( find_daemoninfo(&tmp,plugin,0,0) != 0 )
