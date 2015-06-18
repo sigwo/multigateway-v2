@@ -876,7 +876,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
         {
             argjson = cJSON_GetArrayItem(json,0);
-            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"t"),0);
+            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
             jsonstr = cJSON_Print(argjson), _stripwhite(jsonstr,' ');
             sender[0] = 0;
             valid = validate_token(forwarder,pubkey,sender,(char *)msg,(timestamp != 0)*3);
@@ -884,7 +884,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         else
         {
             argjson = json;
-            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"t"),0);
+            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
             valid = -1;
             forwarder[0] = 0;
         }
@@ -927,7 +927,7 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
         datajson = cJSON_CreateObject();
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
-        cJSON_AddItemToObject(datajson,"t",cJSON_CreateNumber(timestamp));
+        cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp));
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
         if ( (datastr= cJSON_str(cJSON_GetObjectItem(json,"data"))) != 0 && is_hexstr(datastr) != 0 )
         {
