@@ -825,9 +825,10 @@ char *busdata_query(char *sender,char *key,uint32_t timestamp,cJSON *json)
 
 char *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
-    if ( strlen((char *)msg) == datalen-1 )
-        return(clonestr((char *)msg));
-    else return(0);
+    uint8_t *buf;
+    buf = malloc(datalen);
+    decode_hex(buf,datalen,(char *)msg);
+    return((char *)buf);
 }
 
 cJSON *busdata_decode(int32_t validated,char *sender,uint8_t *msg,int32_t datalen)
@@ -979,7 +980,7 @@ char *busdata_sync(char *jsonstr)
     {
         if ( SUPERNET.iamrelay != 0 )
         {
-            if ( RELAYS.bus.sock >= 0 && (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) != datalen )
+            if ( RELAYS.bus.sock >= 0 && (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) == datalen )
             {
                 printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
                 free(data);
