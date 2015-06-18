@@ -842,7 +842,7 @@ cJSON *busdata_decode(int32_t validated,char *sender,uint8_t *msg,int32_t datale
             free(jsonstr);
         } else printf("couldnt decrypt.(%s)\n",msg);
     } else printf("neg validated.%d\n",validated);
-    return(0);
+    return(json);
 }
 
 char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,uint8_t *origmsg,int32_t origlen)
@@ -898,6 +898,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         checklen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
         if ( datalen >= len )
             datalen -= len, msg += len;
+        else printf("no data\n");
         free_json(json);
         printf("datalen.%d checklen.%d len.%d\n",datalen,checklen,len);
         if ( datalen == checklen )
