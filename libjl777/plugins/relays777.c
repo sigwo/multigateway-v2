@@ -878,6 +878,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
             argjson = cJSON_GetArrayItem(json,0);
             timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"t"),0);
             jsonstr = cJSON_Print(argjson), _stripwhite(jsonstr,' ');
+            sender[0] = 0;
             valid = validate_token(forwarder,pubkey,sender,jsonstr,(timestamp != 0)*3);
         }
         else
