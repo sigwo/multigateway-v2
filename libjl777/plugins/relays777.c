@@ -876,21 +876,21 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
         {
             argjson = cJSON_GetArrayItem(json,0);
-            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"t"),0);
+            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"t"),0);
             jsonstr = cJSON_Print(argjson), _stripwhite(jsonstr,' ');
             valid = validate_token(forwarder,pubkey,sender,jsonstr,(timestamp != 0)*3);
         }
         else
         {
-            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"t"),0);
-            valid = -1;
             argjson = json;
+            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"t"),0);
+            valid = -1;
             forwarder[0] = 0;
         }
-        copy_cJSON(src,cJSON_GetObjectItem(json,"NXT"));
-        copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
-        copy_cJSON(sha,cJSON_GetObjectItem(json,"h"));
-        checklen = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"l"),0);
+        copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
+        copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
+        copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
+        checklen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
         if ( datalen >= len )
             datalen -= len, msg += len;
         free_json(json);
@@ -944,8 +944,8 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
             free(tmp);
         }
         calc_sha256(hexstr,hash.bytes,data,datalen);
-        cJSON_AddItemToObject(datajson,"l",cJSON_CreateNumber(datalen));
-        cJSON_AddItemToObject(datajson,"h",cJSON_CreateString(hexstr));
+        cJSON_AddItemToObject(datajson,"n",cJSON_CreateNumber(datalen));
+        cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str = cJSON_Print(datajson), _stripwhite(str,' ');
         if ( mypacket != 0 )
         {
