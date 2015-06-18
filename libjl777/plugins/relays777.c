@@ -935,8 +935,8 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
 char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origlen)
 {
     int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
-    cJSON *json,*argjson; uint32_t timestamp; int32_t len,valid,datalen = origlen; bits256 hash; uint8_t *msg = origmsg;
-    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],key[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
+    cJSON *json,*argjson; uint32_t timestamp; int32_t len,valid,datalen = origlen; bits256 hash; uint8_t databuf[8192],*msg = origmsg;
+    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         len = (int32_t)strlen((char *)msg) + 1;
@@ -955,14 +955,16 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
             valid = -1;
             forwarder[0] = 0;
         }
+        copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
+        decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
         copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
         copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
         copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
         datalen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
         msg += len;
         free_json(json);
-        calc_sha256(hexstr,hash.bytes,&origmsg[origlen-datalen],datalen);
-        printf("datalen.%d len.%d %llx [%llx]\n",datalen,len,(long long)hash.txid,(long long)&origmsg[origlen-datalen]);
+        calc_sha256(hexstr,hash.bytes,databuf,datalen);
+        printf("datalen.%d len.%d %llx [%llx]\n",datalen,len,(long long)hash.txid,(long long)databuf);
         if ( strcmp(hexstr,sha) == 0 )
         {
             retstr = busdata(valid,forwarder,src,key,timestamp,msg,datalen,origmsg,origlen);
