@@ -935,7 +935,7 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
 char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origlen)
 {
     int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
-    cJSON *json,*argjson; uint32_t timestamp,checklen; int32_t len,valid,datalen = origlen; bits256 hash; uint8_t *msg = origmsg;
+    cJSON *json,*argjson; uint32_t timestamp; int32_t len,valid,datalen = origlen; bits256 hash; uint8_t *msg = origmsg;
     char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],key[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
@@ -958,21 +958,17 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
         copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
         copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
-        checklen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
-        if ( datalen >= len )
-            datalen -= len, msg += len;
-        else printf("no data\n");
+        datalen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
+        msg += len;
         free_json(json);
-        printf("datalen.%d checklen.%d len.%d\n",datalen,checklen,len);
-        if ( datalen == checklen )
+        printf("datalen.%d len.%d\n",datalen,len);
+        calc_sha256(hexstr,hash.bytes,msg,datalen);
+        if ( strcmp(hexstr,sha) == 0 )
         {
-            calc_sha256(hexstr,hash.bytes,msg,datalen);
-            if ( strcmp(hexstr,sha) == 0 )
-            {
-                retstr = busdata(valid,forwarder,src,key,timestamp,msg,datalen,origmsg,origlen);
-                printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
-            } else retstr = clonestr("{\"error\":\"hashes dont match\"}");
-        } else retstr = clonestr("{\"error\":\"datalen mismatch\"}");
+            retstr = busdata(valid,forwarder,src,key,timestamp,msg,datalen,origmsg,origlen);
+            printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
+        }
+        else retstr = clonestr("{\"error\":\"hashes dont match\"}");
         if ( jsonstr != 0 )
             free(jsonstr);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
