@@ -839,8 +839,8 @@ cJSON *busdata_decode(int32_t validated,char *sender,uint8_t *msg,int32_t datale
         {
             json = cJSON_Parse((char *)msg);
             free(jsonstr);
-        }
-    }
+        } else printf("couldnt decrypt.(%s)\n",msg);
+    } else printf("neg validated.%d\n",validated);
     return(0);
 }
 
@@ -852,7 +852,10 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
         if ( (json= busdata_decode(validated,sender,msg,datalen)) != 0 )
         {
             if ( (retstr= busdata_query(sender,key,timestamp,json)) != 0 )
+            {
+                printf("busdata_query returned.(%s)\n",retstr);
                 return(retstr);
+            }
             else
             {
                 busdata_addpending(sender,key,timestamp,json);
@@ -860,7 +863,7 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
                     nn_send(RELAYS.bus.sock,origmsg,origlen,0);
             }
             free_json(json);
-        }
+        } else printf("couldnt decode.(%s)\n",msg);
     }
     return(retstr);
 }
