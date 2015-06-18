@@ -419,7 +419,10 @@ int32_t add_relay_connections(char *domain,int32_t skiplb)
     if ( SUPERNET.iamrelay != 0 )
     {
         if ( skiplb == 2 )
+        {
+            printf("BUS ");
             update_serverbits(&RELAYS.bus,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_BUS);
+        }
     }
     if ( skiplb == 0 )
         update_serverbits(&RELAYS.lb,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_REP),NN_REP);
@@ -812,17 +815,6 @@ void nn_direct_processor(int32_t directind,uint8_t *msg,int32_t len)
     }
 }
 
-void busdata_addpending(char *sender,char *key,uint32_t timestamp,cJSON *json)
-{
-    printf("add pending.(%s)\n",cJSON_Print(json));
-}
-
-char *busdata_query(char *sender,char *key,uint32_t timestamp,cJSON *json)
-{
-    char *retstr = 0;
-    return(retstr);
-}
-
 char *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
     uint8_t *buf;
@@ -831,7 +823,7 @@ char *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
     return((char *)buf);
 }
 
-cJSON *busdata_decode(int32_t validated,char *sender,uint8_t *msg,int32_t datalen)
+cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,int32_t datalen)
 {
     char *jsonstr; cJSON *json = 0;
     if ( validated >= 0 )
@@ -839,30 +831,101 @@ cJSON *busdata_decode(int32_t validated,char *sender,uint8_t *msg,int32_t datale
         if ( (jsonstr= busdata_decrypt(sender,msg,datalen)) != 0 )
         {
             json = cJSON_Parse((char *)msg);
+            copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
             free(jsonstr);
         } else printf("couldnt decrypt.(%s)\n",msg);
     } else printf("neg validated.%d\n",validated);
     return(json);
 }
 
+queue_t busdataQ[2];
+struct busdata_item { struct queueitem DL; cJSON *json; char *retstr,*key; uint64_t dest64bits,senderbits; uint32_t queuetime,donetime; };
+
+char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
+{
+    struct busdata_item *ptr = calloc(1,sizeof(*ptr));
+    ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
+    ptr->dest64bits = calc_nxt64bits(destNXT), ptr->senderbits = calc_nxt64bits(sender);
+    printf("%s -> %s add pending.(%s)\n",sender,destNXT,cJSON_Print(json));
+    queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
+    return(clonestr("{\"result\":\"busdata query queued\"}"));
+}
+
+int32_t busdata_match(struct busdata_item *ptr,uint64_t dest64bits,uint64_t senderbits,char *key,uint32_t timestamp,cJSON *json)
+{
+    if ( ptr->dest64bits == senderbits && ptr->senderbits == dest64bits && strcmp(key,ptr->key) == 0 )
+        return(1);
+    else return(0);
+}
+
+int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
+{
+    return(0);
+}
+
+char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
+{
+    uint64_t dest64bits,senderbits; struct busdata_item *ptr; char *retstr = 0; int32_t iter; uint32_t now = (uint32_t)time(NULL);
+    dest64bits = calc_nxt64bits(destNXT), senderbits = calc_nxt64bits(sender);
+    for (iter=0; iter<2; iter++)
+    {
+        if ( (ptr= queue_dequeue(&busdataQ[iter],0)) != 0 )
+        {
+            if ( busdata_match(ptr,dest64bits,senderbits,key,timestamp,json) != 0 )
+            {
+                if ( (retstr= ptr->retstr) != 0 )
+                    retstr = clonestr("{\"result\":\"busdata request done\"}");
+                if ( ptr->json != 0 )
+                    free_json(ptr->json);
+                if ( ptr->key != 0 )
+                    free(ptr->key);
+                return(retstr);
+            }
+            else if ( (now - ptr->queuetime) > 600 )
+            {
+                printf("expired busdataQ.%u at %u\n",ptr->queuetime,now);
+                if ( ptr->retstr != 0 )
+                    free(ptr->retstr);
+                if ( ptr->json != 0 )
+                    free_json(ptr->json);
+                if ( ptr->key != 0 )
+                    free(ptr->key);
+                free(ptr);
+            }
+            else queue_enqueue("re-busdata",&busdataQ[iter ^ 1],&ptr->DL);
+        }
+    }
+    return(retstr);
+}
+
 char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,uint8_t *origmsg,int32_t origlen)
 {
-    cJSON *json; char *retstr = 0;
+    cJSON *json; char destNXT[64],response[1024],*retstr = 0;
     if ( SUPERNET.iamrelay != 0 && validated != 0 )
     {
-        if ( (json= busdata_decode(validated,sender,msg,datalen)) != 0 )
+        if ( (json= busdata_decode(destNXT,validated,sender,msg,datalen)) != 0 )
         {
-            if ( (retstr= busdata_query(sender,key,timestamp,json)) != 0 )
+            copy_cJSON(response,cJSON_GetObjectItem(json,"response"));
+            if ( response[0] == 0 )
+            {
+                if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
+                    return(clonestr("{\"error\":\"busdata duplicate request\"}"));
+                else
+                {
+                    retstr = busdata_addpending(destNXT,sender,key,timestamp,json);
+                    if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.bus.sock >= 0 )
+                    {
+                        printf("BUS-SEND.(%s)\n",origmsg);
+                        nn_send(RELAYS.bus.sock,origmsg,origlen,0);
+                    }
+                }
+            }
+            else if ( (retstr= busdata_matchquery(response,destNXT,sender,key,timestamp,json)) != 0 )
             {
                 printf("busdata_query returned.(%s)\n",retstr);
                 return(retstr);
             }
-            else
-            {
-                busdata_addpending(sender,key,timestamp,json);
-                if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.bus.sock >= 0 )
-                    nn_send(RELAYS.bus.sock,origmsg,origlen,0);
-            }
+            else return(clonestr("{\"error\":\"busdata response without matching query\"}"));
             free_json(json);
         } else printf("couldnt decode.(%s)\n",msg);
     }
@@ -981,12 +1044,13 @@ char *busdata_sync(char *jsonstr)
     {
         if ( SUPERNET.iamrelay != 0 )
         {
-            if ( RELAYS.bus.sock >= 0 && (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) == datalen )
+            if ( RELAYS.bus.sock >= 0 && (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) != datalen )
             {
-                printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
+                if ( Debuglevel > 2 )
+                    printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
                 free(data);
                 return(clonestr("{\"error\":\"couldnt send to bus\"}"));
-            } else printf("no bus sock or error sending sendlen.%d vs %d\n",sendlen,datalen);
+            }
             free(data);
             return(clonestr("{\"result\":\"sent to bus\"}"));
         }
