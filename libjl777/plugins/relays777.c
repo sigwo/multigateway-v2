@@ -986,11 +986,11 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         msg += len;
         free_json(json);
         calc_sha256(hexstr,hash.bytes,databuf,datalen);
-        printf("datalen.%d len.%d %llx [%llx]\n",datalen,len,(long long)hash.txid,(long long)databuf);
+        //printf("datalen.%d len.%d %llx [%llx]\n",datalen,len,(long long)hash.txid,(long long)databuf);
         if ( strcmp(hexstr,sha) == 0 )
         {
             retstr = busdata(valid,forwarder,src,key,timestamp,msg,datalen,origmsg,origlen);
-            printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
+            //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
         }
         else retstr = clonestr("{\"error\":\"hashes dont match\"}");
         if ( jsonstr != 0 )
@@ -1135,8 +1135,6 @@ void responseloop(void *_args)
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
                 retstr = 0;
-                //if ( Debuglevel > 1 )
-                printf("RECV.%s (%s).%ld\n",args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
                 if ( (json= cJSON_Parse((char *)msg)) != 0 )
                 {
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(json,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
@@ -1146,6 +1144,8 @@ void responseloop(void *_args)
                     }
                     else
                     {
+                        //if ( Debuglevel > 1 )
+                        printf("RECV.%s (%s).%ld\n",args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
                         broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));
                         if ( broadcaststr != 0 && strcmp(broadcaststr,"allpeers") == 0 )
                         {
