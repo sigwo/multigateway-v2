@@ -191,8 +191,9 @@ fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,json
         }
         else if ( strcmp(methodstr,"LSUM") == 0 )
         {
-            sprintf(retbuf,"{\"result\":\"%s %d\"}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
+            sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
             printf("LSUM.(%s)\n",retbuf);
+            retstr = clonestr(retbuf);
         }
         else retstr = InstantDEX_parser(jsonstr,json);
         if ( retstr != 0 )
