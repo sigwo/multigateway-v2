@@ -15,6 +15,7 @@
 
 #define DEFINES_ONLY
 #include "system777.c"
+#include "NXT777.c"
 #include "plugin777.c"
 //#include "gen1block.c"
 #undef DEFINES_ONLY
@@ -844,8 +845,10 @@ struct busdata_item { struct queueitem DL; cJSON *json; char *retstr,*key; uint6
 char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
 {
     struct busdata_item *ptr = calloc(1,sizeof(*ptr));
+    if ( key == 0 )
+        key = "";
     ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
-    ptr->dest64bits = calc_nxt64bits(destNXT), ptr->senderbits = calc_nxt64bits(sender);
+    ptr->dest64bits = conv_acctstr(destNXT), ptr->senderbits = conv_acctstr(sender);
     printf("%s -> %s add pending.(%s)\n",sender,destNXT,cJSON_Print(json));
     queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
     return(clonestr("{\"result\":\"busdata query queued\"}"));
@@ -866,7 +869,7 @@ int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timest
 char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
 {
     uint64_t dest64bits,senderbits; struct busdata_item *ptr; char *retstr = 0; int32_t iter; uint32_t now = (uint32_t)time(NULL);
-    dest64bits = calc_nxt64bits(destNXT), senderbits = calc_nxt64bits(sender);
+    dest64bits = conv_acctstr(destNXT), senderbits = conv_acctstr(sender);
     for (iter=0; iter<2; iter++)
     {
         if ( (ptr= queue_dequeue(&busdataQ[iter],0)) != 0 )
@@ -989,7 +992,7 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         if ( (nxt64bits= get_API_nxt64bits(cJSON_GetObjectItem(json,"NXT"))) == 0 )
-            nxt64bits = calc_nxt64bits(SUPERNET.NXTADDR), mypacket = 1;
+            nxt64bits = conv_acctstr(SUPERNET.NXTADDR), mypacket = 1;
         datajson = cJSON_CreateObject();
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));

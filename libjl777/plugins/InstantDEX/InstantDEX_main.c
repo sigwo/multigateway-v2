@@ -156,6 +156,7 @@ fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,json
     {
         // configure settings
         plugin->allowremote = 1;
+        portable_mutex_init(&plugin->mutex);
         init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0);
         update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
@@ -192,10 +193,14 @@ fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,json
         else if ( strcmp(methodstr,"LSUM") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
-            printf("LSUM.(%s)\n",retbuf);
             retstr = clonestr(retbuf);
         }
-        else retstr = InstantDEX_parser(jsonstr,json);
+        else
+        {
+            portable_mutex_lock(&plugin->mutex);
+            retstr = InstantDEX_parser(jsonstr,json);
+            portable_mutex_unlock(&plugin->mutex);
+        }
         if ( retstr != 0 )
         {
             if ( strlen(retstr) >= maxlen-1 )
