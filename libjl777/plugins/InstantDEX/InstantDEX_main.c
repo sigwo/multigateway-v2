@@ -151,7 +151,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
 {
     char sender[MAX_JSON_FIELD],echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
-//fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
@@ -192,6 +192,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         else if ( strcmp(methodstr,"LSUM") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s %d\"}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
+            printf("LSUM.(%s)\n",retbuf);
         }
         else retstr = InstantDEX_parser(jsonstr,json);
         if ( retstr != 0 )

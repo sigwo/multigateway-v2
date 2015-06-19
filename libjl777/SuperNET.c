@@ -744,7 +744,7 @@ queue_t cgiQ[2];
 
 int32_t SuperNET_apireturn(int32_t retsock,int32_t retind,char *apitag,char *retstr)
 {
-    int32_t retlen,ind,checklen;
+    int32_t retlen,checklen;
     retlen = (int32_t)strlen(retstr) + 1;
     //if ( (ind= nn_connect(sock,apitag)) < 0 )
     //    fprintf(stderr,"error connecting to (%s)\n",apitag);
