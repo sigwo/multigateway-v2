@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 {
     CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,portflag = 0; cJSON *json; long offset;
     char urlbuf[512],namebuf[512],postbuf[65536],*retstr,*delim,*url = 0;
-    setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
+    //setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
     json = cJSON_CreateObject();
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
