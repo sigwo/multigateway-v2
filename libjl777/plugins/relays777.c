@@ -1137,7 +1137,7 @@ void responseloop(void *_args)
                 retstr = 0;
                 if ( (json= cJSON_Parse((char *)msg)) != 0 )
                 {
-                    if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 0 )
+                    if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
                         argjson = cJSON_GetArrayItem(json,0);
                     else argjson = json;
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
