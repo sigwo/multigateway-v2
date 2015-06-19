@@ -876,7 +876,7 @@ int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timest
         DL_FOREACH(busdataQ[iter].list,ptr)
         {
             busdata = (struct busdata_item *)ptr;
-            printf("%d.(%llx vs %llx).i%d ",iter,(long long)busdata->hash.txid,(long long)hash.txid,i);
+            //printf("%d.(%llx vs %llx).i%d ",iter,(long long)busdata->hash.txid,(long long)hash.txid,i);
             if ( busdata->hash.txid == hash.txid )
                 return(1);
             i++;
@@ -1142,7 +1142,7 @@ void responseloop(void *_args)
                     else argjson = json;
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
                     {
-                        printf("CALL BUSDATA PROCESSOR\n");
+                        //printf("CALL BUSDATA PROCESSOR\n");
                         retstr = nn_busdata_processor(args,(uint8_t *)msg,len);
                     }
                     else
