@@ -877,8 +877,9 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
 
 char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
 {
-    struct busdata_item *ptr = calloc(1,sizeof(*ptr));
-    struct service_provider *sp; int32_t i,sendtimeout,recvtimeout; char submethod[512],endpoint[512],servicename[512],*hashstr,*str,*retstr;
+    cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
+    struct service_provider *sp; int32_t i,sendtimeout,recvtimeout;
+    char submethod[512],endpoint[512],destplugin[512],servicename[512],*hashstr,*str,*retstr;
     if ( key == 0 )
         key = "0";
     ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
@@ -887,6 +888,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
         decode_hex(ptr->hash.bytes,sizeof(ptr->hash),hashstr);
     else memset(ptr->hash.bytes,0,sizeof(ptr->hash));
     copy_cJSON(submethod,cJSON_GetObjectItem(json,"submethod"));
+    copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
     if ( strcmp(submethod,"serviceprovider") == 0 )
     {
@@ -925,7 +927,13 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             return(clonestr("{\"result\":\"serviceprovider not found\"}"));
         else
         {
-            str = cJSON_Print(json), _stripwhite(str,' ');
+            argjson = cJSON_Duplicate(json,1);
+            cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(submethod));
+            cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(destplugin));
+            cJSON_DeleteItemFromObject(argjson,"submethod");
+            cJSON_DeleteItemFromObject(argjson,"destplugin");
+            str = cJSON_Print(argjson), _stripwhite(str,' ');
+            free_json(argjson);
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
             {
                 free(str);
