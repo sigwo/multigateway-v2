@@ -967,7 +967,7 @@ int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timest
             busdata = (struct busdata_item *)ptr;
             //printf("%d.(%llx vs %llx).i%d ",iter,(long long)busdata->hash.txid,(long long)hash.txid,i);
             if ( busdata->hash.txid == hash.txid )
-                return(1);
+                return(1 * 0);
             i++;
         }
     }
