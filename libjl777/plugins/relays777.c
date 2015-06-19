@@ -1126,7 +1126,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *argjson)
 void responseloop(void *_args)
 {
     struct relayargs *args = _args;
-    int32_t len; char *str,*msg,*retstr,*broadcaststr,*retstr2,*methodstr; cJSON *json;
+    int32_t len; char *str,*msg,*retstr,*broadcaststr,*retstr2,*methodstr; cJSON *json,*argjson;
     if ( args->sock >= 0 )
     {
         fprintf(stderr,"respondloop.%s %d type.%d <- (%s).%d\n",args->name,args->sock,args->type,args->endpoint,nn_oppotype(args->type));
@@ -1137,7 +1137,10 @@ void responseloop(void *_args)
                 retstr = 0;
                 if ( (json= cJSON_Parse((char *)msg)) != 0 )
                 {
-                    if ( (methodstr= cJSON_str(cJSON_GetObjectItem(json,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
+                    if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 0 )
+                        argjson = cJSON_GetArrayItem(json,0);
+                    else argjson = json;
+                    if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
                     {
                         printf("CALL BUSDATA PROCESSOR\n");
                         retstr = nn_busdata_processor(args,(uint8_t *)msg,len);
@@ -1145,11 +1148,11 @@ void responseloop(void *_args)
                     else
                     {
                         //if ( Debuglevel > 1 )
-                        printf("RECV.%s (%s).%ld\n",args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
-                        broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));
+                        printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
+                        broadcaststr = cJSON_str(cJSON_GetObjectItem(argjson,"broadcast"));
                         if ( broadcaststr != 0 && strcmp(broadcaststr,"allpeers") == 0 )
                         {
-                            cJSON_DeleteItemFromObject(json,"broadcast");
+                            cJSON_DeleteItemFromObject(argjson,"broadcast");
                             str = cJSON_Print(json), _stripwhite(str,' ');
                             len = (int32_t)strlen(str)+1;
                             retstr = (*args->commandprocessor)(args,(uint8_t *)str,len);
