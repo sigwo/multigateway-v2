@@ -196,12 +196,23 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     int32_t n = 0;
-    strcpy(servers[n++],"192.99.151.160");
+    /*strcpy(servers[n++],"192.99.151.160");
     strcpy(servers[n++],"167.114.96.223");
     strcpy(servers[n++],"167.114.113.197");
     strcpy(servers[n++],"5.9.105.170");
     strcpy(servers[n++],"136.243.5.70");
-    strcpy(servers[n++],"5.9.155.145");
+     strcpy(servers[n++],"5.9.155.145");*/
+    strcpy(servers[n++],"167.114.96.223");
+    strcpy(servers[n++],"167.114.113.25");
+    strcpy(servers[n++],"167.114.113.27");
+    strcpy(servers[n++],"167.114.113.194");
+    strcpy(servers[n++],"167.114.113.197");
+    strcpy(servers[n++],"167.114.113.201");
+    strcpy(servers[n++],"167.114.113.246");
+    strcpy(servers[n++],"167.114.113.249");
+    strcpy(servers[n++],"167.114.113.250");
+    strcpy(servers[n++],"192.99.151.160");
+    strcpy(servers[n++],"167.114.96.222");
     return(n);
 }
 
@@ -841,10 +852,33 @@ cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,
 
 queue_t busdataQ[2];
 struct busdata_item { struct queueitem DL; bits256 hash; cJSON *json; char *retstr,*key; uint64_t dest64bits,senderbits; uint32_t queuetime,donetime; };
+struct service_provider { UT_hash_handle hh; int32_t sock,numendpoints; char **endpoints; } *Service_providers;
+
+char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datalen)
+{
+    int32_t i,sendlen,recvlen; char *msg,*jsonstr = 0;
+    for (i=0; i<10; i++)
+        if ( (nn_socket_status(sp->sock,1) & NN_POLLOUT) != 0 )
+            break;
+    printf("lb_serviceprovider.(%s)\n",data);
+    if ( (sendlen= nn_send(sp->sock,data,datalen,0)) == datalen )
+    {
+        for (i=0; i<1000; i++)
+            if ( (nn_socket_status(sp->sock,1) & NN_POLLIN) != 0 )
+                break;
+        if ( (recvlen= nn_recv(sp->sock,&msg,NN_MSG,0)) > 0 )
+        {
+            jsonstr = clonestr((char *)msg);
+            nn_freemsg(msg);
+        }
+    } else printf("sendlen.%d != datalen.%d\n",sendlen,datalen);
+    return(jsonstr);
+}
 
 char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
 {
-    struct busdata_item *ptr = calloc(1,sizeof(*ptr)); char *hashstr;
+    struct busdata_item *ptr = calloc(1,sizeof(*ptr));
+    struct service_provider *sp; int32_t i,sendtimeout,recvtimeout; char submethod[512],endpoint[512],servicename[512],*hashstr,*str,*retstr;
     if ( key == 0 )
         key = "0";
     ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
@@ -852,9 +886,56 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     if ( (hashstr= cJSON_str(cJSON_GetObjectItem(json,"H"))) != 0 )
         decode_hex(ptr->hash.bytes,sizeof(ptr->hash),hashstr);
     else memset(ptr->hash.bytes,0,sizeof(ptr->hash));
+    copy_cJSON(submethod,cJSON_GetObjectItem(json,"submethod"));
+    copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
+    if ( strcmp(submethod,"serviceprovider") == 0 )
+    {
+        copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
+        HASH_FIND(hh,Service_providers,servicename,strlen(servicename),sp);
+        if ( sp != 0 )
+        {
+            if ( sp->numendpoints > 0 )
+            {
+                for (i=0; i<sp->numendpoints; i++)
+                    if ( strcmp(sp->endpoints[i],endpoint) == 0 )
+                        return(clonestr("{\"result\":\"serviceprovider duplicate endpoint\"}"));
+            }
+        }
+        if ( sp == 0 )
+        {
+            sp = calloc(1,sizeof(*sp));
+            HASH_ADD_KEYPTR(hh,Service_providers,servicename,strlen(servicename),sp);
+            sp->sock = nn_socket(AF_SP,NN_REQ);
+            sendtimeout = 1000, recvtimeout = 5000;
+            if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            fprintf(stderr,"create servicename.(%s) sock.%d\n",servicename,sp->sock);
+        }
+        sp->endpoints = realloc(sp->endpoints,sizeof(*sp->endpoints) * (sp->numendpoints + 1));
+        sp->endpoints[sp->numendpoints++] = clonestr(endpoint);
+        nn_connect(sp->sock,endpoint);
+        return(clonestr("{\"result\":\"serviceprovider endpoint added\"}"));
+    }
+    else if ( strcmp(submethod,"service") == 0 )
+    {
+        HASH_FIND(hh,Service_providers,servicename,strlen(servicename),sp);
+        if ( sp == 0 )
+            return(clonestr("{\"result\":\"serviceprovider not found\"}"));
+        else
+        {
+            str = cJSON_Print(json), _stripwhite(str,' ');
+            if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
+            {
+                free(str);
+                return(retstr);
+            } else free(str);
+        }
+    }
     printf("%s -> %s add pending.(%s) %llx\n",sender,destNXT,cJSON_Print(json),(long long)ptr->hash.txid);
     queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
-    return(clonestr("{\"result\":\"busdata query queued\"}"));
+    return(0);
 }
 
 int32_t busdata_match(struct busdata_item *ptr,uint64_t dest64bits,uint64_t senderbits,char *key,uint32_t timestamp,cJSON *json)
@@ -934,11 +1015,13 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
                     return(clonestr("{\"error\":\"busdata duplicate request\"}"));
                 else
                 {
-                    retstr = busdata_addpending(destNXT,sender,key,timestamp,json);
-                    if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.bus.sock >= 0 )
+                    if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json)) == 0 )
                     {
-                        printf("BUS-SEND.(%s)\n",origmsg);
-                        nn_send(RELAYS.bus.sock,origmsg,origlen,0);
+                        if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.bus.sock >= 0 )
+                        {
+                            printf("BUS-SEND.(%s)\n",origmsg);
+                            nn_send(RELAYS.bus.sock,origmsg,origlen,0);
+                        }
                     }
                 }
             }
