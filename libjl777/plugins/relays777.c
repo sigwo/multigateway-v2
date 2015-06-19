@@ -840,16 +840,19 @@ cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,
 }
 
 queue_t busdataQ[2];
-struct busdata_item { struct queueitem DL; cJSON *json; char *retstr,*key; uint64_t dest64bits,senderbits; uint32_t queuetime,donetime; };
+struct busdata_item { struct queueitem DL; bits256 hash; cJSON *json; char *retstr,*key; uint64_t dest64bits,senderbits; uint32_t queuetime,donetime; };
 
 char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
 {
-    struct busdata_item *ptr = calloc(1,sizeof(*ptr));
+    struct busdata_item *ptr = calloc(1,sizeof(*ptr)); char *hashstr;
     if ( key == 0 )
-        key = "";
+        key = "0";
     ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
     ptr->dest64bits = conv_acctstr(destNXT), ptr->senderbits = conv_acctstr(sender);
-    printf("%s -> %s add pending.(%s)\n",sender,destNXT,cJSON_Print(json));
+    if ( (hashstr= cJSON_str(cJSON_GetObjectItem(json,"H"))) != 0 )
+        decode_hex(ptr->hash.bytes,sizeof(ptr->hash),hashstr);
+    else memset(ptr->hash.bytes,0,sizeof(ptr->hash));
+    printf("%s -> %s add pending.(%s) %llx\n",sender,destNXT,cJSON_Print(json),(long long)ptr->hash.txid);
     queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
     return(clonestr("{\"result\":\"busdata query queued\"}"));
 }
@@ -863,6 +866,22 @@ int32_t busdata_match(struct busdata_item *ptr,uint64_t dest64bits,uint64_t send
 
 int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
 {
+    char *hashstr; bits256 hash; struct queueitem *ptr; struct busdata_item *busdata; int32_t i,iter;
+    if ( (hashstr= cJSON_str(cJSON_GetObjectItem(json,"H"))) != 0 )
+        decode_hex(hash.bytes,sizeof(hash),hashstr);
+    else memset(hash.bytes,0,sizeof(hash));
+    for (iter=0; iter<2; iter++)
+    {
+        i = 0;
+        DL_FOREACH(busdataQ[iter].list,ptr)
+        {
+            busdata = (struct busdata_item *)ptr;
+            printf("%d.(%llx vs %llx).i%d ",iter,(long long)busdata->hash.txid,(long long)hash.txid,i);
+            if ( busdata->hash.txid == hash.txid )
+                return(1);
+            i++;
+        }
+    }
     return(0);
 }
 
