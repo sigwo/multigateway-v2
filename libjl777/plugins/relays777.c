@@ -934,7 +934,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s)\n",servicename,sp->sock,endpoint);
         }
-        nn_syncbus(origjson);
+        //nn_syncbus(origjson);
         sp->endpoints = realloc(sp->endpoints,sizeof(*sp->endpoints) * (sp->numendpoints + 1));
         sp->endpoints[sp->numendpoints++] = clonestr(endpoint);
         nn_connect(sp->sock,endpoint);
@@ -963,7 +963,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     }
     printf("%s -> %s add pending.(%s) %llx\n",sender,destNXT,cJSON_Print(json),(long long)ptr->hash.txid);
     queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
-    nn_syncbus(origjson);
+    //nn_syncbus(origjson);
     return(0);
 }
 
@@ -1038,11 +1038,12 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
         if ( (json= busdata_decode(destNXT,validated,sender,msg,datalen)) != 0 )
         {
             copy_cJSON(response,cJSON_GetObjectItem(json,"response"));
+            nn_syncbus(origjson);
             if ( response[0] == 0 )
             {
-                if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
-                    return(clonestr("{\"error\":\"busdata duplicate request\"}"));
-                else retstr = busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson);
+                //if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
+                //    return(clonestr("{\"error\":\"busdata duplicate request\"}"));
+                retstr = busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson);
             }
             else if ( (retstr= busdata_matchquery(response,destNXT,sender,key,timestamp,json)) != 0 )
             {
