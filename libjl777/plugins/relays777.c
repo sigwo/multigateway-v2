@@ -953,14 +953,14 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             return(clonestr("{\"result\":\"serviceprovider not found\"}"));
         else
         {
-            argjson = cJSON_GetArrayItem(origjson,1);
-            cJSON_ReplaceItemInObject(argjson,"usedest",cJSON_CreateNumber(1));
+            argjson = cJSON_Duplicate(origjson,1);
+            cJSON_ReplaceItemInObject(cJSON_GetArrayItem(argjson,1),"usedest",cJSON_CreateNumber(1));
             /*cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(submethod));
             cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(destplugin));
             cJSON_DeleteItemFromObject(argjson,"submethod");
             cJSON_DeleteItemFromObject(argjson,"destplugin");*/
-            str = cJSON_Print(origjson), _stripwhite(str,' ');
-            //free_json(argjson);
+            str = cJSON_Print(argjson), _stripwhite(str,' ');
+            free_json(argjson);
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
             {
                 free(str);
