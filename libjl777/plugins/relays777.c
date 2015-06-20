@@ -899,7 +899,7 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
 char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json,char *forwarder,cJSON *origjson)
 {
     cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
-    struct service_provider *sp; int32_t i,sendtimeout,recvtimeout;
+    struct service_provider *sp; int32_t i,sendtimeout,recvtimeout,retrymillis;
     char submethod[512],endpoint[512],destplugin[512],servicename[512],*hashstr,*str,*retstr;
     if ( key == 0 || key[0] == 0 )
         key = "0";
@@ -929,11 +929,13 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             sp = calloc(1,sizeof(*sp));
             HASH_ADD_KEYPTR(hh,Service_providers,servicename,strlen(servicename),sp);
             sp->sock = nn_socket(AF_SP,NN_REQ);
-            sendtimeout = 1000, recvtimeout = 5000;
+            sendtimeout = 1000, recvtimeout = 1000, retrymillis = 1000;
             if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
+                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
             fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s)\n",servicename,sp->sock,endpoint);
         }
         sp->endpoints = realloc(sp->endpoints,sizeof(*sp->endpoints) * (sp->numendpoints + 1));
@@ -1064,7 +1066,7 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
 char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
-    cJSON *json,*argjson; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192];
+    cJSON *json,*argjson; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192]; uint64_t tag;
     char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
@@ -1079,6 +1081,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
             copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
             copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
             copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
+            tag = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"tag"));
             decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
             datalen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
             calc_sha256(hexstr,hash.bytes,(uint8_t *)databuf,datalen);
@@ -1101,7 +1104,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
 {
     int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
     char key[MAX_JSON_FIELD],hexstr[65],numstr[65],*str,*tokbuf = 0,*tmp; bits256 hash;
-    uint64_t nxt64bits; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
+    uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
@@ -1109,6 +1112,8 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         datajson = cJSON_CreateObject();
+        randombytes((uint8_t *)&tag,sizeof(tag));
+        sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(datajson,"tag",cJSON_CreateString(numstr));
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp));
@@ -1362,7 +1367,7 @@ void serverloop(void *_args)
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allpeers_processor);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
-    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
+    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET.port); // NN_REQ
     bussock = -1;
     if ( SUPERNET.iamrelay != 0 )
     {
