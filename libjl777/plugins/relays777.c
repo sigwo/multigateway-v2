@@ -1153,6 +1153,7 @@ char *busdata_sync(char *jsonstr)
         {
             retstr = nn_loadbalanced((uint8_t *)data,datalen);
             free(data);
+            return(retstr);
         }
     }
     return(clonestr("{\"error\":\"error creating busdata\"}"));
