@@ -829,7 +829,8 @@ void nn_direct_processor(int32_t directind,uint8_t *msg,int32_t len)
 
 void nn_syncbus(cJSON *json)
 {
-    cJSON *argjson,*second; char forwarder[MAX_JSON_FIELD],*jsonstr;
+    cJSON *argjson,*second; char forwarder[MAX_JSON_FIELD],*jsonstr; uint64_t forwardbits,nxt64bits;
+    printf("pubsock.%d iamrelay.%d arraysize.%d\n",RELAYS.pubsock,SUPERNET.iamrelay,cJSON_GetArraySize(json));
     if ( RELAYS.pubsock >= 0 && SUPERNET.iamrelay != 0 && is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
@@ -837,11 +838,10 @@ void nn_syncbus(cJSON *json)
         copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
         ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-        if ( forwarder[0] == 0 || strcmp(forwarder,SUPERNET.NXTADDR) == 0 )
-        {
-            printf("BUS-SEND.(%s)\n",jsonstr);
+        forwardbits = conv_acctstr(forwarder), nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
+        printf("BUS-SEND.(%s) forwarder.%llu vs %llu\n",jsonstr,(long long)forwardbits,(long long)nxt64bits);
+        if ( forwardbits == 0 || forwardbits == nxt64bits )
             nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
-        }
         free(jsonstr);
     }
 }
@@ -899,7 +899,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
     struct service_provider *sp; int32_t i,sendtimeout,recvtimeout;
     char submethod[512],endpoint[512],destplugin[512],servicename[512],*hashstr,*str,*retstr;
-    if ( key == 0 )
+    if ( key == 0 || key[0] == 0 )
         key = "0";
     ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
     ptr->dest64bits = conv_acctstr(destNXT), ptr->senderbits = conv_acctstr(sender);
