@@ -1148,8 +1148,8 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
         free(tmp);
         //printf("created busdata.(%s) tlen.%d [%llx]\n",tokbuf,tlen,(long long)data);
         *datalenp = tlen;
-        if ( SUPERNET.iamrelay != 0 )
-            nn_busdata_processor(0,(uint8_t *)tokbuf,tlen);
+        if ( SUPERNET.iamrelay != 0 && (str= nn_busdata_processor(0,(uint8_t *)tokbuf,tlen)) != 0 )
+            free(str);
     } else printf("couldnt parse busdata json.(%s)\n",jsonstr);
     return(tokbuf);
 }
@@ -1455,8 +1455,14 @@ void serverloop(void *_args)
         }
         if ( (len= nn_recv(RELAYS.servicesock,&jsonstr,NN_MSG,0)) > 0 )
         {
+            char *str;
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
+                if ( (str= nn_busdata_processor(0,(uint8_t *)jsonstr,len)) != 0 )
+                {
+                    nn_send(RELAYS.servicesock,str,(int32_t)strlen(str)+1,0);
+                    free(str);
+                }
                 free_json(json);
             }
             printf("SERVICESOCK recv.%d (%s)\n",len,jsonstr);
