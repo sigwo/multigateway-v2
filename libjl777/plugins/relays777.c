@@ -329,12 +329,12 @@ void nn_startdirect(struct endpoint epbits,int32_t sock,char *handler)
 
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout)
 {
-    int32_t sock,typeind = 0; struct endpoint epbits;
+    int32_t sock; struct endpoint epbits;
     if ( (sock= nn_socket(AF_SP,type)) < 0 )
         fprintf(stderr,"error getting socket %s\n",nn_errstr());
     if ( bindflag != 0 )
     {
-        epbits = calc_epbits(SUPERNET.transport,0,SUPERNET.port + nn_portoffset(type) + typeind,type);
+        epbits = calc_epbits(SUPERNET.transport,0,port + nn_portoffset(type),type);
         expand_epbits(endpoint,epbits);
         //set_endpointaddr(SUPERNET.transport,endpoint,"*",SUPERNET.port,type);
         if ( nn_bind(sock,endpoint) < 0 )
@@ -1119,7 +1119,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + nn_portoffset(NN_REP),NN_REP));
+        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port - 2,NN_REP));
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
@@ -1382,7 +1382,7 @@ void serverloop(void *_args)
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
     RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET.port); // NN_REQ
     bussock = -1;
-    RELAYS.servicesock = nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.port,sendtimeout,recvtimeout);
+    RELAYS.servicesock = nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.port - nn_portoffset(NN_REP) - 2,sendtimeout,recvtimeout);
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
