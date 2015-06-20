@@ -1113,9 +1113,9 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
     {
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
-        if ( (nxt64bits= get_API_nxt64bits(cJSON_GetObjectItem(json,"NXT"))) == 0 )
+        //if ( (nxt64bits= get_API_nxt64bits(cJSON_GetObjectItem(json,"NXT"))) == 0 )
             nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
-        if ( nxt64bits == conv_acctstr(SUPERNET.NXTADDR) )
+        //if ( nxt64bits == conv_acctstr(SUPERNET.NXTADDR) )
             mypacket = 1;
         datajson = cJSON_CreateObject();
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
@@ -1158,7 +1158,7 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
                 nn_busdata_processor(0,both,*datalenp);
         }
         else both = (uint8_t *)tokbuf;
-    }
+    } else printf("couldnt parse busdata json.(%s)\n",jsonstr);
     return(both);
 }
 
