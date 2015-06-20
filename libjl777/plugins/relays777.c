@@ -1134,7 +1134,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
         tmp = malloc((datalen << 1) + 1);
-        init_hexbytes_noT(tmp,(uint8_t *)jsonstr,datalen);
+        init_hexbytes_noT(tmp,(uint8_t *)str,datalen);
         cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
         calc_sha256(hexstr,hash.bytes,(uint8_t *)str,datalen);
         free(str);
