@@ -965,7 +965,9 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             {
                 free(str);
                 return(retstr);
-            } else free(str);
+            }
+            free(str);
+            return(clonestr("{\"result\":\"no response from provider\"}"));
         }
     }
     printf("%s -> %s add pending.(%s) %llx\n",sender,destNXT,cJSON_Print(json),(long long)ptr->hash.txid);
@@ -1108,8 +1110,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
                             free(pluginret);
                         free(str);
                     }
-                }
-                else retstr = busdata(valid,forwarder,src,key,timestamp,databuf,datalen,json);
+                } else retstr = busdata(valid,forwarder,src,key,timestamp,databuf,datalen,json);
                 //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
             }
             else retstr = clonestr("{\"error\":\"hashes dont match\"}");
