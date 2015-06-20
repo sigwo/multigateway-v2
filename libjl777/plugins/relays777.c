@@ -1077,7 +1077,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
             copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
             decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
             datalen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
-            calc_sha256(hexstr,hash.bytes,(uint8_t *)datastr,datalen << 1);
+            calc_sha256(hexstr,hash.bytes,(uint8_t *)databuf,datalen);
 printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
             if ( strcmp(hexstr,sha) == 0 )
             {
@@ -1113,7 +1113,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
         tmp = malloc((datalen << 1) + 1);
         init_hexbytes_noT(tmp,(uint8_t *)jsonstr,datalen);
         cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
-        calc_sha256(hexstr,hash.bytes,(uint8_t *)tmp,datalen);
+        calc_sha256(hexstr,hash.bytes,(uint8_t *)jsonstr,datalen);
         cJSON_AddItemToObject(datajson,"n",cJSON_CreateNumber(datalen));
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str = cJSON_Print(datajson), _stripwhite(str,' ');
