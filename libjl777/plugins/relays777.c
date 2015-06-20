@@ -1025,10 +1025,10 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
                 {
                     if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json)) == 0 )
                     {
-                        if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.bus.sock >= 0 )
+                        if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.pubsock >= 0 )
                         {
                             printf("BUS-SEND.(%s)\n",origmsg);
-                            nn_send(RELAYS.bus.sock,origmsg,origlen,0);
+                            nn_send(RELAYS.pubsock,origmsg,origlen,0);
                         }
                     }
                 }
