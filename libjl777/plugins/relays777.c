@@ -1120,22 +1120,24 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port - 2,NN_REP));
+        cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
+        randombytes((uint8_t *)&tag,sizeof(tag));
+        sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         datajson = cJSON_CreateObject();
-        randombytes((uint8_t *)&tag,sizeof(tag));
-        sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(datajson,"tag",cJSON_CreateString(numstr));
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
-        cJSON_AddItemToObject(datajson,"endpoint",cJSON_CreateString(endpoint));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp));
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
-        datalen = (int32_t)(strlen(jsonstr) + 1);
+        str = cJSON_Print(json), _stripwhite(str,' ');
+        datalen = (int32_t)(strlen(str) + 1);
         tmp = malloc((datalen << 1) + 1);
         init_hexbytes_noT(tmp,(uint8_t *)jsonstr,datalen);
         cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
-        calc_sha256(hexstr,hash.bytes,(uint8_t *)jsonstr,datalen);
+        calc_sha256(hexstr,hash.bytes,(uint8_t *)str,datalen);
+        free(str);
         cJSON_AddItemToObject(datajson,"n",cJSON_CreateNumber(datalen));
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str = cJSON_Print(datajson), _stripwhite(str,' ');
