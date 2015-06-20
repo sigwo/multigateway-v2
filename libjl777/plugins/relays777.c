@@ -1395,13 +1395,16 @@ void serverloop(void *_args)
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
     RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET.port); // NN_REQ
     bussock = -1;
-    RELAYS.servicesock = nn_socket(AF_SP,NN_REP);
-    expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port - 2,NN_REP));
-    nn_bind(RELAYS.servicesock,endpoint);
-    if ( sendtimeout > 0 && nn_setsockopt(RELAYS.servicesock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
-        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-    else if ( recvtimeout > 0 && nn_setsockopt(RELAYS.servicesock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
-        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+    if ( 0 )
+    {
+        RELAYS.servicesock = nn_socket(AF_SP,NN_REP);
+        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port - 2,NN_REP));
+        nn_bind(RELAYS.servicesock,endpoint);
+        if ( sendtimeout > 0 && nn_setsockopt(RELAYS.servicesock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+            fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+        else if ( recvtimeout > 0 && nn_setsockopt(RELAYS.servicesock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+            fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+    } else RELAYS.servicesock = -1;
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
@@ -1463,7 +1466,7 @@ void serverloop(void *_args)
             //printf("MGW bus recv.%d json.%p\n",len,json);
             nn_freemsg(jsonstr);
         }
-        if ( (len= nn_recv(RELAYS.servicesock,&jsonstr,NN_MSG,0)) > 0 )
+        if ( RELAYS.servicesock >= 0 && (len= nn_recv(RELAYS.servicesock,&jsonstr,NN_MSG,0)) > 0 )
         {
             char *str;
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
