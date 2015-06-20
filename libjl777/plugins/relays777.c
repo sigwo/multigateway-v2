@@ -1103,11 +1103,12 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 char *create_busdata(int32_t *datalenp,char *jsonstr)
 {
     int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
-    char key[MAX_JSON_FIELD],hexstr[65],numstr[65],*str,*tokbuf = 0,*tmp; bits256 hash;
+    char key[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*tokbuf = 0,*tmp; bits256 hash;
     uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
+        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,0,SUPERNET.port + nn_portoffset(NN_REP),NN_REP));
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
@@ -1116,6 +1117,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(datajson,"tag",cJSON_CreateString(numstr));
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
+        cJSON_AddItemToObject(datajson,"endpoint",cJSON_CreateString(endpoint));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp));
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
         datalen = (int32_t)(strlen(jsonstr) + 1);
@@ -1369,9 +1371,9 @@ void serverloop(void *_args)
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
     RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET.port); // NN_REQ
     bussock = -1;
+    launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
     if ( SUPERNET.iamrelay != 0 )
     {
-        launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
         bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_busdata_processor);
     } else lbargs->commandprocessor = nn_lb_processor;
     RELAYS.bus.sock = bussock, RELAYS.pubsock = pubsock;
