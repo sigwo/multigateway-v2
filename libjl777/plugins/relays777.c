@@ -827,6 +827,25 @@ void nn_direct_processor(int32_t directind,uint8_t *msg,int32_t len)
     }
 }
 
+void nn_syncbus(cJSON *json)
+{
+    cJSON *argjson,*second; char forwarder[MAX_JSON_FIELD],*jsonstr;
+    if ( RELAYS.pubsock >= 0 && SUPERNET.iamrelay != 0 && is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+    {
+        argjson = cJSON_GetArrayItem(json,0);
+        second = cJSON_GetArrayItem(json,1);
+        copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
+        ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+        jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+        if ( forwarder[0] == 0 || strcmp(forwarder,SUPERNET.NXTADDR) == 0 )
+        {
+            printf("BUS-SEND.(%s)\n",jsonstr);
+            nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+        }
+        free(jsonstr);
+    }
+}
+
 char *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
     uint8_t *buf;
@@ -875,7 +894,7 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
     return(jsonstr);
 }
 
-char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json,char *forwarder,uint8_t *origmsg,int32_t origlen)
+char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json,char *forwarder,cJSON *origjson)
 {
     cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
     struct service_provider *sp; int32_t i,sendtimeout,recvtimeout;
@@ -915,11 +934,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s)\n",servicename,sp->sock,endpoint);
         }
-        if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.pubsock >= 0 )
-        {
-            printf("A BUS-SEND.(%s)\n",origmsg);
-            nn_send(RELAYS.pubsock,origmsg,origlen,0);
-        }
+        nn_syncbus(origjson);
         sp->endpoints = realloc(sp->endpoints,sizeof(*sp->endpoints) * (sp->numendpoints + 1));
         sp->endpoints[sp->numendpoints++] = clonestr(endpoint);
         nn_connect(sp->sock,endpoint);
@@ -948,11 +963,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     }
     printf("%s -> %s add pending.(%s) %llx\n",sender,destNXT,cJSON_Print(json),(long long)ptr->hash.txid);
     queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
-    if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.pubsock >= 0 )
-    {
-        printf("B BUS-SEND.(%s)\n",origmsg);
-        nn_send(RELAYS.pubsock,origmsg,origlen,0);
-    }
+    nn_syncbus(origjson);
     return(0);
 }
 
@@ -1019,7 +1030,7 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
     return(retstr);
 }
 
-char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,uint8_t *origmsg,int32_t origlen)
+char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],response[1024],*retstr = 0;
     if ( SUPERNET.iamrelay != 0 && validated != 0 )
@@ -1031,7 +1042,7 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
             {
                 if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
                     return(clonestr("{\"error\":\"busdata duplicate request\"}"));
-                else retstr = busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origmsg,origlen);
+                else retstr = busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson);
             }
             else if ( (retstr= busdata_matchquery(response,destNXT,sender,key,timestamp,json)) != 0 )
             {
@@ -1080,7 +1091,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *origmsg,int32_t origl
         //printf("datalen.%d len.%d %llx [%llx]\n",datalen,len,(long long)hash.txid,(long long)databuf);
         if ( strcmp(hexstr,sha) == 0 )
         {
-            retstr = busdata(valid,forwarder,src,key,timestamp,msg,datalen,origmsg,origlen);
+            retstr = busdata(valid,forwarder,src,key,timestamp,msg,datalen,json);
             //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
         }
         else retstr = clonestr("{\"error\":\"hashes dont match\"}");
@@ -1155,7 +1166,7 @@ char *busdata_sync(char *jsonstr)
     {
         if ( SUPERNET.iamrelay != 0 )
         {
-            if ( RELAYS.bus.sock >= 0 && (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) != datalen )
+            if ( RELAYS.pubsock >= 0 && (sendlen= nn_send(RELAYS.pubsock,data,datalen,0)) != datalen )
             {
                 if ( Debuglevel > 2 )
                     printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
