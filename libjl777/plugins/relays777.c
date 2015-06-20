@@ -839,7 +839,7 @@ void nn_syncbus(cJSON *json)
         ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
         forwardbits = conv_acctstr(forwarder), nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
-        if ( forwardbits == 0 || forwardbits == nxt64bits )
+        if ( forwardbits == 0 )//|| forwardbits == nxt64bits )
         {
             printf("BUS-SEND.(%s) forwarder.%llu vs %llu\n",jsonstr,(long long)forwardbits,(long long)nxt64bits);
             nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
@@ -936,7 +936,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
                 fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-            fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s)\n",servicename,sp->sock,endpoint);
+            fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s) (%s)\n",servicename,sp->sock,endpoint,cJSON_Print(json));
         }
         sp->endpoints = realloc(sp->endpoints,sizeof(*sp->endpoints) * (sp->numendpoints + 1));
         sp->endpoints[sp->numendpoints++] = clonestr(endpoint);
