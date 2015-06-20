@@ -954,7 +954,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
         else
         {
             argjson = cJSON_Duplicate(origjson,1);
-            cJSON_ReplaceItemInObject(cJSON_GetArrayItem(argjson,1),"usedest",cJSON_CreateNumber(1));
+            ensure_jsonitem(cJSON_GetArrayItem(argjson,1),"usedest","yes");
             /*cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(submethod));
             cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(destplugin));
             cJSON_DeleteItemFromObject(argjson,"submethod");
@@ -1069,7 +1069,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
     cJSON *json,*argjson,*second; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192]; uint64_t tag;
-    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
+    char forwarder[65],pubkey[256],usedest[128],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -1091,7 +1091,8 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 //printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
             if ( strcmp(hexstr,sha) == 0 )
             {
-                if ( get_API_int(cJSON_GetObjectItem(second,"usedest"),0) != 0 )
+                copy_cJSON(usedest,cJSON_GetObjectItem(second,"usedest"));
+                if ( usedest[0] != 0 )
                 {
                     copy_cJSON(method,cJSON_GetObjectItem(json,"submethod"));
                     copy_cJSON(plugin,cJSON_GetObjectItem(json,"destplugin"));
