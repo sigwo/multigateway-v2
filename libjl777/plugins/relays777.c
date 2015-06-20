@@ -1119,7 +1119,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port - 2,NN_REP));
+        sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
         cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
         randombytes((uint8_t *)&tag,sizeof(tag));
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
