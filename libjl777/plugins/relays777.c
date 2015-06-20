@@ -875,7 +875,7 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
     return(jsonstr);
 }
 
-char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
+char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json,char *forwarder,uint8_t *origmsg,int32_t origlen)
 {
     cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
     struct service_provider *sp; int32_t i,sendtimeout,recvtimeout;
@@ -913,7 +913,12 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            fprintf(stderr,"create servicename.(%s) sock.%d\n",servicename,sp->sock);
+            fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s)\n",servicename,sp->sock,endpoint);
+        }
+        if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.pubsock >= 0 )
+        {
+            printf("A BUS-SEND.(%s)\n",origmsg);
+            nn_send(RELAYS.pubsock,origmsg,origlen,0);
         }
         sp->endpoints = realloc(sp->endpoints,sizeof(*sp->endpoints) * (sp->numendpoints + 1));
         sp->endpoints[sp->numendpoints++] = clonestr(endpoint);
@@ -943,6 +948,11 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     }
     printf("%s -> %s add pending.(%s) %llx\n",sender,destNXT,cJSON_Print(json),(long long)ptr->hash.txid);
     queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
+    if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.pubsock >= 0 )
+    {
+        printf("B BUS-SEND.(%s)\n",origmsg);
+        nn_send(RELAYS.pubsock,origmsg,origlen,0);
+    }
     return(0);
 }
 
@@ -1021,17 +1031,7 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
             {
                 if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
                     return(clonestr("{\"error\":\"busdata duplicate request\"}"));
-                else
-                {
-                    if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json)) == 0 )
-                    {
-                        if ( strcmp(forwarder,SUPERNET.NXTADDR) == 0 && RELAYS.pubsock >= 0 )
-                        {
-                            printf("BUS-SEND.(%s)\n",origmsg);
-                            nn_send(RELAYS.pubsock,origmsg,origlen,0);
-                        }
-                    }
-                }
+                else retstr = busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origmsg,origlen);
             }
             else if ( (retstr= busdata_matchquery(response,destNXT,sender,key,timestamp,json)) != 0 )
             {
