@@ -900,7 +900,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
 {
     cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
     struct service_provider *sp; int32_t i,sendtimeout,recvtimeout,retrymillis;
-    char submethod[512],endpoint[512],destplugin[512],servicename[512],*hashstr,*str,*retstr;
+    char submethod[512],endpoint[512],destplugin[512],retbuf[128],servicename[512],*hashstr,*str,*retstr;
     if ( key == 0 || key[0] == 0 )
         key = "0";
     ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
@@ -942,7 +942,8 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
         sp->endpoints[sp->numendpoints++] = clonestr(endpoint);
         nn_connect(sp->sock,endpoint);
         nn_syncbus(origjson);
-        return(clonestr("{\"result\":\"serviceprovider endpoint added\"}"));
+        sprintf(retbuf,"{\"result\":\"serviceprovider added\",\"endpoint\":\"%s\"}",endpoint);
+        return(clonestr(retbuf));
     }
     else
     {
@@ -952,13 +953,14 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             return(clonestr("{\"result\":\"serviceprovider not found\"}"));
         else
         {
-            argjson = cJSON_Duplicate(json,1);
-            cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(submethod));
+            argjson = cJSON_GetArrayItem(origjson,1);
+            cJSON_ReplaceItemInObject(argjson,"usedest",cJSON_CreateNumber(1));
+            /*cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(submethod));
             cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(destplugin));
             cJSON_DeleteItemFromObject(argjson,"submethod");
-            cJSON_DeleteItemFromObject(argjson,"destplugin");
-            str = cJSON_Print(argjson), _stripwhite(str,' ');
-            free_json(argjson);
+            cJSON_DeleteItemFromObject(argjson,"destplugin");*/
+            str = cJSON_Print(origjson), _stripwhite(str,' ');
+            //free_json(argjson);
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
             {
                 free(str);
@@ -1066,13 +1068,14 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
 char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
-    cJSON *json,*argjson; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192]; uint64_t tag;
-    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
+    cJSON *json,*argjson,*second; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192]; uint64_t tag;
+    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*jsonstr=0,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
         {
             argjson = cJSON_GetArrayItem(json,0);
+            second = cJSON_GetArrayItem(json,1);
             timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
             jsonstr = cJSON_Print(argjson), _stripwhite(jsonstr,' ');
             sender[0] = 0;
@@ -1088,7 +1091,14 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 //printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
             if ( strcmp(hexstr,sha) == 0 )
             {
-                retstr = busdata(valid,forwarder,src,key,timestamp,databuf,datalen,json);
+                if ( get_API_int(cJSON_GetObjectItem(second,"usedest"),0) != 0 )
+                {
+                    copy_cJSON(method,cJSON_GetObjectItem(json,"submethod"));
+                    copy_cJSON(plugin,cJSON_GetObjectItem(json,"destplugin"));
+                    //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
+                    retstr = plugin_method(0,0,plugin,method,0,0,(char *)databuf,datalen,1000);
+                }
+                else retstr = busdata(valid,forwarder,src,key,timestamp,databuf,datalen,json);
                 //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
             }
             else retstr = clonestr("{\"error\":\"hashes dont match\"}");
@@ -1108,7 +1118,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,0,SUPERNET.port + nn_portoffset(NN_REP),NN_REP));
+        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + nn_portoffset(NN_REP),NN_REP));
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
