@@ -1094,11 +1094,14 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
                 copy_cJSON(usedest,cJSON_GetObjectItem(second,"usedest"));
                 if ( usedest[0] != 0 )
                 {
-                    copy_cJSON(method,cJSON_GetObjectItem(json,"submethod"));
-                    copy_cJSON(plugin,cJSON_GetObjectItem(json,"destplugin"));
-                    //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
-                    printf("call (%s %s) (%s)\n",plugin,method,databuf);
-                    //retstr = plugin_method(0,0,plugin,method,0,0,(char *)databuf,datalen,1000);
+                    if ( (argjson= cJSON_Parse((char *)databuf)) != 0 )
+                    {
+                        copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
+                        copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
+                        //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
+                        printf("call (%s %s) (%s)\n",plugin,method,databuf);
+                        retstr = plugin_method(0,0,plugin,method,0,0,(char *)databuf,datalen,1000);
+                    }
                 }
                 else retstr = busdata(valid,forwarder,src,key,timestamp,databuf,datalen,json);
                 //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
