@@ -939,6 +939,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
         sp->endpoints = realloc(sp->endpoints,sizeof(*sp->endpoints) * (sp->numendpoints + 1));
         sp->endpoints[sp->numendpoints++] = clonestr(endpoint);
         nn_connect(sp->sock,endpoint);
+        nn_syncbus(origjson);
         return(clonestr("{\"result\":\"serviceprovider endpoint added\"}"));
     }
     else
