@@ -1382,9 +1382,10 @@ void serverloop(void *_args)
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
     RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET.port); // NN_REQ
     bussock = -1;
-    launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
+    RELAYS.servicesock = nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.port,sendtimeout,recvtimeout);
     if ( SUPERNET.iamrelay != 0 )
     {
+        launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
         bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_busdata_processor);
     } else lbargs->commandprocessor = nn_lb_processor;
     RELAYS.bus.sock = bussock, RELAYS.pubsock = pubsock;
@@ -1443,7 +1444,16 @@ void serverloop(void *_args)
             //printf("MGW bus recv.%d json.%p\n",len,json);
             nn_freemsg(jsonstr);
         }
- 
+        if ( (len= nn_recv(RELAYS.servicesock,&jsonstr,NN_MSG,0)) > 0 )
+        {
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                free_json(json);
+            }
+            printf("SERVICESOCK recv.%d (%s)\n",len,jsonstr);
+            nn_freemsg(jsonstr);
+        }
+
         /*while ( RELAYS.pullsock >= 0 && (nn_socket_status(RELAYS.pullsock,1) & NN_POLLIN) != 0 &&  (len= nn_recv(RELAYS.pullsock,&retstr,NN_MSG,0)) > 0 )
             coin777_pulldata((void *)retstr,len);
         if ( 0 && SUPERNET.iamrelay != 0 )
