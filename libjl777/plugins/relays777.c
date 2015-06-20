@@ -1113,7 +1113,9 @@ uint8_t *create_busdata(int32_t *datalenp,char *jsonstr)
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         if ( (nxt64bits= get_API_nxt64bits(cJSON_GetObjectItem(json,"NXT"))) == 0 )
-            nxt64bits = conv_acctstr(SUPERNET.NXTADDR), mypacket = 1;
+            nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
+        if ( nxt64bits == conv_acctstr(SUPERNET.NXTADDR) )
+            mypacket = 1;
         datajson = cJSON_CreateObject();
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
