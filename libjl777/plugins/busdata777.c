@@ -47,7 +47,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
 {
     char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512];
     if ( broadcastmode != 0 && broadcastmode[0] != 0 )
-        sprintf(broadcaststr,",\"broadcast\":\"%s\"",broadcastmode);
+        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     else broadcaststr[0] = 0;
     _stripwhite(cmdjson,' ');
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
