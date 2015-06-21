@@ -461,12 +461,21 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
     //int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
-    char key[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*tokbuf = 0,*tmp; bits256 hash;
+    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*tokbuf = 0,*tmp; bits256 hash;
     uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
+        if ( broadcastmode != 0 && broadcastmode[0] != 0 )
+        {
+            copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
+            copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+            cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString("busdata"));
+            cJSON_ReplaceItemInObject(json,"plugin",cJSON_CreateString("relay"));
+            cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(method));
+            cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
+        }
         cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
         randombytes((uint8_t *)&tag,sizeof(tag));
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
