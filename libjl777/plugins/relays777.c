@@ -433,7 +433,7 @@ int32_t add_relay_connections(char *domain,int32_t skiplb)
         if ( skiplb == 2 )
         {
             printf("SERVICE ");
-            update_serverbits(&RELAYS.service,"tcp",ipbits,SUPERNET.port - 2,NN_PUB);
+            update_serverbits(&RELAYS.bus,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
         }
     }
     if ( skiplb == 0 )
@@ -1002,7 +1002,7 @@ void serverloop(void *_args)
     sendtimeout = 10, recvtimeout = 10000;
     RELAYS.lb.mytype = NN_REQ, RELAYS.lb.desttype = nn_oppotype(RELAYS.lb.mytype);
     RELAYS.pair.mytype = NN_PAIR, RELAYS.pair.desttype = nn_oppotype(RELAYS.pair.mytype);
-    RELAYS.service.mytype = NN_PUB, RELAYS.service.desttype = nn_oppotype(RELAYS.service.mytype);
+    RELAYS.bus.mytype = NN_PUB, RELAYS.bus.desttype = nn_oppotype(RELAYS.bus.mytype);
     RELAYS.peer.mytype = NN_SURVEYOR, RELAYS.peer.desttype = nn_oppotype(RELAYS.peer.mytype);
     RELAYS.sub.mytype = NN_SUB, RELAYS.sub.desttype = nn_oppotype(RELAYS.sub.mytype);
     lbargs = &RELAYS.args[n++];
@@ -1132,7 +1132,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
                         sprintf(retbuf,"{\"result\":\"added ipaddr\"}");
                     } else sprintf(retbuf,"{\"result\":\"didnt add ipaddr, probably already there\"}");
                     if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
-                        update_serverbits(&RELAYS.service,"tcp",ipbits,SUPERNET.port - 2,NN_PUB);
+                        update_serverbits(&RELAYS.bus,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
                 }
             }
         }

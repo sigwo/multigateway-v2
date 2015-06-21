@@ -25,7 +25,7 @@ void nn_syncbus(cJSON *json)
 {
     cJSON *argjson,*second; char forwarder[MAX_JSON_FIELD],*jsonstr; uint64_t forwardbits,nxt64bits;
     //printf("pubsock.%d iamrelay.%d arraysize.%d\n",RELAYS.pubsock,SUPERNET.iamrelay,cJSON_GetArraySize(json));
-    if ( RELAYS.service.sock >= 0 && SUPERNET.iamrelay != 0 && is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+    if ( RELAYS.bus.sock >= 0 && SUPERNET.iamrelay != 0 && is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
         second = cJSON_GetArrayItem(json,1);
@@ -36,7 +36,7 @@ void nn_syncbus(cJSON *json)
         if ( forwardbits == 0 )//|| forwardbits == nxt64bits )
         {
             printf("BUS-SEND.(%s) forwarder.%llu vs %llu\n",jsonstr,(long long)forwardbits,(long long)nxt64bits);
-            nn_send(RELAYS.service.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+            nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
         }
         free(jsonstr);
     }
@@ -149,10 +149,6 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
         {
             argjson = cJSON_Duplicate(origjson,1);
             ensure_jsonitem(cJSON_GetArrayItem(argjson,1),"usedest","yes");
-            /*cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(submethod));
-            cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(destplugin));
-            cJSON_DeleteItemFromObject(argjson,"submethod");
-            cJSON_DeleteItemFromObject(argjson,"destplugin");*/
             str = cJSON_Print(argjson), _stripwhite(str,' ');
             free_json(argjson);
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
@@ -365,9 +361,9 @@ char *busdata_sync(char *jsonstr)
     {
         if ( SUPERNET.iamrelay != 0 )
         {
-            if ( RELAYS.service.sock >= 0 )
+            if ( RELAYS.bus.sock >= 0 )
             {
-                if( (sendlen= nn_send(RELAYS.service.sock,data,datalen,0)) != datalen )
+                if( (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) != datalen )
                 {
                     if ( Debuglevel > 1 )
                         printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
@@ -391,33 +387,38 @@ char *busdata_sync(char *jsonstr)
 void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
 {
     char endpoint[512];
-    if ( (RELAYS.service.sock= nn_socket(AF_SP,NN_REP)) >= 0 )
+    if ( (RELAYS.bus.sock= nn_socket(AF_SP,NN_PUB)) >= 0 ) // NN_BUS seems to have 4x redundant packets
     {
-        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port - 2,NN_REP));
-        nn_bind(RELAYS.service.sock,endpoint);
-        if ( sendtimeout > 0 && nn_setsockopt(RELAYS.service.sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port - 2,NN_PUB));
+        nn_bind(RELAYS.bus.sock,endpoint);
+        printf("SERVICE BIND.(%s)\n",endpoint);
+        if ( sendtimeout > 0 && nn_setsockopt(RELAYS.bus.sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
             fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-        else if ( recvtimeout > 0 && nn_setsockopt(RELAYS.service.sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+        else if ( recvtimeout > 0 && nn_setsockopt(RELAYS.bus.sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
             fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
     }
 }
 
 void busdata_poll()
 {
-    char *str,*jsonstr; cJSON *json; int32_t len;
-    if ( RELAYS.service.sock >= 0 && (len= nn_recv(RELAYS.service.sock,&jsonstr,NN_MSG,0)) > 0 )
+    char *str,*jsonstr; cJSON *json; int32_t len,iter,sock;
+    for (iter=0; iter<2; iter++)
     {
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        sock = (iter == 0) ? RELAYS.bus.sock : RELAYS.servicesock;
+        if ( sock >= 0 && (len= nn_recv(RELAYS.bus.sock,&jsonstr,NN_MSG,0)) > 0 )
         {
-            if ( (str= nn_busdata_processor(0,(uint8_t *)jsonstr,len)) != 0 )
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
-                nn_send(RELAYS.service.sock,str,(int32_t)strlen(str)+1,0);
-                free(str);
+                if ( (str= nn_busdata_processor(0,(uint8_t *)jsonstr,len)) != 0 )
+                {
+                    nn_send(sock,str,(int32_t)strlen(str)+1,0);
+                    free(str);
+                }
+                free_json(json);
             }
-            free_json(json);
+            printf("SERVICESOCK recv.%d (%s)\n",len,jsonstr);
+            nn_freemsg(jsonstr);
         }
-        printf("SERVICESOCK recv.%d (%s)\n",len,jsonstr);
-        nn_freemsg(jsonstr);
     }
 }
 
