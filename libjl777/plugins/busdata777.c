@@ -491,7 +491,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         tlen = construct_tokenized_req(tokbuf,str,SUPERNET.NXTACCTSECRET);
         free(str);
         free(tmp);
-        //printf("created busdata.(%s) tlen.%d [%llx]\n",tokbuf,tlen,(long long)data);
+printf("created busdata.(%s) tlen.%d\n",tokbuf,tlen);
         *datalenp = tlen;
         if ( SUPERNET.iamrelay != 0 && (str= nn_busdata_processor(0,(uint8_t *)tokbuf,tlen)) != 0 )
             free(str);
