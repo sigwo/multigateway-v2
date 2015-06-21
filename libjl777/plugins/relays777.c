@@ -433,7 +433,7 @@ int32_t add_relay_connections(char *domain,int32_t skiplb)
         if ( skiplb == 2 )
         {
             printf("SERVICE ");
-            update_serverbits(&RELAYS.bus,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
+            update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
         }
     }
     if ( skiplb == 0 )

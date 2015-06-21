@@ -401,24 +401,21 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
 
 void busdata_poll()
 {
-    char *str,*jsonstr; cJSON *json; int32_t len,iter,sock;
-    for (iter=0; iter<2; iter++)
+    char *str,*jsonstr; cJSON *json; int32_t len,sock;
+    sock = RELAYS.servicesock;
+    if ( sock >= 0 && (len= nn_recv(RELAYS.bus.sock,&jsonstr,NN_MSG,0)) > 0 )
     {
-        sock = (iter == 0) ? RELAYS.bus.sock : RELAYS.servicesock;
-        if ( sock >= 0 && (len= nn_recv(RELAYS.bus.sock,&jsonstr,NN_MSG,0)) > 0 )
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            if ( (str= nn_busdata_processor(0,(uint8_t *)jsonstr,len)) != 0 )
             {
-                if ( (str= nn_busdata_processor(0,(uint8_t *)jsonstr,len)) != 0 )
-                {
-                    nn_send(sock,str,(int32_t)strlen(str)+1,0);
-                    free(str);
-                }
-                free_json(json);
+                nn_send(sock,str,(int32_t)strlen(str)+1,0);
+                free(str);
             }
-            printf("SERVICESOCK recv.%d (%s)\n",len,jsonstr);
-            nn_freemsg(jsonstr);
+            free_json(json);
         }
+        printf("SERVICESOCK recv.%d (%s)\n",len,jsonstr);
+        nn_freemsg(jsonstr);
     }
 }
 
