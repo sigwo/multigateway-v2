@@ -261,7 +261,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
     cJSON *json,*argjson,*second; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192]; uint64_t tag;
-    char forwarder[65],pubkey[256],usedest[128],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*str,*jsonstr=0,*retstr = 0,*pluginret;
+    char forwarder[65],pubkey[256],usedest[128],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*str,*jsonstr=0,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -296,8 +296,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
                         cJSON_DeleteItemFromObject(argjson,"destplugin");  //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
                         str = cJSON_Print(argjson), _stripwhite(str,' ');
                         printf("call (%s %s) (%s)\n",plugin,method,str);
-                        if ( (pluginret= plugin_method(&retstr,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,1000)) != 0 )
-                            free(pluginret);
+                        retstr = plugin_method(0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,5000);
                         free(str);
                     }
                 } else retstr = busdata(valid,forwarder,src,key,timestamp,databuf,datalen,json);
