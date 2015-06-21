@@ -910,8 +910,8 @@ void responseloop(void *_args)
                                     else if ( strcmp(broadcaststr,"allnodes") == 0 )
                                         nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
                                 }
+                                free(jsonstr);
                             }
-                            free(jsonstr);
                         }
                         retstr = nn_busdata_processor(args,(uint8_t *)msg,len);
                     }
