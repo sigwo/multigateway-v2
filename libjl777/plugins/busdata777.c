@@ -365,9 +365,9 @@ char *busdata_sync(char *jsonstr)
     {
         if ( SUPERNET.iamrelay != 0 )
         {
-            if ( RELAYS.servicesock >= 0 )
+            if ( RELAYS.service.sock >= 0 )
             {
-                if( (sendlen= nn_send(RELAYS.servicesock,data,datalen,0)) != datalen )
+                if( (sendlen= nn_send(RELAYS.service.sock,data,datalen,0)) != datalen )
                 {
                     if ( Debuglevel > 1 )
                         printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
