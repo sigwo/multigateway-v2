@@ -386,16 +386,27 @@ char *busdata_sync(char *jsonstr)
 
 void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
 {
-    char endpoint[512];
-    if ( (RELAYS.bus.sock= nn_socket(AF_SP,NN_PUB)) >= 0 ) // NN_BUS seems to have 4x redundant packets
+    char endpoint[512]; int32_t iter,sock,type,portoffset;
+    type = NN_REP, portoffset = -2;
+    for (iter=0; iter<1+SUPERNET.iamrelay; iter++)
     {
-        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB));
-        nn_bind(RELAYS.bus.sock,endpoint);
-        printf("SERVICE BIND.(%s)\n",endpoint);
-        if ( sendtimeout > 0 && nn_setsockopt(RELAYS.bus.sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
-            fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-        else if ( recvtimeout > 0 && nn_setsockopt(RELAYS.bus.sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
-            fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+        if ( (sock= nn_socket(AF_SP,type)) >= 0 ) // NN_BUS seems to have 4x redundant packets
+        {
+            expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + portoffset,type));
+            nn_bind(RELAYS.bus.sock,endpoint);
+            printf("SERVICE BIND.(%s)\n",endpoint);
+            if ( sendtimeout > 0 && nn_setsockopt(RELAYS.bus.sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            else if ( recvtimeout > 0 && nn_setsockopt(RELAYS.bus.sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+        }
+        if ( iter == 0 )
+        {
+            RELAYS.servicesock = sock;
+            type = NN_PUB;
+            portoffset = nn_portoffset(NN_BUS);
+        }
+        else RELAYS.bus.sock = sock;
     }
 }
 
