@@ -123,7 +123,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             sp = calloc(1,sizeof(*sp));
             HASH_ADD_KEYPTR(hh,Service_providers,servicename,strlen(servicename),sp);
             sp->sock = nn_socket(AF_SP,NN_REQ);
-            sendtimeout = 1000, recvtimeout = 1000, retrymillis = 1000;
+            sendtimeout = 1000, recvtimeout = 10000, retrymillis = 10000;
             if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
