@@ -1860,7 +1860,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
 int32_t make_MGWbus(uint16_t port,char *bindaddr,char serverips[MAX_MGWSERVERS][64],int32_t n)
 {
     char tcpaddr[64];
-    int32_t i,err,sock,timeout = 1;
+    int32_t i,err,sock,timeout = 10;
     if ( (sock= nn_socket(AF_SP,NN_BUS)) < 0 )
     {
         printf("error getting socket.%d %s\n",sock,nn_strerror(nn_errno()));

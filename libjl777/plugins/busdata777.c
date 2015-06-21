@@ -392,21 +392,19 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
     {
         if ( (sock= nn_socket(AF_SP,type)) >= 0 ) // NN_BUS seems to have 4x redundant packets
         {
+            if ( iter == 0 )
+                RELAYS.servicesock = sock;
+            else RELAYS.bus.sock = sock;
             expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + portoffset,type));
-            nn_bind(RELAYS.bus.sock,endpoint);
+            nn_bind(sock,endpoint);
             printf("SERVICE BIND.(%s)\n",endpoint);
-            if ( sendtimeout > 0 && nn_setsockopt(RELAYS.bus.sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+            if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            else if ( recvtimeout > 0 && nn_setsockopt(RELAYS.bus.sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+            else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
         }
-        if ( iter == 0 )
-        {
-            RELAYS.servicesock = sock;
-            type = NN_PUB;
-            portoffset = nn_portoffset(NN_BUS);
-        }
-        else RELAYS.bus.sock = sock;
+        type = NN_PUB;
+        portoffset = nn_portoffset(NN_BUS);
     }
 }
 

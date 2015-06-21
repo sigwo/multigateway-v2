@@ -1012,7 +1012,7 @@ void serverloop(void *_args)
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
     RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
     //bussock = -1;
-    busdata_init(sendtimeout,recvtimeout);
+    busdata_init(sendtimeout,10);
     if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
