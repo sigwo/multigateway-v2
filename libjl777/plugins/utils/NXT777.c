@@ -168,7 +168,7 @@ int32_t get_assettype(int32_t *decimals,char *assetidstr);
 
 int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char encoded[NXT_TOKEN_LEN]);
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret);
-int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
+int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode);
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
 char *cancel_orderid(char *NXTaddr,uint64_t orderid);
 

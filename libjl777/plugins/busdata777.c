@@ -43,15 +43,18 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
     return(-1);
 }
 
-int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET)
+int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1];
+    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512];
+    if ( broadcastmode != 0 && broadcastmode[0] != 0 )
+        sprintf(broadcaststr,",\"broadcast\":\"%s\"",broadcastmode);
+    else broadcaststr[0] = 0;
     _stripwhite(cmdjson,' ');
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
     encoded[NXT_TOKEN_LEN] = 0;
     if ( SUPERNET.iamrelay == 0 )
-        sprintf(tokenized,"[%s, {\"token\":\"%s\"}]",cmdjson,encoded);
-    else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"}]",cmdjson,encoded,SUPERNET.NXTADDR);
+        sprintf(tokenized,"[%s, {\"token\":\"%s\"%s}]",cmdjson,encoded,broadcaststr);
+    else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s}]",cmdjson,encoded,SUPERNET.NXTADDR,broadcaststr);
     return((int32_t)strlen(tokenized)+1);
     // printf("(%s) -> (%s) _tokbuf.[%s]\n",NXTaddr,otherNXTaddr,_tokbuf);
 }
@@ -457,15 +460,13 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
-    int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
+    //int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
     char key[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*tokbuf = 0,*tmp; bits256 hash;
     uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
-        if ( broadcastmode != 0 && broadcastmode[0] != 0 )
-            cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString(broadcastmode));
         cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
         randombytes((uint8_t *)&tag,sizeof(tag));
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
@@ -488,7 +489,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str = cJSON_Print(datajson), _stripwhite(str,' ');
         tokbuf = calloc(1,strlen(str) + 1024);
-        tlen = construct_tokenized_req(tokbuf,str,SUPERNET.NXTACCTSECRET);
+        tlen = construct_tokenized_req(tokbuf,str,SUPERNET.NXTACCTSECRET,broadcastmode);
         free(str);
         free(tmp);
 printf("created busdata.(%s) tlen.%d\n",tokbuf,tlen);

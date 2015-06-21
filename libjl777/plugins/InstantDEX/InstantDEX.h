@@ -166,7 +166,7 @@ char *submit_respondtx(char *respondtxstr,uint64_t nxt64bits,char *NXTACCTSECRET
 {
     char _tokbuf[8192],NXTaddr[64],destNXTaddr[64]; int32_t len;
     printf("submit_respondtx.(%s) -> dest.%llu\n",respondtxstr,(long long)dest64bits);
-    len = construct_tokenized_req(_tokbuf,respondtxstr,NXTACCTSECRET);
+    len = construct_tokenized_req(_tokbuf,respondtxstr,NXTACCTSECRET,0);
     expand_nxt64bits(NXTaddr,nxt64bits);
     expand_nxt64bits(destNXTaddr,dest64bits);
     return(nn_loadbalanced((uint8_t *)_tokbuf,len));
