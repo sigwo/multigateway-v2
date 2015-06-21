@@ -91,10 +91,12 @@ uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
     char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce;
+    msleep(500);
     if ( broadcastmode != 0 && broadcastmode[0] != 0 )
     {
         nonce = nonce_func(cmdjson,broadcaststr,SUPERNET.PLUGINTIMEOUT/3);
-        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\"",broadcastmode,nonce);
+        //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\"",broadcastmode,nonce);
+        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     }
     else broadcaststr[0] = 0;
     _stripwhite(cmdjson,' ');
