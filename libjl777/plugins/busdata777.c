@@ -44,20 +44,56 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
     return(-1);
 }
 
+uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis)
+{
+    struct SaMhdr *hdr; uint32_t nonce; uint64_t hit,threshold; int32_t len;
+    len = (int32_t)strlen(str);
+    nonce = 0;
+    if ( leverage != 0 )
+    {
+        hdr = (struct SaMhdr *)calloc(1,len + sizeof(*hdr));
+        hdr->numrounds = 1;
+        memcpy(&hdr[1],str,len);
+        threshold = calc_SaMthreshold(leverage);
+        len += (int32_t)(sizeof(*hdr) - sizeof(hdr->sig));
+        if ( maxmillis == 0 )
+        {
+            hit = SaMnonce(&hdr->sig,&hdr->nonce,(uint8_t *)((long)hdr + sizeof(hdr->sig)),len,hdr->numrounds,threshold,0,maxmillis);
+            if ( hit > (1L << 32) )
+                nonce = 0xffffffff;
+            else nonce = (uint32_t)hit;
+        }
+        else
+        {
+            while ( (hit= SaMnonce(&hdr->sig,&hdr->nonce,(uint8_t *)((long)hdr + sizeof(hdr->sig)),len,hdr->numrounds,threshold,0,maxmillis)) == 0 )
+                fprintf(stderr,"searching for nonce\n");
+            nonce = hdr->nonce;
+        }
+        free(hdr);
+    }
+    return(nonce);
+}
+
+uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
+{
+    int32_t leverage;
+    leverage = 0;
+    if ( strcmp(broadcaststr,"allnodes") == 0 )
+        leverage = 8;
+    else if ( strcmp(broadcaststr,"allrelays") == 0 )
+        leverage = 5;
+    if ( leverage != 0 )
+        return(calc_nonce(str,leverage,maxmillis));
+    return(0);
+}
+
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint64_t hit,threshold; int32_t leverage,len,numrounds; bits384 sig; uint32_t nonce = 0;
+    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce;
     if ( broadcastmode != 0 && broadcastmode[0] != 0 )
     {
-        numrounds = 1;
-        leverage = 4;
-        if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage *= 2;
-        threshold = calc_SaMthreshold(leverage);
-        len = (int32_t)strlen(cmdjson);
-        while ( (hit= SaMnonce(&sig,&nonce,(uint8_t *)cmdjson,len,numrounds,threshold,0,100)) == 0 )
-            fprintf(stderr,"searching for nonce\n");
-        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
+        nonce = nonce_func(cmdjson,broadcaststr,100);
+        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\"",broadcastmode,nonce);
     }
     else broadcaststr[0] = 0;
     _stripwhite(cmdjson,' ');
@@ -102,11 +138,8 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
 
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag)
 {
-    cJSON *array=0,*firstitem=0,*tokenobj,*obj;
-    int64_t timeval,diff = 0;
-    int32_t valid,retcode = -13;
-    char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*firstjsontxt = 0;
-    unsigned char encoded[4096];
+    cJSON *array=0,*firstitem=0,*tokenobj,*obj; int64_t timeval,diff = 0; int32_t valid,retcode = -13;
+    char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*firstjsontxt = 0; unsigned char encoded[4096];
     array = cJSON_Parse(tokenizedtxt);
     NXTaddr[0] = pubkey[0] = forwarder[0] = 0;
     if ( array == 0 )
@@ -157,9 +190,12 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         strcpy(NXTaddr,sender);
                     if ( strcmp(sender,NXTaddr) == 0 )
                     {
+                        copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
+                        if ( nonce_func(firstjsontxt,broadcaststr,0) != 0 )
+                            retcode = -4;
+                        else retcode = valid;
                         if ( Debuglevel > 2 )
                             printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
-                        retcode = valid;
                     }
                     else
                     {

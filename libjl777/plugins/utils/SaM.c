@@ -263,8 +263,17 @@ uint64_t SaMnonce(bits384 *sigp,uint32_t *noncep,uint8_t *buf,int32_t len,uint64
 {
     uint64_t hit = SAMHIT_LIMIT;
     double startmilli = 0;
-    if ( maxmillis != 0 )
-        startmilli = milliseconds();
+    if ( maxmillis == 0 )
+    {
+        hit = calc_SaM(sigp,buf,len,0,0,numrounds);
+        if ( hit >= threshold )
+        {
+            printf("nonce failure hit.%llu >= threshold.%llu\n",(long long)hit,(long long)threshold);
+            return(threshold - hit);
+        }
+        else return(0);
+    }
+    else startmilli = milliseconds();
     while ( hit >= threshold )
     {
         if ( rseed == 0 )
@@ -274,7 +283,8 @@ uint64_t SaMnonce(bits384 *sigp,uint32_t *noncep,uint8_t *buf,int32_t len,uint64
         //printf("%llu %.2f%% (%s) len.%d numrounds.%lld threshold.%llu seed.%u\n",(long long)hit,100.*(double)hit/threshold,(char *)buf,len,(long long)numrounds,(long long)threshold,rseed);
         if ( maxmillis != 0 && milliseconds() > (startmilli + maxmillis) )
             return(0);
-        rseed = (uint32_t)(sigp->txid ^ hit);
+        if ( rseed != 0 )
+            rseed = (uint32_t)(sigp->txid ^ hit);
     }
     //printf("%llu %.2f%% numrounds.%lld threshold.%llu seed.%u\n",(long long)hit,100.*(double)hit/threshold,(long long)numrounds,(long long)threshold,rseed);
     return(hit);
