@@ -245,7 +245,7 @@ int32_t nn_portoffset(int32_t type);
 char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout);
 char *nn_direct(char *ipaddr,uint8_t *data,int32_t len);
 char *nn_publish(uint8_t *data,int32_t len,int32_t nostr);
-char *nn_allpeers(uint8_t *data,int32_t len,int32_t timeoutmillis,char *localresult);
+char *nn_allrelays(uint8_t *data,int32_t len,int32_t timeoutmillis,char *localresult);
 char *nn_loadbalanced(uint8_t *data,int32_t len);
 char *relays_jsonstr(char *jsonstr,cJSON *argjson);
 struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
@@ -258,6 +258,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len);
 void busdata_init(int32_t sendtimeout,int32_t recvtimeout);
 void busdata_poll();
 char *busdata_sync(char *jsonstr);
+int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 
 #endif
 #else
