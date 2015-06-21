@@ -455,7 +455,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     return(retstr);
 }
 
-char *create_busdata(int32_t *datalenp,char *jsonstr)
+char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
     int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
     char key[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*tokbuf = 0,*tmp; bits256 hash;
@@ -464,6 +464,8 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
+        if ( broadcastmode != 0 && broadcastmode[0] != 0 )
+            cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString(broadcastmode));
         cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
         randombytes((uint8_t *)&tag,sizeof(tag));
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
@@ -497,10 +499,10 @@ char *create_busdata(int32_t *datalenp,char *jsonstr)
     return(tokbuf);
 }
 
-char *busdata_sync(char *jsonstr)
+char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
     int32_t datalen,sendlen = 0; char *data,*retstr;
-    if ( (data= create_busdata(&datalen,jsonstr)) != 0 )
+    if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
         {

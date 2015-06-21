@@ -257,7 +257,7 @@ int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis);
 char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len);
 void busdata_init(int32_t sendtimeout,int32_t recvtimeout);
 void busdata_poll();
-char *busdata_sync(char *jsonstr);
+char *busdata_sync(char *jsonstr,char *broadcastmode);
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 
 #endif

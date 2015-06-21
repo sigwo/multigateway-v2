@@ -212,7 +212,7 @@ cJSON *generators_json(struct consensus_model *model,struct crypto777_node *nn,u
     cJSON *array,*json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"cmd",cJSON_CreateString("generators"));
     cJSON_AddItemToObject(json,"blocknum",cJSON_CreateNumber(blocknum));
-    sprintf(numstr,"%llu",mymetric), cJSON_AddItemToObject(json,"metric",cJSON_CreateString(numstr));
+    sprintf(numstr,"%llu",(long long)mymetric), cJSON_AddItemToObject(json,"metric",cJSON_CreateString(numstr));
     array = cJSON_CreateArray();
     for (i=0; i<n; i++)
         cJSON_AddItemToArray(array,cJSON_CreateNumber(sortbuf[i][1]));

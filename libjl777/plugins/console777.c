@@ -227,7 +227,7 @@ printf("userjson.(%s).%d plugin.(%s) broadcastflag.%d method.(%s)\n",cmdstr,len,
     if ( broadcastflag != 0 || strcmp(plugin,"relay") == 0 )
     {
         if ( strcmp(method,"busdata") == 0 )
-            retstr = busdata_sync(cmdstr);
+            retstr = busdata_sync(cmdstr,broadcastflag==0?0:"allnodes");
         else retstr = nn_loadbalanced((uint8_t *)cmdstr,len);
     }
     else if ( strcmp(plugin,"peers") == 0 )

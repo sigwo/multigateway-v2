@@ -874,7 +874,8 @@ char *relays_jsonstr(char *jsonstr,cJSON *argjson)
 void responseloop(void *_args)
 {
     struct relayargs *args = _args;
-    int32_t len; char *str,*msg,*retstr,*broadcaststr,*retstr2,*methodstr; cJSON *json,*argjson;
+    int32_t len; char forwarder[1024],*str,*msg,*retstr,*broadcaststr,*retstr2,*methodstr,*jsonstr;
+    cJSON *json,*argjson,*second,*dupjson; uint64_t forwardbits;
     if ( args->sock >= 0 )
     {
         fprintf(stderr,"respondloop.%s %d type.%d <- (%s).%d\n",args->name,args->sock,args->type,args->endpoint,nn_oppotype(args->type));
@@ -891,6 +892,27 @@ void responseloop(void *_args)
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
                     {
                         //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
+                        argjson = cJSON_GetArrayItem(json,0);
+                        if ( argjson != json )
+                        {
+                            if ( (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
+                            {
+                                dupjson = cJSON_Duplicate(json,1);
+                                second = cJSON_GetArrayItem(dupjson,1);
+                                copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
+                                ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+                                jsonstr = cJSON_Print(dupjson), _stripwhite(jsonstr,' ');
+                                if ( (forwardbits= conv_acctstr(forwarder)) == 0 )
+                                {
+                                    printf("broadcast.(%s) forwarder.%llu vs %s\n",jsonstr,(long long)forwardbits,SUPERNET.NXTADDR);
+                                    if ( strcmp(broadcaststr,"allrelays") == 0 )
+                                        nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                                    else if ( strcmp(broadcaststr,"allnodes") == 0 )
+                                        nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                                }
+                            }
+                            free(jsonstr);
+                        }
                         retstr = nn_busdata_processor(args,(uint8_t *)msg,len);
                     }
                     else
@@ -1108,7 +1130,7 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
             else if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
             else if ( strcmp(methodstr,"busdata") == 0 )
-                retstr = busdata_sync(jsonstr);
+                retstr = busdata_sync(jsonstr,0);
             else if ( (myipaddr= cJSON_str(cJSON_GetObjectItem(json,"myipaddr"))) != 0 && is_ipaddr(myipaddr) != 0 )
             {
                 if ( strcmp(methodstr,"direct") == 0 )

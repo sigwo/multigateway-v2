@@ -147,6 +147,27 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
+/*int32_t should_forward(char *sender,char *origargstr)
+{
+    char forwarder[64],plugin[MAX_JSON_FIELD]; uint8_t *buf; int32_t len;
+    if ( validate_sender(forwarder,sender,origargstr) > 0 )
+    {
+        //printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
+        if ( strcmp(forwarder,sender) == 0 )
+        {
+            len = (int32_t)strlen(origargstr) + 1;
+            if ( (buf= replace_forwarder(plugin,(uint8_t *)origargstr,&len)) != 0 )
+            {
+                nn_publish(buf,len,1);
+                if ( buf != (uint8_t *)origargstr )
+                    free(buf);
+            }
+            return(1);
+        }
+    }
+    return(0);
+}*/
+
 int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char sender[MAX_JSON_FIELD],echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*retstr = 0;
@@ -187,7 +208,9 @@ fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,json
             if ( SUPERNET.gatewayid >= 0 )
             {
                 if ( (retstr= devMGW_command(jsonstr,json)) != 0 )
-                    should_forward(sender,retstr);
+                {
+                    //should_forward(sender,retstr);
+                }
             } //else retstr = nn_loadbalanced((uint8_t *)jsonstr,(int32_t)strlen(jsonstr)+1);
         }
         else if ( strcmp(methodstr,"LSUM") == 0 )
