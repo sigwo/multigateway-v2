@@ -412,7 +412,7 @@ void busdata_poll()
 {
     char *str,*jsonstr; cJSON *json; int32_t len,sock;
     sock = RELAYS.servicesock;
-    if ( sock >= 0 && (len= nn_recv(RELAYS.bus.sock,&jsonstr,NN_MSG,0)) > 0 )
+    if ( sock >= 0 && (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
