@@ -17,6 +17,7 @@
 #include "system777.c"
 #include "NXT777.c"
 #include "plugin777.c"
+#include "SaM.c"
 //#include "gen1block.c"
 #undef DEFINES_ONLY
 
@@ -45,9 +46,19 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512];
+    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint64_t hit,threshold; int32_t leverage,len,numrounds; bits384 sig; uint32_t nonce = 0;
     if ( broadcastmode != 0 && broadcastmode[0] != 0 )
+    {
+        numrounds = 1;
+        leverage = 4;
+        if ( strcmp(broadcaststr,"allnodes") == 0 )
+            leverage *= 2;
+        threshold = calc_SaMthreshold(leverage);
+        len = (int32_t)strlen(cmdjson);
+        while ( (hit= SaMnonce(&sig,&nonce,(uint8_t *)cmdjson,len,numrounds,threshold,0,100)) == 0 )
+            fprintf(stderr,"searching for nonce\n");
         sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
+    }
     else broadcaststr[0] = 0;
     _stripwhite(cmdjson,' ');
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);

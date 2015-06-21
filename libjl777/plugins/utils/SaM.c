@@ -267,7 +267,9 @@ uint64_t SaMnonce(bits384 *sigp,uint32_t *noncep,uint8_t *buf,int32_t len,uint64
         startmilli = milliseconds();
     while ( hit >= threshold )
     {
-        _randombytes((uint8_t *)noncep,sizeof(*noncep),rseed);
+        if ( rseed == 0 )
+            randombytes((uint8_t *)noncep,sizeof(*noncep));
+        else _randombytes((uint8_t *)noncep,sizeof(*noncep),rseed);
         hit = calc_SaM(sigp,buf,len,0,0,numrounds);
         //printf("%llu %.2f%% (%s) len.%d numrounds.%lld threshold.%llu seed.%u\n",(long long)hit,100.*(double)hit/threshold,(char *)buf,len,(long long)numrounds,(long long)threshold,rseed);
         if ( maxmillis != 0 && milliseconds() > (startmilli + maxmillis) )
