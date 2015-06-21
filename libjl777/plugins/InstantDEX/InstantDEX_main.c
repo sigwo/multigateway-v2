@@ -218,7 +218,7 @@ fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,json
             sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
             retstr = clonestr(retbuf);
         }
-        else
+        else if ( SUPERNET.iamrelay == 0 )
         {
             portable_mutex_lock(&plugin->mutex);
             retstr = InstantDEX_parser(jsonstr,json);
