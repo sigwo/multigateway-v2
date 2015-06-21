@@ -898,16 +898,18 @@ void responseloop(void *_args)
                             second = cJSON_GetArrayItem(dupjson,1);
                             copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
                             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-                            jsonstr = cJSON_Print(dupjson), _stripwhite(jsonstr,' ');
-                            if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_str(cJSON_GetObjectItem(second,"usedest")) == 0 )
+                            if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
                             {
+                                ensure_jsonitem(second,"stop","end");
+                                jsonstr = cJSON_Print(dupjson), _stripwhite(jsonstr,' ');
                                 printf("broadcast.(%s) forwarder.%llu vs %s\n",jsonstr,(long long)forwardbits,SUPERNET.NXTADDR);
                                 if ( strcmp(broadcaststr,"allrelays") == 0 )
                                     nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
                                 else if ( strcmp(broadcaststr,"allnodes") == 0 )
                                     nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
-                            }
-                            free(jsonstr);
+                                free(jsonstr);
+                            } else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
+                            free_json(dupjson);
                         }
                     }
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
