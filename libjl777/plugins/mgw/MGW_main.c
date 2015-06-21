@@ -1977,13 +1977,17 @@ int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *re
         else if ( strcmp(methodstr,"msigaddr") == 0 )
         {
             if ( SUPERNET.gatewayid >= 0 )
-                retstr = devMGW_command(jsonstr,json);
+            {
+                if ( (retstr= devMGW_command(jsonstr,json)) != 0 )
+                    printf("msigaddr.(%s)\n",retstr);
+                else sprintf(retbuf,"{\"result\":\"start msigaddr\"}");
+            }
         }
         else if ( strcmp(methodstr,"myacctpubkeys") == 0 )
             mgw_processbus(retbuf,jsonstr,json);
         if ( retstr != 0 )
         {
-            strcpy(retbuf,retstr);
+            strncpy(retbuf,retstr,maxlen-1);
             free(retstr);
         }
     }
