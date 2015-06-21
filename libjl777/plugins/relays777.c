@@ -167,7 +167,7 @@ int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbi
             printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
         else
         {
-            if ( list->desttype == NN_PUB )
+            if ( type == NN_PUB )
             {
                 printf("subscribed to (%s)\n",endpoint);
                 nn_setsockopt(list->sock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
@@ -425,7 +425,7 @@ int32_t add_relay_connections(char *domain,int32_t skiplb)
     if ( domain == 0 || is_ipaddr(domain) == 0 || ismyaddress(domain) != 0 )
         return(-1);
     ipbits = (uint32_t)calc_ipbits(domain);
-    n = (RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num);
+    n = (RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num + RELAYS.bus.num);
     update_serverbits(&RELAYS.peer,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_SURVEYOR),NN_SURVEYOR);
     update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB);
     if ( SUPERNET.iamrelay != 0 )
@@ -438,7 +438,7 @@ int32_t add_relay_connections(char *domain,int32_t skiplb)
     }
     if ( skiplb == 0 )
         update_serverbits(&RELAYS.lb,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_REP),NN_REP);
-    return((RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num) > n);
+    return((RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num + RELAYS.bus.num) > n);
 }
 
 void run_device(void *_args)
