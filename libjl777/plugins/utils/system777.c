@@ -178,7 +178,7 @@ struct relayargs
 {
     char *(*commandprocessor)(struct relayargs *args,uint8_t *msg,int32_t len);
     char name[16],endpoint[MAX_SERVERNAME];
-    int32_t lbsock,bussock,pubsock,subsock,peersock,pushsock,sock,type,bindflag,sendtimeout,recvtimeout;
+    int32_t lbsock,pubsock,subsock,peersock,sock,type,bindflag,sendtimeout,recvtimeout;
 };
 
 #define CONNECTION_NUMBITS 10
@@ -189,8 +189,8 @@ struct direct_connection { char handler[16]; struct endpoint epbits; int32_t soc
 struct relay_info
 {
     struct relayargs args[8];
-    struct _relay_info lb,peer,bus,sub,pair;
-    int32_t readyflag,pubsock,servicesock,querypeers,surveymillis,pushsock,pullsock;
+    struct _relay_info lb,peer,sub,pair;
+    int32_t readyflag,pubsock,servicesock,querypeers,surveymillis,pullsock;
     struct direct_connection directlinks[1 << CONNECTION_NUMBITS];
 }; extern struct relay_info RELAYS;
 
