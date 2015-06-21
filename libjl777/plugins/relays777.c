@@ -889,7 +889,7 @@ void responseloop(void *_args)
                     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
                         argjson = cJSON_GetArrayItem(json,0);
                     else argjson = json;
-                    //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
+                    printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
                     if ( argjson != json )
                     {
                         if ( (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
