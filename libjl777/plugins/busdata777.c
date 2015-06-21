@@ -477,7 +477,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
             decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
             datalen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
             calc_sha256(hexstr,hash.bytes,(uint8_t *)databuf,datalen);
-printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
+//printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
             if ( strcmp(hexstr,sha) == 0 )
             {
                 copy_cJSON(usedest,cJSON_GetObjectItem(second,"usedest"));
@@ -496,9 +496,9 @@ printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,
                             str = cJSON_Print(dupjson), _stripwhite(str,' ');
                             printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
                             if ( strcmp(broadcaststr,"allrelays") == 0 )
-                                nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(str)+1,0);
+                                nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
                             else if ( strcmp(broadcaststr,"allnodes") == 0 )
-                                nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(str)+1,0);
+                                nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
                             free(str);
                         } else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
                         free_json(dupjson);
