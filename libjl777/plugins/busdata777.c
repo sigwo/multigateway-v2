@@ -477,14 +477,14 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
             decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
             datalen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
             calc_sha256(hexstr,hash.bytes,(uint8_t *)databuf,datalen);
-//printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
+printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
             if ( strcmp(hexstr,sha) == 0 )
             {
                 copy_cJSON(usedest,cJSON_GetObjectItem(second,"usedest"));
                 if ( usedest[0] != 0 )
                 {
                     char forwarder[1024],*broadcaststr; cJSON *dupjson; uint64_t forwardbits;
-                    if ( (broadcaststr= cJSON_str(cJSON_GetObjectItem(second,"broadcast"))) != 0 )
+                    if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(second,"broadcast"))) != 0 )
                     {
                         dupjson = cJSON_Duplicate(json,1);
                         second = cJSON_GetArrayItem(dupjson,1);
