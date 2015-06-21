@@ -483,6 +483,26 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
                 copy_cJSON(usedest,cJSON_GetObjectItem(second,"usedest"));
                 if ( usedest[0] != 0 )
                 {
+                    char forwarder[1024],*broadcaststr; cJSON *dupjson; uint64_t forwardbits;
+                    if ( (broadcaststr= cJSON_str(cJSON_GetObjectItem(second,"broadcast"))) != 0 )
+                    {
+                        dupjson = cJSON_Duplicate(json,1);
+                        second = cJSON_GetArrayItem(dupjson,1);
+                        copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
+                        ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+                        if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
+                        {
+                            ensure_jsonitem(second,"stop","end");
+                            str = cJSON_Print(dupjson), _stripwhite(str,' ');
+                            printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
+                            if ( strcmp(broadcaststr,"allrelays") == 0 )
+                                nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(str)+1,0);
+                            else if ( strcmp(broadcaststr,"allnodes") == 0 )
+                                nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(str)+1,0);
+                            free(str);
+                        } else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
+                        free_json(dupjson);
+                    }
                     if ( (argjson= cJSON_Parse((char *)databuf)) != 0 )
                     {
                         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
