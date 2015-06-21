@@ -889,32 +889,29 @@ void responseloop(void *_args)
                     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
                         argjson = cJSON_GetArrayItem(json,0);
                     else argjson = json;
-                    if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
+                    //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
+                    if ( argjson != json )
                     {
-                        //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
-                        argjson = cJSON_GetArrayItem(json,0);
-                        if ( argjson != json )
+                        if ( (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
                         {
-                            if ( (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
+                            dupjson = cJSON_Duplicate(json,1);
+                            second = cJSON_GetArrayItem(dupjson,1);
+                            copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
+                            ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+                            jsonstr = cJSON_Print(dupjson), _stripwhite(jsonstr,' ');
+                            if ( (forwardbits= conv_acctstr(forwarder)) == 0 )
                             {
-                                dupjson = cJSON_Duplicate(json,1);
-                                second = cJSON_GetArrayItem(dupjson,1);
-                                copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
-                                ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-                                jsonstr = cJSON_Print(dupjson), _stripwhite(jsonstr,' ');
-                                if ( (forwardbits= conv_acctstr(forwarder)) == 0 )
-                                {
-                                    printf("broadcast.(%s) forwarder.%llu vs %s\n",jsonstr,(long long)forwardbits,SUPERNET.NXTADDR);
-                                    if ( strcmp(broadcaststr,"allrelays") == 0 )
-                                        nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
-                                    else if ( strcmp(broadcaststr,"allnodes") == 0 )
-                                        nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
-                                }
-                                free(jsonstr);
+                                printf("broadcast.(%s) forwarder.%llu vs %s\n",jsonstr,(long long)forwardbits,SUPERNET.NXTADDR);
+                                if ( strcmp(broadcaststr,"allrelays") == 0 )
+                                    nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                                else if ( strcmp(broadcaststr,"allnodes") == 0 )
+                                    nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
                             }
+                            free(jsonstr);
                         }
-                        retstr = nn_busdata_processor(args,(uint8_t *)msg,len);
                     }
+                    if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
+                        retstr = nn_busdata_processor(args,(uint8_t *)msg,len);
                     else
                     {
                         //if ( Debuglevel > 1 )
