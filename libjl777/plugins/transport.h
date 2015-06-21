@@ -167,7 +167,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
         jsonstr = origjsonstr;
-        if ( localaccess != 0 )
+        //∫if ( localaccess != 0 )
         {
             tmplen = (int32_t)strlen(origjsonstr)+1;
             if ( len > tmplen )

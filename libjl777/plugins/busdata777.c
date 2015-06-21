@@ -296,7 +296,7 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
                         cJSON_DeleteItemFromObject(argjson,"destplugin");  //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
                         str = cJSON_Print(argjson), _stripwhite(str,' ');
                         printf("call (%s %s) (%s)\n",plugin,method,str);
-                        if ( (pluginret = plugin_method(&retstr,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,1000)) != 0 )
+                        if ( (pluginret= plugin_method(&retstr,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,1000)) != 0 )
                             free(pluginret);
                         free(str);
                     }
