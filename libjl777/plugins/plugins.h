@@ -437,9 +437,12 @@ char *language_func(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,in
     FILE *fp;
     char buffer[65536] = { 0 };
     int out_pipe[2],saved_stdout;
-    if ( (fp= fopen(cmd,"rb")) == 0 )
-        return(clonestr("{\"error\":\"no agent file\"}"));
-    else fclose(fp);
+    if ( is_bundled_plugin(plugin) == 0 )
+    {
+        if ( (fp= fopen(cmd,"rb")) == 0 )
+            return(clonestr("{\"error\":\"no agent file\"}"));
+        else fclose(fp);
+    }
     printf("found file.(%s)\n",cmd);
     if ( launchflag != 0 || websocket != 0 )
      return(launch_daemon(plugin,ipaddr,port,websocket,cmd,jsonargs,daemonfunc));
