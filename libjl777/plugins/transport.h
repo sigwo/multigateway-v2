@@ -101,7 +101,7 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,struct relaya
     {
         if ( dp->tags[i][0] == 0 )
         {
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("slot.%d <- tag.%llu dest.%p\n",i,(long long)tag,dest);
             dp->tags[i][0] = tag, dp->tags[i][1] = (uint64_t)dest, dp->tags[i][2] = (uint64_t)args;
             return(i);
@@ -123,7 +123,7 @@ char **get_tagstr(struct relayargs **argsp,struct daemon_info *dp,uint64_t tag)
             if ( dp->tags[i][2] != 0 )
                 *argsp = (struct relayargs *)dp->tags[i][2];
             dp->tags[i][0] = dp->tags[i][1] = dp->tags[i][2] = 0;
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("slot.%d found tag.%llu dest.%p\n",i,(long long)tag,dest);
             return(dest);
         }
@@ -182,7 +182,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
                     tag = tmp, flag = 1;
                 if ( tag == 0 )
                     tag = (((uint64_t)rand() << 32) | rand()), flag = 1;
-printf("tag.%llu flag.%d tmp.%llu datalen.%d\n",(long long)tag,flag,(long long)tmp,datalen);
+//printf("tag.%llu flag.%d tmp.%llu datalen.%d\n",(long long)tag,flag,(long long)tmp,datalen);
                 if ( flag != 0 )
                 {
                     sprintf(numstr,"%llu",(long long)tag), ensure_jsonitem(json,"tag",numstr);

@@ -79,7 +79,7 @@ uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
     int32_t leverage;
     leverage = 0;
     if ( strcmp(broadcaststr,"allnodes") == 0 )
-        leverage = 8;
+        leverage = 7;
     else if ( strcmp(broadcaststr,"allrelays") == 0 )
         leverage = 5;
     if ( leverage != 0 )
@@ -92,7 +92,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce;
     if ( broadcastmode != 0 && broadcastmode[0] != 0 )
     {
-        nonce = nonce_func(cmdjson,broadcaststr,100);
+        nonce = nonce_func(cmdjson,broadcaststr,SUPERNET.PLUGINTIMEOUT/3);
         sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\"",broadcastmode,nonce);
     }
     else broadcaststr[0] = 0;
