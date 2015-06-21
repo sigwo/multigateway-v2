@@ -899,7 +899,7 @@ void responseloop(void *_args)
                             copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
                             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
                             jsonstr = cJSON_Print(dupjson), _stripwhite(jsonstr,' ');
-                            if ( (forwardbits= conv_acctstr(forwarder)) == 0 )
+                            if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_str(cJSON_GetObjectItem(second,"usedest")) == 0 )
                             {
                                 printf("broadcast.(%s) forwarder.%llu vs %s\n",jsonstr,(long long)forwardbits,SUPERNET.NXTADDR);
                                 if ( strcmp(broadcaststr,"allrelays") == 0 )
