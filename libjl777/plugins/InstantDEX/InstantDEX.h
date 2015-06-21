@@ -201,7 +201,7 @@ void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx
     char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *refiQ);
     char *retstr;
     printf("update_openorder iQ.%llu with numtx.%d updateNXT.%d | expires in %ld\n",(long long)iQ->quoteid,numtx,updateNXT,iQ->timestamp+iQ->duration-time(NULL));
-    if ( 0 && (SUPERNET.automatch & 2) != 0 && (retstr= check_ordermatch(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,iQ)) != 0 )
+    if ( (SUPERNET.automatch & 2) != 0 && (retstr= check_ordermatch(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,iQ)) != 0 )
     {
         printf("automatched order!\n");
         free(retstr);
@@ -472,7 +472,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                             free(str);
                         retstr = jsonstr;
                     }
-                    else if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ)) != 0 )
+                    else if ( (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ)) != 0 )
                     {
                         free(jsonstr);
                         return(retstr);
@@ -515,7 +515,7 @@ int32_t should_forward(char *sender,char *origargstr)
             len = (int32_t)strlen(origargstr) + 1;
             if ( (buf= replace_forwarder(plugin,(uint8_t *)origargstr,&len)) != 0 )
             {
-                //nn_publish(buf,len,1);
+                nn_publish(buf,len,1);
                 if ( buf != (uint8_t *)origargstr )
                     free(buf);
             }

@@ -190,7 +190,7 @@ struct relay_info
 {
     struct relayargs args[8];
     struct _relay_info lb,peer,bus,sub,pair;
-    int32_t readyflag,pubsock,servicesock,querypeers,surveymillis,pushsock,pullsock;
+    int32_t readyflag,pubsock,querypeers,surveymillis,pushsock,pullsock;
     struct direct_connection directlinks[1 << CONNECTION_NUMBITS];
 }; extern struct relay_info RELAYS;
 
