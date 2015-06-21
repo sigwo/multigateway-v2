@@ -434,10 +434,14 @@ char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,ch
 
 char *language_func(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,int32_t launchflag,char *cmd,char *jsonargs,int32_t (*daemonfunc)(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs))
 {
+    FILE *fp;
     char buffer[65536] = { 0 };
     int out_pipe[2],saved_stdout;
+    if ( (fp= fopen(cmd,"rb")) == 0 )
+        return(clonestr("{\"error\":\"no agent file\"}"));
+    else fclose(fp);
     if ( launchflag != 0 || websocket != 0 )
-        return(launch_daemon(plugin,ipaddr,port,websocket,cmd,jsonargs,daemonfunc));
+     return(launch_daemon(plugin,ipaddr,port,websocket,cmd,jsonargs,daemonfunc));
     saved_stdout = dup(STDOUT_FILENO);
     if( pipe(out_pipe) != 0 )
         return(clonestr("{\"error\":\"pipe creation error\"}"));
