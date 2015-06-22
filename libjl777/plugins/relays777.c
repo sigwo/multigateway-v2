@@ -111,7 +111,7 @@ int32_t nn_portoffset(int32_t type)
     int32_t i;
     for (i=0; i<(int32_t)(sizeof(nn_typelist)/sizeof(*nn_typelist)); i++)
         if ( nn_typelist[i] == type )
-            return(i + 2);
+            return(i+10);
     return(-1);
 }
 
@@ -899,7 +899,9 @@ void responseloop(void *_args)
                     //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
                     {
-                        retstr = nn_busdata_processor((uint8_t *)msg,len);
+                        if ( (retstr = nn_busdata_processor((uint8_t *)msg,len)) != 0 )
+                            free(retstr);
+                        retstr = 0;
                     }
                     else
                     {

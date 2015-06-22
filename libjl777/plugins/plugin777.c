@@ -251,7 +251,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
             if ( Debuglevel > 2 )
                 printf("return.(%s)\n",retbuf);
             return((int32_t)strlen(retbuf));
-        } //else printf("(%s) -> no return.%d (%s) vs (%s):(%s) len.%d\n",jsonstr,strcmp(name,plugin->name),name,destname,plugin->name,len);
+        } else printf("(%s) -> no return.%d (%s) vs (%s):(%s) len.%d\n",jsonstr,strcmp(name,plugin->name),name,destname,plugin->name,len);
     }
     else
     {
@@ -381,7 +381,7 @@ int32_t main
                             fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                         //nn_send(plugin->sock,retbuf,len+1,0); // send the null terminator too
                     }
-                } //else printf("null return from process_plugin_json\n");
+                } else printf("null return from process_plugin_json\n");
                 free(line);
             }
         }
