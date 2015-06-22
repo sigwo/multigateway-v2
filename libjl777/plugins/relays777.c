@@ -517,8 +517,8 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
         printf("complete_relay.%s warning: send.%d vs %d for (%s) sock.%d %s\n",args->name,sendlen,len,retstr,args->sock,nn_errstr());
         return(-1);
     }
+    printf("SUCCESS complete_relay.(%s) -> sock.%d %s\n",retstr,args->sock,args->name);
     return(0);
-    //else printf("SUCCESS complete_relay.(%s) -> sock.%d %s\n",retstr,args->sock,args->name);
 }
 
 char *nn_publish(uint8_t *publishstr,int32_t len,int32_t nostr)
