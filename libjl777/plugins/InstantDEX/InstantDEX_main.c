@@ -66,7 +66,7 @@ char *respondtx_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs
     return(retstr);
 }
 
-char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
+char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origargstr,cJSON *origargjson)
 {
     static char *allorderbooks[] = { (char *)allorderbooks_func, "allorderbooks", "V", 0 };
     static char *orderbook[] = { (char *)orderbook_func, "orderbook", "V", "baseid", "relid", "allfields", "oldest", "maxdepth", "base", "rel", "gui", "showall", 0 };
@@ -82,20 +82,14 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
     static char *jumptrades[] = { (char *)jumptrades_func, "jumptrades", "V", 0 };
     static char *tradehistory[] = { (char *)tradehistory_func, "tradehistory", "V", "timestamp", 0 };
     static char **commands[] = { allorderbooks, lottostats, cancelquote, respondtx, jumptrades, tradehistory, openorders, makeoffer3, placebid, bid, placeask, ask, orderbook };
-    int32_t i,j,localaccess,valid = 0;
+    int32_t i,j,localaccess;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
-    char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],**cmdinfo,*argstr,*retstr=0;
+    char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],**cmdinfo,*argstr,*retstr=0;
     memset(objs,0,sizeof(objs));
     command[0] = 0;
     memset(NXTaddr,0,sizeof(NXTaddr));
     if ( is_cJSON_Array(origargjson) != 0 )
     {
-        if ( (valid= validate_token(forwarder,pubkey,sender,origargstr,3)) <= 0 )
-        {
-            printf("validation error.%d (%s)\n",valid,origargstr);
-            return(clonestr("{\"error\":\"packet validation error\"}"));
-        }
-        else printf("token validated.%d forwarder.(%s) sender.(%s)\n",valid,forwarder,sender);
         argjson = cJSON_GetArrayItem(origargjson,0);
         argstr = cJSON_Print(argjson), _stripwhite(argstr,' ');
     }
@@ -178,7 +172,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
     return(0);
 }*/
 
-int32_t PLUGNAME(_process_json)(struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
+int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
@@ -231,7 +225,7 @@ fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,json
         else if ( SUPERNET.iamrelay == 0 )
         {
             portable_mutex_lock(&plugin->mutex);
-            retstr = InstantDEX_parser(jsonstr,json);
+            retstr = InstantDEX_parser(forwarder,sender,valid,jsonstr,json);
             portable_mutex_unlock(&plugin->mutex);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
         if ( retstr != 0 )
