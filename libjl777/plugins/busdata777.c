@@ -76,7 +76,7 @@ uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
 {
     int32_t leverage;
     return(0);
-    leverage = 0;
+   leverage = 0;
     if ( strcmp(broadcaststr,"allnodes") == 0 )
         leverage = 7;
     else if ( strcmp(broadcaststr,"allrelays") == 0 )
@@ -170,7 +170,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                     diff = -diff;
                 if ( diff > strictflag )
                 {
-                    printf("(%s) time diff %lld too big %lld vs %ld\n",tokenizedtxt,(long long)diff,(long long)timeval,time(NULL));
+                    printf("time diff %lld too big %lld vs %ld\n",(long long)diff,(long long)timeval,time(NULL));
                     retcode = -5;
                 }
             }
@@ -195,7 +195,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                             retcode = -4;
                         else retcode = valid;
                         if ( Debuglevel > 1 )
-                            printf("retcode.%d signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",retcode,sender,valid,(long long)diff,forwarder);
+                            printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
                     }
                     else
                     {
@@ -383,7 +383,7 @@ int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timest
             busdata = (struct busdata_item *)ptr;
             //printf("%d.(%llx vs %llx).i%d ",iter,(long long)busdata->hash.txid,(long long)hash.txid,i);
             if ( busdata->hash.txid == hash.txid )
-                return(1);
+                return(1 * 0);
             i++;
         }
     }
@@ -428,7 +428,7 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
 char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],response[1024],*retstr = 0;
-    //printf("busdata\n");
+    printf("busdata\n");
     if ( SUPERNET.iamrelay != 0 && valid > 0 )
     {
         if ( (json= busdata_decode(destNXT,valid,sender,msg,datalen)) != 0 )
@@ -436,6 +436,8 @@ char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t time
             copy_cJSON(response,cJSON_GetObjectItem(json,"response"));
             if ( response[0] == 0 )
             {
+                //if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
+                //    return(clonestr("{\"error\":\"busdata duplicate request\"}"));
                 if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson)) == 0 )
                 {
                     nn_syncbus(origjson);
@@ -457,7 +459,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
 {
     char pubkey[256],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0;
-    //printf("busdata_validate\n");
+    printf("busdata_validate\n");
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
@@ -490,7 +492,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         {
             ensure_jsonitem(second,"stop","end");
             str = cJSON_Print(dupjson), _stripwhite(str,' ');
-            //printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
+            printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
             if ( strcmp(broadcaststr,"allrelays") == 0 )
                 nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
             else if ( strcmp(broadcaststr,"allnodes") == 0 )
@@ -520,7 +522,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
-    //printf("nn_busdata_processor\n");
+    printf("nn_busdata_processor\n");
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
@@ -536,7 +538,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    //printf("BUSDATA.(%s) (%x)\n",retstr,*(int32_t *)msg);
+    printf("BUSDATA.(%s) (%x)\n",retstr,*(int32_t *)msg);
     return(retstr);
 }
 
@@ -545,7 +547,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
     bits256 hash; uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
-    //printf("create_busdata\n");
+    printf("create_busdata\n");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -590,7 +592,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(tokbuf,str2,SUPERNET.NXTACCTSECRET,broadcastmode);
-//printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
+printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         if ( SUPERNET.iamrelay != 0 && (str= nn_busdata_processor((uint8_t *)tokbuf,tlen)) != 0 )
@@ -603,7 +605,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
     int32_t datalen,sendlen = 0; char *data,*retstr;
-    //printf("busdata_sync\n");
+    printf("busdata_sync\n");
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
@@ -612,7 +614,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
             {
                 if( (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) != datalen )
                 {
-                    if ( Debuglevel > 2 )
+                    if ( Debuglevel > 1 )
                         printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
                     free(data);
                     return(clonestr("{\"error\":\"couldnt send to bus\"}"));
