@@ -498,9 +498,9 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
 
 char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
 {
-    static char *retstr = 0;
+    //static char *retstr = 0;
     struct daemon_info *dp;
-    char retbuf[8192],methodbuf[1024],*str,*methodsstr;
+    char retbuf[8192],methodbuf[1024],*str,*methodsstr,*retstr;
     uint64_t tag;
     cJSON *json,*argjson;
     struct relayargs *args = 0;
