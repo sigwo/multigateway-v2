@@ -260,6 +260,7 @@ void busdata_poll();
 char *busdata_sync(char *jsonstr,char *broadcastmode);
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode);
+char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode);
 
 #endif
 #else
