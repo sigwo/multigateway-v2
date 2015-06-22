@@ -111,7 +111,7 @@ int32_t nn_portoffset(int32_t type)
     int32_t i;
     for (i=0; i<(int32_t)(sizeof(nn_typelist)/sizeof(*nn_typelist)); i++)
         if ( nn_typelist[i] == type )
-            return(i+10);
+            return(i + 2);
     return(-1);
 }
 

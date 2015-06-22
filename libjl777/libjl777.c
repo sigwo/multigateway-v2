@@ -1577,7 +1577,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         if ( SUPERNET.UPNP != 0 )
         {
             char portstr[16];
-            for (i=0; i<10; i++)
+            for (i=0; i<12; i++)
             {
                 sprintf(portstr,"%d",SUPERNET.port+i);
                 upnpredirect(portstr,portstr,"TCP","SuperNET");
