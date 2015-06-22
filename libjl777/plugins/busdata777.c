@@ -428,6 +428,7 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
 char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],response[1024],*retstr = 0;
+    printf("busdata\n");
     if ( SUPERNET.iamrelay != 0 && validated != 0 )
     {
         if ( (json= busdata_decode(destNXT,validated,sender,msg,datalen)) != 0 )
@@ -458,6 +459,7 @@ int32_t busdata_validate(uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,
 {
     char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0;
+    printf("busdata_validate\n");
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
@@ -480,6 +482,7 @@ char *busdata_deref(char *databuf,cJSON *json)
 {
     char forwarder[1024],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
     cJSON *dupjson,*second,*argjson; uint64_t forwardbits;
+    printf("busdata_deref\n");
     if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
     {
         dupjson = cJSON_Duplicate(json,1);
@@ -520,6 +523,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen; uint8_t databuf[8192];
     char forwarder[65],usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],*retstr = 0;
+    printf("nn_busdata_processor\n");
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( busdata_validate(&timestamp,databuf,&datalen,msg,json) == 0 )
@@ -544,6 +548,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
     bits256 hash; uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
+    printf("create_busdata\n");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -588,8 +593,8 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(tokbuf,str2,SUPERNET.NXTACCTSECRET,broadcastmode);
-        free(tmp), free(str), free(str2), str = str2 = 0;
 printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
+        free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         if ( SUPERNET.iamrelay != 0 && (str= nn_busdata_processor((uint8_t *)tokbuf,tlen)) != 0 )
             free(str);
@@ -601,6 +606,7 @@ printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
 char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
     int32_t datalen,sendlen = 0; char *data,*retstr;
+    printf("busdata_sync\n");
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
