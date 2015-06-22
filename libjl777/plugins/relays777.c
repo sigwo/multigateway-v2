@@ -244,14 +244,17 @@ int32_t nn_addservers(int32_t priority,int32_t sock,char servers[][MAX_SERVERNAM
     return(priority);
 }
 
-int32_t _lb_socket(int32_t retrymillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafes[][MAX_SERVERNAME],int32_t numfailsafes)
+int32_t _lb_socket(int32_t maxmillis,char servers[][MAX_SERVERNAME],int32_t num,char backups[][MAX_SERVERNAME],int32_t numbacks,char failsafes[][MAX_SERVERNAME],int32_t numfailsafes)
 {
-    int32_t lbsock,timeout,priority = 1;
+    int32_t lbsock,timeout,retrymillis,priority = 1;
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
+        retrymillis = maxmillis / 16;
         //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
-        if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
+        if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+        else if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
+            fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         timeout = 10000;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
@@ -329,9 +332,14 @@ void nn_startdirect(struct endpoint epbits,int32_t sock,char *handler)
 
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout)
 {
-    int32_t sock; struct endpoint epbits;
+    int32_t sock,retrymillis,maxmillis; struct endpoint epbits;
+    maxmillis = SUPERNET.PLUGINTIMEOUT, retrymillis = maxmillis/16;
     if ( (sock= nn_socket(AF_SP,type)) < 0 )
         fprintf(stderr,"error getting socket %s\n",nn_errstr());
+    else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
+        printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+    else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
+        fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
     if ( bindflag != 0 )
     {
         epbits = calc_epbits(SUPERNET.transport,0,port + nn_portoffset(type),type);
@@ -890,7 +898,7 @@ void responseloop(void *_args)
                     else argjson = json;
                     printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
-                        retstr = nn_busdata_processor(args,(uint8_t *)msg,len);
+                        retstr = nn_busdata_processor((uint8_t *)msg,len);
                     else
                     {
                         //if ( Debuglevel > 1 )
@@ -1008,7 +1016,7 @@ void serverloop(void *_args)
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allrelays_processor);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
-    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(10000,SUPERNET.port); // NN_REQ
+    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(SUPERNET.PLUGINTIMEOUT,SUPERNET.port); // NN_REQ
     //bussock = -1;
     busdata_init(sendtimeout,10);
     if ( SUPERNET.iamrelay != 0 )

@@ -18,16 +18,13 @@
 #include "NXT777.c"
 #include "plugin777.c"
 #include "SaM.c"
-//#include "gen1block.c"
 #undef DEFINES_ONLY
 
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 {
-    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json; //uint8_t hash[32];
+    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json;
     encoded[0] = 0;
-    //calc_sha256(hashstr,hash,(uint8_t *)key,(int32_t)strlen(key));
     sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase=%s",key,secret);
-    // printf("cmd.(%s)\n",cmd);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
         //printf("(%s) -> (%s)\n",cmd,jsontxt);
@@ -77,7 +74,6 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis)
 uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
 {
     int32_t leverage;
-    return(0);
     leverage = 0;
     if ( strcmp(broadcaststr,"allnodes") == 0 )
         leverage = 7;
@@ -91,7 +87,6 @@ uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
     char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce;
-    msleep(500);
     if ( broadcastmode != 0 && broadcastmode[0] != 0 )
     {
         nonce = nonce_func(cmdjson,broadcaststr,SUPERNET.PLUGINTIMEOUT/3);
@@ -202,9 +197,10 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                     }
                     else
                     {
-                        printf("diff sender.(%s) vs NXTaddr.(%s)\n",sender,NXTaddr);
-                        if ( strcmp(NXTaddr,buf) == 0 )
-                            retcode = valid;
+                        printf("valid.%d diff sender.(%s) vs NXTaddr.(%s)\n",valid,sender,NXTaddr);
+                        //if ( strcmp(NXTaddr,buf) == 0 )
+                        //    retcode = valid;
+                        retcode = -7;
                     }
                 } else printf("decode error\n");
                 if ( retcode < 0 )
@@ -290,7 +286,7 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
 char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json,char *forwarder,cJSON *origjson)
 {
     cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
-    struct service_provider *sp; int32_t i,sendtimeout,recvtimeout,retrymillis;
+    struct service_provider *sp; int32_t i,sendtimeout,recvtimeout,retrymillis,maxmillis;
     char submethod[512],endpoint[512],destplugin[512],retbuf[128],servicename[512],*hashstr,*str,*retstr;
     if ( key == 0 || key[0] == 0 )
         key = "0";
@@ -320,12 +316,14 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             sp = calloc(1,sizeof(*sp));
             HASH_ADD_KEYPTR(hh,Service_providers,servicename,strlen(servicename),sp);
             sp->sock = nn_socket(AF_SP,NN_REQ);
-            sendtimeout = 1000, recvtimeout = 10000, retrymillis = 10000;
+            sendtimeout = 1000, recvtimeout = 10000, maxmillis = SUPERNET.PLUGINTIMEOUT, retrymillis = maxmillis / 16;
             if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&retrymillis,sizeof(retrymillis)) < 0 )
+            else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
+                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+            else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
                 fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
             fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s) (%s)\n",servicename,sp->sock,endpoint,cJSON_Print(json));
         }
@@ -454,7 +452,7 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
     return(retstr);
 }
 
-char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
+char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
     cJSON *json,*argjson,*second; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192]; uint64_t tag;
@@ -496,9 +494,9 @@ char *nn_busdata_processor(struct relayargs *args,uint8_t *msg,int32_t len)
                             str = cJSON_Print(dupjson), _stripwhite(str,' ');
                             printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
                             if ( strcmp(broadcaststr,"allrelays") == 0 )
-                                nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
+                                nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(str)+1,0);
                             else if ( strcmp(broadcaststr,"allnodes") == 0 )
-                                nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
+                                nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(str)+1,0);
                             free(str);
                         } else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
                         free_json(dupjson);
@@ -569,11 +567,11 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         str = cJSON_Print(datajson), _stripwhite(str,' ');
         tokbuf = calloc(1,strlen(str) + 1024);
         tlen = construct_tokenized_req(tokbuf,str,SUPERNET.NXTACCTSECRET,broadcastmode);
-        free(str);
+        free(str), str = 0;
         free(tmp);
 printf("created busdata.(%s) tlen.%d\n",tokbuf,tlen);
         *datalenp = tlen;
-        if ( SUPERNET.iamrelay != 0 && (str= nn_busdata_processor(0,(uint8_t *)tokbuf,tlen)) != 0 )
+        if ( SUPERNET.iamrelay != 0 && (str= nn_busdata_processor((uint8_t *)tokbuf,tlen)) != 0 )
             free(str);
     } else printf("couldnt parse busdata json.(%s)\n",jsonstr);
     return(tokbuf);
@@ -611,7 +609,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
 
 void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
 {
-    char endpoint[512]; int32_t iter,sock,type,portoffset;
+    char endpoint[512]; int32_t iter,sock,type,portoffset,retrymillis,maxmillis;
     type = NN_REP, portoffset = -2;
     for (iter=0; iter<1+SUPERNET.iamrelay; iter++)
     {
@@ -623,10 +621,15 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
             expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + portoffset,type));
             nn_bind(sock,endpoint);
             printf("SERVICE BIND.(%s)\n",endpoint);
+            maxmillis = SUPERNET.PLUGINTIMEOUT, retrymillis = maxmillis / 16;
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
+                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+            else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
+                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         }
         type = NN_PUB;
         portoffset = nn_portoffset(NN_BUS);
@@ -641,7 +644,7 @@ void busdata_poll()
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            if ( (str= nn_busdata_processor(0,(uint8_t *)jsonstr,len)) != 0 )
+            if ( (str= nn_busdata_processor((uint8_t *)jsonstr,len)) != 0 )
             {
                 nn_send(sock,str,(int32_t)strlen(str)+1,0);
                 free(str);
