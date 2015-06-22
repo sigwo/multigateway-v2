@@ -383,7 +383,7 @@ int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timest
             busdata = (struct busdata_item *)ptr;
             //printf("%d.(%llx vs %llx).i%d ",iter,(long long)busdata->hash.txid,(long long)hash.txid,i);
             if ( busdata->hash.txid == hash.txid )
-                return(1 * 0);
+                return(1);
             i++;
         }
     }
@@ -436,8 +436,6 @@ char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t time
             copy_cJSON(response,cJSON_GetObjectItem(json,"response"));
             if ( response[0] == 0 )
             {
-                //if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
-                //    return(clonestr("{\"error\":\"busdata duplicate request\"}"));
                 if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson)) == 0 )
                 {
                     nn_syncbus(origjson);

@@ -578,6 +578,10 @@ fprintf(stderr,"null tag from send_to_daemon\n");
                     free_json(json);
                     *retstrp = str;
                 } else *retstrp = clonestr("{\"error\":\"cant parse command\"}");
+                //str = stringifyM(origargstr);
+                //sprintf(retbuf,"{\"error\":\"\",\"args\":%s}",str);
+                //free(str);
+                //*retstrp = clonestr(retbuf);
             }
         }
         return(*retstrp);
