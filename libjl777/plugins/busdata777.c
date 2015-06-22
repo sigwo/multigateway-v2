@@ -161,7 +161,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
         else
         {
             strcpy(NXTaddr,buf);
-            //printf("decoded.(%s)\n",NXTaddr);
+printf("decoded.(%s)\n",NXTaddr);
             if ( strictflag != 0 )
             {
                 timeval = get_cJSON_int(firstitem,"time");
@@ -177,7 +177,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
             if ( retcode != -5 )
             {
                 firstjsontxt = cJSON_Print(firstitem), _stripwhite(firstjsontxt,' ');
-//printf("(%s)\n",firstjsontxt);
+printf("(%s)\n",firstjsontxt);
                 tokenobj = cJSON_GetArrayItem(array,1);
                 obj = cJSON_GetObjectItem(tokenobj,"token");
                 copy_cJSON((char *)encoded,obj);
@@ -213,6 +213,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
     } else printf("decode arraysize.%d\n",cJSON_GetArraySize(array));
     if ( array != 0 )
         free_json(array);
+    printf("validate retcode.%d\n",retcode);
     return(retcode);
 }
 
