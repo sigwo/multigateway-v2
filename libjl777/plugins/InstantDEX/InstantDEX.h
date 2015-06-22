@@ -326,7 +326,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
     return(retstr);
 }
 
-char *lottostats_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *lottostats_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char buf[MAX_JSON_FIELD];
     uint64_t bestMMbits;
@@ -491,29 +491,27 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     return(retstr);
 }
 
-char *placebid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *placebid_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,SUPERNET.NXTADDR,valid,objs,numobjs,origargstr));
 }
 
-char *placeask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *placeask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,SUPERNET.NXTADDR,valid,objs,numobjs,origargstr));
 }
 
 /**/
 
-char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *bid_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char sender[MAX_JSON_FIELD];
     if ( strcmp(SUPERNET.NXTADDR,sender) != 0 )
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,1,sender,valid,objs,numobjs,origargstr));
     else return(0);
 }
 
-char *ask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char sender[MAX_JSON_FIELD];
     if ( strcmp(SUPERNET.NXTADDR,sender) != 0 )
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,-1,sender,valid,objs,numobjs,origargstr));
     else return(0);
@@ -956,7 +954,7 @@ void init_exchanges()
     }
 }
 
-char *trollbox_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *trollbox_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     if ( (rand() & 1) == 0 )
         return(clonestr("{\"result\":\"buy it will go to the moon\",\"user\":\"troll\",\"whaleindex\":\"0\"}"));

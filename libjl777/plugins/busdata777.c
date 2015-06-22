@@ -548,9 +548,10 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
             cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString("busdata"));
             cJSON_ReplaceItemInObject(json,"plugin",cJSON_CreateString("relay"));
             cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(method));
-            cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
+            if ( strcmp(plugin,"relay") != 0 )
+                cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
         }
-        cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
+        else cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
         randombytes((uint8_t *)&tag,sizeof(tag));
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         timestamp = (uint32_t)time(NULL);

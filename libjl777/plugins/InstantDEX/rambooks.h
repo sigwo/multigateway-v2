@@ -274,7 +274,7 @@ struct rambook_info *add_rambook_quote(char *exchangestr,struct InstantDEX_quote
     return(rb);
 }
 
-char *allorderbooks_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *allorderbooks_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     cJSON *json;
     char *jsonstr;
@@ -333,7 +333,7 @@ cJSON *openorders_json(char *NXTaddr)
     return(json);
 }
 
-char *openorders_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *openorders_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     cJSON *json = 0;
     char *jsonstr;
@@ -362,7 +362,7 @@ int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
     return(0);
 }
 
-char *cancelquote_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *cancelquote_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     struct InstantDEX_quote *iQ;
     uint64_t quoteid; char *retstr;
