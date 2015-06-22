@@ -74,7 +74,8 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis)
 uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
 {
     int32_t leverage;
-    leverage = 0;
+    return(0);
+   leverage = 0;
     if ( strcmp(broadcaststr,"allnodes") == 0 )
         leverage = 7;
     else if ( strcmp(broadcaststr,"allrelays") == 0 )
