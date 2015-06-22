@@ -221,7 +221,7 @@ char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,
 char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout)
 {
     struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
-    int32_t tmp,len; char *retstr,*tokstr;
+    int32_t tmp,len; char *retstr;//,*tokstr;
     len = (int32_t)strlen(cmdstr) + 1;
 printf("userjson.(%s).%d plugin.(%s) broadcastflag.%d method.(%s)\n",cmdstr,len,plugin,broadcastflag,method);
     if ( broadcastflag != 0 || strcmp(plugin,"relay") == 0 )
@@ -234,9 +234,9 @@ printf("userjson.(%s).%d plugin.(%s) broadcastflag.%d method.(%s)\n",cmdstr,len,
         retstr = nn_allrelays((uint8_t *)cmdstr,len,timeout,0);
     else if ( find_daemoninfo(&tmp,plugin,0,0) != 0 )
     {
-        tokstr = create_busdata(&len,cmdstr,0);
-        retstr = plugin_method(0,1,plugin,method,0,0,tokstr,len,timeout != 0 ? timeout : 0);
-        free(tokstr);
+        //tokstr = create_busdata(&len,cmdstr,0);
+        retstr = plugin_method(0,1,plugin,method,0,0,cmdstr,len,timeout != 0 ? timeout : 0);
+        //free(tokstr);
     }
     else retstr = clonestr("{\"error\":\"invalid command\"}");
     return(retstr);
