@@ -187,6 +187,8 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
                 {
                     sprintf(numstr,"%llu",(long long)tag), ensure_jsonitem(json,"tag",numstr);
                     ensure_jsonitem(json,"NXT",SUPERNET.NXTADDR);
+                    if ( localaccess != 0 && cJSON_GetObjectItem(json,"time") == 0 )
+                        cJSON_AddItemToObject(json,"time",cJSON_CreateNumber(time(NULL)));
                     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
                     tmplen = (int32_t)strlen(jsonstr) + 1;
                     if ( datalen != 0 )
