@@ -453,79 +453,84 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
     return(retstr);
 }
 
+int32_t busdata_validate(uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json)
+{
+    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
+    *timestamp = *datalenp = 0;
+    if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+    {
+        argjson = cJSON_GetArrayItem(json,0);
+        *timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
+        sender[0] = 0;
+        if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0)*3)) <= 0 )
+            return(valid);
+        copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
+        copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
+        decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
+        *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
+        calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
+        //printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
+        return(strcmp(hexstr,sha));
+    }
+    return(-1);
+}
+
+char *busdata_deref(char *databuf,cJSON *json)
+{
+    char forwarder[1024],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
+    cJSON *dupjson,*second,*argjson; uint64_t forwardbits;
+    if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
+    {
+        dupjson = cJSON_Duplicate(json,1);
+        second = cJSON_GetArrayItem(dupjson,1);
+        copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
+        ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+        if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
+        {
+            ensure_jsonitem(second,"stop","end");
+            str = cJSON_Print(dupjson), _stripwhite(str,' ');
+            printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
+            if ( strcmp(broadcaststr,"allrelays") == 0 )
+                nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
+            else if ( strcmp(broadcaststr,"allnodes") == 0 )
+                nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
+            free(str);
+        } else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
+        free_json(dupjson);
+    }
+    if ( (argjson= cJSON_Parse(databuf)) != 0 )
+    {
+        copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
+        copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
+        cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(method));
+        cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(plugin));
+        cJSON_DeleteItemFromObject(argjson,"submethod");
+        cJSON_DeleteItemFromObject(argjson,"destplugin");  //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
+        str = cJSON_Print(argjson), _stripwhite(str,' ');
+        printf("call (%s %s) (%s)\n",plugin,method,str);
+        retstr = plugin_method(0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2);
+        free(str);
+    }
+    return(retstr);
+}
+
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    //int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
-    cJSON *json,*argjson,*second; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192]; uint64_t tag;
-    char forwarder[65],pubkey[256],usedest[128],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*str,*jsonstr=0,*retstr = 0;
+    cJSON *json,*argjson; uint32_t timestamp; int32_t datalen; uint8_t databuf[8192];
+    char forwarder[65],usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
-        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+        if ( busdata_validate(&timestamp,databuf,&datalen,msg,json) == 0 )
         {
             argjson = cJSON_GetArrayItem(json,0);
-            second = cJSON_GetArrayItem(json,1);
-            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
-            sender[0] = 0;
-            if ( (valid = validate_token(forwarder,pubkey,sender,(char *)msg,(timestamp != 0)*3)) <= 0 )
-            {
-                retstr = clonestr("{\"error\":\"packet doesnt validate\"}");
-                free_json(json);
-                return(retstr);
-            }
-            jsonstr = cJSON_Print(argjson), _stripwhite(jsonstr,' ');
             copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
             copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
-            copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
-            copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
-            tag = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"tag"));
-            decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
-            datalen = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
-            calc_sha256(hexstr,hash.bytes,(uint8_t *)databuf,datalen);
-//printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
-            if ( strcmp(hexstr,sha) == 0 )
-            {
-                copy_cJSON(usedest,cJSON_GetObjectItem(second,"usedest"));
-                if ( usedest[0] != 0 )
-                {
-                    char forwarder[1024],*broadcaststr; cJSON *dupjson; uint64_t forwardbits;
-                    if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(second,"broadcast"))) != 0 )
-                    {
-                        dupjson = cJSON_Duplicate(json,1);
-                        second = cJSON_GetArrayItem(dupjson,1);
-                        copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
-                        ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-                        if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
-                        {
-                            ensure_jsonitem(second,"stop","end");
-                            str = cJSON_Print(dupjson), _stripwhite(str,' ');
-                            printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
-                            if ( strcmp(broadcaststr,"allrelays") == 0 )
-                                nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
-                            else if ( strcmp(broadcaststr,"allnodes") == 0 )
-                                nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
-                            free(str);
-                        } else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
-                        free_json(dupjson);
-                    }
-                    if ( (argjson= cJSON_Parse((char *)databuf)) != 0 )
-                    {
-                        copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
-                        copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
-                        cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(method));
-                        cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(plugin));
-                        cJSON_DeleteItemFromObject(argjson,"submethod");
-                        cJSON_DeleteItemFromObject(argjson,"destplugin");  //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
-                        str = cJSON_Print(argjson), _stripwhite(str,' ');
-                        printf("call (%s %s) (%s)\n",plugin,method,str);
-                        retstr = plugin_method(0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,5000);
-                        free(str);
-                    }
-                } else retstr = busdata(valid,forwarder,src,key,timestamp,databuf,datalen,json);
-                //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
-            }
-            else retstr = clonestr("{\"error\":\"hashes dont match\"}");
-            free(jsonstr);
-        }
+            copy_cJSON(usedest,cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"usedest"));
+            if ( usedest[0] != 0 )
+                retstr = busdata_deref((char *)databuf,json);
+            else retstr = busdata(1,forwarder,src,key,timestamp,databuf,datalen,json);
+            //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
+        } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
     printf("BUSDATA.(%s) (%x)\n",retstr,*(int32_t *)msg);
