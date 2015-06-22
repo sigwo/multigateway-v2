@@ -226,7 +226,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             portable_mutex_lock(&plugin->mutex);
             retstr = InstantDEX_parser(forwarder,sender,valid,jsonstr,json);
-            printf("InstantDEX_parser return.(%s)\n",retstr);
+            //printf("InstantDEX_parser return.(%s)\n",retstr);
             portable_mutex_unlock(&plugin->mutex);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
         if ( retstr != 0 )

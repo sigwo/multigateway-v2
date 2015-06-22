@@ -628,8 +628,8 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         else
         {
             retstr = nn_loadbalanced((uint8_t *)data,datalen);
-            if ( retstr != 0 )
-                printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
+            //if ( retstr != 0 )
+            //    printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
             if ( data != jsonstr )
                 free(data);
             return(retstr);

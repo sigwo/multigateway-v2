@@ -509,6 +509,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
+    *retstrp = 0;
     if ( localaccess < 0 )
     {
         localaccess = 0;
@@ -559,7 +560,6 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
         else
         {
 //fprintf(stderr,"send_to_daemon.(%s).%d\n",origargstr,len);
-            *retstrp = 0;
             if ( (tag= send_to_daemon(args,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
             {
 fprintf(stderr,"null tag from send_to_daemon\n");

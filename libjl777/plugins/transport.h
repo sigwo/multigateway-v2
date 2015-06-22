@@ -148,6 +148,7 @@ char *wait_for_daemon(char **destp,uint64_t tag,int32_t timeout,int32_t sleepmil
             counter++;
             if ( (counter % 10000) == 0 )
                 printf("%ld: ave %.1f\n",counter,(double)sum/counter);
+            printf("WAITEDFOR.(%s)\n",retstr);
             return(retstr);
         }
         if ( sleepmillis != 0 )
