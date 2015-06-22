@@ -567,14 +567,22 @@ fprintf(stderr,"null tag from send_to_daemon\n");
                 return(*retstrp);
             }
             else if ( async != 0 )
-                return(0);//override == 0 ? clonestr("{\"error\":\"request sent to plugin async\"}") : 0);
+                return(0);
 //fprintf(stderr,"wait_for_daemon\n");
             if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
             {
+                /*if ( (json= cJSON_Parse(origargstr)) != 0 )
+                {
+                    cJSON_AddItemToObject(json,"result",cJSON_CreateString("submitted"));
+                    str = cJSON_Print(json), _stripwhite(str,' ');
+                    printf("WAITEDFOR.(%s)\n",str);
+                    free_json(json);
+                    *retstrp = str;
+                } else *retstrp = clonestr("{\"error\":\"cant parse command\"}");*/
                 str = stringifyM(origargstr);
                 sprintf(retbuf,"{\"error\":\"\",\"args\":%s}",str);
                 free(str);
-                return(clonestr(retbuf));
+                *retstrp = clonestr(retbuf);
             }
         }
         return(*retstrp);

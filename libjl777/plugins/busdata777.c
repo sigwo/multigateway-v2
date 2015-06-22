@@ -76,7 +76,7 @@ uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
 {
     int32_t leverage;
     return(0);
-   leverage = 0;
+    leverage = 0;
     if ( strcmp(broadcaststr,"allnodes") == 0 )
         leverage = 7;
     else if ( strcmp(broadcaststr,"allrelays") == 0 )
@@ -170,7 +170,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                     diff = -diff;
                 if ( diff > strictflag )
                 {
-                    printf("time diff %lld too big %lld vs %ld\n",(long long)diff,(long long)timeval,time(NULL));
+                    printf("(%s) time diff %lld too big %lld vs %ld\n",tokenizedtxt,(long long)diff,(long long)timeval,time(NULL));
                     retcode = -5;
                 }
             }
@@ -195,7 +195,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                             retcode = -4;
                         else retcode = valid;
                         if ( Debuglevel > 1 )
-                            printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
+                            printf("retcode.%d signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",retcode,sender,valid,(long long)diff,forwarder);
                     }
                     else
                     {
@@ -383,7 +383,7 @@ int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timest
             busdata = (struct busdata_item *)ptr;
             //printf("%d.(%llx vs %llx).i%d ",iter,(long long)busdata->hash.txid,(long long)hash.txid,i);
             if ( busdata->hash.txid == hash.txid )
-                return(1 * 0);
+                return(1);
             i++;
         }
     }
@@ -436,8 +436,6 @@ char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t time
             copy_cJSON(response,cJSON_GetObjectItem(json,"response"));
             if ( response[0] == 0 )
             {
-                //if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
-                //    return(clonestr("{\"error\":\"busdata duplicate request\"}"));
                 if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson)) == 0 )
                 {
                     nn_syncbus(origjson);
