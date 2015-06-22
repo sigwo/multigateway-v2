@@ -76,7 +76,7 @@ uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis)
 {
     int32_t leverage;
     return(0);
-   leverage = 0;
+    leverage = 0;
     if ( strcmp(broadcaststr,"allnodes") == 0 )
         leverage = 7;
     else if ( strcmp(broadcaststr,"allrelays") == 0 )
@@ -195,7 +195,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                             retcode = -4;
                         else retcode = valid;
                         if ( Debuglevel > 1 )
-                            printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
+                            printf("retcode.%d signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",retcode,sender,valid,(long long)diff,forwarder);
                     }
                     else
                     {

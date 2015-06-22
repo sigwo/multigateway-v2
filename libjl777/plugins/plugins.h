@@ -571,10 +571,13 @@ fprintf(stderr,"null tag from send_to_daemon\n");
 //fprintf(stderr,"wait_for_daemon\n");
             if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
             {
-                str = stringifyM(origargstr);
-                sprintf(retbuf,"{\"error\":\"\",\"args\":%s}",str);
-                free(str);
-                return(clonestr(retbuf));
+                if ( (json= cJSON_Parse(origargstr)) != 0 )
+                {
+                    cJSON_AddItemToObject(json,"result",cJSON_CreateString("submitted"));
+                    str = cJSON_Print(json), _stripwhite(str,' ');
+                    free_json(json);
+                    *retstrp = str;
+                } else *retstrp = clonestr("{\"error\":\"cant parse command\"}");
             }
         }
         return(*retstrp);
