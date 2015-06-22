@@ -259,6 +259,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout);
 void busdata_poll();
 char *busdata_sync(char *jsonstr,char *broadcastmode);
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
+int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode);
 
 #endif
 #else
