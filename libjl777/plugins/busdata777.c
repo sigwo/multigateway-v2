@@ -170,7 +170,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                     diff = -diff;
                 if ( diff > strictflag )
                 {
-                    printf("time diff %lld too big %lld vs %ld\n",(long long)diff,(long long)timeval,time(NULL));
+                    printf("(%s) time diff %lld too big %lld vs %ld\n",tokenizedtxt,(long long)diff,(long long)timeval,time(NULL));
                     retcode = -5;
                 }
             }
