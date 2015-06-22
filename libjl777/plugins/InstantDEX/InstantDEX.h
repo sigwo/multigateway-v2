@@ -404,7 +404,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
         duration = ORDERBOOK_EXPIRATION;
     copy_cJSON(exchangestr,objs[11]);
-    printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exchangestr);
+    //printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exchangestr);
     if ( exchangestr[0] == 0 )
         strcpy(exchangestr,INSTANTDEX_NAME);
     else
@@ -433,7 +433,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
             } else return(clonestr("{\"error\":\"illegal parameter baseid or relid not crypto or invalid price\"}\n"));
         } //else printf("alternate else case.(%s)\n",exchangestr);
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
     update_rambooks(baseid,relid,0,0,0);
     minbasevol = get_minvolume(baseid), minrelvol = get_minvolume(relid);
