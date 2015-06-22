@@ -84,19 +84,19 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
     static char **commands[] = { allorderbooks, lottostats, cancelquote, respondtx, jumptrades, tradehistory, openorders, makeoffer3, placebid, bid, placeask, ask, orderbook };
     int32_t i,j,localaccess,valid = 0;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
-    char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],**cmdinfo,*retstr=0;
+    char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],**cmdinfo,*argstr,*retstr=0;
     memset(objs,0,sizeof(objs));
     command[0] = 0;
     memset(NXTaddr,0,sizeof(NXTaddr));
     if ( is_cJSON_Array(origargjson) != 0 )
     {
         if ( (valid= validate_token(forwarder,pubkey,sender,origargstr,3)) <= 0 )
-        {
             return(clonestr("{\"error\":\"packet validation error\"}"));
-        }
+        else printf("token validated.%d forwarder.(%s) sender.(%s)\n",valid,forwarder,sender);
         argjson = cJSON_GetArrayItem(origargjson,0);
+        argstr = cJSON_Print(argjson), _stripwhite(argstr,' ');
     }
-    else argjson = origargjson;
+    else argjson = origargjson, argstr = origargstr;
     localaccess = 0;
     NXTACCTSECRET[0] = 0;
     if ( argjson != 0 )
@@ -124,7 +124,7 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
                 strcpy(NXTaddr,SUPERNET.NXTADDR);
              }
         }
-   /// printf("(%s) command.(%s) NXT.(%s) valid.%d\n",cJSON_Print(argjson),command,NXTaddr,valid);
+printf("(%s) argstr.(%s) command.(%s) NXT.(%s) valid.%d\n",cJSON_Print(argjson),argstr,command,NXTaddr,valid);
         //fprintf(stderr,"SuperNET_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
         for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
         {
@@ -136,11 +136,13 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
                     return(0);
                 for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
                     objs[j-3] = cJSON_GetObjectItem(argjson,cmdinfo[j]);
-                retstr = (*(json_handler)cmdinfo[0])(localaccess,valid,sender,objs,j-3,origargstr);
+                retstr = (*(json_handler)cmdinfo[0])(localaccess,valid,sender,objs,j-3,argstr);
                 break;
             }
         }
     } else printf("not JSON to parse?\n");
+    if ( argstr != origargstr )
+        free(argstr);
     return(retstr);
 }
 
