@@ -177,7 +177,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
             if ( retcode != -5 )
             {
                 firstjsontxt = cJSON_Print(firstitem), _stripwhite(firstjsontxt,' ');
-printf("(%s)\n",firstjsontxt);
+//printf("(%s)\n",firstjsontxt);
                 tokenobj = cJSON_GetArrayItem(array,1);
                 obj = cJSON_GetObjectItem(tokenobj,"token");
                 copy_cJSON((char *)encoded,obj);
@@ -425,13 +425,13 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
     return(retstr);
 }
 
-char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
+char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],response[1024],*retstr = 0;
     printf("busdata\n");
-    if ( SUPERNET.iamrelay != 0 && validated != 0 )
+    if ( SUPERNET.iamrelay != 0 && valid > 0 )
     {
-        if ( (json= busdata_decode(destNXT,validated,sender,msg,datalen)) != 0 )
+        if ( (json= busdata_decode(destNXT,valid,sender,msg,datalen)) != 0 )
         {
             copy_cJSON(response,cJSON_GetObjectItem(json,"response"));
             if ( response[0] == 0 )
@@ -455,9 +455,9 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
     return(retstr);
 }
 
-int32_t busdata_validate(uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json)
+int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json)
 {
-    char forwarder[65],pubkey[256],sender[65],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
+    char pubkey[256],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0;
     printf("busdata_validate\n");
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -473,21 +473,20 @@ int32_t busdata_validate(uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,
         *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
         calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
         //printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
-        return(strcmp(hexstr,sha));
+        if ( strcmp(hexstr,sha) == 0 )
+            return(0);
     }
     return(-1);
 }
 
-char *busdata_deref(char *databuf,cJSON *json)
+char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJSON *json)
 {
-    char forwarder[1024],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
+    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
     cJSON *dupjson,*second,*argjson; uint64_t forwardbits;
-    printf("busdata_deref\n");
     if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
     {
         dupjson = cJSON_Duplicate(json,1);
         second = cJSON_GetArrayItem(dupjson,1);
-        copy_cJSON(forwarder,cJSON_GetObjectItem(second,"forwarder"));
         ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
         if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
         {
@@ -521,20 +520,20 @@ char *busdata_deref(char *databuf,cJSON *json)
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    cJSON *json,*argjson; uint32_t timestamp; int32_t datalen; uint8_t databuf[8192];
-    char forwarder[65],usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],*retstr = 0;
+    cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
+    char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
     printf("nn_busdata_processor\n");
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
-        if ( busdata_validate(&timestamp,databuf,&datalen,msg,json) == 0 )
+        if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
         {
             argjson = cJSON_GetArrayItem(json,0);
             copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
             copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
             copy_cJSON(usedest,cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"usedest"));
             if ( usedest[0] != 0 )
-                retstr = busdata_deref((char *)databuf,json);
-            else retstr = busdata(1,forwarder,src,key,timestamp,databuf,datalen,json);
+                retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
+            else retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
             //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
