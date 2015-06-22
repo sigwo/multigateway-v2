@@ -181,14 +181,14 @@ int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbi
 int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     int32_t n = 0;
-    strcpy(servers[n++],"89.248.160.237");
-    strcpy(servers[n++],"89.248.160.238");
+    //strcpy(servers[n++],"89.248.160.237");
+    //strcpy(servers[n++],"89.248.160.238");
     strcpy(servers[n++],"89.248.160.239");
-    strcpy(servers[n++],"89.248.160.240");
+    //strcpy(servers[n++],"89.248.160.240");
     strcpy(servers[n++],"89.248.160.241");
-    strcpy(servers[n++],"89.248.160.242");
-    strcpy(servers[n++],"89.248.160.243");
-    strcpy(servers[n++],"89.248.160.244");
+    //strcpy(servers[n++],"89.248.160.242");
+    //strcpy(servers[n++],"89.248.160.243");
+    //strcpy(servers[n++],"89.248.160.244");
     //strcpy(servers[n++],"89.248.160.245");
     return(n);
 }
@@ -202,17 +202,20 @@ int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port
     strcpy(servers[n++],"5.9.105.170");
     strcpy(servers[n++],"136.243.5.70");
      strcpy(servers[n++],"5.9.155.145");*/
-    strcpy(servers[n++],"167.114.96.223");
-    strcpy(servers[n++],"167.114.113.25");
-    strcpy(servers[n++],"167.114.113.27");
-    strcpy(servers[n++],"167.114.113.194");
-    strcpy(servers[n++],"167.114.113.197");
-    strcpy(servers[n++],"167.114.113.201");
-    strcpy(servers[n++],"167.114.113.246");
-    strcpy(servers[n++],"167.114.113.249");
-    strcpy(servers[n++],"167.114.113.250");
-    strcpy(servers[n++],"192.99.151.160");
-    strcpy(servers[n++],"167.114.96.222");
+    if ( 0 )
+    {
+        strcpy(servers[n++],"167.114.96.223");
+        strcpy(servers[n++],"167.114.113.25");
+        strcpy(servers[n++],"167.114.113.27");
+        strcpy(servers[n++],"167.114.113.194");
+        strcpy(servers[n++],"167.114.113.197");
+        strcpy(servers[n++],"167.114.113.201");
+        strcpy(servers[n++],"167.114.113.246");
+        strcpy(servers[n++],"167.114.113.249");
+        strcpy(servers[n++],"167.114.113.250");
+        strcpy(servers[n++],"192.99.151.160");
+        strcpy(servers[n++],"167.114.96.222");
+    }
     return(n);
 }
 
@@ -273,7 +276,7 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port)
 {
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
     int32_t n,m,lbsock,numfailsafes = 0;
-    strcpy(failsafes[numfailsafes++],"76.176.198.6");
+    strcpy(failsafes[numfailsafes++],"5.9.56.103");
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
     //if ( europeflag != 0 )
