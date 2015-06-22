@@ -901,7 +901,7 @@ void responseloop(void *_args)
                     else argjson = json;
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
                     {
-                        printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
+                        //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
                         retstr = nn_busdata_processor((uint8_t *)msg,len);
                     }
                     else

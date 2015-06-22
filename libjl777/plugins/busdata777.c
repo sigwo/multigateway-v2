@@ -194,7 +194,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         if ( nonce_func(firstjsontxt,broadcaststr,0) != 0 )
                             retcode = -4;
                         else retcode = valid;
-                        if ( Debuglevel > 1 )
+                        if ( Debuglevel > 2 )
                             printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
                     }
                     else
@@ -213,7 +213,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
     } else printf("decode arraysize.%d\n",cJSON_GetArraySize(array));
     if ( array != 0 )
         free_json(array);
-    printf("validate retcode.%d\n",retcode);
+    //printf("validate retcode.%d\n",retcode);
     return(retcode);
 }
 
@@ -539,7 +539,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    printf("BUSDATA.(%s) (%s)\n",msg,retstr);
+   // printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
 }
 
