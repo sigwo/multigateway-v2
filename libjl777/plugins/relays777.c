@@ -1040,6 +1040,7 @@ void serverloop(void *_args)
     }
     for (i=0; i<RELAYS.lb.num; i++)
     {
+        printf("add connection.%d\n",i);
         expand_ipbits(ipaddr,RELAYS.lb.connections[i].ipbits);
         add_relay_connections(ipaddr,2);
     }
@@ -1048,6 +1049,7 @@ void serverloop(void *_args)
         int32_t make_MGWbus(uint16_t port,char *bindaddr,char serverips[MAX_MGWSERVERS][64],int32_t n);
         MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1*0);
     }
+    sleep(10);
     while ( 1 )
     {
         int32_t len; char retbuf[8192],*jsonstr; cJSON *json;
