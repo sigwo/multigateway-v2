@@ -90,8 +90,8 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     if ( broadcastmode != 0 && broadcastmode[0] != 0 )
     {
         nonce = nonce_func(cmdjson,broadcaststr,SUPERNET.PLUGINTIMEOUT/3);
-        //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\"",broadcastmode,nonce);
-        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
+        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\"",broadcastmode,nonce);
+        //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     }
     else broadcaststr[0] = 0;
     _stripwhite(cmdjson,' ');
@@ -494,9 +494,9 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                             str = cJSON_Print(dupjson), _stripwhite(str,' ');
                             printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
                             if ( strcmp(broadcaststr,"allrelays") == 0 )
-                                nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(str)+1,0);
+                                nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
                             else if ( strcmp(broadcaststr,"allnodes") == 0 )
-                                nn_send(RELAYS.pubsock,jsonstr,(int32_t)strlen(str)+1,0);
+                                nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
                             free(str);
                         } else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
                         free_json(dupjson);
