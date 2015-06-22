@@ -673,7 +673,7 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
     for (i=0; i<10; i++)
         if ( (nn_socket_status(lbsock,1) & NN_POLLOUT) != 0 )
             break;
-    printf("NN_LBSEND.(%s)\n",data);
+    //printf("NN_LBSEND.(%s)\n",data);
     if ( (sendlen= nn_send(lbsock,data,len,0)) == len )
     {
         for (i=0; i<1000; i++)
@@ -896,9 +896,13 @@ void responseloop(void *_args)
                     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
                         argjson = cJSON_GetArrayItem(json,0);
                     else argjson = json;
-                    printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
+                    //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
-                        retstr = nn_busdata_processor((uint8_t *)msg,len);
+                    {
+                        if ( (retstr = nn_busdata_processor((uint8_t *)msg,len)) != 0 )
+                            free(retstr);
+                        retstr = 0;
+                    }
                     else
                     {
                         //if ( Debuglevel > 1 )
@@ -923,7 +927,7 @@ void responseloop(void *_args)
                     free(retstr);
                 }
                 nn_freemsg(msg);
-            }// else fprintf(stderr,".");
+            }
         }
     } else printf("error getting socket type.%d %s\n",args->type,nn_errstr());
 }
