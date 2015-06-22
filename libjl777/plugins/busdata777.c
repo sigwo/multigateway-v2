@@ -534,11 +534,11 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
             if ( usedest[0] != 0 )
                 retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
             else retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
-            //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) sha.(%s) datalen.%d origlen.%d\n",valid,forwarder,src,key,hexstr,datalen,origlen);
+            printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    printf("BUSDATA.(%s) (%x)\n",retstr,*(int32_t *)msg);
+    printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
 }
 

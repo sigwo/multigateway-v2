@@ -185,7 +185,7 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
     //strcpy(servers[n++],"89.248.160.238");
     strcpy(servers[n++],"89.248.160.239");
     //strcpy(servers[n++],"89.248.160.240");
-    strcpy(servers[n++],"89.248.160.241");
+    //strcpy(servers[n++],"89.248.160.241");
     //strcpy(servers[n++],"89.248.160.242");
     //strcpy(servers[n++],"89.248.160.243");
     //strcpy(servers[n++],"89.248.160.244");
@@ -196,6 +196,7 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     int32_t n = 0;
+    strcpy(servers[n++],"89.248.160.241");
     /*strcpy(servers[n++],"192.99.151.160");
     strcpy(servers[n++],"167.114.96.223");
     strcpy(servers[n++],"167.114.113.197");
@@ -258,7 +259,7 @@ int32_t _lb_socket(int32_t maxmillis,char servers[][MAX_SERVERNAME],int32_t num,
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         else if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
             fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-        timeout = 10000;
+        timeout = 1000;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
         timeout = 100;
@@ -676,10 +677,10 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
     for (i=0; i<10; i++)
         if ( (nn_socket_status(lbsock,1) & NN_POLLOUT) != 0 )
             break;
-    //printf("NN_LBSEND.(%s)\n",data);
+    printf("NN_LBSEND.(%s)\n",data);
     if ( (sendlen= nn_send(lbsock,data,len,0)) == len )
     {
-        for (i=0; i<1000; i++)
+        for (i=0; i<100; i++)
             if ( (nn_socket_status(lbsock,1) & NN_POLLIN) != 0 )
                 break;
         if ( (recvlen= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
@@ -899,9 +900,9 @@ void responseloop(void *_args)
                     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
                         argjson = cJSON_GetArrayItem(json,0);
                     else argjson = json;
-                    //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
                     {
+                        printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
                         retstr = nn_busdata_processor((uint8_t *)msg,len);
                     }
                     else
