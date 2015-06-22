@@ -506,18 +506,16 @@ char *placeask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numob
 char *bid_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char sender[MAX_JSON_FIELD];
-    //should_forward(sender,origargstr);
     if ( strcmp(SUPERNET.NXTADDR,sender) != 0 )
-        return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,sender,valid,objs,numobjs,origargstr));
+        return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,1,sender,valid,objs,numobjs,origargstr));
     else return(0);
 }
 
 char *ask_func(int32_t localaccess,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char sender[MAX_JSON_FIELD];
-    //should_forward(sender,origargstr);
     if ( strcmp(SUPERNET.NXTADDR,sender) != 0 )
-        return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,sender,valid,objs,numobjs,origargstr));
+        return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,-1,sender,valid,objs,numobjs,origargstr));
     else return(0);
 }
 

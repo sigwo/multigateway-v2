@@ -455,7 +455,7 @@ char *busdata(int32_t validated,char *forwarder,char *sender,char *key,uint32_t 
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
+    //int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
     cJSON *json,*argjson,*second; uint32_t timestamp; int32_t valid,datalen; bits256 hash; uint8_t databuf[8192]; uint64_t tag;
     char forwarder[65],pubkey[256],usedest[128],sender[65],hexstr[65],sha[65],src[64],datastr[8192],key[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*str,*jsonstr=0,*retstr = 0;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
@@ -465,9 +465,14 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
             argjson = cJSON_GetArrayItem(json,0);
             second = cJSON_GetArrayItem(json,1);
             timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
-            jsonstr = cJSON_Print(argjson), _stripwhite(jsonstr,' ');
             sender[0] = 0;
-            valid = validate_token(forwarder,pubkey,sender,(char *)msg,(timestamp != 0)*3);
+            if ( (valid = validate_token(forwarder,pubkey,sender,(char *)msg,(timestamp != 0)*3)) <= 0 )
+            {
+                retstr = clonestr("{\"error\":\"packet doesnt validate\"}");
+                free_json(json);
+                return(retstr);
+            }
+            jsonstr = cJSON_Print(argjson), _stripwhite(jsonstr,' ');
             copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
             copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
             copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
