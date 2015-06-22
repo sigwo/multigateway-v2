@@ -91,7 +91,10 @@ char *InstantDEX_parser(char *origargstr,cJSON *origargjson)
     if ( is_cJSON_Array(origargjson) != 0 )
     {
         if ( (valid= validate_token(forwarder,pubkey,sender,origargstr,3)) <= 0 )
+        {
+            printf("validation error.%d (%s)\n",valid,origargstr);
             return(clonestr("{\"error\":\"packet validation error\"}"));
+        }
         else printf("token validated.%d forwarder.(%s) sender.(%s)\n",valid,forwarder,sender);
         argjson = cJSON_GetArrayItem(origargjson,0);
         argstr = cJSON_Print(argjson), _stripwhite(argstr,' ');

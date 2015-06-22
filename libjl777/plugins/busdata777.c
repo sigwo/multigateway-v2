@@ -177,7 +177,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
             if ( retcode != -5 )
             {
                 firstjsontxt = cJSON_Print(firstitem), _stripwhite(firstjsontxt,' ');
-                //printf("(%s)\n",firstjsontxt);
+printf("(%s)\n",firstjsontxt);
                 tokenobj = cJSON_GetArrayItem(array,1);
                 obj = cJSON_GetObjectItem(tokenobj,"token");
                 copy_cJSON((char *)encoded,obj);
@@ -194,7 +194,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         if ( nonce_func(firstjsontxt,broadcaststr,0) != 0 )
                             retcode = -4;
                         else retcode = valid;
-                        if ( Debuglevel > 2 )
+                        if ( Debuglevel > 1 )
                             printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
                     }
                     else
