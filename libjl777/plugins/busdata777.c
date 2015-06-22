@@ -35,6 +35,7 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
             copy_cJSON(token,tokenobj);
             if ( encoded != 0 )
                 strcpy(encoded,token);
+            free_json(json);
         }
         free(jsontxt);
     }
@@ -326,7 +327,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
                 fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
             else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
                 fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-            fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s) (%s)\n",servicename,sp->sock,endpoint,cJSON_Print(json));
+            fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s)\n",servicename,sp->sock,endpoint);
         }
         sp->endpoints = realloc(sp->endpoints,sizeof(*sp->endpoints) * (sp->numendpoints + 1));
         sp->endpoints[sp->numendpoints++] = clonestr(endpoint);
@@ -356,7 +357,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             return(clonestr("{\"result\":\"no response from provider\"}"));
         }
     }
-    printf("%s -> %s add pending.(%s) %llx\n",sender,destNXT,cJSON_Print(json),(long long)ptr->hash.txid);
+    printf("%s -> %s add pending %llx\n",sender,destNXT,(long long)ptr->hash.txid);
     queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
     return(0);
 }
@@ -509,6 +510,7 @@ char *busdata_deref(char *databuf,cJSON *json)
         str = cJSON_Print(argjson), _stripwhite(str,' ');
         printf("call (%s %s) (%s)\n",plugin,method,str);
         retstr = plugin_method(0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2);
+        free_json(argjson);
         free(str);
     }
     return(retstr);
@@ -539,13 +541,17 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
-    //int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET);
-    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*tokbuf = 0,*tmp; bits256 hash;
-    uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
+    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
+    bits256 hash; uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
+        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+        {
+            *datalenp = (int32_t)strlen(jsonstr) + 1;
+            free_json(json);
+            return(jsonstr);
+        }
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
             copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
@@ -556,7 +562,11 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
             if ( strcmp(plugin,"relay") != 0 )
                 cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
         }
-        else cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
+        else
+        {
+            sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
+            cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
+        }
         randombytes((uint8_t *)&tag,sizeof(tag));
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         timestamp = (uint32_t)time(NULL);
@@ -573,18 +583,17 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         init_hexbytes_noT(tmp,(uint8_t *)str,datalen);
         cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
         calc_sha256(hexstr,hash.bytes,(uint8_t *)str,datalen);
-        free(str);
         cJSON_AddItemToObject(datajson,"n",cJSON_CreateNumber(datalen));
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
-        str = cJSON_Print(datajson), _stripwhite(str,' ');
-        tokbuf = calloc(1,strlen(str) + 1024);
-        tlen = construct_tokenized_req(tokbuf,str,SUPERNET.NXTACCTSECRET,broadcastmode);
-        free(str), str = 0;
-        free(tmp);
-printf("created busdata.(%s) tlen.%d\n",tokbuf,tlen);
+        str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
+        tokbuf = calloc(1,strlen(str2) + 1024);
+        tlen = construct_tokenized_req(tokbuf,str2,SUPERNET.NXTACCTSECRET,broadcastmode);
+        free(tmp), free(str), free(str2), str = str2 = 0;
+printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         *datalenp = tlen;
         if ( SUPERNET.iamrelay != 0 && (str= nn_busdata_processor((uint8_t *)tokbuf,tlen)) != 0 )
             free(str);
+        free_json(json);
     } else printf("couldnt parse busdata json.(%s)\n",jsonstr);
     return(tokbuf);
 }
@@ -606,13 +615,15 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     return(clonestr("{\"error\":\"couldnt send to bus\"}"));
                 } else printf("PUB.(%s)\n",data);
             }
-            free(data);
+            if ( data != jsonstr )
+                free(data);
             return(clonestr("{\"result\":\"sent to bus\"}"));
         }
         else
         {
             retstr = nn_loadbalanced((uint8_t *)data,datalen);
-            free(data);
+            if ( data != jsonstr )
+                free(data);
             return(retstr);
         }
     }
