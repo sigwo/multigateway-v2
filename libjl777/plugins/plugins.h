@@ -575,7 +575,7 @@ fprintf(stderr,"null tag from send_to_daemon\n");
                 {
                     cJSON_AddItemToObject(json,"result",cJSON_CreateString("submitted"));
                     str = cJSON_Print(json), _stripwhite(str,' ');
-                    printf("WAITEDFOR.(%s)\n",str);
+                    printf("timedout.(%s)\n",str);
                     free_json(json);
                     *retstrp = str;
                 } else *retstrp = clonestr("{\"error\":\"cant parse command\"}");

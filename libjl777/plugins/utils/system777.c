@@ -188,7 +188,7 @@ struct direct_connection { char handler[16]; struct endpoint epbits; int32_t soc
 
 struct relay_info
 {
-    struct relayargs args[8];
+    struct relayargs args[16];
     struct _relay_info lb,peer,sub,pair,bus;
     int32_t readyflag,pubsock,servicesock,querypeers,surveymillis,pullsock;
     struct direct_connection directlinks[1 << CONNECTION_NUMBITS];
