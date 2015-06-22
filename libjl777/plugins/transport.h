@@ -101,7 +101,7 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,struct relaya
     {
         if ( dp->tags[i][0] == 0 )
         {
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("slot.%d <- tag.%llu dest.%p\n",i,(long long)tag,dest);
             dp->tags[i][0] = tag, dp->tags[i][1] = (uint64_t)dest, dp->tags[i][2] = (uint64_t)args;
             return(i);
@@ -123,7 +123,7 @@ char **get_tagstr(struct relayargs **argsp,struct daemon_info *dp,uint64_t tag)
             if ( dp->tags[i][2] != 0 )
                 *argsp = (struct relayargs *)dp->tags[i][2];
             dp->tags[i][0] = dp->tags[i][1] = dp->tags[i][2] = 0;
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("slot.%d found tag.%llu dest.%p\n",i,(long long)tag,dest);
             return(dest);
         }
@@ -148,7 +148,7 @@ char *wait_for_daemon(char **destp,uint64_t tag,int32_t timeout,int32_t sleepmil
             counter++;
             if ( (counter % 10000) == 0 )
                 printf("%ld: ave %.1f\n",counter,(double)sum/counter);
-            printf("wait_for_daemon.(%s) %p destp.%p\n",retstr,retstr,destp);
+            //printf("wait_for_daemon.(%s) %p destp.%p\n",retstr,retstr,destp);
             return(retstr);
         }
         if ( sleepmillis != 0 )
