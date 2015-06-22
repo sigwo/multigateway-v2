@@ -894,7 +894,6 @@ int main(int argc,const char *argv[])
         char line[1024];
         if ( getline777(line,sizeof(line)-1) > 0 )
             process_userinput(line);
-        //update_NXT_assettransfers("15344649963748848799");
     }
     return(0);
 }

@@ -474,7 +474,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
         //printf("valid.%d sender.(%s) (%s) datalen.%d len.%d %llx [%llx]\n",valid,sender,databuf,datalen,len,(long long)hash.txid,(long long)databuf);
         if ( strcmp(hexstr,sha) == 0 )
-            return(0);
+            return(1);
     }
     return(-1);
 }
