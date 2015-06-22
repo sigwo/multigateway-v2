@@ -117,7 +117,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
     sprintf(cmd,"requestType=decodeToken&website=%s&token=%s",key,token);
     if ( (retstr = issue_NXTPOST(cmd)) != 0 )
     {
-        printf("(%s) -> (%s)\n",cmd,retstr);
+        //printf("(%s) -> (%s)\n",cmd,retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             validobj = cJSON_GetObjectItem(json,"valid");
@@ -161,7 +161,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
         else
         {
             strcpy(NXTaddr,buf);
-printf("decoded.(%s)\n",NXTaddr);
+//printf("decoded.(%s)\n",NXTaddr);
             if ( strictflag != 0 )
             {
                 timeval = get_cJSON_int(firstitem,"time");
@@ -177,7 +177,7 @@ printf("decoded.(%s)\n",NXTaddr);
             if ( retcode != -5 )
             {
                 firstjsontxt = cJSON_Print(firstitem), _stripwhite(firstjsontxt,' ');
-printf("(%s)\n",firstjsontxt);
+//printf("(%s)\n",firstjsontxt);
                 tokenobj = cJSON_GetArrayItem(array,1);
                 obj = cJSON_GetObjectItem(tokenobj,"token");
                 copy_cJSON((char *)encoded,obj);
@@ -460,7 +460,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
 {
     char pubkey[256],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0;
-    printf("busdata_validate.(%s)\n",msg);
+    //printf("busdata_validate.(%s)\n",msg);
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
@@ -473,7 +473,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
         *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
         calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
-        printf("valid.%d sender.(%s) (%s) datalen.%d %llx [%llx]\n",valid,sender,databuf,*datalenp,(long long)hash.txid,(long long)databuf);
+        //printf("valid.%d sender.(%s) (%s) datalen.%d %llx [%llx]\n",valid,sender,databuf,*datalenp,(long long)hash.txid,(long long)databuf);
         if ( strcmp(hexstr,sha) == 0 )
             return(1);
     }
@@ -535,7 +535,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
             if ( usedest[0] != 0 )
                 retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
             else retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
-            printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
+            //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
@@ -593,7 +593,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(tokbuf,str2,SUPERNET.NXTACCTSECRET,broadcastmode);
-printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
+//printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         if ( SUPERNET.iamrelay != 0 && (str= nn_busdata_processor((uint8_t *)tokbuf,tlen)) != 0 )

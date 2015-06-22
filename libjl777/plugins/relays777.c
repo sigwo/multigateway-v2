@@ -183,7 +183,7 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
     int32_t n = 0;
     //strcpy(servers[n++],"89.248.160.237");
     //strcpy(servers[n++],"89.248.160.238");
-    strcpy(servers[n++],"89.248.160.239");
+    //strcpy(servers[n++],"89.248.160.239");
     //strcpy(servers[n++],"89.248.160.240");
     //strcpy(servers[n++],"89.248.160.241");
     //strcpy(servers[n++],"89.248.160.242");
@@ -196,7 +196,6 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     int32_t n = 0;
-    strcpy(servers[n++],"89.248.160.241");
     /*strcpy(servers[n++],"192.99.151.160");
     strcpy(servers[n++],"167.114.96.223");
     strcpy(servers[n++],"167.114.113.197");
