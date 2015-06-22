@@ -249,7 +249,7 @@ int32_t _lb_socket(int32_t maxmillis,char servers[][MAX_SERVERNAME],int32_t num,
     int32_t lbsock,timeout,retrymillis,priority = 1;
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
-        retrymillis = maxmillis / 16;
+        retrymillis = (maxmillis / 40) + 1;
         //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
@@ -269,7 +269,7 @@ int32_t _lb_socket(int32_t maxmillis,char servers[][MAX_SERVERNAME],int32_t num,
     return(lbsock);
 }
 
-int32_t nn_lbsocket(int32_t retrymillis,int32_t port)
+int32_t nn_lbsocket(int32_t maxmillis,int32_t port)
 {
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
     int32_t n,m,lbsock,numfailsafes = 0;
@@ -279,7 +279,7 @@ int32_t nn_lbsocket(int32_t retrymillis,int32_t port)
     //if ( europeflag != 0 )
     //    lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     //else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,failsafes,numfailsafes);
-    lbsock = _lb_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
+    lbsock = _lb_socket(maxmillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     return(lbsock);
 }
 
@@ -333,7 +333,7 @@ void nn_startdirect(struct endpoint epbits,int32_t sock,char *handler)
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout)
 {
     int32_t sock,retrymillis,maxmillis; struct endpoint epbits;
-    maxmillis = SUPERNET.PLUGINTIMEOUT, retrymillis = maxmillis/16;
+    maxmillis = 1000, retrymillis = maxmillis/40;
     if ( (sock= nn_socket(AF_SP,type)) < 0 )
         fprintf(stderr,"error getting socket %s\n",nn_errstr());
     else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
@@ -1018,7 +1018,7 @@ void serverloop(void *_args)
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allrelays_processor);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
-    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(SUPERNET.PLUGINTIMEOUT,SUPERNET.port); // NN_REQ
+    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET.port); // NN_REQ
     //bussock = -1;
     busdata_init(sendtimeout,10);
     if ( SUPERNET.iamrelay != 0 )

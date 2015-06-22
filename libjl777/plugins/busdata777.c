@@ -318,7 +318,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             sp = calloc(1,sizeof(*sp));
             HASH_ADD_KEYPTR(hh,Service_providers,servicename,strlen(servicename),sp);
             sp->sock = nn_socket(AF_SP,NN_REQ);
-            sendtimeout = 1000, recvtimeout = 10000, maxmillis = SUPERNET.PLUGINTIMEOUT, retrymillis = maxmillis / 16;
+            sendtimeout = 1000, recvtimeout = 10000, maxmillis = 1000, retrymillis = 25;
             if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
@@ -649,7 +649,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
             expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + portoffset,type));
             nn_bind(sock,endpoint);
             printf("SERVICE BIND.(%s)\n",endpoint);
-            maxmillis = SUPERNET.PLUGINTIMEOUT, retrymillis = maxmillis / 16;
+            maxmillis = 1000, retrymillis = 25;
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
