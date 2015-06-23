@@ -36,7 +36,7 @@ struct rambook_info
     UT_hash_handle hh;
     FILE *fp;
     char url[128],base[16],rel[16],lbase[16],lrel[16],exchange[32];
-    struct InstantDEX_quote *quotes;
+    struct InstantDEX_quote **quotes;
     uint64_t assetids[3];
     uint32_t lastaccess;
     int32_t numquotes,maxquotes;
@@ -846,7 +846,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
                         if ( 0 && rb->numquotes > 1 )
                         {
                             char *jsonstr2,*retstr2; cJSON *json2;
-                            if ( (jsonstr2= submitquote_str(1,&rb->quotes[1],baseid,relid)) != 0 )
+                            if ( (jsonstr2= submitquote_str(1,rb->quotes[1],baseid,relid)) != 0 )
                             {
                                 if ( (retstr2= makeoffer3_stub(1,"4077619696739571952",0,jsonstr2)) != 0 )
                                 {

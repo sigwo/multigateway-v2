@@ -266,10 +266,10 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 if ( 0 && rb->numquotes == 1 )
                 {
                     double vol;
-                    printf("[%d] numquotes.%d: %llu %llu | oldest.%u polarity.%d %f isask.%d quoteid.%llu\n",i,rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1],oldest,polarity,calc_price_volume(&vol,rb->quotes[0].baseamount,rb->quotes[0].relamount),rb->quotes[0].isask,(long long)calc_quoteid(&rb->quotes[0]));
+                    printf("[%d] numquotes.%d: %llu %llu | oldest.%u polarity.%d %f isask.%d quoteid.%llu\n",i,rb->numquotes,(long long)rb->assetids[0],(long long)rb->assetids[1],oldest,polarity,calc_price_volume(&vol,rb->quotes[0]->baseamount,rb->quotes[0]->relamount),rb->quotes[0]->isask,(long long)calc_quoteid(rb->quotes[0]));
                 }
                 for (j=0; j<rb->numquotes; j++)
-                    add_to_orderbook(op,iter,&numbids,&numasks,rb,&rb->quotes[j],polarity,oldest,gui);
+                    add_to_orderbook(op,iter,&numbids,&numasks,rb,rb->quotes[j],polarity,oldest,gui);
             }
             free(obooks);
         }

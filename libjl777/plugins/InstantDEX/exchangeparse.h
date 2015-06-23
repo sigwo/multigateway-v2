@@ -27,20 +27,22 @@ int32_t emit_orderbook_changes(struct rambook_info *rb,struct InstantDEX_quote *
     }
     for (i=0; i<rb->numquotes; i++)
     {
-        iQ = &rb->quotes[i];
-        if ( Debuglevel > 2 )
-            fprintf(stderr,"(%llu/%llu %.8f) ",(long long)iQ->baseamount,(long long)iQ->relamount,calc_price_volume(&vol,iQ->baseamount,iQ->relamount));
-        if ( numold > 0 )
+        if ( (iQ= rb->quotes[i]) != 0 )
         {
-            for (j=0; j<numold; j++)
+            if ( Debuglevel > 2 )
+                fprintf(stderr,"(%llu/%llu %.8f) ",(long long)iQ->baseamount,(long long)iQ->relamount,calc_price_volume(&vol,iQ->baseamount,iQ->relamount));
+            if ( numold > 0 )
             {
-                //printf("%s %s_%s %d of %d: %llu/%llu vs %llu/%llu\n",rb->exchange,rb->base,rb->rel,j,numold,(long long)iQ->baseamount,(long long)iQ->relamount,(long long)oldquotes[j].baseamount,(long long)oldquotes[j].relamount);
-                if ( iQcmp(iQ,&oldquotes[j]) == 0 )
-                    break;
-            }
-        } else j = 0;
-        if ( j == numold )
-            emit_iQ(rb,iQ), numchanges++;
+                for (j=0; j<numold; j++)
+                {
+                    //printf("%s %s_%s %d of %d: %llu/%llu vs %llu/%llu\n",rb->exchange,rb->base,rb->rel,j,numold,(long long)iQ->baseamount,(long long)iQ->relamount,(long long)oldquotes[j].baseamount,(long long)oldquotes[j].relamount);
+                    if ( iQcmp(iQ,&oldquotes[j]) == 0 )
+                        break;
+                }
+            } else j = 0;
+            if ( j == numold )
+                emit_iQ(rb,iQ), numchanges++;
+        }
     }
     if ( Debuglevel > 2 )
         fprintf(stderr,"%s %s_%s NEW.%d\n\n",rb->exchange,rb->base,rb->rel,rb->numquotes);

@@ -18,29 +18,29 @@ struct rambook_info *find_rambook(uint64_t rambook_hashbits[3])
 
 uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ) // allow one pair per orderbook
 {
-    char NXTaddr[64];
-    struct NXT_acct *np;
-    int32_t age,oldi,createdflag,duration;
-    uint64_t nxt64bits = 0;
-    uint32_t now,i,oldest = 0;
+    char NXTaddr[64]; struct NXT_acct *np; int32_t age,oldi,createdflag,duration; uint64_t nxt64bits = 0; uint32_t now,i,oldest = 0;
+    struct InstantDEX_quote *rbiQ;
     if ( rb->numquotes == 0 )
         return(0);
     oldi = -1;
     now = (uint32_t)time(NULL);
     for (i=0; i<rb->numquotes; i++)
     {
-        duration = rb->quotes[i].duration;
-        if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
-            duration = ORDERBOOK_EXPIRATION;
-        age = (now - rb->quotes[i].timestamp);
-        if ( rb->quotes[i].exchangeid == INSTANTDEX_EXCHANGEID && (age >= ORDERBOOK_EXPIRATION || age >= duration) )
+        if ( (rbiQ= rb->quotes[i]) != 0 )
         {
-            if ( (iQ == 0 || rb->quotes[i].nxt64bits == iQ->nxt64bits) && (oldest == 0 || rb->quotes[i].timestamp < oldest) )
+            duration = rbiQ->duration;
+            if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
+                duration = ORDERBOOK_EXPIRATION;
+            age = (now - rbiQ->timestamp);
+            if ( rbiQ->exchangeid == INSTANTDEX_EXCHANGEID && (age >= ORDERBOOK_EXPIRATION || age >= duration) )
             {
-                oldest = rb->quotes[i].timestamp;
-                //fprintf(stderr,"(oldi.%d %u) ",j,oldest);
-                nxt64bits = rb->quotes[i].nxt64bits;
-                oldi = i;
+                if ( (iQ == 0 || rbiQ->nxt64bits == iQ->nxt64bits) && (oldest == 0 || rbiQ->timestamp < oldest) )
+                {
+                    oldest = rbiQ->timestamp;
+                    //fprintf(stderr,"(oldi.%d %u) ",j,oldest);
+                    nxt64bits = rbiQ->nxt64bits;
+                    oldi = i;
+                }
             }
         }
     }
@@ -160,8 +160,7 @@ struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
                 continue;
             for (j=0; j<rb->numquotes; j++)
             {
-                iQ = &rb->quotes[j];
-                if ( (evenclosed != 0 || iQ->closed == 0) && calc_quoteid(iQ) == quoteid )
+                if ( (iQ= rb->quotes[j]) != 0 && ((evenclosed != 0 || iQ->closed == 0) && calc_quoteid(iQ) == quoteid) )
                 {
                     free(obooks);
                     return(iQ);
@@ -177,12 +176,12 @@ void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
 {
     static portable_mutex_t mutex;
     static int didinit;
-    int32_t i;
+    int32_t i,incr = 50;
     if ( rb->numquotes > 0 )
     {
         for (i=0; i<rb->numquotes; i++)
         {
-            if ( memcmp(iQ,&rb->quotes[i],sizeof(rb->quotes[i])) == 0 )
+            if ( rb->quotes[i] != 0 && memcmp(iQ,rb->quotes[i],sizeof(*rb->quotes[i])) == 0 )
                 break;
         }
     } else i = 0;
@@ -196,11 +195,13 @@ void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
         portable_mutex_lock(&mutex);
         if ( i >= rb->maxquotes )
         {
-            rb->maxquotes += 50;
+            rb->maxquotes += incr;
             rb->quotes = realloc(rb->quotes,rb->maxquotes * sizeof(*rb->quotes));
-            memset(&rb->quotes[i],0,50 * sizeof(*rb->quotes));
+            memset(&rb->quotes[i],0,incr * sizeof(*rb->quotes));
         }
-        rb->quotes[rb->numquotes++] = *iQ;
+        rb->quotes[rb->numquotes] = calloc(1,sizeof(*iQ));
+        memcpy(rb->quotes[rb->numquotes],iQ,sizeof(*iQ));
+        rb->numquotes++;
         portable_mutex_unlock(&mutex);
     }
     rb->updated = 1;
@@ -307,17 +308,19 @@ cJSON *openorders_json(char *NXTaddr)
                 continue;
             for (j=0; j<rb->numquotes; j++)
             {
-                iQ = &rb->quotes[j];
-                expand_nxt64bits(nxtaddr,iQ->nxt64bits);
-                if ( strcmp(NXTaddr,nxtaddr) == 0 && iQ->closed == 0 )
+                if ( (iQ= rb->quotes[j]) != 0 )
                 {
-                    baseamount = iQ->baseamount, relamount = iQ->relamount;
-                    if ( (item= gen_InstantDEX_json(0,&baseamount,&relamount,0,iQ->isask,iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
+                    expand_nxt64bits(nxtaddr,iQ->nxt64bits);
+                    if ( strcmp(NXTaddr,nxtaddr) == 0 && iQ->closed == 0 )
                     {
-                        ptr = (uint64_t)iQ;
-                        sprintf(numstr,"%llu",(long long)ptr), cJSON_AddItemToObject(item,"iQ",cJSON_CreateString(numstr));
-                        cJSON_AddItemToArray(array,item);
-                        n++;
+                        baseamount = iQ->baseamount, relamount = iQ->relamount;
+                        if ( (item= gen_InstantDEX_json(0,&baseamount,&relamount,0,iQ->isask,iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
+                        {
+                            ptr = (uint64_t)iQ;
+                            sprintf(numstr,"%llu",(long long)ptr), cJSON_AddItemToObject(item,"iQ",cJSON_CreateString(numstr));
+                            cJSON_AddItemToArray(array,item);
+                            n++;
+                        }
                     }
                 }
             }
@@ -396,8 +399,7 @@ int32_t match_unconfirmed(struct rambook_info **obooks,int32_t numbooks,char *ac
             {
                 for (k=0; k<rb->numquotes; k++)
                 {
-                    iQ = &rb->quotes[k];
-                    if ( calc_quoteid(iQ) == quoteid )
+                    if ( (iQ= rb->quotes[k]) && calc_quoteid(iQ) == quoteid )
                     {
                         if ( iQ->matched == 0 )
                         {
