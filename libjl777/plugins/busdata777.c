@@ -74,12 +74,14 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
 
 uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
 {
-    int32_t leverage;
-    if ( strcmp(broadcaststr,"allnodes") == 0 )
-        leverage = 7;
-    else if ( strcmp(broadcaststr,"allrelays") == 0 )
-        leverage = 5;
-    else leverage = 3;
+    int32_t leverage = 3;
+    if ( broadcaststr != 0 && broadcaststr[0] != 0 )
+    {
+        if ( strcmp(broadcaststr,"allnodes") == 0 )
+            leverage = 7;
+        else if ( strcmp(broadcaststr,"allrelays") == 0 )
+            leverage = 5;
+    }
     if ( maxmillis == 0 && *leveragep != leverage )
         return(0xffffffff);
     *leveragep = leverage;
@@ -89,14 +91,11 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
     char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce; int32_t leverage;
-    if ( broadcastmode != 0 && broadcastmode[0] != 0 )
-    {
-        nonce = nonce_func(&leverage,cmdjson,broadcaststr,SUPERNET.PLUGINTIMEOUT,0);
-        printf("%s.",broadcaststr);
-        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
-        //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
-    }
-    else broadcaststr[0] = 0;
+    if ( broadcastmode == 0 )
+        broadcastmode = "";
+    nonce = nonce_func(&leverage,cmdjson,broadcaststr,SUPERNET.PLUGINTIMEOUT,0);
+    sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
+    //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     _stripwhite(cmdjson,' ');
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
     encoded[NXT_TOKEN_LEN] = 0;
