@@ -83,6 +83,7 @@ void sort_orderbook(struct orderbook *op)
 {
     if ( op != 0 )
     {
+        fprintf(stderr,"sort orderbook\n");
         if ( op->numbids > 1 )
             qsort(op->bids,op->numbids,sizeof(*op->bids),_decreasing_quotes);
         if ( op->numasks > 1 )
@@ -141,7 +142,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             op->jumpasset = jumpasset;
             if ( (op->numbids= (to->numasks*from->numbids)+(rawop==0?0:rawop->numbids)) > 0 )
             {
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
                 n = 0;
@@ -158,7 +159,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             }
             if ( (op->numasks= (from->numasks*to->numbids)+(rawop==0?0:rawop->numasks)) > 0 )
             {
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
                 n = 0;
@@ -411,7 +412,7 @@ struct orderbook *make_orderbook(struct orderbook *obooks[],long max,char *base,
     obooks[n] = 0;
     if ( m > 1 )
     {
-        printf("num jumpbooks.%d\n",m);
+        fprintf(stderr,"num jumpbooks.%d\n",m);
         op = merge_books(base,refbaseid,rel,refrelid,jumpbooks,m);
     }
     else op = jumpbooks[0];
@@ -532,7 +533,9 @@ char *orderbook_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs
     if ( baseid != 0 && relid != 0 )
     {
         update_rambooks(baseid,relid,maxdepth,gui,showall);
+fprintf(stderr,"make_orderbook\n");
         op = make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,baseid,rel,relid,maxdepth,oldest,gui);
+fprintf(stderr,"orderbook_jsonstr\n");
         retstr = orderbook_jsonstr(nxt64bits,op,base,rel,maxdepth,allflag);
         free_orderbooks(obooks,sizeof(obooks)/sizeof(*obooks),op);
     }
