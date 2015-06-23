@@ -90,10 +90,16 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
 
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce; int32_t leverage;
+    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce,nonceerr; int32_t i,leverage;
     if ( broadcastmode == 0 )
         broadcastmode = "";
-    nonce = nonce_func(&leverage,cmdjson,broadcastmode,SUPERNET.PLUGINTIMEOUT,0);
+    for (i=0; i<10; i++)
+    {
+        nonce = nonce_func(&leverage,cmdjson,broadcastmode,SUPERNET.PLUGINTIMEOUT*(i+1),0);
+        if ( (nonceerr= nonce_func(&leverage,cmdjson,broadcastmode,0,nonce)) == 0 )
+            break;
+        printf("iter.%d nonce.%u warning: error.%u\n",i,nonce,nonceerr);
+    }
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     _stripwhite(cmdjson,' ');

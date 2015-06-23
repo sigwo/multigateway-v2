@@ -37,8 +37,7 @@ int32_t ramchain_idle(struct plugin_info *plugin)
         if ( (coin= COINS.LIST[i]) != 0 )
         {
             ramchain = &coin->ramchain;
-            //printf("packed.%p ledger.%p\n",coin->packed,ramchain->activeledger);
-            if ( ramchain->readyflag != 0 )//&& (ledger= ramchain->activeledger) != 0 )//&& ledger->blocknum <= coin->readahead )
+            if ( ramchain->readyflag != 0 )
             {
                 flag += ramchain_update(coin,ramchain);
             }
