@@ -273,7 +273,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
                 if ( strcmp(obooks[i]->exchange,"nxtae") == 0 )
                 {
                     printf("obook.%d %llu %llu isask.%d\n",i,(long long)obooks[i]->assetids[0],(long long)obooks[i]->assetids[1],(int)(obooks[i]->assetids[2] & 1));
-                    ramupdate_NXThalf((obooks[i]->assetids[2] & 1) != 0,obooks[i]->assetids[0],0,0);
+                    ramupdate_NXThalf((obooks[i]->assetids[2] & 1) != 0,obooks[i]->assetids[0],50,0);
                 }
             }
             free(obooks);
