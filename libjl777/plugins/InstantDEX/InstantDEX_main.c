@@ -201,6 +201,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
+        portable_mutex_lock(&plugin->mutex);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
@@ -224,10 +225,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( SUPERNET.iamrelay == 0 )
         {
-            portable_mutex_lock(&plugin->mutex);
             retstr = InstantDEX_parser(forwarder,sender,valid,jsonstr,json);
             //printf("InstantDEX_parser return.(%s)\n",retstr);
-            portable_mutex_unlock(&plugin->mutex);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
         if ( retstr != 0 )
         {
@@ -237,6 +236,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             free(retstr);
         }
         //else sprintf(retbuf,"{\"error\":\"method %s not found\"}",methodstr);
+        portable_mutex_unlock(&plugin->mutex);
     }
     return((int32_t)strlen(retbuf));
 }
