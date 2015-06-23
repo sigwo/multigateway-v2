@@ -88,6 +88,7 @@ void sort_orderbook(struct orderbook *op)
             qsort(op->bids,op->numbids,sizeof(*op->bids),_decreasing_quotes);
         if ( op->numasks > 1 )
             qsort(op->asks,op->numasks,sizeof(*op->asks),_increasing_quotes);
+        fprintf(stderr,"finished sort orderbook\n");
     }
 }
 
