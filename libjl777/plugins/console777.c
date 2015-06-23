@@ -233,11 +233,7 @@ char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcast
     //else if ( strcmp(plugin,"peers") == 0 )
     //    retstr = nn_allrelays((uint8_t *)cmdstr,len,timeout,0);
     else if ( find_daemoninfo(&tmp,plugin,0,0) != 0 )
-    {
-        //tokstr = create_busdata(&len,cmdstr,0);
         retstr = plugin_method(0,1,plugin,method,0,0,cmdstr,len,timeout != 0 ? timeout : 0);
-        //free(tokstr);
-    }
     else retstr = clonestr("{\"error\":\"invalid command\"}");
     return(retstr);
 }

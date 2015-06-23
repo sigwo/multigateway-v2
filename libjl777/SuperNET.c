@@ -613,7 +613,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
     char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],request[MAX_JSON_FIELD],*bstr,*retstr;
     uint64_t daemonid,instanceid,tag;
-    int32_t timeout,broadcastflag = 0,n = 1;
+    int32_t timeout,broadcastflag = 0;
     cJSON *json;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
@@ -640,9 +640,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
             if ( plugin[0] == 0 && set_first_plugin(plugin,method) < 0 )
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
-        n = get_API_int(cJSON_GetObjectItem(json,"iters"),1);
         timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),SUPERNET.PLUGINTIMEOUT);
-//printf("call process_user_json.(%s)\n",jsonstr);
         return(process_user_json(plugin,method,jsonstr,broadcastflag,timeout));
         //return(plugin_method(0,previpaddr==0,plugin,method,daemonid,instanceid,jsonstr,0,timeout));
     } else return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
@@ -786,7 +784,7 @@ void SuperNET_apiloop(void *ipaddr)
                         if ( plugin[0] == 0 )
                             copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
                         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
-                        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
+                        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),SUPERNET.PLUGINTIMEOUT);
                         fprintf(stderr,"API RECV.(%s)\n",jsonstr);
                         if ( (ptr->retind= nn_connect(sock,apitag)) < 0 )
                             fprintf(stderr,"error connecting to (%s)\n",apitag);
