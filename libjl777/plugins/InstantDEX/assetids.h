@@ -183,7 +183,7 @@ uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits)
             strcpy(name,MGWassets[i][1]);
             if ( multp != 0 )
                 *multp = _calc_decimals_mult(atoi(MGWassets[i][2]));
-            //printf("SETASSETNAME.(%s) <- %s mult.%llu\n",name,assetstr,(long long)*multp);
+            fprintf(stderr,"SETASSETNAME.(%s) <- %s mult.%llu\n",name,assetstr,(long long)*multp);
             return(INSTANTDEX_NATIVE); // native crypto type
         }
     }

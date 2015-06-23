@@ -121,6 +121,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
     struct orderbook *op = 0;
     int32_t i,j,n,m = sqrt(maxdepth);
     uint64_t mult;
+    fprintf(stderr,"make_jumpbook: ");
     if ( m < 10 )
         m = 10;
     if ( 0 && rawop != 0 )
@@ -144,7 +145,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             if ( (op->numbids= (to->numasks*from->numbids)+(rawop==0?0:rawop->numbids)) > 0 )
             {
                 if ( Debuglevel > 1 )
-                    printf("(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
+                    fprintf(stderr,"(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
                 n = 0;
                 if ( to->numasks > 0 && from->numbids > 0 )
@@ -161,7 +162,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             if ( (op->numasks= (from->numasks*to->numbids)+(rawop==0?0:rawop->numasks)) > 0 )
             {
                 if ( Debuglevel > 1 )
-                    printf("(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
+                    fprintf(stderr,"(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
                 n = 0;
                 if ( from->numasks > 0 && to->numbids > 0 )
@@ -208,7 +209,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
     struct rambook_info **obooks,*rb;
     struct orderbook *op = 0;
     uint64_t basemult,relmult,baseequivs[512],relequivs[512];
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("create_orderbook %llu/%llu\n",(long long)refbaseid,(long long)refrelid);
     if ( refbaseid == 0 || refrelid == 0 )
         getchar();
