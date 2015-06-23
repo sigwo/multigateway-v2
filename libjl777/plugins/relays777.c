@@ -1121,7 +1121,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             else if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
             else if ( strcmp(methodstr,"busdata") == 0 )
-                retstr = busdata_sync(jsonstr,0);
+                retstr = busdata_sync(jsonstr,cJSON_str(cJSON_GetObjectItem(json,"broadcast")));
             else if ( (myipaddr= cJSON_str(cJSON_GetObjectItem(json,"myipaddr"))) != 0 && is_ipaddr(myipaddr) != 0 )
             {
                 if ( strcmp(methodstr,"direct") == 0 )

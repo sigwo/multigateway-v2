@@ -103,7 +103,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     if ( SUPERNET.iamrelay == 0 )
         sprintf(tokenized,"[%s, {\"token\":\"%s\"%s}]",cmdjson,encoded,broadcaststr);
     else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s}]",cmdjson,encoded,SUPERNET.NXTADDR,broadcaststr);
-    printf("(%s) -> (%s)\n",cmdjson,tokenized);
+    printf("%p.(%s) -> (%s)\n",broadcastmode,cmdjson,tokenized);
     return((int32_t)strlen(tokenized)+1);
 }
 
@@ -609,7 +609,7 @@ printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
 char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
     int32_t datalen,sendlen = 0; char *data,*retstr;
-    //printf("busdata_sync\n");
+    printf("busdata_sync.(%s) (%s)\n",jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
