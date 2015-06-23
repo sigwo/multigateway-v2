@@ -36,7 +36,7 @@ void expand_epbits(char *endpoint,struct endpoint epbits)
     char ipaddr[64];
     if ( epbits.ipbits != 0 )
         expand_ipbits(ipaddr,epbits.ipbits);
-    else strcpy(ipaddr,"127.0.0.1");
+    else strcpy(ipaddr,"*");
     sprintf(endpoint,"%s://%s:%d",nn_transports[epbits.transport],ipaddr,epbits.port);
 }
 
