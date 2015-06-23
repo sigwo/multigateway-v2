@@ -467,27 +467,40 @@ struct InstantDEX_quote *clone_quotes(int32_t *nump,struct rambook_info *rb)
     return(quotes);
 }
 
+void update_ramparse(struct exchange_info *exchange,struct rambook_info *bids,struct rambook_info *asks,int32_t maxdepth,char *gui)
+{
+    struct InstantDEX_quote *prevbids,*prevasks;
+    int32_t numoldbids,numoldasks;
+    if ( exchange->ramparse != 0 && exchange->ramparse != ramparse_stub )
+    {
+        prevbids = clone_quotes(&numoldbids,bids), prevasks = clone_quotes(&numoldasks,asks);
+        (*exchange->ramparse)(bids,asks,maxdepth,gui);
+        emit_orderbook_changes(bids,prevbids,numoldbids), emit_orderbook_changes(asks,prevasks,numoldasks);
+        bids->numupdates++, asks->numupdates++;
+    }
+    exchange->lastaccess = (uint32_t)time(NULL);
+}
+
 void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char *gui,int32_t showall)
 {
+    int32_t cleared_with_nxtae(int32_t);
     uint64_t assetids[8192];
     struct rambook_info *bids,*asks;
     uint64_t baseid,relid;
     uint32_t now = (uint32_t)time(NULL);
     struct exchange_info *exchange;
-    struct InstantDEX_quote *prevbids,*prevasks;
-    int32_t i,n,exchangeid,numoldbids,numoldasks,pollgap = DEFAULT_POLLGAP;
+    int32_t i,n,exchangeid,pollgap = DEFAULT_POLLGAP;
     n = gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid);
     for (i=0; i<n; i++)
     {
         baseid = assetids[i*3], relid = assetids[i*3+1], exchangeid = (int32_t)assetids[i*3+2];
         if ( (exchange= &Exchanges[exchangeid]) != 0 && exchangeid < MAX_EXCHANGES )
         {
-            int32_t cleared_with_nxtae(int32_t);
             if ( showall != 0 || (exchange->trade != 0 || cleared_with_nxtae(exchangeid) != 0) )
             {
-                bids = get_rambook(0,baseid,0,relid,(exchangeid<<1));
-                asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1);
-                if ( exchangeid != INSTANTDEX_EXCHANGEID )
+                bids = get_rambook(0,baseid,0,relid,(exchangeid<<1),gui);
+                asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1,gui);
+                if ( exchangeid != INSTANTDEX_EXCHANGEID && (bids->numupdates + asks->numupdates) == 0 )
                 {
                     if ( Debuglevel > 2 )
                         fprintf(stderr,"(%llu %llu max.%d).%s ",(long long)baseid,(long long)relid,maxdepth,Exchanges[exchangeid].name);
@@ -496,13 +509,8 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
                         if ( exchange->pollgap != 0 )
                             pollgap = exchange->pollgap;
                         if ( now >= (bids->lastaccess + pollgap) && now >= (asks->lastaccess + pollgap) )
-                        {
-                            prevbids = clone_quotes(&numoldbids,bids), prevasks = clone_quotes(&numoldasks,asks);
-                            if ( exchange->ramparse != 0 && exchange->ramparse != ramparse_stub )
-                                (*exchange->ramparse)(bids,asks,maxdepth,gui);
-                            emit_orderbook_changes(bids,prevbids,numoldbids), emit_orderbook_changes(asks,prevasks,numoldasks);
-                            exchange->lastaccess = now = (uint32_t)time(NULL);
-                        } else printf("wait %u vs %u %u %u\n",now,exchange->lastaccess,bids->lastaccess,asks->lastaccess);
+                            update_ramparse(exchange,bids,asks,maxdepth, gui);
+                        else printf("wait %ld vs %u %u %u\n",time(NULL),exchange->lastaccess,bids->lastaccess,asks->lastaccess);
                     }// else printf("unexpected %p %p %d %d %d\n",bids,asks,maxdepth,exchangeid,exchange->exchangeid);
                 }
             }

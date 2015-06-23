@@ -264,8 +264,22 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
     }
     if ( NXTblock != prevNXTblock )
     {
+        struct rambook_info **obooks; int32_t numbooks;
         prevNXTblock = NXTblock, printf("New NXTblock.%d\n",NXTblock);
         update_NXT_assettrades();
+        if ( (obooks= get_allrambooks(&numbooks)) != 0 )
+        {
+            for (i=0; i<numbooks; i++)
+            {
+                if ( strcmp(obooks[i]->exchange,"nxtae") == 0 )
+                {
+                    if ( obooks[i]->assetids[0] != NXT_ASSETID )
+                        ramupdate_NXThalf(0,obooks[i]->assetids[0],0,0);
+                    else ramupdate_NXThalf(1,obooks[i]->assetids[1],0,0);
+                }
+            }
+            free(obooks);
+        }
     }
     lastmilli = milliseconds();
 }

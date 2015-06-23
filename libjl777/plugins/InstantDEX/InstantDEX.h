@@ -35,11 +35,11 @@ struct rambook_info
 {
     UT_hash_handle hh;
     FILE *fp;
-    char url[128],base[16],rel[16],lbase[16],lrel[16],exchange[32];
+    char url[128],base[16],rel[16],lbase[16],lrel[16],exchange[32],gui[16];
     struct InstantDEX_quote **quotes;
     uint64_t assetids[3];
     uint32_t lastaccess;
-    int32_t numquotes,maxquotes;
+    int32_t numquotes,maxquotes,numupdates;
     float lastmilli;
     uint8_t updated;
 } *Rambooks;

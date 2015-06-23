@@ -140,12 +140,9 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     return(nxt64bits);
 }
 
-struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t relid,uint64_t exchangebits)
+struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t relid,uint64_t exchangebits,char *gui)
 {
-    char base[16],rel[16];
-    uint64_t assetids[3],basemult,relmult;
-    uint32_t i,basetype,reltype,exchangeid = (uint32_t)(exchangebits >> 1);
-    struct rambook_info *rb;
+    struct rambook_info *rb; char base[16],rel[16]; uint64_t assetids[3],basemult,relmult; uint32_t i,basetype,reltype,exchangeid = (uint32_t)(exchangebits >> 1);
     if ( exchangeid >= MAX_EXCHANGES )
     {
         printf("illegal exchangeid.%d from exchangebits.%llx\n",exchangeid,(long long)exchangebits);
@@ -171,14 +168,18 @@ struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t
         rb = calloc(1,sizeof(*rb));
         strncpy(rb->exchange,Exchanges[exchangeid].name,sizeof(rb->exchange)-1);
         strcpy(rb->base,base), strcpy(rb->rel,rel);
+        if ( gui != 0 )
+            strcpy(rb->gui,gui);
         touppercase(rb->base), strcpy(rb->lbase,rb->base), tolowercase(rb->lbase);
         touppercase(rb->rel), strcpy(rb->lrel,rb->rel), tolowercase(rb->lrel);
         for (i=0; i<3; i++)
             rb->assetids[i] = assetids[i];
         if ( Debuglevel > 1 )
-            printf("CREATE RAMBOOK.(%llu -> %llu).%d name.(%s) (%s) (%s)\n",(long long)baseid,(long long)relid,(int)exchangebits,Exchanges[exchangeid].name,rb->base,rb->rel);
+            printf("CREATE RAMBOOK.(%llu -> %llu).%d name.(%s) (%s) (%s) gui.(%s)\n",(long long)baseid,(long long)relid,(int)exchangebits,Exchanges[exchangeid].name,rb->base,rb->rel,gui!=0?"":gui);
         HASH_ADD(hh,Rambooks,assetids,sizeof(rb->assetids),rb);
     }
+    if ( rb->gui[0] == 0 && gui != 0 )
+        strcpy(rb->gui,gui);
     return(rb);
 }
 
@@ -283,7 +284,7 @@ struct rambook_info *add_rambook_quote(char *exchangestr,struct InstantDEX_quote
     if ( (exchange= find_exchange(exchangestr,0,0)) != 0 )
     {
         //printf("add.(%llu %llu) %llu/%llu\n",(long long)baseid,(long long)relid,(long long)baseamount,(long long)relamount);
-        if ( (rb= get_rambook(0,baseid,0,relid,(exchange->exchangeid<<1) | (dir<0))) != 0 )
+        if ( (rb= get_rambook(0,baseid,0,relid,(exchange->exchangeid<<1) | (dir<0),gui)) != 0 )
         {
             //printf("add.(%llu %llu) %llu/%llu\n",(long long)baseid,(long long)relid,(long long)baseamount,(long long)relamount);
             if ( _add_rambook_quote(iQ,rb,nxt64bits,timestamp,dir,price,volume,baseid,baseamount,relid,relamount,gui,quoteid,duration) != 0 )
@@ -438,7 +439,7 @@ int32_t match_unconfirmed(struct rambook_info **obooks,int32_t numbooks,char *ac
 
 int32_t update_iQ_flags(struct NXT_tx *txptrs[],int32_t maxtx,uint64_t refassetid)
 {
-    struct rambook_info **get_allrambooks(int32_t *numbooksp);
+    //struct rambook_info **get_allrambooks(int32_t *numbooksp);
     uint64_t quoteid,assetid,amount,qty,priceNQT;
     char cmd[1024],txidstr[MAX_JSON_FIELD],account[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],*jsonstr;
     cJSON *json,*array,*txobj,*attachment,*msgobj,*commentobj;
