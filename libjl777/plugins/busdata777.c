@@ -72,7 +72,7 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
     return(nonce);
 }
 
-uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
+uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
 {
     int32_t leverage;
     if ( strcmp(broadcaststr,"allnodes") == 0 )
@@ -80,16 +80,19 @@ uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonc
     else if ( strcmp(broadcaststr,"allrelays") == 0 )
         leverage = 5;
     else leverage = 3;
+    if ( maxmillis == 0 && *leveragep != leverage )
+        return(0xffffffff);
+    *leveragep = leverage;
     return(calc_nonce(str,leverage,maxmillis,nonce));
 }
 
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce;
+    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce; int32_t leverage;
     if ( broadcastmode != 0 && broadcastmode[0] != 0 )
     {
-        nonce = nonce_func(cmdjson,broadcaststr,3000,0);
-        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\"",broadcastmode,nonce);
+        nonce = nonce_func(&leverage,cmdjson,broadcaststr,SUPERNET.PLUGINTIMEOUT,0);
+        sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
         //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     }
     else broadcaststr[0] = 0;
@@ -135,7 +138,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
 
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag)
 {
-    cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t valid,retcode = -13;
+    cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t valid,leverage,retcode = -13;
     char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*firstjsontxt = 0; unsigned char encoded[4096];
     array = cJSON_Parse(tokenizedtxt);
     NXTaddr[0] = pubkey[0] = forwarder[0] = 0;
@@ -188,8 +191,9 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                     if ( strcmp(sender,NXTaddr) == 0 )
                     {
                         nonce = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
+                        leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
                         copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
-                        if ( nonce_func(firstjsontxt,broadcaststr,0,nonce) != 0 )
+                        if ( nonce_func(&leverage,firstjsontxt,broadcaststr,0,nonce) != 0 )
                             retcode = -4;
                         else retcode = valid;
                         if ( Debuglevel > 2 )
@@ -204,7 +208,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                     }
                 } else printf("decode error\n");
                 if ( retcode < 0 )
-                    printf("err: signed by invalid sender.(%s) NXT.%s valid.%d or timediff too big diff.%lld, buf.(%s)\n",sender,NXTaddr,valid,(long long)diff,buf);
+                    printf("err.%d: signed by invalid sender.(%s) NXT.%s valid.%d or timediff too big diff.%lld, buf.(%s)\n",retcode,sender,NXTaddr,valid,(long long)diff,firstjsontxt);
                 free(firstjsontxt);
             }
         }

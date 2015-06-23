@@ -262,7 +262,7 @@ int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode);
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode);
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
-uint32_t nonce_func(char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce);
+uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce);
 
 #endif
 #else

@@ -864,9 +864,9 @@ int main(int argc,const char *argv[])
 #ifdef __APPLE__
     while ( 0 )
     {
-        uint32_t nonce,failed;
-        nonce = nonce_func("test string","allrelays",3000,0);
-        failed = nonce_func("test string","allrelays",0,nonce);
+        uint32_t nonce,failed; int32_t leverage;
+        nonce = nonce_func(&leverage,"test string","allrelays",3000,0);
+        failed = nonce_func(&leverage,"test string","allrelays",0,nonce);
         printf("nonce.%u failed.%u\n",nonce,failed);
     }
 #endif
