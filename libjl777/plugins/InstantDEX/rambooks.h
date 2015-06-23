@@ -9,6 +9,89 @@
 #define xcode_rambooks_h
 
 
+struct InstantDEX_quote *find_iQ(uint64_t quoteid)
+{
+    struct InstantDEX_quote *iQ;
+    HASH_FIND(hh,AllQuotes,&quoteid,sizeof(quoteid),iQ);
+    return(iQ);
+}
+
+struct InstantDEX_quote *create_iQ(struct InstantDEX_quote iQ)
+{
+    struct InstantDEX_quote *newiQ;
+    if ( (newiQ= find_iQ(iQ.quoteid)) != 0 )
+        return(newiQ);
+    newiQ = calloc(1,sizeof(*newiQ));
+    *newiQ = iQ;
+    HASH_ADD(hh,AllQuotes,quoteid,sizeof(newiQ->quoteid),newiQ);
+    return(newiQ);
+}
+
+struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
+{
+    struct InstantDEX_quote *iQ;
+    if ( (iQ= find_iQ(quoteid)) != 0 && ((evenclosed != 0 || iQ->closed == 0) && calc_quoteid(iQ) == quoteid) )
+        return(iQ);
+    return(0);
+    /*struct rambook_info **obooks,*rb;
+     int32_t i,j,numbooks;
+     if ( (obooks= get_allrambooks(&numbooks)) != 0 )
+     {
+     for (i=0; i<numbooks; i++)
+     {
+     rb = obooks[i];
+     if ( rb->numquotes == 0 )
+     continue;
+     for (j=0; j<rb->numquotes; j++)
+     {
+     if ( (iQ= rb->quotes[j]) != 0 && ((evenclosed != 0 || iQ->closed == 0) && calc_quoteid(iQ) == quoteid) )
+     {
+     free(obooks);
+     return(iQ);
+     }
+     }
+     }
+     free(obooks);
+     }
+     return(0);*/
+}
+
+void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
+{
+    static portable_mutex_t mutex;
+    static int didinit;
+    int32_t i,incr = 50;
+    if ( rb->numquotes > 0 )
+    {
+        for (i=0; i<rb->numquotes; i++)
+        {
+            if ( rb->quotes[i] != 0 && memcmp(iQ,rb->quotes[i],sizeof(*rb->quotes[i])) == 0 )
+                break;
+        }
+    } else i = 0;
+    if ( i == rb->numquotes )
+    {
+        if ( didinit == 0 )
+        {
+            portable_mutex_init(&mutex);
+            didinit = 1;
+        }
+        portable_mutex_lock(&mutex);
+        if ( i >= rb->maxquotes )
+        {
+            rb->maxquotes += incr;
+            rb->quotes = realloc(rb->quotes,rb->maxquotes * sizeof(*rb->quotes));
+            memset(&rb->quotes[i],0,incr * sizeof(*rb->quotes));
+        }
+        rb->quotes[rb->numquotes] = calloc(1,sizeof(*iQ));
+        memcpy(rb->quotes[rb->numquotes],iQ,sizeof(*iQ));
+        rb->numquotes++;
+        portable_mutex_unlock(&mutex);
+    }
+    rb->updated = 1;
+    // printf("add_user_order i.%d numquotes.%d\n",i,rb->numquotes);
+}
+
 struct rambook_info *find_rambook(uint64_t rambook_hashbits[3])
 {
     struct rambook_info *rb;
@@ -144,68 +227,6 @@ cJSON *all_orderbooks()
         cJSON_AddItemToObject(json,"orderbooks",array);
     }
     return(json);
-}
-
-struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
-{
-    struct rambook_info **obooks,*rb;
-    struct InstantDEX_quote *iQ;
-    int32_t i,j,numbooks;
-    if ( (obooks= get_allrambooks(&numbooks)) != 0 )
-    {
-        for (i=0; i<numbooks; i++)
-        {
-            rb = obooks[i];
-            if ( rb->numquotes == 0 )
-                continue;
-            for (j=0; j<rb->numquotes; j++)
-            {
-                if ( (iQ= rb->quotes[j]) != 0 && ((evenclosed != 0 || iQ->closed == 0) && calc_quoteid(iQ) == quoteid) )
-                {
-                    free(obooks);
-                    return(iQ);
-                }
-            }
-        }
-        free(obooks);
-    }
-    return(0);
-}
-
-void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
-{
-    static portable_mutex_t mutex;
-    static int didinit;
-    int32_t i,incr = 50;
-    if ( rb->numquotes > 0 )
-    {
-        for (i=0; i<rb->numquotes; i++)
-        {
-            if ( rb->quotes[i] != 0 && memcmp(iQ,rb->quotes[i],sizeof(*rb->quotes[i])) == 0 )
-                break;
-        }
-    } else i = 0;
-    if ( i == rb->numquotes )
-    {
-        if ( didinit == 0 )
-        {
-            portable_mutex_init(&mutex);
-            didinit = 1;
-        }
-        portable_mutex_lock(&mutex);
-        if ( i >= rb->maxquotes )
-        {
-            rb->maxquotes += incr;
-            rb->quotes = realloc(rb->quotes,rb->maxquotes * sizeof(*rb->quotes));
-            memset(&rb->quotes[i],0,incr * sizeof(*rb->quotes));
-        }
-        rb->quotes[rb->numquotes] = calloc(1,sizeof(*iQ));
-        memcpy(rb->quotes[rb->numquotes],iQ,sizeof(*iQ));
-        rb->numquotes++;
-        portable_mutex_unlock(&mutex);
-    }
-    rb->updated = 1;
-   // printf("add_user_order i.%d numquotes.%d\n",i,rb->numquotes);
 }
 
 void save_InstantDEX_quote(struct rambook_info *rb,struct InstantDEX_quote *iQ)
