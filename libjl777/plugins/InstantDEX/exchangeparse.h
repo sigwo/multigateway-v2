@@ -139,7 +139,7 @@ void ramupdate_NXThalf(int32_t flip,uint64_t assetid,int32_t maxdepth,char *gui)
     sprintf(url,"requestType=%s&asset=%llu&limit=%d",cmd,(long long)assetid,maxdepth);
     if ( (str= issue_NXTPOST(url)) != 0 )
     {
-        //printf("flip.%d update.(%s) -> (%s)\n",flip,url,str);
+        printf("flip.%d update.(%s)\n",flip,url);
         if ( (json = cJSON_Parse(str)) != 0 )
             convram_NXT_quotejson(assetid,flip,json,field,get_assetmult(assetid),maxdepth,gui), free_json(json);
     } else printf("cant get.(%s)\n",url);
