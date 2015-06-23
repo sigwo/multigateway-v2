@@ -139,7 +139,7 @@ void ramupdate_NXThalf(int32_t flip,uint64_t assetid,int32_t maxdepth,char *gui)
     sprintf(url,"requestType=%s&asset=%llu&limit=%d",cmd,(long long)assetid,maxdepth);
     if ( (str= issue_NXTPOST(url)) != 0 )
     {
-        printf("flip.%d update.(%s) -> (%s)\n",flip,url,str);
+        //printf("flip.%d update.(%s) -> (%s)\n",flip,url,str);
         if ( (json = cJSON_Parse(str)) != 0 )
             convram_NXT_quotejson(assetid,flip,json,field,get_assetmult(assetid),maxdepth,gui), free_json(json);
     } else printf("cant get.(%s)\n",url);
@@ -152,16 +152,14 @@ void ramparse_NXT(struct rambook_info *bids,struct rambook_info *asks,int32_t ma
     uint64_t assetid;
     if ( NXT_ASSETID != stringbits("NXT") )
         printf("NXT_ASSETID.%llu != %llu stringbits\n",(long long)NXT_ASSETID,(long long)stringbits("NXT"));
-    if ( (bids->assetids[1] != NXT_ASSETID && bids->assetids[0] != NXT_ASSETID) )//|| time(NULL) < bids->lastaccess+10 || time(NULL) < asks->lastaccess+10 )
-    {
+    if ( bids->assetids[1] != NXT_ASSETID && bids->assetids[0] != NXT_ASSETID )
         return;
-    }
     //printf("ramparse_NXT %llu/%llu\n",(long long)bids->assetids[0],(long long)bids->assetids[1]);
     if ( bids->assetids[0] != NXT_ASSETID )
         assetid = bids->assetids[0];
     else assetid = bids->assetids[1];
     convram_NXT_Uquotejson(assetid);
-    if ( maxdepth == 0 )
+    if ( maxdepth == 0 || bids->numupdates == 0 || asks->numupdates == 0 )
     {
         maxdepth = 50;
         ramupdate_NXThalf(0,bids->assetids[0],maxdepth,gui);
