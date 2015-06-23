@@ -144,7 +144,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
 
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag)
 {
-    cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t i,valid,leverage,retcode = -13;
+    cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t valid,leverage,retcode = -13;
     char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*firstjsontxt = 0; unsigned char encoded[4096];
     array = cJSON_Parse(tokenizedtxt);
     NXTaddr[0] = pubkey[0] = forwarder[0] = 0;
@@ -199,16 +199,9 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         nonce = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
                         leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
                         copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
-                        retcode = valid;
                         if ( nonce_func(&leverage,firstjsontxt,broadcaststr,0,nonce) != 0 )
-                        {
-                            for (i=0; i<3; i++)
-                                if ( nonce_func(&leverage,firstjsontxt,broadcaststr,0,nonce) == 0 )
-                                    break;
-                            if ( i == 3 )
-                                retcode = -4;
-                            else printf("nonce autocorrected\n");
-                        }
+                            retcode = -4;
+                        else retcode = valid;
                         if ( Debuglevel > 2 )
                             printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
                     }
