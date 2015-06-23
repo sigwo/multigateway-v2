@@ -93,7 +93,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce; int32_t leverage;
     if ( broadcastmode == 0 )
         broadcastmode = "";
-    nonce = nonce_func(&leverage,cmdjson,broadcaststr,SUPERNET.PLUGINTIMEOUT,0);
+    nonce = nonce_func(&leverage,cmdjson,broadcastmode,SUPERNET.PLUGINTIMEOUT,0);
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     _stripwhite(cmdjson,' ');
@@ -102,7 +102,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     if ( SUPERNET.iamrelay == 0 )
         sprintf(tokenized,"[%s, {\"token\":\"%s\"%s}]",cmdjson,encoded,broadcaststr);
     else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s}]",cmdjson,encoded,SUPERNET.NXTADDR,broadcaststr);
-    printf("%p.(%s) -> (%s)\n",broadcastmode,cmdjson,tokenized);
+    printf("(%s).(%s) -> (%s)\n",broadcastmode,cmdjson,tokenized);
     return((int32_t)strlen(tokenized)+1);
 }
 
