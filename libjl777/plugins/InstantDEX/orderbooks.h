@@ -63,9 +63,9 @@ void update_orderbook(int32_t iter,struct orderbook *op,int32_t *numbidsp,int32_
         else quote = &op->asks[(*numasksp)++], *quote = *iQ, quote->isask = 1;
         if ( polarity < 0 )
             quote->baseid = iQ->relid, quote->baseamount = iQ->relamount, quote->relid = iQ->baseid, quote->relamount = iQ->baseamount;
-        if ( calc_quoteid(quote) != calc_quoteid(iQ) )
-            printf("quoteid mismatch %llu vs %llu\n",(long long)calc_quoteid(quote),(long long)calc_quoteid(iQ)), getchar();
-        if ( Debuglevel > 1 )
+        //if ( calc_quoteid(quote) != calc_quoteid(iQ) )
+        //    printf("quoteid mismatch %llu vs %llu\n",(long long)calc_quoteid(quote),(long long)calc_quoteid(iQ)), getchar();
+        if ( Debuglevel > 2 )
         {
             double p,v;
             p = calc_price_volume(&v,quote->baseamount,quote->relamount);//, printf("%c.(%f %f).%d ",'B'-quote->isask,p,v,polarity);
@@ -234,7 +234,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
     op = (struct orderbook *)calloc(1,sizeof(*op));
     strcpy(op->base,base), strcpy(op->rel,rel);
     op->baseid = refbaseid, op->relid = refrelid;
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("create_orderbook %s/%s\n",op->base,op->rel);
     for (iter=0; iter<2; iter++)
     {
@@ -261,7 +261,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else if ( op->baseid == rb->assetids[1] && op->relid == rb->assetids[0] )
                     polarity = -1;
                 else continue;
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf(">>>>>> %s numquotes.%d: (%s).%llu (%s).%llu | (%s).%llu (%s).%llu\n",rb->exchange,rb->numquotes,rb->base,(long long)rb->assetids[0],rb->rel,(long long)rb->assetids[1],op->base,(long long)op->baseid,op->rel,(long long)op->relid);
                 if ( 0 && rb->numquotes == 1 )
                 {
@@ -411,7 +411,7 @@ struct orderbook *make_orderbook(struct orderbook *obooks[],long max,char *base,
     obooks[n] = 0;
     if ( m > 1 )
     {
-        //printf("num jumpbooks.%d\n",m);
+        printf("num jumpbooks.%d\n",m);
         op = merge_books(base,refbaseid,rel,refrelid,jumpbooks,m);
     }
     else op = jumpbooks[0];
@@ -487,31 +487,24 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
     uint64_t assetids[8192];
     struct rambook_info *bids,*asks;
     uint64_t baseid,relid;
-    uint32_t now = (uint32_t)time(NULL);
     struct exchange_info *exchange;
-    int32_t i,n,exchangeid,pollgap = DEFAULT_POLLGAP;
+    int32_t i,n,exchangeid;
     n = gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid);
     for (i=0; i<n; i++)
     {
         baseid = assetids[i*3], relid = assetids[i*3+1], exchangeid = (int32_t)assetids[i*3+2];
-        if ( (exchange= &Exchanges[exchangeid]) != 0 && exchangeid < MAX_EXCHANGES )
+        if ( maxdepth > 0 && (exchange= &Exchanges[exchangeid]) != 0 && exchangeid < MAX_EXCHANGES && exchangeid != INSTANTDEX_EXCHANGEID )
         {
             if ( showall != 0 || (exchange->trade != 0 || cleared_with_nxtae(exchangeid) != 0) )
             {
                 bids = get_rambook(0,baseid,0,relid,(exchangeid<<1),gui);
                 asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1,gui);
-                if ( exchangeid != INSTANTDEX_EXCHANGEID && (bids->numupdates + asks->numupdates) == 0 )
+                if ( bids != 0 && asks != 0 && (bids->numupdates + asks->numupdates) == 0 )
                 {
-                    if ( Debuglevel > 2 )
+                    if ( Debuglevel > 1 )
                         fprintf(stderr,"(%llu %llu max.%d).%s ",(long long)baseid,(long long)relid,maxdepth,Exchanges[exchangeid].name);
-                    if ( bids != 0 && asks != 0 && maxdepth > 0 && exchange->exchangeid == exchangeid )
-                    {
-                        if ( exchange->pollgap != 0 )
-                            pollgap = exchange->pollgap;
-                        if ( now >= (bids->lastaccess + pollgap) && now >= (asks->lastaccess + pollgap) )
-                            update_ramparse(exchange,bids,asks,maxdepth, gui);
-                        else printf("wait %ld vs %u %u %u\n",time(NULL),exchange->lastaccess,bids->lastaccess,asks->lastaccess);
-                    }// else printf("unexpected %p %p %d %d %d\n",bids,asks,maxdepth,exchangeid,exchange->exchangeid);
+                    if ( exchange->exchangeid == exchangeid )
+                        update_ramparse(exchange,bids,asks,maxdepth,gui);
                 }
             }
         }
