@@ -161,7 +161,7 @@ void ramparse_NXT(struct rambook_info *bids,struct rambook_info *asks,int32_t ma
     convram_NXT_Uquotejson(assetid);
     if ( maxdepth == 0 || bids->numupdates == 0 || asks->numupdates == 0 )
     {
-        maxdepth = 50;
+        maxdepth = 25;
         ramupdate_NXThalf(0,bids->assetids[0],maxdepth,gui);
         ramupdate_NXThalf(1,asks->assetids[0],maxdepth,gui);
     }
