@@ -286,7 +286,7 @@ uint64_t SaMnonce(bits384 *sigp,uint32_t *noncep,uint8_t *buf,int32_t len,uint64
         if ( rseed != 0 )
             rseed = (uint32_t)(sigp->txid ^ hit);
     }
-    //printf("%llu %.2f%% numrounds.%lld threshold.%llu seed.%u\n",(long long)hit,100.*(double)hit/threshold,(long long)numrounds,(long long)threshold,rseed);
+    //printf("%5.1f %14llu %7.2f%% numrounds.%lld threshold.%llu seed.%u\n",milliseconds()-startmilli,(long long)hit,100.*(double)hit/threshold,(long long)numrounds,(long long)threshold,rseed);
     return(hit);
 }
 

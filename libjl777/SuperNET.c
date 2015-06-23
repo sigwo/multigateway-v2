@@ -861,6 +861,15 @@ int main(int argc,const char *argv[])
     int32_t i;
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
+#ifdef __APPLE__
+    while ( 0 )
+    {
+        uint32_t nonce,failed;
+        nonce = nonce_func("test string","allrelays",3000,0);
+        failed = nonce_func("test string","allrelays",0,nonce);
+        printf("nonce.%u failed.%u\n",nonce,failed);
+    }
+#endif
     if ( (jsonstr= loadfile(&allocsize,"SuperNET.conf")) == 0 )
         jsonstr = clonestr("{}");
     else if ( (json= cJSON_Parse(jsonstr)) == 0 )
