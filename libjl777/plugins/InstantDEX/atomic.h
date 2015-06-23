@@ -264,8 +264,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
     }
     if ( NXTblock != prevNXTblock )
     {
-        struct rambook_info **obooks; int32_t numbooks;
-        prevNXTblock = NXTblock, printf("New NXTblock.%d\n",NXTblock);
+        struct rambook_info **obooks; int32_t numbooks = 0;
         update_NXT_assettrades();
         if ( (obooks= get_allrambooks(&numbooks)) != 0 )
         {
@@ -273,6 +272,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
             {
                 if ( strcmp(obooks[i]->exchange,"nxtae") == 0 )
                 {
+                    printf("obook.%d %llu %llu\n",i,(long long)obooks[i]->assetids[0],(long long)obooks[i]->assetids[1]);
                     if ( obooks[i]->assetids[0] != NXT_ASSETID )
                         ramupdate_NXThalf(0,obooks[i]->assetids[0],0,0);
                     else ramupdate_NXThalf(1,obooks[i]->assetids[1],0,0);
@@ -280,6 +280,7 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
             }
             free(obooks);
         }
+        prevNXTblock = NXTblock, printf("New NXTblock.%d numbooks.%d\n",NXTblock,numbooks);
     }
     lastmilli = milliseconds();
 }
