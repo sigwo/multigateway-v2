@@ -94,10 +94,11 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce; int32_t i,leverage;
     if ( broadcastmode == 0 )
         broadcastmode = "";
-    for (i=0; i<10; i++)
+    for (i=0; i<100; i++)
     {
-        if ( (nonce= nonce_func(&leverage,cmdjson,broadcastmode,1000 + SUPERNET.PLUGINTIMEOUT*(i+1),0)) != 0 )
+        if ( (nonce= nonce_func(&leverage,cmdjson,broadcastmode,1000,0)) != 0 )
             break;
+        printf("iter.%d nonce.%u failed, try again\n",i,nonce);
     }
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
