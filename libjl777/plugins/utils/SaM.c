@@ -67,8 +67,8 @@ void SaM_PrepareIndices()
 
 void SaM_Initialize(struct SaM_info *state)
 {
-    if ( SAM_INDICES[0] == 0 )
-        SaM_PrepareIndices(), printf("SAM_INDICES[0] -> %d\n",SAM_INDICES[0]);
+    //if ( SAM_INDICES[0] == 0 )
+    SaM_PrepareIndices();//, printf("SAM_INDICES[0] -> %d\n",SAM_INDICES[0]);
     memset(state->hash,0,sizeof(state->hash));
     memcpy(state->trits,SAM_TRITS,sizeof(state->trits));
 }
