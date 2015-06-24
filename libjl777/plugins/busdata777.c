@@ -97,7 +97,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     _stripwhite(cmdjson,' ');
     for (i=0; i<100; i++)
     {
-        if ( (nonce= nonce_func(&leverage,cmdjson,broadcastmode,1000,0)) != 0 )
+        if ( (nonce= nonce_func(&leverage,cmdjson,broadcastmode,5000,0)) != 0 )
             break;
         printf("iter.%d nonce.%u failed, try again\n",i,nonce);
     }
@@ -109,7 +109,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     }
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
-    printf("GEN.(%s).(%s) -> (%s) len.%d crc.%u\n",broadcastmode,cmdjson,broadcaststr,(int32_t)strlen(cmdjson),_crc32(0,(void *)cmdjson,(int32_t)strlen(cmdjson)));
+    //printf("GEN.(%s).(%s) -> (%s) len.%d crc.%u\n",broadcastmode,cmdjson,broadcaststr,(int32_t)strlen(cmdjson),_crc32(0,(void *)cmdjson,(int32_t)strlen(cmdjson)));
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
     encoded[NXT_TOKEN_LEN] = 0;
     if ( SUPERNET.iamrelay == 0 )
@@ -206,10 +206,10 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
                         copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
                         retcode = valid;
-                        int32_t len = (int32_t)strlen(firstjsontxt);
+                        //int32_t len = (int32_t)strlen(firstjsontxt);
                         if ( nonce_func(&leverage,firstjsontxt,broadcaststr,0,nonce) != 0 )
                         {
-                            printf("(%s) -> (%s) leverage.%d len.%d crc.%u\n",broadcaststr,firstjsontxt,leverage,len,_crc32(0,(void *)firstjsontxt,len));
+                            //printf("(%s) -> (%s) leverage.%d len.%d crc.%u\n",broadcaststr,firstjsontxt,leverage,len,_crc32(0,(void *)firstjsontxt,len));
                             retcode = -4;
                         }
                         if ( Debuglevel > 2 )
