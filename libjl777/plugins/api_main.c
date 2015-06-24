@@ -31,8 +31,10 @@ void process_json(cJSON *json)
     recvtimeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),10000);
     sendtimeout = 5000;
     randombytes(&tag,sizeof(tag));
-    cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
-    cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
+    if ( cJSON_GetObjectItem(json,"tag") == 0 )
+        cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
+    if ( cJSON_GetObjectItem(json,"apitag") == 0 )
+        cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
     //cJSON_AddItemToObject(json,"timeout",cJSON_CreateNumber(recvtimeout));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
