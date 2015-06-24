@@ -309,7 +309,7 @@ char *orderbook_jsonstr(uint64_t nxt64bits,struct orderbook *op,char *base,char 
             if ( (i < maxdepth || op->bids[i].nxt64bits == nxt64bits) && (item= gen_orderbook_item(&op->bids[i],allflag,op->baseid,op->relid,op->jumpasset)) != 0 )
             {
                 cJSON_AddItemToArray(bids,item);
-                if ( Debuglevel > 1 && i == 0 )
+                if ( Debuglevel > 2 && i == 0 )
                     highbid = item;
             }
         }
@@ -318,7 +318,7 @@ char *orderbook_jsonstr(uint64_t nxt64bits,struct orderbook *op,char *base,char 
             if ( (i < maxdepth || op->asks[i].nxt64bits == nxt64bits) && (item= gen_orderbook_item(&op->asks[i],allflag,op->baseid,op->relid,op->jumpasset)) != 0 )
             {
                 cJSON_AddItemToArray(asks,item);
-                if ( Debuglevel > 1 && i == 0 )
+                if ( Debuglevel > 2 && i == 0 )
                     lowask = item;
             }
         }
@@ -336,7 +336,8 @@ char *orderbook_jsonstr(uint64_t nxt64bits,struct orderbook *op,char *base,char 
     cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
     cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(time(NULL)));
     cJSON_AddItemToObject(json,"maxdepth",cJSON_CreateNumber(maxdepth));
-    debug_json(highbid), debug_json(lowask);
+    if ( Debuglevel > 2 )
+        debug_json(highbid), debug_json(lowask);
     return(cJSON_Print(json));
 }
 
