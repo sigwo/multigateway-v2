@@ -65,9 +65,8 @@ void process_json(cJSON *json)
 
 int32_t setnxturl(char *urlbuf)
 {
-    FILE *fp;
-    char confname[512],buf[65536];
-    strcpt(confname,"../../SuperNET.conf"), os_compatible_path(confname);
+    FILE *fp; cJSON *json; char confname[512],buf[65536];
+    strcpy(confname,"../../SuperNET.conf"), os_compatible_path(confname);
     if ( (fp= fopen(confname,"rb")) != 0 )
     {
         if ( fread(buf,1,sizeof(buf),fp) > 0 )
