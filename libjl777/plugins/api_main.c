@@ -16,7 +16,7 @@ long _stripwhite(char *buf,int accept);
 #define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
 #define issue_POST(url,cmdstr) bitcoind_RPC(0,"curl",url,0,0,cmdstr)
-
+char *os_compatible_path(char *str);
 
 void process_json(cJSON *json)
 {
@@ -63,6 +63,27 @@ void process_json(cJSON *json)
     free(jsonstr);
 }
 
+int32_t setnxturl(char *urlbuf)
+{
+    FILE *fp;
+    char confname[512],buf[65536];
+    strcpt(confname,"../../SuperNET.conf"), os_compatible_path(confname);
+    if ( (fp= fopen(confname,"rb")) != 0 )
+    {
+        if ( fread(buf,1,sizeof(buf),fp) > 0 )
+        {
+            if ( (json= cJSON_Parse(buf)) != 0 )
+            {
+                copy_cJSON(urlbuf,cJSON_GetObjectItem(json,"NXTAPIURL"));
+                fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
+                free_json(json);
+            }
+        }
+        fclose(fp);
+    }
+    return(0);
+}
+
 int main(int argc, char **argv)
 {
     CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,portflag = 0; cJSON *json; long offset;
@@ -79,7 +100,11 @@ int main(int argc, char **argv)
     if ( strcmp(namebuf,"api") != 0 )
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
     if ( strcmp("nxt",namebuf) == 0 )
-        url = "http://127.0.0.1:7876/nxt";
+    {
+        if ( setnxturl(urlbuf) != 0 )
+            url = urlbuf;
+        else url = "http://127.0.0.1:7876/nxt";
+    }
     else if ( strcmp("nxts",namebuf) == 0 )
         url = "https://127.0.0.1:7876/nxt";
     else if ( strcmp("port",namebuf) == 0 )
