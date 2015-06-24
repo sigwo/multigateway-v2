@@ -840,21 +840,48 @@ uint64_t calc_decimals_mult(int32_t decimals)
     return(mult);
 }
 
+struct assethash { UT_hash_handle hh; uint64_t assetid,minvol,mult; int32_t type,decimals; char assetidstr[24],name[16]; } *Allassets;
+struct assethash *find_asset(char *assetidstr)
+{
+    struct assethash *ap;
+    HASH_FIND(hh,Allassets,assetidstr,strlen(assetidstr),ap);
+    return(ap);
+}
+
+struct assethash *create_asset(char *assetidstr,struct assethash *ap)
+{
+    struct assethash *newap;
+    if ( (newap= find_asset(assetidstr)) != 0 )
+        return(newap);
+    newap = calloc(1,sizeof(*newap));
+    *newap = *ap;
+    HASH_ADD(hh,Allassets,assetidstr,strlen(assetidstr),newap);
+    return(newap);
+}
+
 int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
 {
-    cJSON *json; char *jsonstr; int32_t ap_type = -1;
+    cJSON *json; char name[64],*jsonstr; int32_t ap_type = -1; struct assethash *ap,A;
+    if ( (ap= find_asset(assetidstr)) != 0 )
+    {
+        *numdecimalsp = ap->decimals;
+        return(ap->type);
+    }
     if ( calc_nxt64bits(assetidstr) == NXT_ASSETID )
     {
         *numdecimalsp = 8;
         return(0);
     }
+    memset(name,0,sizeof(name));
     if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( get_cJSON_int(json,"errorCode") == 0 )
             {
-                *numdecimalsp = (int32_t)get_cJSON_int(json,"decimals");
+                if ( extract_cJSON_str(name,16,json,"name") <= 0 )
+                    *numdecimalsp = -1;
+                else *numdecimalsp = (int32_t)get_cJSON_int(json,"decimals");
                 ap_type = 2;
             }
             free_json(json);
@@ -869,7 +896,9 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
             {
                 if ( get_cJSON_int(json,"errorCode") == 0 )
                 {
-                    *numdecimalsp = (int32_t)get_cJSON_int(json,"decimals");
+                    if ( extract_cJSON_str(name,16,json,"name") <= 0 )
+                        *numdecimalsp = -1;
+                    else *numdecimalsp = (int32_t)get_cJSON_int(json,"decimals");
                     ap_type = 5;
                 }
                 free_json(json);
@@ -877,6 +906,13 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
             free(jsonstr);
         }
     }
+    memset(&A,0,sizeof(A));
+    A.assetid = calc_nxt64bits(assetidstr);
+    A.minvol = A.mult = calc_decimals_mult(*numdecimalsp);
+    A.decimals = *numdecimalsp;
+    A.type = ap_type;
+    strcpy(A.name,name);
+    create_asset(assetidstr,&A);
     return(ap_type);
 }
 
