@@ -37,7 +37,7 @@ struct rambook_info
     FILE *fp;
     char url[128],base[16],rel[16],lbase[16],lrel[16],exchange[32],gui[16];
     struct InstantDEX_quote **quotes;
-    uint64_t assetids[3],minbasevol,minrelvol;
+    uint64_t assetids[3];
     uint32_t lastaccess;
     int32_t numquotes,maxquotes,numupdates;
     float lastmilli;
@@ -349,12 +349,12 @@ char *placequote_str(struct InstantDEX_quote *iQ)
     return(clonestr(buf));
 }
 
-char *submitquote_str(uint64_t minbasevol,uint64_t minrelvol,int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t baseid,uint64_t relid)
+char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t baseid,uint64_t relid)
 {
     cJSON *json;
     char *jsonstr = 0;
     uint64_t basetmp,reltmp;
-    if ( (json= gen_InstantDEX_json(minbasevol,minrelvol,0,localaccess,&basetmp,&reltmp,0,iQ->isask,iQ,baseid,relid,0)) != 0 )
+    if ( (json= gen_InstantDEX_json(localaccess,&basetmp,&reltmp,0,iQ->isask,iQ,baseid,relid,0)) != 0 )
     {
         ensure_jsonitem(json,"plugin","relay");
         ensure_jsonitem(json,"destplugin","InstantDEX");
@@ -460,7 +460,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                     if ( Debuglevel > 2 )
                         printf("placequote.(%s) remoteflag.%d\n",retstr,remoteflag);
                 }
-                if ( (jsonstr= submitquote_str(rb->minbasevol,rb->minrelvol,localaccess,&iQ,baseid,relid)) != 0 )
+                if ( (jsonstr= submitquote_str(localaccess,&iQ,baseid,relid)) != 0 )
                 {
                     //printf("got submitquote_str.(%s)\n",jsonstr);
                     if ( remoteflag == 0 )
@@ -832,7 +832,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
             quoteid = (long long)calc_quoteid(&iQ);
             if ( orderbook_testpair(items,quoteid,nxt64bits,base,baseid,rel,relid,gui,maxdepth) == 0 )
             {
-                jsonstr = submitquote_str(get_minvolume(baseid),get_minvolume(relid),1,&iQ,baseid,relid);
+                jsonstr = submitquote_str(1,&iQ,baseid,relid);
                 if ( (retstr= makeoffer3_stub(1,"4077619696739571952",0,jsonstr)) != 0 )
                 {
                     if ( (json= cJSON_Parse(retstr)) != 0 )
@@ -846,7 +846,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
                         if ( 0 && rb->numquotes > 1 )
                         {
                             char *jsonstr2,*retstr2; cJSON *json2;
-                            if ( (jsonstr2= submitquote_str(get_minvolume(baseid),get_minvolume(relid),1,rb->quotes[1],baseid,relid)) != 0 )
+                            if ( (jsonstr2= submitquote_str(1,rb->quotes[1],baseid,relid)) != 0 )
                             {
                                 if ( (retstr2= makeoffer3_stub(1,"4077619696739571952",0,jsonstr2)) != 0 )
                                 {

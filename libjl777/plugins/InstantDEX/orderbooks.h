@@ -12,7 +12,7 @@
 
 struct orderbook
 {
-    uint64_t baseid,relid,jumpasset,minbasevol,minrelvol,minjumpvol;
+    uint64_t baseid,relid,jumpasset;
     char base[16],rel[16],jumper[16];
     struct InstantDEX_quote *bids,*asks;
     int32_t numbids,numasks;
@@ -83,12 +83,10 @@ void sort_orderbook(struct orderbook *op)
 {
     if ( op != 0 )
     {
-        fprintf(stderr,"sort orderbook\n");
         if ( op->numbids > 1 )
             qsort(op->bids,op->numbids,sizeof(*op->bids),_decreasing_quotes);
         if ( op->numasks > 1 )
             qsort(op->asks,op->numasks,sizeof(*op->asks),_increasing_quotes);
-        fprintf(stderr,"finished sort orderbook\n");
     }
 }
 
@@ -121,7 +119,6 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
     struct orderbook *op = 0;
     int32_t i,j,n,m = sqrt(maxdepth);
     uint64_t mult;
-    fprintf(stderr,"make_jumpbook: ");
     if ( m < 10 )
         m = 10;
     if ( 0 && rawop != 0 )
@@ -139,20 +136,20 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
         {
             op = (struct orderbook *)calloc(1,sizeof(*op));
             strcpy(op->base,base), strcpy(op->rel,rel), set_assetname(&mult,op->jumper,jumpasset);
-            op->baseid = baseid, op->minbasevol = get_minvolume(baseid);
-            op->relid = relid, op->minrelvol = get_minvolume(relid);
-            op->jumpasset = jumpasset, op->minjumpvol = get_minvolume(jumpasset);
+            op->baseid = baseid;
+            op->relid = relid;
+            op->jumpasset = jumpasset;
             if ( (op->numbids= (to->numasks*from->numbids)+(rawop==0?0:rawop->numbids)) > 0 )
             {
                 if ( Debuglevel > 2 )
-                    fprintf(stderr,"(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
+                    printf("(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
                 n = 0;
                 if ( to->numasks > 0 && from->numbids > 0 )
                 {
                     for (i=0; i<to->numasks&&i<m; i++)
                         for (j=0; j<from->numbids&&j<m; j++)
-                            n += make_jumpiQ(baseid,relid,op->minbasevol,op->minrelvol,0,&op->bids[n],&from->bids[j],&to->asks[i],gui,0);
+                            n += make_jumpiQ(baseid,relid,0,&op->bids[n],&from->bids[j],&to->asks[i],gui,0);
                 }
                 if ( rawop != 0 && rawop->numbids > 0 )
                     for (i=0; i<rawop->numbids; i++)
@@ -162,14 +159,14 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             if ( (op->numasks= (from->numasks*to->numbids)+(rawop==0?0:rawop->numasks)) > 0 )
             {
                 if ( Debuglevel > 2 )
-                    fprintf(stderr,"(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
+                    printf("(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
                 n = 0;
                 if ( from->numasks > 0 && to->numbids > 0 )
                 {
                     for (i=0; i<from->numasks&&i<m; i++)
                         for (j=0; j<to->numbids&&j<m; j++)
-                            n += make_jumpiQ(baseid,relid,op->minbasevol,op->minrelvol,1,&op->asks[n],&from->asks[i],&to->bids[j],gui,0);
+                            n += make_jumpiQ(baseid,relid,1,&op->asks[n],&from->asks[i],&to->bids[j],gui,0);
                 }
                 if ( rawop != 0 && rawop->numasks > 0 )
                     for (i=0; i<rawop->numasks; i++)
@@ -237,8 +234,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
     op = (struct orderbook *)calloc(1,sizeof(*op));
     strcpy(op->base,base), strcpy(op->rel,rel);
     op->baseid = refbaseid, op->relid = refrelid;
-    op->minbasevol = get_minvolume(refbaseid), op->minrelvol = get_minvolume(refrelid);
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("create_orderbook %s/%s\n",op->base,op->rel);
     for (iter=0; iter<2; iter++)
     {
@@ -265,7 +261,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else if ( op->baseid == rb->assetids[1] && op->relid == rb->assetids[0] )
                     polarity = -1;
                 else continue;
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf(">>>>>> %s numquotes.%d: (%s).%llu (%s).%llu | (%s).%llu (%s).%llu\n",rb->exchange,rb->numquotes,rb->base,(long long)rb->assetids[0],rb->rel,(long long)rb->assetids[1],op->base,(long long)op->baseid,op->rel,(long long)op->relid);
                 if ( 0 && rb->numquotes == 1 )
                 {
@@ -310,7 +306,7 @@ char *orderbook_jsonstr(uint64_t nxt64bits,struct orderbook *op,char *base,char 
     {
         for (i=0; i<op->numbids; i++)
         {
-            if ( (i < maxdepth || op->bids[i].nxt64bits == nxt64bits) && (item= gen_orderbook_item(op->minbasevol,op->minrelvol,op->minjumpvol,&op->bids[i],allflag,op->baseid,op->relid,op->jumpasset)) != 0 )
+            if ( (i < maxdepth || op->bids[i].nxt64bits == nxt64bits) && (item= gen_orderbook_item(&op->bids[i],allflag,op->baseid,op->relid,op->jumpasset)) != 0 )
             {
                 cJSON_AddItemToArray(bids,item);
                 if ( Debuglevel > 1 && i == 0 )
@@ -319,7 +315,7 @@ char *orderbook_jsonstr(uint64_t nxt64bits,struct orderbook *op,char *base,char 
         }
         for (i=0; i<op->numasks; i++)
         {
-            if ( (i < maxdepth || op->asks[i].nxt64bits == nxt64bits) && (item= gen_orderbook_item(op->minbasevol,op->minrelvol,op->minjumpvol,&op->asks[i],allflag,op->baseid,op->relid,op->jumpasset)) != 0 )
+            if ( (i < maxdepth || op->asks[i].nxt64bits == nxt64bits) && (item= gen_orderbook_item(&op->asks[i],allflag,op->baseid,op->relid,op->jumpasset)) != 0 )
             {
                 cJSON_AddItemToArray(asks,item);
                 if ( Debuglevel > 1 && i == 0 )
@@ -354,8 +350,8 @@ struct orderbook *merge_books(char *base,uint64_t refbaseid,char *rel,uint64_t r
         numasks += books[i]->numasks;
     op = (struct orderbook *)calloc(1,sizeof(*op));
     strcpy(op->base,base), strcpy(op->rel,rel), sprintf(op->jumper,"merged.%d",n);
-    op->baseid = refbaseid, op->minbasevol = get_minvolume(refbaseid);
-    op->relid = refrelid, op->minrelvol = get_minvolume(refrelid);
+    op->baseid = refbaseid;
+    op->relid = refrelid;
     op->jumpasset = 0;
     if ( (op->numbids= numbids) > 0 )
     {
@@ -415,7 +411,7 @@ struct orderbook *make_orderbook(struct orderbook *obooks[],long max,char *base,
     obooks[n] = 0;
     if ( m > 1 )
     {
-        fprintf(stderr,"num jumpbooks.%d\n",m);
+        printf("num jumpbooks.%d\n",m);
         op = merge_books(base,refbaseid,rel,refrelid,jumpbooks,m);
     }
     else op = jumpbooks[0];
@@ -505,7 +501,7 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
                 asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1,gui);
                 if ( bids != 0 && asks != 0 && (bids->numupdates + asks->numupdates) == 0 )
                 {
-                    if ( Debuglevel > 2 )
+                    if ( Debuglevel > 1 )
                         fprintf(stderr,"(%llu %llu max.%d).%s ",(long long)baseid,(long long)relid,maxdepth,Exchanges[exchangeid].name);
                     if ( exchange->exchangeid == exchangeid )
                         update_ramparse(exchange,bids,asks,maxdepth,gui);

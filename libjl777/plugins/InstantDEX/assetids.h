@@ -183,7 +183,7 @@ uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits)
             strcpy(name,MGWassets[i][1]);
             if ( multp != 0 )
                 *multp = _calc_decimals_mult(atoi(MGWassets[i][2]));
-            fprintf(stderr,"SETASSETNAME.(%s) <- %s mult.%llu\n",name,assetstr,(long long)*multp);
+            //printf("SETASSETNAME.(%s) <- %s mult.%llu\n",name,assetstr,(long long)*multp);
             return(INSTANTDEX_NATIVE); // native crypto type
         }
     }
@@ -313,8 +313,8 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
     int32_t i,j;
     baseamount = volume * SATOSHIDEN;
     relamount = ((price * volume) * SATOSHIDEN);
-//*baseamountp = baseamount, *relamountp = relamount;
-//return;
+    //*baseamountp = baseamount, *relamountp = relamount;
+    //return;
     for (i=-1; i<=1; i++)
         for (j=-1; j<=1; j++)
         {
@@ -374,15 +374,13 @@ double check_ratios(uint64_t baseamount,uint64_t relamount,uint64_t baseamount2,
     } return(1.);
 }
 
-double make_jumpquote(uint64_t minbasevol,uint64_t minrelvol,uint64_t *baseamountp,uint64_t *relamountp,uint64_t *frombasep,uint64_t *fromrelp,uint64_t *tobasep,uint64_t *torelp)
+double make_jumpquote(uint64_t baseid,uint64_t relid,uint64_t *baseamountp,uint64_t *relamountp,uint64_t *frombasep,uint64_t *fromrelp,uint64_t *tobasep,uint64_t *torelp)
 {
     double p0,v0,p1,v1,price,vol,checkprice,checkvol,ratio;
     *baseamountp = *relamountp = 0;
-    if ( minbasevol == 0 || minrelvol == 0 )
-        printf("make_jumpquote error: null minvol %.8f %.8f\n",dstr(minbasevol),dstr(minrelvol));
     p0 = calc_price_volume(&v0,*tobasep,*torelp);
     p1 = calc_price_volume(&v1,*frombasep,*fromrelp);
-    if ( p0 > 0. && p1 > 0. && v0 >= minbasevol && v1 >= minrelvol )
+    if ( p0 > 0. && p1 > 0. && v0 >= get_minvolume(baseid) && v1 >= get_minvolume(relid) )
     {
         price = (p1 / p0);
         vol = ((v0 * p0) / p1);
