@@ -400,7 +400,7 @@ struct orderbook *make_orderbook(struct orderbook *obooks[],long max,char *base,
                         obooks[n++] = baseop;
                     if ( (relop= create_orderbook(0,relid,0,jumpassets[i],oldest,gui)) != 0 )
                         obooks[n++] = relop;
-                    if ( baseop != 0 && relop != 0 && (jumpop= make_jumpbook(base,baseid,jumpassets[i],rel,relid,relop,baseop,gui,0,maxdepth)) != 0 )
+                    if ( 0 && baseop != 0 && relop != 0 && (jumpop= make_jumpbook(base,baseid,jumpassets[i],rel,relid,relop,baseop,gui,0,maxdepth)) != 0 )
                         jumpbooks[m++] = obooks[n++] = jumpop;
                 }
             }
@@ -535,9 +535,7 @@ char *orderbook_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs
     if ( baseid != 0 && relid != 0 )
     {
         update_rambooks(baseid,relid,maxdepth,gui,showall);
-fprintf(stderr,"make_orderbook\n");
         op = make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,baseid,rel,relid,maxdepth,oldest,gui);
-fprintf(stderr,"orderbook_jsonstr\n");
         retstr = orderbook_jsonstr(nxt64bits,op,base,rel,maxdepth,allflag);
         free_orderbooks(obooks,sizeof(obooks)/sizeof(*obooks),op);
     }
