@@ -281,7 +281,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
         } else sort_orderbook(op);
     }
-    if ( Debuglevel > 2 || op->numbids+op->numasks > 0 )
+    if ( Debuglevel > 2 )//|| op->numbids+op->numasks > 0 )
         printf("(%s/%s) %llu/%llu numbids.%d numasks.%d\n",op->base,op->rel,(long long)op->baseid,(long long)op->relid,op->numbids,op->numasks);
     if ( op != 0 && (op->numbids + op->numasks) == 0 )
         free_orderbook(op), op = 0;
