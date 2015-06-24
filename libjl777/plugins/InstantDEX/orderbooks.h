@@ -234,7 +234,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
     op = (struct orderbook *)calloc(1,sizeof(*op));
     strcpy(op->base,base), strcpy(op->rel,rel);
     op->baseid = refbaseid, op->relid = refrelid;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("create_orderbook %s/%s\n",op->base,op->rel);
     for (iter=0; iter<2; iter++)
     {
@@ -261,7 +261,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else if ( op->baseid == rb->assetids[1] && op->relid == rb->assetids[0] )
                     polarity = -1;
                 else continue;
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     printf(">>>>>> %s numquotes.%d: (%s).%llu (%s).%llu | (%s).%llu (%s).%llu\n",rb->exchange,rb->numquotes,rb->base,(long long)rb->assetids[0],rb->rel,(long long)rb->assetids[1],op->base,(long long)op->baseid,op->rel,(long long)op->relid);
                 if ( 0 && rb->numquotes == 1 )
                 {
