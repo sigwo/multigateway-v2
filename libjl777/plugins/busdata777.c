@@ -109,12 +109,12 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     }
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
+    printf("GEN.(%s).(%s) -> (%s)\n",broadcastmode,cmdjson,broadcaststr);
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
     encoded[NXT_TOKEN_LEN] = 0;
     if ( SUPERNET.iamrelay == 0 )
         sprintf(tokenized,"[%s, {\"token\":\"%s\"%s}]",cmdjson,encoded,broadcaststr);
     else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s}]",cmdjson,encoded,SUPERNET.NXTADDR,broadcaststr);
-    //printf("(%s).(%s) -> (%s)\n",broadcastmode,cmdjson,tokenized);
     return((int32_t)strlen(tokenized)+1);
 }
 
@@ -208,12 +208,8 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         retcode = valid;
                         if ( nonce_func(&leverage,firstjsontxt,broadcaststr,0,nonce) != 0 )
                         {
-                            for (i=0; i<3; i++)
-                                if ( nonce_func(&leverage,firstjsontxt,broadcaststr,0,nonce) == 0 )
-                                    break;
-                            if ( i == 3 )
-                                retcode = -4;
-                            else printf("nonce autocorrected\n");
+                            printf("(%s) -> (%s) leverage.%d\n",broadcaststr,firstjsontxt,leverage);
+                            retcode = -4;
                         }
                         if ( Debuglevel > 2 )
                             printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
