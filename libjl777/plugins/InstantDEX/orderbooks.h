@@ -411,7 +411,7 @@ struct orderbook *make_orderbook(struct orderbook *obooks[],long max,char *base,
     obooks[n] = 0;
     if ( m > 1 )
     {
-        printf("num jumpbooks.%d\n",m);
+        //printf("num jumpbooks.%d\n",m);
         op = merge_books(base,refbaseid,rel,refrelid,jumpbooks,m);
     }
     else op = jumpbooks[0];
@@ -501,7 +501,7 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
                 asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1,gui);
                 if ( bids != 0 && asks != 0 && (bids->numupdates + asks->numupdates) == 0 )
                 {
-                    if ( Debuglevel > 1 )
+                    if ( Debuglevel > 2 )
                         fprintf(stderr,"(%llu %llu max.%d).%s ",(long long)baseid,(long long)relid,maxdepth,Exchanges[exchangeid].name);
                     if ( exchange->exchangeid == exchangeid )
                         update_ramparse(exchange,bids,asks,maxdepth,gui);
