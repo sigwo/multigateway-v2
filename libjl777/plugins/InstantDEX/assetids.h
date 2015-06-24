@@ -313,8 +313,8 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
     int32_t i,j;
     baseamount = volume * SATOSHIDEN;
     relamount = ((price * volume) * SATOSHIDEN);
-*baseamountp = baseamount, *relamountp = relamount;
-return;
+//*baseamountp = baseamount, *relamountp = relamount;
+//return;
     for (i=-1; i<=1; i++)
         for (j=-1; j<=1; j++)
         {
