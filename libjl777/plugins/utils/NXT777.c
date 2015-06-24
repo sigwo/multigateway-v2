@@ -840,37 +840,37 @@ uint64_t calc_decimals_mult(int32_t decimals)
     return(mult);
 }
 
-struct assethash { UT_hash_handle hh; uint64_t assetid,minvol,mult; int32_t type,decimals; char assetidstr[24],name[16]; } *Allassets;
-struct assethash *find_asset(char *assetidstr)
+struct assethash { UT_hash_handle hh; uint64_t assetid,minvol,mult; int32_t type,decimals; char name[16]; } *Allassets;
+struct assethash *find_asset(uint64_t assetid)
 {
     struct assethash *ap;
-    HASH_FIND(hh,Allassets,assetidstr,strlen(assetidstr),ap);
+    HASH_FIND(hh,Allassets,assetid,sizeof(assetid),ap);
     return(ap);
 }
 
-struct assethash *create_asset(char *assetidstr,struct assethash *ap)
+struct assethash *create_asset(uint64_t assetid,struct assethash *ap)
 {
     struct assethash *newap;
-    if ( (newap= find_asset(assetidstr)) != 0 )
+    if ( (newap= find_asset(assetid)) != 0 )
         return(newap);
     newap = calloc(1,sizeof(*newap));
     *newap = *ap;
-    HASH_ADD(hh,Allassets,assetidstr,strlen(assetidstr),newap);
+    HASH_ADD(hh,Allassets,assetid,sizeof(assetid),newap);
     return(newap);
 }
 
 int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
 {
-    cJSON *json; char name[64],*jsonstr; int32_t ap_type = -1; struct assethash *ap,A;
-    if ( (ap= find_asset(assetidstr)) != 0 )
-    {
-        *numdecimalsp = ap->decimals;
-        return(ap->type);
-    }
-    if ( calc_nxt64bits(assetidstr) == NXT_ASSETID )
+    cJSON *json; char name[64],*jsonstr; uint64_t assetid; int32_t ap_type = -1; struct assethash *ap,A;
+    if ( (assetid= calc_nxt64bits(assetidstr)) == NXT_ASSETID )
     {
         *numdecimalsp = 8;
         return(0);
+    }
+    if ( (ap= find_asset(assetid)) != 0 )
+    {
+        *numdecimalsp = ap->decimals;
+        return(ap->type);
     }
     memset(name,0,sizeof(name));
     if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
@@ -907,12 +907,12 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
         }
     }
     memset(&A,0,sizeof(A));
-    A.assetid = calc_nxt64bits(assetidstr);
+    A.assetid = assetid;
     A.minvol = A.mult = calc_decimals_mult(*numdecimalsp);
     A.decimals = *numdecimalsp;
     A.type = ap_type;
     strcpy(A.name,name);
-    create_asset(assetidstr,&A);
+    create_asset(assetid,&A);
     return(ap_type);
 }
 
