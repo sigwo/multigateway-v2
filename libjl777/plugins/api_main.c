@@ -77,10 +77,10 @@ int32_t setnxturl(char *urlbuf)
                 copy_cJSON(urlbuf,cJSON_GetObjectItem(json,"NXTAPIURL"));
                 fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
                 free_json(json);
-            }
-        }
+            } else fprintf(stderr,"setnxturl parse error.(%s)\n",buf);
+        } else fprintf(stderr,"setnxturl error reading.(%s)\n",confname);
         fclose(fp);
-    }
+    } else fprintf(stderr,"setnxturl cant open.(%s)\n",confname);
     return((int32_t)strlen(urlbuf));
 }
 
