@@ -117,7 +117,7 @@ void convram_NXT_quotejson(uint64_t assetid,int32_t flip,cJSON *json,char *field
                 relamount = (get_satoshi_obj(srcitem,"quantityQNT") * get_satoshi_obj(srcitem,"priceNQT"));
                 timestamp = get_blockutime((uint32_t)get_API_int(cJSON_GetObjectItem(srcitem,"height"),0));
                 add_rambook_quote(INSTANTDEX_NXTAENAME,&iQ,get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"account")),timestamp,dir,assetid,NXT_ASSETID,0.,0.,baseamount,relamount,gui,get_API_nxt64bits(cJSON_GetObjectItem(srcitem,"order")),0);
-                if ( Debuglevel > 1 && i < 3 )
+                if ( Debuglevel > 2 && i < 3 )
                 {
                     double price,volume,tmp;
                     price = calc_price_volume(&volume,baseamount,relamount);
@@ -139,7 +139,7 @@ void ramupdate_NXThalf(int32_t flip,uint64_t assetid,int32_t maxdepth,char *gui)
     sprintf(url,"requestType=%s&asset=%llu&limit=%d",cmd,(long long)assetid,maxdepth);
     if ( (str= issue_NXTPOST(url)) != 0 )
     {
-        printf("flip.%d update.(%s)\n",flip,url);
+        //printf("flip.%d update.(%s)\n",flip,url);
         if ( (json = cJSON_Parse(str)) != 0 )
             convram_NXT_quotejson(assetid,flip,json,field,get_assetmult(assetid),maxdepth,gui), free_json(json);
     } else printf("cant get.(%s)\n",url);
