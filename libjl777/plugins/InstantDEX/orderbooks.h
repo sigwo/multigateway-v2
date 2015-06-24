@@ -144,7 +144,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             op->jumpasset = jumpasset;
             if ( (op->numbids= (to->numasks*from->numbids)+(rawop==0?0:rawop->numbids)) > 0 )
             {
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     fprintf(stderr,"(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
                 n = 0;
@@ -152,7 +152,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
                 {
                     for (i=0; i<to->numasks&&i<m; i++)
                         for (j=0; j<from->numbids&&j<m; j++)
-                            n += 0;//make_jumpiQ(baseid,relid,0,&op->bids[n],&from->bids[j],&to->asks[i],gui,0);
+                            n += make_jumpiQ(baseid,relid,0,&op->bids[n],&from->bids[j],&to->asks[i],gui,0);
                 }
                 if ( rawop != 0 && rawop->numbids > 0 )
                     for (i=0; i<rawop->numbids; i++)
@@ -161,7 +161,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             }
             if ( (op->numasks= (from->numasks*to->numbids)+(rawop==0?0:rawop->numasks)) > 0 )
             {
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     fprintf(stderr,"(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
                 n = 0;
@@ -169,7 +169,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
                 {
                     for (i=0; i<from->numasks&&i<m; i++)
                         for (j=0; j<to->numbids&&j<m; j++)
-                            n += 0;//make_jumpiQ(baseid,relid,1,&op->asks[n],&from->asks[i],&to->bids[j],gui,0);
+                            n += make_jumpiQ(baseid,relid,1,&op->asks[n],&from->asks[i],&to->bids[j],gui,0);
                 }
                 if ( rawop != 0 && rawop->numasks > 0 )
                     for (i=0; i<rawop->numasks; i++)
@@ -209,7 +209,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
     struct rambook_info **obooks,*rb;
     struct orderbook *op = 0;
     uint64_t basemult,relmult,baseequivs[512],relequivs[512];
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("create_orderbook %llu/%llu\n",(long long)refbaseid,(long long)refrelid);
     if ( refbaseid == 0 || refrelid == 0 )
         getchar();
@@ -237,7 +237,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
     op = (struct orderbook *)calloc(1,sizeof(*op));
     strcpy(op->base,base), strcpy(op->rel,rel);
     op->baseid = refbaseid, op->relid = refrelid;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("create_orderbook %s/%s\n",op->base,op->rel);
     for (iter=0; iter<2; iter++)
     {
@@ -264,7 +264,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else if ( op->baseid == rb->assetids[1] && op->relid == rb->assetids[0] )
                     polarity = -1;
                 else continue;
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     printf(">>>>>> %s numquotes.%d: (%s).%llu (%s).%llu | (%s).%llu (%s).%llu\n",rb->exchange,rb->numquotes,rb->base,(long long)rb->assetids[0],rb->rel,(long long)rb->assetids[1],op->base,(long long)op->baseid,op->rel,(long long)op->relid);
                 if ( 0 && rb->numquotes == 1 )
                 {
@@ -504,7 +504,7 @@ void update_rambooks(uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth,char 
                 asks = get_rambook(0,baseid,0,relid,(exchangeid<<1) | 1,gui);
                 if ( bids != 0 && asks != 0 && (bids->numupdates + asks->numupdates) == 0 )
                 {
-                    if ( Debuglevel > 1 )
+                    if ( Debuglevel > 2 )
                         fprintf(stderr,"(%llu %llu max.%d).%s ",(long long)baseid,(long long)relid,maxdepth,Exchanges[exchangeid].name);
                     if ( exchange->exchangeid == exchangeid )
                         update_ramparse(exchange,bids,asks,maxdepth,gui);

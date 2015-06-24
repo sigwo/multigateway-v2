@@ -294,7 +294,7 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
     uint32_t timestamp;
     frombase = baseiQ->baseamount, fromrel = baseiQ->relamount;
     tobase = reliQ->baseamount, torel = reliQ->relamount;
-    if ( make_jumpquote(refbaseid,refrelid,&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel) == 0. )
+    if ( 0 && make_jumpquote(refbaseid,refrelid,&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel) == 0. )
         return(0);
     if ( (timestamp= reliQ->timestamp) > baseiQ->timestamp )
         timestamp = baseiQ->timestamp;
