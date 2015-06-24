@@ -91,18 +91,24 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
 
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce; int32_t i,leverage;
+    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce,nonceerr; int32_t i,leverage;
     if ( broadcastmode == 0 )
         broadcastmode = "";
+    _stripwhite(cmdjson,' ');
     for (i=0; i<100; i++)
     {
         if ( (nonce= nonce_func(&leverage,cmdjson,broadcastmode,1000,0)) != 0 )
             break;
         printf("iter.%d nonce.%u failed, try again\n",i,nonce);
     }
+    if ( (nonceerr= nonce_func(&leverage,cmdjson,broadcastmode,0,nonce)) != 0 )
+    {
+        printf("error validating nonce.%u -> %u\n",nonce,nonceerr);
+        tokenized[0] = 0;
+        return(0);
+    }
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
-    _stripwhite(cmdjson,' ');
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
     encoded[NXT_TOKEN_LEN] = 0;
     if ( SUPERNET.iamrelay == 0 )
