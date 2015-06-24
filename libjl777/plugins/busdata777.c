@@ -58,7 +58,6 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
                     return(0xffffffff);
                 else return((uint32_t)(threshold - hit));
             }
-            else return(0);
         }
         else
         {
@@ -67,11 +66,11 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
             {
                 randombytes((void *)&nonce,sizeof(nonce));
                 if ( (hit= calc_SaM(&sig,(void *)str,len,(void *)&nonce,sizeof(nonce),numrounds)) < threshold )
-                    break;
+                    return(nonce);
             }
         }
     }
-    return(nonce);
+    return(0);
 }
 
 uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
@@ -92,15 +91,13 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
 
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce,nonceerr; int32_t i,leverage;
+    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce; int32_t i,leverage;
     if ( broadcastmode == 0 )
         broadcastmode = "";
     for (i=0; i<10; i++)
     {
-        nonce = nonce_func(&leverage,cmdjson,broadcastmode,SUPERNET.PLUGINTIMEOUT*(i+1),0);
-        if ( (nonceerr= nonce_func(&leverage,cmdjson,broadcastmode,0,nonce)) == 0 )
+        if ( (nonce= nonce_func(&leverage,cmdjson,broadcastmode,1000 + SUPERNET.PLUGINTIMEOUT*(i+1),0)) != 0 )
             break;
-        printf("iter.%d nonce.%u warning: error.%u\n",i,nonce,nonceerr);
     }
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
