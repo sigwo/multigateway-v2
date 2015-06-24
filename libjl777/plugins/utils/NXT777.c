@@ -844,7 +844,7 @@ struct assethash { UT_hash_handle hh; uint64_t assetid,minvol,mult; int32_t type
 struct assethash *find_asset(uint64_t assetid)
 {
     struct assethash *ap;
-    HASH_FIND(hh,Allassets,assetid,sizeof(assetid),ap);
+    HASH_FIND(hh,Allassets,&assetid,sizeof(assetid),ap);
     return(ap);
 }
 
