@@ -99,6 +99,7 @@ int main(int argc, char **argv)
         namebuf[offset] = 0;
     if ( strcmp(namebuf,"api") != 0 )
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
+    fprintf(stderr,"namebuf.(%s)\n",namebuf);
     if ( strcmp("nxt",namebuf) == 0 )
     {
         if ( setnxturl(urlbuf) != 0 )
