@@ -44,30 +44,32 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 
 uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
 {
-    struct SaMhdr *hdr; uint64_t hit,threshold; int32_t len;
+    uint64_t hit,threshold; bits384 sig; double endmilli; int32_t len,numrounds = 10;
     len = (int32_t)strlen(str);
     if ( leverage != 0 )
     {
-        hdr = (struct SaMhdr *)calloc(1,len + sizeof(*hdr));
-        hdr->numrounds = 10;
-        memcpy(&hdr[1],str,len);
         threshold = calc_SaMthreshold(leverage);
-        len += (int32_t)(sizeof(*hdr) - sizeof(hdr->sig));
         if ( maxmillis == 0 )
         {
-            hdr->nonce = nonce;
-            hit = SaMnonce(&hdr->sig,&hdr->nonce,(uint8_t *)((long)hdr + sizeof(hdr->sig)),len,hdr->numrounds,threshold,0,maxmillis);
-            if ( hit > (1L << 32) )
-                nonce = 0xffffffff;
-            else nonce = (uint32_t)hit;
+            if ( (hit= calc_SaM(&sig,(void *)str,len,(void *)&nonce,sizeof(nonce),numrounds)) >= threshold )
+            {
+                printf("nonce failure hit.%llu >= threshold.%llu\n",(long long)hit,(long long)threshold);
+                if ( (threshold - hit) > (1L << 32) )
+                    return(0xffffffff);
+                else return((uint32_t)(threshold - hit));
+            }
+            else return(0);
         }
         else
         {
-            while ( (hit= SaMnonce(&hdr->sig,&hdr->nonce,(uint8_t *)((long)hdr + sizeof(hdr->sig)),len,hdr->numrounds,threshold,0,maxmillis)) == 0 )
-                fprintf(stderr,"searching for nonce\n");
-            nonce = hdr->nonce;
+            endmilli = (milliseconds() + maxmillis);
+            while ( milliseconds() < endmilli )
+            {
+                randombytes((void *)&nonce,sizeof(nonce));
+                if ( (hit= calc_SaM(&sig,(void *)str,len,(void *)&nonce,sizeof(nonce),numrounds)) < threshold )
+                    break;
+            }
         }
-        free(hdr);
     }
     return(nonce);
 }
