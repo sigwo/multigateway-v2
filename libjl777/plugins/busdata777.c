@@ -109,7 +109,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
     }
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
-    printf("GEN.(%s).(%s) -> (%s)\n",broadcastmode,cmdjson,broadcaststr);
+    printf("GEN.(%s).(%s) -> (%s) len.%d crc.%u\n",broadcastmode,cmdjson,broadcaststr,(int32_t)strlen(cmdjson),_crc32(0,(void *)cmdjson,(int32_t)strlen(cmdjson)));
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
     encoded[NXT_TOKEN_LEN] = 0;
     if ( SUPERNET.iamrelay == 0 )
@@ -150,7 +150,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
 
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag)
 {
-    cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t i,valid,leverage,retcode = -13;
+    cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t valid,leverage,retcode = -13;
     char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*firstjsontxt = 0; unsigned char encoded[4096];
     array = cJSON_Parse(tokenizedtxt);
     NXTaddr[0] = pubkey[0] = forwarder[0] = 0;
@@ -206,9 +206,10 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
                         copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
                         retcode = valid;
+                        int32_t len = (int32_t)strlen(firstjsontxt);
                         if ( nonce_func(&leverage,firstjsontxt,broadcaststr,0,nonce) != 0 )
                         {
-                            printf("(%s) -> (%s) leverage.%d\n",broadcaststr,firstjsontxt,leverage);
+                            printf("(%s) -> (%s) leverage.%d len.%d crc.%u\n",broadcaststr,firstjsontxt,leverage,len,_crc32(0,(void *)firstjsontxt,len));
                             retcode = -4;
                         }
                         if ( Debuglevel > 2 )
