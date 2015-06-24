@@ -146,7 +146,7 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
     return(0);
 }
 
-cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,int32_t depth,int32_t flip,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset)
+cJSON *gen_InstantDEX_json(uint64_t minbasevol,uint64_t minrelvol,uint64_t minjumpvol,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,int32_t depth,int32_t flip,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset)
 {
     cJSON *relobj=0,*baseobj=0,*json = 0;
     char numstr[64],base[64],rel[64],exchange[64];
@@ -163,7 +163,7 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t *baseamountp,uint64_t *r
     {
         frombase = baseiQ->baseamount, fromrel = baseiQ->relamount;
         tobase = reliQ->baseamount, torel = reliQ->relamount;
-        if ( make_jumpquote(refbaseid,refrelid,baseamountp,relamountp,&frombase,&fromrel,&tobase,&torel) == 0. )
+        if ( make_jumpquote(minbasevol,minrelvol,baseamountp,relamountp,&frombase,&fromrel,&tobase,&torel) == 0. )
             return(0);
     } else frombase = fromrel = tobase = torel = 0;
     json = cJSON_CreateObject();
@@ -204,12 +204,12 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t *baseamountp,uint64_t *r
                     jumpasset = iQ->baseiQ->relid;
                 else printf("mismatched jumpassset: %llu vs %llu\n",(long long)iQ->baseiQ->relid,(long long)iQ->reliQ->relid), getchar();
             }
-            baseobj = gen_InstantDEX_json(localaccess,&baseamount,&relamount,depth+1,iQ->isask,iQ->baseiQ,refbaseid,jumpasset,0);
+            baseobj = gen_InstantDEX_json(minbasevol,minjumpvol,0,localaccess,&baseamount,&relamount,depth+1,iQ->isask,iQ->baseiQ,refbaseid,jumpasset,0);
             *baseamountp = baseamount;
             if ( (ratio= check_ratios(baseamount,relamount,frombase,fromrel)) < .999 || ratio > 1.001 )
                 printf("WARNING: baseiQ ratio %f (%llu/%llu) -> (%llu/%llu)\n",ratio,(long long)baseamount,(long long)relamount,(long long)frombase,(long long)fromrel);
             baseamount = tobase, relamount = torel;
-            relobj = gen_InstantDEX_json(localaccess,&baseamount,&relamount,depth+1,!iQ->isask,iQ->reliQ,refrelid,jumpasset,0);
+            relobj = gen_InstantDEX_json(minrelvol,minjumpvol,0,localaccess,&baseamount,&relamount,depth+1,!iQ->isask,iQ->reliQ,refrelid,jumpasset,0);
             *relamountp = baseamount;
             if ( (ratio= check_ratios(baseamount,relamount,tobase,torel)) < .999 || ratio > 1.001 )
                 printf("WARNING: reliQ ratio %f (%llu/%llu) -> (%llu/%llu)\n",ratio,(long long)baseamount,(long long)relamount,(long long)tobase,(long long)torel);
@@ -254,7 +254,7 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t *baseamountp,uint64_t *r
     return(json);
 }
 
-cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t baseid,uint64_t relid,uint64_t jumpasset)
+cJSON *gen_orderbook_item(uint64_t minbasevol,uint64_t minrelvol,uint64_t minjumpvol,struct InstantDEX_quote *iQ,int32_t allflag,uint64_t baseid,uint64_t relid,uint64_t jumpasset)
 {
     char offerstr[MAX_JSON_FIELD];
     uint64_t baseamount=0,relamount=0;
@@ -267,7 +267,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
             printf("gen_orderbook_item: isask.%d %llu/%llu != %llu/%llu\n",iQ->isask,(long long)iQ->baseid,(long long)iQ->relid,(long long)baseid,(long long)relid);
         //return(0);
     }
-    if ( (json= gen_InstantDEX_json(0,&baseamount,&relamount,0,iQ->isask,iQ,baseid,relid,jumpasset)) != 0 )
+    if ( (json= gen_InstantDEX_json(minbasevol,minrelvol,minjumpvol,0,&baseamount,&relamount,0,iQ->isask,iQ,baseid,relid,jumpasset)) != 0 )
     {
         if ( cJSON_GetObjectItem(json,"minbase_error") != 0 || cJSON_GetObjectItem(json,"minrel_error") != 0 )
         {
@@ -286,7 +286,7 @@ cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t b
     return(json);
 }
 
-int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct InstantDEX_quote *iQ,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,char *gui,int32_t duration)
+int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,uint64_t minbasevol,uint64_t minrelvol,int32_t flip,struct InstantDEX_quote *iQ,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,char *gui,int32_t duration)
 {
     uint64_t baseamount,relamount,frombase,fromrel,tobase,torel;
     double vol;
@@ -294,12 +294,12 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
     uint32_t timestamp;
     frombase = baseiQ->baseamount, fromrel = baseiQ->relamount;
     tobase = reliQ->baseamount, torel = reliQ->relamount;
-    if ( make_jumpquote(refbaseid,refrelid,&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel) == 0. )
+    if ( make_jumpquote(minbasevol,minrelvol,&baseamount,&relamount,&frombase,&fromrel,&tobase,&torel) == 0. )
         return(0);
     if ( (timestamp= reliQ->timestamp) > baseiQ->timestamp )
         timestamp = baseiQ->timestamp;
     iQ_exchangestr(exchange,iQ);
-    //create_InstantDEX_quote(iQ,timestamp,0,calc_quoteid(baseiQ) ^ calc_quoteid(reliQ),0.,0.,refbaseid,baseamount,refrelid,relamount,exchange,0,gui,baseiQ,reliQ,duration);
+    create_InstantDEX_quote(iQ,timestamp,0,calc_quoteid(baseiQ) ^ calc_quoteid(reliQ),0.,0.,refbaseid,baseamount,refrelid,relamount,exchange,0,gui,baseiQ,reliQ,duration);
     if ( Debuglevel > 2 )
         printf("jump%s: %f (%llu/%llu) %llu %llu (%f %f) %llu %llu\n",flip==0?"BID":"ASK",calc_price_volume(&vol,iQ->baseamount,iQ->relamount),(long long)baseamount,(long long)relamount,(long long)frombase,(long long)fromrel,calc_price_volume(&vol,frombase,fromrel),calc_price_volume(&vol,tobase,torel),(long long)tobase,(long long)torel);
     iQ->isask = flip;

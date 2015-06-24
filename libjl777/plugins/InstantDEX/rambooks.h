@@ -172,6 +172,7 @@ struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t
             strcpy(rb->gui,gui);
         touppercase(rb->base), strcpy(rb->lbase,rb->base), tolowercase(rb->lbase);
         touppercase(rb->rel), strcpy(rb->lrel,rb->rel), tolowercase(rb->lrel);
+        rb->minbasevol = get_minvolume(baseid), rb->minrelvol = get_minvolume(relid);
         for (i=0; i<3; i++)
             rb->assetids[i] = assetids[i];
         if ( Debuglevel > 1 )
@@ -336,7 +337,7 @@ cJSON *openorders_json(char *NXTaddr)
                     if ( strcmp(NXTaddr,nxtaddr) == 0 && iQ->closed == 0 )
                     {
                         baseamount = iQ->baseamount, relamount = iQ->relamount;
-                        if ( (item= gen_InstantDEX_json(0,&baseamount,&relamount,0,iQ->isask,iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
+                        if ( (item= gen_InstantDEX_json(rb->minbasevol,rb->minrelvol,0,0,&baseamount,&relamount,0,iQ->isask,iQ,rb->assetids[0],rb->assetids[1],0)) != 0 )
                         {
                             ptr = (uint64_t)iQ;
                             sprintf(numstr,"%llu",(long long)ptr), cJSON_AddItemToObject(item,"iQ",cJSON_CreateString(numstr));
