@@ -369,7 +369,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *base,ch
     curl_setopt ($ ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt ($ ch, CURLOPT_HEADER, 0);  */
     static CURL *cHandle;
- 	char *data,cmdbuf[8192],buf[512],digest[33],market[16],coinname[16],fmtstr[512],*pricefmt,*volfmt = "%.4f";
+ 	char *data,cmdbuf[8192],buf[512],digest[33],market[16],coinname[16],fmtstr[512],*pricefmt,*volfmt = "%.3f";
     cJSON *json,*resultobj; uint32_t stamp; uint64_t txid = 0;
     stamp = (uint32_t)time(NULL);
     if ( (dir= cny_flip(market,coinname,base,rel,dir,&price,&volume)) == 0 )
@@ -379,7 +379,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *base,ch
     }
     if ( strcmp(market,"cny") == 0 )
         pricefmt = "%.5f";
-    else pricefmt = "%.8f";
+    else pricefmt = "%.6f";
     sprintf(buf,"%s%u",exchange->apisecret,stamp);
     calc_md5(digest,buf,(int32_t)strlen(buf));
     sprintf(fmtstr,"key=%%s&time=%%u&md5=%%s&type=%%s&mk_type=%%s&coinname=%%s&Price=%s&amount=%s",pricefmt,volfmt);
