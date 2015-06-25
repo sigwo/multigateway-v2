@@ -644,7 +644,7 @@ uint64_t issue_transferAsset(char **retstrp,void *deprecated,char *secret,char *
     if ( assetidbits == NXT_ASSETID )
         sprintf(cmd,"requestType=sendMoney&amountNQT=%lld",(long long)quantity);
     else sprintf(cmd,"requestType=transferAsset&asset=%s&quantityQNT=%lld&messageIsPrunable=false",asset,(long long)quantity);
-    sprintf(cmd+strlen(cmd),"&secretPhrase=%s&recipient=%s&feeNQT=%lld&deadline=%d",secret,recipient,(long long)feeNQT,deadline);
+    sprintf(cmd+strlen(cmd),"&secretPhrase='%s'&recipient=%s&feeNQT=%lld&deadline=%d",secret,recipient,(long long)feeNQT,deadline);
     if ( destpubkey != 0 )
         sprintf(cmd+strlen(cmd),"&recipientPublicKey=%s",destpubkey);
     if ( comment != 0 )
