@@ -179,7 +179,8 @@ void escape_code(char *escaped,char *str)
             j += strlen(esc);
         }
     }
-    str[i] = 0;
+    escaped[j] = 0;
+    printf("escape_code: (%s) -> (%s)\n",str,escaped);
 }
 
 int32_t is_zeroes(char *str)
