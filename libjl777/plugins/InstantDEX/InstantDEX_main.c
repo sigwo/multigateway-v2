@@ -176,7 +176,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 {
     char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
-//fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings

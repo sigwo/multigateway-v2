@@ -404,7 +404,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
         duration = ORDERBOOK_EXPIRATION;
     copy_cJSON(exchangestr,objs[11]);
-    //printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exchangestr);
+printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exchangestr);
     if ( exchangestr[0] == 0 )
         strcpy(exchangestr,INSTANTDEX_NAME);
     else
@@ -418,6 +418,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
             return(fill_nxtae(nxt64bits,dir,price,volume,baseid,relid));
         else if ( strcmp(exchangestr,"InstantDEX") != 0 )
         {
+            printf("check %s/%s\n",base,rel);
             if ( is_native_crypto(base,baseid) > 0 && is_native_crypto(rel,relid) > 0 && price > 0 && volume > 0 && dir != 0 )
             {
                 if ( (exchange= find_exchange(exchangestr,0,0)) != 0 )
@@ -427,8 +428,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
                         printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",dir,base,rel,price,volume,exchangestr);
                         (*exchange->trade)(&retstr,exchange,base,rel,dir,price,volume);
                         return(retstr);
-                    }
-                    else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
+                    } else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
                 } else return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
             } else return(clonestr("{\"error\":\"illegal parameter baseid or relid not crypto or invalid price\"}\n"));
         } //else printf("alternate else case.(%s)\n",exchangestr);
