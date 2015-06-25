@@ -188,7 +188,7 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
     strcpy(servers[n++],"89.248.160.241");
     strcpy(servers[n++],"89.248.160.242");
     strcpy(servers[n++],"89.248.160.243");
-    //strcpy(servers[n++],"89.248.160.244");
+    strcpy(servers[n++],"89.248.160.244");
     //strcpy(servers[n++],"89.248.160.245");
     return(n);
 }
@@ -202,7 +202,6 @@ int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port
     strcpy(servers[n++],"5.9.105.170");
     strcpy(servers[n++],"136.243.5.70");
      strcpy(servers[n++],"5.9.155.145");*/
-    strcpy(servers[n++],"89.248.160.244");
     if ( 0 )
     {
         strcpy(servers[n++],"167.114.96.223");
@@ -265,9 +264,12 @@ int32_t _lb_socket(int32_t maxmillis,char servers[][MAX_SERVERNAME],int32_t num,
         timeout = 100;
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
-        priority = nn_addservers(priority,lbsock,servers,num);
-        priority = nn_addservers(priority,lbsock,backups,numbacks);
-        priority = nn_addservers(priority,lbsock,failsafes,numfailsafes);
+        if ( num > 0 )
+            priority = nn_addservers(priority,lbsock,servers,num);
+        if ( numbacks > 0 )
+            priority = nn_addservers(priority,lbsock,backups,numbacks);
+        if ( numfailsafes > 0 )
+            priority = nn_addservers(priority,lbsock,failsafes,numfailsafes);
     } else printf("error getting req socket %s\n",nn_errstr());
     //printf("RELAYS.lb.num %d\n",RELAYS.lb.num);
     return(lbsock);
@@ -283,7 +285,7 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port)
     //if ( europeflag != 0 )
     //    lbsock = nn_loadbalanced_socket(retrymillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     //else lbsock = nn_loadbalanced_socket(retrymillis,Cservers,n,Bservers,m,failsafes,numfailsafes);
-    lbsock = _lb_socket(maxmillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
+    lbsock = _lb_socket(maxmillis,Bservers,0*m,Cservers,0*n,failsafes,numfailsafes);
     return(lbsock);
 }
 
