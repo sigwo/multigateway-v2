@@ -484,7 +484,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         argjson = cJSON_GetArrayItem(json,0);
         *timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
         sender[0] = 0;
-        if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0)*3)) <= 0 )
+        if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
             return(valid);
         copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
         copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));

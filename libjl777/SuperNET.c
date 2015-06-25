@@ -860,12 +860,14 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
 #ifdef __APPLE__
-    int MD5One(unsigned char *data, unsigned int dataLen, unsigned char *md5str);
-    int MD5Print(unsigned char *digest);
-    unsigned char md5str[512];
-    MD5One((void *)" ",1,md5str);
-    MD5Print(md5str);
-    getchar();
+    if ( 0 )
+    {
+        bits128 calc_md5(char digeststr[33],void *buf,int32_t len);
+        char digeststr[33],*str = "abc";
+        calc_md5(digeststr,str,(int32_t)strlen(str));
+        printf("(%s) -> (%s)\n",str,digeststr);
+        getchar();
+    }
     while ( 0 )
     {
         uint32_t nonce,failed; int32_t leverage;

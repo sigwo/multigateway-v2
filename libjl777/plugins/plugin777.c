@@ -232,7 +232,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
             obj = cJSON_GetArrayItem(json,0);
             timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(obj,"time"),0);
             sender[0] = 0;
-            valid = validate_token(forwarder,pubkey,sender,jsonstr,(timestamp != 0)*3);
+            valid = validate_token(forwarder,pubkey,sender,jsonstr,(timestamp != 0)*MAXTIMEDIFF);
         }
         else obj = json;
         copy_cJSON(name,cJSON_GetObjectItem(obj,"plugin"));

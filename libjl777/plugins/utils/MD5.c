@@ -306,6 +306,21 @@ int md5_done(hash_state * md, unsigned char *out)
     return CRYPT_OK;
 }
 
+#define DEFINES_ONLY
+#include "bits777.c"
+#undef DEFINES_ONLY
+
+bits128 calc_md5(char digeststr[33],void *buf,int32_t len)
+{
+    hash_state md; bits128 digest;
+    md5_init(&md);
+    md5_process(&md,buf,len);
+    md5_done(&md,digest.bytes);
+    if ( digeststr != 0 )
+        init_hexbytes_noT(digeststr,digest.bytes,sizeof(digest));
+    return(digest);
+}
+    
 /**
   Self-test the hash
   @return CRYPT_OK if successful, CRYPT_NOP if self-tests have been disabled
