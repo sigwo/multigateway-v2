@@ -636,10 +636,16 @@ uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits)
 
 uint64_t issue_transferAsset(char **retstrp,void *deprecated,char *secret,char *recipient,char *asset,int64_t quantity,int64_t feeNQT,int32_t deadline,char *comment,char *destpubkey)
 {
-    char cmd[4096],numstr[MAX_JSON_FIELD],*jsontxt;
+    char cmd[16384],secretstr[8192],numstr[MAX_JSON_FIELD],*jsontxt;
     uint64_t assetidbits,txid = 0;
     cJSON *json,*errjson,*txidobj;
     *retstrp = 0;
+    if ( strlen(secretstr) >= sizeof(secretstr)/3-1 )
+    {
+        fprintf(stderr,"issue_transferAsset: secret too long!\n");
+        return(0);
+    }
+    escape_code(secretstr,secret);
     assetidbits = calc_nxt64bits(asset);
     if ( assetidbits == NXT_ASSETID )
         sprintf(cmd,"requestType=sendMoney&amountNQT=%lld",(long long)quantity);

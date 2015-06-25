@@ -22,9 +22,15 @@
 
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 {
-    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json;
+    char cmd[16384],secretstr[8192],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json;
     encoded[0] = 0;
-    sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase='%s'",key,secret);
+    if ( strlen(secretstr) >= sizeof(secretstr)/3-1 )
+    {
+        fprintf(stderr,"secret too long!\n");
+        return(-1);
+    }
+    escape_code(secretstr,secret);
+    sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase=%s",key,secretstr);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
         //printf("(%s) -> (%s)\n",cmd,jsontxt);
