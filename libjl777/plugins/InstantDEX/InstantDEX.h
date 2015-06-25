@@ -418,9 +418,9 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
             return(fill_nxtae(nxt64bits,dir,price,volume,baseid,relid));
         else if ( strcmp(exchangestr,"InstantDEX") != 0 )
         {
-            printf("check %s/%s\n",base,rel);
             if ( is_native_crypto(base,baseid) > 0 && is_native_crypto(rel,relid) > 0 && price > 0 && volume > 0 && dir != 0 )
             {
+                printf("check %s/%s\n",base,rel);
                 if ( (exchange= find_exchange(exchangestr,0,0)) != 0 )
                 {
                     if ( exchange->trade != 0 )
@@ -899,7 +899,7 @@ void init_exchange(cJSON *json)
         { (void *)"bityes", (void *)ramparse_bityes, (void *)bityes_supports, 0 },
         { (void *)"lakebtc", (void *)ramparse_lakebtc, (void *)lakebtc_supports, 0 },
         { (void *)"exmo", (void *)ramparse_exmo, (void *)exmo_supports, 0 },
-        { (void *)"btc38", (void *)ramparse_btc38, (void *)btc38_supports, 0 },
+        { (void *)"btc38", (void *)ramparse_btc38, (void *)btc38_supports, (void *)btc38_trade },
     };
     struct exchange_info *exchange;
     char name[MAX_JSON_FIELD];
