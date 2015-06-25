@@ -77,7 +77,7 @@ int32_t setnxturl(char *urlbuf)
             if ( (json= cJSON_Parse(buf)) != 0 )
             {
                 copy_cJSON(urlbuf,cJSON_GetObjectItem(json,"NXTAPIURL"));
-                //fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
+fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
                 free_json(json);
             } else fprintf(stderr,"setnxturl parse error.(%s)\n",buf);
         } else fprintf(stderr,"setnxturl error reading.(%s)\n",confname);
@@ -101,9 +101,9 @@ int main(int argc, char **argv)
         namebuf[offset] = 0;
     if ( strcmp(namebuf,"api") != 0 )
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
-    //fprintf(stderr,"namebuf.(%s)\n",namebuf);
     if ( strcmp("nxt",namebuf) == 0 )
     {
+fprintf(stderr,"namebuf.(%s)\n",namebuf);
         if ( setnxturl(urlbuf) != 0 )
             url = urlbuf;
         else url = "http://127.0.0.1:7876/nxt";
