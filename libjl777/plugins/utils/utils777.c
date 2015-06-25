@@ -175,13 +175,13 @@ void escape_code(char *escaped,char *str)
         else
         {
             sprintf(esc,"%%%d",c);
-            sprintf(esc,"\\%c",c);
+            sprintf(esc,"\\\\%c",c);
             strcpy(escaped + j,esc);
             j += strlen(esc);
         }
     }
     escaped[j] = 0;
-    printf("escape_code: (%s) -> (%s)\n",str,escaped);
+    //printf("escape_code: (%s) -> (%s)\n",str,escaped);
 }
 
 int32_t is_zeroes(char *str)
