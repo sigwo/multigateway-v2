@@ -382,7 +382,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *base,ch
     else pricefmt = "%.8f";
     sprintf(buf,"%s%u",exchange->apisecret,stamp);
     calc_md5(digest,buf,(int32_t)strlen(buf));
-    sprintf(fmtstr,"key=%%s&time=%%u&md5=%%s&type=%%s&mk_type=%%s&coinname=%%s&price=%s&amount=%s",pricefmt,volfmt);
+    sprintf(fmtstr,"key=%%s&time=%%u&md5=%%s&type=%%s&mk_type=%%s&coinname=%%s&Price=%s&amount=%s",pricefmt,volfmt);
     sprintf(cmdbuf,fmtstr,exchange->apikey,stamp,digest,dir>0?"1":"2",market,coinname,price,volume);
     if ( (data= curl_post(&cHandle,"http://www.btc38.com/trade/t_api/submitOrder.php",cmdbuf,0,0,0)) != 0 )
     {
