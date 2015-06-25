@@ -175,6 +175,7 @@ void escape_code(char *escaped,char *str)
         else
         {
             sprintf(esc,"%%%d",c);
+            sprintf(esc,"\\%c",c);
             strcpy(escaped + j,esc);
             j += strlen(esc);
         }
