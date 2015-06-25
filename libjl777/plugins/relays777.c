@@ -280,6 +280,7 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port)
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
     int32_t n,m,lbsock,numfailsafes = 0;
     strcpy(failsafes[numfailsafes++],"5.9.56.103");
+    strcpy(failsafes[numfailsafes++],"5.9.102.210");
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
     //if ( europeflag != 0 )
