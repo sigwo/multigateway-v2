@@ -646,6 +646,8 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
     {
         offer->ratio = perc / 100.;
         offer->volume = volume * offer->ratio;
+        printf("volume %f -> %f\n",volume,offer->volume);
+        volume = offer->volume;
         offer->baseamount = baseamount * offer->ratio;
         offer->relamount = relamount * offer->ratio;
     }
