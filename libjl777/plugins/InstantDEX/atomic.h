@@ -635,7 +635,7 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
     offer->nxt64bits = calc_nxt64bits(NXTaddr);
     if ( offer->nxt64bits == offerNXT )
         return(clonestr("{\"error\":\"cant match your own offer\"}"));
-    if ( perc <= 0 || perc >= 100 )
+    if ( perc <= 0 || perc > 100 )
     {
         offer->ratio = 1.;
         offer->volume = volume;

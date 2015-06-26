@@ -322,6 +322,8 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
             perc = 100. * vol / refvol;
             if ( perc == 0 )
                 perc = 1;
+            else if ( perc > 100 )
+                perc = 100;
             if ( perc >= iQ->minperc )
                 retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,vol,0,perc,refiQ->baseid,refiQ->relid,iQ->baseiQ,iQ->reliQ,iQ->quoteid,dir < 0,exchange,iQ->baseamount,iQ->relamount,iQ->nxt64bits,iQ->minperc,get_iQ_jumpasset(iQ));
         } else printf("besti.%d\n",besti);
