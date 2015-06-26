@@ -225,7 +225,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
     uint64_t assetA,amountA,assetB,amountB; char jumpstr[1024],otherNXTaddr[64],exchange[64],*retstr = 0;
     double refprice,refvol,price,vol,metric,perc,bestmetric = 0.;
     //struct InstantDEX_quote { uint64_t nxt64bits,baseamount,relamount,type; uint32_t timestamp; char exchange[9]; uint8_t closed:1,sent:1,matched:1,isask:1; };
-    update_rambooks(refiQ->baseid,refiQ->relid,DEFAULT_MAXDEPTH,refiQ->gui,1);
+    update_rambooks(refiQ->baseid,refiQ->relid,DEFAULT_MAXDEPTH,refiQ->gui,1,0);
     set_assetname(&mult,base,refiQ->baseid), set_assetname(&mult,rel,refiQ->relid);
     besti = -1;
     if ( refiQ->isask != 0 )
@@ -233,7 +233,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
     if ( (refprice= calc_price_volume(&refvol,refiQ->baseamount,refiQ->relamount)) <= SMALLVAL )
         return(clonestr("{\"error\":\"invalid price volume calc\"}"));
     printf("%s dir.%d check_ordermatch(%llu %.8f | %llu %.8f) ref %.8f vol %.8f\n",NXTaddr,dir,(long long)refiQ->baseid,dstr(refiQ->baseamount),(long long)refiQ->relid,dstr(refiQ->relamount),refprice,refvol);
-    if ( (op= make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,refiQ->baseid,rel,refiQ->relid,DEFAULT_MAXDEPTH,0,refiQ->gui)) != 0 )
+    if ( (op= make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,refiQ->baseid,rel,refiQ->relid,DEFAULT_MAXDEPTH,0,refiQ->gui,0)) != 0 )
     {
         if ( dir > 0 && (n= op->numasks) != 0 )
             quotes = op->asks;
@@ -424,7 +424,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
     }
     if ( Debuglevel > 1 )
         printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
-    update_rambooks(baseid,relid,0,0,0);
+    update_rambooks(baseid,relid,0,0,0,0);
     minbasevol = get_minvolume(baseid), minrelvol = get_minvolume(relid);
     if ( volume < minbasevol || (volume * price) < minrelvol )
     {
@@ -633,7 +633,7 @@ cJSON *orderbook_json(uint64_t nxt64bits,char *base,uint64_t baseid,char *rel,ui
     char *retstr;
     uint32_t oldest = 0;
     struct orderbook *op,*obooks[1024];
-    if ( (op = make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,baseid,rel,relid,maxdepth,oldest,gui)) != 0 )
+    if ( (op = make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,baseid,rel,relid,maxdepth,oldest,gui,0)) != 0 )
     {
         if ( (retstr = orderbook_jsonstr(nxt64bits,op,base,rel,maxdepth,allflag)) != 0 )
         {
@@ -795,7 +795,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
         return;
     }
     price = (baseprice / relprice);
-    update_rambooks(refbaseid,refrelid,maxdepth,gui,1);
+    update_rambooks(refbaseid,refrelid,maxdepth,gui,1,0);
     baseid = refbaseid, relid = refrelid;
     volume = 1.;
     printf("price %f = (%f / %f) vol %f\n",price,baseprice,relprice,volume);
@@ -803,7 +803,7 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
     {
         set_assetname(&mult,base,baseid);
         set_assetname(&mult,rel,relid);
-        update_rambooks(baseid,relid,maxdepth,gui,1);
+        update_rambooks(baseid,relid,maxdepth,gui,1,0);
         minbasevol = get_minvolume(baseid);
         minrelvol = get_minvolume(relid);
         printf("base.(%s %.8f) rel.(%s %.8f)\n",base,minbasevol,rel,minrelvol);

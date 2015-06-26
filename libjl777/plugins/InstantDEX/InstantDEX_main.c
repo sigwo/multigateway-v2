@@ -69,7 +69,7 @@ char *respondtx_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs
 char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origargstr,cJSON *origargjson)
 {
     static char *allorderbooks[] = { (char *)allorderbooks_func, "allorderbooks", "", 0 };
-    static char *orderbook[] = { (char *)orderbook_func, "orderbook", "", "baseid", "relid", "allfields", "oldest", "maxdepth", "base", "rel", "gui", "showall", 0 };
+    static char *orderbook[] = { (char *)orderbook_func, "orderbook", "", "baseid", "relid", "allfields", "oldest", "maxdepth", "base", "rel", "gui", "showall", "exchange", 0 };
     static char *lottostats[] = { (char *)lottostats_func, "lottostats", "", "timestamp", 0 };
     static char *cancelquote[] = { (char *)cancelquote_func, "cancelquote", "", "quoteid", 0 };
     static char *openorders[] = { (char *)openorders_func, "openorders", "", 0 };
