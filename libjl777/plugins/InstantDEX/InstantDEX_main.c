@@ -107,6 +107,8 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
         {
             strcpy(NXTaddr,SUPERNET.NXTADDR);
             strcpy(offerNXT,SUPERNET.NXTADDR);
+            ensure_jsonitem(argjson,"NXT",NXTaddr);
+            ensure_jsonitem(argjson,"offerNXT",offerNXT);
         }
         if ( strcmp(offerNXT,SUPERNET.NXTADDR) == 0 )
             localaccess = 1;
