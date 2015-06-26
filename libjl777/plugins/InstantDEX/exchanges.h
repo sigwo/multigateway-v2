@@ -18,6 +18,8 @@ cJSON *exchanges_json()
     {
         item = cJSON_CreateObject();
         exchange = &Exchanges[exchangeid];
+        if ( exchange->name[0] == 0 )
+            break;
         cJSON_AddItemToObject(item,"name",cJSON_CreateString(exchange->name));
         memset(api,0,sizeof(api));
         if ( exchange->trade != 0 )
