@@ -107,14 +107,17 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
         {
             strcpy(NXTaddr,SUPERNET.NXTADDR);
             strcpy(offerNXT,SUPERNET.NXTADDR);
+            strcpy(sender,SUPERNET.NXTADDR);
             ensure_jsonitem(argjson,"NXT",NXTaddr);
             ensure_jsonitem(argjson,"offerNXT",offerNXT);
         }
         else if ( offerNXT[0] == 0 && strcmp(NXTaddr,SUPERNET.NXTADDR) == 0 )
         {
             strcpy(offerNXT,SUPERNET.NXTADDR);
+            strcpy(sender,SUPERNET.NXTADDR);
             ensure_jsonitem(argjson,"offerNXT",offerNXT);
         }
+        else strcpy(sender,offerNXT);
         if ( strcmp(offerNXT,SUPERNET.NXTADDR) == 0 )
             localaccess = 1;
         if ( localaccess != 0 && strcmp(NXTaddr,SUPERNET.NXTADDR) != 0 )
