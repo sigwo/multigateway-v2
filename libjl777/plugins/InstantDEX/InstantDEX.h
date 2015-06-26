@@ -247,7 +247,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
                 expand_nxt64bits(otherNXTaddr,iQ->nxt64bits);
                 if ( iQ->closed != 0 )
                     continue;
-                if ( is_unfunded_order(iQ->nxt64bits,dir > 0 ? iQ->baseid : iQ->relid,dir > 0 ? iQ->baseamount : iQ->relamount) != 0 )
+                if ( 0 && iQ->exchangeid == INSTANTDEX_EXCHANGEID && is_unfunded_order(iQ->nxt64bits,dir > 0 ? iQ->baseid : iQ->relid,dir > 0 ? iQ->baseamount : iQ->relamount) != 0 )
                 {
                     iQ->closed = 1;
                     printf("found unfunded order!\n");
@@ -305,13 +305,9 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
             price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
             iQ_exchangestr(exchange,iQ);
             expand_nxt64bits(otherNXTaddr,iQ->nxt64bits);
-            perc = 100. * refvol / vol;
-            if ( perc == 0 )
-                perc = 1;
-            else if ( perc > 100 )
-                perc = 100;
+            perc = 100.;
             if ( perc >= iQ->minperc )
-                retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,vol,0,perc,refiQ->baseid,refiQ->relid,iQ->baseiQ,iQ->reliQ,iQ->quoteid,dir < 0,exchange,iQ->baseamount,iQ->relamount,iQ->nxt64bits,iQ->minperc,get_iQ_jumpasset(iQ));
+                retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,refvol,0,perc,refiQ->baseid,refiQ->relid,iQ->baseiQ,iQ->reliQ,iQ->quoteid,dir < 0,exchange,iQ->baseamount,iQ->relamount,iQ->nxt64bits,iQ->minperc,get_iQ_jumpasset(iQ));
         } else printf("besti.%d\n",besti);
         free_orderbooks(obooks,sizeof(obooks)/sizeof(*obooks),op);
     } else printf("cant make orderbook\n");
