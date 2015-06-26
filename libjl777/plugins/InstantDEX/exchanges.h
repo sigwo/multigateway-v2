@@ -380,7 +380,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *base,ch
     if ( strcmp(market,"cny") == 0 )
         pricefmt = "%.5f";
     else pricefmt = "%.6f";
-    sprintf(buf,"%s%s%u",exchange->apikey,exchange->apisecret,stamp);
+    sprintf(buf,"%s_%u",exchange->apisecret,stamp);
     calc_md5(digest,buf,(int32_t)strlen(buf));
     sprintf(fmtstr,"key=%%s&time=%%u&md5=%%s&type=%%s&mk_type=%%s&coinname=%%s&Price=%s&amount=%s",pricefmt,volfmt);
     sprintf(cmdbuf,fmtstr,exchange->apikey,stamp,digest,dir>0?"1":"2",market,coinname,price,volume);
