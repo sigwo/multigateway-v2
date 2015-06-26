@@ -297,9 +297,9 @@ void *curl_post(CURL **cHandlep,char *url,char *userpass,char *postfields,char *
             headers = curl_slist_append(headers,hdr1);
         if ( hdr2 != 0 )
             headers = curl_slist_append(headers,hdr2);
-        if ( headers != 0 )
-            curl_easy_setopt(cHandle,CURLOPT_HTTPHEADER,headers);
-    } else curl_easy_setopt(cHandle,CURLOPT_HEADER,0);
+    } headers = curl_slist_append(0,"Expect:");
+    if ( headers != 0 )
+        curl_easy_setopt(cHandle,CURLOPT_HTTPHEADER,headers);
     //res = curl_easy_perform(cHandle);
     memset(&chunk,0,sizeof(chunk));
     curl_easy_setopt(cHandle,CURLOPT_WRITEFUNCTION,WriteMemoryCallback);
