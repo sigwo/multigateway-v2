@@ -110,6 +110,11 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
             ensure_jsonitem(argjson,"NXT",NXTaddr);
             ensure_jsonitem(argjson,"offerNXT",offerNXT);
         }
+        else if ( offerNXT[0] == 0 && strcmp(NXTaddr,SUPERNET.NXTADDR) == 0 )
+        {
+            strcpy(offerNXT,SUPERNET.NXTADDR);
+            ensure_jsonitem(argjson,"offerNXT",offerNXT);
+        }
         if ( strcmp(offerNXT,SUPERNET.NXTADDR) == 0 )
             localaccess = 1;
         if ( localaccess != 0 && strcmp(NXTaddr,SUPERNET.NXTADDR) != 0 )
@@ -118,7 +123,7 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
             ensure_jsonitem(argjson,"NXT",NXTaddr);
             //printf("subsititute NXT.%s\n",NXTaddr);
         }
-        printf("localaccess.%d myaddr.(%s) offerNXT.(%s)\n",localaccess,SUPERNET.NXTADDR,offerNXT);
+        printf("localaccess.%d myaddr.(%s) NXT.(%s) offerNXT.(%s)\n",localaccess,SUPERNET.NXTADDR,NXTaddr,offerNXT);
         copy_cJSON(command,obj);
         copy_cJSON(NXTACCTSECRET,secretobj);
         if ( NXTACCTSECRET[0] == 0 )

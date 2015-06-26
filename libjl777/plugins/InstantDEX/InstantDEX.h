@@ -476,7 +476,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
         sprintf(buf,"{\"error\":\"place%s error %llu/%llu dir.%d volume %f price %f\"}",dir>0?"bid":"ask",(long long)baseid,(long long)relid,dir,volume,price);
         retstr = clonestr(buf);
     }
-printf("placequote.(%s)\n",retstr);
+//printf("placequote.(%s)\n",retstr);
     return(retstr);
 }
 
