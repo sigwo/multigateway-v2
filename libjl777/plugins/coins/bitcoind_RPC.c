@@ -284,8 +284,8 @@ void *curl_post(CURL **cHandlep,char *url,char *userpass,char *postfields,char *
 	curl_easy_setopt(cHandle,CURLOPT_USERAGENT,"Mozilla / 4.0 (compatible; btc38 PHP bot; )");//"Mozilla/4.0 (compatible; )");
 	//curl_easy_setopt(cHandle,CURLOPT_SSL_VERIFYPEER,0);
 	curl_easy_setopt(cHandle,CURLOPT_URL,url);
-    curl_easy_setopt(cHandle,CURLOPT_POST,1);
-  	curl_easy_setopt(cHandle,CURLOPT_CONNECTTIMEOUT,10);
+    //curl_easy_setopt(cHandle,CURLOPT_POST,1);
+  	//curl_easy_setopt(cHandle,CURLOPT_CONNECTTIMEOUT,10);
     if ( userpass != 0 )
         curl_easy_setopt(cHandle,CURLOPT_USERPWD,userpass);
 	if ( postfields != NULL )
