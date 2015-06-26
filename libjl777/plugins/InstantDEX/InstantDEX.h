@@ -270,10 +270,10 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
                 iQ_exchangestr(exchange,iQ);
                 if ( strcmp(otherNXTaddr,NXTaddr) != 0 && iQ->matched == 0 && iQ->exchangeid == INSTANTDEX_NXTAEID )
                 {
-                    printf("matchedflag.%d exchange.(%s) %llu/%llu from (%s)\n",iQ->matched,exchange,(long long)iQ->baseamount,(long long)iQ->relamount,otherNXTaddr);
+                    printf("matchedflag.%d exchange.(%s) %llu/%llu from (%s) | ",iQ->matched,exchange,(long long)iQ->baseamount,(long long)iQ->relamount,otherNXTaddr);
                     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
                     printf("price %.8f vol %.8f | %.8f > %.8f? %.8f > %.8f?\n",price,vol,vol,(refvol * INSTANTDEX_MINVOLPERC),refvol,(vol * INSTANTDEX_MINVOLPERC));
-                    if ( vol > (refvol * INSTANTDEX_MINVOLPERC) && refvol > (vol * INSTANTDEX_MINVOLPERC) )
+                    if ( vol > (refvol * INSTANTDEX_MINVOLPERC) && refvol > (vol * iQ->minperc * .01) )
                     {
                         if ( vol < refvol )
                             metric = (vol / refvol);
