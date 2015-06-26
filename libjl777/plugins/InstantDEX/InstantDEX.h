@@ -268,7 +268,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
                     continue;
                 }
                 iQ_exchangestr(exchange,iQ);
-                if ( strcmp(otherNXTaddr,NXTaddr) != 0 && iQ->matched == 0 && iQ->exchangeid == INSTANTDEX_EXCHANGEID )
+                if ( strcmp(otherNXTaddr,NXTaddr) != 0 && iQ->matched == 0 && iQ->exchangeid == INSTANTDEX_NXTAEID )
                 {
                     printf("matchedflag.%d exchange.(%s) %llu/%llu from (%s)\n",iQ->matched,exchange,(long long)iQ->baseamount,(long long)iQ->relamount,otherNXTaddr);
                     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
@@ -291,9 +291,10 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
                             besti = i;
                         }
                     }
-                }
+                } else printf("NXTaddr.%s: skip %s from %s\n",NXTaddr,exchange,otherNXTaddr);
             }
-        } else printf("n.%d\n",n);
+        }
+        printf("n.%d\n",n);
         if ( besti >= 0 )
         {
             iQ = &quotes[besti];
