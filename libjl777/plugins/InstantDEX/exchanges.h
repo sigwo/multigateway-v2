@@ -11,46 +11,29 @@
 #include "exchangepairs.h"
 #include "exchangeparse.h"
 
-/*void ensure_dir(char *dirname)
+cJSON *exchanges_json()
 {
-    FILE *fp;
-    char fname[512],cmd[512];
-    sprintf(fname,"%s/tmp",dirname);
-    if ( (fp= fopen(os_compatible_path(fname),"rb")) == 0 )
+    struct exchange_info *exchange; int32_t exchangeid,n = 0; char api[4]; cJSON *item,*array = cJSON_CreateArray();
+    for (exchangeid=0; exchangeid<MAX_EXCHANGES; exchangeid++)
     {
-        sprintf(cmd,"mkdir %s",os_compatible_path(dirname));
-        if ( system(os_compatible_path(cmd)) != 0 )
-            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
-        fp = fopen(os_compatible_path(fname),"wb");
-        if ( fp != 0 )
-            fclose(fp);
-        if ( (fp= fopen(os_compatible_path(fname),"rb")) == 0 )
+        item = cJSON_CreateObject();
+        exchange = &Exchanges[exchangeid];
+        cJSON_AddItemToObject(item,"name",cJSON_CreateString(exchange->name));
+        memset(api,0,sizeof(api));
+        if ( exchange->trade != 0 )
         {
-            printf("failed to create.(%s) in (%s)\n",fname,dirname);
-            exit(-1);
-        } else printf("ensure_dir(%s) created.(%s)\n",dirname,fname);
+            if ( exchange->apikey[0] != 0 )
+                api[n++] = 'K';
+            if ( exchange->apisecret[0] != 0 )
+                api[n++] = 'S';
+            if ( exchange->userid[0] != 0 )
+                api[n++] = 'U';
+            cJSON_AddItemToObject(item,"trade",cJSON_CreateString(api));
+        }
+        cJSON_AddItemToArray(array,item);
     }
-    fclose(fp);
+    return(array);
 }
-
-void set_exchange_fname(char *fname,char *exchangestr,char *base,char *rel,uint64_t baseid,uint64_t relid)
-{
-    char exchange[16],basestr[64],relstr[64];
-    uint64_t mult;
-    if ( strcmp(exchange,"iDEX") == 0 )
-        strcpy(exchange,"InstantDEX");
-    else strcpy(exchange,exchangestr);
-    ensure_dir(PRICEDIR);
-    sprintf(fname,"%s/%s",PRICEDIR,exchange);
-    ensure_dir(fname);
-    if ( is_cryptocoin(base) != 0 )
-        strcpy(basestr,base);
-    else set_assetname(&mult,basestr,baseid);
-    if ( is_cryptocoin(rel) != 0 )
-        strcpy(relstr,rel);
-    else set_assetname(&mult,relstr,relid);
-    sprintf(fname,"%s/%s/%s_%s",PRICEDIR,exchange,basestr,relstr);
-}*/
 
 struct exchange_info *find_exchange(char *exchangestr,void (*ramparse)(struct rambook_info *bids,struct rambook_info *asks,int32_t maxdepth,char *gui),int32_t (*ramparse_supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid))
 {

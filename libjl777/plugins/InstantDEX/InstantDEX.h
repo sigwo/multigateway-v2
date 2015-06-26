@@ -51,7 +51,7 @@ struct exchange_info
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
     uint64_t nxt64bits;
     struct libwebsocket *wsi;
-    char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD];
+    char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD];
     uint32_t num,exchangeid,lastblock,lastaccess,pollgap;
     float lastmilli;
 } Exchanges[MAX_EXCHANGES];
@@ -913,6 +913,7 @@ void init_exchange(cJSON *json)
         {
             exchange->pollgap = get_API_int(cJSON_GetObjectItem(json,"pollgap"),DEFAULT_POLLGAP);
             extract_cJSON_str(exchange->apikey,sizeof(exchange->apikey),json,"key");
+            extract_cJSON_str(exchange->userid,sizeof(exchange->userid),json,"userid");
             extract_cJSON_str(exchange->apisecret,sizeof(exchange->apisecret),json,"secret");
             *(void **)&exchange->trade = trade;
             /*if ( exchangeptrs[i][4] != 0 )

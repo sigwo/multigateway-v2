@@ -327,11 +327,12 @@ struct rambook_info *add_rambook_quote(char *exchangestr,struct InstantDEX_quote
 
 char *allorderbooks_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    cJSON *json;
-    char *jsonstr;
+    cJSON *exchanges_json();
+    cJSON *json; char *jsonstr;
    // printf("all orderbooks\n");
     if ( (json= all_orderbooks()) != 0 )
     {
+        cJSON_AddItemToObject(json,"exchanges",exchanges_json());
         cJSON_AddItemToObject(json,"NXTAPIURL",cJSON_CreateString(SUPERNET.NXTAPIURL));
         jsonstr = cJSON_Print(json);
         free_json(json);
