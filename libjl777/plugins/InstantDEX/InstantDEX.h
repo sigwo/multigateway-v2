@@ -245,7 +245,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
     if ( refiQ->isask != 0 )
         dir = -1;
     if ( (refprice= calc_price_volume(&refvol,refiQ->baseamount,refiQ->relamount)) <= SMALLVAL )
-        return(0);
+        return(clonestr("{\"error\":\"invalid price volume calc\"}"));
     printf("%s dir.%d check_ordermatch(%llu %.8f | %llu %.8f) ref %.8f vol %.8f\n",NXTaddr,dir,(long long)refiQ->baseid,dstr(refiQ->baseamount),(long long)refiQ->relid,dstr(refiQ->relamount),refprice,refvol);
     if ( (op= make_orderbook(obooks,sizeof(obooks)/sizeof(*obooks),base,refiQ->baseid,rel,refiQ->relid,DEFAULT_MAXDEPTH,0,refiQ->gui)) != 0 )
     {
@@ -462,7 +462,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
                 }
                 if ( (jsonstr= submitquote_str(localaccess,&iQ,baseid,relid)) != 0 )
                 {
-                    //printf("got submitquote_str.(%s)\n",jsonstr);
+                    printf("got submitquote_str.(%s)\n",jsonstr);
                     if ( remoteflag == 0 )
                     {
                         if ( (str= busdata_sync(jsonstr,"allnodes")) != 0 )
@@ -473,7 +473,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
                     {
                         free(jsonstr);
                         return(retstr);
-                    }
+                    } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
                 } else printf("not submitquote_str\n");
             } else return(clonestr("{\"error\":\"cant get price close enough due to limited decimals\"}"));
         }
