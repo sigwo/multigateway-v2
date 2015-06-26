@@ -87,6 +87,7 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
     char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD],**cmdinfo,*argstr,*retstr=0;
     memset(objs,0,sizeof(objs));
     command[0] = 0;
+    valid = 1;
     memset(NXTaddr,0,sizeof(NXTaddr));
     if ( is_cJSON_Array(origargjson) != 0 )
     {

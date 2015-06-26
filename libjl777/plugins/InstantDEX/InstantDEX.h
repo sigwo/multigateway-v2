@@ -426,7 +426,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
             } else return(clonestr("{\"error\":\"illegal parameter baseid or relid not crypto or invalid price\"}\n"));
         } //else printf("alternate else case.(%s)\n",exchangestr);
     }
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
     update_rambooks(baseid,relid,0,0,0);
     minbasevol = get_minvolume(baseid), minrelvol = get_minvolume(relid);
@@ -435,11 +435,6 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
         sprintf(buf,"{\"error\":\"not enough volume\",\"price\":%f,\"volume\":%f,\"minbasevol\":%f,\"minrelvol\":%f,\"relvol\":%f}",price,volume,minbasevol,minrelvol,price*volume);
         return(clonestr(buf));
     }
-    /*if ( automatch != 0 && remoteflag == 0 && (retstr= auto_makeoffer2(NXTaddr,NXTACCTSECRET,dir,baseid,baseamount,relid,relamount,gui)) != 0 )
-     {
-     fprintf(stderr,"got (%s) from auto_makeoffer2\n",retstr);
-     return(retstr);
-     }*/
     if ( sender[0] != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
@@ -450,19 +445,19 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
                 if ( (quoteid= calc_quoteid(&iQ)) != 0 )
                 {
                     retstr = placequote_str(&iQ);
-                    if ( Debuglevel > 2 )
+                    if ( Debuglevel > 1 )
                         printf("placequote.(%s) remoteflag.%d\n",retstr,remoteflag);
                 }
                 if ( (jsonstr= submitquote_str(localaccess,&iQ,baseid,relid)) != 0 )
                 {
                     printf("got submitquote_str.(%s)\n",jsonstr);
-                    if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ)) != 0 )
-                    {
-                        free(jsonstr);
-                        return(retstr);
-                    } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
                     if ( remoteflag == 0 )
                     {
+                        if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ)) != 0 )
+                        {
+                            free(jsonstr);
+                            return(retstr);
+                        } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
                         if ( (str= busdata_sync(jsonstr,"allnodes")) != 0 )
                             free(str);
                         retstr = jsonstr;
@@ -481,6 +476,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
         sprintf(buf,"{\"error\":\"place%s error %llu/%llu dir.%d volume %f price %f\"}",dir>0?"bid":"ask",(long long)baseid,(long long)relid,dir,volume,price);
         retstr = clonestr(buf);
     }
+printf("placequote.(%s)\n",buf);
     return(retstr);
 }
 
