@@ -234,8 +234,8 @@ char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcast
     //    retstr = nn_allrelays((uint8_t *)cmdstr,len,timeout,0);
     else if ( find_daemoninfo(&tmp,plugin,0,0) != 0 )
     {
-       // int32_t construct_tokenized_req(tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
         len = construct_tokenized_req(tokenized,cmdstr,SUPERNET.NXTACCTSECRET,broadcastflag!=0?"allnodes":0);
+        printf("console.(%s)\n",tokenized);
         retstr = plugin_method(0,1,plugin,method,0,0,tokenized,len,timeout != 0 ? timeout : 0);
     }
     else retstr = clonestr("{\"error\":\"invalid command\"}");
