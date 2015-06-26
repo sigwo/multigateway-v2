@@ -441,7 +441,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
                 if ( (quoteid= calc_quoteid(&iQ)) != 0 )
                 {
                     retstr = placequote_str(&iQ);
-                    if ( Debuglevel > 1 )
+                    if ( Debuglevel > 2 )
                         printf("placequote.(%s) remoteflag.%d\n",retstr,remoteflag);
                 }
                 if ( (jsonstr= submitquote_str(localaccess,&iQ,baseid,relid)) != 0 )

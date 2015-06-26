@@ -248,7 +248,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 rb = obooks[i];
                 if ( Debuglevel > 2 )
                     printf("%s numquotes.%d: (%s).%llu (%s).%llu | (%s).%llu (%s).%llu | equiv.(%d %d) match.%d %d\n",rb->exchange,rb->numquotes,rb->base,(long long)rb->assetids[0],rb->rel,(long long)rb->assetids[1],op->base,(long long)op->baseid,op->rel,(long long)op->relid,numbase,numrel,op->baseid == rb->assetids[0] && op->relid == rb->assetids[1],op->baseid == rb->assetids[1] && op->relid == rb->assetids[0]);
-                if ( rb->numquotes == 0 || (exchange != 0 && strcmp(exchange,rb->exchange) != 0) )
+                if ( rb->numquotes == 0 || (exchange != 0 && exchange[0] != 0 && strcmp(exchange,rb->exchange) != 0) )
                 {
                     continue;
                 }
