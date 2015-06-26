@@ -284,8 +284,8 @@ void *curl_post(CURL **cHandlep,char *url,char *userpass,char *postfields,char *
 	curl_easy_setopt(cHandle,CURLOPT_USERAGENT,"Mozilla / 4.0 (compatible; btc38 PHP bot; )");//"Mozilla/4.0 (compatible; )");
 	curl_easy_setopt(cHandle,CURLOPT_SSL_VERIFYPEER,0);
 	curl_easy_setopt(cHandle,CURLOPT_URL,url);
-    curl_easy_setopt(cHandle,CURLOPT_POST,1);
-  	//curl_easy_setopt(cHandle,CURLOPT_CONNECTTIMEOUT,10);
+    //curl_easy_setopt(cHandle,CURLOPT_POST,1);
+  	curl_easy_setopt(cHandle,CURLOPT_CONNECTTIMEOUT,10);
     if ( userpass != 0 )
         curl_easy_setopt(cHandle,CURLOPT_USERPWD,userpass);
 	if ( postfields != NULL )
@@ -299,8 +299,7 @@ void *curl_post(CURL **cHandlep,char *url,char *userpass,char *postfields,char *
             headers = curl_slist_append(headers,hdr2);
         if ( headers != 0 )
             curl_easy_setopt(cHandle,CURLOPT_HTTPHEADER,headers);
-    }
-    //else curl_easy_setopt(cHandle,CURLOPT_HEADER,0);
+    } else curl_easy_setopt(cHandle,CURLOPT_HEADER,0);
     //res = curl_easy_perform(cHandle);
     memset(&chunk,0,sizeof(chunk));
     curl_easy_setopt(cHandle,CURLOPT_WRITEFUNCTION,WriteMemoryCallback);
