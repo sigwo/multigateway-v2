@@ -42,7 +42,7 @@ struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
             if ( calc_quoteid(iQ) == quoteid )
                 return(iQ);
             else printf("calc_quoteid %llu vs %llu\n",(long long)calc_quoteid(iQ),(long long)quoteid);
-        } else printf("quoteid.%llu closed.%d\n",(long long)quoteid,iQ->closed);
+        } //else printf("quoteid.%llu closed.%d\n",(long long)quoteid,iQ->closed);
     } else printf("couldnt find %llu\n",(long long)quoteid);
     return(0);
     /*struct rambook_info **obooks,*rb;
@@ -155,6 +155,7 @@ uint64_t purge_oldest_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
     }
     if ( oldi >= 0 )
     {
+        cancel_InstantDEX_quote(rb->quotes[oldi]);
         rb->quotes[oldi] = rb->quotes[--rb->numquotes];
         memset(&rb->quotes[rb->numquotes],0,sizeof(rb->quotes[rb->numquotes]));
         expand_nxt64bits(NXTaddr,nxt64bits);
@@ -403,11 +404,9 @@ char *cancelquote_func(int32_t localaccess,int32_t valid,char *sender,cJSON **ob
 {
     struct InstantDEX_quote *iQ;
     uint64_t quoteid; char *retstr;
-    printf("inside cancelquote\n");
     if ( localaccess == 0 )
         return(0);
     quoteid = get_API_nxt64bits(objs[0]);
-    printf("cancelquote %llu\n",(long long)quoteid);
     if ( (retstr= cancel_orderid(SUPERNET.NXTADDR,quoteid)) != 0 )
     {
         if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(SUPERNET.NXTADDR) )

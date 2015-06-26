@@ -126,7 +126,7 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
             ensure_jsonitem(argjson,"NXT",NXTaddr);
             //printf("subsititute NXT.%s\n",NXTaddr);
         }
-        printf("localaccess.%d myaddr.(%s) NXT.(%s) offerNXT.(%s)\n",localaccess,SUPERNET.NXTADDR,NXTaddr,offerNXT);
+        //printf("localaccess.%d myaddr.(%s) NXT.(%s) offerNXT.(%s)\n",localaccess,SUPERNET.NXTADDR,NXTaddr,offerNXT);
         copy_cJSON(command,obj);
         copy_cJSON(NXTACCTSECRET,secretobj);
         if ( NXTACCTSECRET[0] == 0 )
@@ -144,7 +144,7 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
             cmdinfo = commands[i];
             if ( strcmp(cmdinfo[1],command) == 0 )
             {
-                printf("needvalid.(%c) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
+                //printf("needvalid.(%c) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
                 if ( cmdinfo[2][0] != 0 && valid <= 0 )
                     return(0);
                 for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
@@ -167,32 +167,12 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
-/*int32_t should_forward(char *sender,char *origargstr)
-{
-    char forwarder[64],plugin[MAX_JSON_FIELD]; uint8_t *buf; int32_t len;
-    if ( validate_sender(forwarder,sender,origargstr) > 0 )
-    {
-        //printf("sender.(%s) forwarder.(%s)\n",sender,forwarder);
-        if ( strcmp(forwarder,sender) == 0 )
-        {
-            len = (int32_t)strlen(origargstr) + 1;
-            if ( (buf= replace_forwarder(plugin,(uint8_t *)origargstr,&len)) != 0 )
-            {
-                nn_publish(buf,len,1);
-                if ( buf != (uint8_t *)origargstr )
-                    free(buf);
-            }
-            return(1);
-        }
-    }
-    return(0);
-}*/
-
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
-fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    if ( Debuglevel > 2 )
+        fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
