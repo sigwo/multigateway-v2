@@ -463,17 +463,17 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
                 if ( (jsonstr= submitquote_str(localaccess,&iQ,baseid,relid)) != 0 )
                 {
                     printf("got submitquote_str.(%s)\n",jsonstr);
+                    if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ)) != 0 )
+                    {
+                        free(jsonstr);
+                        return(retstr);
+                    } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
                     if ( remoteflag == 0 )
                     {
                         if ( (str= busdata_sync(jsonstr,"allnodes")) != 0 )
                             free(str);
                         retstr = jsonstr;
                     }
-                    else if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(NXTaddr,NXTACCTSECRET,&iQ)) != 0 )
-                    {
-                        free(jsonstr);
-                        return(retstr);
-                    } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
                 } else printf("not submitquote_str\n");
             } else return(clonestr("{\"error\":\"cant get price close enough due to limited decimals\"}"));
         }
