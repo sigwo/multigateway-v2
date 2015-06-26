@@ -573,7 +573,7 @@ char *tweak_offer(struct pending_offer *offer,int32_t dir,double refprice,double
     baseqty = offer->baseamount / offer->basemult;
     relqty = offer->relamount / offer->relmult;
     price = calc_price_volume(&volume,baseqty * offer->basemult,relqty * offer->relmult);
-    if ( fabs(price/refprice - 1.) > 0.01 || fabs(volume/refvolume) > 0.1 )
+    if ( fabs(price/refprice - 1.) > 0.01 || fabs(volume/refvolume - 1.) > 0.1 )
     {
         printf("refprice %.8f -> price %.8f %f, %f refvolume %.8f -> %.8f\n",refprice,price,fabs(price/refprice - 1.),fabs(volume/refvolume),refvolume,volume);
         return(clonestr("{\"error\":\"asset decimals dont allow this\"}"));
