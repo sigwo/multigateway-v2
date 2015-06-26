@@ -24,14 +24,26 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote iQ)
     newiQ = calloc(1,sizeof(*newiQ));
     *newiQ = iQ;
     HASH_ADD(hh,AllQuotes,quoteid,sizeof(newiQ->quoteid),newiQ);
+    {
+        struct InstantDEX_quote *checkiQ;
+        if ( (checkiQ= find_iQ(iQ.quoteid)) == 0 || memcmp(checkiQ,&iQ,sizeof(iQ)) != 0 )
+            printf("error finding iQ after adding %llu vs %llu\n",(long long)checkiQ->quoteid,(long long)iQ.quoteid);
+    }
     return(newiQ);
 }
 
 struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
 {
     struct InstantDEX_quote *iQ;
-    if ( (iQ= find_iQ(quoteid)) != 0 && ((evenclosed != 0 || iQ->closed == 0) && calc_quoteid(iQ) == quoteid) )
-        return(iQ);
+    if ( (iQ= find_iQ(quoteid)) != 0 )
+    {
+        if ( evenclosed != 0 || iQ->closed == 0 )
+        {
+            if ( calc_quoteid(iQ) == quoteid )
+                return(iQ);
+            else printf("calc_quoteid %llu vs %llu\n",(long long)calc_quoteid(iQ),(long long)quoteid);
+        } else printf("quoteid.%llu closed.%d\n",(long long)quoteid,iQ->closed);
+    } else printf("couldnt find %llu\n",(long long)quoteid);
     return(0);
     /*struct rambook_info **obooks,*rb;
      int32_t i,j,numbooks;
@@ -54,6 +66,22 @@ struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
      free(obooks);
      }
      return(0);*/
+}
+
+int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
+{
+    struct InstantDEX_quote *iQ;
+    char nxtaddr[64];
+    if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(NXTaddr) && iQ->baseiQ == 0 && iQ->reliQ == 0 && iQ->exchangeid == INSTANTDEX_EXCHANGEID )
+    {
+        expand_nxt64bits(nxtaddr,iQ->nxt64bits);
+        if ( strcmp(NXTaddr,nxtaddr) == 0 && calc_quoteid(iQ) == quoteid )
+        {
+            cancel_InstantDEX_quote(iQ);
+            return(1);
+        }
+    }
+    return(0);
 }
 
 void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
@@ -370,22 +398,6 @@ char *openorders_func(int32_t localaccess,int32_t valid,char *sender,cJSON **obj
         return(jsonstr);
     }
     return(clonestr("{\"error\":\"no openorders\"}"));
-}
-
-int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
-{
-    struct InstantDEX_quote *iQ;
-    char nxtaddr[64];
-    if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(NXTaddr) && iQ->baseiQ == 0 && iQ->reliQ == 0 && iQ->exchangeid == INSTANTDEX_EXCHANGEID )
-    {
-        expand_nxt64bits(nxtaddr,iQ->nxt64bits);
-        if ( strcmp(NXTaddr,nxtaddr) == 0 && calc_quoteid(iQ) == quoteid )
-        {
-            cancel_InstantDEX_quote(iQ);
-            return(1);
-        }
-    }
-    return(0);
 }
 
 char *cancelquote_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
