@@ -305,7 +305,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
             price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
             iQ_exchangestr(exchange,iQ);
             expand_nxt64bits(otherNXTaddr,iQ->nxt64bits);
-            perc = 100. * vol / refvol;
+            perc = 100. * refvol / vol;
             if ( perc == 0 )
                 perc = 1;
             else if ( perc > 100 )
@@ -476,7 +476,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
         sprintf(buf,"{\"error\":\"place%s error %llu/%llu dir.%d volume %f price %f\"}",dir>0?"bid":"ask",(long long)baseid,(long long)relid,dir,volume,price);
         retstr = clonestr(buf);
     }
-printf("placequote.(%s)\n",buf);
+printf("placequote.(%s)\n",retstr);
     return(retstr);
 }
 
