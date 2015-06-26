@@ -103,6 +103,11 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
         secretobj = cJSON_GetObjectItem(argjson,"secret");
         copy_cJSON(NXTaddr,nxtobj);
         copy_cJSON(offerNXT,cJSON_GetObjectItem(argjson,"offerNXT"));
+        if ( NXTaddr[0] == 0 && offerNXT[0] == 0 )
+        {
+            strcpy(NXTaddr,SUPERNET.NXTADDR);
+            strcpy(offerNXT,SUPERNET.NXTADDR);
+        }
         if ( strcmp(offerNXT,SUPERNET.NXTADDR) == 0 )
             localaccess = 1;
         if ( localaccess != 0 && strcmp(NXTaddr,SUPERNET.NXTADDR) != 0 )
