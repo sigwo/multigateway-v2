@@ -457,7 +457,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
                         if ( (str= busdata_sync(jsonstr,"allnodes")) != 0 )
                             free(str);
                         retstr = jsonstr;
-                    }
+                    } else return(clonestr("{\"result\":\"updated rambook\"}"));
                 } else printf("not submitquote_str\n");
             } else return(clonestr("{\"error\":\"cant get price close enough due to limited decimals\"}"));
         }

@@ -314,7 +314,7 @@ struct rambook_info *add_rambook_quote(char *exchangestr,struct InstantDEX_quote
         //printf("add.(%llu %llu) %llu/%llu\n",(long long)baseid,(long long)relid,(long long)baseamount,(long long)relamount);
         if ( (rb= get_rambook(0,baseid,0,relid,(exchange->exchangeid<<1) | (dir<0),gui)) != 0 )
         {
-            //printf("add.(%llu %llu) %llu/%llu\n",(long long)baseid,(long long)relid,(long long)baseamount,(long long)relamount);
+            printf("add.(%llu %llu) %llu/%llu price %.8f vol %.8f\n",(long long)baseid,(long long)relid,(long long)baseamount,(long long)relamount,price,volume);
             if ( _add_rambook_quote(iQ,rb,nxt64bits,timestamp,dir,price,volume,baseid,baseamount,relid,relamount,gui,quoteid,duration) != 0 )
             {
                 save_InstantDEX_quote(rb,iQ);
