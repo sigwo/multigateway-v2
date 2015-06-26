@@ -270,21 +270,24 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
                 iQ_exchangestr(exchange,iQ);
                 if ( strcmp(otherNXTaddr,NXTaddr) != 0 && iQ->matched == 0 && iQ->exchangeid == INSTANTDEX_NXTAEID )
                 {
-                    printf("matchedflag.%d exchange.(%s) %llu/%llu from (%s) | ",iQ->matched,exchange,(long long)iQ->baseamount,(long long)iQ->relamount,otherNXTaddr);
                     price = calc_price_volume(&vol,iQ->baseamount,iQ->relamount);
-                    printf("price %.8f vol %.8f | %.8f > %.8f? %.8f > %.8f?\n",price,vol,vol,(refvol * INSTANTDEX_MINVOLPERC),refvol,(vol * INSTANTDEX_MINVOLPERC));
                     if ( vol > (refvol * INSTANTDEX_MINVOLPERC) && refvol > (vol * iQ->minperc * .01) )
                     {
                         if ( vol < refvol )
                             metric = (vol / refvol);
                         else metric = 1.;
-                        printf("price %f against %f or %f\n",price,(refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL),(refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL));
                         if ( dir > 0 && price < (refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL) )
                             metric *= (1. + (refprice - price)/refprice);
                         else if ( dir < 0 && price > (refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL) )
                             metric *= (1. + (price - refprice)/refprice);
                         else metric = 0.;
-                        printf("metric %f\n",metric);
+                        if ( metric != 0. )
+                        {
+                            printf("matchedflag.%d exchange.(%s) %llu/%llu from (%s) | ",iQ->matched,exchange,(long long)iQ->baseamount,(long long)iQ->relamount,otherNXTaddr);
+                            printf("price %.8f vol %.8f | %.8f > %.8f? %.8f > %.8f?\n",price,vol,vol,(refvol * INSTANTDEX_MINVOLPERC),refvol,(vol * INSTANTDEX_MINVOLPERC));
+                            printf("price %f against %f or %f\n",price,(refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL),(refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL));
+                            printf("metric %f\n",metric);
+                        }
                         if ( metric > bestmetric )
                         {
                             bestmetric = metric;
@@ -294,7 +297,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
                 } else printf("NXTaddr.%s: skip %s from %s\n",NXTaddr,exchange,otherNXTaddr);
             }
         }
-        printf("n.%d\n",n);
+        //printf("n.%d\n",n);
         if ( besti >= 0 )
         {
             iQ = &quotes[besti];
