@@ -398,7 +398,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     memset(&iQ,0,sizeof(iQ));
     timestamp = (uint32_t)get_API_int(objs[4],0);
     copy_cJSON(gui,objs[7]), gui[sizeof(iQ.gui)-1] = 0;
-    automatch = (int32_t)get_API_int(objs[8],0);
+    automatch = (int32_t)get_API_int(objs[8],1);
     minperc = (int32_t)get_API_int(objs[9],0);
     duration = (int32_t)get_API_int(objs[10],ORDERBOOK_EXPIRATION);
     if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
