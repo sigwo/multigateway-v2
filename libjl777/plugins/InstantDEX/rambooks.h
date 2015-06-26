@@ -16,18 +16,18 @@ struct InstantDEX_quote *find_iQ(uint64_t quoteid)
     return(iQ);
 }
 
-struct InstantDEX_quote *create_iQ(struct InstantDEX_quote iQ)
+struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
 {
     struct InstantDEX_quote *newiQ;
-    if ( (newiQ= find_iQ(iQ.quoteid)) != 0 )
+    if ( (newiQ= find_iQ(iQ->quoteid)) != 0 )
         return(newiQ);
     newiQ = calloc(1,sizeof(*newiQ));
-    *newiQ = iQ;
+    *newiQ = *iQ;
     HASH_ADD(hh,AllQuotes,quoteid,sizeof(newiQ->quoteid),newiQ);
     {
         struct InstantDEX_quote *checkiQ;
-        if ( (checkiQ= find_iQ(iQ.quoteid)) == 0 || memcmp(checkiQ,&iQ,sizeof(iQ)) != 0 )
-            printf("error finding iQ after adding %llu vs %llu\n",(long long)checkiQ->quoteid,(long long)iQ.quoteid);
+        if ( (checkiQ= find_iQ(iQ->quoteid)) == 0 || memcmp(checkiQ,iQ,sizeof(*iQ)) != 0 )
+            printf("error finding iQ after adding %llu vs %llu\n",(long long)checkiQ->quoteid,(long long)iQ->quoteid);
     }
     return(newiQ);
 }
@@ -111,9 +111,7 @@ void add_user_order(struct rambook_info *rb,struct InstantDEX_quote *iQ)
             rb->quotes = realloc(rb->quotes,rb->maxquotes * sizeof(*rb->quotes));
             memset(&rb->quotes[i],0,incr * sizeof(*rb->quotes));
         }
-        rb->quotes[rb->numquotes] = calloc(1,sizeof(*iQ));
-        memcpy(rb->quotes[rb->numquotes],iQ,sizeof(*iQ));
-        rb->numquotes++;
+        rb->quotes[rb->numquotes] = create_iQ(iQ), rb->numquotes++;
         portable_mutex_unlock(&mutex);
     }
     rb->updated = 1;
