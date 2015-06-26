@@ -307,7 +307,7 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
             expand_nxt64bits(otherNXTaddr,iQ->nxt64bits);
             perc = 100.;
             if ( perc >= iQ->minperc )
-                retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,refvol,0,perc,refiQ->baseid,refiQ->relid,iQ->baseiQ,iQ->reliQ,iQ->quoteid,dir < 0,exchange,iQ->baseamount,iQ->relamount,iQ->nxt64bits,iQ->minperc,get_iQ_jumpasset(iQ));
+                retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,refvol,0,perc,refiQ->baseid,refiQ->relid,iQ->baseiQ,iQ->reliQ,iQ->quoteid,dir < 0,exchange,iQ->baseamount*refvol/vol,iQ->relamount*refvol/vol,iQ->nxt64bits,iQ->minperc,get_iQ_jumpasset(iQ));
         } else printf("besti.%d\n",besti);
         free_orderbooks(obooks,sizeof(obooks)/sizeof(*obooks),op);
     } else printf("cant make orderbook\n");
