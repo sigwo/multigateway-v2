@@ -382,7 +382,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     struct exchange_info *exchange;
     int32_t remoteflag,automatch,duration;
     struct rambook_info *rb;
-    char buf[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[16],rel[16],*str,*jsonstr,*retstr = 0;
+    char buf[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[16],rel[16],*str,*jsonstr,*retstr = 0;
     if ( (xchg= find_exchange(INSTANTDEX_NAME,0,0)) == 0 || xchg->exchangeid != INSTANTDEX_EXCHANGEID )
         return(clonestr("{\"error\":\"unexpected InstantDEX exchangeid\"}"));
     remoteflag = (localaccess == 0);
@@ -410,6 +410,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
         duration = ORDERBOOK_EXPIRATION;
     copy_cJSON(exchangestr,objs[11]);
+    copy_cJSON(offerNXT,objs[12]);
 printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exchangestr);
     if ( exchangestr[0] == 0 )
         strcpy(exchangestr,INSTANTDEX_NAME);
@@ -511,14 +512,18 @@ char *placeask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,
 
 char *bid_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    if ( strcmp(SUPERNET.NXTADDR,sender) != 0 )
+    char offerNXT[MAX_JSON_FIELD];
+    copy_cJSON(offerNXT,objs[12]);
+    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,1,sender,valid,objs,numobjs,origargstr));
     else return(0);
 }
 
 char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    if ( strcmp(SUPERNET.NXTADDR,sender) != 0 )
+    char offerNXT[MAX_JSON_FIELD];
+    copy_cJSON(offerNXT,objs[12]);
+    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
         return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,-1,sender,valid,objs,numobjs,origargstr));
     else return(0);
 }

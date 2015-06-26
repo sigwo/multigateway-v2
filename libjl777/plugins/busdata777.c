@@ -533,7 +533,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(method));
         cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(plugin));
         cJSON_DeleteItemFromObject(argjson,"submethod");
-        cJSON_DeleteItemFromObject(argjson,"destplugin");  //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
+        cJSON_DeleteItemFromObject(argjson,"destplugin");
         str = cJSON_Print(argjson), _stripwhite(str,' ');
         printf("call (%s %s) (%s)\n",plugin,method,str);
         retstr = plugin_method(0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2);
