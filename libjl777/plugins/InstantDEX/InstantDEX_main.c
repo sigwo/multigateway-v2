@@ -82,9 +82,9 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
     static char *jumptrades[] = { (char *)jumptrades_func, "jumptrades", "V", 0 };
     static char *tradehistory[] = { (char *)tradehistory_func, "tradehistory", "V", "timestamp", 0 };
     static char **commands[] = { allorderbooks, lottostats, cancelquote, respondtx, jumptrades, tradehistory, openorders, makeoffer3, placebid, bid, placeask, ask, orderbook };
-    int32_t i,j,localaccess;
+    int32_t i,j,localaccess = 0;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
-    char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],**cmdinfo,*argstr,*retstr=0;
+    char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD],**cmdinfo,*argstr,*retstr=0;
     memset(objs,0,sizeof(objs));
     command[0] = 0;
     memset(NXTaddr,0,sizeof(NXTaddr));
@@ -92,9 +92,7 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
     {
         argjson = cJSON_GetArrayItem(origargjson,0);
         argstr = cJSON_Print(argjson), _stripwhite(argstr,' ');
-    }
-    else argjson = origargjson, argstr = origargstr;
-    localaccess = 0;
+    } else argjson = origargjson, argstr = origargstr;
     NXTACCTSECRET[0] = 0;
     if ( argjson != 0 )
     {
@@ -103,7 +101,8 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
         nxtobj = cJSON_GetObjectItem(argjson,"NXT");
         secretobj = cJSON_GetObjectItem(argjson,"secret");
         copy_cJSON(NXTaddr,nxtobj);
-        if ( strcmp(NXTaddr,SUPERNET.NXTADDR) == 0 )
+        copy_cJSON(offerNXT,cJSON_GetObjectItem(argjson,"offerNXT"));
+        if ( strcmp(offerNXT,SUPERNET.NXTADDR) == 0 )
             localaccess = 1;
         if ( localaccess != 0 && strcmp(NXTaddr,SUPERNET.NXTADDR) != 0 )
         {
@@ -121,14 +120,14 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
                 strcpy(NXTaddr,SUPERNET.NXTADDR);
              }
         }
-//printf("(%s) argstr.(%s) command.(%s) NXT.(%s) valid.%d\n",cJSON_Print(argjson),argstr,command,NXTaddr,valid);
+printf("(%s) argstr.(%s) command.(%s) NXT.(%s) valid.%d\n",cJSON_Print(argjson),argstr,command,NXTaddr,valid);
         //fprintf(stderr,"SuperNET_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
         for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
         {
             cmdinfo = commands[i];
-            //printf("needvalid.(%c) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
             if ( strcmp(cmdinfo[1],command) == 0 )
             {
+                printf("needvalid.(%c) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
                 if ( cmdinfo[2][0] != 0 && valid <= 0 )
                     return(0);
                 for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
