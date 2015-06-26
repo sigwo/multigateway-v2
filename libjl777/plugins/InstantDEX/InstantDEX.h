@@ -148,20 +148,6 @@ void ramparse_stub(struct rambook_info *bids,struct rambook_info *asks,int32_t m
     printf("unexpected call to ramparse_stub gui.%s maxdepth.%d\n",gui,maxdepth);
 }
 
-/*int32_t validate_sender(char *forwarder,char *sender,char *tokenizedtxt)
-{
-    char pubkey[512]; int32_t strictflag = 0;
-    return(validate_token(forwarder,pubkey,sender,tokenizedtxt,strictflag));
-}
-
-char *submit_quote(char *quotestr)
-{
-    int32_t len; char _tokbuf[4096];
-    //printf("submit_quote.(%s)\n",quotestr);
-    len = construct_tokenized_req(_tokbuf,quotestr,SUPERNET.NXTACCTSECRET);
-    return(nn_loadbalanced((uint8_t *)_tokbuf,len));
-}*/
-
 char *submit_respondtx(char *respondtxstr,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t dest64bits)
 {
     printf("submit_respondtx.(%s) -> dest.%llu\n",respondtxstr,(long long)dest64bits);
