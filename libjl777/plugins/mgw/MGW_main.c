@@ -1342,8 +1342,10 @@ int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
 
 int32_t mgw_isrealtime(struct coin777 *coin)
 {
-    printf("(coin->ramchain.RTblocknum - coin->ramchain.blocknum) <= coin->minconfirms %d vs %d\n",(coin->ramchain.RTblocknum - coin->ramchain.blocknum),coin->minconfirms);
-    return(1);
+    printf("verified.%d lag.%d (coin->ramchain.RTblocknum - coin->ramchain.blocknum) <= coin->minconfirms %d vs %d\n",coin->verified,coin->lag,(coin->ramchain.RTblocknum - coin->ramchain.blocknum),coin->minconfirms);
+    if ( (coin->lag > 0 && coin->lag <= coin->minconfirms) && coin->verified != 0 )
+        return(1);
+    return(0);
 }
 
 uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struct addrtx_info *unspents,int32_t num,uint64_t balance)
@@ -1842,8 +1844,8 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     mgw->circulation = circulation = calc_circulation(0,mgw,0);
     mgw->unspent = unspent;
     balance = (unspent - circulation - mgw->withdrawsum);
-    printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [%.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),m);
-    if ( balance >= 0 && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
+    printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [balance %.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),m);
+    if ( balance >= -1 && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
     {
         struct cointx_info *cointx;
         for (i=0; i<mgw->numwithdraws; i++)
