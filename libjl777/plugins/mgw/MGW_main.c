@@ -1549,7 +1549,8 @@ cJSON *mgw_create_vouts(struct cointx_info *cointx)
     cJSON *json;
     json = cJSON_CreateObject();
     for (i=0; i<cointx->numoutputs; i++)
-        cJSON_AddItemToObject(json,cointx->outputs[i].coinaddr, cJSON_CreateNumber(dstr(cointx->outputs[i].value)));
+        if ( cointx->outputs[i].value != 0 )
+            cJSON_AddItemToObject(json,cointx->outputs[i].coinaddr, cJSON_CreateNumber(dstr(cointx->outputs[i].value)));
     return(json);
 }
 
@@ -1737,10 +1738,13 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
         strcpy(cointx->outputs[numoutputs].coinaddr,destaddr);
         cointx->outputs[numoutputs++].value = value - MGWfee - opreturn_amount - mgw->txfee;
     }
-    opreturn_output = numoutputs;
-    //printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
-    strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
-    cointx->outputs[numoutputs++].value = opreturn_amount;
+    if ( opreturn_amount != 0 )
+    {
+        opreturn_output = numoutputs;
+        //printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
+        strcpy(cointx->outputs[numoutputs].coinaddr,mgw->opreturnmarker);
+        cointx->outputs[numoutputs++].value = opreturn_amount;
+    }
     cointx->numoutputs = numoutputs;
     cointx->amount = amount = value - mgw->txfee;//(MGWfee + value + opreturn_amount + mgw->txfee);
     if ( mgw->balance >= 0 )
@@ -1762,6 +1766,13 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
                     cointx->outputs[cointx->numoutputs].value = cointx->change;
                     cointx->numoutputs++;
                 } else cointx->outputs[0].value += cointx->change;
+            }
+            if ( opreturn_amount == 0 )
+            {
+                opreturn_output = numoutputs;
+                //printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
+                strcpy(cointx->outputs[numoutputs].coinaddr,"");
+                cointx->outputs[numoutputs++].value = opreturn_amount;
             }
             if ( SUPERNET.gatewayid >= 0 )
             {
