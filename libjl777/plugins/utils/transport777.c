@@ -6,6 +6,9 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 #include "crypto777.h"
+#ifdef _WIN32
+#define in_addr_t uint32_t
+#endif
 
 char *conv_ipv6(char *ipv6addr)
 {
