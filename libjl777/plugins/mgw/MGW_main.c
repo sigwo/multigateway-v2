@@ -1570,10 +1570,11 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         cJSON_AddItemToArray(array,cJSON_Duplicate(vinsobj,1));
         cJSON_AddItemToArray(array,cJSON_Duplicate(voutsobj,1));
         paramstr = cJSON_Print(array), free_json(array), _stripwhite(paramstr,' ');
-        if ( Debuglevel > 2 )
+        if ( Debuglevel > 1 )
             fprintf(stderr,"len.%ld calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
         free(paramstr);
+        printf("got txbytes.(%s)\n",txbytes);
         if ( opreturn >= 0 )
         {
             if ( (txbytes2= mgw_OP_RETURN(opreturn,txbytes,do_opreturn,redeemtxid,oldtx_format)) == 0 )
@@ -1584,6 +1585,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
             }
             free(txbytes);
             txbytes = txbytes2, txbytes2 = 0;
+            printf("opreturn txbytes.(%s)\n",txbytes);
         }
         array = cJSON_CreateArray();
         if ( (flags= mgw_other_redeems(signedtxs,redeemtxid)) != 0 )
