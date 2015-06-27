@@ -63,7 +63,7 @@ test:	all
 clean: doesntexist
 	rm libs/libjl777.a SuperNET; rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
-PINCLUDES := -Iincludes -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp -I. -Iutils -Iramchain -Imgw -I ../includes -I../..
+PINCLUDES := -Iincludes -I../nonportable  -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp -I. -Iutils -Iramchain -Imgw -I ../includes -I../..
 
 _echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) echodemo.c $(PLIBS)
 
