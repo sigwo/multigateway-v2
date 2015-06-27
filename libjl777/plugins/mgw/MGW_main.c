@@ -1342,6 +1342,7 @@ int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
 
 int32_t mgw_isrealtime(struct coin777 *coin)
 {
+    printf("(coin->ramchain.RTblocknum - coin->ramchain.blocknum) <= coin->minconfirms %d vs %d\n",(coin->ramchain.RTblocknum - coin->ramchain.blocknum),coin->minconfirms);
     return(1);
 }
 
