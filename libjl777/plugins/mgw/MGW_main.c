@@ -1845,7 +1845,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     mgw->unspent = unspent;
     balance = (unspent - circulation - mgw->withdrawsum);
     printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [balance %.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),m);
-    if ( balance >= -1 && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
+    if ( balance >= -SATOSHIDEN && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
     {
         struct cointx_info *cointx;
         for (i=0; i<mgw->numwithdraws; i++)
