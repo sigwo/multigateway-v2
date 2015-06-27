@@ -1479,6 +1479,8 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
         if ( do_opreturn != 0 )
         {
             mgw_encode_OP_RETURN(scriptstr,redeemtxid);
+            vout->value = 0;
+            vout->coinaddr[0] = 0;
             safecopy(vout->script,scriptstr,sizeof(vout->script));
             printf("opreturn vout.%d (%s)\n",opreturn,vout->script);
         }
@@ -1549,8 +1551,7 @@ cJSON *mgw_create_vouts(struct cointx_info *cointx)
     cJSON *json;
     json = cJSON_CreateObject();
     for (i=0; i<cointx->numoutputs; i++)
-        if ( cointx->outputs[i].value != 0 )
-            cJSON_AddItemToObject(json,cointx->outputs[i].coinaddr, cJSON_CreateNumber(dstr(cointx->outputs[i].value)));
+        cJSON_AddItemToObject(json,cointx->outputs[i].coinaddr, cJSON_CreateNumber(dstr(cointx->outputs[i].value)));
     return(json);
 }
 
@@ -1575,6 +1576,11 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
             fprintf(stderr,"len.%ld calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
         free(paramstr);
+        if ( txbytes == 0 )
+        {
+            free(txbytes);
+            return(0);
+        }
         printf("got txbytes.(%s)\n",txbytes);
         if ( opreturn >= 0 )
         {
@@ -1636,6 +1642,8 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         if ( voutsobj != 0 )
             free_json(voutsobj);
     }
+    if ( txbytes != 0 )
+        free(txbytes);
     return(rettx);
 }
 
@@ -1771,8 +1779,8 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
             {
                 opreturn_output = numoutputs;
                 //printf("opreturn (%s)\n",coin->mgw.opreturnmarker);
-                strcpy(cointx->outputs[numoutputs].coinaddr,"");
-                cointx->outputs[numoutputs++].value = opreturn_amount;
+                strcpy(cointx->outputs[numoutputs].coinaddr,coin->mgw.opreturnmarker);
+                cointx->outputs[numoutputs++].value = coin->minoutput;
             }
             if ( SUPERNET.gatewayid >= 0 )
             {
