@@ -27,25 +27,14 @@ make libwebsockets MXE_TARGETS='x86_64-w64-mingw32.static'
 export PATH=$PWD/usr/bin:$PATH
 cp ./usr/x86_64-w64-mingw32.static/include/winioctl.h ./usr/x86_64-w64-mingw32.static/include/WinIoCtl.h
 cp ./usr/x86_64-w64-mingw32.static/include/windows.h ./usr/x86_64-w64-mingw32.static/include/Windows.h
-cd ../libuv
-make clean
-sh autogen.sh
-./configure --host x86_64-w64-mingw32.static --disable-shared
-echo ">>>>>>>>>>>>>>>>>>building libuv"  
-make
-cp .libs/libuv.a ../libs/libuv-x64-win.a
 cd ..
-mkdir db_win
-unzip db-6.1.19.zip -d db_64_win
-cd db_64_win/db-6.1.19
-echo ">>>>>>>>>>>>>>>>>>building libdb"
-mkdir build_mxe
-cd build_mxe
-CC=x86_64-w64-mingw32.static-gcc CXX=x86_64-w64-mingw32.static-g++ ../dist/configure --enable-mingw --disable-replication --enable-cxx --host x86_64-w64-mingw32.static
+cd nanomsg
+echo ">>>>>>>>>>>>>>>>>>building nanomsg"
+sh ./autogen.sh
+CC=x86_64-w64-mingw32.static-gcc CXX=x86_64-w64-mingw32.static-g++ ./configure --disable-replication --enable-cxx --host x86_64-w64-mingw32.static
 make
-cp libdb.a ../../../libs/libdb-x64-win.a
-cp db.h ../../../
-cd ../../..
+cp .libs/libnanomsg.a ../libs/libnanomsg.a
+cd ../
 rm mxe/usr/x86_64-w64-mingw32.static/include/objidl.h
 cp mxe/objidl.h mxe/usr/x86_64-w64-mingw32.static/include/objidl.h
 cd miniupnpc
@@ -55,6 +44,7 @@ cd ../mman-win32
 make clean
 ./configure --cc=x86_64-w64-mingw32.static-gcc --enable-static
 make
-cp libmman.a ../libs/libmman-x64-win.a
+cp libmman.a ../libs/libmman.a
 cd ..
 echo ">>>>>>>>>>>>>>>>>>finished with make winpatch"
+
