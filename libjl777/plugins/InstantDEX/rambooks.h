@@ -26,13 +26,13 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
     HASH_ADD(hh,AllQuotes,quoteid,sizeof(newiQ->quoteid),newiQ);
     {
         struct InstantDEX_quote *checkiQ;
-        if ( (checkiQ= find_iQ(iQ->quoteid)) == 0 || memcmp(checkiQ,iQ,sizeof(*iQ)) != 0 )
+        if ( (checkiQ= find_iQ(iQ->quoteid)) == 0 || memcmp((uint8_t *)((long)checkiQ + sizeof(checkiQ->hh) + sizeof(checkiQ->quoteid)),(uint8_t *)((long)iQ + sizeof(iQ->hh) + sizeof(iQ->quoteid)),sizeof(*iQ) - sizeof(iQ->hh) - sizeof(iQ->quoteid)) != 0 )
         {
             int32_t i;
-            for (i=0; i<sizeof(*iQ); i++)
+            for (i=(sizeof(iQ->hh) - sizeof(iQ->quoteid)); i<sizeof(*iQ) - sizeof(iQ->hh) - sizeof(iQ->quoteid); i++)
                 printf("%02x ",((uint8_t *)iQ)[i]);
             printf("iQ\n");
-            for (i=0; i<sizeof(*checkiQ); i++)
+            for (i=(sizeof(checkiQ->hh) + sizeof(checkiQ->quoteid)); i<sizeof(*checkiQ) - sizeof(checkiQ->hh) - sizeof(checkiQ->quoteid); i++)
                 printf("%02x ",((uint8_t *)checkiQ)[i]);
             printf("checkiQ\n");
             printf("error finding iQ after adding %llu vs %llu\n",(long long)checkiQ->quoteid,(long long)iQ->quoteid);
