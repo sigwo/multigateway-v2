@@ -1025,7 +1025,7 @@ void serverloop(void *_args)
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allrelays_processor);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
-    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET.port); // NN_REQ
+    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET_PORT); // NN_REQ
     //bussock = -1;
     busdata_init(sendtimeout,10);
     if ( SUPERNET.iamrelay != 0 )
