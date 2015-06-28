@@ -592,6 +592,12 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         }
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+        if ( strcmp(method,"serviceprovider") == 0 )
+        {
+            sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
+            if ( cJSON_GetObjectItem(json,"endpoint") == 0 )
+                cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
+        }
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
             cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString("busdata"));
@@ -599,11 +605,6 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
             cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(method));
             if ( strcmp(plugin,"relay") != 0 )
                 cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
-        }
-        else if ( strcmp(method,"serviceprovider") == 0 )
-        {
-            sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
-            cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
         }
         randombytes((uint8_t *)&tag,sizeof(tag));
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
