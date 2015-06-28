@@ -592,11 +592,10 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         }
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
-        if ( strcmp(method,"serviceprovider") == 0 )
+        if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
             sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
-            if ( cJSON_GetObjectItem(json,"endpoint") == 0 )
-                cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
+            cJSON_ReplaceItemInObject(json,"endpoint",cJSON_CreateString(endpoint));
         }
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
