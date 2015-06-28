@@ -532,7 +532,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"servicename"));
         printf("(%s %s).%s\n",plugin,method,buf);
-        if ( buf[0] != 0 && strcmp(method,"serviceprovider") != 0 )
+        if ( buf[0] != 0 && strcmp(method,"serviceprovider") == 0 )
         {
             free_json(argjson);
             return(0);
