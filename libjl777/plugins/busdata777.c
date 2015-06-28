@@ -536,7 +536,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"servicename"));
         //printf("deref (%s %s).%s\n",plugin,method,buf);
-        if ( buf[0] != 0 || (strcmp(method,"serviceprovider") == 0 || strcmp(method,"servicename") == 0) )
+        if ( strcmp(method,"serviceprovider") == 0 || strcmp(method,"servicename") == 0 )
         {
             //printf("bypass deref\n");
             free_json(argjson);
