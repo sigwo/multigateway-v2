@@ -5,6 +5,9 @@
 //
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
+//  I still need to DB the service providers, make API to get list of service providers, allow authentication when registering service provider
+// and then also to make sure adding relays on the fly syncs up to the current set of serviceproviders
+// way to remove serviceprovider node
 
 #define BUNDLED
 #define PLUGINSTR "relay"
@@ -532,10 +535,10 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"servicename"));
-        printf("deref (%s %s).%s\n",plugin,method,buf);
+        //printf("deref (%s %s).%s\n",plugin,method,buf);
         if ( buf[0] != 0 || (strcmp(method,"serviceprovider") == 0 || strcmp(method,"servicename") == 0) )
         {
-            printf("bypass deref\n");
+            //printf("bypass deref\n");
             free_json(argjson);
             return(0);
         }
@@ -556,7 +559,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
-    printf("nn_busdata_processor.(%s)\n",msg);
+    //printf("nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
@@ -707,16 +710,17 @@ void busdata_poll()
     sock = RELAYS.servicesock;
     if ( sock >= 0 && (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
     {
+        printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (str= nn_busdata_processor((uint8_t *)jsonstr,len)) != 0 )
             {
+                printf("servicereturn.(%s)\n",str);
                 nn_send(sock,str,(int32_t)strlen(str)+1,0);
                 free(str);
             }
             free_json(json);
         }
-        printf("SERVICESOCK recv.%d (%s)\n",len,jsonstr);
         nn_freemsg(jsonstr);
     }
 }
