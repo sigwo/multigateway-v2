@@ -325,6 +325,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     copy_cJSON(submethod,cJSON_GetObjectItem(json,"submethod"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
+    printf("addpending.(%s %s).%s\n",destplugin,servicename,submethod);
     if ( strcmp(submethod,"serviceprovider") == 0 )
     {
         copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
@@ -599,7 +600,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
             if ( strcmp(plugin,"relay") != 0 )
                 cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
         }
-        else if ( 0 )
+        else if ( strcmp(method,"serviceprovider") == 0 )
         {
             sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
             cJSON_AddItemToObject(json,"endpoint",cJSON_CreateString(endpoint));
