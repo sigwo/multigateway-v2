@@ -454,7 +454,7 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
 char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],response[1024],*retstr = 0;
-    printf("busdata.(%s)\n",msg);
+    printf("busdata.(%s) valid.%d\n",msg,valid);
     if ( SUPERNET.iamrelay != 0 && valid > 0 )
     {
         if ( (json= busdata_decode(destNXT,valid,sender,msg,datalen)) != 0 )
@@ -532,9 +532,10 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"servicename"));
-        printf("(%s %s).%s\n",plugin,method,buf);
-        if ( buf[0] != 0 && (strcmp(method,"serviceprovider") == 0 || strcmp(method,"servicename") == 0) )
+        printf("deref (%s %s).%s\n",plugin,method,buf);
+        if ( buf[0] != 0 || (strcmp(method,"serviceprovider") == 0 || strcmp(method,"servicename") == 0) )
         {
+            printf("bypass deref\n");
             free_json(argjson);
             return(0);
         }
@@ -555,7 +556,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
-    //printf("nn_busdata_processor\n");
+    printf("nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
