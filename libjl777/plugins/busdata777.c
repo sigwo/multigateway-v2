@@ -590,10 +590,10 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
             free_json(json);
             return(jsonstr);
         }
+        copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
+        copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
-            copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
-            copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
             cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString("busdata"));
             cJSON_ReplaceItemInObject(json,"plugin",cJSON_CreateString("relay"));
             cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(method));
