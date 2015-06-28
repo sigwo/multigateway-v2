@@ -708,20 +708,23 @@ void busdata_poll()
 {
     char *str,*jsonstr; cJSON *json; int32_t len,sock;
     sock = RELAYS.servicesock;
-    if ( sock >= 0 && (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
+    if ( sock >= 0 )
     {
-        printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
         {
-            if ( (str= nn_busdata_processor((uint8_t *)jsonstr,len)) != 0 )
+            printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
-                printf("servicereturn.(%s)\n",str);
-                nn_send(sock,str,(int32_t)strlen(str)+1,0);
-                free(str);
+                if ( (str= nn_busdata_processor((uint8_t *)jsonstr,len)) != 0 )
+                {
+                    printf("servicereturn.(%s)\n",str);
+                    nn_send(sock,str,(int32_t)strlen(str)+1,0);
+                    free(str);
+                } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
+                free_json(json);
             }
-            free_json(json);
+            nn_freemsg(jsonstr);
         }
-        nn_freemsg(jsonstr);
     }
 }
 
