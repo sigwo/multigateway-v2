@@ -506,7 +506,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
 
 char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJSON *json)
 {
-    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
+    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],buf[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
     cJSON *dupjson,*second,*argjson; uint64_t forwardbits;
     if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
     {
@@ -528,8 +528,14 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
     }
     if ( (argjson= cJSON_Parse(databuf)) != 0 )
     {
-        copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
+        copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
+        copy_cJSON(buf,cJSON_GetObjectItem(argjson,"servicename"));
+        if ( buf[0] != 0 && strcmp(method,"serviceprovider") != 0 )
+        {
+            free_json(argjson);
+            return(0);
+        }
         cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(method));
         cJSON_ReplaceItemInObject(argjson,"plugin",cJSON_CreateString(plugin));
         cJSON_DeleteItemFromObject(argjson,"submethod");
@@ -558,7 +564,8 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
             copy_cJSON(usedest,cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"usedest"));
             if ( usedest[0] != 0 )
                 retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
-            else retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
+            if ( retstr == 0 )
+                retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
             //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
