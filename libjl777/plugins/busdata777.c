@@ -9,6 +9,9 @@
 // and then also to make sure adding relays on the fly syncs up to the current set of serviceproviders
 // way to remove serviceprovider node
 
+// register: ./BitcoinDarkd SuperNET '{"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"serviceprovider","servicename":"echo","endpoint":""}'
+// invoke: ./BitcoinDarkd SuperNET '{"method":"busdata","plugin":"relay","servicename":"echo","destplugin":"echodemo","submethod":"echo","echostr":"remote echo"}'
+
 #define BUNDLED
 #define PLUGINSTR "relay"
 #define PLUGNAME(NAME) relay ## NAME
@@ -536,7 +539,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"servicename"));
         //printf("deref (%s %s).%s\n",plugin,method,buf);
-        if ( strcmp(method,"serviceprovider") == 0 || strcmp(method,"servicename") == 0 )
+        if ( buf[0] != 0 && strcmp(method,"serviceprovider") == 0 && strcmp(method,"servicename") != 0 )
         {
             //printf("bypass deref\n");
             free_json(argjson);
