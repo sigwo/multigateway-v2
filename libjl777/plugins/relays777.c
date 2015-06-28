@@ -25,7 +25,7 @@ int32_t relay_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME RELAYS;
 char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr" }; // list of supported methods
-char *PLUGNAME(_pubmethods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr" }; // list of supported methods
+char *PLUGNAME(_pubmethods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr", "serviceprovider" }; // list of supported methods
 char *PLUGNAME(_authmethods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr" }; // list of supported methods
 
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
