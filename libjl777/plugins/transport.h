@@ -205,7 +205,6 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
                 }
             } else tag = tmp;
         }
-        free_json(json);
         if ( len == 0 )
             len = (int32_t)strlen(jsonstr) + 1;
         if ( localaccess != 0 )
@@ -218,6 +217,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
             jsonstr = tokbuf, flag = 1;
         }
 printf("localaccess.%d send_to_daemon.(%s) tag.%llu\n",localaccess,jsonstr,(long long)tag);
+        free_json(json);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
 //printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
