@@ -682,11 +682,12 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
     //printf("NN_LBSEND.(%s)\n",data);
     if ( (sendlen= nn_send(lbsock,data,len,0)) == len )
     {
-        for (i=0; i<100; i++)
+        for (i=0; i<10; i++)
             if ( (nn_socket_status(lbsock,1) & NN_POLLIN) != 0 )
                 break;
         if ( (recvlen= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
         {
+            printf("LBRECV.(%s)\n",msg);
             jsonstr = clonestr((char *)msg);
             if ( (json= cJSON_Parse((char *)data)) != 0 )
             {
@@ -904,8 +905,8 @@ void responseloop(void *_args)
                     else argjson = json;
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
                     {
-                        //printf("CALL BUSDATA PROCESSOR.(%s)\n",msg);
                         retstr = nn_busdata_processor((uint8_t *)msg,len);
+                        printf("CALL BUSDATA PROCESSOR.(%s) -> (%s)\n",msg,retstr);
                     }
                     else
                     {

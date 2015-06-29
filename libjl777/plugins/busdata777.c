@@ -331,7 +331,6 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
                 break;
         if ( (recvlen= nn_recv(sp->sock,&msg,NN_MSG,0)) > 0 )
         {
-            printf("LBS.(%s)\n",msg);
             jsonstr = clonestr((char *)msg);
             nn_freemsg(msg);
         } else printf("lb_serviceprovider timeout\n");
@@ -474,6 +473,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
             {
                 free(str);
+                printf("LBS.(%s)\n",retstr);
                 return(retstr);
             }
             free(str);
@@ -551,7 +551,6 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
 char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],response[1024],*retstr = 0;
-    //printf("busdata.(%s) valid.%d\n",msg,valid);
     if ( SUPERNET.iamrelay != 0 && valid > 0 )
     {
         if ( (json= busdata_decode(destNXT,valid,sender,msg,datalen)) != 0 )
@@ -575,6 +574,7 @@ char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t time
             free_json(json);
         } else printf("couldnt decode.(%s)\n",msg);
     }
+    printf("busdata.(%s) valid.%d -> (%s)\n",msg,valid,retstr!=0?retstr:"");
     return(retstr);
 }
 
@@ -676,7 +676,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-   // printf("BUSDATA.(%s) (%s)\n",msg,retstr);
+    printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
 }
 
