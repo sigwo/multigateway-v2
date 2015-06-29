@@ -93,11 +93,11 @@ int32_t nonce_leverage(char *broadcaststr)
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage = 7;
-        else if ( strcmp(broadcaststr,"servicerequest") == 0 )
-            leverage = 6;
-        else if ( strcmp(broadcaststr,"allrelays") == 0 )
             leverage = 5;
+        else if ( strcmp(broadcaststr,"servicerequest") == 0 )
+            leverage = 4;
+        else if ( strcmp(broadcaststr,"allrelays") == 0 )
+            leverage = 3;
     }
     return(leverage);
 }
