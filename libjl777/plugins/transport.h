@@ -217,7 +217,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
                 free(jsonstr);
             jsonstr = tokbuf, flag = 1;
         }
-        //printf("send_to_daemon.(%s) tag.%llu\n",jsonstr,(long long)tag);
+printf("localaccess.%d send_to_daemon.(%s) tag.%llu\n",localaccess,jsonstr,(long long)tag);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
 //printf("send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
