@@ -166,7 +166,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
 {
     struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
     struct daemon_info *dp;
-    char numstr[64],*tmpstr,*jsonstr,*tokbuf; uint8_t *data; int32_t ind,datalen,tmplen,flag = 0; uint64_t tmp,tag = 0; cJSON *json;
+    char numstr[64],*tmpstr,*jsonstr,*tokbuf,*broadcastmode; uint8_t *data; int32_t ind,datalen,tmplen,flag = 0; uint64_t tmp,tag = 0; cJSON *json;
 //printf("A send_to_daemon.(%s).%d\n",origjsonstr,len);
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
@@ -211,7 +211,8 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
         if ( localaccess != 0 )
         {
             tokbuf = calloc(1,len + 1024);
-            len = construct_tokenized_req(tokbuf,jsonstr,SUPERNET.NXTACCTSECRET,0);
+            broadcastmode = get_broadcastmode(json,cJSON_str(cJSON_GetObjectItem(json,"broadcast")));
+            len = construct_tokenized_req(tokbuf,jsonstr,SUPERNET.NXTACCTSECRET,broadcastmode);
             if ( flag != 0 )
                 free(jsonstr);
             jsonstr = tokbuf, flag = 1;

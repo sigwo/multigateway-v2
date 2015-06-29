@@ -87,7 +87,7 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
     return(0);
 }
 
-uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
+int32_t nonce_leverage(char *broadcaststr)
 {
     int32_t leverage = 3;
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
@@ -99,6 +99,12 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
             leverage = 5;
     }
+    return(leverage);
+}
+
+uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
+{
+    int32_t leverage = nonce_leverage(broadcaststr);
     if ( maxmillis == 0 && *leveragep != leverage )
         return(0xffffffff);
     *leveragep = leverage;
@@ -660,9 +666,18 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
     return(retstr);
 }
 
+char *get_broadcastmode(cJSON *json,char *broadcastmode)
+{
+    char servicename[MAX_JSON_FIELD];
+    copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
+    if ( servicename[0] != 0 )
+        broadcastmode = "servicerequest";
+        return(broadcastmode);
+}
+
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
-    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicename[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
+    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
     bits256 hash; uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
     //printf("create_busdata\n");
@@ -674,9 +689,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
             free_json(json);
             return(jsonstr);
         }
-        copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
-        if ( servicename[0] != 0 )
-            broadcastmode = "servicerequest";
+        broadcastmode = get_broadcastmode(json,broadcastmode);
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
