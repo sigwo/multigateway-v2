@@ -1579,6 +1579,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             DB_msigs = db777_create(0,0,"msigs",0,0);
         if ( DB_NXTtrades == 0 )
             DB_NXTtrades = db777_create(0,0,"NXT_trades",0,0);
+        if ( DB_services == 0 )
+            DB_services = db777_create(0,0,"services",0,0);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {
