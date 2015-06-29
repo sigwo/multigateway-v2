@@ -32,7 +32,7 @@ echo ">>>>>>>>>>>>>>>>>>building nanomsg"
 sh ./autogen.sh
 CC=x86_64-w64-mingw32.static-gcc CXX=x86_64-w64-mingw32.static-g++ ./configure --disable-replication --enable-cxx --host x86_64-w64-mingw32.static
 make
-cp .libs/libnanomsg.a ../libs/libnanomsg.a
+cp .libs/libnanomsg.a ../libs/libnanomsg-x64-win.a
 cd ../
 rm mxe/usr/x86_64-w64-mingw32.static/include/objidl.h
 cp mxe/objidl.h mxe/usr/x86_64-w64-mingw32.static/include/objidl.h
