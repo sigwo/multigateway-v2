@@ -89,13 +89,13 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
 
 uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
 {
-    int32_t leverage = 2;
+    int32_t leverage = 4;
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage = 6;
+            leverage = 7;
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
-            leverage = 4;
+            leverage = 6;
     }
     if ( maxmillis == 0 && *leveragep != leverage )
         return(0xffffffff);
