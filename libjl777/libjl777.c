@@ -1519,6 +1519,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),0);
         copy_cJSON(SUPERNET.hostname,cJSON_GetObjectItem(json,"hostname"));
         SUPERNET.port = get_API_int(cJSON_GetObjectItem(json,"SUPERNET_PORT"),SUPERNET_PORT);
+        SUPERNET.serviceport = get_API_int(cJSON_GetObjectItem(json,"serviceport"),SUPERNET_PORT - 2);
+        copy_cJSON(SUPERNET.SERVICESECRET,cJSON_GetObjectItem(json,"SERVICESECRET"));
         SUPERNET.automatch = get_API_int(cJSON_GetObjectItem(json,"automatch"),3);
 #ifndef __linux__
         SUPERNET.UPNP = 1;

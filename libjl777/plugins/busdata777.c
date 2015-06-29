@@ -50,6 +50,7 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
             free_json(json);
         }
         free(jsontxt);
+        return(0);
     }
     return(-1);
 }
@@ -319,8 +320,8 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
 char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json,char *forwarder,cJSON *origjson)
 {
     cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
-    struct service_provider *sp; int32_t i,sendtimeout,recvtimeout,retrymillis,maxmillis;
-    char submethod[512],endpoint[512],destplugin[512],retbuf[128],servicename[512],*hashstr,*str,*retstr;
+    struct service_provider *sp; int32_t i,valid,sendtimeout,recvtimeout,retrymillis,maxmillis; uint64_t servicebits;
+    char submethod[512],endpoint[512],destplugin[512],retbuf[128],serviceaddr[128],servicename[512],servicetoken[512],*hashstr,*str,*retstr;
     if ( key == 0 || key[0] == 0 )
         key = "0";
     ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
@@ -335,6 +336,12 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     if ( strcmp(submethod,"serviceprovider") == 0 )
     {
         copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
+        copy_cJSON(servicetoken,cJSON_GetObjectItem(json,"servicetoken"));
+        if ( issue_decodeToken(serviceaddr,&valid,endpoint,(void *)servicetoken) > 0 )
+        {
+            servicebits = calc_nxt64bits(serviceaddr);
+            printf("valid.(%s) from %llu\n",endpoint,servicebits);
+        }
         HASH_FIND(hh,Service_providers,servicename,strlen(servicename),sp);
         if ( sp != 0 )
         {
@@ -589,7 +596,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
-    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
+    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
     bits256 hash; uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
     *datalenp = 0;
     //printf("create_busdata\n");
@@ -607,6 +614,8 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         {
             sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port - 2);
             cJSON_ReplaceItemInObject(json,"endpoint",cJSON_CreateString(endpoint));
+            if ( SUPERNET.SERVICESECRET[0] != 0 && issue_generateToken(servicetoken,endpoint,SUPERNET.SERVICESECRET) == 0 )
+                cJSON_AddItemToObject(json,"servicetoken",cJSON_CreateString(servicetoken));
         }
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
@@ -684,8 +693,8 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
 
 void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
 {
-    char endpoint[512]; int32_t iter,sock,type,portoffset,retrymillis,maxmillis;
-    type = NN_REP, portoffset = -2;
+    char endpoint[512]; int32_t iter,sock,type,port,retrymillis,maxmillis;
+    type = NN_REP, port = SUPERNET.serviceport;
     for (iter=0; iter<1+SUPERNET.iamrelay; iter++)
     {
         if ( (sock= nn_socket(AF_SP,type)) >= 0 ) // NN_BUS seems to have 4x redundant packets
@@ -693,7 +702,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
             if ( iter == 0 )
                 RELAYS.servicesock = sock;
             else RELAYS.bus.sock = sock;
-            expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + portoffset,type));
+            expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),port,type));
             nn_bind(sock,endpoint);
             printf("SERVICE BIND.(%s)\n",endpoint);
             maxmillis = 1000, retrymillis = 25;
@@ -707,7 +716,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
                 fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         }
         type = NN_PUB;
-        portoffset = nn_portoffset(NN_BUS);
+        port = SUPERNET.port + nn_portoffset(NN_BUS);
     }
 }
 
@@ -719,7 +728,7 @@ void busdata_poll()
     {
         if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
         {
-            printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
+            //printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 if ( (str= nn_busdata_processor((uint8_t *)jsonstr,len)) != 0 )
