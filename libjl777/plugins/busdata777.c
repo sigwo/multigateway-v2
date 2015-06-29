@@ -237,14 +237,14 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         nonce = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
                         leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
                         copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
-                        broadcastmode = get_broadcastmode(tokenobj,broadcaststr);
+                        broadcastmode = get_broadcastmode(firstitem,broadcaststr);
                         retcode = valid;
                         if ( nonce_func(&leverage,firstjsontxt,broadcastmode,0,nonce) != 0 )
                         {
                             //printf("(%s) -> (%s) leverage.%d len.%d crc.%u\n",broadcaststr,firstjsontxt,leverage,len,_crc32(0,(void *)firstjsontxt,len));
                             retcode = -4;
                         }
-                        if ( Debuglevel > 2 )
+                        if ( Debuglevel > 1 )
                             printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
                     }
                     else
