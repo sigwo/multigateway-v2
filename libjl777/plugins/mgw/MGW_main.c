@@ -646,8 +646,8 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
-    int32_t i,buyNXT; uint64_t nxt64bits; cJSON *array,*item; struct coin777 *coin;
-    char nxtaddr[64],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[3][MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024],*str;
+    int32_t i,buyNXT; uint64_t nxt64bits; cJSON *item = 0; struct coin777 *coin;
+    char nxtaddr[64],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024],*str;
     if ( SUPERNET.gatewayid >= 0 )
     {
         copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
@@ -661,19 +661,24 @@ char *devMGW_command(char *jsonstr,cJSON *json)
         copy_cJSON(userNXTpubkey,cJSON_GetObjectItem(json,"userpubkey"));
         buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
         printf("NXTaddr.(%s) %llu %s\n",nxtaddr,(long long)nxt64bits,coinstr);
-        array = cJSON_CreateArray();
         if ( nxtaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr,0)) != 0 )
         {
             for (i=0; i<3; i++)
             {
-                ensure_NXT_msigaddr(msigjsonstr[i],coinstr,nxtaddr,userNXTpubkey,buyNXT);
-                if ( (item= cJSON_Parse(msigjsonstr[i])) != 0 )
-                    cJSON_AddItemToArray(array,item);
+                ensure_NXT_msigaddr(msigjsonstr,coinstr,nxtaddr,userNXTpubkey,buyNXT);
+                if ( i == SUPERNET.gatewayid )
+                    item = cJSON_Parse(msigjsonstr);
             }
             fix_msigaddr(coin,nxtaddr,"myacctpubkeys");
         }
-        //sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",nxtaddr);
-        str = cJSON_Print(array), _stripwhite(str,' ');
+        if ( item != 0 )
+            str = cJSON_Print(item), _stripwhite(str,' '), free_json(item);
+        else
+        {
+            sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",nxtaddr);
+            _stripwhite(msigjsonstr,' ');
+            str = clonestr(msigjsonstr);
+        }
         return(str);
     } else return(0);
 }
