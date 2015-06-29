@@ -251,7 +251,7 @@ int32_t _lb_socket(uint16_t port,int32_t maxmillis,char servers[][MAX_SERVERNAME
     int32_t lbsock,timeout,retrymillis,priority = 1;
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
-        retrymillis = (maxmillis / 40) + 1;
+        retrymillis = (maxmillis / 30) + 1;
         //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
@@ -1024,7 +1024,7 @@ void serverloop(void *_args)
     peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allrelays_processor);
     pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
-    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(1000,SUPERNET_PORT); // NN_REQ
+    RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(3000,SUPERNET_PORT); // NN_REQ
     //bussock = -1;
     busdata_init(sendtimeout,10);
     if ( SUPERNET.iamrelay != 0 )

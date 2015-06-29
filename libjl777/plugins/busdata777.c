@@ -326,14 +326,15 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
     printf("lb_serviceprovider.(%s)\n",data);
     if ( (sendlen= nn_send(sp->sock,data,datalen,0)) == datalen )
     {
-        for (i=0; i<1000; i++)
+        for (i=0; i<10; i++)
             if ( (nn_socket_status(sp->sock,1) & NN_POLLIN) != 0 )
                 break;
         if ( (recvlen= nn_recv(sp->sock,&msg,NN_MSG,0)) > 0 )
         {
+            printf("LBS.(%s)\n",msg);
             jsonstr = clonestr((char *)msg);
             nn_freemsg(msg);
-        }
+        } else printf("lb_serviceprovider timeout\n");
     } else printf("sendlen.%d != datalen.%d\n",sendlen,datalen);
     return(jsonstr);
 }
@@ -391,7 +392,7 @@ struct service_provider *find_servicesock(char *servicename,char *endpoint)
         sp = calloc(1,sizeof(*sp));
         HASH_ADD_KEYPTR(hh,Service_providers,servicename,strlen(servicename),sp);
         sp->sock = nn_socket(AF_SP,NN_REQ);
-        sendtimeout = 1000, recvtimeout = 10000, maxmillis = 1000, retrymillis = 25;
+        sendtimeout = 1000, recvtimeout = 10000, maxmillis = 3000, retrymillis = 100;
         if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
             fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
         else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
