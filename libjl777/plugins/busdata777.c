@@ -5,11 +5,10 @@
 //
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
-// DB the service providers,
-// allow authentication when registering service provider
 // make API to get list of service providers and sync relays
 // and then also to make sure adding relays on the fly syncs up to the current set of serviceproviders
 // way to remove serviceprovider node
+// bridge cgi
 
 // "servicesecret" in SuperNET.conf
 // register: ./BitcoinDarkd SuperNET '{"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"serviceprovider","servicename":"echo","endpoint":""}'
@@ -356,7 +355,7 @@ int32_t add_service_provider(char *serviceNXT,char *servicename,char *endpoint)
 {
     struct serviceprovider S;
     memset(&S,0,sizeof(S));
-    S.servicebits = calc_nxt64bits(serviceNXT);
+    S.servicebits = conv_acctstr(serviceNXT);
     strncpy(S.name,servicename,sizeof(S.name)-1);
     S.endpoint[sizeof(S.endpoint)-1] = 0;
     strncpy(S.endpoint,endpoint,sizeof(S.endpoint)-1);
