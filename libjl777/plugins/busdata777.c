@@ -108,7 +108,7 @@ char *get_broadcastmode(cJSON *json,char *broadcastmode)
     copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
     if ( servicename[0] != 0 )
         broadcastmode = "servicerequest";
-    printf("(%s) get_broadcastmode.(%s) servicename.[%s]\n",cJSON_Print(json),broadcastmode!=0?broadcastmode:"",servicename);
+    //printf("(%s) get_broadcastmode.(%s) servicename.[%s]\n",cJSON_Print(json),broadcastmode!=0?broadcastmode:"",servicename);
     return(broadcastmode);
 }
 
@@ -550,7 +550,7 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
 char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],response[1024],*retstr = 0;
-    printf("busdata.(%s) valid.%d\n",msg,valid);
+    //printf("busdata.(%s) valid.%d\n",msg,valid);
     if ( SUPERNET.iamrelay != 0 && valid > 0 )
     {
         if ( (json= busdata_decode(destNXT,valid,sender,msg,datalen)) != 0 )
@@ -814,7 +814,7 @@ void busdata_poll()
     {
         if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
         {
-            //printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
+            printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 if ( (str= nn_busdata_processor((uint8_t *)jsonstr,len)) != 0 )
