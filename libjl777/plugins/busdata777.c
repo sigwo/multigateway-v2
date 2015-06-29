@@ -244,7 +244,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                             //printf("(%s) -> (%s) leverage.%d len.%d crc.%u\n",broadcaststr,firstjsontxt,leverage,len,_crc32(0,(void *)firstjsontxt,len));
                             retcode = -4;
                         }
-                        if ( Debuglevel > 1 )
+                        if ( Debuglevel > 2 )
                             printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
                     }
                     else
@@ -589,7 +589,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         sender[0] = 0;
         if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
         {
-            printf("valid.%d sender.(%s) forwarer.(%s)\n",valid,sender,forwarder);
+            printf("error valid.%d sender.(%s) forwarder.(%s)\n",valid,sender,forwarder);
             return(valid);
         }
         copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));

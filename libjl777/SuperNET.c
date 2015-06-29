@@ -792,7 +792,8 @@ void SuperNET_apiloop(void *ipaddr)
                         {
                             //retstr = call_SuperNET_JSON(jsonstr);
                             //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
-                            if ( (str= plugin_method(&ptr->retstr,1,plugin,method,0,0,jsonstr,(int32_t)strlen(jsonstr)+1,timeout)) != 0 )
+                            str = busdata_sync(jsonstr,0);
+                            if ( str != 0 )//(str= plugin_method(&ptr->retstr,1,plugin,method,0,0,jsonstr,(int32_t)strlen(jsonstr)+1,timeout)) != 0 )
                             {
                                 if ( (retjson= cJSON_Parse(str)) != 0 )
                                 {
