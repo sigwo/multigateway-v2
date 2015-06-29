@@ -672,7 +672,7 @@ char *get_broadcastmode(cJSON *json,char *broadcastmode)
     copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
     if ( servicename[0] != 0 )
         broadcastmode = "servicerequest";
-    printf("get_broadcastmode.(%s) servicename.[%s]\n",broadcastmode!=0?broadcastmode:"",servicename);
+    printf("(%s) get_broadcastmode.(%s) servicename.[%s]\n",cJSON_Print(json),broadcastmode!=0?broadcastmode:"",servicename);
     return(broadcastmode);
 }
 
