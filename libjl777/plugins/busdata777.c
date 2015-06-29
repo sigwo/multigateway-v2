@@ -513,7 +513,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
 
 char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJSON *json)
 {
-    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],buf[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
+    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],buf[MAX_JSON_FIELD],servicename[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
     cJSON *dupjson,*second,*argjson; uint64_t forwardbits;
     if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
     {
@@ -538,10 +538,12 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"method"));
+        copy_cJSON(servicename,cJSON_GetObjectItem(argjson,"servicename"));
         //printf("deref (%s %s).%s\n",plugin,method,buf);
         // busdata.({"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"serviceprovider","servicename":"echo","endpoint":"tcp://89.248.160.237:7775","tag":"13378853124063105007"}) valid.1
         // call (echodemo echo) ({"method":"echo","plugin":"echodemo","servicename":"echo","echostr":"remote echo","tag":"15741577899766654"})
-        if ( SUPERNET.iamrelay != 0 && strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0 )
+        printf("relay.%d buf.(%s) method.(%s) servicename.(%s)\n",SUPERNET.iamrelay,buf,method,servicename);
+        if ( SUPERNET.iamrelay != 0 && ((strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0) || servicename[0] != 0) )
         {
             //printf("bypass deref\n");
             free_json(argjson);
