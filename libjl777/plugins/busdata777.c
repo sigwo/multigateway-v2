@@ -102,6 +102,16 @@ int32_t nonce_leverage(char *broadcaststr)
     return(leverage);
 }
 
+char *get_broadcastmode(cJSON *json,char *broadcastmode)
+{
+    char servicename[MAX_JSON_FIELD];
+    copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
+    if ( servicename[0] != 0 )
+        broadcastmode = "servicerequest";
+    printf("(%s) get_broadcastmode.(%s) servicename.[%s]\n",cJSON_Print(json),broadcastmode!=0?broadcastmode:"",servicename);
+    return(broadcastmode);
+}
+
 uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
 {
     int32_t leverage = nonce_leverage(broadcaststr);
@@ -173,7 +183,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag)
 {
     cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t valid,leverage,retcode = -13;
-    char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*firstjsontxt = 0; unsigned char encoded[4096];
+    char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*broadcastmode,*firstjsontxt = 0; unsigned char encoded[4096];
     array = cJSON_Parse(tokenizedtxt);
     NXTaddr[0] = pubkey[0] = forwarder[0] = 0;
     if ( array == 0 )
@@ -227,9 +237,9 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         nonce = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
                         leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
                         copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
+                        broadcastmode = get_broadcastmode(tokenobj,broadcaststr);
                         retcode = valid;
-                        //int32_t len = (int32_t)strlen(firstjsontxt);
-                        if ( nonce_func(&leverage,firstjsontxt,broadcaststr,0,nonce) != 0 )
+                        if ( nonce_func(&leverage,firstjsontxt,broadcastmode,0,nonce) != 0 )
                         {
                             //printf("(%s) -> (%s) leverage.%d len.%d crc.%u\n",broadcaststr,firstjsontxt,leverage,len,_crc32(0,(void *)firstjsontxt,len));
                             retcode = -4;
@@ -253,7 +263,8 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
     } else printf("decode arraysize.%d\n",cJSON_GetArraySize(array));
     if ( array != 0 )
         free_json(array);
-    //printf("validate retcode.%d\n",retcode);
+    if ( retcode < 0 )
+        printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
     return(retcode);
 }
 
@@ -577,16 +588,18 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         *timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
         sender[0] = 0;
         if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
+        {
+            printf("valid.%d sender.(%s) forwarer.(%s)\n",valid,sender,forwarder);
             return(valid);
+        }
         copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
         copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
         decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
         *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
         calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
-        //printf("valid.%d sender.(%s) (%s) datalen.%d %llx [%llx]\n",valid,sender,databuf,*datalenp,(long long)hash.txid,(long long)databuf);
         if ( strcmp(hexstr,sha) == 0 )
             return(1);
-    }
+    } else printf("busdata_validate not array\n");
     return(-1);
 }
 
@@ -664,16 +677,6 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
    // printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
-}
-
-char *get_broadcastmode(cJSON *json,char *broadcastmode)
-{
-    char servicename[MAX_JSON_FIELD];
-    copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
-    if ( servicename[0] != 0 )
-        broadcastmode = "servicerequest";
-    printf("(%s) get_broadcastmode.(%s) servicename.[%s]\n",cJSON_Print(json),broadcastmode!=0?broadcastmode:"",servicename);
-    return(broadcastmode);
 }
 
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
