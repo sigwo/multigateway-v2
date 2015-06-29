@@ -390,8 +390,12 @@ struct service_provider *find_servicesock(char *servicename,char *endpoint)
             {
                 if ( sps[i] != 0 )
                 {
-                    if ( (endpoint == 0 || strcmp(endpoint,sps[i]->endpoint) != 0) && strcmp(servicename,sps[i]->name) == 0 )
-                        printf("NEED TO ADD ");
+                    if ( strcmp(servicename,sps[i]->name) == 0 )
+                    {
+                        nn_connect(sp->sock,sps[i]->endpoint), printf("SERVICEPROVIDER CONNECT ");
+                        if ( endpoint != 0 && strcmp(sps[i]->endpoint,endpoint) == 0 )
+                            endpoint = 0;
+                    }
                     printf("%24llu %16s %s\n",(long long)sps[i]->servicebits,sps[i]->name,sps[i]->endpoint);
                     free(sps[i]);
                 }
