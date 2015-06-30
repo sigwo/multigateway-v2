@@ -317,7 +317,7 @@ cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,
 
 queue_t busdataQ[2];
 struct busdata_item { struct queueitem DL; bits256 hash; cJSON *json; char *retstr,*key; uint64_t dest64bits,senderbits; uint32_t queuetime,donetime; };
-struct service_provider { UT_hash_handle hh; int32_t sock,numendpoints; char **endpoints; } *Service_providers;
+struct service_provider { UT_hash_handle hh; int32_t sock; } *Service_providers;
 struct serviceprovider { uint64_t servicebits; char name[32],endpoint[64]; };
 
 char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datalen)
@@ -412,13 +412,18 @@ cJSON *serviceprovider_json()
 
 struct service_provider *find_servicesock(char *servicename,char *endpoint)
 {
-    struct service_provider *sp; struct serviceprovider **sps; int32_t i,num,sendtimeout,recvtimeout,retrymillis,maxmillis;
+    struct service_provider *sp,*checksp; struct serviceprovider **sps; int32_t i,num,sendtimeout,recvtimeout,retrymillis,maxmillis;
     HASH_FIND(hh,Service_providers,servicename,strlen(servicename),sp);
     if ( sp == 0 )
     {
         printf("Couldnt find service.(%s)\n",servicename);
         sp = calloc(1,sizeof(*sp));
         HASH_ADD_KEYPTR(hh,Service_providers,servicename,strlen(servicename),sp);
+        HASH_FIND(hh,Service_providers,servicename,strlen(servicename),checksp);
+        if ( checksp != sp )
+        {
+            printf("checksp.%p != %p\n",checksp,sp);
+        }
         sp->sock = nn_socket(AF_SP,NN_REQ);
         sendtimeout = 1000, recvtimeout = 10000, maxmillis = 3000, retrymillis = 100;
         if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
@@ -448,7 +453,7 @@ struct service_provider *find_servicesock(char *servicename,char *endpoint)
             }
             free(sps);
         }
-    }
+    } else printf("sp.%p found servicename.(%s) sock.%d\n",sp,servicename,sp->sock);
     if ( endpoint != 0 )
     {
         fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s)\n",servicename,sp->sock,endpoint);
@@ -482,6 +487,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
         if ( add_service_provider(serviceNXT,servicename,endpoint) == 0 )
             find_servicesock(servicename,endpoint);
         else find_servicesock(servicename,0);
+        find_servicesock(servicename,0);
         nn_syncbus(origjson);
         sprintf(retbuf,"{\"result\":\"serviceprovider added\",\"endpoint\":\"%s\",\"serviceNXT\":\"%s\"}",endpoint,serviceNXT);
         return(clonestr(retbuf));
