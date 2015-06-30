@@ -103,10 +103,10 @@ int main(int argc, char **argv)
     offset = strlen(namebuf) - 4;
     if ( offset > 0 && strcmp(".exe",namebuf + offset) == 0 )
         namebuf[offset] = 0;
+    if ( strcmp(namebuf,"public") == 0 )
+        publicaccess = 1, strcpy(namebuf,"api");
     if ( strcmp(namebuf,"api") != 0 )
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
-    else if ( strcmp(namebuf,"public") == 0 )
-        publicaccess = 1;
     if ( strcmp("nxt",namebuf) == 0 )
     {
 fprintf(stderr,"namebuf.(%s)\n",namebuf);
