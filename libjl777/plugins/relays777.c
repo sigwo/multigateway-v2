@@ -687,7 +687,8 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
                 break;
         if ( (recvlen= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
         {
-            printf("LBRECV.(%s)\n",msg);
+            if ( Debuglevel > 2 )
+                printf("LBRECV.(%s)\n",msg);
             jsonstr = clonestr((char *)msg);
             if ( (json= cJSON_Parse((char *)data)) != 0 )
             {

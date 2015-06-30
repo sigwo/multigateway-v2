@@ -282,7 +282,8 @@ void nn_syncbus(cJSON *json)
         forwardbits = conv_acctstr(forwarder), nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         if ( forwardbits == 0 )//|| forwardbits == nxt64bits )
         {
-            printf("BUS-SEND.(%s) forwarder.%llu vs %llu\n",jsonstr,(long long)forwardbits,(long long)nxt64bits);
+            if ( Debuglevel > 2 )
+                printf("BUS-SEND.(%s) forwarder.%llu vs %llu\n",jsonstr,(long long)forwardbits,(long long)nxt64bits);
             nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
         }
         free(jsonstr);
@@ -323,7 +324,8 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
     for (i=0; i<10; i++)
         if ( (nn_socket_status(sp->sock,1) & NN_POLLOUT) != 0 )
             break;
-    printf("lb_serviceprovider.(%s)\n",data);
+    if ( Debuglevel > 2 )
+        printf("lb_serviceprovider.(%s)\n",data);
     if ( (sendlen= nn_send(sp->sock,data,datalen,0)) == datalen )
     {
         for (i=0; i<10; i++)
@@ -473,7 +475,8 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
             {
                 free(str);
-                printf("LBS.(%s)\n",retstr);
+                if ( Debuglevel > 2 )
+                    printf("LBS.(%s)\n",retstr);
                 return(retstr);
             }
             free(str);
@@ -574,7 +577,8 @@ char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t time
             free_json(json);
         } else printf("couldnt decode.(%s)\n",msg);
     }
-    printf("busdata.(%s) valid.%d -> (%s)\n",msg,valid,retstr!=0?retstr:"");
+    if ( Debuglevel > 2 )
+        printf("busdata.(%s) valid.%d -> (%s)\n",msg,valid,retstr!=0?retstr:"");
     return(retstr);
 }
 
@@ -659,7 +663,8 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
-    printf("nn_busdata_processor.(%s)\n",msg);
+    if ( Debuglevel > 2 )
+        printf("nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
@@ -676,7 +681,8 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    printf("BUSDATA.(%s) (%s)\n",msg,retstr);
+    if ( Debuglevel > 2 )
+        printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
 }
 
@@ -815,7 +821,8 @@ void busdata_poll()
     {
         if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
         {
-            printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
+            if ( Debuglevel > 2 )
+                printf("SERVICESOCK.%d recv.%d (%s)\n",sock,len,jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 if ( (str= nn_busdata_processor((uint8_t *)jsonstr,len)) != 0 )
