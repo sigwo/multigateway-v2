@@ -667,7 +667,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
         printf("NXTaddr.(%s) %llu %s\n",nxtaddr,(long long)nxt64bits,coinstr);
         if ( nxtaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr,0)) != 0 )
         {
-            for (i=0; i<3; i++)
+            for (i=0; i<1; i++)
             {
                 if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,nxtaddr,userNXTpubkey,buyNXT) > 0 )
                 {
@@ -675,7 +675,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
                     if ( (addr= cJSON_str(cJSON_GetObjectItem(item,"address"))) != 0 )
                         break;
                 }
-                msleep(250);
+                //msleep(250);
             }
             fix_msigaddr(coin,nxtaddr,"myacctpubkeys");
         }
