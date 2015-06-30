@@ -826,7 +826,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
 
 void busdata_poll()
 {
-    char *str,*jsonstr; cJSON *json; int32_t len,sock;
+    char tokenized[65536],*str,*jsonstr; cJSON *json; int32_t len,sock;
     sock = RELAYS.servicesock;
     if ( sock >= 0 )
     {
@@ -838,8 +838,9 @@ void busdata_poll()
             {
                 if ( (str= nn_busdata_processor((uint8_t *)jsonstr,len)) != 0 )
                 {
+                    len = construct_tokenized_req(tokenized,str,SUPERNET.SERVICESECRET,0);
                     printf("servicereturn.(%s)\n",str);
-                    nn_send(sock,str,(int32_t)strlen(str)+1,0);
+                    nn_send(sock,tokenized,len,0);
                     free(str);
                 } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
                 free_json(json);
