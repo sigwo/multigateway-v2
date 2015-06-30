@@ -758,7 +758,7 @@ int32_t SuperNET_apireturn(int32_t retsock,int32_t retind,char *apitag,char *ret
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    int32_t sock,len,recvtimeout,timeout,iter; cJSON *json,*retjson; struct pending_cgi *ptr;
+    int32_t sock,len,recvtimeout,timeout; cJSON *json; struct pending_cgi *ptr;
     char apitag[1024],errstr[1024],plugin[1024],method[1024],*jsonstr,*str;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
@@ -795,11 +795,15 @@ void SuperNET_apiloop(void *ipaddr)
                             str = busdata_sync(jsonstr,0);
                             if ( str != 0 )//(str= plugin_method(&ptr->retstr,1,plugin,method,0,0,jsonstr,(int32_t)strlen(jsonstr)+1,timeout)) != 0 )
                             {
-                                if ( (retjson= cJSON_Parse(str)) != 0 )
+                                /*if ( (retjson= cJSON_Parse(str)) != 0 )
                                 {
                                     copy_cJSON(errstr,cJSON_GetObjectItem(retjson,"error"));
                                     free_json(retjson);
-                                }
+                                }*/
+                                free_json(json);
+                                SuperNET_apireturn(sock,ptr->retind,apitag,str);
+                                nn_freemsg(jsonstr);
+                                continue;
                             }
                         }
                         free_json(json);
@@ -812,7 +816,7 @@ void SuperNET_apiloop(void *ipaddr)
                     }
                     nn_freemsg(jsonstr);
                 }
-                for (iter=0; iter<2; iter++)
+                /*for (iter=0; iter<2; iter++)
                 {
                     if ( (ptr= queue_dequeue(&cgiQ[iter],0)) != 0 )
                     {
@@ -823,7 +827,7 @@ void SuperNET_apiloop(void *ipaddr)
                             free(ptr);
                         } else queue_enqueue("cgiQ2",&cgiQ[iter ^ 1],&ptr->DL);
                     }
-                }
+                }*/
             }
         }
         nn_shutdown(sock,0);
