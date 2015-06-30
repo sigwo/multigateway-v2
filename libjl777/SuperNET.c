@@ -712,12 +712,12 @@ void SuperNET_loop(void *ipaddr)
     strs[n++] = language_func((char *)"relay","",0,0,1,(char *)"relay",jsonargs,call_system);
     while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"relay",0,0) == 0 )
         poll_daemons();
-    strs[n++] = language_func((char *)"peers","",0,0,1,(char *)"peers",jsonargs,call_system);
+    /*strs[n++] = language_func((char *)"peers","",0,0,1,(char *)"peers",jsonargs,call_system);
     while ( PEERS.readyflag == 0 || find_daemoninfo(&ind,"peers",0,0) == 0 )
         poll_daemons();
     strs[n++] = language_func((char *)"subscriptions","",0,0,1,(char *)"subscriptions",jsonargs,call_system);
     while ( SUBSCRIPTIONS.readyflag == 0 || find_daemoninfo(&ind,"subscriptions",0,0) == 0 )
-        poll_daemons();
+        poll_daemons();*/
     if ( SUPERNET.disableNXT == 0 && SUPERNET.iamrelay == 0 )
     {
         strs[n++] = language_func((char *)"InstantDEX","",0,0,1,(char *)"InstantDEX",jsonargs,call_system);

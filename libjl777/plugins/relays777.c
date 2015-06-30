@@ -923,7 +923,8 @@ void responseloop(void *_args)
                             retstr2 = nn_allrelays((uint8_t *)str,len,1000,retstr), free(retstr), free(str);
                             retstr = retstr2;
                         }
-                        else*/ retstr = (*args->commandprocessor)(args,(uint8_t *)msg,(int32_t)strlen((char *)msg)+1);
+                        else*/
+                        retstr = (*args->commandprocessor)(args,(uint8_t *)msg,(int32_t)strlen((char *)msg)+1);
                     }
                     free_json(json);
                 } else printf("parse error.(%s)\n",(char *)msg);
