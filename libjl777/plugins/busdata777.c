@@ -454,7 +454,7 @@ struct service_provider *find_servicesock(char *servicename,char *endpoint)
             }
             free(sps);
         }
-    } else printf("sp.%p found servicename.(%s) sock.%d\n",sp,servicename,sp->sock);
+    } // else printf("sp.%p found servicename.(%s) sock.%d\n",sp,servicename,sp->sock);
     if ( endpoint != 0 )
     {
         fprintf(stderr,"create servicename.(%s) sock.%d <-> (%s)\n",servicename,sp->sock,endpoint);
@@ -478,7 +478,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     copy_cJSON(submethod,cJSON_GetObjectItem(json,"submethod"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
-    printf("addpending.(%s %s).%s\n",destplugin,servicename,submethod);
+    //printf("addpending.(%s %s).%s\n",destplugin,servicename,submethod);
     if ( strcmp(submethod,"serviceprovider") == 0 )
     {
         copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
@@ -661,7 +661,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
             else if ( strcmp(broadcaststr,"allnodes") == 0 )
                 nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
             free(str);
-        } else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
+        } // else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
         free_json(dupjson);
     }
     if ( (argjson= cJSON_Parse(databuf)) != 0 )
