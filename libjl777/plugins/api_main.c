@@ -37,11 +37,10 @@ void process_json(cJSON *json,int32_t publicaccess)
         cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
     if ( cJSON_GetObjectItem(json,"apitag") == 0 )
         cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
-publicaccess = 1;
     if ( publicaccess != 0 )
         cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("publicaccess"));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-    fprintf(stderr,"publicaccess.%d jsonstr.(%s)\r\n",publicaccess,jsonstr);
+    //fprintf(stderr,"publicaccess.%d jsonstr.(%s)\r\n",publicaccess,jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
     if ( json != 0 )
     {
@@ -106,6 +105,8 @@ int main(int argc, char **argv)
         namebuf[offset] = 0;
     if ( strcmp(namebuf,"api") != 0 )
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
+    else if ( strcmp(namebuf,"public") != 0 )
+        publicaccess = 1;
     if ( strcmp("nxt",namebuf) == 0 )
     {
 fprintf(stderr,"namebuf.(%s)\n",namebuf);
@@ -121,8 +122,8 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
         url = "https://127.0.0.1", portflag = 1;
     if ( url != 0 )
          postbuf[0] = 0, delim = "";
-    if ( (value= CGI_lookup_all(CGI_get_all(0),"HTTP_ORIGIN")) != 0 )
-        printf("HTTP_ORIGIN: %s\n",value);
+    //if ( (value= CGI_lookup_all(CGI_get_all(0),"HTTP_ORIGIN")) != 0 )
+    //    printf("HTTP_ORIGIN: %s\n",value);
     for (iter=0; iter<3; iter++)
     {
         if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : ((iter==1) ? CGI_get_query(0) : CGI_get_cookie(0)))) != 0 )
@@ -132,7 +133,7 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
                 value = CGI_lookup_all(varlist,0);
                 for (i=0; value[i]!=0; i++)
                 {
-                    fprintf(stderr,"iter.%d %s [%d] = %s\r\n",iter,name,i,value[i]);
+                    //fprintf(stderr,"iter.%d %s [%d] = %s\r\n",iter,name,i,value[i]);
                     if ( i == 0 )
                     {
                         if ( url == 0 )
