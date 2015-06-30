@@ -5,7 +5,7 @@
 #include <process.h>
 #include <tlhelp32.h>
 
-int32_t OS_getppid() { return(GetCurrentProcessId()); }
+int32_t OS_getpid() { return(GetCurrentProcessId()); }
 
 int32_t OS_getppid()
 {
