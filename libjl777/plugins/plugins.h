@@ -333,16 +333,16 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
         int32_t db777_main(int32_t,char *args[]);
         int32_t SuperNET_main(int32_t,char *args[]);
         int32_t coins_main(int32_t,char *args[]);
-        int32_t peers_main(int32_t,char *args[]);
-        int32_t subscriptions_main(int32_t,char *args[]);
+        //int32_t peers_main(int32_t,char *args[]);
+        //int32_t subscriptions_main(int32_t,char *args[]);
         int32_t relay_main(int32_t,char *args[]);
         int32_t InstantDEX_main(int32_t,char *args[]);
         if ( strcmp(dp->name,"coins") == 0 ) return(coins_main(n,args));
         else if ( strcmp(dp->name,"InstantDEX") == 0 ) return(InstantDEX_main(n,args));
         else if ( strcmp(dp->name,"db777") == 0 ) return(db777_main(n,args));
         else if ( strcmp(dp->name,"relay") == 0 ) return(relay_main(n,args));
-        else if ( strcmp(dp->name,"peers") == 0 ) return(peers_main(n,args));
-        else if ( strcmp(dp->name,"subscriptions") == 0 ) return(subscriptions_main(n,args));
+        //else if ( strcmp(dp->name,"peers") == 0 ) return(peers_main(n,args));
+        //else if ( strcmp(dp->name,"subscriptions") == 0 ) return(subscriptions_main(n,args));
         else if ( strcmp(dp->name,"ramchain") == 0 ) return(ramchain_main(n,args));
         else if ( strcmp(dp->name,"MGW") == 0 ) return(MGW_main(n,args));
         else if ( strcmp(dp->name,"SuperNET") == 0 ) return(SuperNET_main(n,args));
@@ -353,7 +353,7 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
 
 int32_t is_bundled_plugin(char *plugin)
 {
-    if ( strcmp(plugin,"InstantDEX") == 0 || strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"db777") == 0 || strcmp(plugin,"coins") == 0  || strcmp(plugin,"ramchain") == 0  || strcmp(plugin,"MGW") == 0 || strcmp(plugin,"peers") == 0 || strcmp(plugin,"relay") == 0 || strcmp(plugin,"subscriptions") == 0 )
+    if ( strcmp(plugin,"InstantDEX") == 0 || strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"db777") == 0 || strcmp(plugin,"coins") == 0  || strcmp(plugin,"ramchain") == 0  || strcmp(plugin,"MGW") == 0 || strcmp(plugin,"relay") == 0 )//|| strcmp(plugin,"peers") == 0 || strcmp(plugin,"subscriptions") == 0 )
         return(1);
     else return(0);
 }
