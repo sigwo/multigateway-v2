@@ -501,7 +501,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
             {
                 free(str);
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("LBS.(%s)\n",retstr);
                 return(retstr);
             }
