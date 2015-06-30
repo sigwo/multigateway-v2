@@ -792,7 +792,7 @@ void SuperNET_apiloop(void *ipaddr)
                             fprintf(stderr,"error connecting to (%s)\n",apitag);
                         else
                         {
-                            if ( 0 )
+                            if ( 1 )
                             {
                                 str = busdata_sync(jsonstr,broadcaststr);
                                 if ( str != 0 )
