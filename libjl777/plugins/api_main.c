@@ -37,6 +37,7 @@ void process_json(cJSON *json,int32_t publicaccess)
         cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
     if ( cJSON_GetObjectItem(json,"apitag") == 0 )
         cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
+publicaccess = 1;
     if ( publicaccess != 0 )
         cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("publicaccess"));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
