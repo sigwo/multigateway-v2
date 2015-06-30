@@ -707,7 +707,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
 }
