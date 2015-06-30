@@ -1150,9 +1150,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         {
                             if ( ipbits != 0 )
                             {
-                                update_serverbits(&RELAYS.peer,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_SURVEYOR),NN_SURVEYOR);
-                                update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB);
-                                nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                                //update_serverbits(&RELAYS.peer,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_SURVEYOR),NN_SURVEYOR);
+                                //update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB);
+                                //nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
                             }
                         }
                         sprintf(retbuf,"{\"result\":\"added ipaddr\"}");
