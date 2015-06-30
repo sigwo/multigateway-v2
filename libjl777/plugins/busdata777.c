@@ -384,6 +384,30 @@ int32_t add_service_provider(char *serviceNXT,char *servicename,char *endpoint)
     return(0);
 }
 
+cJSON *serviceprovider_json()
+{
+    struct serviceprovider **sps; int32_t i,num; cJSON *json,*item,*array; char numstr[64];
+    json = cJSON_CreateObject();
+    array = cJSON_CreateArray();
+    if ( (sps= (struct serviceprovider **)db777_copy_all(&num,DB_services,"key",0)) != 0 )
+    {
+        for (i=0; i<num; i++)
+        {
+            if ( sps[i] != 0 )
+            {
+                item = cJSON_CreateObject();
+                cJSON_AddItemToObject(json,sps[i]->name,cJSON_CreateString(sps[i]->endpoint));
+                sprintf(numstr,"%llu",(long long)sps[i]->servicebits), cJSON_AddItemToObject(json,"serviceNXT",cJSON_CreateString(numstr));
+                free(sps[i]);
+                cJSON_AddItemToArray(array,item);
+            }
+        }
+        free(sps);
+    }
+    cJSON_AddItemToObject(json,"services",array);
+    return(json);
+}
+
 struct service_provider *find_servicesock(char *servicename,char *endpoint)
 {
     struct service_provider *sp; struct serviceprovider **sps; int32_t i,num,sendtimeout,recvtimeout,retrymillis,maxmillis;

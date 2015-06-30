@@ -266,6 +266,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
 uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce);
 int32_t nonce_leverage(char *broadcaststr);
 char *get_broadcastmode(cJSON *json,char *broadcastmode);
+cJSON *serviceprovider_json();
 
 #define MAXTIMEDIFF 10
 
