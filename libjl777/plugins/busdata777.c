@@ -501,7 +501,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
             {
                 free(str);
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     printf("LBS.(%s)\n",retstr);
                 return(retstr);
             }
@@ -689,7 +689,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
@@ -707,7 +707,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
 }
