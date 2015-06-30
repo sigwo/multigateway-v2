@@ -396,8 +396,8 @@ cJSON *serviceprovider_json()
             if ( sps[i] != 0 )
             {
                 item = cJSON_CreateObject();
-                cJSON_AddItemToObject(json,sps[i]->name,cJSON_CreateString(sps[i]->endpoint));
-                sprintf(numstr,"%llu",(long long)sps[i]->servicebits), cJSON_AddItemToObject(json,"serviceNXT",cJSON_CreateString(numstr));
+                cJSON_AddItemToObject(item,sps[i]->name,cJSON_CreateString(sps[i]->endpoint));
+                sprintf(numstr,"%llu",(long long)sps[i]->servicebits), cJSON_AddItemToObject(item,"serviceNXT",cJSON_CreateString(numstr));
                 free(sps[i]);
                 cJSON_AddItemToArray(array,item);
             }
