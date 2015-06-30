@@ -761,7 +761,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
             {
                 if ( strcmp(broadcastmode,"publicaccess") == 0 )
                 {
-                    retstr = nn_busdata_processor((uint8_t *)jsonstr,(int32_t)strlen(jsonstr)+1);
+                    retstr = nn_busdata_processor((uint8_t *)data,datalen);
                     if ( data != jsonstr )
                         free(data);
                     free_json(json);
