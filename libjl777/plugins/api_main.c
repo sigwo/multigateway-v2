@@ -21,7 +21,7 @@ char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *
 #define issue_POST(url,cmdstr) bitcoind_RPC(0,"curl",url,0,0,cmdstr)
 char *os_compatible_path(char *str);
 
-void process_json(cJSON *json)
+void process_json(cJSON *json,int32_t publicaccess)
 {
     int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
     char endpoint[128],*resultstr,*jsonstr;
@@ -38,6 +38,8 @@ void process_json(cJSON *json)
         cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
     if ( cJSON_GetObjectItem(json,"apitag") == 0 )
         cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
+    if ( publicaccess != 0 )
+        cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("publicaccess"));
     //cJSON_AddItemToObject(json,"timeout",cJSON_CreateNumber(recvtimeout));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
@@ -91,7 +93,7 @@ fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
 
 int main(int argc, char **argv)
 {
-    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,portflag = 0; cJSON *json; long offset;
+    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,publicaccess = 0,portflag = 0; cJSON *json; long offset;
     char urlbuf[512],namebuf[512],postbuf[65536],*retstr,*delim,*url = 0;
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
     json = cJSON_CreateObject();
@@ -119,16 +121,16 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
         url = "https://127.0.0.1", portflag = 1;
     if ( url != 0 )
          postbuf[0] = 0, delim = "";
-    for (iter=0; iter<2; iter++)
+    for (iter=0; iter<3; iter++)
     {
-        if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : CGI_get_query(0))) != 0 )
+        if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : ((iter==1) ? CGI_get_query(0) : CGI_get_cookie(0)))) != 0 )
         {
             for (name=CGI_first_name(varlist); name!=0; name=CGI_next_name(varlist))
             {
                 value = CGI_lookup_all(varlist,0);
                 for (i=0; value[i]!=0; i++)
                 {
-                    //fprintf(stderr,"%s [%d] = %s\r\n", name, i, value[i]);
+                    fprintf(stderr,"iter.%d %s [%d] = %s\r\n",iter,name,i,value[i]);
                     if ( i == 0 )
                     {
                         if ( url == 0 )
@@ -163,7 +165,7 @@ fprintf(stderr,"url.(%s) (%s)\n",url,postbuf);
     }
     else
     {
-        process_json(json);
+        process_json(json,publicaccess);
     }
     free_json(json);
     return 0;

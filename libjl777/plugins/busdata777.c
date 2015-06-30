@@ -751,12 +751,23 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 
 char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
-    int32_t datalen,sendlen = 0; char *data,*retstr;
+    int32_t datalen,sendlen = 0; char *data,*retstr; cJSON *json;
     //printf("busdata_sync.(%s) (%s)\n",jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
         {
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                if ( strcmp(broadcastmode,"publicaccess") == 0 )
+                {
+                    retstr = nn_busdata_processor((uint8_t *)jsonstr,(int32_t)strlen(jsonstr)+1);
+                    if ( data != jsonstr )
+                        free(data);
+                    free_json(json);
+                    return(retstr);
+                } else free_json(json);
+            }
             if ( RELAYS.bus.sock >= 0 )
             {
                 if( (sendlen= nn_send(RELAYS.bus.sock,data,datalen,0)) != datalen )
@@ -765,7 +776,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                         printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
                     free(data);
                     return(clonestr("{\"error\":\"couldnt send to bus\"}"));
-                } else printf("PUB.(%s)\n",data);
+                } else printf("PUB.(%s) sendlen.%d datalen.%d\n",data,sendlen,datalen);
             }
             if ( data != jsonstr )
                 free(data);

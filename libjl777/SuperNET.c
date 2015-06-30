@@ -759,7 +759,7 @@ int32_t SuperNET_apireturn(int32_t retsock,int32_t retind,char *apitag,char *ret
 void SuperNET_apiloop(void *ipaddr)
 {
     int32_t sock,len,recvtimeout,timeout; cJSON *json; struct pending_cgi *ptr;
-    char apitag[1024],errstr[1024],plugin[1024],method[1024],*jsonstr,*str;
+    char apitag[1024],errstr[1024],plugin[1024],method[1024],*jsonstr,*str,*broadcaststr;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -772,6 +772,7 @@ void SuperNET_apiloop(void *ipaddr)
             fprintf(stderr,"BIND.(%s)\n",SUPERNET_APIENDPOINT);
             while ( 1 )
             {
+                broadcaststr = 0;
                 if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
                 {
                     errstr[0] = 0; str = 0;
@@ -785,14 +786,15 @@ void SuperNET_apiloop(void *ipaddr)
                             copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
                         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
                         timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),SUPERNET.PLUGINTIMEOUT);
-                        fprintf(stderr,"API RECV.(%s)\n",jsonstr);
+                        broadcaststr = cJSON_str(cJSON_GetObjectItem(json,"broadcast"));
+                        fprintf(stderr,"(%s) API RECV.(%s)\n",broadcaststr!=0?broadcaststr:"",jsonstr);
                         if ( (ptr->retind= nn_connect(sock,apitag)) < 0 )
                             fprintf(stderr,"error connecting to (%s)\n",apitag);
                         else
                         {
                             //retstr = call_SuperNET_JSON(jsonstr);
                             //char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
-                            str = busdata_sync(jsonstr,0);
+                            str = busdata_sync(jsonstr,broadcaststr);
                             if ( str != 0 )//(str= plugin_method(&ptr->retstr,1,plugin,method,0,0,jsonstr,(int32_t)strlen(jsonstr)+1,timeout)) != 0 )
                             {
                                 /*if ( (retjson= cJSON_Parse(str)) != 0 )
