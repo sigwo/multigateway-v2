@@ -26,7 +26,6 @@ void process_json(cJSON *json,int32_t publicaccess)
     int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
     char endpoint[128],*resultstr,*jsonstr;
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-    //fprintf(stderr,"jsonstr.(%s)\r\n",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
     apitag = _crc32(0,jsonstr,len);
     sprintf(endpoint,"ipc://api.%u",apitag);
@@ -40,8 +39,8 @@ void process_json(cJSON *json,int32_t publicaccess)
         cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
     if ( publicaccess != 0 )
         cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("publicaccess"));
-    //cJSON_AddItemToObject(json,"timeout",cJSON_CreateNumber(recvtimeout));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+    fprintf(stderr,"publicaccess.%d jsonstr.(%s)\r\n",publicaccess,jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
     if ( json != 0 )
     {
