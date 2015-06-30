@@ -670,10 +670,8 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"method"));
         copy_cJSON(servicename,cJSON_GetObjectItem(argjson,"servicename"));
-        //printf("deref (%s %s).%s\n",plugin,method,buf);
-        // busdata.({"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"serviceprovider","servicename":"echo","endpoint":"tcp://89.248.160.237:7775","tag":"13378853124063105007"}) valid.1
-        // call (echodemo echo) ({"method":"echo","plugin":"echodemo","servicename":"echo","echostr":"remote echo","tag":"15741577899766654"})
-        printf("relay.%d buf.(%s) method.(%s) servicename.(%s)\n",SUPERNET.iamrelay,buf,method,servicename);
+        if ( Debuglevel > 2 )
+            printf("relay.%d buf.(%s) method.(%s) servicename.(%s)\n",SUPERNET.iamrelay,buf,method,servicename);
         if ( SUPERNET.iamrelay != 0 && ((strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0) || servicename[0] != 0) )
         {
             //printf("bypass deref\n");
