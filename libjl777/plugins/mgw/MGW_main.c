@@ -647,7 +647,7 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
     int32_t i,buyNXT; uint64_t nxt64bits; cJSON *item = 0; struct coin777 *coin;
-    char nxtaddr[64],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024],*str;
+    char nxtaddr[64],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024],*str,*addr;
     if ( SUPERNET.gatewayid >= 0 )
     {
         copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
@@ -665,9 +665,13 @@ char *devMGW_command(char *jsonstr,cJSON *json)
         {
             for (i=0; i<3; i++)
             {
-                ensure_NXT_msigaddr(msigjsonstr,coinstr,nxtaddr,userNXTpubkey,buyNXT);
-                if ( i == SUPERNET.gatewayid )
+                if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,nxtaddr,userNXTpubkey,buyNXT) > 0 )
+                {
                     item = cJSON_Parse(msigjsonstr);
+                    if ( (addr= cJSON_str(cJSON_GetObjectItem(item,"address"))) != 0 )
+                        break;
+                }
+                msleep(250);
             }
             fix_msigaddr(coin,nxtaddr,"myacctpubkeys");
         }
