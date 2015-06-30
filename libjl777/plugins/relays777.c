@@ -909,7 +909,7 @@ void responseloop(void *_args)
                         retstr = nn_busdata_processor((uint8_t *)msg,len);
                         //printf("CALL BUSDATA PROCESSOR.(%s) -> (%s)\n",msg,retstr);
                     }
-                    else
+                    else if ( SUPERNET.iamrelay != 0 )
                     {
                         //if ( Debuglevel > 1 )
                         printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
