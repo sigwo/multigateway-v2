@@ -581,6 +581,8 @@ int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { retur
 #include "plugins/plugins.h"
 #undef DEFINES_ONLY
 
+struct pending_cgi { struct queueitem DL; char apitag[24],*retstr,*jsonstr; cJSON *json; int32_t sock,retind; };
+
 char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json)
 {
     char ipaddr[MAX_JSON_FIELD],path[MAX_JSON_FIELD],*str,*retstr;
@@ -608,12 +610,78 @@ char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json)
 
 int32_t got_newpeer(const char *ip_port) { if ( Debuglevel > 2 ) printf("got_newpeer.(%s)\n",ip_port); return(0); }
 
+void *issue_cgicall(void *_ptr)
+{
+    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
+    copy_cJSON(apitag,cJSON_GetObjectItem(ptr->json,"apitag"));
+    safecopy(ptr->apitag,apitag,sizeof(ptr->apitag));
+    copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"agent"));
+    if ( plugin[0] == 0 )
+        copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"plugin"));
+    copy_cJSON(method,cJSON_GetObjectItem(ptr->json,"method"));
+    timeout = get_API_int(cJSON_GetObjectItem(ptr->json,"timeout"),SUPERNET.PLUGINTIMEOUT);
+    broadcaststr = cJSON_str(cJSON_GetObjectItem(ptr->json,"broadcast"));
+    fprintf(stderr,"(%s) API RECV.(%s)\n",broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
+    if ( (ptr->retind= nn_connect(ptr->sock,apitag)) < 0 )
+        fprintf(stderr,"error connecting to (%s)\n",apitag);
+    else
+    {
+        if ( (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
+            str = busdata_sync(ptr->jsonstr,broadcaststr);
+        else
+        {
+            str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
+            if ( str != 0 )
+                printf("retstr.(%s)\n",str), free(str);
+            while ( ptr->retstr == 0 )
+                msleep(10);
+            str = ptr->retstr;
+        }
+        if ( str != 0 )
+        {
+            //printf("mainstr.(%s)\n",str);
+            if ( ptr->sock >= 0 )
+            {
+                retlen = (int32_t)strlen(str) + 1;
+                if ( (checklen= nn_send(ptr->sock,str,retlen,0)) != retlen )
+                    fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,retlen,apitag);
+                free(str), str = 0;
+            }
+        }
+    }
+    nn_shutdown(ptr->sock,ptr->retind);
+    free_json(ptr->json);
+    nn_freemsg(ptr->jsonstr);
+    free(ptr);
+    return(str);
+}
+
+char *process_nn_message(int32_t sock,char *jsonstr)
+{
+    cJSON *json; struct pending_cgi *ptr; char *retstr = 0;
+    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+    {
+        ptr = calloc(1,sizeof(*ptr));
+        ptr->sock = sock;
+        ptr->json = json;
+        ptr->jsonstr = jsonstr;
+        if ( sock >= 0 )
+            portable_thread_create((void *)issue_cgicall,ptr);
+        else
+        {
+            retstr = issue_cgicall(ptr);
+            nn_freemsg(jsonstr);
+        }
+    } else nn_freemsg(jsonstr);
+    return(retstr);
+}
+
 char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 {
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
     char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],request[MAX_JSON_FIELD],*bstr,*retstr;
     uint64_t daemonid,instanceid,tag;
-    int32_t timeout,broadcastflag = 0;
+    int32_t broadcastflag = 0;
     cJSON *json;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
@@ -640,8 +708,9 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
             if ( plugin[0] == 0 && set_first_plugin(plugin,method) < 0 )
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
-        timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),SUPERNET.PLUGINTIMEOUT);
-        return(process_user_json(plugin,method,jsonstr,broadcastflag,timeout));
+        return(process_nn_message(-1,jsonstr));
+        //timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),SUPERNET.PLUGINTIMEOUT);
+        //return(process_user_json(plugin,method,jsonstr,broadcastflag,timeout));
         //return(plugin_method(0,previpaddr==0,plugin,method,daemonid,instanceid,jsonstr,0,timeout));
     } else return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }
@@ -738,7 +807,6 @@ void SuperNET_loop(void *ipaddr)
 }
 
 #define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
-struct pending_cgi { struct queueitem DL; char apitag[24],*retstr,*jsonstr; cJSON *json; int32_t sock,retind; };
 /*queue_t cgiQ[2];
 
 int32_t SuperNET_apireturn(int32_t retsock,int32_t retind,char *apitag,char *retstr)
@@ -756,47 +824,6 @@ int32_t SuperNET_apireturn(int32_t retsock,int32_t retind,char *apitag,char *ret
     return(-1);
 }*/
 
-void *issue_cgicall(void *_ptr)
-{
-    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
-    copy_cJSON(apitag,cJSON_GetObjectItem(ptr->json,"apitag"));
-    safecopy(ptr->apitag,apitag,sizeof(ptr->apitag));
-    copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"agent"));
-    if ( plugin[0] == 0 )
-        copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"plugin"));
-    copy_cJSON(method,cJSON_GetObjectItem(ptr->json,"method"));
-    timeout = get_API_int(cJSON_GetObjectItem(ptr->json,"timeout"),SUPERNET.PLUGINTIMEOUT);
-    broadcaststr = cJSON_str(cJSON_GetObjectItem(ptr->json,"broadcast"));
-    fprintf(stderr,"(%s) API RECV.(%s)\n",broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
-    if ( (ptr->retind= nn_connect(ptr->sock,apitag)) < 0 )
-        fprintf(stderr,"error connecting to (%s)\n",apitag);
-    else
-    {
-        if ( (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
-            str = busdata_sync(ptr->jsonstr,broadcaststr);
-        else
-        {
-            str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
-            if ( str != 0 )
-                printf("retstr.(%s)\n",str), free(str);
-            while ( ptr->retstr == 0 )
-                msleep(10);
-            str = ptr->retstr;
-        }
-        if ( str != 0 )
-        {
-            //printf("mainstr.(%s)\n",str);
-            retlen = (int32_t)strlen(str) + 1;
-            if ( (checklen= nn_send(ptr->sock,str,retlen,0)) != retlen )
-                fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,retlen,apitag);
-        }
-    }
-    nn_shutdown(ptr->sock,ptr->retind);
-    free_json(ptr->json);
-    nn_freemsg(ptr->jsonstr);
-    free(ptr);
-    return(0);
-}
 
 void SuperNET_apiloop(void *ipaddr)
 {
@@ -814,16 +841,7 @@ void SuperNET_apiloop(void *ipaddr)
             while ( 1 )
             {
                 if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
-                {
-                    if ( (json= cJSON_Parse(jsonstr)) != 0 )
-                    {
-                        ptr = calloc(1,sizeof(*ptr));
-                        ptr->sock = sock;
-                        ptr->json = json;
-                        ptr->jsonstr = jsonstr;
-                        portable_thread_create((void *)issue_cgicall,ptr);
-                    } else nn_freemsg(jsonstr);
-                }
+                    process_nn_message(sock,jsonstr);
             }
         }
         nn_shutdown(sock,0);
