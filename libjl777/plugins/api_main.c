@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     if ( strcmp(namebuf,"public") == 0 )
         publicaccess = 1, strcpy(namebuf,"api");
     if ( strcmp(namebuf,"api") != 0 )
-        cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
+        cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(namebuf));
     if ( strcmp("nxt",namebuf) == 0 )
     {
 fprintf(stderr,"namebuf.(%s)\n",namebuf);
