@@ -774,7 +774,15 @@ void *issue_cgicall(void *_ptr)
     {
         if ( broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0 )
             str = busdata_sync(ptr->jsonstr,broadcaststr);
-        else str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
+        else
+        {
+            str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
+            if ( str != 0 )
+                printf("retstr.(%s)\n",str), free(str);
+            while ( ptr->retstr == 0 )
+                msleep(10);
+            str = ptr->retstr;
+        }
         if ( str != 0 )
         {
             printf("mainstr.(%s)\n",str);
