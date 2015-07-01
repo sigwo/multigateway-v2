@@ -669,6 +669,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
             else if ( strcmp(broadcaststr,"allnodes") == 0 )
             {
                 printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
+                nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
                 nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
             }
             free(str);
@@ -871,15 +872,22 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         }
         else
         {
-            printf("LBsend.(%s)\n",data);
-            if ( broadcastmode == 0 )
-                retstr = nn_busdata_processor((uint8_t *)data,datalen);
-            else retstr = nn_loadbalanced((uint8_t *)data,datalen);
-            if ( 0 && retstr != 0 )
-                printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
-            if ( data != jsonstr )
-                free(data);
-            return(retstr);
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                if ( broadcastmode == 0 || cJSON_str(cJSON_GetObjectItem(json,"servicename")) != 0 )
+                    retstr = nn_busdata_processor((uint8_t *)data,datalen);
+                else
+                {
+                    printf("LBsend.(%s)\n",data);
+                    retstr = nn_loadbalanced((uint8_t *)data,datalen);
+                }
+                if ( 0 && retstr != 0 )
+                    printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
+                if ( data != jsonstr )
+                    free(data);
+                free_json(json);
+                return(retstr);
+            }
         }
     }
     return(clonestr("{\"error\":\"error creating busdata\"}"));

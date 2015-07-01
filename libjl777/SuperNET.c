@@ -772,7 +772,7 @@ void *issue_cgicall(void *_ptr)
         fprintf(stderr,"error connecting to (%s)\n",apitag);
     else
     {
-        if ( broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0 )
+        if ( (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
             str = busdata_sync(ptr->jsonstr,broadcaststr);
         else
         {
