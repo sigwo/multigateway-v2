@@ -872,7 +872,9 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         else
         {
             printf("LBsend.(%s)\n",data);
-            retstr = nn_loadbalanced((uint8_t *)data,datalen);
+            if ( broadcastmode == 0 )
+                retstr = nn_busdata_processor((uint8_t *)data,datalen);
+            else retstr = nn_loadbalanced((uint8_t *)data,datalen);
             if ( 0 && retstr != 0 )
                 printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
             if ( data != jsonstr )
