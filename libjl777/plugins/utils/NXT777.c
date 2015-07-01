@@ -190,10 +190,11 @@ uint64_t min_asset_amount(uint64_t assetid);
 #undef DEFINES_ONLY
 #endif
 #include "tweetnacl.c"
-#if __i686__ || __i386__
-#include "curve25519-donna.c"
-#else
+//__i686__ || __i386__
+#if __amd64__
 #include "curve25519-donna-c64.c"
+#else
+#include "curve25519-donna.c"
 #endif
 
 bits256 curve25519(bits256 mysecret,bits256 theirpublic)
