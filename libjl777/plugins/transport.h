@@ -221,7 +221,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
         free_json(json);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
-printf("after find_daemoninfo send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
+//printf("after find_daemoninfo send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
             if ( len > 0 )
             {
                 if ( Debuglevel > 2 )
