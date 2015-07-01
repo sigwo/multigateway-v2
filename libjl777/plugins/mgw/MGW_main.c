@@ -2065,7 +2065,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             free(retstr);
         }
     }
-    return((int32_t)strlen(retbuf));
+    return((int32_t)strlen(retbuf) + retbuf[0] != 0);
 }
 
 int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)

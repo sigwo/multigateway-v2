@@ -663,7 +663,10 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
             str = cJSON_Print(dupjson), _stripwhite(str,' ');
             printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
             if ( strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0 )
+            {
+                printf("allrelays\n");
                 nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
+            }
             else if ( strcmp(broadcaststr,"allnodes") == 0 )
                 nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
             free(str);
@@ -726,8 +729,9 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
-    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
-    bits256 hash; uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,diff,datalen = 0;
+    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
+    char *str,*str2,*tokbuf = 0,*tmp;
+    bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,diff,datalen = 0;
     *datalenp = 0;
     //printf("create_busdata\n");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -740,13 +744,13 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         }
         broadcastmode = get_broadcastmode(json,broadcastmode);
         if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
-            diff = 60;
-        else diff = 0;
+            diff = 60, port = SUPERNET.port + nn_portoffset(NN_REP);
+        else diff = 0, port = SUPERNET.serviceport;
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
-            sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.serviceport);
+            sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,port);
             cJSON_ReplaceItemInObject(json,"endpoint",cJSON_CreateString(endpoint));
             if ( SUPERNET.SERVICESECRET[0] != 0 && issue_generateToken(servicetoken,endpoint,SUPERNET.SERVICESECRET) == 0 )
                 cJSON_AddItemToObject(json,"servicetoken",cJSON_CreateString(servicetoken));
