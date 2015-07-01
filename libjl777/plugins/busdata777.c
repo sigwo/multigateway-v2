@@ -515,7 +515,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             if ( (retstr= lb_serviceprovider(sp,(uint8_t *)str,(int32_t)strlen(str)+1)) != 0 )
             {
                 free(str);
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("LBS.(%s)\n",retstr);
                 return(retstr);
             }
@@ -617,7 +617,7 @@ char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t time
             free_json(json);
         } else printf("couldnt decode.(%s)\n",msg);
     }
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("busdata.(%s) valid.%d -> (%s)\n",msg,valid,retstr!=0?retstr:"");
     return(retstr);
 }
@@ -725,7 +725,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
 }

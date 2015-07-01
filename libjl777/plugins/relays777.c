@@ -768,7 +768,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     //char *nn_allrelays_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     //char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
-//printf("LB PROCESSOR.(%s)\n",msg);
+printf("LB PROCESSOR.(%s)\n",msg);
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
     {
         //printf("NEWLB.(%s)\n",buf);
@@ -906,7 +906,14 @@ void responseloop(void *_args)
                     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
                     {
                         retstr = nn_busdata_processor((uint8_t *)msg,len);
-                        //printf("CALL BUSDATA PROCESSOR.(%s) -> (%s)\n",msg,retstr);
+                        printf("sock.%d CALL BUSDATA PROCESSOR.(%s) -> (%s)\n",args->sock,msg,retstr);
+                        if ( args->sock >= 0 )
+                        {
+                            nn_send(args->sock,retstr,(int32_t)strlen(retstr)+1,0);
+                            free_json(json);
+                            nn_freemsg(msg);
+                        }
+                        continue;
                     }
                     else //if ( SUPERNET.iamrelay != 0 )
                     {
