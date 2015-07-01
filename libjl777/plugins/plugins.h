@@ -507,7 +507,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     cJSON *json,*argjson;
     struct relayargs *args = 0;
     int32_t ind,async;
-printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,len,retstrp);
+//printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,len,retstrp);
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
@@ -562,7 +562,7 @@ printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,l
         }
         else
         {
-fprintf(stderr,"send_to_daemon.(%s).%d\n",origargstr,len);
+fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
             if ( (tag= send_to_daemon(args,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
             {
 fprintf(stderr,"null tag from send_to_daemon\n");
