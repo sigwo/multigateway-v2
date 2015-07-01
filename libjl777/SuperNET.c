@@ -777,6 +777,7 @@ void *issue_cgicall(void *_ptr)
         else str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
         if ( str != 0 )
         {
+            printf("mainstr.(%s)\n",str);
             retlen = (int32_t)strlen(str) + 1;
             if ( (checklen= nn_send(ptr->sock,str,retlen,0)) != retlen )
                 fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,retlen,apitag);
