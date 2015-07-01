@@ -1136,30 +1136,30 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     free_json(retjson);
                 }
             }
+            else if ( strcmp(methodstr,"join") == 0  )
+            {
+                sprintf(retbuf,"{\"result\":\"join command\"}");
+                /*if ( SUPERNET.iamrelay != 0 )
+                {
+                    if ( add_relay_connections(SUPERNET.myipaddr,1) > 0 )
+                    {
+                        //if ( ipbits != 0 )
+                        {
+                            //update_serverbits(&RELAYS.peer,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_SURVEYOR),NN_SURVEYOR);
+                            //update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB);
+                            //nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+                        }
+                    }
+                    sprintf(retbuf,"{\"result\":\"added ipaddr\"}");
+                } else sprintf(retbuf,"{\"result\":\"didnt add ipaddr, probably already there\"}");
+                //if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
+                //    update_serverbits(&RELAYS.bus,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);*/
+            }
             else if ( (myipaddr= cJSON_str(cJSON_GetObjectItem(json,"myipaddr"))) != 0 && is_ipaddr(myipaddr) != 0 )
             {
                 if ( strcmp(methodstr,"direct") == 0 )
                 {
                     retstr = nn_directconnect(cJSON_str(cJSON_GetObjectItem(json,"mytransport")),myipaddr,get_API_int(cJSON_GetObjectItem(json,"myport"),0),cJSON_str(cJSON_GetObjectItem(json,"myhandler")));
-                }
-                else if ( strcmp(methodstr,"join") == 0  )
-                {
-                    ipbits = (uint32_t)calc_ipbits(myipaddr);
-                    if ( add_relay_connections(myipaddr,1) > 0 )
-                    {
-                        if ( SUPERNET.iamrelay != 0 )
-                        {
-                            if ( ipbits != 0 )
-                            {
-                                //update_serverbits(&RELAYS.peer,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_SURVEYOR),NN_SURVEYOR);
-                                //update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB);
-                                //nn_send(RELAYS.bus.sock,jsonstr,(int32_t)strlen(jsonstr)+1,0);
-                            }
-                        }
-                        sprintf(retbuf,"{\"result\":\"added ipaddr\"}");
-                    } else sprintf(retbuf,"{\"result\":\"didnt add ipaddr, probably already there\"}");
-                    if ( (hostname= cJSON_str(cJSON_GetObjectItem(json,"iamrelay"))) != 0 )
-                        update_serverbits(&RELAYS.bus,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
                 }
             }
         }
