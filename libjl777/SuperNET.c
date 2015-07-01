@@ -621,16 +621,21 @@ void *issue_cgicall(void *_ptr)
     copy_cJSON(method,cJSON_GetObjectItem(ptr->json,"method"));
     timeout = get_API_int(cJSON_GetObjectItem(ptr->json,"timeout"),SUPERNET.PLUGINTIMEOUT);
     broadcaststr = cJSON_str(cJSON_GetObjectItem(ptr->json,"broadcast"));
-    fprintf(stderr,"(%s) API RECV.(%s)\n",broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
+    fprintf(stderr,"sock.%d (%s) API RECV.(%s)\n",ptr->sock,broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
     if ( ptr->sock >= 0 && (ptr->retind= nn_connect(ptr->sock,apitag)) < 0 )
         fprintf(stderr,"error connecting to (%s)\n",apitag);
     else
     {
         if ( (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
+        {
+            printf("call busdata\n");
             str = busdata_sync(ptr->jsonstr,broadcaststr);
+            printf("got %p\n",str);
+        }
         else
         {
             ptr->retstr = 0;
+            printf("call plugin_method\n");
             str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
             if ( str != 0 )
                 printf("retstr.(%s)\n",str), free(str);
@@ -654,6 +659,8 @@ void *issue_cgicall(void *_ptr)
     {
         nn_freemsg(ptr->jsonstr);
         nn_shutdown(ptr->sock,ptr->retind);
+        if ( str != 0 )
+            free(str), str = 0;
     }
     free_json(ptr->json);
     free(ptr);
