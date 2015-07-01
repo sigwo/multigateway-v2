@@ -530,7 +530,8 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     {
         if ( is_bundled_plugin(plugin) != 0 )
         {
-            language_func((char *)plugin,"",0,0,1,(char *)plugin,origargstr,call_system);
+            if ( SUPERNET.iamrelay == 0 )
+                language_func((char *)plugin,"",0,0,1,(char *)plugin,origargstr,call_system);
             return(clonestr("{\"error\":\"cant find plugin, AUTOLOAD\"}"));
         }
         fprintf(stderr,"cant find.(%s)\n",plugin);

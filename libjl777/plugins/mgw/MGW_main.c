@@ -33,9 +33,9 @@ int32_t MGW_idle(struct plugin_info *plugin)
 }
 
 STRUCTNAME MGW;
-char *PLUGNAME(_methods)[] = { "myacctpubkeys", "msigaddr" };
-char *PLUGNAME(_pubmethods)[] = { "myacctpubkeys", "msigaddr" };
-char *PLUGNAME(_authmethods)[] = { "myacctpubkeys", "msigaddr" };
+char *PLUGNAME(_methods)[] = { "myacctpubkeys", "msigaddr", "status" };
+char *PLUGNAME(_pubmethods)[] = { "myacctpubkeys", "msigaddr", "status" };
+char *PLUGNAME(_authmethods)[] = { "myacctpubkeys", "msigaddr", "status" };
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
