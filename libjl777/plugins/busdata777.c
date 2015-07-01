@@ -682,11 +682,11 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"method"));
         copy_cJSON(servicename,cJSON_GetObjectItem(argjson,"servicename"));
-        if ( Debuglevel > 2 )
+        if ( Debuglevel > 1 )
             printf("relay.%d buf.(%s) method.(%s) servicename.(%s)\n",SUPERNET.iamrelay,buf,method,servicename);
         if ( ((strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0) || servicename[0] != 0) ) //UPERNET.iamrelay != 0 && 
         {
-            //printf("bypass deref\n");
+    printf("bypass deref\n");
             free_json(argjson);
             return(0);
         }
@@ -874,7 +874,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         {
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
-                if ( broadcastmode == 0 || cJSON_str(cJSON_GetObjectItem(json,"servicename")) != 0 )
+                if ( broadcastmode == 0 && cJSON_str(cJSON_GetObjectItem(json,"servicename")) == 0 )
                     retstr = nn_busdata_processor((uint8_t *)data,datalen);
                 else
                 {
