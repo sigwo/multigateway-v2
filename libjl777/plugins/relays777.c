@@ -1079,9 +1079,7 @@ void serverloop(void *_args)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,*retstr = 0,*methodstr,*myipaddr,*hostname;
-    int32_t i,n,count; uint32_t ipbits;
-    cJSON *array,*retjson;
+    char *resultstr,*retstr = 0,*methodstr,*myipaddr; int32_t i,n,count; cJSON *array,*retjson;
     retbuf[0] = 0;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -1127,7 +1125,10 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             else if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
             else if ( strcmp(methodstr,"busdata") == 0 )
+            {
+                printf("methodstr.(%s) (%s)\n",methodstr,jsonstr);
                 retstr = busdata_sync(jsonstr,cJSON_str(cJSON_GetObjectItem(json,"broadcast")));
+            }
             else if ( strcmp(methodstr,"allservices") == 0 )
             {
                 if ( (retjson= serviceprovider_json()) != 0 )

@@ -784,7 +784,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
     int32_t datalen,sendlen = 0; char *data,*retstr; cJSON *json;
-// printf("busdata_sync.(%s) (%s)\n",jsonstr,broadcastmode==0?"":broadcastmode);
+printf("busdata_sync.(%s) (%s)\n",jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
@@ -816,6 +816,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         }
         else
         {
+            printf("call LB\n");
             retstr = nn_loadbalanced((uint8_t *)data,datalen);
             if ( retstr != 0 )
                 printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
