@@ -108,10 +108,12 @@ int32_t nonce_leverage(char *broadcaststr)
 
 char *get_broadcastmode(cJSON *json,char *broadcastmode)
 {
-    char servicename[MAX_JSON_FIELD];
+    char servicename[MAX_JSON_FIELD],*bstr;
     copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
     if ( servicename[0] != 0 )
         broadcastmode = "servicerequest";
+    else if ( (bstr= cJSON_str(cJSON_GetObjectItem(json,"broadcast"))) != 0 )
+        return(bstr);
     //printf("(%s) get_broadcastmode.(%s) servicename.[%s]\n",cJSON_Print(json),broadcastmode!=0?broadcastmode:"",servicename);
     return(broadcastmode);
 }
@@ -816,7 +818,6 @@ printf("busdata_sync.(%s) (%s)\n",jsonstr,broadcastmode==0?"":broadcastmode);
         }
         else
         {
-            printf("call LB\n");
             retstr = nn_loadbalanced((uint8_t *)data,datalen);
             if ( retstr != 0 )
                 printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);

@@ -1079,7 +1079,7 @@ void serverloop(void *_args)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,*retstr = 0,*methodstr,*myipaddr; int32_t i,n,count; cJSON *array,*retjson;
+    char *resultstr,*retstr = 0,*methodstr,*myipaddr; cJSON *retjson;
     retbuf[0] = 0;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -1100,7 +1100,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        //printf("RELAYS.(%s)\n",jsonstr);
+        fprintf(stderr,"RELAYS methodstr.(%s) (%s)\n",methodstr,jsonstr);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
@@ -1115,18 +1115,19 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else
         {
             strcpy(retbuf,"{\"result\":\"relay command under construction\"}");
-            if ( strcmp(methodstr,"add") == 0 && (array= cJSON_GetObjectItem(json,"hostnames")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            /*if ( strcmp(methodstr,"add") == 0 && (array= cJSON_GetObjectItem(json,"hostnames")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=count=0; i<n; i++)
                     if ( add_relay_connections(cJSON_str(cJSON_GetArrayItem(array,i)),1) > 0 )
                         count++;
                 sprintf(retbuf,"{\"result\":\"relay added\",\"count\":%d}",count);
             }
-            else if ( strcmp(methodstr,"list") == 0 )
+            else*/
+            if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
             else if ( strcmp(methodstr,"busdata") == 0 )
             {
-                printf("methodstr.(%s) (%s)\n",methodstr,jsonstr);
+                fprintf(stderr,"BUSDATA\n");
                 retstr = busdata_sync(jsonstr,cJSON_str(cJSON_GetObjectItem(json,"broadcast")));
             }
             else if ( strcmp(methodstr,"allservices") == 0 )
