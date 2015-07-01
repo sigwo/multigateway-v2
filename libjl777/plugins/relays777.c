@@ -768,7 +768,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     //char *nn_allrelays_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     //char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len);
     char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
-    //printf("LB PROCESSOR.(%s)\n",msg);
+//printf("LB PROCESSOR.(%s)\n",msg);
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
     {
         //printf("NEWLB.(%s)\n",buf);

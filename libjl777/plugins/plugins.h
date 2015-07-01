@@ -533,6 +533,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
             language_func((char *)plugin,"",0,0,1,(char *)plugin,origargstr,call_system);
             return(clonestr("{\"error\":\"cant find plugin, AUTOLOAD\"}"));
         }
+        fprintf(stderr,"cant find.(%s)\n",plugin);
         return(clonestr("{\"error\":\"cant find plugin\"}"));
     }
     else

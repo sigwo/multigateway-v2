@@ -758,7 +758,7 @@ int32_t SuperNET_apireturn(int32_t retsock,int32_t retind,char *apitag,char *ret
 
 void *issue_cgicall(void *_ptr)
 {
-    char apitag[1024],plugin[1024],method[1024],*str,*broadcaststr; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
+    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
     copy_cJSON(apitag,cJSON_GetObjectItem(ptr->json,"apitag"));
     safecopy(ptr->apitag,apitag,sizeof(ptr->apitag));
     copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"agent"));
@@ -770,11 +770,17 @@ void *issue_cgicall(void *_ptr)
     fprintf(stderr,"(%s) API RECV.(%s)\n",broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
     if ( (ptr->retind= nn_connect(ptr->sock,apitag)) < 0 )
         fprintf(stderr,"error connecting to (%s)\n",apitag);
-    else if ( (str= busdata_sync(ptr->jsonstr,broadcaststr)) != 0 )
+    else
     {
-        retlen = (int32_t)strlen(str) + 1;
-        if ( (checklen= nn_send(ptr->sock,str,retlen,0)) != retlen )
-            fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,retlen,apitag);
+        if ( broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0 )
+            str = busdata_sync(ptr->jsonstr,broadcaststr);
+        else str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
+        if ( str != 0 )
+        {
+            retlen = (int32_t)strlen(str) + 1;
+            if ( (checklen= nn_send(ptr->sock,str,retlen,0)) != retlen )
+                fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,retlen,apitag);
+        }
     }
     nn_shutdown(ptr->sock,ptr->retind);
     free_json(ptr->json);
