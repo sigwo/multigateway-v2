@@ -299,7 +299,7 @@ int32_t main
     char *retbuf,registerbuf[MAX_JSON_FIELD];
     struct plugin_info *plugin;
     double startmilli;
-    cJSON *argjson;
+    cJSON *argjson,*json;
     int32_t i,n,bundledflag,max,sendflag,sleeptime=1,len = 0;
     char *messages[16],*line,*jsonargs,*transportstr;
     milliseconds();
@@ -373,6 +373,17 @@ int32_t main
                 line = messages[i], len = (int32_t)strlen(line);
                 if ( Debuglevel > 1 )
                     printf("(s%d r%d) <<<<<<<<<<<<<< RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
+                if ( (json= cJSON_Parse(line)) != 0 )
+                {
+                    if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+                    {
+                        free(line);
+                        line = cJSON_Print(cJSON_GetArrayItem(json,0));
+                        _stripwhite(line,' ');
+                        len = (int32_t)strlen(line);
+                    }
+                    free_json(json);
+                }
                 if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
                 {
                     if ( plugin->bundledflag == 0 )
