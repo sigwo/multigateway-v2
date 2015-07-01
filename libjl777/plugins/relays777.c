@@ -1141,9 +1141,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 {
                     copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
                     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_REP),NN_REP));
-                    sprintf(buf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\",\"tag\":\"%s\"}",2,endpoint,SUPERNET.NXTADDR,tagstr);
-                    construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
-                    fprintf(stderr,"join.(%s)\n",retbuf);
+                    sprintf(retbuf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\",\"tag\":\"%s\"}",2,endpoint,SUPERNET.NXTADDR,tagstr);
+                    //construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
+                    fprintf(stderr,"send join.(%s)\n",retbuf);
                 }
                 else
                 {
