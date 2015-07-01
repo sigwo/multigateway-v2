@@ -1011,8 +1011,8 @@ int32_t poll_direct(int32_t timeoutmillis)
 void serverloop(void *_args)
 {
     struct relayargs *lbargs,*arg; //*peerargs,
-    char ipaddr[64]; //endpoint[128],
-    int32_t i,sendtimeout,recvtimeout,lbsock,n = 0; //pubsock,peersock,
+    char ipaddr[64],endpoint[128];
+    int32_t i,sendtimeout,recvtimeout,pubsock,lbsock,n = 0; //,peersock,
   //start_devices(NN_RESPONDENT);
     sendtimeout = 10, recvtimeout = 10000;
     RELAYS.servicesock = RELAYS.bus.sock = -1;
@@ -1024,7 +1024,8 @@ void serverloop(void *_args)
     lbargs = &RELAYS.args[n++];
     //RELAYS.querypeers = peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     //peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allrelays_processor);
-    //pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
+    expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB));
+    pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
     RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(3000,SUPERNET_PORT); // NN_REQ
     //bussock = -1;
@@ -1034,13 +1035,13 @@ void serverloop(void *_args)
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
         //bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_busdata_processor);
     } //else lbargs->commandprocessor = nn_lb_processor;
-    //RELAYS.pubsock = pubsock;
+    RELAYS.pubsock = pubsock;
     for (i=0; i<n; i++)
     {
         arg = &RELAYS.args[i];
         arg->lbsock = lbsock;
         //arg->bussock = bussock;
-        //arg->pubsock = pubsock;
+        arg->pubsock = pubsock;
         //arg->peersock = peersock;
     }
     for (i=0; i<RELAYS.lb.num; i++)
