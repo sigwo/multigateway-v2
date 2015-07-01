@@ -1081,7 +1081,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 {
     char buf[8192],endpoint[128],*resultstr,*retstr = 0,*methodstr,*myipaddr; cJSON *retjson;
     retbuf[0] = 0;
-    printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
@@ -1100,7 +1100,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        fprintf(stderr,"RELAYS methodstr.(%s) (%s)\n",methodstr,jsonstr);
+        //fprintf(stderr,"RELAYS methodstr.(%s) (%s)\n",methodstr,jsonstr);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
@@ -1142,6 +1142,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_REP),NN_REP));
                     sprintf(buf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\"}",2,endpoint,SUPERNET.NXTADDR);
                     construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
+                    fprintf(stderr,"join.(%s)\n",retbuf);
                 }
                 else
                 {
