@@ -727,6 +727,44 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
     return(retstr);
 }
 
+void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
+{
+    char endpoint[512]; int32_t iter,sock,type,port,retrymillis,maxmillis;
+    type = NN_REP, port = SUPERNET.serviceport;
+    for (iter=firstiter; iter<1+SUPERNET.iamrelay; iter++)
+    {
+        if ( (sock= nn_socket(AF_SP,type)) >= 0 ) // NN_BUS seems to have 4x redundant packets
+        {
+            if ( iter == 0 )
+            {
+                if ( RELAYS.servicesock >= 0 )
+                    continue;
+                RELAYS.servicesock = sock;
+            }
+            else
+            {
+                if ( RELAYS.bus.sock >= 0 )
+                    continue;
+                RELAYS.bus.sock = sock;
+            }
+            expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),port,type));
+            nn_bind(sock,endpoint);
+            printf("SERVICE BIND.(%s)\n",endpoint);
+            maxmillis = 1000, retrymillis = 25;
+            if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
+                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+            else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
+                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+        }
+        type = NN_PUB;
+        port = SUPERNET.port + nn_portoffset(NN_BUS);
+    }
+}
+
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
@@ -744,7 +782,10 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         }
         broadcastmode = get_broadcastmode(json,broadcastmode);
         if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
+        {
             diff = 60, port = SUPERNET.port + nn_portoffset(NN_REP);
+            busdata_init(10,10,1);
+        }
         else diff = 0, port = SUPERNET.serviceport;
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
@@ -827,9 +868,9 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         }
         else
         {
-            printf("LBsend.(%s)\n",data);
+            //printf("LBsend.(%s)\n",data);
             retstr = nn_loadbalanced((uint8_t *)data,datalen);
-            if ( retstr != 0 )
+            if ( 0 && retstr != 0 )
                 printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
             if ( data != jsonstr )
                 free(data);
@@ -837,35 +878,6 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         }
     }
     return(clonestr("{\"error\":\"error creating busdata\"}"));
-}
-
-void busdata_init(int32_t sendtimeout,int32_t recvtimeout)
-{
-    char endpoint[512]; int32_t iter,sock,type,port,retrymillis,maxmillis;
-    type = NN_REP, port = SUPERNET.serviceport;
-    for (iter=0; iter<1+SUPERNET.iamrelay; iter++)
-    {
-        if ( (sock= nn_socket(AF_SP,type)) >= 0 ) // NN_BUS seems to have 4x redundant packets
-        {
-            if ( iter == 0 )
-                RELAYS.servicesock = sock;
-            else RELAYS.bus.sock = sock;
-            expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),port,type));
-            nn_bind(sock,endpoint);
-            printf("SERVICE BIND.(%s)\n",endpoint);
-            maxmillis = 1000, retrymillis = 25;
-            if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
-                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
-                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
-                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-            else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
-                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-        }
-        type = NN_PUB;
-        port = SUPERNET.port + nn_portoffset(NN_BUS);
-    }
 }
 
 void busdata_poll()

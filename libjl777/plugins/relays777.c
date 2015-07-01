@@ -24,7 +24,7 @@ int32_t relay_idle(struct plugin_info *plugin) { return(0); }
 
 STRUCTNAME RELAYS;
 char *PLUGNAME(_methods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr", "allservices" }; // list of supported methods
-char *PLUGNAME(_pubmethods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr", "serviceprovider", "allservices" }; // list of supported methods
+char *PLUGNAME(_pubmethods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr", "serviceprovider", "allservices", "nonce" }; // list of supported methods
 char *PLUGNAME(_authmethods)[] = { "list", "add", "direct", "join", "busdata", "msigaddr", "allservices" }; // list of supported methods
 
 int32_t nn_typelist[] = { NN_REP, NN_REQ, NN_RESPONDENT, NN_SURVEYOR, NN_PUB, NN_SUB, NN_PULL, NN_PUSH, NN_BUS, NN_PAIR };
@@ -445,10 +445,7 @@ int32_t add_relay_connections(char *domain,int32_t skiplb)
     if ( SUPERNET.iamrelay != 0 )
     {
         if ( skiplb == 2 )
-        {
-            printf("SERVICE ");
             update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
-        }
     }
     if ( skiplb == 0 )
         update_serverbits(&RELAYS.lb,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_REP),NN_REP);
@@ -1017,6 +1014,7 @@ void serverloop(void *_args)
     int32_t i,sendtimeout,recvtimeout,lbsock,n = 0; //pubsock,peersock,
   //start_devices(NN_RESPONDENT);
     sendtimeout = 10, recvtimeout = 10000;
+    RELAYS.servicesock = RELAYS.bus.sock = -1;
     RELAYS.lb.mytype = NN_REQ, RELAYS.lb.desttype = nn_oppotype(RELAYS.lb.mytype);
     RELAYS.pair.mytype = NN_PAIR, RELAYS.pair.desttype = nn_oppotype(RELAYS.pair.mytype);
     RELAYS.bus.mytype = NN_PUB, RELAYS.bus.desttype = nn_oppotype(RELAYS.bus.mytype);
@@ -1029,12 +1027,12 @@ void serverloop(void *_args)
     RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
     RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(3000,SUPERNET_PORT); // NN_REQ
     //bussock = -1;
-    busdata_init(sendtimeout,10);
-    if ( SUPERNET.iamrelay != 0 )
+    busdata_init(sendtimeout,10,0);
+    //if ( SUPERNET.iamrelay != 0 )
     {
         launch_responseloop(lbargs,"NN_REP",NN_REP,1,nn_lb_processor);
         //bussock = launch_responseloop(&RELAYS.args[n++],"NN_BUS",NN_BUS,1,nn_busdata_processor);
-    } else lbargs->commandprocessor = nn_lb_processor;
+    } //else lbargs->commandprocessor = nn_lb_processor;
     //RELAYS.pubsock = pubsock;
     for (i=0; i<n; i++)
     {
@@ -1075,6 +1073,21 @@ void serverloop(void *_args)
         }
         busdata_poll();
     }
+}
+
+void calc_nonces(char *endpoint)
+{
+    char buf[8192]; double endmilli = milliseconds() + 15000;
+    printf("calc_nonces\n");
+    expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_BUS),NN_PUB));
+    while ( milliseconds() < endmilli )
+    {
+        sprintf(buf,"{\"plugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\"}",5,endpoint,SUPERNET.NXTADDR);
+        nn_send(RELAYS.bus.sock,buf,(int32_t)strlen(buf)+1,0);
+        fprintf(stderr,"noncesend.(%s)\n",buf);
+        //construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
+    }
+    free(endpoint);
 }
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
@@ -1135,15 +1148,18 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     free_json(retjson);
                 }
             }
-            else if ( strcmp(methodstr,"join") == 0  )
+            else if ( strcmp(methodstr,"join") == 0 || strcmp(methodstr,"nonce") == 0  )
             {
                 if ( SUPERNET.iamrelay != 0 )
                 {
                     copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
-                    expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_REP),NN_REP));
-                    sprintf(retbuf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\",\"tag\":\"%s\"}",2,endpoint,SUPERNET.NXTADDR,tagstr);
-                    //construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
-                    fprintf(stderr,"send join.(%s)\n",retbuf);
+                    expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_BUS),NN_PUB));
+                    if ( strcmp(methodstr,"join") == 0 )
+                    {
+                        portable_thread_create((void *)calc_nonces,clonestr(endpoint));
+                        sprintf(retbuf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\",\"tag\":\"%s\"}",2,endpoint,SUPERNET.NXTADDR,tagstr);
+                    }
+                    fprintf(stderr,"join or nonce.(%s)\n",retbuf);
                 }
                 else
                 {
@@ -1151,6 +1167,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
                     copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
                     sprintf(buf,"{\"result\":\"gotnonce\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,sender);
+                    update_serverbits(&RELAYS.bus,"tcp",(uint32_t)calc_ipbits(SUPERNET.NXTADDR),SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
                     fprintf(stderr,"received.(%s) from (%s)\n",endpoint,sender);
                 }
                 /*if ( SUPERNET.iamrelay != 0 )

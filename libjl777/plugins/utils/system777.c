@@ -257,7 +257,7 @@ uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp);
 int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis);
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len);
-void busdata_init(int32_t sendtimeout,int32_t recvtimeout);
+void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter);
 void busdata_poll();
 char *busdata_sync(char *jsonstr,char *broadcastmode);
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
