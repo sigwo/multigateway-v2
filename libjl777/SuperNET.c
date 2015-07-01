@@ -651,9 +651,11 @@ void *issue_cgicall(void *_ptr)
         }
     }
     if ( ptr->sock >= 0 )
+    {
+        nn_freemsg(ptr->jsonstr);
         nn_shutdown(ptr->sock,ptr->retind);
+    }
     free_json(ptr->json);
-    nn_freemsg(ptr->jsonstr);
     free(ptr);
     return(str);
 }
@@ -670,7 +672,7 @@ char *process_nn_message(int32_t sock,char *jsonstr)
         if ( sock >= 0 )
             portable_thread_create((void *)issue_cgicall,ptr);
         else retstr = issue_cgicall(ptr);
-    } else nn_freemsg(jsonstr);
+    } else if ( sock >= 0 ) nn_freemsg(jsonstr);
     return(retstr);
 }
 
