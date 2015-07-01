@@ -786,7 +786,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
         {
             diff = 60, port = SUPERNET.port + nn_portoffset(NN_REP);
-            busdata_init(10,10,1);
+            //busdata_init(10,10,1);
         }
         else diff = 0, port = SUPERNET.serviceport;
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
@@ -803,7 +803,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
             cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString("busdata"));
             cJSON_ReplaceItemInObject(json,"plugin",cJSON_CreateString("relay"));
             cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(method));
-            if ( strcmp(plugin,"relay") != 0 )
+            //if ( strcmp(plugin,"relay") != 0 )
                 cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
         }
         randombytes((uint8_t *)&tag,sizeof(tag));
@@ -870,7 +870,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         }
         else
         {
-            //printf("LBsend.(%s)\n",data);
+            printf("LBsend.(%s)\n",data);
             retstr = nn_loadbalanced((uint8_t *)data,datalen);
             if ( 0 && retstr != 0 )
                 printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
