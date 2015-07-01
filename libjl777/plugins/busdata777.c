@@ -129,15 +129,15 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
 
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce,nonceerr; int32_t i,leverage;
+    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce,nonceerr; int32_t i,leverage,n = 100;
     if ( broadcastmode == 0 )
         broadcastmode = "";
     _stripwhite(cmdjson,' ');
-    for (i=0; i<100; i++)
+    for (i=0; i<n; i++)
     {
         if ( (nonce= nonce_func(&leverage,cmdjson,broadcastmode,5000,0)) != 0 )
             break;
-        printf("iter.%d nonce.%u failed, try again\n",i,nonce);
+        printf("iter.%d of %d couldnt find nonce, try again\n",i,n);
     }
     if ( (nonceerr= nonce_func(&leverage,cmdjson,broadcastmode,0,nonce)) != 0 )
     {
@@ -725,7 +725,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65],*str,*str2,*tokbuf = 0,*tmp;
-    bits256 hash; uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,datalen = 0;
+    bits256 hash; uint64_t nxt64bits,tag; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,diff,datalen = 0;
     *datalenp = 0;
     //printf("create_busdata\n");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -737,6 +737,9 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
             return(jsonstr);
         }
         broadcastmode = get_broadcastmode(json,broadcastmode);
+        if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
+            diff = 60;
+        else diff = 0;
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
@@ -762,7 +765,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         datajson = cJSON_CreateObject();
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
-        cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp));
+        cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
