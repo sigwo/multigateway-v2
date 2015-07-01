@@ -1075,24 +1075,21 @@ void serverloop(void *_args)
     }
 }
 
-void calc_nonces(char *endpoint)
+void calc_nonces(char *destpoint)
 {
-    char buf[8192],*str; double endmilli = milliseconds() + 15000;
-    printf("calc_nonces.(%s)\n",endpoint);
+    char buf[8192],endpoint[8192],*str; double endmilli = milliseconds() + 30000;
+    printf("calc_nonces.(%s)\n",destpoint);
     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_BUS),NN_PUB));
     while ( milliseconds() < endmilli )
     {
-        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"7\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,SUPERNET.NXTADDR);
+        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"7\",\"endpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
         if ( (str= busdata_sync(buf,"7")) != 0 )
         {
             fprintf(stderr,"(%s) -> (%s)\n",buf,str);
             free(str);
         }
-        //construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
-        //nn_send(RELAYS.bus.sock,retbuf,(int32_t)strlen(retbuf)+1,0);
-        //fprintf(stderr,"noncesend.(%s)\n",retbuf);
     }
-    free(endpoint);
+    free(destpoint);
 }
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)

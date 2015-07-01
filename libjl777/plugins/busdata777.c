@@ -860,7 +860,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                         printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
                     free(data);
                     return(clonestr("{\"error\":\"couldnt send to bus\"}"));
-                } else printf("PUB.(%s) sendlen.%d datalen.%d\n",data,sendlen,datalen);
+                } // else printf("PUB.(%s) sendlen.%d datalen.%d\n",data,sendlen,datalen);
             }
             if ( data != jsonstr )
                 free(data);
