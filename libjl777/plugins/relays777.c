@@ -895,7 +895,8 @@ void responseloop(void *_args)
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
-                printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
+                if ( SUPERNET.iamrelay == 0 )
+                    printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
                 retstr = 0;
                 if ( (json= cJSON_Parse((char *)msg)) != 0 )
                 {
