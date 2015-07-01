@@ -786,7 +786,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     return(retstr);
 }
 
-/*char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len)
+char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf; cJSON *json;
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
@@ -804,7 +804,7 @@ char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
     return(retstr);
 }
 
-char *nn_allrelays_processor(struct relayargs *args,uint8_t *msg,int32_t len)
+/*char *nn_allrelays_processor(struct relayargs *args,uint8_t *msg,int32_t len)
 {
     char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
     if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
@@ -1026,7 +1026,8 @@ void serverloop(void *_args)
     //RELAYS.querypeers = peersock = nn_createsocket(endpoint,1,"NN_SURVEYOR",NN_SURVEYOR,SUPERNET.port,sendtimeout,recvtimeout);
     //peerargs = &RELAYS.args[n++], RELAYS.peer.sock = launch_responseloop(peerargs,"NN_RESPONDENT",NN_RESPONDENT,0,nn_allrelays_processor);
     //pubsock = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port,sendtimeout,-1);
-    //RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
+    if ( SUPERNET.iamrelay != 0 )
+        RELAYS.sub.sock = launch_responseloop(&RELAYS.args[n++],"NN_SUB",NN_SUB,0,nn_pubsub_processor);
     RELAYS.lb.sock = lbargs->sock = lbsock = nn_lbsocket(3000,SUPERNET_PORT); // NN_REQ
     //bussock = -1;
     busdata_init(sendtimeout,10);
@@ -1079,7 +1080,7 @@ void serverloop(void *_args)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char buf[8192],endpoint[128],*resultstr,*retstr = 0,*methodstr,*myipaddr; cJSON *retjson;
+    char endpoint[128],*resultstr,*retstr = 0,*methodstr,*myipaddr; cJSON *retjson;
     retbuf[0] = 0;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -1138,9 +1139,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             else if ( strcmp(methodstr,"join") == 0  )
             {
                 expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_REP),NN_REP));
-                sprintf(buf,"{\"result\":\"nonce\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\"}",6,endpoint,SUPERNET.NXTADDR);
-                construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
-                fprintf(stderr,"return.(%s)\n",buf);
+                sprintf(retbuf,"{\"result\":\"nonce\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\"}",6,endpoint,SUPERNET.NXTADDR);
+                //construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
+                fprintf(stderr,"return.(%s)\n",retbuf);
                 /*if ( SUPERNET.iamrelay != 0 )
                 {
                     if ( add_relay_connections(SUPERNET.myipaddr,1) > 0 )
