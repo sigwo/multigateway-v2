@@ -269,7 +269,7 @@ int32_t nonce_leverage(char *broadcaststr);
 char *get_broadcastmode(cJSON *json,char *broadcastmode);
 cJSON *serviceprovider_json();
 
-#define MAXTIMEDIFF 10
+#define MAXTIMEDIFF 60
 
 #endif
 #else

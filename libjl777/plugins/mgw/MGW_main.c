@@ -1815,7 +1815,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
     struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
-    cJSON *json; char numstr[64],*jsonstr,*retbuf; struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
+    cJSON *json,*retjson,*item,*waiting,*pending; char numstr[64],*jsonstr,*retbuf; struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
     ramchain_prepare(coin,&coin->ramchain);
     if ( mgw->unspents != 0 )
         free(mgw->unspents);
@@ -1828,6 +1828,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         printf("mgw_calc_MGWunspent: no coin777\n");
         return(0);
     }
+    retjson = cJSON_CreateObject(), waiting = cJSON_CreateArray(), pending = cJSON_CreateArray();
     if ( mgw->marker_addrind == 0 && mgw->marker != 0 )
         mgw->marker_addrind = coin777_addrind(&firstblocknum,coin,mgw->marker);
     if ( mgw->marker2_addrind == 0 && mgw->marker2 != 0 )
@@ -1864,20 +1865,40 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     mgw->unspent = unspent;
     balance = (unspent - circulation - mgw->withdrawsum);
     printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [balance %.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),m);
+    cJSON_AddItemToObject(retjson,"coin",cJSON_CreateString(coin->name));
+    cJSON_AddItemToObject(retjson,"circulation",cJSON_CreateNumber(dstr(circulation)));
+    cJSON_AddItemToObject(retjson,"unspent",cJSON_CreateNumber(dstr(unspent)));
+    cJSON_AddItemToObject(retjson,"numwithdraws",cJSON_CreateNumber(mgw->numwithdraws));
+    cJSON_AddItemToObject(retjson,"withdrawsum",cJSON_CreateNumber(dstr(mgw->withdrawsum)));
+    cJSON_AddItemToObject(retjson,"balance",cJSON_CreateNumber(dstr(balance)));
     if ( balance >= -SATOSHIDEN && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
     {
         struct cointx_info *cointx;
         for (i=0; i<mgw->numwithdraws; i++)
         {
             extra = &mgw->withdraws[i];
+            item = cJSON_CreateObject();
+            sprintf(numstr,"%llu",(long long)extra->txidbits), cJSON_AddItemToObject(item,"redeemtxid",cJSON_CreateString(numstr));
+            cJSON_AddItemToObject(item,"withdrawaddr",cJSON_CreateString(extra->coindata));
+            cJSON_AddItemToObject(item,"amount",cJSON_CreateNumber(dstr(extra->amount)));
             if ( (mgw->RTNXT_height - extra->height) < SUPERNET.NXTconfirms )
+            {
                 printf("numconfs.%d of %d for redeemtxid.%llu -> (%s) %.8f\n",(mgw->RTNXT_height - extra->height),SUPERNET.NXTconfirms,(long long)extra->txidbits,extra->coindata,dstr(extra->amount));
+                cJSON_AddItemToObject(item,"numconfs",cJSON_CreateNumber(mgw->RTNXT_height - extra->height));
+                cJSON_AddItemToObject(item,"needed",cJSON_CreateNumber(SUPERNET.NXTconfirms));
+                cJSON_AddItemToArray(waiting,item);
+            }
             else
             {
                 cointx = mgw_cointx_withdraw(coin,extra->coindata,extra->amount,extra->txidbits,smallestaddr,smallestaddrB);
                 printf("%p height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",cointx,extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(cointx->inputsum),cointx->numinputs,dstr(cointx->change),dstr(cointx->inputsum)-dstr(cointx->change));
                 if ( cointx != 0 )
                 {
+                    cJSON_AddItemToObject(item,"inputsum",cJSON_CreateNumber(dstr(cointx->inputsum)));
+                    cJSON_AddItemToObject(item,"numinputs",cJSON_CreateNumber(cointx->numinputs));
+                    cJSON_AddItemToObject(item,"change",cJSON_CreateNumber(dstr(cointx->change)));
+                    cJSON_AddItemToObject(item,"miners",cJSON_CreateNumber(dstr(cointx->inputsum) - dstr(cointx->change)));
+                    cJSON_AddItemToArray(pending,item);
                     if ( (json= mgw_stdjson(coin->name,SUPERNET.NXTADDR,SUPERNET.gatewayid,"redeemtxid")) != 0 )
                     {
                         sprintf(numstr,"%llu",(long long)extra->txidbits), cJSON_AddItemToObject(json,"redeemtxid",cJSON_CreateString(numstr));
@@ -1896,6 +1917,11 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         }
     } else if ( mgw->numwithdraws == 0 )
         coin->mgw.lastupdate = (milliseconds() + 60000);
+    cJSON_AddItemToObject(retjson,"waiting",waiting);
+    cJSON_AddItemToObject(retjson,"pending",pending);
+    if ( mgw->retjson != 0 )
+        free_json(mgw->retjson);
+    mgw->retjson = retjson;
     return(unspent);
 }
 
@@ -2024,6 +2050,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     printf("msigaddr.(%s)\n",retstr);
                 else sprintf(retbuf,"{\"result\":\"start msigaddr\"}");
             }
+        }
+        else if ( coinstr != 0 && strcmp(methodstr,"status") == 0 )
+        {
+            struct coin777 *coin;
+            if ( (coin= coin777_find(coinstr,0)) != 0 && coin->mgw.retjson != 0 )
+                retstr = cJSON_Print(coin->mgw.retjson), _stripwhite(retstr,' ');
         }
         else if ( strcmp(methodstr,"myacctpubkeys") == 0 )
             mgw_processbus(retbuf,jsonstr,json);

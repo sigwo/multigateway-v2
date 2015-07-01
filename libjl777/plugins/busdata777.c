@@ -96,6 +96,8 @@ int32_t nonce_leverage(char *broadcaststr)
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
             leverage = 5;
+        else if ( strcmp(broadcaststr,"join") == 0 )
+            leverage = 8;
         else if ( strcmp(broadcaststr,"servicerequest") == 0 )
             leverage = 4;
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
@@ -211,16 +213,16 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
             if ( strictflag != 0 )
             {
                 timeval = get_cJSON_int(firstitem,"time");
-                diff = timeval - time(NULL);
-                if ( diff < 0 )
-                    diff = -diff;
-                if ( diff > strictflag )
+                diff = (timeval - time(NULL));
+                if ( diff < -60 )
+                    retcode = -6;
+                else if ( diff > strictflag )
                 {
                     printf("time diff %lld too big %lld vs %ld\n",(long long)diff,(long long)timeval,time(NULL));
                     retcode = -5;
                 }
             }
-            if ( retcode != -5 )
+            if ( retcode != -5 && retcode != -6 )
             {
                 firstjsontxt = cJSON_Print(firstitem), _stripwhite(firstjsontxt,' ');
 //printf("(%s)\n",firstjsontxt);
