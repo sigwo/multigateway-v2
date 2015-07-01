@@ -812,6 +812,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         datajson = cJSON_CreateObject();
+        cJSON_AddItemToObject(datajson,"plugin",cJSON_CreateString("relay"));
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
