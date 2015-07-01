@@ -299,7 +299,7 @@ int32_t main
     char *retbuf,registerbuf[MAX_JSON_FIELD];
     struct plugin_info *plugin;
     double startmilli;
-    cJSON *argjson,*json;
+    cJSON *argjson;
     int32_t i,n,bundledflag,max,sendflag,sleeptime=1,len = 0;
     char *messages[16],*line,*jsonargs,*transportstr;
     milliseconds();
@@ -356,7 +356,7 @@ int32_t main
         if ( (len= registerAPI(registerbuf,sizeof(registerbuf)-1,plugin,argjson)) > 0 )
         {
             if ( Debuglevel > 2 )
-                fprintf(stderr,">>>>>>>>>>>>>>> plugin sends REGISTER SEND.(%s)\n",registerbuf);
+                fprintf(stderr,">>>>>>>>>>>>>>> plugin.(%s) sends REGISTER SEND.(%s)\n",plugin->name,registerbuf);
             nn_local_broadcast(&plugin->all.socks,0,0,(uint8_t *)registerbuf,(int32_t)strlen(registerbuf)+1), plugin->numsent++;
             //nn_send(plugin->sock,plugin->registerbuf,len+1,0); // send the null terminator too
         } else printf("error register API\n");
@@ -371,9 +371,9 @@ int32_t main
             for (i=0; i<n; i++)
             {
                 line = messages[i], len = (int32_t)strlen(line);
-                if ( Debuglevel > 1 )
-                    printf("(s%d r%d) <<<<<<<<<<<<<< RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
-                if ( (json= cJSON_Parse(line)) != 0 )
+                if ( Debuglevel > 2 )
+                    printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
+                /*if ( (json= cJSON_Parse(line)) != 0 )
                 {
                     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
                     {
@@ -383,7 +383,7 @@ int32_t main
                         len = (int32_t)strlen(line);
                     }
                     free_json(json);
-                }
+                }*/
                 if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
                 {
                     if ( plugin->bundledflag == 0 )
@@ -391,7 +391,7 @@ int32_t main
                     if ( sendflag != 0 )
                     {
                         nn_local_broadcast(&plugin->all.socks,0,0,(uint8_t *)retbuf,(int32_t)strlen(retbuf)+1), plugin->numsent++;
-                        if ( Debuglevel > 2 )
+                        if ( Debuglevel > 1 )
                             fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                         //nn_send(plugin->sock,retbuf,len+1,0); // send the null terminator too
                     }
