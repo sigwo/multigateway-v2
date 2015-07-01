@@ -895,6 +895,7 @@ void responseloop(void *_args)
         {
             if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
             {
+                printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
                 retstr = 0;
                 if ( (json= cJSON_Parse((char *)msg)) != 0 )
                 {
@@ -906,10 +907,10 @@ void responseloop(void *_args)
                         retstr = nn_busdata_processor((uint8_t *)msg,len);
                         //printf("CALL BUSDATA PROCESSOR.(%s) -> (%s)\n",msg,retstr);
                     }
-                    else if ( SUPERNET.iamrelay != 0 )
+                    else //if ( SUPERNET.iamrelay != 0 )
                     {
                         //if ( Debuglevel > 1 )
-                        printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
+                        //printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
                         /*broadcaststr = cJSON_str(cJSON_GetObjectItem(argjson,"broadcast"));
                         if ( broadcaststr != 0 && strcmp(broadcaststr,"allrelays") == 0 )
                         {

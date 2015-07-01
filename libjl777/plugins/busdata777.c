@@ -751,7 +751,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
             }
             expand_epbits(endpoint,calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(SUPERNET.myipaddr),port,type));
             nn_bind(sock,endpoint);
-            printf("SERVICE BIND.(%s)\n",endpoint);
+            printf("SERVICE BIND.(%s) sock.%d type.%s\n",endpoint,sock,nn_typestr(type));
             maxmillis = 1000, retrymillis = 25;
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
