@@ -1079,7 +1079,7 @@ void serverloop(void *_args)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char buf[8192],endpoint[128],*resultstr,*retstr = 0,*methodstr,*myipaddr; cJSON *retjson;
+    char buf[8192],endpoint[128],tagstr[512],*resultstr,*retstr = 0,*methodstr,*myipaddr; cJSON *retjson;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -1139,8 +1139,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             {
                 if ( SUPERNET.iamrelay != 0 )
                 {
+                    copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
                     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_REP),NN_REP));
-                    sprintf(buf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\"}",2,endpoint,SUPERNET.NXTADDR);
+                    sprintf(buf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\",\"tag\":\"%s\"}",2,endpoint,SUPERNET.NXTADDR,tagstr);
                     construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
                     fprintf(stderr,"join.(%s)\n",retbuf);
                 }
@@ -1149,6 +1150,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     char endpoint[512],sender[64];
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
                     copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
+                    sprintf(buf,"{\"result\":\"gotnonce\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,sender);
                     fprintf(stderr,"received.(%s) from (%s)\n",endpoint,sender);
                 }
                 /*if ( SUPERNET.iamrelay != 0 )
