@@ -684,7 +684,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         copy_cJSON(servicename,cJSON_GetObjectItem(argjson,"servicename"));
         if ( Debuglevel > 2 )
             printf("relay.%d buf.(%s) method.(%s) servicename.(%s)\n",SUPERNET.iamrelay,buf,method,servicename);
-        if ( SUPERNET.iamrelay != 0 && ((strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0) || servicename[0] != 0) )
+        if ( ((strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0) || servicename[0] != 0) ) //UPERNET.iamrelay != 0 && 
         {
             //printf("bypass deref\n");
             free_json(argjson);
