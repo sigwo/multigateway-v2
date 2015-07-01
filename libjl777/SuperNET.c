@@ -630,6 +630,7 @@ void *issue_cgicall(void *_ptr)
             str = busdata_sync(ptr->jsonstr,broadcaststr);
         else
         {
+            ptr->retstr = 0;
             str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
             if ( str != 0 )
                 printf("retstr.(%s)\n",str), free(str);
@@ -639,7 +640,7 @@ void *issue_cgicall(void *_ptr)
         }
         if ( str != 0 )
         {
-            //printf("mainstr.(%s)\n",str);
+            printf("mainstr.(%s)\n",str);
             if ( ptr->sock >= 0 )
             {
                 retlen = (int32_t)strlen(str) + 1;
@@ -668,11 +669,7 @@ char *process_nn_message(int32_t sock,char *jsonstr)
         ptr->jsonstr = jsonstr;
         if ( sock >= 0 )
             portable_thread_create((void *)issue_cgicall,ptr);
-        else
-        {
-            retstr = issue_cgicall(ptr);
-            nn_freemsg(jsonstr);
-        }
+        else retstr = issue_cgicall(ptr);
     } else nn_freemsg(jsonstr);
     return(retstr);
 }
