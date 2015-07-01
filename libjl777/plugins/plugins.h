@@ -562,7 +562,7 @@ printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,l
         }
         else
         {
-//fprintf(stderr,"send_to_daemon.(%s).%d\n",origargstr,len);
+fprintf(stderr,"send_to_daemon.(%s).%d\n",origargstr,len);
             if ( (tag= send_to_daemon(args,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
             {
 fprintf(stderr,"null tag from send_to_daemon\n");
