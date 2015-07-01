@@ -622,7 +622,7 @@ void *issue_cgicall(void *_ptr)
     timeout = get_API_int(cJSON_GetObjectItem(ptr->json,"timeout"),SUPERNET.PLUGINTIMEOUT);
     broadcaststr = cJSON_str(cJSON_GetObjectItem(ptr->json,"broadcast"));
     fprintf(stderr,"(%s) API RECV.(%s)\n",broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
-    if ( (ptr->retind= nn_connect(ptr->sock,apitag)) < 0 )
+    if ( ptr->sock >= 0 && (ptr->retind= nn_connect(ptr->sock,apitag)) < 0 )
         fprintf(stderr,"error connecting to (%s)\n",apitag);
     else
     {
@@ -649,7 +649,8 @@ void *issue_cgicall(void *_ptr)
             }
         }
     }
-    nn_shutdown(ptr->sock,ptr->retind);
+    if ( ptr->sock >= 0 )
+        nn_shutdown(ptr->sock,ptr->retind);
     free_json(ptr->json);
     nn_freemsg(ptr->jsonstr);
     free(ptr);
@@ -827,7 +828,7 @@ int32_t SuperNET_apireturn(int32_t retsock,int32_t retind,char *apitag,char *ret
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    char *jsonstr; int32_t sock,len,recvtimeout; cJSON *json; struct pending_cgi *ptr;
+    char *jsonstr; int32_t sock,len,recvtimeout;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
