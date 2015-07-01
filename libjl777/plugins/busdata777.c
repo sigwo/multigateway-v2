@@ -70,7 +70,7 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
             if ( (hit= calc_SaM(&sig,(void *)str,len,(void *)&nonce,sizeof(nonce),numrounds)) >= threshold )
             {
                 printf("nonce failure hit.%llu >= threshold.%llu\n",(long long)hit,(long long)threshold);
-                if ( (threshold - hit) > (1L << 32) )
+                if ( (threshold - hit) > ((uint64_t)1L << 32) )
                     return(0xffffffff);
                 else return((uint32_t)(threshold - hit));
             }
