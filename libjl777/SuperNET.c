@@ -785,7 +785,7 @@ void *issue_cgicall(void *_ptr)
         }
         if ( str != 0 )
         {
-            printf("mainstr.(%s)\n",str);
+            //printf("mainstr.(%s)\n",str);
             retlen = (int32_t)strlen(str) + 1;
             if ( (checklen= nn_send(ptr->sock,str,retlen,0)) != retlen )
                 fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,retlen,apitag);

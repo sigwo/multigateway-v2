@@ -270,7 +270,7 @@ int32_t poll_daemons() // the only thread that is allowed to modify Daemoninfos[
                     for (i=0; i<n; i++,processed++)
                     {
                         str = messages[i];
-                        if ( Debuglevel > 1 )
+                        if ( Debuglevel > 2 )
                             printf("(%d %d) %d %.6f HOST RECEIVED.%d i.%d/%d (%s) FROM (%s) %llu >>>>>>>>>>>>>>\n",dp->numrecv,dp->numsent,processed,milliseconds(),n,i,Numdaemons,str,dp->cmd,(long long)dp->daemonid);
                         process_plugin_message(dp,str,(int32_t)strlen(str)+1);
                         //free(str);
@@ -538,7 +538,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
     }
     else
     {
-        if ( Debuglevel > 1 )
+        if ( Debuglevel > 2 )
             fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d retstrp.%p\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess,retstrp);
         if ( dp->readyflag == 0 )
         {
@@ -562,7 +562,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
         }
         else
         {
-fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
+//fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
             if ( (tag= send_to_daemon(args,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
             {
 fprintf(stderr,"null tag from send_to_daemon\n");

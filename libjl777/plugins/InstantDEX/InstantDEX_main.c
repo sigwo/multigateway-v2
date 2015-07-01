@@ -126,7 +126,7 @@ char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origarg
             ensure_jsonitem(argjson,"NXT",NXTaddr);
             //printf("subsititute NXT.%s\n",NXTaddr);
         }
-printf("localaccess.%d myaddr.(%s) NXT.(%s) offerNXT.(%s)\n",localaccess,SUPERNET.NXTADDR,NXTaddr,offerNXT);
+//printf("localaccess.%d myaddr.(%s) NXT.(%s) offerNXT.(%s)\n",localaccess,SUPERNET.NXTADDR,NXTaddr,offerNXT);
         copy_cJSON(command,obj);
         copy_cJSON(NXTACCTSECRET,secretobj);
         if ( NXTACCTSECRET[0] == 0 )
@@ -221,7 +221,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else if ( SUPERNET.iamrelay == 0 )
         {
             retstr = InstantDEX_parser(forwarder,sender,valid,jsonstr,json);
-printf("InstantDEX_parser return.(%s)\n",retstr);
+//printf("InstantDEX_parser return.(%s)\n",retstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
         if ( retstr != 0 )
         {
