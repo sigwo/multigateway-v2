@@ -1079,7 +1079,7 @@ void serverloop(void *_args)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char *resultstr,*retstr = 0,*methodstr,*myipaddr; cJSON *retjson;
+    char endpoint[128],*resultstr,*retstr = 0,*methodstr,*myipaddr; cJSON *retjson;
     retbuf[0] = 0;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -1126,10 +1126,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
             else if ( strcmp(methodstr,"busdata") == 0 )
-            {
-                fprintf(stderr,"BUSDATA\n");
                 retstr = busdata_sync(jsonstr,cJSON_str(cJSON_GetObjectItem(json,"broadcast")));
-            }
             else if ( strcmp(methodstr,"allservices") == 0 )
             {
                 if ( (retjson= serviceprovider_json()) != 0 )
@@ -1140,7 +1137,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             }
             else if ( strcmp(methodstr,"join") == 0  )
             {
-                sprintf(retbuf,"{\"result\":\"join command\"}");
+                expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_REP),NN_REP));
+                sprintf(retbuf,"{\"result\":\"nonce\",\"broadcast\":%d,\"endpoint\":\"%s\"}",6,endpoint);
                 /*if ( SUPERNET.iamrelay != 0 )
                 {
                     if ( add_relay_connections(SUPERNET.myipaddr,1) > 0 )

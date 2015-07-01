@@ -102,6 +102,8 @@ int32_t nonce_leverage(char *broadcaststr)
             leverage = 4;
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
             leverage = 3;
+        else if ( atoi(broadcaststr) != 0 )
+            leverage = atoi(broadcaststr);
     }
     return(leverage);
 }
@@ -660,7 +662,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
             ensure_jsonitem(second,"stop","end");
             str = cJSON_Print(dupjson), _stripwhite(str,' ');
             printf("broadcast.(%s) forwarder.%llu vs %s\n",str,(long long)forwardbits,SUPERNET.NXTADDR);
-            if ( strcmp(broadcaststr,"allrelays") == 0 )
+            if ( strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0 )
                 nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
             else if ( strcmp(broadcaststr,"allnodes") == 0 )
                 nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
@@ -789,7 +791,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
     int32_t datalen,sendlen = 0; char *data,*retstr; cJSON *json;
-printf("busdata_sync.(%s) (%s)\n",jsonstr,broadcastmode==0?"":broadcastmode);
+//printf("busdata_sync.(%s) (%s)\n",jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
