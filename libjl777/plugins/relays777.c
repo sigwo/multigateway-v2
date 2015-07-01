@@ -1082,8 +1082,8 @@ void calc_nonces(char *endpoint)
     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_BUS),NN_PUB));
     while ( milliseconds() < endmilli )
     {
-        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"4\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,SUPERNET.NXTADDR);
-        if ( (str= busdata_sync(buf,"4")) != 0 )
+        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"5\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,SUPERNET.NXTADDR);
+        if ( (str= busdata_sync(buf,"5")) != 0 )
         {
             fprintf(stderr,"(%s) -> (%s)\n",buf,str);
             free(str);
@@ -1164,8 +1164,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     if ( strcmp(methodstr,"join") == 0 )
                     {
                         portable_thread_create((void *)calc_nonces,clonestr(endpoint));
-                        sprintf(retbuf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\"}",2,endpoint);
-                    }
+                        sprintf(retbuf,"{\"result\":\"noncing\",\"endpoint\":\"%s\"}",endpoint);
+                    } else sprintf(retbuf,"{\"result\":\"nonce stats\",\"endpoint\":\"%s\"}",endpoint);
                     fprintf(stderr,"join or nonce.(%s)\n",retbuf);
                 }
                 else
