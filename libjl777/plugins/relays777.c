@@ -1138,9 +1138,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             else if ( strcmp(methodstr,"join") == 0  )
             {
                 expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_REP),NN_REP));
-                sprintf(buf,"{\"result\":\"nonce\",\"broadcast\":%d,\"endpoint\":\"%s\"}",6,endpoint);
+                sprintf(buf,"{\"result\":\"nonce\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\"}",6,endpoint,SUPERNET.NXTADDR);
                 construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
-
+                fprintf(stderr,"return.(%s)\n",buf);
                 /*if ( SUPERNET.iamrelay != 0 )
                 {
                     if ( add_relay_connections(SUPERNET.myipaddr,1) > 0 )
