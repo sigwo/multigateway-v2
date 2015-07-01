@@ -95,13 +95,13 @@ int32_t nonce_leverage(char *broadcaststr)
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage = 5;
+            leverage = 6;
         else if ( strcmp(broadcaststr,"join") == 0 )
             leverage = 8;
         else if ( strcmp(broadcaststr,"servicerequest") == 0 )
-            leverage = 4;
+            leverage = 5;
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
-            leverage = 3;
+            leverage = 4;
         else if ( atoi(broadcaststr) != 0 )
             leverage = atoi(broadcaststr);
     }
@@ -661,14 +661,16 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         {
             ensure_jsonitem(second,"stop","end");
             str = cJSON_Print(dupjson), _stripwhite(str,' ');
-            printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
             if ( strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0 )
             {
-                printf("allrelays\n");
+                printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
                 nn_send(RELAYS.bus.sock,str,(int32_t)strlen(str)+1,0);
             }
             else if ( strcmp(broadcaststr,"allnodes") == 0 )
+            {
+                printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
                 nn_send(RELAYS.pubsock,str,(int32_t)strlen(str)+1,0);
+            }
             free(str);
         } // else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
         free_json(dupjson);
