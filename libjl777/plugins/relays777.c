@@ -442,7 +442,7 @@ int32_t add_relay_connections(char *domain,int32_t skiplb)
     n = (RELAYS.lb.num + RELAYS.peer.num + RELAYS.sub.num + RELAYS.bus.num);
     //update_serverbits(&RELAYS.peer,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_SURVEYOR),NN_SURVEYOR);
     //update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_PUB),NN_PUB);
-    if ( SUPERNET.iamrelay != 0 )
+    //if ( SUPERNET.iamrelay != 0 )
     {
         if ( skiplb == 2 )
             update_serverbits(&RELAYS.sub,"tcp",ipbits,SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
@@ -1077,15 +1077,15 @@ void serverloop(void *_args)
 
 void calc_nonces(char *endpoint)
 {
-    char buf[8192]; double endmilli = milliseconds() + 15000;
-    printf("calc_nonces\n");
+    char buf[8192],retbuf[8192]; double endmilli = milliseconds() + 15000;
+    printf("calc_nonces.(%s)\n",endpoint);
     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_BUS),NN_PUB));
     while ( milliseconds() < endmilli )
     {
         sprintf(buf,"{\"plugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\"}",5,endpoint,SUPERNET.NXTADDR);
-        nn_send(RELAYS.bus.sock,buf,(int32_t)strlen(buf)+1,0);
-        fprintf(stderr,"noncesend.(%s)\n",buf);
-        //construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
+        construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
+        nn_send(RELAYS.bus.sock,retbuf,(int32_t)strlen(retbuf)+1,0);
+        fprintf(stderr,"noncesend.(%s)\n",retbuf);
     }
     free(endpoint);
 }
@@ -1167,7 +1167,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
                     copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
                     sprintf(buf,"{\"result\":\"gotnonce\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,sender);
-                    update_serverbits(&RELAYS.bus,"tcp",(uint32_t)calc_ipbits(SUPERNET.NXTADDR),SUPERNET.port + nn_portoffset(NN_BUS),NN_PUB);
                     fprintf(stderr,"received.(%s) from (%s)\n",endpoint,sender);
                 }
                 /*if ( SUPERNET.iamrelay != 0 )
