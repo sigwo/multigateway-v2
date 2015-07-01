@@ -1077,15 +1077,20 @@ void serverloop(void *_args)
 
 void calc_nonces(char *endpoint)
 {
-    char buf[8192],retbuf[8192]; double endmilli = milliseconds() + 15000;
+    char buf[8192],*str; double endmilli = milliseconds() + 15000;
     printf("calc_nonces.(%s)\n",endpoint);
     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_BUS),NN_PUB));
     while ( milliseconds() < endmilli )
     {
-        sprintf(buf,"{\"plugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\"}",5,endpoint,SUPERNET.NXTADDR);
-        construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
-        nn_send(RELAYS.bus.sock,retbuf,(int32_t)strlen(retbuf)+1,0);
-        fprintf(stderr,"noncesend.(%s)\n",retbuf);
+        sprintf(buf,"{\"plugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"allrelays\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,SUPERNET.NXTADDR);
+        if ( (str= busdata_sync(buf,"allrelays")) != 0 )
+        {
+            fprintf(stderr,"(%s) -> (%s)\n",buf,str);
+            free(str);
+        }
+        //construct_tokenized_req(retbuf,buf,SUPERNET.NXTACCTSECRET,0);
+        //nn_send(RELAYS.bus.sock,retbuf,(int32_t)strlen(retbuf)+1,0);
+        //fprintf(stderr,"noncesend.(%s)\n",retbuf);
     }
     free(endpoint);
 }
@@ -1153,11 +1158,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 if ( SUPERNET.iamrelay != 0 )
                 {
                     copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
+                    copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
+                    nn_connect(RELAYS.bus.sock,endpoint);
                     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+nn_portoffset(NN_BUS),NN_PUB));
                     if ( strcmp(methodstr,"join") == 0 )
                     {
                         portable_thread_create((void *)calc_nonces,clonestr(endpoint));
-                        sprintf(retbuf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\",\"NXT\":\"%s\",\"tag\":\"%s\"}",2,endpoint,SUPERNET.NXTADDR,tagstr);
+                        sprintf(retbuf,"{\"result\":\"noncing\",\"broadcast\":%d,\"endpoint\":\"%s\"}",2,endpoint);
                     }
                     fprintf(stderr,"join or nonce.(%s)\n",retbuf);
                 }
