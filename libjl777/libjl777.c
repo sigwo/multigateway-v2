@@ -1481,7 +1481,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     FILE *fp;
     int32_t i;
     retbuf[0] = 0;
-    printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! (%s) initflag.%d process %s\n",plugin->name,jsonstr,initflag,plugin->name);
+    //printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! (%s) initflag.%d process %s\n",plugin->name,jsonstr,initflag,plugin->name);
     if ( initflag > 0 )
     {
         SUPERNET.argjson = cJSON_Duplicate(json,1);

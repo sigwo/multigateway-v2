@@ -645,7 +645,20 @@ void *issue_cgicall(void *_ptr)
         }
         if ( str != 0 )
         {
-            printf("sock.%d mainstr.(%s)\n",ptr->sock,str);
+            int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json);
+            char forwarder[512],sender[512]; uint32_t timestamp = 0; uint8_t databuf[8192]; int32_t valid=-1,datalen; cJSON *retjson;
+            forwarder[0] = sender[0] = 0;
+            if ( (retjson= cJSON_Parse(str)) != 0 )
+            {
+                if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,str,retjson)) > 0 )
+                {
+                    free(str);
+                    str = malloc(datalen);
+                    memcpy(str,databuf,datalen);
+                }
+                free_json(retjson);
+            }
+            printf("sock.%d mainstr.(%s) valid.%d sender.(%s) forwarder.(%s) time.%u\n",ptr->sock,str,valid,sender,forwarder,timestamp);
             if ( ptr->sock >= 0 )
             {
                 retlen = (int32_t)strlen(str) + 1;
