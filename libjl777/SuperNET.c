@@ -937,6 +937,7 @@ int SuperNET_start(char *fname,char *myip)
     int32_t parse_ipaddr(char *ipaddr,char *ip_port);
     char ipaddr[256],*jsonstr = 0;
     uint64_t allocsize;
+    OS_init();
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
         jsonstr = clonestr("{}");

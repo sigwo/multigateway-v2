@@ -302,6 +302,9 @@ int32_t main
     cJSON *argjson;
     int32_t i,n,bundledflag,max,sendflag,sleeptime=1,len = 0;
     char *messages[16],*line,*jsonargs,*transportstr;
+#ifndef BUNDLED
+    OS_init();
+#endif
     milliseconds();
     max = 1000000;
     retbuf = malloc(max+1);

@@ -588,7 +588,7 @@ int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_
 int32_t poll_local_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis)
 {
     struct nn_pollfd pfd[sizeof(struct allendpoints)/sizeof(int32_t)];
-    int32_t len,received=0,rc,i,n = 0;
+    int32_t len,received=0,i,n = 0;
     char *str,*msg;
     memset(pfd,0,sizeof(pfd));
     for (i=0; i<(int32_t)(sizeof(socks->all)/sizeof(*socks->all)); i++)

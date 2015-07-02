@@ -1477,7 +1477,7 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json);
-    char *retstr,*resultstr,*methodstr,*destplugin,secretstr[4096],buf[1024],myipaddr[512];
+    char *retstr,*resultstr,*methodstr,*destplugin,buf[1024],myipaddr[512];
     FILE *fp;
     int32_t i;
     retbuf[0] = 0;
