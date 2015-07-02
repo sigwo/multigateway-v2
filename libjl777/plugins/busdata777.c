@@ -1010,7 +1010,10 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
     RELAYS.servicesock = RELAYS.pubglobal = RELAYS.pubrelays = RELAYS.lbserver = -1;
     endpoint[0] = 0;
     if ( (RELAYS.subclient= nn_createsocket(endpoint,0,"NN_SUB",NN_SUB,0,sendtimeout,recvtimeout)) >= 0 )
+    {
         RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.subclient;
+        nn_setsockopt(RELAYS.subclient,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
+    }
     RELAYS.lbclient = nn_lbsocket(SUPERNET.PLUGINTIMEOUT,SUPERNET.port + LB_OFFSET,SUPERNET.port + PUBGLOBALS_OFFSET,SUPERNET.port + PUBRELAYS_OFFSET);
     if ( (RELAYS.servicesock= nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.serviceport,sendtimeout,recvtimeout)) >= 0 )
         RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.servicesock;
@@ -1023,5 +1026,6 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
     }
     for (i=0; i<RELAYS.numservers; i++)
         RELAYS.pfd[i].events = NN_POLLIN | NN_POLLOUT;
+    printf("numservers.%d\n",RELAYS.numservers);
 }
 

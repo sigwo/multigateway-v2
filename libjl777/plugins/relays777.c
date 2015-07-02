@@ -141,7 +141,7 @@ int32_t add_relay(struct _relay_info *list,struct endpoint epbits)
     return(list->num);
 }
 
-int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbits,uint16_t port,int32_t type)
+/*int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbits,uint16_t port,int32_t type)
 {
     char endpoint[1024]; struct endpoint epbits;
     if ( ipbits == SUPERNET.myipbits )
@@ -170,7 +170,7 @@ int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbi
         }
     }
     return(list->num);
-}
+}*/
 
 int32_t nn_add_lbservers(uint16_t port,uint16_t globalport,uint16_t relaysport,int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
@@ -221,7 +221,7 @@ int32_t _lb_socket(uint16_t port,uint16_t globalport,uint16_t relaysport,int32_t
     if ( (lbsock= nn_socket(AF_SP,NN_REQ)) >= 0 )
     {
         retrymillis = (maxmillis / 30) + 1;
-        //printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
+printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
             printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         else if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
