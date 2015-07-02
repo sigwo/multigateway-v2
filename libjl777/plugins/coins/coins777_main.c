@@ -145,6 +145,7 @@ void set_coinconfname(char *fname,char *coinstr,char *userhome,char *coindir,cha
         confname = buf;
         sprintf(confname,"%s.conf",buf);
     }
+    printf("userhome.(%s) coindir.(%s) confname.(%s)\n",userhome,coindir,confname);
     sprintf(fname,"%s/%s/%s",userhome,coindir,confname);
 }
 
