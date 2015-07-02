@@ -55,7 +55,7 @@ int32_t OS_init()
     if (ret != NO_ERROR)
     {
         printf("Error: TCP/IP socket library failed to start (WSAStartup returned error %d)\n", ret);
-        printf("%s\n", strError.c_str());
+        //printf("%s\n", strError.c_str());
         return -1;
     }
     return(0);

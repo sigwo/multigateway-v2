@@ -645,7 +645,7 @@ void *issue_cgicall(void *_ptr)
         }
         if ( str != 0 )
         {
-            //printf("sock.%d mainstr.(%s)\n",ptr->sock,str);
+            printf("sock.%d mainstr.(%s)\n",ptr->sock,str);
             if ( ptr->sock >= 0 )
             {
                 retlen = (int32_t)strlen(str) + 1;
