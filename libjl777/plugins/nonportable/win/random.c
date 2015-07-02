@@ -60,4 +60,3 @@ int32_t OS_init()
     }
     return(0);
 }
-#endif
