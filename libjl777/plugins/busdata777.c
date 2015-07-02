@@ -617,7 +617,7 @@ char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t time
             free_json(json);
         } else printf("couldnt decode.(%s)\n",msg);
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("busdata.(%s) valid.%d -> (%s)\n",msg,valid,retstr!=0?retstr:"");
     return(retstr);
 }

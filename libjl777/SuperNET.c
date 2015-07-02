@@ -628,9 +628,9 @@ void *issue_cgicall(void *_ptr)
     {
         if ( (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
-            printf("call busdata\n");
+            //printf("call busdata\n");
             str = busdata_sync(ptr->jsonstr,broadcaststr);
-            printf("got %p\n",str);
+            //printf("got %p\n",str);
         }
         else
         {
@@ -645,7 +645,7 @@ void *issue_cgicall(void *_ptr)
         }
         if ( str != 0 )
         {
-            printf("sock.%d mainstr.(%s)\n",ptr->sock,str);
+            //printf("sock.%d mainstr.(%s)\n",ptr->sock,str);
             if ( ptr->sock >= 0 )
             {
                 retlen = (int32_t)strlen(str) + 1;
