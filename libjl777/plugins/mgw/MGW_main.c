@@ -1293,41 +1293,44 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
 {
     uint32_t txidind,addrind = 0,firstblocknum; int32_t i,vout; uint64_t redeemtxid; char txidstr[256];
     struct coin777_Lentry L; struct addrtx_info ATX; struct coin777 *coin = coin777_find(mgw->coinstr,0);
-    if ( coin != 0 && coin->ramchain.readyflag != 0 && (extra->flags & MGW_PENDINGREDEEM) != 0 )
+    if ( coin != 0 && coin->ramchain.readyflag != 0 )
     {
-        if ( (addrind= coin777_addrind(&firstblocknum,coin,extra->coindata)) != 0 && coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
+        if ( (extra->flags & MGW_PENDINGREDEEM) != 0 )
         {
-            for (i=0; i<L.numaddrtx; i++)
+            if ( (addrind= coin777_addrind(&firstblocknum,coin,extra->coindata)) != 0 && coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
             {
-                coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
-                if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,ATX.unspentind)) >= 0 )
+                for (i=0; i<L.numaddrtx; i++)
                 {
-                    if ( (redeemtxid= mgw_is_mgwtx(coin,txidind,extra->amount)) == extra->txidbits )
+                    coin777_RWaddrtx(0,coin,addrind,&ATX,&L,i);
+                    if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,ATX.unspentind)) >= 0 )
                     {
-                        printf("height.%u MATCHED REDEEM: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
-                        return(MGW_WITHDRAWDONE);
-                    } //else printf(" %s.v%d for %s\n",txidstr,vout,extra->coindata);
-                } else printf("(%s.v%d != %s)\n",txidstr,vout,extra->coindata);
-            }
-        } //else printf("skip flag.%d (%s).v%d %.8f\n",extra->flags,extra->coindata,extra->vout,dstr(extra->amount));
-        if ( coin->mgw.redeemheight == 0 || extra->height >= coin->mgw.redeemheight )
-        {
-            if ( validate_coinaddr(mgw->coinstr,coin->serverport,coin->userpass,extra->coindata) == 0 )
+                        if ( (redeemtxid= mgw_is_mgwtx(coin,txidind,extra->amount)) == extra->txidbits )
+                        {
+                            printf("height.%u MATCHED REDEEM: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+                            return(MGW_WITHDRAWDONE);
+                        } //else printf(" %s.v%d for %s\n",txidstr,vout,extra->coindata);
+                    } else printf("(%s.v%d != %s)\n",txidstr,vout,extra->coindata);
+                }
+            } //else printf("skip flag.%d (%s).v%d %.8f\n",extra->flags,extra->coindata,extra->vout,dstr(extra->amount));
+            if ( coin->mgw.redeemheight == 0 || extra->height >= coin->mgw.redeemheight )
             {
-                printf("height.%u ILLEGAL WITHDRAW ADDR: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
-                return(MGW_WITHDRAWDONE);
-            }
-            else
-            {
-                printf("[numconfs.%d] height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",mgw->RTNXT_height-extra->height,extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
-                if ( coin->mgw.numwithdraws < sizeof(coin->mgw.withdraws)/sizeof(*coin->mgw.withdraws) )
+                if ( validate_coinaddr(mgw->coinstr,coin->serverport,coin->userpass,extra->coindata) == 0 )
                 {
-                    coin->mgw.withdrawsum += extra->amount;
-                    memcpy(&coin->mgw.withdraws[coin->mgw.numwithdraws++],extra,sizeof(*extra));
+                    printf("height.%u ILLEGAL WITHDRAW ADDR: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+                    return(MGW_WITHDRAWDONE);
+                }
+                else
+                {
+                    printf("[numconfs.%d] height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",mgw->RTNXT_height-extra->height,extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+                    if ( coin->mgw.numwithdraws < sizeof(coin->mgw.withdraws)/sizeof(*coin->mgw.withdraws) )
+                    {
+                        coin->mgw.withdrawsum += extra->amount;
+                        memcpy(&coin->mgw.withdraws[coin->mgw.numwithdraws++],extra,sizeof(*extra));
+                    }
                 }
             }
-        }
-    } else printf("cant find MGW_PENDINGREDEEM (%s) (%llu %.8f)\n",extra->coindata,(long long)extra->txidbits,dstr(extra->amount));
+        } else printf("cant find MGW_PENDINGREDEEM (%s) (%llu %.8f)\n",extra->coindata,(long long)extra->txidbits,dstr(extra->amount));
+    }
     return(0);
 }
 
