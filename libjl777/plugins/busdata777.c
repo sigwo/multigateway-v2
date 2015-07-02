@@ -866,113 +866,9 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
     return(0);
 }
 
- /*
-uint8_t *replace_forwarder(char *pluginbuf,uint8_t *data,int32_t *datalenp)
-{
-    cJSON *json,*argjson,*second; char *plugin,*jsonstr; int32_t len,datalen,diff; uint8_t *ptr = data;
-    pluginbuf[0] = 0;
-    if ( (json= cJSON_Parse((char *)data)) != 0 )
-    {
-        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-        {
-            argjson = cJSON_GetArrayItem(json,0);
-            second = cJSON_GetArrayItem(json,1);
-            ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-            datalen = (int32_t)strlen((char *)data) + 1;
-            jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-            if ( (len= (int32_t)strlen(jsonstr)+1) == datalen )
-                memcpy(data,jsonstr,len);
-            else
-            {
-                diff = *datalenp - datalen;
-                ptr = malloc(diff + len);
-                memcpy(ptr,jsonstr,len);
-                //printf("ptr.(%s) len.%d diff.%d datalen.%d\n",ptr,len,diff,datalen);
-                if ( diff > 0 )
-                    memcpy(&ptr[len],&data[datalen],diff);
-                *datalenp = (diff + len);
-            }
-            free(jsonstr);
-        }
-        else argjson = json;
-        if ( (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destplugin"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"destagent"))) != 0 || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"plugin"))) != 0  || (plugin= cJSON_str(cJSON_GetObjectItem(argjson,"agent"))) != 0 )
-        {
-            strcpy(pluginbuf,plugin);
-        }
-        free_json(json);
-    } else printf("cant parse.(%s)\n",data);
-    return(ptr);
-}
-
-char *nn_lb_processor(struct relayargs *args,uint8_t *msg,int32_t len)
-{
-    //char *nn_allrelays_processor(struct relayargs *args,uint8_t *msg,int32_t len);
-    //char *nn_pubsub_processor(struct relayargs *args,uint8_t *msg,int32_t len);
-    char plugin[MAX_JSON_FIELD],*retstr = 0; uint8_t *buf;
-    printf("LB PROCESSOR.(%s)\n",msg);
-    if ( (buf= replace_forwarder(plugin,msg,&len)) != 0 )
-    {
-        //printf("NEWLB.(%s)\n",buf);
-     retstr = plugin_method(0,-1,plugin,(char *)args,0,0,(char *)msg,len,1000);
-    } else { retstr = clonestr("{\"error\":\"couldnt parse LB request\"}"); printf("%s\n",retstr); }
-    if ( buf != msg )
-        free(buf);
-    return(retstr);
-}
-
-void responseloop(void *_args)
-{
-    struct relayargs *args = _args;
-    int32_t len; char *msg,*retstr,*methodstr; cJSON *json,*argjson; // *str,*broadcaststr,*retstr2
-    if ( args->sock >= 0 )
-    {
-        fprintf(stderr,"respondloop.%s %d type.%d <- (%s).%d\n",args->name,args->sock,args->type,args->endpoint,nn_oppotype(args->type));
-        while ( 1 )
-        {
-            if ( (len= nn_recv(args->sock,&msg,NN_MSG,0)) > 0 )
-            {
-                if ( SUPERNET.iamrelay == 0 )
-                    printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
-                retstr = 0;
-                if ( (json= cJSON_Parse((char *)msg)) != 0 )
-                {
-                    if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-                        argjson = cJSON_GetArrayItem(json,0);
-                    else argjson = json;
-                    if ( (methodstr= cJSON_str(cJSON_GetObjectItem(argjson,"method"))) != 0 && strcmp(methodstr,"busdata") == 0 )
-                    {
-                        retstr = nn_busdata_processor((uint8_t *)msg,len);
-                        printf("sock.%d CALL BUSDATA PROCESSOR.(%s) -> (%s)\n",args->sock,msg,retstr);
-                        if ( args->sock >= 0 )
-                        {
-                            nn_send(args->sock,retstr,(int32_t)strlen(retstr)+1,0);
-                            free_json(json);
-                            nn_freemsg(msg);
-                        }
-                        continue;
-                    }
-                    else //if ( SUPERNET.iamrelay != 0 )
-                    {
-                        //if ( Debuglevel > 1 )
-                        //printf("%s RECV.%s (%s).%ld\n",methodstr,args->name,strlen(msg)<1400?msg:"<big message>",strlen(msg));
-                         retstr = (*args->commandprocessor)(args,(uint8_t *)msg,(int32_t)strlen((char *)msg)+1);
-                    }
-                    free_json(json);
-                } else printf("parse error.(%s)\n",(char *)msg);
-                if ( retstr != 0 )
-                {
-                    complete_relay(args,retstr);
-                    free(retstr);
-                }
-                nn_freemsg(msg);
-            }
-        }
-    } else printf("error getting socket type.%d %s\n",args->type,nn_errstr());
-}*/
-
 int32_t busdata_poll()
 {
-    char tokenized[16384],*msg,*retstr; cJSON *json; int32_t len,sock,rc,i,n = 0,timeoutmillis = 1000;
+    char tokenized[65536],*msg,*retstr; cJSON *json; int32_t len,sock,rc,i,n = 0,timeoutmillis = 1000;
     if ( RELAYS.numservers > 0 )
     {
         if ( (rc= nn_poll(RELAYS.pfd,RELAYS.numservers,timeoutmillis)) > 0 )
@@ -999,7 +895,7 @@ int32_t busdata_poll()
                     nn_freemsg(msg);
                 }
             }
-        }
+        } else printf("no packets of n.%d\n",RELAYS.numservers);
     }
     return(n);
 }
@@ -1015,13 +911,17 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
         nn_setsockopt(RELAYS.subclient,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
     }
     RELAYS.lbclient = nn_lbsocket(SUPERNET.PLUGINTIMEOUT,SUPERNET.port + LB_OFFSET,SUPERNET.port + PUBGLOBALS_OFFSET,SUPERNET.port + PUBRELAYS_OFFSET);
+    sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.serviceport);
     if ( (RELAYS.servicesock= nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.serviceport,sendtimeout,recvtimeout)) >= 0 )
         RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.servicesock;
     if ( SUPERNET.iamrelay != 0 )
     {
+        sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + LB_OFFSET);
         if ( (RELAYS.lbserver= nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.port + LB_OFFSET,sendtimeout,recvtimeout)) >= 0 )
             RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.lbserver;
+        sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + PUBGLOBALS_OFFSET);
         RELAYS.pubglobal = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBGLOBALS_OFFSET,sendtimeout,recvtimeout);
+        sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + PUBRELAYS_OFFSET);
         RELAYS.pubrelays = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBRELAYS_OFFSET,sendtimeout,recvtimeout);
     }
     for (i=0; i<RELAYS.numservers; i++)

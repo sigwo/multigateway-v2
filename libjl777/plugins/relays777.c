@@ -308,7 +308,8 @@ int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,
         fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
     if ( bindflag != 0 )
     {
-        expand_epbits(endpoint,calc_epbits(SUPERNET.transport,0,port,type));
+        if ( endpoint[0] == 0 )
+            expand_epbits(endpoint,calc_epbits(SUPERNET.transport,0,port,type));
         if ( nn_bind(sock,endpoint) < 0 )
             fprintf(stderr,"error binding to relaypoint sock.%d type.%d to (%s) (%s) %s\n",sock,type,name,endpoint,nn_errstr());
         else fprintf(stderr,"BIND.(%s) <- %s\n",endpoint,name);
@@ -427,6 +428,7 @@ char *relays_jsonstr(char *jsonstr,cJSON *argjson)
 void serverloop(void *_args)
 {
     int32_t make_MGWbus(uint16_t port,char *bindaddr,char serverips[MAX_MGWSERVERS][64],int32_t n);
+    int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json);
     int32_t poll_daemons();
     int32_t len,n; char retbuf[8192],*jsonstr; cJSON *json;
     busdata_init(10,10,0);
@@ -438,7 +440,6 @@ void serverloop(void *_args)
         n = poll_daemons();
         if ( SUPERNET.gatewayid >= 0 && (len= nn_recv(MGW.all.socks.both.bus,&jsonstr,NN_MSG,0)) > 0 )
         {
-            int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 mgw_processbus(retbuf,jsonstr,json);
