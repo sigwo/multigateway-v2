@@ -1289,14 +1289,38 @@ int32_t validate_coinaddr(char *coinstr,char *serverport,char *userpass,char *co
     return(retval);
 }
 
+int32_t calc_opreturn_script(char *scriptstr,uint64_t redeemtxid,int32_t do_opreturn)
+{
+    char str40[41]; int32_t i;
+    if ( do_opreturn != 0 )
+        mgw_encode_OP_RETURN(scriptstr,redeemtxid);
+    else
+    {
+        init_hexbytes_noT(str40,(void *)&redeemtxid,sizeof(redeemtxid));
+        for (i=(int32_t)strlen(str40); i<40; i++)
+            str40[i] = '0';
+        str40[i] = 0;
+        sprintf(scriptstr,"76a914%s88ac",str40);
+    }
+    return((int32_t)strlen(scriptstr));
+}
+
 int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
 {
-    uint32_t txidind,addrind = 0,firstblocknum; int32_t i,vout; uint64_t redeemtxid; char txidstr[256];
+    uint32_t scriptind,txidind,addrind = 0,firstblocknum; int32_t i,vout; uint64_t redeemtxid; char txidstr[256],scriptstr[32768];
     struct coin777_Lentry L; struct addrtx_info ATX; struct coin777 *coin = coin777_find(mgw->coinstr,0);
     if ( coin != 0 && coin->ramchain.readyflag != 0 )
     {
         if ( (extra->flags & MGW_PENDINGREDEEM) != 0 )
         {
+            calc_opreturn_script(scriptstr,extra->txidbits,coin->mgw.do_opreturn);
+            scriptind = coin777_scriptind(&firstblocknum,coin,extra->coindata,scriptstr);
+            if ( scriptind > 0 && scriptind < 0xffffffff )
+            {
+                printf("height.%u MATCHED REDEEM: (%llu %.8f -> %s) script.(%s) scriptind.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,scriptstr,scriptind);
+                return(MGW_WITHDRAWDONE);
+            }
+            printf("height.%u NO REDEEM: (%llu %.8f -> %s) script.(%s) scriptind.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,scriptstr,scriptind);
             if ( (addrind= coin777_addrind(&firstblocknum,coin,extra->coindata)) != 0 && coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
             {
                 for (i=0; i<L.numaddrtx; i++)
@@ -1497,28 +1521,18 @@ char *mgw_sign_localtx_plus2(uint32_t *completedp,char *coinstr,char *serverport
 
 char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t redeemtxid,int32_t oldtx_format)
 {
-    char scriptstr[1024],str40[41],*retstr = 0; uint64_t checktxid; long len,i; struct cointx_info *cointx; struct rawvout *vout;
+    char scriptstr[1024],*retstr = 0; uint64_t checktxid; long len; struct cointx_info *cointx; struct rawvout *vout;
     if ( (cointx= _decode_rawtransaction(rawtx,oldtx_format)) != 0 )
     {
         vout = &cointx->outputs[opreturn];
+        calc_opreturn_script(scriptstr,redeemtxid,do_opreturn);
         if ( do_opreturn != 0 )
         {
-            mgw_encode_OP_RETURN(scriptstr,redeemtxid);
             vout->value = 0;
             vout->coinaddr[0] = 0;
-            safecopy(vout->script,scriptstr,sizeof(vout->script));
-            printf("opreturn vout.%d (%s)\n",opreturn,vout->script);
         }
-        else
-        {
-            init_hexbytes_noT(str40,(void *)&redeemtxid,sizeof(redeemtxid));
-            for (i=strlen(str40); i<40; i++)
-                str40[i] = '0';
-            str40[i] = 0;
-            sprintf(scriptstr,"76a914%s88ac",str40);
-            strcpy(vout->script,scriptstr);
-            printf("vout.%d (%s)\n",opreturn,vout->script);
-        }
+        safecopy(vout->script,scriptstr,sizeof(vout->script));
+        printf("do_opreturn.%d opreturn vout.%d (%s)\n",do_opreturn,opreturn,vout->script);
         if ( 1 )
         {
             uint8_t script[128];
