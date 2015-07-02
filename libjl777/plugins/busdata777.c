@@ -358,6 +358,25 @@ uint32_t find_serviceprovider(struct serviceprovider *S)
     return(timestamp);
 }
 
+int32_t delete_service_provider(char *serviceNXT,char *servicename,char *endpoint)
+{
+    void *obj; struct serviceprovider S;
+    memset(&S,0,sizeof(S));
+    S.servicebits = conv_acctstr(serviceNXT);
+    strncpy(S.name,servicename,sizeof(S.name)-1);
+    S.endpoint[sizeof(S.endpoint)-1] = 0;
+    strncpy(S.endpoint,endpoint,sizeof(S.endpoint)-1);
+    if ( find_serviceprovider(&S) != 0 && (obj= sp_object(DB_services->db)) != 0 )
+    {
+        if ( sp_set(obj,"key",&S,sizeof(S)) == 0 )
+        {
+            printf("DELETE SERVICEPROVIDER.(%s) (%s) serviceNXT.(%s)\n",servicename,endpoint,serviceNXT);
+            return(sp_delete(obj));
+        }
+    }
+    return(-1);
+}
+
 int32_t add_serviceprovider(struct serviceprovider *S,uint32_t timestamp)
 {
     void *obj;
@@ -634,12 +653,14 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         }
         copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
         copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
-        decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
+        if ( datastr[0] != 0 )
+            decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
+        else databuf[0] = 0;
         *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
         calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
         if ( strcmp(hexstr,sha) == 0 )
             return(1);
-    } else printf("busdata_validate not array\n");
+    } // else printf("busdata_validate not array\n");
     return(-1);
 }
 
@@ -873,7 +894,7 @@ int32_t busdata_poll()
             //if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                printf("RECV.%d (%s)\n",sock,msg);
+                //printf("RECV.%d (%s)\n",sock,msg);
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
                 {

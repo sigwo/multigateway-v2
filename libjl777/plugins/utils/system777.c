@@ -588,7 +588,7 @@ int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_
 int32_t poll_local_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis)
 {
     struct nn_pollfd pfd[sizeof(struct allendpoints)/sizeof(int32_t)];
-    int32_t len,received=0,i,n = 0;
+    int32_t len,received=0,rc,i,n = 0;
     char *str,*msg;
     memset(pfd,0,sizeof(pfd));
     for (i=0; i<(int32_t)(sizeof(socks->all)/sizeof(*socks->all)); i++)
@@ -598,13 +598,12 @@ int32_t poll_local_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsen
     }
     if ( n > 0 )
     {
-        //if ( (rc= nn_poll(pfd,n,timeoutmillis)) > 0 )
+        if ( (rc= nn_poll(pfd,n,timeoutmillis)) > 0 )
         {
             for (i=0; i<n; i++)
             {
                // printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,pfd[i].fd,socks->all[i],pfd[i].revents);
-                //if ( (pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(pfd[i].fd,&msg,NN_MSG,0)) > 0 )
-                if ( (len= nn_recv(pfd[i].fd,&msg,NN_MSG,0)) > 0 )
+                if ( (pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(pfd[i].fd,&msg,NN_MSG,0)) > 0 )
                 {
                     (*numrecvp)++;
                     str = clonestr(msg);
@@ -615,8 +614,8 @@ int32_t poll_local_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsen
                 }
             }
         }
-        //else if ( rc < 0 )
-        //    printf("%s Error.%d polling %d daemons [0] == %d\n",nn_strerror(nn_errno()),rc,n,pfd[0].fd);
+        else if ( rc < 0 )
+            printf("%s Error.%d polling %d daemons [0] == %d\n",nn_strerror(nn_errno()),rc,n,pfd[0].fd);
     }
     //if ( n != 0 || received != 0 )
     //   printf("n.%d: received.%d\n",n,received);
