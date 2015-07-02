@@ -701,7 +701,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
@@ -715,12 +715,12 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
             if ( retstr == 0 )
                 retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
-printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
+//printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
     if ( Debuglevel > 1 )
-        printf("BUSDATA.(%s) (%s)\n",msg,retstr);
+        printf("BUSDATA.(%s) -> %p.(%s)\n",msg,retstr,retstr);
     return(retstr);
 }
 
@@ -806,6 +806,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     if ( data != jsonstr )
                         free(data);
                     free_json(json);
+                    printf("relay returns publicaccess.(%s)\n",retstr);
                     return(retstr);
                 } else free_json(json);
             }
@@ -835,7 +836,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                 }
                 if ( 1 && retstr != 0 )
-                    printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
+                    printf("busdata nn_loadbalanced retstr.(%s) %p\n",retstr,retstr);
                 if ( data != jsonstr )
                     free(data);
                 free_json(json);
@@ -845,7 +846,6 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
     }
     return(clonestr("{\"error\":\"error creating busdata\"}"));
 }
-
 
 int32_t complete_relay(struct relayargs *args,char *retstr)
 {
@@ -880,13 +880,13 @@ int32_t busdata_poll()
                     if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
                     {
                         noneed = 0;
-                        if ( (retjson= cJSON_Parse(msg)) != 0 )
+                        if ( (retjson= cJSON_Parse(retstr)) != 0 )
                         {
                             if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
                             {
                                 noneed = 1;
-                                printf("return.(%s)\n",msg);
-                                nn_send(sock,msg,len,0);
+                                printf("return.(%s)\n",retstr);
+                                nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
                             }
                             free_json(retjson);
                         }
