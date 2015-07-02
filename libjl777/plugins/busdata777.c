@@ -871,13 +871,14 @@ int32_t busdata_poll()
     char tokenized[65536],*msg,*retstr; cJSON *json; int32_t len,sock,rc,i,n = 0,timeoutmillis = 1000;
     if ( RELAYS.numservers > 0 )
     {
-        if ( (rc= nn_poll(RELAYS.pfd,RELAYS.numservers,timeoutmillis)) > 0 )
-        {
+        //if ( (rc= nn_poll(RELAYS.pfd,RELAYS.numservers,timeoutmillis)) > 0 )
+        //{
             for (i=0; i<RELAYS.numservers; i++)
             {
                 sock = RELAYS.pfd[i].fd;
-                printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,RELAYS.pfd[i].fd,RELAYS.pfd[i].fd,RELAYS.pfd[i].revents);
-                if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
+                //printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,RELAYS.pfd[i].fd,RELAYS.pfd[i].fd,RELAYS.pfd[i].revents);
+                //if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
+                if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
                 {
                     printf("RECV.%d (%s)\n",sock,msg);
                     n++;
@@ -895,7 +896,7 @@ int32_t busdata_poll()
                     nn_freemsg(msg);
                 }
             }
-        } else printf("no packets of n.%d\n",RELAYS.numservers);
+        //} else printf("no packets of n.%d\n",RELAYS.numservers);
     }
     return(n);
 }
