@@ -972,7 +972,7 @@ void responseloop(void *_args)
 
 int32_t busdata_poll()
 {
-    char tokenized[16384],*msg,*retstr; cJSON *json; int32_t len,sock,rc,i,n = 0,timeoutmillis = 1;
+    char tokenized[16384],*msg,*retstr; cJSON *json; int32_t len,sock,rc,i,n = 0,timeoutmillis = 1000;
     if ( RELAYS.numservers > 0 )
     {
         if ( (rc= nn_poll(RELAYS.pfd,RELAYS.numservers,timeoutmillis)) > 0 )
@@ -980,7 +980,7 @@ int32_t busdata_poll()
             for (i=0; i<RELAYS.numservers; i++)
             {
                 sock = RELAYS.pfd[i].fd;
-                // printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,pfd[i].fd,socks->all[i],pfd[i].revents);
+                printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,RELAYS.pfd[i].fd,RELAYS.pfd[i].fd,RELAYS.pfd[i].revents);
                 if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
                 {
                     printf("RECV.%d (%s)\n",sock,msg);
@@ -1017,10 +1017,8 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
     {
         if ( (RELAYS.lbserver= nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.port + LB_OFFSET,sendtimeout,recvtimeout)) >= 0 )
             RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.lbserver;
-        if ( (RELAYS.pubglobal= nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBGLOBALS_OFFSET,sendtimeout,recvtimeout)) >= 0 )
-            RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.pubglobal;
-        if ( (RELAYS.pubrelays= nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBRELAYS_OFFSET,sendtimeout,recvtimeout)) >= 0 )
-            RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.pubrelays;
+        RELAYS.pubglobal = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBGLOBALS_OFFSET,sendtimeout,recvtimeout);
+        RELAYS.pubrelays = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBRELAYS_OFFSET,sendtimeout,recvtimeout);
     }
     for (i=0; i<RELAYS.numservers; i++)
         RELAYS.pfd[i].events = NN_POLLIN | NN_POLLOUT;
