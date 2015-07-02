@@ -983,6 +983,7 @@ int32_t busdata_poll()
                 // printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,pfd[i].fd,socks->all[i],pfd[i].revents);
                 if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
                 {
+                    printf("RECV.%d (%s)\n",sock,msg);
                     n++;
                     if ( (json= cJSON_Parse(msg)) != 0 )
                     {

@@ -191,7 +191,7 @@ int32_t nn_add_lbservers(uint16_t port,uint16_t globalport,uint16_t relaysport,i
                 expand_epbits(endpoint,epbits);
                 if ( nn_connect(sock,endpoint) >= 0 )
                 {
-                    printf("+%s ",endpoint);
+                    printf("+R%s ",endpoint);
                     add_relay(&RELAYS.active,epbits);
                 }
                 if ( RELAYS.subclient >= 0 )
@@ -201,12 +201,12 @@ int32_t nn_add_lbservers(uint16_t port,uint16_t globalport,uint16_t relaysport,i
                         epbits = calc_epbits("tcp",ipbits,relaysport,NN_PUB);
                         expand_epbits(pubendpoint,epbits);
                         if ( nn_connect(RELAYS.subclient,pubendpoint) >= 0 )
-                            printf("+%s ",pubendpoint);
+                            printf("+P%s ",pubendpoint);
                     }
                     epbits = calc_epbits("tcp",ipbits,globalport,NN_PUB);
                     expand_epbits(pubendpoint,epbits);
                     if ( nn_connect(RELAYS.subclient,pubendpoint) >= 0 )
-                        printf("+%s ",pubendpoint);
+                        printf("+P%s ",pubendpoint);
                 }
             }
         }
