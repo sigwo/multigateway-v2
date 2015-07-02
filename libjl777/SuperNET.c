@@ -628,9 +628,9 @@ void *issue_cgicall(void *_ptr)
     {
         if ( (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
-            //printf("call busdata\n");
+            printf("call busdata_sync\n");
             str = busdata_sync(ptr->jsonstr,broadcaststr);
-            //printf("got %p\n",str);
+            printf("got %p\n",str);
         }
         else
         {
@@ -666,7 +666,7 @@ void *issue_cgicall(void *_ptr)
                     fprintf(stderr,"checklen.%d != len.%d for nn_send to (%s)\n",checklen,retlen,apitag);
                 free(str), str = 0;
             }
-        }
+        } else printf("null str returned\n");
     }
     if ( ptr->sock >= 0 )
     {
