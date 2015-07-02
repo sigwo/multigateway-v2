@@ -431,7 +431,7 @@ void serverloop(void *_args)
     int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json);
     int32_t poll_daemons();
     int32_t len,n; char retbuf[8192],*jsonstr; cJSON *json;
-    busdata_init(10,10,0);
+    busdata_init(10,1,0);
     if ( SUPERNET.gatewayid >= 0 )
         MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1*0);
     sleep(10);
