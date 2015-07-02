@@ -1284,11 +1284,11 @@ char *PLUGNAME(_methods)[] = { "install", "plugin", "agent" }; // list of suppor
 char *PLUGNAME(_pubmethods)[] = { "ping", "pong" }; // list of supported methods
 char *PLUGNAME(_authmethods)[] = { "setpass" }; // list of supported methods
 
-uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass)
+uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secretstr,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass)
 {
     uint64_t allocsize,nxt64bits;
     uint8_t mysecret[32],mypublic[32];
-    char coinaddr[MAX_JSON_FIELD],*str,*privkey;
+    char coinaddr[MAX_JSON_FIELD],secret[4096],*str,*privkey;
     NXTaddr[0] = 0;
     extract_cJSON_str(secret,max,argjson,"secret");
     if ( Debuglevel > 2 )
@@ -1323,6 +1323,7 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
     if ( 1 )
         conv_rsacctstr(NXTacct,nxt64bits);
     printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>");
+    escape_code(secretstr,secret);
     return(nxt64bits);
 }
 
@@ -1476,7 +1477,7 @@ int upnpredirect(const char* eport, const char* iport, const char* proto, const 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
     char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json);
-    char *retstr,*resultstr,*methodstr,*destplugin,buf[1024],myipaddr[512];
+    char *retstr,*resultstr,*methodstr,*destplugin,secretstr[4096],buf[1024],myipaddr[512];
     FILE *fp;
     int32_t i;
     retbuf[0] = 0;
@@ -1520,7 +1521,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         copy_cJSON(SUPERNET.hostname,cJSON_GetObjectItem(json,"hostname"));
         SUPERNET.port = get_API_int(cJSON_GetObjectItem(json,"SUPERNET_PORT"),SUPERNET_PORT);
         SUPERNET.serviceport = get_API_int(cJSON_GetObjectItem(json,"serviceport"),SUPERNET_PORT - 2);
-        copy_cJSON(SUPERNET.SERVICESECRET,cJSON_GetObjectItem(json,"SERVICESECRET"));
+        copy_cJSON(secretstr,cJSON_GetObjectItem(json,"SERVICESECRET"));
+        escape_code(secretstr,SUPERNET.SERVICESECRET);
+
         SUPERNET.automatch = get_API_int(cJSON_GetObjectItem(json,"automatch"),3);
 #ifndef __linux__
         SUPERNET.UPNP = 1;
