@@ -1008,6 +1008,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
 {
     char endpoint[512]; int32_t i;
     RELAYS.servicesock = RELAYS.pubglobal = RELAYS.pubrelays = RELAYS.lbserver = -1;
+    endpoint[0] = 0;
     if ( (RELAYS.subclient= nn_createsocket(endpoint,0,"NN_SUB",NN_SUB,0,sendtimeout,recvtimeout)) >= 0 )
         RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.subclient;
     RELAYS.lbclient = nn_lbsocket(SUPERNET.PLUGINTIMEOUT,SUPERNET.port + LB_OFFSET,SUPERNET.port + PUBGLOBALS_OFFSET,SUPERNET.port + PUBRELAYS_OFFSET);
