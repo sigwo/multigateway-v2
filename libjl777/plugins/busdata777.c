@@ -6,7 +6,6 @@
 //
 // sync relays
 // and then also to make sure adding relays on the fly syncs up to the current set of serviceproviders
-// way to remove serviceprovider node
 // encryption
 // ipv6
 // btc38
@@ -343,6 +342,30 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
     return(jsonstr);
 }
 
+cJSON *serviceprovider_json()
+{
+    struct serviceprovider **sps; int32_t i,num; cJSON *json,*item,*array; char numstr[64];
+    json = cJSON_CreateObject();
+    array = cJSON_CreateArray();
+    if ( (sps= (struct serviceprovider **)db777_copy_all(&num,DB_services,"key",0)) != 0 )
+    {
+        for (i=0; i<num; i++)
+        {
+            if ( sps[i] != 0 )
+            {
+                item = cJSON_CreateObject();
+                cJSON_AddItemToObject(item,sps[i]->name,cJSON_CreateString(sps[i]->endpoint));
+                sprintf(numstr,"%llu",(long long)sps[i]->servicebits), cJSON_AddItemToObject(item,"serviceNXT",cJSON_CreateString(numstr));
+                free(sps[i]);
+                cJSON_AddItemToArray(array,item);
+            }
+        }
+        free(sps);
+    }
+    cJSON_AddItemToObject(json,"services",array);
+    return(json);
+}
+
 uint32_t find_serviceprovider(struct serviceprovider *S)
 {
     void *obj,*result,*value; int32_t len; uint32_t timestamp = 0;
@@ -360,7 +383,7 @@ uint32_t find_serviceprovider(struct serviceprovider *S)
 
 int32_t remove_service_provider(char *serviceNXT,char *servicename,char *endpoint)
 {
-    void *obj; struct serviceprovider S;
+    void *obj; int32_t retval; struct serviceprovider S;
     memset(&S,0,sizeof(S));
     S.servicebits = conv_acctstr(serviceNXT);
     strncpy(S.name,servicename,sizeof(S.name)-1);
@@ -370,8 +393,9 @@ int32_t remove_service_provider(char *serviceNXT,char *servicename,char *endpoin
     {
         if ( sp_set(obj,"key",&S,sizeof(S)) == 0 )
         {
-            printf("DELETE SERVICEPROVIDER.(%s) (%s) serviceNXT.(%s)\n",servicename,endpoint,serviceNXT);
-            return(sp_delete(obj));
+            printf("DELETE SERVICEPROVIDER.(%s) (%s) serviceNXT.(%s) (%s)\n",servicename,endpoint,serviceNXT,cJSON_Print(serviceprovider_json()));
+            retval = sp_delete(obj);
+            printf("after delete retval.%d (%s)\n",retval,cJSON_Print(serviceprovider_json()));
         }
     }
     return(-1);
@@ -404,30 +428,6 @@ int32_t add_service_provider(char *serviceNXT,char *servicename,char *endpoint)
     if ( find_serviceprovider(&S) == 0 )
         add_serviceprovider(&S,(uint32_t)time(NULL));
     return(0);
-}
-
-cJSON *serviceprovider_json()
-{
-    struct serviceprovider **sps; int32_t i,num; cJSON *json,*item,*array; char numstr[64];
-    json = cJSON_CreateObject();
-    array = cJSON_CreateArray();
-    if ( (sps= (struct serviceprovider **)db777_copy_all(&num,DB_services,"key",0)) != 0 )
-    {
-        for (i=0; i<num; i++)
-        {
-            if ( sps[i] != 0 )
-            {
-                item = cJSON_CreateObject();
-                cJSON_AddItemToObject(item,sps[i]->name,cJSON_CreateString(sps[i]->endpoint));
-                sprintf(numstr,"%llu",(long long)sps[i]->servicebits), cJSON_AddItemToObject(item,"serviceNXT",cJSON_CreateString(numstr));
-                free(sps[i]);
-                cJSON_AddItemToArray(array,item);
-            }
-        }
-        free(sps);
-    }
-    cJSON_AddItemToObject(json,"services",array);
-    return(json);
 }
 
 struct service_provider *find_servicesock(char *servicename,char *endpoint)
