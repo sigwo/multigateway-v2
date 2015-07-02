@@ -358,7 +358,7 @@ uint32_t find_serviceprovider(struct serviceprovider *S)
     return(timestamp);
 }
 
-int32_t delete_service_provider(char *serviceNXT,char *servicename,char *endpoint)
+int32_t remove_service_provider(char *serviceNXT,char *servicename,char *endpoint)
 {
     void *obj; struct serviceprovider S;
     memset(&S,0,sizeof(S));
@@ -487,7 +487,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
 {
     cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
     struct service_provider *sp; int32_t valid;
-    char submethod[512],endpoint[512],destplugin[512],retbuf[128],serviceNXT[128],servicename[512],servicetoken[512],*hashstr,*str,*retstr;
+    char submethod[512],servicecmd[512],endpoint[512],destplugin[512],retbuf[128],serviceNXT[128],servicename[512],servicetoken[512],*hashstr,*str,*retstr;
     if ( key == 0 || key[0] == 0 )
         key = "0";
     ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
@@ -498,6 +498,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     copy_cJSON(submethod,cJSON_GetObjectItem(json,"submethod"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
+    copy_cJSON(servicecmd,cJSON_GetObjectItem(json,"servicecmd"));
     //printf("addpending.(%s %s).%s\n",destplugin,servicename,submethod);
     if ( strcmp(submethod,"serviceprovider") == 0 )
     {
@@ -505,12 +506,20 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
         copy_cJSON(servicetoken,cJSON_GetObjectItem(json,"servicetoken"));
         if ( issue_decodeToken(serviceNXT,&valid,endpoint,(void *)servicetoken) > 0 )
             printf("valid.(%s) from serviceNXT.%s\n",endpoint,serviceNXT);
-        if ( add_service_provider(serviceNXT,servicename,endpoint) == 0 )
-            find_servicesock(servicename,endpoint);
-        else find_servicesock(servicename,0);
-        find_servicesock(servicename,0);
+        if ( strcmp(servicecmd,"remove") == 0 )
+        {
+            remove_service_provider(serviceNXT,servicename,endpoint);
+            sprintf(retbuf,"{\"result\":\"serviceprovider endpoint removed\",\"endpoint\":\"%s\",\"serviceNXT\":\"%s\"}",endpoint,serviceNXT);
+        }
+        else
+        {
+            if ( add_service_provider(serviceNXT,servicename,endpoint) == 0 )
+                find_servicesock(servicename,endpoint);
+            else find_servicesock(servicename,0);
+            find_servicesock(servicename,0);
+            sprintf(retbuf,"{\"result\":\"serviceprovider added\",\"endpoint\":\"%s\",\"serviceNXT\":\"%s\"}",endpoint,serviceNXT);
+        }
         nn_syncbus(origjson);
-        sprintf(retbuf,"{\"result\":\"serviceprovider added\",\"endpoint\":\"%s\",\"serviceNXT\":\"%s\"}",endpoint,serviceNXT);
         return(clonestr(retbuf));
     }
     else
