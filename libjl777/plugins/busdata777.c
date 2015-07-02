@@ -719,7 +719,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("BUSDATA.(%s) -> %p.(%s)\n",msg,retstr,retstr);
     return(retstr);
 }
@@ -806,7 +806,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     if ( data != jsonstr )
                         free(data);
                     free_json(json);
-                    printf("relay returns publicaccess.(%s)\n",retstr);
+                    //printf("relay returns publicaccess.(%s)\n",retstr);
                     return(retstr);
                 } else free_json(json);
             }
@@ -835,7 +835,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     //printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                 }
-                if ( 1 && retstr != 0 )
+                if ( 0 && retstr != 0 )
                     printf("busdata nn_loadbalanced retstr.(%s) %p\n",retstr,retstr);
                 if ( data != jsonstr )
                     free(data);
@@ -885,7 +885,7 @@ int32_t busdata_poll()
                             if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
                             {
                                 noneed = 1;
-                                printf("return.(%s)\n",retstr);
+                                //printf("return.(%s)\n",retstr);
                                 nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
                             }
                             free_json(retjson);
@@ -893,7 +893,7 @@ int32_t busdata_poll()
                         if ( noneed == 0 )
                         {
                             len = construct_tokenized_req(tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
-                            printf("tokenized return.(%s)\n",tokenized);
+                            //printf("tokenized return.(%s)\n",tokenized);
                             nn_send(sock,tokenized,len,0);
                         }
                         free(retstr);

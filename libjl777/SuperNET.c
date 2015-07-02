@@ -628,17 +628,17 @@ void *issue_cgicall(void *_ptr)
     {
         if ( (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
-            printf("call busdata_sync\n");
+            //printf("call busdata_sync\n");
             str = busdata_sync(ptr->jsonstr,broadcaststr);
-            printf("got %p\n",str);
+            //printf("got %p\n",str);
         }
         else
         {
             ptr->retstr = 0;
-            printf("call plugin_method\n");
+            //printf("call plugin_method\n");
             str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
             if ( str != 0 )
-                printf("retstr.(%s)\n",str), free(str);
+                free(str);
             while ( ptr->retstr == 0 )
                 msleep(10);
             str = ptr->retstr;
@@ -658,7 +658,7 @@ void *issue_cgicall(void *_ptr)
                 }
                 free_json(retjson);
             }
-            printf("sock.%d mainstr.(%s) valid.%d sender.(%s) forwarder.(%s) time.%u\n",ptr->sock,str,valid,sender,forwarder,timestamp);
+            //printf("sock.%d mainstr.(%s) valid.%d sender.(%s) forwarder.(%s) time.%u\n",ptr->sock,str,valid,sender,forwarder,timestamp);
             if ( ptr->sock >= 0 )
             {
                 retlen = (int32_t)strlen(str) + 1;
