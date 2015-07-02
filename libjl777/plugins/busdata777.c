@@ -394,7 +394,7 @@ int32_t remove_service_provider(char *serviceNXT,char *servicename,char *endpoin
         if ( sp_set(obj,"key",&S,sizeof(S)) == 0 )
         {
             printf("DELETE SERVICEPROVIDER.(%s) (%s) serviceNXT.(%s) (%s)\n",servicename,endpoint,serviceNXT,cJSON_Print(serviceprovider_json()));
-            retval = sp_delete(obj);
+            retval = sp_delete(DB_services->db,obj);
             printf("after delete retval.%d (%s)\n",retval,cJSON_Print(serviceprovider_json()));
         }
     }
