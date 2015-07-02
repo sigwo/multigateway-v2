@@ -868,7 +868,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr; cJSON *json; int32_t len,sock,i,n = 0;
+    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -884,9 +884,22 @@ int32_t busdata_poll()
                 {
                     if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
                     {
-                        len = construct_tokenized_req(tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
-                        printf("busdata return.(%s)\n",retstr);
-                        nn_send(sock,tokenized,len,0);
+                        noneed = 0;
+                        if ( (retjson= cJSON_Parse(msg)) != 0 )
+                        {
+                            if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
+                            {
+                                noneed = 1;
+                                nn_send(sock,msg,len,0);
+                            }
+                            free_json(retjson);
+                        }
+                        if ( noneed == 0 )
+                        {
+                            len = construct_tokenized_req(tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
+                            //printf("busdata return.(%s)\n",retstr);
+                            nn_send(sock,tokenized,len,0);
+                        }
                         free(retstr);
                     } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
                     free_json(json);
