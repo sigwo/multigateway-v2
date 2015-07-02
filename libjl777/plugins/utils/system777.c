@@ -273,6 +273,7 @@ char *get_broadcastmode(cJSON *json,char *broadcastmode);
 cJSON *serviceprovider_json();
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout);
 int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t relaysport);
+int32_t OS_init();
 
 #define MAXTIMEDIFF 60
 
