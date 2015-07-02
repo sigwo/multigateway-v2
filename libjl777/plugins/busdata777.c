@@ -715,11 +715,11 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
             if ( retstr == 0 )
                 retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
-            //printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
+printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("BUSDATA.(%s) (%s)\n",msg,retstr);
     return(retstr);
 }
@@ -834,7 +834,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     //printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                 }
-                if ( 0 && retstr != 0 )
+                if ( 1 && retstr != 0 )
                     printf("busdata nn_loadbalanced retstr.(%s)\n",retstr);
                 if ( data != jsonstr )
                     free(data);
