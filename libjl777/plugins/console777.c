@@ -271,15 +271,15 @@ void process_userinput(char *_line)
         if ( (cmdstr = parse_expandedline(plugin,method,&timeout,line,broadcastflag)) != 0 )
         {
             printf("ipaddr.(%s) (%s)\n",ipaddr,line);
-            retstr = nn_direct(ipaddr,(uint8_t *)line,(int32_t)strlen(line)+1);
-            printf("(%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
+            //retstr = nn_direct(ipaddr,(uint8_t *)line,(int32_t)strlen(line)+1);
+            printf("deprecated (%s) -> (%s)\n",line,cmdstr);
             free(cmdstr);
         }
         return;
     }
     if ( (cmdstr= parse_expandedline(plugin,method,&timeout,line,broadcastflag)) != 0 )
     {
-        retstr = process_user_json(plugin,method,cmdstr,broadcastflag,timeout != 0 ? timeout : RELAYS.surveymillis);
+        retstr = process_user_json(plugin,method,cmdstr,broadcastflag,timeout != 0 ? timeout : SUPERNET.PLUGINTIMEOUT);
         printf("CONSOLE (%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);
         free(cmdstr);
     }

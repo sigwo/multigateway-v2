@@ -35,6 +35,9 @@
 #include "pair.h"
 
 #define SUPERNET_PORT 7777
+#define LB_OFFSET 1
+#define PUBGLOBALS_OFFSET 2
+#define PUBRELAYS_OFFSET 3
 
 #define nn_errstr() nn_strerror(nn_errno())
 
@@ -179,9 +182,9 @@ struct InstantDEX_info
 #define MAX_SERVERNAME 128
 struct relayargs
 {
-    char *(*commandprocessor)(struct relayargs *args,uint8_t *msg,int32_t len);
+    //char *(*commandprocessor)(struct relayargs *args,uint8_t *msg,int32_t len);
     char name[16],endpoint[MAX_SERVERNAME];
-    int32_t lbsock,pubsock,subsock,peersock,sock,type,bindflag,sendtimeout,recvtimeout;
+    int32_t sock,type,bindflag,sendtimeout,recvtimeout;
 };
 
 #define CONNECTION_NUMBITS 10
@@ -191,10 +194,9 @@ struct direct_connection { char handler[16]; struct endpoint epbits; int32_t soc
 
 struct relay_info
 {
-    struct relayargs args[16];
-    struct _relay_info lb,peer,sub,pair,bus;
-    int32_t readyflag,pubsock,servicesock,querypeers,surveymillis,pullsock;
-    struct direct_connection directlinks[1 << CONNECTION_NUMBITS];
+    struct _relay_info active;
+    struct nn_pollfd pfd[16];
+    int32_t readyflag,subclient,lbclient,lbserver,servicesock,pubglobal,pubrelays,numservers;
 }; extern struct relay_info RELAYS;
 
 void expand_epbits(char *endpoint,struct endpoint epbits);
@@ -259,7 +261,7 @@ int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis);
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len);
 void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter);
-void busdata_poll();
+int32_t busdata_poll();
 char *busdata_sync(char *jsonstr,char *broadcastmode);
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode);
@@ -269,6 +271,8 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
 int32_t nonce_leverage(char *broadcaststr);
 char *get_broadcastmode(cJSON *json,char *broadcastmode);
 cJSON *serviceprovider_json();
+int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout);
+int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t relaysport);
 
 #define MAXTIMEDIFF 60
 
