@@ -36,7 +36,7 @@
 
 struct plugin_info
 {
-    char bindaddr[64],connectaddr[64],ipaddr[64],name[64],NXTADDR[64];
+    char bindaddr[64],connectaddr[64],ipaddr[64],name[64],NXTADDR[64],SERVICENXT[64];
     uint64_t daemonid,myid,nxt64bits;
     union endpoints all;
     uint32_t permanentflag,ppid,transportid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis,allowremote;
@@ -158,34 +158,11 @@ static int32_t set_nxtaddrs(char *NXTaddr,char *serviceNXT)
 
 static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin,uint64_t tag,int32_t allfields)
 {
-    char tagstr[128],numstr[64]; cJSON *json;
+    char tagstr[128]; cJSON *json;
 //printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
     tagstr[0] = 0;
     if ( retbuf[strlen(retbuf)-1] != ']' && (json= cJSON_Parse(retbuf)) != 0 )
     {
-#ifndef BUNDLED
-        char NXTaddr[512],serviceNXT[512],tmpstrA[512],tmpstrB[512],*str;
-        copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"NXT"));
-        copy_cJSON(serviceNXT,cJSON_GetObjectItem(json,"serviceNXT"));
-        if ( NXTaddr[0] == 0 || serviceNXT[0] == 0 )
-        {
-            set_nxtaddrs(tmpstrA,tmpstrB);
-            if ( NXTaddr[0] == 0 )
-                strcpy(NXTaddr,tmpstrA);
-            if ( serviceNXT[0] == 0 )
-                strcpy(serviceNXT,tmpstrB);
-        }
-        if ( cJSON_GetObjectItem(json,"NXT") == 0 )
-            cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
-        else cJSON_ReplaceItemInObject(json,"NXT",cJSON_CreateString(NXTaddr));
-        if ( cJSON_GetObjectItem(json,"serviceNXT") == 0 )
-            cJSON_AddItemToObject(json,"serviceNXT",cJSON_CreateString(serviceNXT));
-        else cJSON_ReplaceItemInObject(json,"serviceNXT",cJSON_CreateString(serviceNXT));
-        cJSON_AddItemToObject(json,"allowremote",cJSON_CreateNumber(plugin->allowremote));
-        str = cJSON_Print(json), _stripwhite(str,' ');
-        strcpy(retbuf,str);
-        free(str);
-#else
         if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
             sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
         if ( allfields != 0 )
@@ -196,7 +173,6 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
             sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
          }
          else sprintf(retbuf+strlen(retbuf)-1,",\"allowremote\":%d%s}",plugin->allowremote,tagstr);
-#endif
     }
 }
 
@@ -241,6 +217,25 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
     if ( plugin->sleepmillis == 0 )
         plugin->sleepmillis = get_API_int(cJSON_GetObjectItem(json,"sleepmillis"),SUPERNET.APISLEEP);
     cJSON_AddItemToObject(json,"sleepmillis",cJSON_CreateNumber(plugin->sleepmillis));
+    char NXTaddr[512],serviceNXT[512],tmpstrA[512],tmpstrB[512];
+    copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"NXT"));
+    copy_cJSON(serviceNXT,cJSON_GetObjectItem(json,"serviceNXT"));
+    if ( NXTaddr[0] == 0 || serviceNXT[0] == 0 )
+    {
+        set_nxtaddrs(tmpstrA,tmpstrB);
+        if ( NXTaddr[0] == 0 )
+            strcpy(NXTaddr,tmpstrA);
+        if ( serviceNXT[0] == 0 )
+            strcpy(serviceNXT,tmpstrB);
+    }
+    strcpy(plugin->NXTADDR,NXTaddr);
+    strcpy(plugin->SERVICENXT,serviceNXT);
+    if ( cJSON_GetObjectItem(json,"NXT") == 0 )
+        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
+    else cJSON_ReplaceItemInObject(json,"NXT",cJSON_CreateString(NXTaddr));
+    if ( cJSON_GetObjectItem(json,"serviceNXT") == 0 )
+        cJSON_AddItemToObject(json,"serviceNXT",cJSON_CreateString(serviceNXT));
+    else cJSON_ReplaceItemInObject(json,"serviceNXT",cJSON_CreateString(serviceNXT));
     jsonstr = cJSON_Print(json), free_json(json);
     _stripwhite(jsonstr,' ');
     strcpy(retbuf,jsonstr), free(jsonstr);
