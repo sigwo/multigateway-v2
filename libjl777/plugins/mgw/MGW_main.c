@@ -397,7 +397,7 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
         {
             strcpy(msigjsonstr,str);
             _stripwhite(msigjsonstr,' ');
-            nn_send(MGW.all.socks.both.bus,(uint8_t *)msigjsonstr,(int32_t)strlen(msigjsonstr)+1,0);
+            //nn_send(MGW.all.socks.both.bus,(uint8_t *)msigjsonstr,(int32_t)strlen(msigjsonstr)+1,0);
             //nn_publish((uint8_t *)msigjsonstr,(int32_t)strlen(msigjsonstr)+1,1);
             //printf("ENSURE.(%s)\n",msigjsonstr);
             retval = 1;
@@ -488,7 +488,7 @@ void fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method)
 
 int32_t process_acctpubkeys(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char *retbuf,char *jsonstr,cJSON *json,char *methodstr)
 {
-    char userNXT[64]; cJSON *array,*item; struct coin777 *coin; int32_t i,havemsig,n=0,count = 0,updated = 0;
+    char userNXT[64]; cJSON *array,*item; int32_t i,havemsig,n=0,count = 0,updated = 0;
     if ( SUPERNET.gatewayid >= 0 )
     {
         if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -499,12 +499,12 @@ int32_t process_acctpubkeys(char *coinstr,int32_t gatewayid,uint64_t gatewaybits
                 item = cJSON_GetArrayItem(array,i);
                 copy_cJSON(userNXT,cJSON_GetObjectItem(item,"userNXT"));
                 updated += process_acctpubkey(&havemsig,item,gatewayid,gatewaybits);
-                if ( n == 1 && strcmp(methodstr,"myacctpubkeys") == 0 )
+                /*if ( n == 1 && strcmp(methodstr,"myacctpubkey") == 0 )
                 {
                     coin = coin777_find(coinstr,0);
                     if ( coin != 0 && userNXT[0] != 0 )
                         fix_msigaddr(coin,userNXT,"myacctpubkey");
-                }
+                }*/
                 count += havemsig;
             }
         }
