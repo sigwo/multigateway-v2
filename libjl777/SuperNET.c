@@ -644,7 +644,7 @@ void *issue_cgicall(void *_ptr)
                 while ( ptr->retstr == 0 )
                     msleep(10);
             }
-            else str = plugin_method(0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,0);
+            else str = plugin_method(0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
             str = ptr->retstr;
         }
         if ( str != 0 )
