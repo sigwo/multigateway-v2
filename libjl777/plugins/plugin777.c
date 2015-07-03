@@ -133,21 +133,60 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     return(retval);
 }
 
+static int32_t set_nxtaddrs(char *NXTaddr,char *serviceNXT)
+{
+    FILE *fp; cJSON *json; char confname[512],buf[65536],secret[4096],servicesecret[4096]; uint8_t mysecret[32],mypublic[32];
+    strcpy(confname,"../../SuperNET.conf"), os_compatible_path(confname);
+    NXTaddr[0] = serviceNXT[0] = 0;
+    if ( (fp= fopen(confname,"rb")) != 0 )
+    {
+        if ( fread(buf,1,sizeof(buf),fp) > 0 )
+        {
+            if ( (json= cJSON_Parse(buf)) != 0 )
+            {
+                copy_cJSON(secret,cJSON_GetObjectItem(json,"secret"));
+                copy_cJSON(servicesecret,cJSON_GetObjectItem(json,"SERVICESECRET"));
+                expand_nxt64bits(NXTaddr,conv_NXTpassword(mysecret,mypublic,(uint8_t *)secret,(int32_t)strlen(secret)));
+                expand_nxt64bits(serviceNXT,conv_NXTpassword(mysecret,mypublic,(uint8_t *)servicesecret,(int32_t)strlen(servicesecret)));
+                free_json(json);
+            } else fprintf(stderr,"set_nxtaddrs parse error.(%s)\n",buf);
+        } else fprintf(stderr,"set_nxtaddrs error reading.(%s)\n",confname);
+        fclose(fp);
+    } else fprintf(stderr,"set_nxtaddrs cant open.(%s)\n",confname);
+    return((int32_t)strlen(NXTaddr));
+}
+
 static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin,uint64_t tag,int32_t allfields)
 {
-    char tagstr[128],*NXTaddr; cJSON *json;
+    char tagstr[128],numstr[64]; cJSON *json;
 //printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
     if ( retbuf[strlen(retbuf)-1] != ']' && (json= cJSON_Parse(retbuf)) != 0 )
     {
-        if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
-            sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
-        else tagstr[0] = 0;
-        NXTaddr = cJSON_str(cJSON_GetObjectItem(json,"NXT"));
-        if ( NXTaddr == 0 || NXTaddr[0] == 0 )
+#ifndef BUNDLED
+        char NXTaddr[512],serviceNXT[512],tmpstrA[512],tmpstrB[512],*str;
+        copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"NXT"));
+        copy_cJSON(serviceNXT,cJSON_GetObjectItem(json,"serviceNXT"));
+        if ( NXTaddr[0] == 0 || serviceNXT[0] == 0 )
         {
-            NXTaddr = SUPERNET.NXTADDR;
-            sprintf(retbuf+strlen(retbuf)-1,",\"NXT\":\"%s\"}",NXTaddr);
+            set_nxtaddrs(tmpstrA,tmpstrB);
+            if ( NXTaddr[0] == 0 )
+                strcpy(NXTaddr,tmpstrA);
+            if ( serviceNXT[0] == 0 )
+                strcpy(serviceNXT,tmpstrB);
         }
+        if ( cJSON_GetObjectItem(json,"NXT") == 0 )
+            cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
+        else cJSON_ReplaceItemInObject(json,"NXT",cJSON_CreateString(NXTaddr));
+        if ( cJSON_GetObjectItem(json,"serviceNXT") == 0 )
+            cJSON_AddItemToObject(json,"serviceNXT",cJSON_CreateString(serviceNXT));
+        else cJSON_ReplaceItemInObject(json,"serviceNXT",cJSON_CreateString(serviceNXT));
+        cJSON_AddItemToObject(json,"allowremote",cJSON_CreateNumber(plugin->allowremote));
+        str = cJSON_Print(json), _stripwhite(str,' ');
+        strcpy(retbuf,str);
+        free(str);
+#else
+        if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
+            sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         if ( allfields != 0 )
         {
              if ( SUPERNET.iamrelay != 0 )
@@ -156,6 +195,7 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
             sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
          }
          else sprintf(retbuf+strlen(retbuf)-1,",\"allowremote\":%d%s}",plugin->allowremote,tagstr);
+#endif
     }
 }
 

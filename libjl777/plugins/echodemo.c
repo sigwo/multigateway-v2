@@ -68,7 +68,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"echo") == 0 )
         {
-            sprintf(retbuf,"{\"result\":\"%s\",\"NXT\":\"%s\",\"serviceNXT\":\"%s\"}",echostr,SUPERNET.NXTADDR,SUPERNET.SERVICENXT);
+            sprintf(retbuf,"{\"result\":\"%s\"}",echostr);
         }
         else if ( strcmp(methodstr,"RS") == 0 )
         {
@@ -86,12 +86,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     else if ( is_decimalstr(addr) != 0 )
                         nxt64bits = calc_nxt64bits(addr), RS_encode(rsaddr,nxt64bits);
                     if ( nxt64bits != 0 )
-                        sprintf(retbuf,"{\"result\":\"success\",\"account\":\"%llu\",\"accountRS\":\"%s\",\"NXT\":\"%s\",\"serviceNXT\":\"%s\"}",(long long)nxt64bits,rsaddr,SUPERNET.NXTADDR,SUPERNET.SERVICENXT);
+                        sprintf(retbuf,"{\"result\":\"success\",\"account\":\"%llu\",\"accountRS\":\"%s\"}",(long long)nxt64bits,rsaddr);
                 }
                 if ( nxt64bits == 0 )
-                    sprintf(retbuf,"{\"error\":\"illegal addr field\",\"addr\":\"%s\",\"NXT\":\"%s\",\"serviceNXT\":\"%s\"}",addr,SUPERNET.NXTADDR,SUPERNET.SERVICENXT);
+                    sprintf(retbuf,"{\"error\":\"illegal addr field\",\"addr\":\"%s\"}",addr);
             }
-            else sprintf(retbuf,"{\"error\":\"no addr field\",\"NXT\":\"%s\",\"serviceNXT\":\"%s\"}",SUPERNET.NXTADDR,SUPERNET.SERVICENXT);
+            else sprintf(retbuf,"{\"error\":\"no addr field\"}");
         }
     }
     return((int32_t)strlen(retbuf) + retbuf[0] != 0);
