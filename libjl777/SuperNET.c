@@ -628,14 +628,14 @@ void *issue_cgicall(void *_ptr)
     {
         if ( (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
-            printf("call busdata_sync\n");
+            //printf("call busdata_sync\n");
             str = busdata_sync(ptr->jsonstr,broadcaststr);
-            printf("got.(%s)\n",str);
+            //printf("got.(%s)\n",str);
         }
         else
         {
             ptr->retstr = 0;
-            if ( 1 )
+            if ( 0 )
             {
                 //printf("call plugin_method\n");
                 str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
@@ -660,7 +660,7 @@ void *issue_cgicall(void *_ptr)
                     copy_cJSON(methodstr,cJSON_GetObjectItem(argjson,"method"));
                     if ( strcmp(methodstr,"busdata") == 0 )
                     {
-                        fprintf(stderr,"call validate\n");
+                        //fprintf(stderr,"call validate\n");
                         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,str,retjson)) > 0 )
                         {
                             if ( datalen > 0 )
@@ -674,7 +674,7 @@ void *issue_cgicall(void *_ptr)
                 }
                 free_json(retjson);
             }
-            fprintf(stderr,"sock.%d mainstr.(%s) valid.%d sender.(%s) forwarder.(%s) time.%u\n",ptr->sock,str,valid,sender,forwarder,timestamp);
+            //fprintf(stderr,"sock.%d mainstr.(%s) valid.%d sender.(%s) forwarder.(%s) time.%u\n",ptr->sock,str,valid,sender,forwarder,timestamp);
             if ( ptr->sock >= 0 )
             {
                 retlen = (int32_t)strlen(str) + 1;
