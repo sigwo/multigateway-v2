@@ -1551,13 +1551,9 @@ int32_t RS_encode(char *rsaddr,uint64_t id)
     int32_t j=4;
     for (i=0; i<17; i++)
     {
-        rsaddr[j] = alphabet[code[cwmap[i]]];
-        j++;
+        rsaddr[j++] = alphabet[code[cwmap[i]]];
         if ( (j % 5) == 3 && j < 20 )
-        {
-            rsaddr[j] = '-';
-            j++;
-        }
+            rsaddr[j++] = '-';
     }
     rsaddr[j] = 0;
     return(0);
