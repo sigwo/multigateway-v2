@@ -160,6 +160,7 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
 {
     char tagstr[128],numstr[64]; cJSON *json;
 //printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
+    tagstr[0] = 0;
     if ( retbuf[strlen(retbuf)-1] != ']' && (json= cJSON_Parse(retbuf)) != 0 )
     {
 #ifndef BUNDLED
@@ -186,7 +187,7 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
         free(str);
 #else
         if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
-            sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
+            sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
         if ( allfields != 0 )
         {
              if ( SUPERNET.iamrelay != 0 )
