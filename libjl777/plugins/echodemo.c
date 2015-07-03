@@ -73,7 +73,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else if ( strcmp(methodstr,"RS") == 0 )
         {
             uint64_t RS_decode(char *rs);
-            char *RS_encode(uint64_t id);
+            int32_t RS_encode(char *,uint64_t id);
             char rsaddr[64]; uint64_t nxt64bits = 0;
             if ( (addr= cJSON_str(cJSON_GetObjectItem(json,"addr"))) != 0 )
             {
