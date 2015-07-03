@@ -1478,6 +1478,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 {
     char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json);
     char *retstr,*resultstr,*methodstr,*destplugin,buf[1024],myipaddr[512];
+    uint8_t mysecret[32],mypublic[32];
     FILE *fp;
     int32_t i;
     retbuf[0] = 0;
@@ -1523,6 +1524,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         SUPERNET.port = get_API_int(cJSON_GetObjectItem(json,"SUPERNET_PORT"),SUPERNET_PORT);
         SUPERNET.serviceport = get_API_int(cJSON_GetObjectItem(json,"serviceport"),SUPERNET_PORT - 2);
         copy_cJSON(SUPERNET.SERVICESECRET,cJSON_GetObjectItem(json,"SERVICESECRET"));
+        expand_nxt64bits(SUPERNET.SERVICENXT,conv_NXTpassword(mysecret,mypublic,(uint8_t *)SUPERNET.SERVICESECRET,(int32_t)strlen(SUPERNET.SERVICESECRET)));
 
         SUPERNET.automatch = get_API_int(cJSON_GetObjectItem(json,"automatch"),3);
 #ifndef __linux__

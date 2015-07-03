@@ -68,7 +68,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"echo") == 0 )
         {
-            sprintf(retbuf,"{\"result\":\"%s\"}",echostr);
+            sprintf(retbuf,"{\"result\":\"%s\",\"NXT\":\"%s\",\"serviceNXT\":\"%s\"}",echostr,SUPERNET.NXTADDR,SUPERNET.SERVICENXT);
         }
         else if ( strcmp(methodstr,"RS") == 0 )
         {

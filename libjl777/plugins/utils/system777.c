@@ -118,7 +118,7 @@ struct env777
 #define DEFAULT_APISLEEP 100  // milliseconds
 struct SuperNET_info
 {
-    char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],transport[16],BACKUPS[512];
+    char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],transport[16],BACKUPS[512],SERVICENXT[64];
     char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[8192],SERVICESECRET[8192],userhome[512],hostname[512];
     uint64_t my64bits;
     uint32_t myipbits;
