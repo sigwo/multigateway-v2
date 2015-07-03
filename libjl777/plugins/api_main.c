@@ -156,6 +156,7 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
     fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
     fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
     fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
+    fputs("Cache-Control: no-cache, no-store, must-revalidate\r\n",stdout);
     fputs("Content-type: text/plain\r\n",stdout);
     if ( url != 0 )
     {
