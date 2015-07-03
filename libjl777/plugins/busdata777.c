@@ -902,7 +902,8 @@ int32_t busdata_poll()
             //if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                printf("RECV.%d (%s)\n",sock,msg);
+                if ( Debuglevel > 2 )
+                    printf("RECV.%d (%s)\n",sock,msg);
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
                 {
