@@ -1262,6 +1262,11 @@ uint64_t mgw_is_mgwtx(struct coin777 *coin,uint32_t txidind,uint64_t value)
 int32_t mgw_isinternal(struct coin777 *coin,struct multisig_addr *msig,uint32_t addrind,uint32_t unspentind,char *txidstr,int32_t vout,uint64_t value)
 {
     char txidstr0[1024]; int32_t vout0; uint32_t txidind0;
+    if ( in_jsonarray(coin->mgw.limbo,txidstr) != 0 )
+    {
+        printf("TXID.(%s) in limbo\n",txidstr);
+        return(MGW_ISINTERNAL);
+    }
     if ( (vout0= coin777_unspentmap(&txidind0,txidstr0,coin,unspentind - vout)) == 0 )
     {
         if ( mgw_is_mgwtx(coin,txidind0,value) != 0 )
@@ -1314,6 +1319,11 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
     {
         if ( (extra->flags & MGW_PENDINGREDEEM) != 0 )
         {
+            if ( _is_limbo_redeem(&coin->mgw,extra->txidbits) != 0 )
+            {
+                printf("height.%u is LIMBO REDEEM: (%llu %.8f -> %s)\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata);
+                return(MGW_WITHDRAWDONE);
+            }
             calc_opreturn_script(scriptstr,extra->txidbits,coin->mgw.do_opreturn);
             scriptind = coin777_scriptind(&firstblocknum,coin,extra->coindata,scriptstr);
             if ( scriptind > 0 && scriptind < 0xffffffff )
