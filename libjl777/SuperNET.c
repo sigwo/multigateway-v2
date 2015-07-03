@@ -634,13 +634,17 @@ void *issue_cgicall(void *_ptr)
         }
         else
         {
-            ptr->retstr = 0;
-            //printf("call plugin_method\n");
-            str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
-            if ( str != 0 )
-                free(str);
-            while ( ptr->retstr == 0 )
-                msleep(10);
+            if ( 0 )
+            {
+                ptr->retstr = 0;
+                //printf("call plugin_method\n");
+                str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
+                if ( str != 0 )
+                    free(str);
+                while ( ptr->retstr == 0 )
+                    msleep(10);
+            }
+            else str = plugin_method(0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,0);
             str = ptr->retstr;
         }
         if ( str != 0 )
@@ -658,7 +662,7 @@ void *issue_cgicall(void *_ptr)
                 }
                 free_json(retjson);
             }
-            //printf("sock.%d mainstr.(%s) valid.%d sender.(%s) forwarder.(%s) time.%u\n",ptr->sock,str,valid,sender,forwarder,timestamp);
+            printf("sock.%d mainstr.(%s) valid.%d sender.(%s) forwarder.(%s) time.%u\n",ptr->sock,str,valid,sender,forwarder,timestamp);
             if ( ptr->sock >= 0 )
             {
                 retlen = (int32_t)strlen(str) + 1;
@@ -786,7 +790,7 @@ void SuperNET_loop(void *ipaddr)
     strs[n++] = language_func((char *)"db777","",0,0,1,(char *)"db777",jsonargs,call_system);
     while ( SOPHIA.readyflag == 0 || find_daemoninfo(&ind,"db777",0,0) == 0 )
          poll_daemons();
-    if ( 1 || SUPERNET.gatewayid >= 0 )
+    if ( SUPERNET.gatewayid >= 0 )
     {
         strs[n++] = language_func((char *)"MGW","",0,0,1,(char *)"MGW",jsonargs,call_system);
         while ( MGW.readyflag == 0 || find_daemoninfo(&ind,"MGW",0,0) == 0 )
@@ -795,9 +799,12 @@ void SuperNET_loop(void *ipaddr)
     strs[n++] = language_func((char *)"coins","",0,0,1,(char *)"coins",jsonargs,call_system);
     while ( COINS.readyflag == 0 || find_daemoninfo(&ind,"coins",0,0) == 0 )
         poll_daemons();
-    strs[n++] = language_func((char *)"ramchain","",0,0,1,(char *)"ramchain",jsonargs,call_system);
-    while ( RAMCHAINS.readyflag == 0 || find_daemoninfo(&ind,"ramchain",0,0) == 0 )
-        poll_daemons();
+    if ( SUPERNET.gatewayid >= 0 )
+    {
+        strs[n++] = language_func((char *)"ramchain","",0,0,1,(char *)"ramchain",jsonargs,call_system);
+        while ( RAMCHAINS.readyflag == 0 || find_daemoninfo(&ind,"ramchain",0,0) == 0 )
+            poll_daemons();
+    }
     strs[n++] = language_func((char *)"relay","",0,0,1,(char *)"relay",jsonargs,call_system);
     while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"relay",0,0) == 0 )
         poll_daemons();
