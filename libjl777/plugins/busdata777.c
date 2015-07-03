@@ -184,7 +184,8 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag)
 {
     cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t valid,leverage,retcode = -13;
-    char buf[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*broadcastmode,*firstjsontxt = 0; unsigned char encoded[4096];
+    char buf[MAX_JSON_FIELD],serviceNXT[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*broadcastmode,*firstjsontxt = 0;
+    unsigned char encoded[4096];
     array = cJSON_Parse(tokenizedtxt);
     NXTaddr[0] = pubkey[0] = forwarder[0] = 0;
     if ( array == 0 )
@@ -201,6 +202,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
             copy_cJSON(pubkey,obj);
         }
         obj = cJSON_GetObjectItem(firstitem,"NXT"), copy_cJSON(buf,obj);
+        obj = cJSON_GetObjectItem(firstitem,"serviceNXT"), copy_cJSON(serviceNXT,obj);
         if ( NXTaddr[0] != 0 && strcmp(buf,NXTaddr) != 0 )
             retcode = -3;
         else
@@ -245,12 +247,12 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                     }
                     if ( Debuglevel > 2 )
                         printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
-                    if ( strcmp(sender,NXTaddr) != 0 )
+                    if ( strcmp(sender,NXTaddr) != 0 && strcmp(sender,serviceNXT) != 0 )
                     {
                         printf("valid.%d diff sender.(%s) vs NXTaddr.(%s)\n",valid,sender,NXTaddr);
                         //if ( strcmp(NXTaddr,buf) == 0 )
                         //    retcode = valid;
-                        //retcode = -7;
+                        retcode = -7;
                     }
                 } else printf("decode error\n");
                 if ( retcode < 0 )
@@ -912,7 +914,7 @@ int32_t busdata_poll()
                             if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
                             {
                                 noneed = 1;
-                                printf("return.(%s)\n",retstr);
+                                fprintf(stderr,"return.(%s)\n",retstr);
                                 nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
                             }
                             free_json(retjson);
@@ -923,7 +925,7 @@ int32_t busdata_poll()
                             if ( SUPERNET.iamrelay == 0 && sock == RELAYS.servicesock )
                                 secret = SUPERNET.SERVICESECRET;
                             len = construct_tokenized_req(tokenized,retstr,secret,0);
-                            printf("tokenized return.(%s)\n",tokenized);
+                            fprintf(stderr,"tokenized return.(%s)\n",tokenized);
                             nn_send(sock,tokenized,len,0);
                         }
                         free(retstr);
