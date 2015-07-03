@@ -39,7 +39,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
 {
-    char echostr[MAX_JSON_FIELD],*resultstr,*methodstr;
+    char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*addr;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
