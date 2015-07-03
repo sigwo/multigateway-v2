@@ -649,12 +649,12 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
 {
     char pubkey[256],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0;
+    forwarder[0] = sender[0] = 0;
     //printf("busdata_validate.(%s)\n",msg);
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
         *timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
-        sender[0] = 0;
         if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
         {
             printf("error valid.%d sender.(%s) forwarder.(%s)\n",valid,sender,forwarder);
@@ -745,11 +745,11 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
             if ( retstr == 0 )
                 retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
-//printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
+printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("BUSDATA.(%s) -> %p.(%s)\n",msg,retstr,retstr);
     return(retstr);
 }
