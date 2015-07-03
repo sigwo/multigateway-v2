@@ -136,7 +136,7 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
 static int32_t set_nxtaddrs(char *NXTaddr,char *serviceNXT)
 {
     FILE *fp; cJSON *json; char confname[512],buf[65536],secret[4096],servicesecret[4096]; uint8_t mysecret[32],mypublic[32];
-    strcpy(confname,"../../SuperNET.conf"), os_compatible_path(confname);
+    strcpy(confname,"SuperNET.conf"), os_compatible_path(confname);
     NXTaddr[0] = serviceNXT[0] = 0;
     if ( (fp= fopen(confname,"rb")) != 0 )
     {
