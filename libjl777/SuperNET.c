@@ -634,18 +634,18 @@ void *issue_cgicall(void *_ptr)
         }
         else
         {
-            if ( 0 )
+            ptr->retstr = 0;
+            if ( 1 )
             {
-                ptr->retstr = 0;
                 //printf("call plugin_method\n");
                 str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
                 if ( str != 0 )
                     free(str);
                 while ( ptr->retstr == 0 )
                     msleep(10);
+                str = ptr->retstr, ptr->retstr = 0;
             }
             else str = plugin_method(0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
-            str = ptr->retstr;
         }
         if ( str != 0 )
         {
