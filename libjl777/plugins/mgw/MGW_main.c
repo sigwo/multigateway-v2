@@ -615,13 +615,14 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
     int32_t i,n;
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"listreceivedbyaddress","[1, true]")) != 0 )
     {
-        //printf("listaccounts.(%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             if ( is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
             {
+                fprintf(stderr,"listaccounts returns %d addresses\n",n);
                 for (i=0; i<n; i++)
                 {
+                    fprintf(stderr,".");
                     item = cJSON_GetArrayItem(json,i);
                     copy_cJSON(account,cJSON_GetObjectItem(item,"account"));
                     if ( is_decimalstr(account) > 0 )
@@ -1616,10 +1617,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
         free(paramstr);
         if ( txbytes == 0 )
-        {
-            free(txbytes);
             return(0);
-        }
         printf("got txbytes.(%s) opreturn.%d\n",txbytes,opreturn);
         if ( opreturn >= 0 )
         {
