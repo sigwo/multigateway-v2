@@ -434,7 +434,7 @@ struct service_provider *find_servicesock(char *servicename,char *endpoint)
 {
     struct service_provider *sp,*checksp; struct serviceprovider **sps; int32_t i,num,sendtimeout,recvtimeout,retrymillis,maxmillis;
     HASH_FIND(hh,Service_providers,servicename,strlen(servicename),sp);
-    if ( sp == 0 && endpoint != 0 && endpoint[0] != 0 )
+    if ( sp == 0 )
     {
         printf("Couldnt find service.(%s)\n",servicename);
         sp = calloc(1,sizeof(*sp));
