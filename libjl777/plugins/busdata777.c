@@ -893,7 +893,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0;
+    char tokenized[65536],*msg,*retstr,*secret; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -903,7 +903,7 @@ int32_t busdata_poll()
             //if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                //printf("RECV.%d (%s)\n",sock,msg);
+                printf("RECV.%d (%s)\n",sock,msg);
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
                 {
@@ -915,15 +915,18 @@ int32_t busdata_poll()
                             if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
                             {
                                 noneed = 1;
-                                //printf("return.(%s)\n",retstr);
+                                printf("return.(%s)\n",retstr);
                                 nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
                             }
                             free_json(retjson);
                         }
                         if ( noneed == 0 )
                         {
-                            len = construct_tokenized_req(tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
-                            //printf("tokenized return.(%s)\n",tokenized);
+                            secret = SUPERNET.NXTACCTSECRET;
+                            if ( SUPERNET.iamrelay == 0 && sock == RELAYS.servicesock )
+                                secret = SUPERNET.SERVICESECRET;
+                            len = construct_tokenized_req(tokenized,retstr,secret,0);
+                            printf("tokenized return.(%s)\n",tokenized);
                             nn_send(sock,tokenized,len,0);
                         }
                         free(retstr);
