@@ -650,18 +650,26 @@ void *issue_cgicall(void *_ptr)
         if ( str != 0 )
         {
             int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json);
-            char forwarder[512],sender[512]; uint32_t timestamp = 0; uint8_t databuf[8192]; int32_t valid=-1,datalen; cJSON *retjson;
+            char forwarder[512],sender[512],methodstr[512]; uint32_t timestamp = 0; uint8_t databuf[8192]; int32_t valid=-1,datalen; cJSON *retjson,*argjson;
             forwarder[0] = sender[0] = 0;
             if ( (retjson= cJSON_Parse(str)) != 0 )
             {
-                fprintf(stderr,"call validate\n");
-                if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,str,retjson)) > 0 )
+                if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
                 {
-                    if ( datalen > 0 )
+                    argjson = cJSON_GetArrayItem(retjson,0);
+                    copy_cJSON(methodstr,cJSON_GetObjectItem(argjson,"method"));
+                    if ( strcmp(methodstr,"busdata") == 0 )
                     {
-                        free(str);
-                        str = malloc(datalen);
-                        memcpy(str,databuf,datalen);
+                        fprintf(stderr,"call validate\n");
+                        if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,str,retjson)) > 0 )
+                        {
+                            if ( datalen > 0 )
+                            {
+                                free(str);
+                                str = malloc(datalen);
+                                memcpy(str,databuf,datalen);
+                            }
+                        }
                     }
                 }
                 free_json(retjson);
