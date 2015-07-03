@@ -630,7 +630,7 @@ void *issue_cgicall(void *_ptr)
         {
             printf("call busdata_sync\n");
             str = busdata_sync(ptr->jsonstr,broadcaststr);
-            printf("got %p\n",str);
+            printf("got.(%s)\n",str);
         }
         else
         {
@@ -657,9 +657,12 @@ void *issue_cgicall(void *_ptr)
                 fprintf(stderr,"call validate\n");
                 if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,str,retjson)) > 0 )
                 {
-                    free(str);
-                    str = malloc(datalen);
-                    memcpy(str,databuf,datalen);
+                    if ( datalen > 0 )
+                    {
+                        free(str);
+                        str = malloc(datalen);
+                        memcpy(str,databuf,datalen);
+                    }
                 }
                 free_json(retjson);
             }

@@ -249,7 +249,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
                     if ( strcmp(sender,NXTaddr) != 0 && strcmp(sender,serviceNXT) != 0 )
                     {
-                        printf("valid.%d diff sender.(%s) vs NXTaddr.(%s)\n",valid,sender,NXTaddr);
+                        printf("valid.%d diff sender.(%s) vs NXTaddr.(%s) serviceNXT.(%s)\n",valid,sender,NXTaddr,serviceNXT);
                         //if ( strcmp(NXTaddr,buf) == 0 )
                         //    retcode = valid;
                         retcode = -7;
