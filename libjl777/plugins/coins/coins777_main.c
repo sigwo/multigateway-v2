@@ -44,13 +44,13 @@ int32_t coins_idle(struct plugin_info *plugin)
                             mgw_calc_unspent(smallestaddr,smallestaddrB,coin);
                         coin->mgw.lastupdate = milliseconds();
                     }
-                    if ( coin->mgw.marker[0] != 0 && coin->ramchain.startmilli == 0 && coin->ramchain.readyflag == 0 )
+                    /*if ( coin->mgw.marker[0] != 0 && coin->ramchain.startmilli == 0 && coin->ramchain.readyflag == 0 )
                     {
                         uint32_t ramchain_prepare(struct coin777 *coin,struct ramchain *ramchain);
                         ramchain_prepare(coin,&coin->ramchain);
                         coin->ramchain.readyflag = 1;
                         coin->ramchain.paused = 0;
-                    }
+                    }*/
                 }
             }
         }
