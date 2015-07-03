@@ -233,22 +233,19 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                 {
                     if ( NXTaddr[0] == 0 )
                         strcpy(NXTaddr,sender);
-                    if ( strcmp(sender,NXTaddr) == 0 )
+                    nonce = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
+                    leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
+                    copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
+                    broadcastmode = get_broadcastmode(firstitem,broadcaststr);
+                    retcode = valid;
+                    if ( nonce_func(&leverage,firstjsontxt,broadcastmode,0,nonce) != 0 )
                     {
-                        nonce = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
-                        leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
-                        copy_cJSON(broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
-                        broadcastmode = get_broadcastmode(firstitem,broadcaststr);
-                        retcode = valid;
-                        if ( nonce_func(&leverage,firstjsontxt,broadcastmode,0,nonce) != 0 )
-                        {
-                            //printf("(%s) -> (%s) leverage.%d len.%d crc.%u\n",broadcaststr,firstjsontxt,leverage,len,_crc32(0,(void *)firstjsontxt,len));
-                            retcode = -4;
-                        }
-                        if ( Debuglevel > 2 )
-                            printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
+                        //printf("(%s) -> (%s) leverage.%d len.%d crc.%u\n",broadcaststr,firstjsontxt,leverage,len,_crc32(0,(void *)firstjsontxt,len));
+                        retcode = -4;
                     }
-                    else
+                    if ( Debuglevel > 2 )
+                        printf("signed by valid NXT.%s valid.%d diff.%lld forwarder.(%s)\n",sender,valid,(long long)diff,forwarder);
+                    if ( strcmp(sender,NXTaddr) != 0 )
                     {
                         printf("valid.%d diff sender.(%s) vs NXTaddr.(%s)\n",valid,sender,NXTaddr);
                         //if ( strcmp(NXTaddr,buf) == 0 )
@@ -657,7 +654,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         *timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
         if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
         {
-            printf("error valid.%d sender.(%s) forwarder.(%s)\n",valid,sender,forwarder);
+            fprintf(stderr,"error valid.%d sender.(%s) forwarder.(%s)\n",valid,sender,forwarder);
             return(valid);
         }
         copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
@@ -731,8 +728,8 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
-    if ( Debuglevel > 2 )
-        printf("nn_busdata_processor.(%s)\n",msg);
+    if ( Debuglevel > 1 )
+        fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
@@ -750,7 +747,7 @@ printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
     if ( Debuglevel > 1 )
-        printf("BUSDATA.(%s) -> %p.(%s)\n",msg,retstr,retstr);
+        fprintf(stderr,"BUSDATA.(%s) -> %p.(%s)\n",msg,retstr,retstr);
     return(retstr);
 }
 
