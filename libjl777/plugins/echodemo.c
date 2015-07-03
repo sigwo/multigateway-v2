@@ -25,9 +25,9 @@ STRUCTNAME
 
 int32_t echodemo_idle(struct plugin_info *plugin) { return(0); }
 
-char *PLUGNAME(_methods)[] = { "echo" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "echo" }; // list of supported methods approved for public (Internet) access
-char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
+char *PLUGNAME(_methods)[] = { "echo", "RS" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "echo", "RS" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_authmethods)[] = { "echo", "RS" }; // list of supported methods that require authentication
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -69,6 +69,24 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else if ( strcmp(methodstr,"echo") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s\"}",echostr);
+        }
+        else if ( strcmp(methodstr,"RS") == 0 )
+        {
+            uint64_t RS_decode(char *rs);
+            char *RS_encode(uint64_t id);
+            char rsaddr[64]; uint64_t nxt64bits = 0;
+            if ( (addr= cJSON_str(cJSON_GetObjectItem(json,"addr"))) != 0 )
+            {
+                rsaddr[0] = 0;
+                if ( strlen(addr) > 4 )
+                {
+                    if ( strncmp(addr,"NXT-",4) == 0 )
+                        nxt64bits = RS_decode(addr), strcpy(rsaddr,addr);
+                    else nxt64bits = calc_nxt64bits(addr), RS_encode(rsaddr,nxt64bits);
+                    sprintf(retbuf,"{\"result\":\"success\",\"account\":\"%llu\",\"accountRS\":\"%s\"}",(long long)nxt64bits,rsaddr);
+                } else sprintf(retbuf,"{\"error\":\"illegal addr field\",\"addr\":\"%s\"}",addr);
+            }
+            else sprintf(retbuf,"{\"error\":\"no addr field\"}");
         }
     }
     return((int32_t)strlen(retbuf) + retbuf[0] != 0);

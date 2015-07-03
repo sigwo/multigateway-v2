@@ -178,6 +178,8 @@ int32_t get_assetdecimals(uint64_t assetid);
 uint64_t get_assetmult(uint64_t assetid);
 double get_minvolume(uint64_t assetid);
 uint64_t min_asset_amount(uint64_t assetid);
+uint64_t RS_decode(char *rs);
+int32_t RS_encode(char *rsaddr,uint64_t id);
 
 #endif
 #else
@@ -1476,10 +1478,12 @@ int32_t letterval(char letter)
     return ret;
 }
 
-uint64_t RS_decode(const char * rs)
+uint64_t RS_decode(char *rs)
 {
     int32_t code[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int32_t i,p = 4;
+    if ( strncmp("NXT-",rs,4) != 0 )
+        return(0);
     for (i=0; i<17; i++)
     {
         code[cwmap[i]] = letterval(rs[p]);
@@ -1493,19 +1497,21 @@ uint64_t RS_decode(const char * rs)
     return out;
 }
 
-char *RS_encode(uint64_t id)
+int32_t RS_encode(char *rsaddr,uint64_t id)
 {
     int32_t a,code[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int32_t inp[32],out[32],i,pos = 0,len = 0;
-    char *acc = malloc(21);
+    char acc[64];
     sprintf(acc,"%lld",(long long)id);
-    for(a=0; *(acc+a) != '\0'; a++)
+    for (a=0; *(acc+a) != '\0'; a++)
         len ++;
-    if (len == 20 && *acc != '1')
-        return "error";
+    if ( len == 20 && *acc != '1' )
+    {
+        strcpy(rsaddr,"error");
+        return(-1);
+    }
     for (i=0; i<len; i++)
         inp[i] = (int32_t)*(acc+i) - (int32_t)'0';
-    free(acc);
     int32_t divide = 0;
     int32_t newlen = 0;
     do // base 10 to base 32 conversion
@@ -1541,20 +1547,19 @@ char *RS_encode(uint64_t id)
     code[14] = p[1];
     code[15] = p[2];
     code[16] = p[3];
-    char * rs = malloc(35);
-    strcpy(rs, "NXT-");
+    strcpy(rsaddr,"NXT-");
     int32_t j=4;
     for (i=0; i<17; i++)
     {
-        rs[j] = alphabet[code[cwmap[i]]];
+        rsaddr[j] = alphabet[code[cwmap[i]]];
         j++;
         if ( (j % 5) == 3 && j < 20 )
         {
-            rs[j] = '-';
+            rsaddr[j] = '-';
             j++;
         }
     }
-    return rs;
+    return(0);
 }
 
 #endif
