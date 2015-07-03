@@ -1906,9 +1906,9 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
             else
             {
                 cointx = mgw_cointx_withdraw(coin,extra->coindata,extra->amount,extra->txidbits,smallestaddr,smallestaddrB);
-                printf("%p height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",cointx,extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(cointx->inputsum),cointx->numinputs,dstr(cointx->change),dstr(cointx->inputsum)-dstr(cointx->change));
                 if ( cointx != 0 )
                 {
+                    printf("%p height.%u PENDING WITHDRAW: (%llu %.8f -> %s) inputsum %.8f numinputs.%d change %.8f miners %.8f\n",cointx,extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,dstr(cointx->inputsum),cointx->numinputs,dstr(cointx->change),dstr(cointx->inputsum)-dstr(cointx->change));
                     cJSON_AddItemToObject(item,"inputsum",cJSON_CreateNumber(dstr(cointx->inputsum)));
                     cJSON_AddItemToObject(item,"numinputs",cJSON_CreateNumber(cointx->numinputs));
                     cJSON_AddItemToObject(item,"change",cJSON_CreateNumber(dstr(cointx->change)));
