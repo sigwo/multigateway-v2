@@ -44,6 +44,13 @@ int32_t coins_idle(struct plugin_info *plugin)
                             mgw_calc_unspent(smallestaddr,smallestaddrB,coin);
                         coin->mgw.lastupdate = milliseconds();
                     }
+                    if ( coin->mgw.marker[0] != 0 && coin->ramchain.startmilli == 0 && coin->ramchain.readyflag == 0 )
+                    {
+                        uint32_t ramchain_prepare(struct coin777 *coin,struct ramchain *ramchain);
+                        ramchain_prepare(coin,&coin->ramchain);
+                        coin->ramchain.readyflag = 1;
+                        coin->ramchain.paused = 0;
+                    }
                 }
             }
         }
@@ -236,7 +243,6 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         coin->mgw.NXTfee_equiv = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"NXTfee_equiv_satoshis"));
         if ( coin->mgw.NXTfee_equiv == 0 )
             coin->mgw.NXTfee_equiv = (uint64_t)(SATOSHIDEN * get_API_float(cJSON_GetObjectItem(argjson,"NXTfee_equiv")));
-        copy_cJSON(coin->mgw.marker,cJSON_GetObjectItem(argjson,"marker"));
         copy_cJSON(coin->mgw.opreturnmarker,cJSON_GetObjectItem(argjson,"opreturnmarker"));
         printf("OPRETURN.(%s)\n",coin->mgw.opreturnmarker);
         copy_cJSON(coin->mgw.marker2,cJSON_GetObjectItem(argjson,"marker2"));
@@ -250,6 +256,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
             if ( coin->mgw.NXTfee_equiv != 0 && coin->mgw.txfee != 0 )
                 coin->mgw.NXTconvrate = ((double)coin->mgw.NXTfee_equiv / coin->mgw.txfee);
         }
+        copy_cJSON(coin->mgw.marker,cJSON_GetObjectItem(argjson,"marker"));
         printf("OPRETURN.(%s)\n",coin->mgw.opreturnmarker);
     }
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu opreturn.%d oldformat.%d\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits,coin->mgw.do_opreturn,coin->mgw.oldtx_format);
