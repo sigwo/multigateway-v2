@@ -730,7 +730,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*retstr = 0;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
@@ -744,11 +744,11 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
             if ( retstr == 0 )
                 retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
-printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
+//printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         fprintf(stderr,"BUSDATA.(%s) -> %p.(%s)\n",msg,retstr,retstr);
     return(retstr);
 }
@@ -914,7 +914,7 @@ int32_t busdata_poll()
                             if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
                             {
                                 noneed = 1;
-                                fprintf(stderr,"return.(%s)\n",retstr);
+                                //fprintf(stderr,"return.(%s)\n",retstr);
                                 nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
                             }
                             free_json(retjson);
@@ -925,7 +925,7 @@ int32_t busdata_poll()
                             if ( SUPERNET.iamrelay == 0 && sock == RELAYS.servicesock )
                                 secret = SUPERNET.SERVICESECRET;
                             len = construct_tokenized_req(tokenized,retstr,secret,0);
-                            fprintf(stderr,"tokenized return.(%s)\n",tokenized);
+                            //fprintf(stderr,"tokenized return.(%s)\n",tokenized);
                             nn_send(sock,tokenized,len,0);
                         }
                         free(retstr);

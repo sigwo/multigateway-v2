@@ -1559,6 +1559,7 @@ int32_t RS_encode(char *rsaddr,uint64_t id)
             j++;
         }
     }
+    rsaddr[j] = 0;
     return(0);
 }
 
