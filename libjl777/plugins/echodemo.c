@@ -84,9 +84,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         nxt64bits = RS_decode(addr), strcpy(rsaddr,addr);
                     else nxt64bits = calc_nxt64bits(addr), RS_encode(rsaddr,nxt64bits);
                     sprintf(retbuf,"{\"result\":\"success\",\"account\":\"%llu\",\"accountRS\":\"%s\",\"NXT\":\"%s\",\"serviceNXT\":\"%s\"}",(long long)nxt64bits,rsaddr,SUPERNET.NXTADDR,SUPERNET.SERVICENXT);
-                } else sprintf(retbuf,"{\"error\":\"illegal addr field\",\"addr\":\"%s\"}",addr);
+                } else sprintf(retbuf,"{\"error\":\"illegal addr field\",\"addr\":\"%s\",\"NXT\":\"%s\",\"serviceNXT\":\"%s\"}",addr,SUPERNET.NXTADDR,SUPERNET.SERVICENXT);
             }
-            else sprintf(retbuf,"{\"error\":\"no addr field\"}");
+            else sprintf(retbuf,"{\"error\":\"no addr field\",\"NXT\":\"%s\",\"serviceNXT\":\"%s\"}",SUPERNET.NXTADDR,SUPERNET.SERVICENXT);
         }
     }
     return((int32_t)strlen(retbuf) + retbuf[0] != 0);
