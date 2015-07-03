@@ -250,7 +250,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
                         printf("valid.%d diff sender.(%s) vs NXTaddr.(%s)\n",valid,sender,NXTaddr);
                         //if ( strcmp(NXTaddr,buf) == 0 )
                         //    retcode = valid;
-                        retcode = -7;
+                        //retcode = -7;
                     }
                 } else printf("decode error\n");
                 if ( retcode < 0 )
