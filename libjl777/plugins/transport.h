@@ -41,6 +41,7 @@ int32_t init_pluginhostsocks(struct daemon_info *dp,char *connectaddr)
         printf("error connecting dp->pushsock.%d to %s %s\n",dp->pushsock,connectaddr,nn_strerror(nn_errno()));
         return(-1);
     }
+    printf("host.%s connected.(%s) %d\n",dp->name,connectaddr,dp->pushsock);
     return(0);
 }
 

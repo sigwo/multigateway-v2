@@ -58,7 +58,7 @@ int32_t plugin_result(char *retbuf,cJSON *json,uint64_t tag);
 #undef DEFINES_ONLY
 #endif
 
-static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag,char *bindaddr,char *connectaddr,uint64_t instanceid,uint64_t daemonid,int32_t timeout)
+static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag,uint64_t instanceid,uint64_t daemonid,int32_t timeout)
 {
     if ( (plugin->pushsock= nn_socket(AF_SP,NN_PUSH)) < 0 )
     {
@@ -70,9 +70,9 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
         printf("error setting plugin->pushsock timeouts %s\n",nn_strerror(nn_errno()));
         return(-1);
     }
-    else if ( nn_connect(plugin->pushsock,connectaddr) < 0 )
+    else if ( nn_connect(plugin->pushsock,plugin->connectaddr) < 0 )
     {
-        printf("error connecting plugin->pushsock.%d to %s %s\n",plugin->pushsock,connectaddr,nn_strerror(nn_errno()));
+        printf("error connecting plugin->pushsock.%d to %s %s\n",plugin->pushsock,plugin->connectaddr,nn_strerror(nn_errno()));
         return(-1);
     }
     if ( (plugin->pullsock= nn_socket(AF_SP,NN_PULL)) < 0 )
@@ -85,11 +85,12 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
         printf("error setting plugin->pullsock timeouts %s\n",nn_strerror(nn_errno()));
         return(-1);
     }
-    else if ( nn_connect(plugin->pullsock,bindaddr) < 0 )
+    else if ( nn_connect(plugin->pullsock,plugin->bindaddr) < 0 )
     {
-        printf("error connecting plugin->pullsock.%d to %s %s\n",plugin->pullsock,bindaddr,nn_strerror(nn_errno()));
+        printf("error connecting plugin->pullsock.%d to %s %s\n",plugin->pullsock,plugin->bindaddr,nn_strerror(nn_errno()));
         return(-1);
     }
+    printf("%s bind.(%s) %d and connected.(%s) %d\n",plugin->name,plugin->bindaddr,plugin->pullsock,plugin->connectaddr,plugin->pushsock);
     return(0);
 }
 
@@ -401,7 +402,7 @@ int32_t main
     jsonargs = (argc >= 3) ? ((char *)argv[3]) : 0;
     configure_plugin(retbuf,max,plugin,jsonargs,1);
     printf("CONFIGURED.(%s) argc.%d: %s myid.%llu daemonid.%llu NXT.%s\n",plugin->name,argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",(long long)plugin->myid,(long long)plugin->daemonid,plugin->NXTADDR);//,jsonargs!=0?jsonargs:"");
-    if ( init_pluginsocks(plugin,plugin->permanentflag,plugin->bindaddr,plugin->connectaddr,plugin->myid,plugin->daemonid,plugin->timeout) == 0 )
+    if ( init_pluginsocks(plugin,plugin->permanentflag,plugin->myid,plugin->daemonid,plugin->timeout) == 0 )
     {
         argjson = cJSON_Parse(jsonargs);
         if ( (len= registerAPI(registerbuf,sizeof(registerbuf)-1,plugin,argjson)) > 0 )
