@@ -296,16 +296,27 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t 
     return(lbsock);
 }
 
-int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout)
+int32_t nn_settimeouts(int32_t sock,int32_t sendtimeout,int32_t recvtimeout)
 {
-    int32_t sock,retrymillis,maxmillis;
+    int32_t retrymillis,maxmillis;
     maxmillis = SUPERNET.PLUGINTIMEOUT, retrymillis = maxmillis/40;
-    if ( (sock= nn_socket(AF_SP,type)) < 0 )
-        fprintf(stderr,"error getting socket %s\n",nn_errstr());
-    else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
-        printf("error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+    if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
+        fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
     else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
         fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+    else if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+    else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+    else return(0);
+    return(-1);
+}
+
+int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout)
+{
+    int32_t sock;
+    if ( (sock= nn_socket(AF_SP,type)) < 0 )
+        fprintf(stderr,"error getting socket %s\n",nn_errstr());
     if ( bindflag != 0 )
     {
         if ( endpoint[0] == 0 )
@@ -320,11 +331,7 @@ int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,
             fprintf(stderr,"error connecting to relaypoint sock.%d type.%d to (%s) (%s) %s\n",sock,type,name,endpoint,nn_errstr());
         else fprintf(stderr,"%s -> CONNECT.(%s)\n",name,endpoint);
     }
-    if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
-        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-    else if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
-        fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-    else
+    if ( nn_settimeouts(sock,sendtimeout,recvtimeout) < 0 )
     {
         fprintf(stderr,"nn_createsocket.(%s) %d\n",name,sock);
         return(sock);

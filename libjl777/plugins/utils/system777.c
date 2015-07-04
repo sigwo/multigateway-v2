@@ -122,7 +122,7 @@ struct SuperNET_info
     char myipaddr[64],myNXTacct[64],myNXTaddr[64],NXTACCT[64],NXTADDR[64],NXTACCTSECRET[8192],SERVICESECRET[8192],userhome[512],hostname[512];
     uint64_t my64bits;
     uint32_t myipbits;
-    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,gatewayid,numgateways,readyflag,UPNP,iamrelay,disableNXT,NXTconfirms,automatch,PLUGINTIMEOUT,ppid,noncing;
+    int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,gatewayid,numgateways,readyflag,UPNP,iamrelay,disableNXT,NXTconfirms,automatch,PLUGINTIMEOUT,ppid,noncing,pullsock;
     uint16_t port,serviceport;
     struct env777 DBs;
     cJSON *argjson;
@@ -228,8 +228,8 @@ void process_userinput(char *line);
 char *get_localtransport(int32_t bundledflag);
 int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char *_connectaddr,int32_t timeout);
 int32_t shutdown_plugsocks(union endpoints *socks);
-int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len);
-int32_t poll_local_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis);
+int32_t nn_local_broadcast(int32_t pushsock,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len);
+//char *poll_local_endpoints(int32_t *lenp,int32_t pullsock);
 struct endpoint nn_directepbits(char *retbuf,char *transport,char *ipaddr,uint16_t port);
 int32_t nn_directsend(struct endpoint epbits,uint8_t *msg,int32_t len);
 
@@ -274,6 +274,7 @@ cJSON *serviceprovider_json();
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout);
 int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t relaysport);
 int32_t OS_init();
+int32_t nn_settimeouts(int32_t sock,int32_t sendtimeout,int32_t recvtimeout);
 
 #define MAXTIMEDIFF 60
 
@@ -514,15 +515,15 @@ int32_t ismyaddress(char *server)
     return(0);
 }
 
-int32_t report_err(char *typestr,int32_t err,char *nncall,int32_t type,char *bindaddr,char *connectaddr)
+/*int32_t report_err(char *typestr,int32_t err,char *nncall,int32_t type,char *bindaddr,char *connectaddr)
 {
     printf("%s error %d type.%d nn_%s err.%s bind.(%s) connect.(%s)\n",typestr,err,type,nncall,nn_strerror(nn_errno()),bindaddr,connectaddr!=0?connectaddr:"");
     return(-1);
-}
+}*/
 
 char *get_localtransport(int32_t bundledflag) { return(OFFSET_ENABLED ? "ipc" : "inproc"); }
 
-int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char *_connectaddr,int32_t timeout)
+/*int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char *_connectaddr,int32_t timeout)
 {
     int32_t sock,err = 0;
     char bindaddr[512],connectaddr[512];
@@ -564,79 +565,19 @@ int32_t shutdown_plugsocks(union endpoints *socks)
         if ( socks->all[i] >= 0 && nn_shutdown(socks->all[i],0) != 0 )
             errs++, printf("error (%s) nn_shutdown.%d\n",nn_strerror(nn_errno()),i);
     return(errs);
-}
+}*/
 
-int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
+int32_t nn_local_broadcast(int32_t sock,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
 {
-    int32_t i,sendlen,sock,errs = 0;
-    for (i=0; i<(int32_t)(sizeof(socks->send)/sizeof(int32_t))+2; i++)
+    int32_t sendlen,errs = 0;
+    if ( sock >= 0 )
     {
-        if ( i < 2 )
-            sock = (i == 0) ? socks->both.bus : socks->both.pair;
-        else sock = ((int32_t *)&socks->send)[i - 2];
-        if ( sock >= 0 )
-        {
-            if ( (sendlen= nn_send(sock,(char *)retstr,len,0)) <= 0 )
-                errs++, printf("error %d sending to socket.%d send.%d len.%d (%s) [%s]\n",sendlen,sock,i,len,nn_strerror(nn_errno()),retstr);
-            else if ( Debuglevel > 2 )
-                printf("nn_local_broadcast SENT.(%s) len.%d sendlen.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,sendlen,strlen((char *)retstr),(long long)instanceid,sock);
-        }
+        if ( (sendlen= nn_send(sock,(char *)retstr,len,0)) <= 0 )
+            errs++, printf("=sending to socket.%d sendlen.%d len.%d (%s) [%s]\n",sock,sendlen,len,nn_strerror(nn_errno()),retstr);
+        else if ( Debuglevel > 2 )
+            printf("nn_local_broadcast SENT.(%s) len.%d sendlen.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,sendlen,strlen((char *)retstr),(long long)instanceid,sock);
     }
     return(errs);
-}
-
-int32_t poll_local_endpoints(char *messages[],uint32_t *numrecvp,uint32_t numsent,union endpoints *socks,int32_t timeoutmillis)
-{
-    struct nn_pollfd pfd[sizeof(struct allendpoints)/sizeof(int32_t)];
-    int32_t len,received=0,rc,i,n = 0;
-    char *str,*msg;
-    memset(pfd,0,sizeof(pfd));
-    for (i=0; i<(int32_t)(sizeof(socks->all)/sizeof(*socks->all)); i++)
-    {
-        if ( (pfd[n].fd= socks->all[i]) >= 0 )
-            pfd[n++].events = NN_POLLIN | NN_POLLOUT;
-    }
-    if ( n > 0 )
-    {
-        if ( (rc= nn_poll(pfd,n,timeoutmillis)) > 0 )
-        {
-            for (i=0; i<n; i++)
-            {
-               // printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,pfd[i].fd,socks->all[i],pfd[i].revents);
-                if ( (pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(pfd[i].fd,&msg,NN_MSG,0)) > 0 )
-                {
-                    (*numrecvp)++;
-                    str = clonestr(msg);
-                    nn_freemsg(msg);
-                    messages[received++] = str;
-                    if ( Debuglevel > 2 )
-                        printf("(%d %d) %d %.6f RECEIVED.%d i.%d/%ld (%s)\n",*numrecvp,numsent,received,milliseconds(),n,i,sizeof(socks->all)/sizeof(*socks->all),str);
-                }
-            }
-        }
-        else if ( rc < 0 )
-            printf("%s Error.%d polling %d daemons [0] == %d\n",nn_strerror(nn_errno()),rc,n,pfd[0].fd);
-    }
-    //if ( n != 0 || received != 0 )
-    //   printf("n.%d: received.%d\n",n,received);
-    return(received);
-}
-
-void MGW_loop()
-{
-    int32_t poll_daemons(); char *SuperNET_JSON(char *JSONstr);
-    int i,n,timeoutmillis = 10;
-    char *messages[100],*msg;
-    poll_daemons();
-    if ( (n= poll_local_endpoints(messages,&MGW.numrecv,MGW.numsent,&MGW.all,timeoutmillis)) > 0 )
-    {
-        for (i=0; i<n; i++)
-        {
-            msg = SuperNET_JSON(messages[i]);
-            printf("%d of %d: (%s)\n",i,n,msg);
-            free(messages[i]);
-        }
-    }
 }
 
 int32_t plugin_result(char *retbuf,cJSON *json,uint64_t tag)

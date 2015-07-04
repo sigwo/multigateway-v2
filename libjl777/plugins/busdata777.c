@@ -1012,3 +1012,29 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
     printf("numservers.%d\n",RELAYS.numservers);
 }
 
+int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
+{
+    char bindaddr[64],*transportstr; int32_t iter;
+    if ( (SUPERNET.pullsock= nn_socket(AF_SP,NN_PULL)) < 0 )
+    {
+        printf("error creating pullsock %s\n",nn_strerror(nn_errno()));
+        return(-1);
+    }
+    else if ( nn_settimeouts(SUPERNET.pullsock,sendtimeout,recvtimeout) < 0 )
+    {
+        printf("error settime pullsock timeouts %s\n",nn_strerror(nn_errno()));
+        return(-1);
+    }
+    for (iter=0; iter<2; iter++)
+    {
+        transportstr = (iter == 0) ? "inproc" : "ipc";
+        sprintf(bindaddr,"%s://SuperNET",transportstr);
+        if ( nn_bind(SUPERNET.pullsock,bindaddr) < 0 )
+        {
+            printf("error binding pullsock to (%s) %s\n",bindaddr,nn_strerror(nn_errno()));
+            return(-1);
+        }
+    }
+    return(0);
+}
+

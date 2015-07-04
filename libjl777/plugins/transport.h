@@ -18,82 +18,30 @@
 #define LOCALCAST 1
 #define BROADCAST 2
 
-void set_transportaddr(char *addr,char *transportstr,uint64_t daemonid,char *ipaddr,int32_t port,uint64_t selector)
-{
-    if ( ipaddr != 0 && ipaddr[0] != 0 && port != 0 )
-        sprintf(addr,"tcp://%s:%llu",ipaddr,(long long)(port + selector));
-    else sprintf(addr,"%s://%llu",transportstr,(long long)(daemonid + selector));
-}
-
-void set_bind_transport(char *bindaddr,int32_t bundledflag,int32_t permanentflag,char *ipaddr,uint16_t port,uint64_t daemonid)
-{
-    set_transportaddr(bindaddr,get_localtransport(bundledflag),daemonid,ipaddr,port,2*OFFSET_ENABLED);
-}
-
 void set_connect_transport(char *connectaddr,int32_t bundledflag,int32_t permanentflag,char *ipaddr,uint16_t port,uint64_t daemonid)
 {
-    set_transportaddr(connectaddr,get_localtransport(bundledflag),daemonid,ipaddr,port,1*OFFSET_ENABLED);
+    //set_transportaddr(connectaddr,get_localtransport(bundledflag),daemonid,ipaddr,port,1*OFFSET_ENABLED);
+    sprintf(connectaddr,"%s://%llu",get_localtransport(bundledflag),(long long)daemonid);
 }
 
-void set_pair_bindconnect(char *bindaddr,char *connectaddr,int32_t bundledflag,int32_t permanentflag,uint64_t myid,uint64_t instanceid)
+int32_t init_pluginhostsocks(struct daemon_info *dp,char *connectaddr)
 {
-    uint64_t xored;
-    char *transportstr;
-    connectaddr[0] = bindaddr[0] = 0;
-    if ( myid != instanceid )
+    if ( (dp->pushsock= nn_socket(AF_SP,NN_PUSH)) < 0 )
     {
-        xored = (myid ^ instanceid);
-        transportstr = get_localtransport(bundledflag);
-        if ( permanentflag != 0 )
-            sprintf(bindaddr,"%s://%llu",transportstr,(long long)xored);
-        else sprintf(connectaddr,"%s://%llu",transportstr,(long long)xored);
+        printf("error creating dp->pushsock %s\n",nn_strerror(nn_errno()));
+        return(-1);
     }
-}
-
-int32_t iteration_recvsocket(struct daemon_info *dp,int32_t counter)
-{
-    int32_t sock,ind;
-    struct allendpoints *socks;
-    ind = ((counter >> 1) % ((sizeof(dp->perm.socks.recv)/sizeof(int32_t))) + 1);
-    if ( (counter & 1) == 0 )
-        socks = &dp->perm.socks;
-    else socks = &dp->wss.socks;
-    sock = (ind == 0) ? socks->both.bus : ((int32_t *)&socks->recv)[ind - 1];
-    return(sock);
-}
-
-int32_t init_pluginhostsocks(struct daemon_info *dp,int32_t permanentflag,char *bindaddr,char *connectaddr,uint64_t instanceid)
-{
-    int32_t errs = 0;
-    struct allendpoints *socks;
-    if ( permanentflag != 0 )
-        socks = &dp->perm.socks;
-    else socks = &dp->wss.socks;
-    if ( Debuglevel > 2 )
-        printf("<<<<<<<<<<<<< init_permpairsocks bind.(%s) connect.(%s)\n",bindaddr,connectaddr);
-//#ifdef _WIN32
-    if ( (socks->both.bus= init_socket("","bus",NN_BUS,bindaddr,0,1)) < 0 ) errs++;
-//#else
-//    if ( (socks->both.pair= init_socket(".pair","pair",NN_PAIR,bindaddr,0,1)) < 0 ) errs++;
-//#endif
-    //if ( (socks->send.push= init_socket(".pipeline","push",NN_PUSH,bindaddr,0,1)) < 0 ) errs++;
-    //if ( (socks->send.rep= init_socket(".reqrep","rep",NN_REP,0,connectaddr,1)) < 0 ) errs++;
-    //if ( (socks->send.pub= init_socket(".pubsub","pub",NN_PUB,bindaddr,0,1)) < 0 ) errs++;
-    //if ( (socks->send.survey= init_socket(".survey","surveyor",NN_SURVEYOR,bindaddr,0,1)) < 0 ) errs++;
-    //if ( (socks->recv.pull= init_socket(".pipeline","pull",NN_PULL,0,connectaddr,0)) < 0 ) errs++;
-    //if ( (socks->recv.req= init_socket(".reqrep","req",NN_REQ,bindaddr,connectaddr,0)) < 0 ) errs++;
-    //if ( (socks->recv.sub= init_socket(".pubsub","sub",NN_SUB,0,connectaddr,0)) < 0 ) errs++;
-    //if ( (socks->recv.respond= init_socket(".survey","respondent",NN_RESPONDENT,0,connectaddr,0)) < 0 ) errs++;
-    return(errs);
-}
-
-int32_t connect_instanceid(struct daemon_info *dp,uint64_t instanceid)
-{
-    char addr[64];
-    int32_t err = -1;
-    sprintf(addr,"%s://%llu",get_localtransport(dp->bundledflag),(long long)instanceid);
-    printf("need to connect to (%s) efficiently\n",addr);
-    return(err);
+    else if ( nn_settimeouts(dp->pushsock,10,1) < 0 )
+    {
+        printf("error setting dp->pushsock timeouts %s\n",nn_strerror(nn_errno()));
+        return(-1);
+    }
+    else if ( nn_connect(dp->pushsock,connectaddr) < 0 )
+    {
+        printf("error connecting dp->pushsock.%d to %s %s\n",dp->pushsock,connectaddr,nn_strerror(nn_errno()));
+        return(-1);
+    }
+    return(0);
 }
 
 int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,int32_t retsock)
@@ -229,7 +177,7 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                 if ( tag != 0 )
                     add_tagstr(dp,tag,retstrp,sock);
                 dp->numsent++;
-                if ( nn_local_broadcast(&dp->perm.socks,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
+                if ( nn_local_broadcast(dp->pushsock,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
                     printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
             }
             else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);
