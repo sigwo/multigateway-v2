@@ -668,6 +668,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
         if ( strcmp(hexstr,sha) == 0 )
             return(1);
+        else printf("hash mismatch %s vs %s\n",hexstr,sha);
     } else printf("busdata_validate not array (%s)\n",msg);
     return(-1);
 }
