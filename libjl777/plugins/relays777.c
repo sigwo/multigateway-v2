@@ -462,8 +462,8 @@ void calc_nonces(char *destpoint)
     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
     while ( milliseconds() < endmilli )
     {
-        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"7\",\"myendpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
-        if ( (str= busdata_sync(buf,"7")) != 0 )
+        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"8\",\"myendpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
+        if ( (str= busdata_sync(buf,"8")) != 0 )
         {
             fprintf(stderr,"send.(%s)\n",buf);
             free(str);

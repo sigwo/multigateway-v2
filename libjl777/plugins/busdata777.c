@@ -84,17 +84,17 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
 
 int32_t nonce_leverage(char *broadcaststr)
 {
-    int32_t leverage = 3;
+    int32_t leverage = 4;
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage = 6;
+            leverage = 7;
         else if ( strcmp(broadcaststr,"join") == 0 )
-            leverage = 8;
+            leverage = 9;
         else if ( strcmp(broadcaststr,"servicerequest") == 0 )
-            leverage = 5;
+            leverage = 6;
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
-            leverage = 4;
+            leverage = 5;
         else if ( atoi(broadcaststr) != 0 )
             leverage = atoi(broadcaststr);
     }
@@ -849,7 +849,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
     copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     if ( strcmp(plugin,"relay") == 0 && strcmp(destplugin,"relay") == 0 && broadcastmode == 0 )
-        broadcastmode = "3";
+        broadcastmode = "4";
     sentflag = 0;
     //printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
@@ -867,7 +867,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     //printf("relay returns publicaccess.(%s)\n",retstr);
                     return(retstr);
                 } else free_json(json);
-                if ( RELAYS.pubglobal >= 0 && (strcmp(broadcastmode,"allnodes") == 0 || strcmp(broadcastmode,"7") == 0) )
+                if ( RELAYS.pubglobal >= 0 && (strcmp(broadcastmode,"allnodes") == 0 || strcmp(broadcastmode,"8") == 0) )
                 {
                     if( (sendlen= nn_send(RELAYS.pubglobal,data,datalen,0)) != datalen )
                     {
