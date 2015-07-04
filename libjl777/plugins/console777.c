@@ -238,7 +238,7 @@ char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcast
     {
         //len = construct_tokenized_req(tokenized,cmdstr,SUPERNET.NXTACCTSECRET,broadcastflag!=0?"allnodes":0);
         //printf("console.(%s)\n",tokenized);
-        retstr = plugin_method(0,1,plugin,method,0,0,cmdstr,len,timeout != 0 ? timeout : 0);
+        retstr = plugin_method(-1,0,1,plugin,method,0,0,cmdstr,len,timeout != 0 ? timeout : 0);
     }
     else retstr = clonestr("{\"error\":\"invalid command\"}");
     return(retstr);

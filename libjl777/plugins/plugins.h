@@ -180,11 +180,7 @@ char *add_instanceid(struct daemon_info *dp,uint64_t instanceid)
 
 void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
 {
-    cJSON *json;
-    struct relayargs *args = 0;
-    int32_t permflag,broadcastflag;
-    uint64_t instanceid,tag = 0;
-    char request[8192],**dest,*retstr,*sendstr;
+    cJSON *json; int32_t permflag,sendlen,broadcastflag,retsock; uint64_t instanceid,tag = 0; char request[8192],**dest,*retstr,*sendstr;
     if ( (json= cJSON_Parse(str)) != 0 )
     {
         //printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
@@ -222,15 +218,14 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     } else printf("parse error.(%s)\n",str);
     if ( tag != 0 )
     {
-        if ( (dest= get_tagstr(&args,dp,tag)) != 0 )
+        if ( (dest= get_tagstr(&retsock,dp,tag)) != 0 )
             *dest = str;
-        //else
+        if ( retsock >= 0 )
         {
-            int32_t complete_relay(struct relayargs *args,char *retstr);
-            if ( args != 0 )
-                complete_relay(args,str);
-            else printf("TAG.%llu -> no destination for.(%s)\n",(long long)tag,str);
-            free(str);
+            if ( (sendlen= nn_send(retsock,retstr,len,0)) != len )
+                printf("sendlen.%d != len.%d (%s)\n",sendlen,len,retstr);
+            if ( dest == 0 )
+                free(str);
         }
     }
     else if ( dp->websocket == 0 )
@@ -498,34 +493,14 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
     return(clonestr("{\"error\":\"cant register inactive plugin\"}"));
 }
 
-char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
+char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout)
 {
-    //static char *retstr = 0;
-    struct daemon_info *dp;
-    char retbuf[8192],methodbuf[1024],*str,*methodsstr,*retstr;
-    uint64_t tag;
-    cJSON *json,*argjson;
-    struct relayargs *args = 0;
-    int32_t ind,async;
+    struct daemon_info *dp; char retbuf[8192],*str,*methodsstr,*retstr; uint64_t tag; cJSON *json; int32_t ind,async;
 //printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,len,retstrp);
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
     *retstrp = 0;
-    if ( localaccess < 0 )
-    {
-        localaccess = 0;
-        args = (struct relayargs *)method, method = 0, methodbuf[0] = 0;
-        if ( (json= cJSON_Parse(origargstr)) != 0 )
-        {
-            if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-                argjson = cJSON_GetArrayItem(json,0);
-            else argjson = json;
-            copy_cJSON(methodbuf,cJSON_GetObjectItem(argjson,"method"));
-            free(json);
-        }
-        method = methodbuf;
-    }
     if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) == 0 )
     {
         if ( is_bundled_plugin(plugin) != 0 )
@@ -564,7 +539,7 @@ char *plugin_method(char **retstrp,int32_t localaccess,char *plugin,char *method
         else
         {
 //fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
-            if ( (tag= send_to_daemon(args,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
+            if ( (tag= send_to_daemon(sock,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess)) == 0 )
             {
 fprintf(stderr,"null tag from send_to_daemon\n");
                 *retstrp = clonestr("{\"error\":\"null tag from send_to_daemon\"}");

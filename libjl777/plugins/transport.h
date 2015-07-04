@@ -96,7 +96,7 @@ int32_t connect_instanceid(struct daemon_info *dp,uint64_t instanceid)
     return(err);
 }
 
-int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,struct relayargs *args)
+int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,int32_t retsock)
 {
     int32_t i;
     //printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
@@ -106,7 +106,7 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,struct relaya
         {
             if ( Debuglevel > 1 )
                 printf("slot.%d <- tag.%llu dest.%p\n",i,(long long)tag,dest);
-            dp->tags[i][0] = tag, dp->tags[i][1] = (uint64_t)dest, dp->tags[i][2] = (uint64_t)args;
+            dp->tags[i][0] = tag, dp->tags[i][1] = (uint64_t)dest, dp->tags[i][2] = (uint64_t)retsock;
             return(i);
         }
     }
@@ -114,7 +114,7 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,struct relaya
     return(-1);
 }
 
-char **get_tagstr(struct relayargs **argsp,struct daemon_info *dp,uint64_t tag)
+char **get_tagstr(int32_t *retsockp,struct daemon_info *dp,uint64_t tag)
 {
     int32_t i;
     char **dest;
@@ -124,7 +124,7 @@ char **get_tagstr(struct relayargs **argsp,struct daemon_info *dp,uint64_t tag)
         {
             dest = (char **)dp->tags[i][1];
             if ( dp->tags[i][2] != 0 )
-                *argsp = (struct relayargs *)dp->tags[i][2];
+                *retsockp = (int32_t)dp->tags[i][2];
             dp->tags[i][0] = dp->tags[i][1] = dp->tags[i][2] = 0;
             if ( Debuglevel > 1 )
                 printf("slot.%d found tag.%llu dest.%p\n",i,(long long)tag,dest);
@@ -162,7 +162,7 @@ char *wait_for_daemon(char **destp,uint64_t tag,int32_t timeout,int32_t sleepmil
     return(*destp);
 }
  
-uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_t daemonid,uint64_t instanceid,char *origjsonstr,int32_t len,int32_t localaccess)
+uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid,uint64_t instanceid,char *origjsonstr,int32_t len,int32_t localaccess)
 {
     struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
     struct daemon_info *dp;
@@ -225,9 +225,9 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
             if ( len > 0 )
             {
                 if ( Debuglevel > 2 )
-                    fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s) args.%p\n",(long long)tag,jsonstr,args);
+                    fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s) sock.%d\n",(long long)tag,jsonstr,sock);
                 if ( tag != 0 )
-                    add_tagstr(dp,tag,retstrp,args);
+                    add_tagstr(dp,tag,retstrp,sock);
                 dp->numsent++;
                 if ( nn_local_broadcast(&dp->perm.socks,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
                     printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
@@ -242,3 +242,4 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
     else printf("send_to_daemon: cant parse jsonstr.(%s)\n",origjsonstr);
     return(0);
 }
+

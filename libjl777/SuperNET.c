@@ -581,7 +581,7 @@ int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { retur
 #include "plugins/plugins.h"
 #undef DEFINES_ONLY
 
-struct pending_cgi { struct queueitem DL; char apitag[24],*retstr,*jsonstr; cJSON *json; int32_t sock,retind; };
+struct pending_cgi { struct queueitem DL; char apitag[24],*jsonstr; cJSON *json; int32_t sock,retind; };
 
 char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json)
 {
@@ -635,17 +635,17 @@ void *issue_cgicall(void *_ptr)
         else
         {
             //printf("call plugin_method.(%s)\n",ptr->jsonstr);
-            ptr->retstr = 0;
+            /*ptr->retstr = 0;
             if ( 0 )
             {
-                str = plugin_method(&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
+                str = plugin_method(ptr->sock,&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
                 if ( str != 0 )
                     free(str);
                 while ( ptr->retstr == 0 )
                     msleep(10);
                 str = ptr->retstr, ptr->retstr = 0;
             }
-            else str = plugin_method(0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
+            else */str = plugin_method(ptr->sock,0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
         }
         if ( str != 0 )
         {
@@ -745,9 +745,6 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
         return(process_nn_message(-1,jsonstr));
-        //timeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),SUPERNET.PLUGINTIMEOUT);
-        //return(process_user_json(plugin,method,jsonstr,broadcastflag,timeout));
-        //return(plugin_method(0,previpaddr==0,plugin,method,daemonid,instanceid,jsonstr,0,timeout));
     } else return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }
 
@@ -849,7 +846,7 @@ void SuperNET_loop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    char *jsonstr; int32_t sock,len,recvtimeout;
+    char *jsonstr,*str; int32_t sock,len,recvtimeout;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -863,7 +860,8 @@ void SuperNET_apiloop(void *ipaddr)
             while ( 1 )
             {
                 if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
-                    process_nn_message(sock,jsonstr);
+                    if ( (str= process_nn_message(sock,jsonstr)) != 0 )
+                        free(str);
             }
         }
         nn_shutdown(sock,0);

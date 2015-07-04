@@ -742,7 +742,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         str = cJSON_Print(argjson), _stripwhite(str,' ');
         if ( Debuglevel > 2 )
             printf("call (%s %s) (%s)\n",plugin,method,str);
-        retstr = plugin_method(0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2);
+        retstr = plugin_method(-1,0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2);
         free_json(origjson);
         free(str);
     }
