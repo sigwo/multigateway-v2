@@ -457,12 +457,13 @@ void serverloop(void *_args)
 
 void calc_nonces(char *destpoint)
 {
-    char buf[8192],endpoint[8192],*str; double endmilli = milliseconds() + 30000;
+    char buf[8192],endpoint[8192],*str; int32_t n = 0; double endmilli = milliseconds() + 60000;
     //printf("calc_nonces.(%s)\n",destpoint);
     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
     while ( milliseconds() < endmilli )
     {
-        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"8\",\"myendpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
+        sprintf(buf,"{\"plugin\":\"relay\",\"counter\":\"%d\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"8\",\"myendpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",n,endpoint,destpoint,SUPERNET.NXTADDR);
+        n++;
         if ( (str= busdata_sync(buf,"8")) != 0 )
         {
             fprintf(stderr,"send.(%s)\n",buf);
