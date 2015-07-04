@@ -479,7 +479,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
         json = cJSON_GetArrayItem(origjson,0), jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     else json = origjson, jsonstr = origjsonstr;
-    //printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
