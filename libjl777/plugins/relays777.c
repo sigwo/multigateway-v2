@@ -469,6 +469,7 @@ void calc_nonces(char *destpoint)
             free(str);
         }
     }
+    SUPERNET.noncing = 0;
     free(destpoint);
 }
 
@@ -528,7 +529,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             }
             else if ( strcmp(methodstr,"join") == 0 || strcmp(methodstr,"nonce") == 0  )
             {
-                if ( SUPERNET.iamrelay != 0 )
+                if ( SUPERNET.iamrelay != 0 && SUPERNET.noncing == 0 )
                 {
                     copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
@@ -536,6 +537,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     //expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
                     if ( strcmp(methodstr,"join") == 0 )
                     {
+                        SUPERNET.noncing = 1;
                         portable_thread_create((void *)calc_nonces,clonestr(endpoint));
                         sprintf(retbuf,"{\"result\":\"noncing\",\"endpoint\":\"%s\"}",endpoint);
                     } else sprintf(retbuf,"{\"result\":\"nonce stats\",\"endpoint\":\"%s\"}",endpoint);
