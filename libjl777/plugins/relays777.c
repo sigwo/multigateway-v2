@@ -549,7 +549,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
                     copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
                     sprintf(buf,"{\"result\":\"gotnonce\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,sender);
-                    fprintf(stderr,"received.(%s) from (%s)\n",endpoint,sender);
+                    fprintf(stderr,"received.(%s) from (%s)\n",origjsonstr,sender);
                 }
             }
         }

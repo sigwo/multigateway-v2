@@ -740,7 +740,8 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         cJSON_DeleteItemFromObject(argjson,"submethod");
         cJSON_DeleteItemFromObject(argjson,"destplugin");
         str = cJSON_Print(argjson), _stripwhite(str,' ');
-        printf("call (%s %s) (%s)\n",plugin,method,str);
+        if ( Debuglevel > 2 )
+            printf("call (%s %s) (%s)\n",plugin,method,str);
         retstr = plugin_method(0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2);
         free_json(origjson);
         free(str);
