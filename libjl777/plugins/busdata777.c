@@ -849,7 +849,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     if ( strcmp(plugin,"relay") == 0 && strcmp(destplugin,"relay") == 0 && broadcastmode == 0 )
         broadcastmode = "3";
-    printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
+    //printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
@@ -886,12 +886,12 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
             {
                 if ( broadcastmode == 0 && cJSON_str(cJSON_GetObjectItem(json,"servicename")) == 0 )
                 {
-                    printf("call busdata proc.(%s)\n",data);
+                    //printf("call busdata proc.(%s)\n",data);
                     retstr = nn_busdata_processor((uint8_t *)data,datalen);
                 }
                 else
                 {
-                    printf("LBsend.(%s)\n",data);
+                    //printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                 }
                 if ( 0 && retstr != 0 )
