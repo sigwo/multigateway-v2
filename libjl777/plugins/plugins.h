@@ -181,7 +181,7 @@ char *add_instanceid(struct daemon_info *dp,uint64_t instanceid)
 
 void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
 {
-    cJSON *json; int32_t permflag,sendlen,broadcastflag,retsock; uint64_t instanceid,tag = 0; char request[8192],**dest,*retstr,*sendstr;
+    cJSON *json; int32_t permflag,sendlen,broadcastflag,retsock; uint64_t instanceid,tag = 0; char request[8192],**dest,*retstr=0,*sendstr;
     if ( (json= cJSON_Parse(str)) != 0 )
     {
         //printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
@@ -207,7 +207,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
                 if ( Debuglevel > 2 )
                     fprintf(stderr,"send return from (%s) <<<<<<<<<<<<<<<<<<<<<< \n",str);
                 nn_local_broadcast(dp->pushsock,instanceid,0,(uint8_t *)retstr,(int32_t)strlen(retstr)+1), dp->numsent++;
-                free(retstr);
+                free(retstr), retstr = 0;
             }
         }
         else if ( instanceid != 0 && (broadcastflag= get_API_int(cJSON_GetObjectItem(json,"broadcast"),0)) > 0 )
@@ -217,20 +217,25 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         }
         free_json(json);
     } else printf("parse error.(%s)\n",str);
-    printf("tag.%llu\n",(long long)tag);
+    printf("tag.%llu str.%p retstr.%p\n",(long long)tag,str,retstr);
     if ( tag != 0 )
     {
         if ( (dest= get_tagstr(&retsock,dp,tag)) != 0 )
             *dest = str;
-        if ( retsock >= 0 )
+        if ( retsock >= 0 && str != 0 )
         {
-            if ( (sendlen= nn_send(retsock,retstr,len,0)) != len )
-                printf("sendlen.%d != len.%d (%s)\n",sendlen,len,retstr);
+            if ( (sendlen= nn_send(retsock,str,(int32_t)strlen(str)+1,0)) != (int32_t)strlen(str)+1 )
+                printf("sendlen.%d != len.%d (%s)\n",sendlen,len,str);
             if ( dest == 0 )
                 free(str);
         }
     }
-    else if ( dp->websocket == 0 )
+    else if ( str != 0 )
+    {
+        printf("orphaned str.(%s)\n",str);
+        free(str);
+    }
+    /*else if ( dp->websocket == 0 )
     {
         static FILE *fp;
         if ( fp == 0 )
@@ -241,7 +246,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
             fflush(fp);
             free(str);
         } else queue_enqueue("daemon",&dp->messages,queueitem(str));
-    }
+    }*/
 }
 
 int32_t poll_daemons()
