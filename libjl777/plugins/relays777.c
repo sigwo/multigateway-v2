@@ -523,7 +523,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 {
                     retstr = cJSON_Print(retjson), _stripwhite(retstr,' ');
                     free_json(retjson);
-                }
+                    printf("got.(%s)\n",retstr);
+                } else printf("null serviceprovider_json()\n");
             }
             else if ( strcmp(methodstr,"join") == 0 || strcmp(methodstr,"nonce") == 0  )
             {
