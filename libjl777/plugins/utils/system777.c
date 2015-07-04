@@ -248,7 +248,7 @@ void set_endpointaddr(char *transport,char *endpoint,char *domain,uint16_t port,
 int32_t nn_portoffset(int32_t type);
 
 char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout);
-char *nn_direct(char *ipaddr,uint8_t *data,int32_t len);
+//char *nn_direct(char *ipaddr,uint8_t *data,int32_t len);
 //char *nn_publish(uint8_t *data,int32_t len,int32_t nostr);
 //char *nn_allrelays(uint8_t *data,int32_t len,int32_t timeoutmillis,char *localresult);
 char *nn_loadbalanced(uint8_t *data,int32_t len);
@@ -515,63 +515,16 @@ int32_t ismyaddress(char *server)
     return(0);
 }
 
-/*int32_t report_err(char *typestr,int32_t err,char *nncall,int32_t type,char *bindaddr,char *connectaddr)
-{
-    printf("%s error %d type.%d nn_%s err.%s bind.(%s) connect.(%s)\n",typestr,err,type,nncall,nn_strerror(nn_errno()),bindaddr,connectaddr!=0?connectaddr:"");
-    return(-1);
-}*/
-
 char *get_localtransport(int32_t bundledflag) { return(OFFSET_ENABLED ? "ipc" : "inproc"); }
-
-/*int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char *_connectaddr,int32_t timeout)
-{
-    int32_t sock,err = 0;
-    char bindaddr[512],connectaddr[512];
-    printf("%s.%s bind.(%s) connect.(%s)\n",typestr,suffix,_bindaddr,_connectaddr);
-    bindaddr[0] = connectaddr[0] = 0;
-    if ( _bindaddr != 0 && _bindaddr[0] != 0 )
-        strcpy(bindaddr,_bindaddr), strcat(bindaddr,suffix);
-    if ( _connectaddr != 0 && _connectaddr[0] != 0 )
-        strcpy(connectaddr,_connectaddr), strcat(connectaddr,suffix);
-    if ( (sock= nn_socket(AF_SP,type)) < 0 )
-        return(report_err(typestr,sock,"nn_socket",type,bindaddr,connectaddr));
-    if ( bindaddr[0] != 0 )
-    {
-        //printf("bind\n");
-        if ( (err= nn_bind(sock,bindaddr)) < 0 )
-            return(report_err(typestr,err,"nn_bind",type,bindaddr,connectaddr));
-    }
-    if ( connectaddr[0] != 0 )
-    {
-        //printf("nn_connect\n");
-        if ( (err= nn_connect(sock,connectaddr)) < 0 )
-            return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
-        else if ( type == NN_SUB && (err= nn_setsockopt(sock,NN_SUB,NN_SUB_SUBSCRIBE,"",0)) < 0 )
-            return(report_err(typestr,err,"nn_setsockopt subscribe",type,bindaddr,connectaddr));
-    }
-    if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
-        return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
-    if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
-        return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
-    if ( Debuglevel > 1 )
-        printf("%s.%s socket.%d bind.(%s) connect.(%s)\n",typestr,suffix,sock,bindaddr,connectaddr);
-    return(sock);
-}
-
-int32_t shutdown_plugsocks(union endpoints *socks)
-{
-    int32_t i,errs = 0;
-    for (i=0; i<(int32_t)(sizeof(socks->all)/sizeof(*socks->all)); i++)
-        if ( socks->all[i] >= 0 && nn_shutdown(socks->all[i],0) != 0 )
-            errs++, printf("error (%s) nn_shutdown.%d\n",nn_strerror(nn_errno()),i);
-    return(errs);
-}*/
 
 int32_t nn_local_broadcast(int32_t sock,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
 {
-    int32_t sendlen,errs = 0;
+    int32_t i,sendlen,errs = 0;
     if ( sock >= 0 )
     {
+        for (i=0; i<10; i++)
+            if ( (nn_socket_status(sock,1) & NN_POLLOUT) != 0 )
+                break;
         if ( (sendlen= nn_send(sock,(char *)retstr,len,0)) <= 0 )
             errs++, printf("=sending to socket.%d sendlen.%d len.%d (%s) [%s]\n",sock,sendlen,len,nn_strerror(nn_errno()),retstr);
         else if ( Debuglevel > 2 )

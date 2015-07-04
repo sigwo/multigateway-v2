@@ -847,7 +847,7 @@ void SuperNET_loop(void *ipaddr)
 void SuperNET_apiloop(void *ipaddr)
 {
     char *jsonstr,*str; int32_t sock,len,recvtimeout;
-    if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
+    if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
             fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_PAIR,SUPERNET_APIENDPOINT,nn_errstr());
@@ -856,7 +856,7 @@ void SuperNET_apiloop(void *ipaddr)
             recvtimeout = 1;
             if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            fprintf(stderr,"BIND.(%s)\n",SUPERNET_APIENDPOINT);
+            fprintf(stderr,"BIND.(%s) sock.%d\n",SUPERNET_APIENDPOINT,sock);
             while ( 1 )
             {
                 if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
