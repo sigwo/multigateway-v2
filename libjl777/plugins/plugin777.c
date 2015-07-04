@@ -323,10 +323,9 @@ printf("process_plugin_json: couldnt parse.(%s)\n",jsonstr);
     return((int32_t)strlen(retbuf));
 }
 
-static int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent,int32_t permanentflag,int32_t pullsock,int32_t timeoutmillis)
+static char *get_newinput(int32_t permanentflag,int32_t pullsock,int32_t timeoutmillis)
 {
-    char _line[8192],*line = 0,*msg;
-    int32_t len = 0,n = 0;
+    char _line[8192],*line = 0,*msg; int32_t len = 0;
     _line[0] = 0;
     if ( (len= nn_recv(pullsock,&msg,NN_MSG,0)) <= 0 )
     {
@@ -344,12 +343,7 @@ static int32_t get_newinput(char *messages[],uint32_t *numrecvp,uint32_t numsent
         memcpy(line,msg,len);
         nn_freemsg(msg);
     }
-    if ( line != 0 && line[0] != 0 )
-    {
-        if ( len > 0 )
-            messages[0] = line, n = 1;
-    }
-    return(n);
+    return(line);
 }
 
 #ifdef BUNDLED
@@ -363,8 +357,8 @@ int32_t main
     struct plugin_info *plugin;
     double startmilli;
     cJSON *argjson;
-    int32_t i,n,bundledflag,max,sendflag,sleeptime=1,len = 0;
-    char *messages[16],*line,*jsonargs,*transportstr;
+    int32_t bundledflag,max,sendflag,sleeptime=1,len = 0;
+    char *line,*jsonargs,*transportstr;
 #ifndef BUNDLED
     OS_init();
 #endif
@@ -417,28 +411,25 @@ int32_t main
     while ( OS_getppid() == plugin->ppid )
     {
         retbuf[0] = 0;
-        if ( (n= get_newinput(messages,&plugin->numrecv,plugin->numsent,plugin->permanentflag,plugin->pullsock,plugin->timeout)) > 0 )
+        if ( (line= get_newinput(plugin->permanentflag,plugin->pullsock,plugin->timeout)) != 0 )
         {
-            for (i=0; i<n; i++)
+            len = (int32_t)strlen(line);
+            if ( Debuglevel > 1 )
+                printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
+            if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
             {
-                line = messages[i], len = (int32_t)strlen(line);
-                if ( Debuglevel > 1 )
-                    printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
-                if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
+                if ( plugin->bundledflag == 0 )
+                    printf("%s\n",retbuf), fflush(stdout);
+                if ( sendflag != 0 )
                 {
-                    if ( plugin->bundledflag == 0 )
-                        printf("%s\n",retbuf), fflush(stdout);
-                    if ( sendflag != 0 )
-                    {
-                        nn_local_broadcast(plugin->pushsock,0,0,(uint8_t *)retbuf,(int32_t)strlen(retbuf)+1), plugin->numsent++;
-                        if ( Debuglevel > 1 )
-                            fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
-                    }
-                } //else printf("null return from process_plugin_json\n");
-                free(line);
-            }
+                    nn_local_broadcast(plugin->pushsock,0,0,(uint8_t *)retbuf,(int32_t)strlen(retbuf)+1), plugin->numsent++;
+                    if ( Debuglevel > 1 )
+                        fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
+                }
+            } //else printf("null return from process_plugin_json\n");
+            free(line);
         }
-        if ( n == 0 )
+        else
         {
             startmilli = milliseconds();
             if ( PLUGNAME(_idle)(plugin) == 0 )
