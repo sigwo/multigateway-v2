@@ -685,7 +685,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
 char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJSON *json)
 {
     char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],buf[MAX_JSON_FIELD],servicename[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
-    cJSON *dupjson,*second,*argjson; uint64_t forwardbits;
+    cJSON *dupjson,*second,*argjson,*origjson; uint64_t forwardbits;
     if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
     {
         dupjson = cJSON_Duplicate(json,1);
@@ -709,8 +709,20 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         } // else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
         free_json(dupjson);
     }
-    if ( (argjson= cJSON_Parse(databuf)) != 0 )
+    if ( (origjson= cJSON_Parse(databuf)) != 0 )
     {
+        if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
+        {
+            argjson = cJSON_GetArrayItem(origjson,0);
+            copy_cJSON(buf,cJSON_GetObjectItem(argjson,"NXT"));
+            if ( strcmp(buf,SUPERNET.NXTADDR) != 0 )
+            {
+                printf("tokenized json not local.(%s)\n",databuf);
+                free_json(origjson);
+                return(clonestr("{\"error\":\"tokenized json not local\"}"));
+            }
+        }
+        else argjson = origjson;
         copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"method"));
@@ -720,7 +732,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         if ( SUPERNET.iamrelay != 0 && ((strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0) || servicename[0] != 0) ) //
         {
 // printf("bypass deref\n");
-            free_json(argjson);
+            free_json(origjson);
             return(0);
         }
         cJSON_ReplaceItemInObject(argjson,"method",cJSON_CreateString(method));
@@ -730,7 +742,7 @@ char *busdata_deref(char *forwarder,char *sender,int32_t valid,char *databuf,cJS
         str = cJSON_Print(argjson), _stripwhite(str,' ');
         printf("call (%s %s) (%s)\n",plugin,method,str);
         retstr = plugin_method(0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2);
-        free_json(argjson);
+        free_json(origjson);
         free(str);
     }
     return(retstr);
