@@ -646,7 +646,7 @@ char *busdata(char *forwarder,char *sender,int32_t valid,char *key,uint32_t time
 
 int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json)
 {
-    char pubkey[256],hexstr[65],sha[65],datastr[8192],*str; int32_t valid; cJSON *argjson; bits256 hash;
+    char pubkey[256],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0;
     forwarder[0] = sender[0] = 0;
     //printf("busdata_validate.(%s)\n",msg);
@@ -674,8 +674,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         }
         else
         {
-            str = cJSON_Print(argjson), _stripwhite(str,' ');
-            strcpy((char *)databuf,str), free(str);
+            strcpy((char *)databuf,msg);
             *datalenp = (int32_t)strlen((char *)databuf) + 1;
             return(1);
         }
