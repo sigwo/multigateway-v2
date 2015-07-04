@@ -568,7 +568,7 @@ int32_t shutdown_plugsocks(union endpoints *socks)
 
 int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
 {
-    int32_t i,sock,errs = 0;
+    int32_t i,sendlen,sock,errs = 0;
     for (i=0; i<(int32_t)(sizeof(socks->send)/sizeof(int32_t))+2; i++)
     {
         if ( i < 2 )
@@ -576,10 +576,10 @@ int32_t nn_local_broadcast(struct allendpoints *socks,uint64_t instanceid,int32_
         else sock = ((int32_t *)&socks->send)[i - 2];
         if ( sock >= 0 )
         {
-            if ( (len= nn_send(sock,(char *)retstr,len,0)) <= 0 )
-                errs++, printf("error %d sending to socket.%d send.%d len.%d (%s)\n",len,sock,i,len,nn_strerror(nn_errno()));
+            if ( (sendlen= nn_send(sock,(char *)retstr,len,0)) <= 0 )
+                errs++, printf("error %d sending to socket.%d send.%d len.%d (%s) [%s]\n",sendlen,sock,i,len,nn_strerror(nn_errno()),retstr);
             else if ( Debuglevel > 2 )
-                printf("nn_local_broadcast SENT.(%s) len.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,strlen((char *)retstr),(long long)instanceid,sock);
+                printf("nn_local_broadcast SENT.(%s) len.%d sendlen.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,sendlen,strlen((char *)retstr),(long long)instanceid,sock);
         }
     }
     return(errs);
