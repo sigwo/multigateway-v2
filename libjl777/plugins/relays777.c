@@ -472,13 +472,13 @@ void calc_nonces(char *destpoint)
     free(destpoint);
 }
 
-int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag)
+int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *origjsonstr,cJSON *origjson,int32_t initflag)
 {
-    char buf[8192],endpoint[128],tagstr[512],*resultstr,*retstr = 0,*methodstr; cJSON *retjson;
+    char buf[8192],endpoint[128],tagstr[512],*resultstr,*retstr = 0,*methodstr,*jsonstr; cJSON *retjson,*json;
     retbuf[0] = 0;
-    //if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
-    //    json = cJSON_GetArrayItem(origjson,0), jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-    //else json = origjson, jsonstr = origjsonstr;
+    if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
+        json = cJSON_GetArrayItem(origjson,0), jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+    else json = origjson, jsonstr = origjsonstr;
     printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
