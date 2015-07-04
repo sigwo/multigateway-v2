@@ -207,7 +207,7 @@ uint64_t send_to_daemon(struct relayargs *args,char **retstrp,char *name,uint64_
         }
         if ( len == 0 )
             len = (int32_t)strlen(jsonstr) + 1;
-        if ( localaccess != 0 && is_cJSON_Array(json) == 0 )
+        if ( 0 && localaccess != 0 && is_cJSON_Array(json) == 0 )
         {
             tokbuf = calloc(1,len + 1024);
 //printf("local tokenize jsonstr.(%s)\n",jsonstr);
