@@ -526,7 +526,7 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
 {
     int32_t sock,err = 0;
     char bindaddr[512],connectaddr[512];
-    //printf("%s.%s bind.(%s) connect.(%s)\n",typestr,suffix,_bindaddr,_connectaddr);
+    printf("%s.%s bind.(%s) connect.(%s)\n",typestr,suffix,_bindaddr,_connectaddr);
     bindaddr[0] = connectaddr[0] = 0;
     if ( _bindaddr != 0 && _bindaddr[0] != 0 )
         strcpy(bindaddr,_bindaddr), strcat(bindaddr,suffix);
@@ -552,7 +552,7 @@ int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char
         return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
     if ( timeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
         return(report_err(typestr,err,"nn_connect",type,bindaddr,connectaddr));
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("%s.%s socket.%d bind.(%s) connect.(%s)\n",typestr,suffix,sock,bindaddr,connectaddr);
     return(sock);
 }

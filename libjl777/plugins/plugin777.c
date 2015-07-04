@@ -61,7 +61,7 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
 {
     int32_t errs = 0;
     struct allendpoints *socks = &plugin->all.socks;
-    if ( Debuglevel > 2 )
+    if ( Debuglevel > 1 )
         printf("%s.%p <<<<<<<<<<<<< init_permpairsocks bind.(%s) connect.(%s)\n",plugin->name,plugin,bindaddr,connectaddr);
 //#ifdef _WIN32
     if ( (socks->both.bus= init_socket("","bus",NN_BUS,0,connectaddr,timeout)) < 0 ) errs++;
