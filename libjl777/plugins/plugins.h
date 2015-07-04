@@ -226,27 +226,8 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         {
             if ( (sendlen= nn_send(retsock,str,(int32_t)strlen(str)+1,0)) != (int32_t)strlen(str)+1 )
                 printf("sendlen.%d != len.%d (%s)\n",sendlen,len,str);
-            if ( dest == 0 )
-                free(str);
         }
     }
-    else if ( str != 0 )
-    {
-        printf("orphaned str.(%s)\n",str);
-        free(str);
-    }
-    /*else if ( dp->websocket == 0 )
-    {
-        static FILE *fp;
-        if ( fp == 0 )
-            fp = fopen("msglog","wb");
-        if ( fp != 0 )
-        {
-            fprintf(fp,"queue message.(%s)\n",str);
-            fflush(fp);
-            free(str);
-        } else queue_enqueue("daemon",&dp->messages,queueitem(str));
-    }*/
 }
 
 int32_t poll_daemons()
