@@ -659,10 +659,10 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
             fprintf(stderr,"error valid.%d sender.(%s) forwarder.(%s)\n",valid,sender,forwarder);
             return(valid);
         }
-        if ( strcmp(sender,SUPERNET.NXTADDR) != 0 )
+        copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
+        if ( strcmp(sender,SUPERNET.NXTADDR) != 0 && datastr[0] == 0 )
         {
             copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
-            copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
             if ( datastr[0] != 0 )
                 decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
             else databuf[0] = 0;
