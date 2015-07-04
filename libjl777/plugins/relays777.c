@@ -413,16 +413,17 @@ cJSON *relay_json(struct _relay_info *list)
 char *relays_jsonstr(char *jsonstr,cJSON *argjson)
 {
     cJSON *json; char *retstr;
-    json = cJSON_CreateObject();
     if ( SUPERNET.iamrelay != 0 && SUPERNET.myipaddr[0] != 0 )
     {
+        json = cJSON_CreateObject();
         cJSON_AddItemToObject(json,"relay",cJSON_CreateString(SUPERNET.myipaddr));
         if ( RELAYS.active.num > 0 )
             cJSON_AddItemToObject(json,"relays",relay_json(&RELAYS.active));
+        retstr = cJSON_Print(json);
+        free_json(json);
+        return(retstr);
     }
-    retstr = cJSON_Print(json);
-    free_json(json);
-    return(retstr);
+    else return(clonestr("{\"error\":\"get relay list from relay\"}"));
 }
 
 void serverloop(void *_args)
@@ -475,7 +476,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 {
     char buf[8192],endpoint[128],tagstr[512],*resultstr,*retstr = 0,*methodstr; cJSON *retjson;
     retbuf[0] = 0;
-    //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
