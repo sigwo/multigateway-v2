@@ -883,7 +883,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     retstr = nn_busdata_processor((uint8_t *)data,datalen);
                 else
                 {
-                    //printf("LBsend.(%s)\n",data);
+                    printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                 }
                 if ( 0 && retstr != 0 )
@@ -924,7 +924,7 @@ int32_t busdata_poll()
             //if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("RECV.%d (%s)\n",sock,msg);
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
