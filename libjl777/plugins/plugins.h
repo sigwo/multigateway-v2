@@ -224,7 +224,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     {
         if ( (dest= get_tagstr(&args,dp,tag)) != 0 )
             *dest = str;
-        else
+        //else
         {
             int32_t complete_relay(struct relayargs *args,char *retstr);
             if ( args != 0 )
