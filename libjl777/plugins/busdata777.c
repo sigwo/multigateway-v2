@@ -843,12 +843,13 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 
 char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
-    int32_t datalen,sendlen = 0; char plugin[512],destplugin[512],*data,*retstr; cJSON *json;
+    int32_t sentflag,datalen,sendlen = 0; char plugin[512],destplugin[512],*data,*retstr; cJSON *json;
     json = cJSON_Parse(jsonstr);
     copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     if ( strcmp(plugin,"relay") == 0 && strcmp(destplugin,"relay") == 0 && broadcastmode == 0 )
         broadcastmode = "3";
+    sentflag = 0;
     //printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
@@ -865,15 +866,26 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
                     //printf("relay returns publicaccess.(%s)\n",retstr);
                     return(retstr);
                 } else free_json(json);
+                if ( RELAYS.pubglobal >= 0 && (strcmp(broadcastmode,"allnodes") == 0 || strcmp(broadcastmode,"7") == 0) )
+                {
+                    if( (sendlen= nn_send(RELAYS.pubglobal,data,datalen,0)) != datalen )
+                    {
+                        if ( Debuglevel > 1 )
+                            printf("globl sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
+                        free(data);
+                        return(clonestr("{\"error\":\"couldnt send to allnodes\"}"));
+                    }
+                    sentflag = 1;
+                }
             }
-            if ( RELAYS.pubrelays >= 0 )
+            if ( sentflag == 0 && RELAYS.pubrelays >= 0 )
             {
                 if( (sendlen= nn_send(RELAYS.pubrelays,data,datalen,0)) != datalen )
                 {
                     if ( Debuglevel > 1 )
                         printf("sendlen.%d vs datalen.%d (%s) %s\n",sendlen,datalen,(char *)data,nn_errstr());
                     free(data);
-                    return(clonestr("{\"error\":\"couldnt send to bus\"}"));
+                    return(clonestr("{\"error\":\"couldnt send to allrelays\"}"));
                 } // else printf("PUB.(%s) sendlen.%d datalen.%d\n",data,sendlen,datalen);
             }
             if ( data != jsonstr )
