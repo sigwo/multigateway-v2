@@ -465,7 +465,7 @@ void calc_nonces(char *destpoint)
         sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"7\",\"endpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
         if ( (str= busdata_sync(buf,"7")) != 0 )
         {
-            //fprintf(stderr,"(%s) -> (%s)\n",buf,str);
+            fprintf(stderr,"send.(%s)\n",buf);
             free(str);
         }
     }
@@ -480,7 +480,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
         json = cJSON_GetArrayItem(origjson,0), jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     else json = origjson, jsonstr = origjsonstr;
-    printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    //printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
@@ -524,7 +524,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 {
                     retstr = cJSON_Print(retjson), _stripwhite(retstr,' ');
                     free_json(retjson);
-                    printf("got.(%s)\n",retstr);
+                    //printf("got.(%s)\n",retstr);
                 } else printf("null serviceprovider_json()\n");
             }
             else if ( strcmp(methodstr,"join") == 0 || strcmp(methodstr,"nonce") == 0  )
@@ -534,7 +534,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
                     //nn_connect(RELAYS.subclient,endpoint);
-                    //expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
+                    expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
                     if ( strcmp(methodstr,"join") == 0 )
                     {
                         SUPERNET.noncing = 1;
