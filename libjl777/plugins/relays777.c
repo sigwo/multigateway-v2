@@ -375,7 +375,7 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
                 break;
         if ( (recvlen= nn_recv(lbsock,&msg,NN_MSG,0)) > 0 )
         {
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("LBRECV.(%s)\n",msg);
             jsonstr = clonestr((char *)msg);
             nn_freemsg(msg);
@@ -458,14 +458,14 @@ void serverloop(void *_args)
 void calc_nonces(char *destpoint)
 {
     char buf[8192],endpoint[8192],*str; double endmilli = milliseconds() + 30000;
-    printf("calc_nonces.(%s)\n",destpoint);
+    //printf("calc_nonces.(%s)\n",destpoint);
     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
     while ( milliseconds() < endmilli )
     {
-        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"7\",\"endpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
+        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"allnodes\",\"endpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
         if ( (str= busdata_sync(buf,"7")) != 0 )
         {
-            fprintf(stderr,"(%s) -> (%s)\n",buf,str);
+            //fprintf(stderr,"(%s) -> (%s)\n",buf,str);
             free(str);
         }
     }
@@ -479,7 +479,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
         json = cJSON_GetArrayItem(origjson,0), jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     else json = origjson, jsonstr = origjsonstr;
-    printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    //printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
@@ -532,8 +532,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 {
                     copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
-                    nn_connect(RELAYS.subclient,endpoint);
-                    expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
+                    //nn_connect(RELAYS.subclient,endpoint);
+                    //expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
                     if ( strcmp(methodstr,"join") == 0 )
                     {
                         portable_thread_create((void *)calc_nonces,clonestr(endpoint));
