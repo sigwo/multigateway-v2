@@ -659,16 +659,24 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
             fprintf(stderr,"error valid.%d sender.(%s) forwarder.(%s)\n",valid,sender,forwarder);
             return(valid);
         }
-        copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
-        copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
-        if ( datastr[0] != 0 )
-            decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
-        else databuf[0] = 0;
-        *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
-        calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
-        if ( strcmp(hexstr,sha) == 0 )
-            return(1);
-        else printf("hash mismatch %s vs %s\n",hexstr,sha);
+        if ( strcmp(sender,SUPERNET.NXTADDR) != 0 )
+        {
+            copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
+            copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
+            if ( datastr[0] != 0 )
+                decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
+            else databuf[0] = 0;
+            *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
+            calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
+            if ( strcmp(hexstr,sha) == 0 )
+                return(1);
+            else printf("hash mismatch %s vs %s\n",hexstr,sha);
+        }
+        else
+        {
+            strcpy((char *)databuf,msg);
+            *datalenp = (int32_t)strlen((char *)databuf) + 1;
+        }
     } else printf("busdata_validate not array (%s)\n",msg);
     return(-1);
 }
