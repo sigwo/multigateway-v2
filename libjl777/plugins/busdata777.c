@@ -660,7 +660,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
             return(valid);
         }
         copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
-        if ( strcmp(sender,SUPERNET.NXTADDR) != 0 && datastr[0] == 0 )
+        if ( strcmp(sender,SUPERNET.NXTADDR) != 0 || datastr[0] != 0 )
         {
             copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
             if ( datastr[0] != 0 )
