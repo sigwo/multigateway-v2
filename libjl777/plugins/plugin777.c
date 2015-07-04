@@ -241,8 +241,8 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
     _stripwhite(jsonstr,' ');
     strcpy(retbuf,jsonstr), free(jsonstr);
     append_stdfields(retbuf,max,plugin,0,1);
-    if ( Debuglevel > 2 )
-        printf(">>>>>>>>>>> ret.(%s)\n",retbuf);
+    if ( Debuglevel > 1 )
+        printf(">>>>>>>>>>> register return.(%s)\n",retbuf);
     return((int32_t)strlen(retbuf));
 }
 
@@ -397,7 +397,7 @@ int32_t main
         argjson = cJSON_Parse(jsonargs);
         if ( (len= registerAPI(registerbuf,sizeof(registerbuf)-1,plugin,argjson)) > 0 )
         {
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 fprintf(stderr,">>>>>>>>>>>>>>> plugin.(%s) sends REGISTER SEND.(%s)\n",plugin->name,registerbuf);
             nn_local_broadcast(&plugin->all.socks,0,0,(uint8_t *)registerbuf,(int32_t)strlen(registerbuf)+1), plugin->numsent++;
             //nn_send(plugin->sock,plugin->registerbuf,len+1,0); // send the null terminator too

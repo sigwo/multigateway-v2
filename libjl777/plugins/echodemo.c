@@ -33,6 +33,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 {
     uint64_t disableflags = 0;
     printf("init %s size.%ld\n",plugin->name,sizeof(struct echodemo_info));
+    plugin->allowremote = 1;
     // runtime specific state can be created and put into *data
     return(disableflags); // set bits corresponding to array position in _methods[]
 }

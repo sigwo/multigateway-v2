@@ -518,7 +518,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
             fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d retstrp.%p\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess,retstrp);
         if ( dp->readyflag == 0 )
         {
-            fprintf(stderr,"readyflag.%d\n",dp->readyflag);
+            fprintf(stderr,"%s readyflag.%d\n",dp->name,dp->readyflag);
             return(clonestr("{\"error\":\"plugin not ready\"}"));
         }
         if ( localaccess == 0 && dp->allowremote == 0 )
