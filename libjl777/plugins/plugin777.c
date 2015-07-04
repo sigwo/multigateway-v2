@@ -413,7 +413,7 @@ int32_t main
             for (i=0; i<n; i++)
             {
                 line = messages[i], len = (int32_t)strlen(line);
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
                 /*if ( (json= cJSON_Parse(line)) != 0 )
                 {

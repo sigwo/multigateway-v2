@@ -1480,7 +1480,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     char *retstr,*resultstr,*methodstr,*destplugin,buf[1024],myipaddr[512];
     uint8_t mysecret[32],mypublic[32];
     FILE *fp;
-    int32_t i;
+    int32_t i,len;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! (%s) initflag.%d process %s\n",plugin->name,jsonstr,initflag,plugin->name);
     if ( initflag > 0 )
@@ -1615,7 +1615,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             retstr = SuperNET_install(destplugin,jsonstr,json);
         else retstr = "return JSON result";
         strcpy(retbuf,retstr);
-        sprintf(retbuf + strlen(retbuf) - 1,",\"debug\":%d,\"USESSL\":%d,\"MAINNET\":%d,\"DATADIR\":\"%s\",\"NXTAPI\":\"%s\",\"WEBSOCKETD\":\"%s\",\"SUPERNET_PORT\":%d,\"APISLEEP\":%d,\"domain\":\"%s\"}",Debuglevel,SUPERNET.usessl,SUPERNET.ismainnet,SUPERNET.DATADIR,SUPERNET.NXTAPIURL,SUPERNET.WEBSOCKETD,SUPERNET.port,SUPERNET.APISLEEP,SUPERNET.hostname);
+        len = (int32_t)strlen(retbuf);
+        while ( --len > 0 )
+            if ( retbuf[len] == '}' )
+                break;
+        sprintf(retbuf + len,",\"debug\":%d,\"USESSL\":%d,\"MAINNET\":%d,\"DATADIR\":\"%s\",\"NXTAPI\":\"%s\",\"WEBSOCKETD\":\"%s\",\"SUPERNET_PORT\":%d,\"APISLEEP\":%d,\"domain\":\"%s\"}",Debuglevel,SUPERNET.usessl,SUPERNET.ismainnet,SUPERNET.DATADIR,SUPERNET.NXTAPIURL,SUPERNET.WEBSOCKETD,SUPERNET.port,SUPERNET.APISLEEP,SUPERNET.hostname);
     }
     return((int32_t)strlen(retbuf));
 }
