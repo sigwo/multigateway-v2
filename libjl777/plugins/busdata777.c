@@ -53,14 +53,14 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
 
 uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
 {
-    uint64_t hit,threshold; bits384 sig; double endmilli; int32_t len,numrounds = 10;
+    uint64_t hit,threshold; bits384 sig; double endmilli; int32_t len;
     len = (int32_t)strlen(str);
     if ( leverage != 0 )
     {
         threshold = calc_SaMthreshold(leverage);
         if ( maxmillis == 0 )
         {
-            if ( (hit= calc_SaM(&sig,(void *)str,len,(void *)&nonce,sizeof(nonce),numrounds)) >= threshold )
+            if ( (hit= calc_SaM(&sig,(void *)str,len,(void *)&nonce,sizeof(nonce))) >= threshold )
             {
                 printf("nonce failure hit.%llu >= threshold.%llu\n",(long long)hit,(long long)threshold);
                 if ( (threshold - hit) > ((uint64_t)1L << 32) )
@@ -74,7 +74,7 @@ uint32_t calc_nonce(char *str,int32_t leverage,int32_t maxmillis,uint32_t nonce)
             while ( milliseconds() < endmilli )
             {
                 randombytes((void *)&nonce,sizeof(nonce));
-                if ( (hit= calc_SaM(&sig,(void *)str,len,(void *)&nonce,sizeof(nonce),numrounds)) < threshold )
+                if ( (hit= calc_SaM(&sig,(void *)str,len,(void *)&nonce,sizeof(nonce))) < threshold )
                     return(nonce);
             }
         }
@@ -668,7 +668,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
         if ( strcmp(hexstr,sha) == 0 )
             return(1);
-    } // else printf("busdata_validate not array\n");
+    } else printf("busdata_validate not array (%s)\n",msg);
     return(-1);
 }
 

@@ -967,9 +967,12 @@ void SuperNET_apiloop(void *ipaddr)
 int SuperNET_start(char *fname,char *myip)
 {
     int32_t parse_ipaddr(char *ipaddr,char *ip_port);
+    void SaM_PrepareIndices();
     char ipaddr[256],*jsonstr = 0;
     uint64_t allocsize;
     OS_init();
+    SaM_PrepareIndices();
+
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
         jsonstr = clonestr("{}");
@@ -995,6 +998,12 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
 #ifdef __APPLE__
+    //void SaM_PrepareIndices();
+    //int32_t SaM_test();
+    //SaM_PrepareIndices();
+    //SaM_test();
+    //printf("finished SaM_test\n");
+    //getchar();
     if ( 0 )
     {
         bits128 calc_md5(char digeststr[33],void *buf,int32_t len);
