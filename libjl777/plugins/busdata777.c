@@ -843,13 +843,18 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 
 char *busdata_sync(char *jsonstr,char *broadcastmode)
 {
-    int32_t datalen,sendlen = 0; char *data,*retstr; cJSON *json;
-printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
+    int32_t datalen,sendlen = 0; char plugin[512],destplugin[512],*data,*retstr; cJSON *json;
+    json = cJSON_Parse(jsonstr);
+    copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+    copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
+    if ( strcmp(plugin,"relay") == 0 && strcmp(destplugin,"relay") == 0 && broadcastmode == 0 )
+        broadcastmode = "3";
+    printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
         {
-            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            if ( json != 0 )
             {
                 if ( strcmp(broadcastmode,"publicaccess") == 0 )
                 {
@@ -877,10 +882,13 @@ printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmo
         }
         else
         {
-            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            if ( json != 0 )
             {
                 if ( broadcastmode == 0 && cJSON_str(cJSON_GetObjectItem(json,"servicename")) == 0 )
+                {
+                    printf("call busdata proc.(%s)\n",data);
                     retstr = nn_busdata_processor((uint8_t *)data,datalen);
+                }
                 else
                 {
                     printf("LBsend.(%s)\n",data);
@@ -892,7 +900,7 @@ printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmo
                     free(data);
                 free_json(json);
                 return(retstr);
-            }
+            } else printf("Cant parse busdata_sync.(%s)\n",jsonstr);
         }
     }
     return(clonestr("{\"error\":\"error creating busdata\"}"));
