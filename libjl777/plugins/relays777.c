@@ -462,7 +462,7 @@ void calc_nonces(char *destpoint)
     expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
     while ( milliseconds() < endmilli )
     {
-        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"7\",\"endpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
+        sprintf(buf,"{\"plugin\":\"relay\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"7\",\"myendpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,destpoint,SUPERNET.NXTADDR);
         if ( (str= busdata_sync(buf,"7")) != 0 )
         {
             fprintf(stderr,"send.(%s)\n",buf);
@@ -470,6 +470,7 @@ void calc_nonces(char *destpoint)
         }
     }
     SUPERNET.noncing = 0;
+    printf("finished noncing for (%s)\n",destpoint);
     free(destpoint);
 }
 
@@ -534,7 +535,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
                     //nn_connect(RELAYS.subclient,endpoint);
-                    expand_epbits(endpoint,calc_epbits("tcp",(uint32_t)calc_ipbits(SUPERNET.myipaddr),SUPERNET.port+PUBRELAYS_OFFSET,NN_PUB));
                     if ( strcmp(methodstr,"join") == 0 )
                     {
                         SUPERNET.noncing = 1;
@@ -546,7 +546,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 else
                 {
                     char endpoint[512],sender[64];
-                    copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
+                    copy_cJSON(endpoint,cJSON_GetObjectItem(json,"myendpoint"));
                     copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
                     sprintf(buf,"{\"result\":\"gotnonce\",\"endpoint\":\"%s\",\"NXT\":\"%s\"}",endpoint,sender);
                     fprintf(stderr,"received.(%s) from (%s)\n",origjsonstr,sender);
