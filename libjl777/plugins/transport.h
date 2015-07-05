@@ -75,7 +75,7 @@ char **get_tagstr(int32_t *retsockp,struct daemon_info *dp,uint64_t tag)
             if ( SUPERNET.tags[i][2] != 0 )
                 *retsockp = (int32_t)SUPERNET.tags[i][2];
             SUPERNET.tags[i][0] = SUPERNET.tags[i][1] = SUPERNET.tags[i][2] = 0;
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("dp.%p %s slot.%d found tag.%llu dest.%p\n",dp,dp->name,i,(long long)tag,dest);
             return(dest);
         }
