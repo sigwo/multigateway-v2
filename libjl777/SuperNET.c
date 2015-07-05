@@ -842,19 +842,17 @@ void SuperNET_loop(void *ipaddr)
     serverloop(0);
 }
 
-#define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
-
 void SuperNET_apiloop(void *ipaddr)
 {
-    char *jsonstr,*str; int32_t sock,len,recvtimeout;
+    char *jsonstr,*str; int32_t sock,len;
     if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
             fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_PAIR,SUPERNET_APIENDPOINT,nn_errstr());
         else
         {
-            recvtimeout = 1;
-            if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+            if ( nn_settimeouts(sock,10,1) < 0 )
+            //if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             fprintf(stderr,"BIND.(%s) sock.%d\n",SUPERNET_APIENDPOINT,sock);
             while ( 1 )
@@ -877,7 +875,7 @@ int SuperNET_start(char *fname,char *myip)
     uint64_t allocsize;
     OS_init();
     SaM_PrepareIndices();
-    init_SUPERNET_pullsock(10,1);
+    //init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
         jsonstr = clonestr("{}");

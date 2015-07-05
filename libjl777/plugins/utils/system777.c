@@ -38,6 +38,7 @@
 #define LB_OFFSET 1
 #define PUBGLOBALS_OFFSET 2
 #define PUBRELAYS_OFFSET 3
+#define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
 
 #define nn_errstr() nn_strerror(nn_errno())
 

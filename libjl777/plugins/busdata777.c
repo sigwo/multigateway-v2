@@ -1014,7 +1014,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
     printf("SUPERNET.iamrelay %d, numservers.%d\n",SUPERNET.iamrelay,RELAYS.numservers);
 }
 
-int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
+/*int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
 {
     char bindaddr[64],*transportstr; int32_t iter;
     if ( (SUPERNET.pullsock= nn_socket(AF_SP,NN_BUS)) < 0 )
@@ -1028,9 +1028,9 @@ int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
         return(-1);
     }
     printf("SUPERNET.pullsock.%d\n",SUPERNET.pullsock);
-    for (iter=0; iter<2; iter++)
+    for (iter=0; iter<1; iter++)
     {
-        transportstr = (iter == 0) ? "inproc" : "ipc";
+        transportstr = (iter == 0) ? "ipc" : "inproc";
         sprintf(bindaddr,"%s://SuperNET",transportstr);
         if ( nn_bind(SUPERNET.pullsock,bindaddr) < 0 )
         {
@@ -1040,4 +1040,4 @@ int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
     }
     return(0);
 }
-
+*/
