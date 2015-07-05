@@ -215,7 +215,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         }
         free_json(json);
     } else printf("parse error.(%s)\n",str);
-    printf("tag.%llu str.%p retstr.%p\n",(long long)tag,str,retstr);
+    //printf("tag.%llu str.%p retstr.%p\n",(long long)tag,str,retstr);
     if ( tag != 0 )
     {
         if ( (dest= get_tagstr(&retsock,dp,tag)) != 0 )

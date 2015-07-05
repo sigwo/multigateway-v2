@@ -863,6 +863,7 @@ void SuperNET_apiloop(void *ipaddr)
             {
                 if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
                 {
+                    fprintf(stderr,"apirecv.(%s)\n",jsonstr);
                     if ( strlen(jsonstr) < sizeof(buf) )
                     {
                         strcpy(buf,jsonstr);
