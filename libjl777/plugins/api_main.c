@@ -8,7 +8,7 @@
 #include "ccgi.h"
 #include "nn.h"
 #include "cJSON.h"
-#include "bus.h"
+#include "pair.h"
 #include "pipeline.h"
 #ifdef _WIN32
 #define setenv(x, y, z) _putenv_s(x, y)
@@ -44,7 +44,7 @@ void process_json(cJSON *json,int32_t publicaccess)
     len = (int32_t)strlen(jsonstr)+1;
     if ( json != 0 )
     {
-        if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
+        if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
         {
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
