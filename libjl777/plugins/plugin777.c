@@ -63,7 +63,7 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
 //#ifdef _WIN32
 //    sprintf(plugin->connectaddr,"tcp://127.0.0.1:7774");
 //#endif
-    if ( (plugin->pushsock= nn_socket(AF_SP,NN_BUS)) < 0 )
+    if ( (plugin->pushsock= nn_socket(AF_SP,NN_PUSH)) < 0 )
     {
         printf("error creating plugin->pushsock %s\n",nn_strerror(nn_errno()));
         return(-1);

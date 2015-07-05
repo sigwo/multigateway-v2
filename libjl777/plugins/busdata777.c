@@ -1035,7 +1035,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
 int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
 {
     char bindaddr[64],*transportstr; int32_t iter;
-    if ( (SUPERNET.pullsock= nn_socket(AF_SP,NN_BUS)) < 0 )
+    if ( (SUPERNET.pullsock= nn_socket(AF_SP,NN_PULL)) < 0 )
     {
         printf("error creating pullsock %s\n",nn_strerror(nn_errno()));
         return(-1);
