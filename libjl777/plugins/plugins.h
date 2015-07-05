@@ -489,12 +489,13 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         if ( dp->readyflag == 0 )
         {
             fprintf(stderr,"%s readyflag.%d\n",dp->name,dp->readyflag);
-            return(clonestr("{\"error\":\"plugin not ready\"}"));
+            sprintf(retbuf,"{\"error\":\"plugin not ready\",\"daemonid\":\"%llu\",\"myid\":\"%llu\"}",(long long)dp->daemonid,(long long)dp->myid);
+            return(clonestr(retbuf));
         }
         if ( localaccess == 0 && dp->allowremote == 0 )
         {
             fprintf(stderr,"allowremote.%d isremote.%d\n",dp->allowremote,!localaccess);
-            sprintf(retbuf,"{\"error\":\"cant remote call plugin\",\"ipaddr\":\"%s\",\"plugin\":\"%s\"}",SUPERNET.myipaddr,plugin);
+            sprintf(retbuf,"{\"error\":\"cant remote call plugin\",\"ipaddr\":\"%s\",\"plugin\":\"%s\",\"daemonid\":\"%llu\",\"myid\":\"%llu\"}",SUPERNET.myipaddr,plugin,(long long)dp->daemonid,(long long)dp->myid);
             return(clonestr(retbuf));
         }
         else if ( in_jsonarray(localaccess != 0 ? dp->methodsjson : dp->pubmethods,method) == 0 )
@@ -502,7 +503,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
             methodsstr = cJSON_Print(localaccess != 0 ? dp->methodsjson : dp->pubmethods);
            // if ( Debuglevel > 2 )
                 fprintf(stderr,"available.%s methods.(%s) vs (%s)\n",plugin,methodsstr,method);
-            sprintf(retbuf,"{\"error\":\"method not allowed\",\"plugin\":\"%s\",\"%s\":\"%s\"}",plugin,method,methodsstr);
+            sprintf(retbuf,"{\"error\":\"method not allowed\",\"plugin\":\"%s\",\"%s\":\"%s\",\"daemonid\":\"%llu\",\"myid\":\"%llu\"}",plugin,method,methodsstr,(long long)dp->daemonid,(long long)dp->myid);
             free(methodsstr);
             return(clonestr(retbuf));
         }
