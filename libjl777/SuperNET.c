@@ -875,7 +875,7 @@ int SuperNET_start(char *fname,char *myip)
     uint64_t allocsize;
     OS_init();
     SaM_PrepareIndices();
-    //init_SUPERNET_pullsock(10,1);
+    init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
         jsonstr = clonestr("{}");
