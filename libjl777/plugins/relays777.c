@@ -334,9 +334,9 @@ int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,
     if ( nn_settimeouts(sock,sendtimeout,recvtimeout) < 0 )
     {
         fprintf(stderr,"nn_createsocket.(%s) %d\n",name,sock);
-        return(sock);
+        return(-1);
     }
-    return(-1);
+    return(sock);
 }
 
 int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis)
