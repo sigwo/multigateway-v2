@@ -318,6 +318,17 @@ struct busdata_item { struct queueitem DL; bits256 hash; cJSON *json; char *rets
 struct service_provider { UT_hash_handle hh; int32_t sock; } *Service_providers;
 struct serviceprovider { uint64_t servicebits; char name[32],endpoint[64]; };
 
+void free_busdata_item(struct busdata_item *ptr)
+{
+    if ( ptr->json != 0 )
+        free_json(ptr->json);
+    if ( ptr->retstr != 0 )
+        free(ptr->retstr);
+    if ( ptr->key != 0 )
+        free(ptr->key);
+    free(ptr);
+}
+
 char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datalen)
 {
     int32_t i,sendlen,recvlen; char *msg,*jsonstr = 0;
@@ -484,16 +495,13 @@ struct service_provider *find_servicesock(char *servicename,char *endpoint)
 
 char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json,char *forwarder,cJSON *origjson)
 {
-    cJSON *argjson; struct busdata_item *ptr = calloc(1,sizeof(*ptr));
-    struct service_provider *sp; int32_t valid;
+    cJSON *argjson; struct busdata_item *ptr; bits256 hash; struct service_provider *sp; int32_t valid;
     char submethod[512],servicecmd[512],endpoint[512],destplugin[512],retbuf[128],serviceNXT[128],servicename[512],servicetoken[512],*hashstr,*str,*retstr;
     if ( key == 0 || key[0] == 0 )
         key = "0";
-    ptr->json = json, ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
-    ptr->dest64bits = conv_acctstr(destNXT), ptr->senderbits = conv_acctstr(sender);
-    if ( (hashstr= cJSON_str(cJSON_GetObjectItem(json,"H"))) != 0 )
-        decode_hex(ptr->hash.bytes,sizeof(ptr->hash),hashstr);
-    else memset(ptr->hash.bytes,0,sizeof(ptr->hash));
+     if ( (hashstr= cJSON_str(cJSON_GetObjectItem(json,"H"))) != 0 )
+        decode_hex(hash.bytes,sizeof(hash),hashstr);
+    else memset(hash.bytes,0,sizeof(hash));
     copy_cJSON(submethod,cJSON_GetObjectItem(json,"submethod"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     copy_cJSON(servicename,cJSON_GetObjectItem(json,"servicename"));
@@ -545,6 +553,12 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             return(clonestr("{\"result\":\"no response from provider\"}"));
         }
     }
+    ptr = calloc(1,sizeof(*ptr));
+    ptr->json = cJSON_Duplicate(json,1), ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
+    ptr->dest64bits = conv_acctstr(destNXT), ptr->senderbits = conv_acctstr(sender);
+    if ( (hashstr= cJSON_str(cJSON_GetObjectItem(json,"H"))) != 0 )
+        decode_hex(ptr->hash.bytes,sizeof(ptr->hash),hashstr);
+    else memset(ptr->hash.bytes,0,sizeof(ptr->hash));
     printf("%s -> %s add pending %llx\n",sender,destNXT,(long long)ptr->hash.txid);
     queue_enqueue("busdata",&busdataQ[0],&ptr->DL);
     return(0);
@@ -779,7 +793,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
-    char *str,*str2,*tokbuf = 0,*tmp;
+    char *str,*str2,*tokbuf = 0,*tmp,*secret;
     bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,diff,datalen = 0;
     *datalenp = 0;
     //printf("create_busdata\n");
@@ -797,12 +811,16 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         else diff = 0, port = SUPERNET.serviceport;
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+        secret = SUPERNET.NXTACCTSECRET;
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
             sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,port);
             cJSON_ReplaceItemInObject(json,"endpoint",cJSON_CreateString(endpoint));
             if ( SUPERNET.SERVICESECRET[0] != 0 && issue_generateToken(servicetoken,endpoint,SUPERNET.SERVICESECRET) == 0 )
+            {
                 cJSON_AddItemToObject(json,"servicetoken",cJSON_CreateString(servicetoken));
+                secret = SUPERNET.SERVICESECRET;
+            }
         }
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
@@ -835,7 +853,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
-        tlen = construct_tokenized_req(tokbuf,str2,SUPERNET.NXTACCTSECRET,broadcastmode);
+        tlen = construct_tokenized_req(tokbuf,str2,secret,broadcastmode);
 //printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
@@ -967,10 +985,7 @@ int32_t busdata_poll()
                         }
                         if ( noneed == 0 )
                         {
-                            secret = SUPERNET.NXTACCTSECRET;
-                            if ( SUPERNET.iamrelay == 0 && sock == RELAYS.servicesock )
-                                secret = SUPERNET.SERVICESECRET;
-                            len = construct_tokenized_req(tokenized,retstr,secret,0);
+                            len = construct_tokenized_req(tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
                             //fprintf(stderr,"tokenized return.(%s)\n",tokenized);
                             nn_send(sock,tokenized,len,0);
                         }
