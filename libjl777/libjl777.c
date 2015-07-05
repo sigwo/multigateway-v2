@@ -1525,7 +1525,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         SUPERNET.serviceport = get_API_int(cJSON_GetObjectItem(json,"serviceport"),SUPERNET_PORT - 2);
         copy_cJSON(SUPERNET.SERVICESECRET,cJSON_GetObjectItem(json,"SERVICESECRET"));
         expand_nxt64bits(SUPERNET.SERVICENXT,conv_NXTpassword(mysecret,mypublic,(uint8_t *)SUPERNET.SERVICESECRET,(int32_t)strlen(SUPERNET.SERVICESECRET)));
-
+        printf("SERVICENXT.%s\n",SUPERNET.SERVICENXT);
         SUPERNET.automatch = get_API_int(cJSON_GetObjectItem(json,"automatch"),3);
 #ifndef __linux__
         SUPERNET.UPNP = 1;

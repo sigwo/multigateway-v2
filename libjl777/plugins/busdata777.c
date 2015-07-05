@@ -820,6 +820,8 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         datajson = cJSON_CreateObject();
         cJSON_AddItemToObject(datajson,"plugin",cJSON_CreateString("relay"));
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
+        if ( SUPERNET.SERVICESECRET[0] != 0 )
+            cJSON_AddItemToObject(datajson,"serviceNXT",cJSON_CreateString(SUPERNET.SERVICENXT));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
