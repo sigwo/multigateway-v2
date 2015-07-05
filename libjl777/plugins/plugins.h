@@ -230,21 +230,23 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
 
 int32_t poll_daemons()
 {
-    struct daemon_info *dp; int32_t ind,processed=0; char *msg; uint64_t daemonid,instanceid; cJSON *json;
+    struct daemon_info *dp; int32_t ind,processed=0; char *msg,*str; uint64_t daemonid,instanceid; cJSON *json;
     update_Daemoninfos();
     while ( nn_recv(SUPERNET.pullsock,&msg,NN_MSG,0) > 0 )
     {
+        str = clonestr(msg);
+        nn_freemsg(msg);
         if ( (json= cJSON_Parse(msg)) != 0 )
         {
             daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
             instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
             if ( (dp= find_daemoninfo(&ind,0,daemonid,instanceid)) != 0 )
-                process_plugin_message(dp,msg,(int32_t)strlen(msg)+1);
-            else printf("poll_daemons cant find daemonid.%llu instanceid.%llu (%s)\n",(long long)daemonid,(long long)instanceid,msg);
+                process_plugin_message(dp,str,(int32_t)strlen(str)+1);
+            else printf("poll_daemons cant find daemonid.%llu instanceid.%llu (%s)\n",(long long)daemonid,(long long)instanceid,str);
             free_json(json);
-        } else printf("poll_daemons couldnt parse.(%s)\n",msg);
-        nn_freemsg(msg);
+        } else printf("poll_daemons couldnt parse.(%s)\n",str);
         processed++;
+        free(str);
     }
     return(processed);
 }
