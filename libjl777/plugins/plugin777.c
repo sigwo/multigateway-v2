@@ -323,7 +323,7 @@ printf("process_plugin_json: couldnt parse.(%s)\n",jsonstr);
     return((int32_t)strlen(retbuf));
 }
 
-static char *get_newinput(int32_t permanentflag,int32_t pullsock,int32_t timeoutmillis)
+/*static char *get_newinput(int32_t permanentflag,int32_t pullsock,int32_t timeoutmillis)
 {
     char _line[8192],*line = 0,*msg; int32_t len = 0;
     _line[0] = 0;
@@ -344,7 +344,7 @@ static char *get_newinput(int32_t permanentflag,int32_t pullsock,int32_t timeout
         nn_freemsg(msg);
     }
     return(line);
-}
+}*/
 
 #ifdef BUNDLED
 int32_t PLUGNAME(_main)
@@ -353,12 +353,9 @@ int32_t main
 #endif
 (int argc,const char *argv[])
 {
-    char *retbuf,registerbuf[MAX_JSON_FIELD];
-    struct plugin_info *plugin;
-    double startmilli;
-    cJSON *argjson;
+    char *retbuf,*line,*jsonargs,*transportstr,registerbuf[MAX_JSON_FIELD];
+    struct plugin_info *plugin; double startmilli; cJSON *argjson;
     int32_t bundledflag,max,sendflag,sleeptime=1,len = 0;
-    char *line,*jsonargs,*transportstr;
 #ifndef BUNDLED
     OS_init();
 #endif
@@ -411,7 +408,8 @@ int32_t main
     while ( OS_getppid() == plugin->ppid )
     {
         retbuf[0] = 0;
-        if ( (line= get_newinput(plugin->permanentflag,plugin->pullsock,plugin->timeout)) != 0 )
+        if ( (len= nn_recv(plugin->pullsock,&line,NN_MSG,0)) > 0 )
+        //if ( (line= get_newinput(plugin->permanentflag,plugin->pullsock,plugin->timeout)) != 0 )
         {
             len = (int32_t)strlen(line);
             if ( Debuglevel > 1 )
@@ -427,7 +425,7 @@ int32_t main
                         fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                 }
             } //else printf("null return from process_plugin_json\n");
-            free(line);
+            nn_freemsg(line);
         }
         else
         {

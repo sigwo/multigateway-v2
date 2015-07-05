@@ -519,15 +519,15 @@ char *get_localtransport(int32_t bundledflag) { return(OFFSET_ENABLED ? "ipc" : 
 
 int32_t nn_local_broadcast(int32_t sock,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
 {
-    int32_t i,sendlen,errs = 0;
+    int32_t sendlen,errs = 0;
     if ( sock >= 0 )
     {
-        for (i=0; i<10; i++)
-            if ( (nn_socket_status(sock,1) & NN_POLLOUT) != 0 )
-                break;
+        //for (i=0; i<10; i++)
+        //    if ( (nn_socket_status(sock,1) & NN_POLLOUT) != 0 )
+        //        break;
         if ( (sendlen= nn_send(sock,(char *)retstr,len,0)) <= 0 )
             errs++, printf("=sending to socket.%d sendlen.%d len.%d (%s) [%s]\n",sock,sendlen,len,nn_strerror(nn_errno()),retstr);
-        else if ( Debuglevel > 2 )
+        else if ( Debuglevel > 1 )
             printf("nn_local_broadcast SENT.(%s) len.%d sendlen.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,sendlen,strlen((char *)retstr),(long long)instanceid,sock);
     }
     return(errs);
