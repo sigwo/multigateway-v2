@@ -1009,7 +1009,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
     }
     for (i=0; i<RELAYS.numservers; i++)
         RELAYS.pfd[i].events = NN_POLLIN | NN_POLLOUT;
-    printf("numservers.%d\n",RELAYS.numservers);
+    printf("SUPERNET.iamrelay %d, numservers.%d\n",SUPERNET.iamrelay,RELAYS.numservers);
 }
 
 int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
