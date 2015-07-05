@@ -57,9 +57,11 @@ void update_Daemoninfos()
     struct daemon_info *dp;
     double currentmilli = milliseconds();
     int32_t i,n;
+#ifndef _WIN32
     if ( didinit == 0 )
         portable_mutex_init(&mutex), didinit = 1;
     portable_mutex_lock(&mutex);
+#endif
     for (i=n=0; i<Numdaemons; i++)
     {
         if ( (dp= Daemoninfos[i]) != 0 )
@@ -86,7 +88,9 @@ void update_Daemoninfos()
         printf("dequeued new daemon.(%s)\n",dp->name);
         Daemoninfos[Numdaemons++] = dp;
     }
+#ifndef _WIN32
     portable_mutex_unlock(&mutex);
+#endif
 }
 
 struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid)
