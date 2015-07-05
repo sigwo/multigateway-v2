@@ -225,7 +225,9 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
             if ( (sendlen= nn_send(retsock,str,(int32_t)strlen(str)+1,0)) != (int32_t)strlen(str)+1 )
                 printf("sendlen.%d != len.%d (%s)\n",sendlen,len,str);
         }
-    }
+        if ( dest == 0 )
+            free(str);
+    } else free(str);
 }
 
 int32_t poll_daemons()
@@ -239,7 +241,7 @@ int32_t poll_daemons()
             daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
             instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
             if ( (dp= find_daemoninfo(&ind,0,daemonid,instanceid)) != 0 )
-                process_plugin_message(dp,msg,(int32_t)strlen(msg)+1);
+                process_plugin_message(dp,clonestr(msg),(int32_t)strlen(msg)+1);
             else printf("poll_daemons cant find daemonid.%llu instanceid.%llu (%s)\n",(long long)daemonid,(long long)instanceid,msg);
             free_json(json);
         } else printf("poll_daemons couldnt parse.(%s)\n",msg);
