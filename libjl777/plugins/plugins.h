@@ -236,7 +236,7 @@ int32_t poll_daemons()
     {
         str = clonestr(msg);
         nn_freemsg(msg);
-        if ( (json= cJSON_Parse(msg)) != 0 )
+        if ( (json= cJSON_Parse(str)) != 0 )
         {
             daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
             instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));

@@ -686,7 +686,7 @@ void *issue_cgicall(void *_ptr)
     }
     if ( ptr->sock >= 0 )
     {
-        nn_freemsg(ptr->jsonstr);
+        free(ptr->jsonstr);
         nn_shutdown(ptr->sock,ptr->retind);
         if ( str != 0 )
             free(str), str = 0;
@@ -708,7 +708,7 @@ char *process_nn_message(int32_t sock,char *jsonstr)
         if ( sock >= 0 )
             portable_thread_create((void *)issue_cgicall,ptr);
         else retstr = issue_cgicall(ptr);
-    } else if ( sock >= 0 ) nn_freemsg(jsonstr);
+    } else if ( sock >= 0 ) free(jsonstr);
     return(retstr);
 }
 
@@ -844,7 +844,7 @@ void SuperNET_loop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    char *jsonstr,*str; int32_t sock,len;
+    char *jsonstr,*str,*msg; int32_t sock,len;
     if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -857,9 +857,12 @@ void SuperNET_apiloop(void *ipaddr)
             fprintf(stderr,"BIND.(%s) sock.%d\n",SUPERNET_APIENDPOINT,sock);
             while ( 1 )
             {
-                if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
+                if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
+                {
+                    jsonstr = clonestr(msg);
                     if ( (str= process_nn_message(sock,jsonstr)) != 0 )
                         free(str);
+                }
             }
         }
         nn_shutdown(sock,0);
