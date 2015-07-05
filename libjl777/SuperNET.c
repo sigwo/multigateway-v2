@@ -844,7 +844,7 @@ void SuperNET_loop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    char *jsonstr,*str,*msg; int32_t sock,len;
+    char *jsonstr,*str; int32_t sock,len;
     if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -857,12 +857,9 @@ void SuperNET_apiloop(void *ipaddr)
             fprintf(stderr,"BIND.(%s) sock.%d\n",SUPERNET_APIENDPOINT,sock);
             while ( 1 )
             {
-                if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
-                {
-                    jsonstr = clonestr(msg);
+                if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
                     if ( (str= process_nn_message(sock,jsonstr)) != 0 )
                         free(str);
-                }
             }
         }
         nn_shutdown(sock,0);
