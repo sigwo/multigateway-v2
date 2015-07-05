@@ -15,7 +15,6 @@
 #include "nonportable.h"
 
 #define DAEMONFREE_MARGIN_SECONDS 13
-#define NUM_PLUGINTAGS 8192
 
 struct daemon_info
 {
@@ -27,7 +26,6 @@ struct daemon_info
     //union endpoints perm,wss;
     int32_t (*daemonfunc)(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs);
     uint64_t daemonid,myid,instanceids[256];
-    uint64_t tags[NUM_PLUGINTAGS][3];
     uint32_t numsent,numrecv;
     int32_t lasti,finished,websocket,allowremote,bundledflag,readyflag,pushsock;//,pairsocks[256];
     uint16_t port;

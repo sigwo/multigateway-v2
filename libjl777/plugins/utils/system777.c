@@ -117,6 +117,8 @@ struct env777
 };
 
 #define DEFAULT_APISLEEP 100  // milliseconds
+#define NUM_PLUGINTAGS 8192
+
 struct SuperNET_info
 {
     char WEBSOCKETD[1024],NXTAPIURL[1024],NXTSERVER[1024],DATADIR[1024],transport[16],BACKUPS[512],SERVICENXT[64];
@@ -125,6 +127,7 @@ struct SuperNET_info
     uint32_t myipbits;
     int32_t usessl,ismainnet,Debuglevel,SuperNET_retval,APISLEEP,gatewayid,numgateways,readyflag,UPNP,iamrelay,disableNXT,NXTconfirms,automatch,PLUGINTIMEOUT,ppid,noncing,pullsock;
     uint16_t port,serviceport;
+    uint64_t tags[NUM_PLUGINTAGS][3];
     struct env777 DBs;
     cJSON *argjson;
 }; extern struct SuperNET_info SUPERNET;
