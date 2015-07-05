@@ -8,7 +8,7 @@
 #include "ccgi.h"
 #include "nn.h"
 #include "cJSON.h"
-#include "bus.h"
+#include "pair.h"
 #include "pipeline.h"
 #ifdef _WIN32
 #define setenv(x, y, z) _putenv_s(x, y)
@@ -23,7 +23,7 @@ char *os_compatible_path(char *str);
 
 void process_json(cJSON *json,int32_t publicaccess)
 {
-    int32_t sock,i,len,checklen,sendtimeout,recvtimeout,retrymillis,maxmillis; uint32_t apitag; uint64_t tag;
+    int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
     char endpoint[128],*resultstr,*jsonstr;
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
@@ -31,7 +31,7 @@ void process_json(cJSON *json,int32_t publicaccess)
     sprintf(endpoint,"ipc://api.%u",apitag);
     free(jsonstr);
     recvtimeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),10000);
-    sendtimeout = 100;
+    sendtimeout = 5000;
     randombytes(&tag,sizeof(tag));
     if ( cJSON_GetObjectItem(json,"tag") == 0 )
         cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
@@ -44,9 +44,8 @@ void process_json(cJSON *json,int32_t publicaccess)
     len = (int32_t)strlen(jsonstr)+1;
     if ( json != 0 )
     {
-        if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
+        if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
         {
-            maxmillis = 3000, retrymillis = maxmillis / 3;
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
             if ( nn_connect(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -57,10 +56,6 @@ void process_json(cJSON *json,int32_t publicaccess)
             {
                 if ( recvtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
                     fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-                else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
-                    fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-                else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
-                    fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
                 if ( nn_recv(sock,&resultstr,NN_MSG,0) > 0 )
                 {
                     printf("Content-Length: %ld\r\n\r\n",strlen(resultstr)+2);
