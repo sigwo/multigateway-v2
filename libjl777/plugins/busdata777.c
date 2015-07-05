@@ -1046,10 +1046,11 @@ int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
         return(-1);
     }
     printf("SUPERNET.pullsock.%d\n",SUPERNET.pullsock);
-    for (iter=0; iter<2; iter++)
+    for (iter=0; iter<1; iter++)
     {
         transportstr = (iter == 0) ? "ipc" : "inproc";
         sprintf(bindaddr,"%s://SuperNET",transportstr);
+        sprintf(bindaddr,"tcp://127.0.0.1:%u",SUPERNET.port-3);
         if ( nn_bind(SUPERNET.pullsock,bindaddr) < 0 )
         {
             printf("error binding pullsock to (%s) %s\n",bindaddr,nn_strerror(nn_errno()));
