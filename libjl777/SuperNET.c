@@ -686,7 +686,7 @@ void *issue_cgicall(void *_ptr)
     }
     if ( ptr->sock >= 0 )
     {
-        free(ptr->jsonstr);
+        //nn_freemsg(ptr->jsonstr);
         nn_shutdown(ptr->sock,ptr->retind);
         if ( str != 0 )
             free(str), str = 0;
@@ -708,14 +708,14 @@ char *process_nn_message(int32_t sock,char *jsonstr)
         if ( sock >= 0 )
             portable_thread_create((void *)issue_cgicall,ptr);
         else retstr = issue_cgicall(ptr);
-    } else if ( sock >= 0 ) free(jsonstr);
+    } //else if ( sock >= 0 ) free(jsonstr);
     return(retstr);
 }
 
 char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 {
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
-    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],request[MAX_JSON_FIELD],*bstr,*retstr;
+    char buf[65536],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],request[MAX_JSON_FIELD],*bstr,*retstr;
     uint64_t daemonid,instanceid,tag;
     int32_t broadcastflag = 0;
     cJSON *json;
@@ -744,8 +744,13 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
             if ( plugin[0] == 0 && set_first_plugin(plugin,method) < 0 )
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
-        return(process_nn_message(-1,jsonstr));
-    } else return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
+        if ( strlen(jsonstr) < sizeof(buf)-1)
+        {
+            strcpy(buf,jsonstr);
+            return(process_nn_message(-1,buf));
+        }
+    }
+    return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }
 
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
@@ -844,7 +849,7 @@ void SuperNET_loop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    char *jsonstr,*str; int32_t sock,len;
+    char buf[65536],*jsonstr,*str; int32_t sock,len;
     if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -858,8 +863,15 @@ void SuperNET_apiloop(void *ipaddr)
             while ( 1 )
             {
                 if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
-                    if ( (str= process_nn_message(sock,jsonstr)) != 0 )
-                        free(str);
+                {
+                    if ( strlen(jsonstr) < sizeof(buf) )
+                    {
+                        strcpy(buf,jsonstr);
+                        nn_freemsg(jsonstr);
+                        if ( (str= process_nn_message(sock,buf)) != 0 )
+                            free(str);
+                    }
+                }
             }
         }
         nn_shutdown(sock,0);
