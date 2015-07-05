@@ -990,18 +990,18 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
     endpoint[0] = 0;
     if ( (RELAYS.subclient= nn_createsocket(endpoint,0,"NN_SUB",NN_SUB,0,sendtimeout,recvtimeout)) >= 0 )
     {
-        RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.subclient;
+        RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.subclient, printf("numservers.%d\n",RELAYS.numservers);
         nn_setsockopt(RELAYS.subclient,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
     }
     RELAYS.lbclient = nn_lbsocket(SUPERNET.PLUGINTIMEOUT,SUPERNET_PORT + LB_OFFSET,SUPERNET.port + PUBGLOBALS_OFFSET,SUPERNET.port + PUBRELAYS_OFFSET);
     sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.serviceport);
     if ( (RELAYS.servicesock= nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.serviceport,sendtimeout,recvtimeout)) >= 0 )
-        RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.servicesock;
+        RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.servicesock, printf("numservers.%d\n",RELAYS.numservers);
     if ( SUPERNET.iamrelay != 0 )
     {
         sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + LB_OFFSET);
         if ( (RELAYS.lbserver= nn_createsocket(endpoint,1,"NN_REP",NN_REP,SUPERNET.port + LB_OFFSET,sendtimeout,recvtimeout)) >= 0 )
-            RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.lbserver;
+            RELAYS.pfd[RELAYS.numservers++].fd = RELAYS.lbserver, printf("numservers.%d\n",RELAYS.numservers);
         sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + PUBGLOBALS_OFFSET);
         RELAYS.pubglobal = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBGLOBALS_OFFSET,sendtimeout,recvtimeout);
         sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + PUBRELAYS_OFFSET);
