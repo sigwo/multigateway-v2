@@ -8,7 +8,7 @@
 #include "ccgi.h"
 #include "nn.h"
 #include "cJSON.h"
-#include "pair.h"
+#include "bus.h"
 #include "pipeline.h"
 #ifdef _WIN32
 #define setenv(x, y, z) _putenv_s(x, y)
@@ -31,7 +31,7 @@ void process_json(cJSON *json,int32_t publicaccess)
     sprintf(endpoint,"ipc://api.%u",apitag);
     free(jsonstr);
     recvtimeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),10000);
-    sendtimeout = 5000;
+    sendtimeout = 100;
     randombytes(&tag,sizeof(tag));
     if ( cJSON_GetObjectItem(json,"tag") == 0 )
         cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
@@ -44,7 +44,7 @@ void process_json(cJSON *json,int32_t publicaccess)
     len = (int32_t)strlen(jsonstr)+1;
     if ( json != 0 )
     {
-        if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
+        if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
         {
             if ( sendtimeout > 0 && nn_setsockopt(sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());

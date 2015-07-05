@@ -850,7 +850,7 @@ void SuperNET_loop(void *ipaddr)
 void SuperNET_apiloop(void *ipaddr)
 {
     char buf[65536],*jsonstr,*str; int32_t sock,len;
-    if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
+    if ( (sock= nn_socket(AF_SP,NN_BUS)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
             fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_BUS,SUPERNET_APIENDPOINT,nn_errstr());
