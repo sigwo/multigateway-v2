@@ -54,7 +54,7 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,int32_t retso
         if ( dp->tags[i][0] == 0 )
         {
             if ( Debuglevel > 1 )
-                printf("slot.%d <- tag.%llu dest.%p\n",i,(long long)tag,dest);
+                printf("dp.%p %s slot.%d <- tag.%llu dest.%p\n",dp,dp->name,i,(long long)tag,dest);
             dp->tags[i][0] = tag, dp->tags[i][1] = (uint64_t)dest, dp->tags[i][2] = (uint64_t)retsock;
             return(i);
         }
@@ -76,11 +76,11 @@ char **get_tagstr(int32_t *retsockp,struct daemon_info *dp,uint64_t tag)
                 *retsockp = (int32_t)dp->tags[i][2];
             dp->tags[i][0] = dp->tags[i][1] = dp->tags[i][2] = 0;
             if ( Debuglevel > 1 )
-                printf("slot.%d found tag.%llu dest.%p\n",i,(long long)tag,dest);
+                printf("dp.%p %s slot.%d found tag.%llu dest.%p\n",dp,dp->name,i,(long long)tag,dest);
             return(dest);
         }
     }
-    printf("get_tagstr: cant find tag.%llu [0] %llu\n",(long long)tag,(long long)dp->tags[0][0]);
+    printf("get_tagstr: dp.%p %s cant find tag.%llu [0] %llu\n",dp,dp->name,(long long)tag,(long long)dp->tags[0][0]);
     return(0);
 }
 

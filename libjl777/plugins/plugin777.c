@@ -323,29 +323,6 @@ printf("process_plugin_json: couldnt parse.(%s)\n",jsonstr);
     return((int32_t)strlen(retbuf));
 }
 
-/*static char *get_newinput(int32_t permanentflag,int32_t pullsock,int32_t timeoutmillis)
-{
-    char _line[8192],*line = 0,*msg; int32_t len = 0;
-    _line[0] = 0;
-    if ( (len= nn_recv(pullsock,&msg,NN_MSG,0)) <= 0 )
-    {
-        if ( permanentflag == 0 && getline777(_line,sizeof(_line)-1) > 0 )
-        {
-            len = (int32_t)strlen(_line);
-            if ( _line[len-1] == '\n' )
-                _line[--len] = 0;
-            line = clonestr(_line);
-        }
-    }
-    else
-    {
-        line = malloc(len);
-        memcpy(line,msg,len);
-        nn_freemsg(msg);
-    }
-    return(line);
-}*/
-
 #ifdef BUNDLED
 int32_t PLUGNAME(_main)
 #else
@@ -409,10 +386,9 @@ int32_t main
     {
         retbuf[0] = 0;
         if ( (len= nn_recv(plugin->pullsock,&line,NN_MSG,0)) > 0 )
-        //if ( (line= get_newinput(plugin->permanentflag,plugin->pullsock,plugin->timeout)) != 0 )
         {
             len = (int32_t)strlen(line);
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
             if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
             {
@@ -421,7 +397,7 @@ int32_t main
                 if ( sendflag != 0 )
                 {
                     nn_local_broadcast(plugin->pushsock,0,0,(uint8_t *)retbuf,(int32_t)strlen(retbuf)+1), plugin->numsent++;
-                    if ( Debuglevel > 1 )
+                    if ( Debuglevel > 2 )
                         fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                 }
             } //else printf("null return from process_plugin_json\n");
@@ -444,7 +420,8 @@ int32_t main
     } fprintf(stderr,"ppid.%d changed to %d\n",plugin->ppid,OS_getppid());
     PLUGNAME(_shutdown)(plugin,len); // rc == 0 -> parent process died
     nn_shutdown(plugin->pushsock,0);
-    nn_shutdown(plugin->pullsock,0);
+    if ( plugin->pushsock != plugin->pullsock )
+        nn_shutdown(plugin->pullsock,0);
     free(plugin);
     return(len);
 }
