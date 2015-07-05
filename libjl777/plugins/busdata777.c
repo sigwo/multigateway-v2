@@ -1028,7 +1028,7 @@ int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
         return(-1);
     }
     printf("SUPERNET.pullsock.%d\n",SUPERNET.pullsock);
-    for (iter=0; iter<1; iter++)
+    for (iter=0; iter<2; iter++)
     {
         transportstr = (iter == 0) ? "ipc" : "inproc";
         sprintf(bindaddr,"%s://SuperNET",transportstr);
