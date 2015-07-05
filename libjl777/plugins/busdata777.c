@@ -1050,7 +1050,7 @@ int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
     {
         transportstr = (iter == 0) ? "ipc" : "inproc";
         sprintf(bindaddr,"%s://SuperNET",transportstr);
-        sprintf(bindaddr,"tcp://127.0.0.1:%u",SUPERNET.port-3);
+        sprintf(bindaddr,"tcp://127.0.0.1:7774");
         if ( nn_bind(SUPERNET.pullsock,bindaddr) < 0 )
         {
             printf("error binding pullsock to (%s) %s\n",bindaddr,nn_strerror(nn_errno()));
