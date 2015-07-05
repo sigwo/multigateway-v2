@@ -330,7 +330,7 @@ int32_t main
 #endif
 (int argc,const char *argv[])
 {
-    char *retbuf,*line,*msg,*jsonargs,*transportstr,registerbuf[MAX_JSON_FIELD];
+    char *retbuf,*line,*jsonargs,*transportstr,registerbuf[MAX_JSON_FIELD];
     struct plugin_info *plugin; double startmilli; cJSON *argjson;
     int32_t bundledflag,max,sendflag,sleeptime=1,len = 0;
 #ifndef BUNDLED
@@ -385,10 +385,8 @@ int32_t main
     while ( OS_getppid() == plugin->ppid )
     {
         retbuf[0] = 0;
-        if ( (len= nn_recv(plugin->pullsock,&msg,NN_MSG,0)) > 0 )
+        if ( (len= nn_recv(plugin->pullsock,&line,NN_MSG,0)) > 0 )
         {
-            line = clonestr(msg);
-            nn_freemsg(msg);
             len = (int32_t)strlen(line);
             if ( Debuglevel > 2 )
                 printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
@@ -403,7 +401,7 @@ int32_t main
                         fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                 }
             } //else printf("null return from process_plugin_json\n");
-            free(line);
+            nn_freemsg(line);
         }
         else
         {

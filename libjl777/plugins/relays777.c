@@ -438,7 +438,7 @@ void serverloop(void *_args)
     int32_t make_MGWbus(uint16_t port,char *bindaddr,char serverips[MAX_MGWSERVERS][64],int32_t n);
     int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json);
     int32_t poll_daemons();
-    int32_t len,n; char retbuf[8192],*jsonstr,*msg; cJSON *json;
+    int32_t len,n; char retbuf[8192],*jsonstr; cJSON *json;
     busdata_init(10,1,0);
     if ( SUPERNET.gatewayid >= 0 )
         MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1*0);
@@ -446,17 +446,15 @@ void serverloop(void *_args)
     while ( OS_getppid() == SUPERNET.ppid )
     {
         n = poll_daemons();
-        if ( SUPERNET.gatewayid >= 0 && (len= nn_recv(MGW.all.socks.both.bus,&msg,NN_MSG,0)) > 0 )
+        if ( SUPERNET.gatewayid >= 0 && (len= nn_recv(MGW.all.socks.both.bus,&jsonstr,NN_MSG,0)) > 0 )
         {
-            jsonstr = clonestr(msg);
-            nn_freemsg(msg);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 mgw_processbus(retbuf,jsonstr,json);
                 free_json(json);
             }
             //printf("MGW bus recv.%d json.%p\n",len,json);
-            free(jsonstr);
+            nn_freemsg(jsonstr);
         }
         n += busdata_poll();
         if ( n == 0 && SUPERNET.APISLEEP > 0 )

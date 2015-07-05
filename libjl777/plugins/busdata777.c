@@ -935,7 +935,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*origmsg,*retstr,*secret; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0;
+    char tokenized[65536],*msg,*retstr,*secret; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -943,10 +943,8 @@ int32_t busdata_poll()
             sock = RELAYS.pfd[i].fd;
             //printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,RELAYS.pfd[i].fd,RELAYS.pfd[i].fd,RELAYS.pfd[i].revents);
             //if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
-            if ( (len= nn_recv(sock,&origmsg,NN_MSG,0)) > 0 )
+            if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                msg = clonestr(origmsg);
-                nn_freemsg(origmsg);
                 if ( Debuglevel > 1 )
                     printf("RECV.%d (%s)\n",sock,msg);
                 n++;
@@ -978,7 +976,7 @@ int32_t busdata_poll()
                     } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
                     free_json(json);
                 }
-                free(msg);
+                nn_freemsg(msg);
             }
         }
     }
