@@ -461,8 +461,9 @@ uint64_t issue_broadcastTransaction(int32_t *errcodep,char **retstrp,char *txbyt
 {
     cJSON *json,*errjson;
     uint64_t txid = 0;
-    char cmd[4096],*retstr;
-    sprintf(cmd,"requestType=broadcastTransaction&secretPhrase=%s&transactionBytes=%s",NXTACCTSECRET,txbytes);
+    char cmd[4096],secret[8192],*retstr;
+    escape_code(secret,NXTACCTSECRET);
+    sprintf(cmd,"requestType=broadcastTransaction&secretPhrase=%s&transactionBytes=%s",secret,txbytes);
     retstr = issue_NXTPOST(cmd);
     *errcodep = -1;
     if ( retstrp != 0 )
@@ -493,8 +494,9 @@ uint64_t issue_broadcastTransaction(int32_t *errcodep,char **retstrp,char *txbyt
 
 char *issue_signTransaction(char *txbytes,char *NXTACCTSECRET)
 {
-    char cmd[4096];
-    sprintf(cmd,"requestType=signTransaction&secretPhrase=%s&unsignedTransactionBytes=%s",NXTACCTSECRET,txbytes);
+    char cmd[4096],secret[8192];
+    escape_code(secret,NXTACCTSECRET);
+    sprintf(cmd,"requestType=signTransaction&secretPhrase=%s&unsignedTransactionBytes=%s",secret,txbytes);
     return(issue_NXTPOST(cmd));
 }
 
@@ -563,12 +565,13 @@ uint64_t _get_AEquote(char *str,uint64_t orderid)
 
 char *cancel_orderid(char *NXTaddr,uint64_t orderid)
 {
-    uint64_t nxt64bits; char cmd[1025],*str = "Bid",*retstr = 0;
+    uint64_t nxt64bits; char cmd[1025],secret[8192],*str = "Bid",*retstr = 0;
     if ( (nxt64bits= _get_AEquote(str,orderid)) == 0 )
         str = "Ask", nxt64bits = _get_AEquote(str,orderid);
     if ( nxt64bits == calc_nxt64bits(NXTaddr) )
     {
-        sprintf(cmd,"requestType=cancel%sOrder&secretPhrase=%s&feeNQT=%lld&deadline=%d&order=%llu",str,SUPERNET.NXTACCTSECRET,(long long)MIN_NQTFEE,DEFAULT_NXT_DEADLINE,(long long)orderid);
+        escape_code(secret,SUPERNET.NXTACCTSECRET);
+        sprintf(cmd,"requestType=cancel%sOrder&secretPhrase=%s&feeNQT=%lld&deadline=%d&order=%llu",str,secret,(long long)MIN_NQTFEE,DEFAULT_NXT_DEADLINE,(long long)orderid);
         retstr = issue_NXTPOST(cmd);
         //printf("(%s) -> (%s)\n",cmd,retstr);
     }

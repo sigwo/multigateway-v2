@@ -28,10 +28,11 @@
 #include "SaM.c"
 #undef DEFINES_ONLY
 
-int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret)
+int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecret)
 {
-    char cmd[16384],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json;
+    char cmd[16384],secret[8192],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*jsontxt; cJSON *tokenobj,*json;
     encoded[0] = 0;
+    escape_code(secret,origsecret);
     sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase=%s",key,secret);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
     {
@@ -955,7 +956,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr,*secret; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0;
+    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
