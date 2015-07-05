@@ -60,7 +60,7 @@ int32_t plugin_result(char *retbuf,cJSON *json,uint64_t tag);
 
 static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag,uint64_t instanceid,uint64_t daemonid,int32_t timeout)
 {
-    if ( (plugin->pushsock= nn_socket(AF_SP,NN_BUS)) < 0 )
+    if ( (plugin->pushsock= nn_socket(AF_SP,NN_PUSH)) < 0 )
     {
         printf("error creating plugin->pushsock %s\n",nn_strerror(nn_errno()));
         return(-1);
@@ -75,7 +75,7 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
         printf("error connecting plugin->pushsock.%d to %s %s\n",plugin->pushsock,plugin->connectaddr,nn_strerror(nn_errno()));
         return(-1);
     }
-    if ( (plugin->pullsock= nn_socket(AF_SP,NN_BUS)) < 0 )
+    if ( (plugin->pullsock= nn_socket(AF_SP,NN_PULL)) < 0 )
     {
         printf("error creating plugin->pullsock %s\n",nn_strerror(nn_errno()));
         return(-1);

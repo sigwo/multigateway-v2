@@ -26,7 +26,7 @@ void set_connect_transport(char *connectaddr,int32_t bundledflag,int32_t permane
 
 int32_t init_pluginhostsocks(struct daemon_info *dp,char *connectaddr)
 {
-    if ( (dp->pushsock= nn_socket(AF_SP,NN_BUS)) < 0 )
+    if ( (dp->pushsock= nn_socket(AF_SP,NN_PUSH)) < 0 )
     {
         printf("error creating dp->pushsock %s\n",nn_strerror(nn_errno()));
         return(-1);
