@@ -240,7 +240,7 @@ int32_t poll_daemons()
             instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
             if ( (dp= find_daemoninfo(&ind,0,daemonid,instanceid)) != 0 )
                 process_plugin_message(dp,msg,(int32_t)strlen(msg)+1);
-            else printf("poll_daemons cant find daemonid.%llu instanceid.%llu\n",(long long)daemonid,(long long)instanceid);
+            else printf("poll_daemons cant find daemonid.%llu instanceid.%llu (%s)\n",(long long)daemonid,(long long)instanceid,msg);
             free_json(json);
         } else printf("poll_daemons couldnt parse.(%s)\n",msg);
         nn_freemsg(msg);
