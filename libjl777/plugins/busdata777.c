@@ -838,6 +838,7 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         datajson = cJSON_CreateObject();
+        cJSON_AddItemToObject(datajson,"tag",cJSON_CreateString(numstr));
         cJSON_AddItemToObject(datajson,"plugin",cJSON_CreateString("relay"));
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         if ( SUPERNET.SERVICESECRET[0] != 0 )
