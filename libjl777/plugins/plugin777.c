@@ -127,14 +127,16 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     if ( obj != 0 )
     {
 //printf("jsonargs.(%s)\n",jsonargs);
-        if ( (nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(obj,"NXT"))) != 0 )
-        {
-            plugin->nxt64bits = nxt64bits;
-            expand_nxt64bits(plugin->NXTADDR,plugin->nxt64bits);
-        }
         tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
         if ( initflag > 0 )
         {
+            if ( (nxt64bits= get_API_nxt64bits(cJSON_GetObjectItem(obj,"NXT"))) != 0 )
+            {
+                plugin->nxt64bits = nxt64bits;
+                expand_nxt64bits(plugin->NXTADDR,plugin->nxt64bits);
+            }
+            if ( (nxt64bits= get_API_nxt64bits(cJSON_GetObjectItem(obj,"serviceNXT"))) != 0 )
+                expand_nxt64bits(plugin->SERVICENXT,nxt64bits);
             myipaddr = cJSON_str(cJSON_GetObjectItem(obj,"ipaddr"));
             if ( is_ipaddr(myipaddr) != 0 )
                 strcpy(plugin->ipaddr,myipaddr);
@@ -239,7 +241,7 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
     if ( plugin->sleepmillis == 0 )
         plugin->sleepmillis = get_API_int(cJSON_GetObjectItem(json,"sleepmillis"),SUPERNET.APISLEEP);
     cJSON_AddItemToObject(json,"sleepmillis",cJSON_CreateNumber(plugin->sleepmillis));
-    char NXTaddr[512],serviceNXT[512],tmpstrA[512],tmpstrB[512];
+    /*char NXTaddr[512],serviceNXT[512],tmpstrA[512],tmpstrB[512];
     copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"NXT"));
     copy_cJSON(serviceNXT,cJSON_GetObjectItem(json,"serviceNXT"));
     if ( NXTaddr[0] == 0 || serviceNXT[0] == 0 )
@@ -249,15 +251,15 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
             strcpy(NXTaddr,tmpstrA);
         if ( serviceNXT[0] == 0 )
             strcpy(serviceNXT,tmpstrB);
-    }
-    strcpy(plugin->NXTADDR,NXTaddr);
-    strcpy(plugin->SERVICENXT,serviceNXT);
+        strcpy(plugin->NXTADDR,NXTaddr);
+        strcpy(plugin->SERVICENXT,serviceNXT);
+    }*/
     if ( cJSON_GetObjectItem(json,"NXT") == 0 )
-        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
-    else cJSON_ReplaceItemInObject(json,"NXT",cJSON_CreateString(NXTaddr));
+        cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(plugin->NXTADDR));
+    else cJSON_ReplaceItemInObject(json,"NXT",cJSON_CreateString(plugin->NXTADDR));
     if ( cJSON_GetObjectItem(json,"serviceNXT") == 0 )
-        cJSON_AddItemToObject(json,"serviceNXT",cJSON_CreateString(serviceNXT));
-    else cJSON_ReplaceItemInObject(json,"serviceNXT",cJSON_CreateString(serviceNXT));
+        cJSON_AddItemToObject(json,"serviceNXT",cJSON_CreateString(plugin->SERVICENXT));
+    else cJSON_ReplaceItemInObject(json,"serviceNXT",cJSON_CreateString(plugin->SERVICENXT));
     jsonstr = cJSON_Print(json), free_json(json);
     _stripwhite(jsonstr,' ');
     strcpy(retbuf,jsonstr), free(jsonstr);
@@ -376,7 +378,7 @@ int32_t main
     sprintf(plugin->bindaddr,"%s://%llu",transportstr,(long long)plugin->daemonid);
     jsonargs = (argc >= 3) ? ((char *)argv[3]) : 0;
     configure_plugin(retbuf,max,plugin,jsonargs,1);
-    printf("CONFIGURED.(%s) argc.%d: %s myid.%llu daemonid.%llu NXT.%s\n",plugin->name,argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",(long long)plugin->myid,(long long)plugin->daemonid,plugin->NXTADDR);//,jsonargs!=0?jsonargs:"");
+    printf("CONFIGURED.(%s) argc.%d: %s myid.%llu daemonid.%llu NXT.%s serviceNXT.%s\n",plugin->name,argc,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET",(long long)plugin->myid,(long long)plugin->daemonid,plugin->NXTADDR,plugin->SERVICENXT);//,jsonargs!=0?jsonargs:"");
     if ( init_pluginsocks(plugin,plugin->permanentflag,plugin->myid,plugin->daemonid,plugin->timeout) == 0 )
     {
         argjson = cJSON_Parse(jsonargs);
