@@ -586,9 +586,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                             if ( endpoint[0] != 0 && tokenstr[0] != 0 && (tokenobj= cJSON_Parse(tokenstr)) != 0 )
                             {
                                 nonce = (uint32_t)get_cJSON_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
+                                fprintf(stderr,"received.(%s) from (%s) nonce.%u endpoint.(%s)\n",origjsonstr,sender,nonce,endpoint);
                                 free_json(tokenobj);
                             }
-                            fprintf(stderr,"received.(%s) from (%s)\n",origjsonstr,sender);
                         }
                     }
                 }
