@@ -612,7 +612,7 @@ int32_t got_newpeer(const char *ip_port) { if ( Debuglevel > 2 ) printf("got_new
 
 void *issue_cgicall(void *_ptr)
 {
-    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
+    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr; uint32_t nonce; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
     copy_cJSON(apitag,cJSON_GetObjectItem(ptr->json,"apitag"));
     safecopy(ptr->apitag,apitag,sizeof(ptr->apitag));
     copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"agent"));
@@ -629,7 +629,7 @@ void *issue_cgicall(void *_ptr)
         if ( strcmp(plugin,"relay") == 0 || (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
             //printf("call busdata_sync\n");
-            str = busdata_sync(ptr->jsonstr,broadcaststr);
+            str = busdata_sync(&nonce,ptr->jsonstr,broadcaststr);
             //printf("got.(%s)\n",str);
         }
         else

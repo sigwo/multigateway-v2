@@ -158,10 +158,11 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
             len = (int32_t)strlen(jsonstr) + 1;
         if ( 0 && localaccess != 0 && is_cJSON_Array(json) == 0 )
         {
+            uint32_t nonce;
             tokbuf = calloc(1,len + 1024);
 //printf("local tokenize jsonstr.(%s)\n",jsonstr);
             broadcastmode = get_broadcastmode(json,cJSON_str(cJSON_GetObjectItem(json,"broadcast")));
-            len = construct_tokenized_req(tokbuf,jsonstr,SUPERNET.NXTACCTSECRET,broadcastmode);
+            len = construct_tokenized_req(&nonce,tokbuf,jsonstr,SUPERNET.NXTACCTSECRET,broadcastmode);
             if ( flag != 0 )
                 free(jsonstr);
             jsonstr = tokbuf, flag = 1;

@@ -123,9 +123,10 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
     return(calc_nonce(str,leverage,maxmillis,nonce));
 }
 
-int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
+int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
     char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce,nonceerr; int32_t i,leverage,n = 100;
+    *noncep = 0;
     if ( broadcastmode == 0 )
         broadcastmode = "";
     _stripwhite(cmdjson,' ');
@@ -141,6 +142,7 @@ int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRE
         tokenized[0] = 0;
         return(0);
     }
+    *noncep = nonce;
     sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     //printf("GEN.(%s).(%s) -> (%s) len.%d crc.%u\n",broadcastmode,cmdjson,broadcaststr,(int32_t)strlen(cmdjson),_crc32(0,(void *)cmdjson,(int32_t)strlen(cmdjson)));
@@ -791,12 +793,12 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
     return(retstr);
 }
 
-char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
+char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broadcastmode)
 {
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
     char *str,*str2,*tokbuf = 0,*tmp,*secret;
     bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,diff,datalen = 0;
-    *datalenp = 0;
+    *datalenp = *noncep = 0;
     //printf("create_busdata\n");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
@@ -854,7 +856,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
-        tlen = construct_tokenized_req(tokbuf,str2,secret,broadcastmode);
+        tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
 //printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
@@ -863,7 +865,7 @@ char *create_busdata(int32_t *datalenp,char *jsonstr,char *broadcastmode)
     return(tokbuf);
 }
 
-char *busdata_sync(char *jsonstr,char *broadcastmode)
+char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode)
 {
     int32_t sentflag,datalen,sendlen = 0; char plugin[512],destplugin[512],*data,*retstr; cJSON *json;
     json = cJSON_Parse(jsonstr);
@@ -873,7 +875,7 @@ char *busdata_sync(char *jsonstr,char *broadcastmode)
         broadcastmode = "4";
     sentflag = 0;
     //printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
-    if ( (data= create_busdata(&datalen,jsonstr,broadcastmode)) != 0 )
+    if ( (data= create_busdata(noncep,&datalen,jsonstr,broadcastmode)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
         {
@@ -956,7 +958,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0;
+    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -986,7 +988,7 @@ int32_t busdata_poll()
                         }
                         if ( noneed == 0 )
                         {
-                            len = construct_tokenized_req(tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
+                            len = construct_tokenized_req(&nonce,tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
                             //fprintf(stderr,"tokenized return.(%s)\n",tokenized);
                             nn_send(sock,tokenized,len,0);
                         }

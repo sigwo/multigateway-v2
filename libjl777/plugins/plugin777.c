@@ -100,7 +100,7 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
 static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,char *jsonargs,int32_t initflag)
 {
     void *loadfile(uint64_t *allocsizep,char *fname);
-    char filename[1024],*myipaddr,*jsonstr = 0;
+    char filename[1024],*myipaddr,tokenstr[MAX_JSON_FIELD],*jsonstr = 0;
     cJSON *obj=0,*tmp,*json = 0;
     uint64_t allocsize,nxt64bits,tag = 0;
     int32_t retval = 0;
@@ -108,8 +108,11 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     if ( jsonargs != 0 && (json= cJSON_Parse(jsonargs)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+        {
             obj = cJSON_GetArrayItem(json,0);
-        else obj = json;
+            copy_cJSON(tokenstr,cJSON_GetArrayItem(json,1));
+        }
+        else obj = json, tokenstr[0] = 0;
         copy_cJSON(filename,cJSON_GetObjectItem(obj,"filename"));
         if ( filename[0] != 0 && (jsonstr= loadfile(&allocsize,filename)) != 0 )
         {
@@ -140,7 +143,7 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     }
     //fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%s) [%s] %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
     if ( jsonstr != 0 && obj != 0 )
-        retval = PLUGNAME(_process_json)(0,0,1,plugin,tag,retbuf,max,jsonstr,obj,initflag);
+        retval = PLUGNAME(_process_json)(0,0,1,plugin,tag,retbuf,max,jsonstr,obj,initflag,tokenstr);
     else printf("error with JSON.(%s)\n",jsonstr);//, getchar();
     //fprintf(stderr,"done tag.%llu initflag.%d got jsonargs.(%p) %p %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
     if ( jsonstr != 0 )
@@ -281,7 +284,7 @@ static void plugin_transportaddr(char *addr,char *transportstr,char *ipaddr,uint
 static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,struct plugin_info *plugin,int32_t permanentflag,uint64_t daemonid,uint64_t myid,char *jsonstr)
 {
     uint32_t timestamp; int32_t valid = -11,len = (int32_t)strlen(jsonstr); cJSON *json,*obj; uint64_t tag = 0;
-    char name[MAX_JSON_FIELD],destname[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],sender[MAX_JSON_FIELD];
+    char name[MAX_JSON_FIELD],destname[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],tokenstr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],sender[MAX_JSON_FIELD];
     retbuf[0] = *sendflagp = 0;
     if ( Debuglevel > 2 )
         printf("PLUGIN.(%s) process_plugin_json (%s)\n",plugin->name,jsonstr);
@@ -290,11 +293,12 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         if ( is_cJSON_Array(json) != 0 )
         {
             obj = cJSON_GetArrayItem(json,0);
+            copy_cJSON(tokenstr,cJSON_GetArrayItem(json,1));
             timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(obj,"time"),0);
             sender[0] = 0;
             valid = validate_token(forwarder,pubkey,sender,jsonstr,(timestamp != 0)*MAXTIMEDIFF);
         }
-        else obj = json;
+        else obj = json, tokenstr[0] = forwarder[0] = sender[0] = 0;
         copy_cJSON(name,cJSON_GetObjectItem(obj,"plugin"));
         if ( name[0] == 0 )
             copy_cJSON(name,cJSON_GetObjectItem(obj,"agent"));
@@ -302,7 +306,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         if ( destname[0] == 0 )
             copy_cJSON(destname,cJSON_GetObjectItem(obj,"destagent"));
         tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
-        if ( (strcmp(name,plugin->name) == 0 || strcmp(destname,plugin->name) == 0) && (len= PLUGNAME(_process_json)(forwarder,sender,valid,plugin,tag,retbuf,max,jsonstr,obj,0)) > 0 )
+        if ( (strcmp(name,plugin->name) == 0 || strcmp(destname,plugin->name) == 0) && (len= PLUGNAME(_process_json)(forwarder,sender,valid,plugin,tag,retbuf,max,jsonstr,obj,0,tokenstr)) > 0 )
         {
             *sendflagp = 1;
             if ( retbuf[0] == 0 )
@@ -391,7 +395,7 @@ int32_t main
         if ( (len= nn_recv(plugin->pullsock,&line,NN_MSG,0)) > 0 )
         {
             len = (int32_t)strlen(line);
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
             if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
             {
