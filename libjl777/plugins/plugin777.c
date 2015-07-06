@@ -156,7 +156,7 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
     return(retval);
 }
 
-static int32_t set_nxtaddrs(char *NXTaddr,char *serviceNXT)
+/*static int32_t set_nxtaddrs(char *NXTaddr,char *serviceNXT)
 {
     FILE *fp; cJSON *json; char confname[512],buf[65536],secret[4096],servicesecret[4096]; uint8_t mysecret[32],mypublic[32];
     strcpy(confname,"SuperNET.conf"), os_compatible_path(confname);
@@ -177,11 +177,11 @@ static int32_t set_nxtaddrs(char *NXTaddr,char *serviceNXT)
         fclose(fp);
     } else fprintf(stderr,"set_nxtaddrs cant open.(%s)\n",confname);
     return((int32_t)strlen(NXTaddr));
-}
+}*/
 
 static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin,uint64_t tag,int32_t allfields)
 {
-    char tagstr[128]; cJSON *json; int32_t len;
+    char tagstr[512]; cJSON *json; int32_t len;
 //printf("APPEND.(%s) (%s)\n",retbuf,plugin->name);
     tagstr[0] = 0;
     len = (int32_t)strlen(retbuf);
@@ -189,6 +189,9 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
     {
         if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
             sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
+        if ( plugin->SERVICENXT[0] != 0 )
+            sprintf(tagstr+strlen(tagstr),",\"serviceNXT\":\"%s\"",plugin->SERVICENXT);
+        sprintf(tagstr+strlen(tagstr),",\"NXT\":\"%s\"",plugin->NXTADDR);
         if ( allfields != 0 )
         {
              if ( SUPERNET.iamrelay != 0 )
