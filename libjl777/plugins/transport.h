@@ -115,7 +115,7 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
 {
     struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
     struct daemon_info *dp;
-    char numstr[64],*tmpstr,*jsonstr,*tokbuf,*broadcastmode; uint8_t *data; int32_t ind,datalen,tmplen,flag = 0; uint64_t tmp,tag = 0; cJSON *json;
+    char numstr[64],*tmpstr,*jsonstr; uint8_t *data; int32_t ind,datalen,tmplen,flag = 0; uint64_t tmp,tag = 0; cJSON *json;
 //printf("A send_to_daemon.(%s).%d\n",origjsonstr,len);
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
@@ -154,9 +154,15 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                 }
             } else tag = tmp;
         }
+        else
+        {
+            if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+                tag = get_API_nxt64bits(cJSON_GetObjectItem(cJSON_GetArrayItem(json,0),"tag"));
+            else tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
+        }
         if ( len == 0 )
             len = (int32_t)strlen(jsonstr) + 1;
-        if ( 0 && localaccess != 0 && is_cJSON_Array(json) == 0 )
+        /*if ( 0 && localaccess != 0 && is_cJSON_Array(json) == 0 )
         {
             uint32_t nonce;
             tokbuf = calloc(1,len + 1024);
@@ -166,7 +172,7 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
             if ( flag != 0 )
                 free(jsonstr);
             jsonstr = tokbuf, flag = 1;
-        }
+        }*/
 //printf("localaccess.%d send_to_daemon.(%s) tag.%llu\n",localaccess,jsonstr,(long long)tag);
         free_json(json);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
