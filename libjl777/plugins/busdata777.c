@@ -837,7 +837,6 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
-        nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         datajson = cJSON_CreateObject();
         cJSON_AddItemToObject(datajson,"plugin",cJSON_CreateString("relay"));
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
@@ -845,6 +844,7 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
             cJSON_AddItemToObject(datajson,"serviceNXT",cJSON_CreateString(SUPERNET.SERVICENXT));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
+        nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
@@ -857,7 +857,7 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-//printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
+printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         free_json(json);
