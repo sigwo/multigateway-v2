@@ -861,7 +861,8 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
+        if ( Debuglevel > 2 )
+            printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         free_json(json);
@@ -970,7 +971,7 @@ int32_t busdata_poll()
             sock = RELAYS.pfd[i].fd;
             if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                if ( Debuglevel > 1 )
+                if ( Debuglevel > 2 )
                     printf("RECV.%d (%s)\n",sock,msg);
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
