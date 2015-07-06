@@ -189,9 +189,10 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
     {
         if ( tag != 0 && get_API_nxt64bits(cJSON_GetObjectItem(json,"tag")) == 0 )
             sprintf(tagstr,",\"tag\":\"%llu\"",(long long)tag);
-        if ( plugin->SERVICENXT[0] != 0 )
+        if ( cJSON_GetObjectItem(json,"serviceNXT") == 0 && plugin->SERVICENXT[0] != 0 )
             sprintf(tagstr+strlen(tagstr),",\"serviceNXT\":\"%s\"",plugin->SERVICENXT);
-        sprintf(tagstr+strlen(tagstr),",\"NXT\":\"%s\"",plugin->NXTADDR);
+        if ( cJSON_GetObjectItem(json,"NXT") == 0 )
+            sprintf(tagstr+strlen(tagstr),",\"NXT\":\"%s\"",plugin->NXTADDR);
         if ( allfields != 0 )
         {
              if ( SUPERNET.iamrelay != 0 )
