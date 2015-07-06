@@ -833,8 +833,11 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
             //if ( strcmp(plugin,"relay") != 0 )
                 cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
         }
-        randombytes((uint8_t *)&tag,sizeof(tag));
-        sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
+        if ( (tag= get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"))) == 0 )
+        {
+            randombytes((uint8_t *)&tag,sizeof(tag));
+            sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
+        }
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         datajson = cJSON_CreateObject();
@@ -858,7 +861,7 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-//printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
+printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         free_json(json);
