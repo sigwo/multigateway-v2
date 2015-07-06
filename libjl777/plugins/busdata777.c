@@ -784,7 +784,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata_deref(forwarder,sender,valid,(char *)databuf,json);
             if ( retstr == 0 )
                 retstr = busdata(forwarder,sender,valid,key,timestamp,databuf,datalen,json);
-//printf("valid.%d forwarder.(%s) NXT.%-24s key.(%s) datalen.%d\n",valid,forwarder,src,key,datalen);
+printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
@@ -857,7 +857,7 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
+//printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         free_json(json);
@@ -964,11 +964,9 @@ int32_t busdata_poll()
         for (i=0; i<RELAYS.numservers; i++)
         {
             sock = RELAYS.pfd[i].fd;
-            //printf("n.%d i.%d check socket.%d:%d revents.%d\n",n,i,RELAYS.pfd[i].fd,RELAYS.pfd[i].fd,RELAYS.pfd[i].revents);
-            //if ( (RELAYS.pfd[i].revents & NN_POLLIN) != 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                if ( Debuglevel > 2 )
+                if ( Debuglevel > 1 )
                     printf("RECV.%d (%s)\n",sock,msg);
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
@@ -1048,14 +1046,6 @@ int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
         return(-1);
     }
     printf("SUPERNET.pullsock.%d\n",SUPERNET.pullsock);
-/*#ifdef _WIN32
-    sprintf(bindaddr,"tcp://127.0.0.1:7774");
-    if ( nn_bind(SUPERNET.pullsock,bindaddr) < 0 )
-    {
-        printf("error binding pullsock to (%s) %s\n",bindaddr,nn_strerror(nn_errno()));
-        return(-1);
-    }
-#else*/
     for (iter=0; iter<2; iter++)
     {
         transportstr = (iter == 0) ? "ipc" : "inproc";
@@ -1066,7 +1056,6 @@ int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
             return(-1);
         }
     }
-//#endif
     return(0);
 }
 

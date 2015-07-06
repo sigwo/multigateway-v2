@@ -120,7 +120,7 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
         jsonstr = origjsonstr;
-        //if ( localaccess != 0 )
+        if ( localaccess != 0 )
         {
             tmplen = (int32_t)strlen(origjsonstr)+1;
             if ( len > tmplen )
