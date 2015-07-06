@@ -89,7 +89,7 @@ int32_t nonce_leverage(char *broadcaststr)
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage = 7;
+            leverage = 6;
         else if ( strcmp(broadcaststr,"join") == 0 )
             leverage = 9;
         else if ( strcmp(broadcaststr,"servicerequest") == 0 )
