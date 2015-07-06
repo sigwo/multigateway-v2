@@ -365,7 +365,7 @@ int32_t main
     }
     randombytes((uint8_t *)&plugin->myid,sizeof(plugin->myid));
     plugin->permanentflag = atoi(argv[1]);
-    plugin->daemonid = atol(argv[2]);
+    plugin->daemonid = calc_nxt64bits(argv[2]);
     plugin->bundledflag = bundledflag = is_bundled_plugin(plugin->name);
     transportstr = get_localtransport(plugin->bundledflag);
     sprintf(plugin->connectaddr,"%s://SuperNET",transportstr);
