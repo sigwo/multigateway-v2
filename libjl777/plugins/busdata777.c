@@ -677,7 +677,7 @@ char *busdata(char *tokenstr,char *forwarder,char *sender,int32_t valid,char *ke
 
 int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json)
 {
-    char pubkey[256],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
+    char pubkey[256],hexstr[65],sha[65],datastr[8192],fforwarder[512],fsender[512]; int32_t valid,fvalid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0; forwarder[0] = sender[0] = 0;
     //printf("busdata_validate.(%s)\n",msg);
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -688,6 +688,11 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         {
             fprintf(stderr,"error valid.%d sender.(%s) forwarder.(%s)\n",valid,sender,forwarder);
             return(valid);
+        }
+        if ( strcmp(forwarder,sender) != 0 && (fvalid= validate_token(fforwarder,pubkey,fsender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
+        {
+            fprintf(stderr,"error fvalid.%d fsender.(%s) fforwarder.(%s)\n",fvalid,fsender,fforwarder);
+            return(fvalid);
         }
         copy_cJSON(datastr,cJSON_GetObjectItem(argjson,"data"));
         if ( strcmp(sender,SUPERNET.NXTADDR) != 0 || datastr[0] != 0 )
@@ -781,17 +786,25 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    cJSON *json,*argjson; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
-    char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*tokenstr,*retstr = 0;
+    cJSON *json,*argjson,*tokenobj; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
+    char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*tokenstr=0,*retstr = 0;
     if ( Debuglevel > 2 )
         fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
-        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-            tokenstr = cJSON_Print(cJSON_GetArrayItem(json,1)), printf("GOT.(%s)\n",tokenstr);
-        else tokenstr = 0;
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
         {
+            if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+            {
+                tokenobj = cJSON_GetArrayItem(json,1);
+                if ( cJSON_GetObjectItem(tokenobj,"valid") != 0 )
+                    cJSON_DeleteItemFromObject(tokenobj,"valid");
+                if ( cJSON_GetObjectItem(tokenobj,"sender") != 0 )
+                    cJSON_DeleteItemFromObject(tokenobj,"sender");
+                cJSON_AddItemToObject(tokenobj,"valid",cJSON_CreateNumber(valid));
+                cJSON_AddItemToObject(tokenobj,"sender",cJSON_CreateString(sender));
+                tokenstr = cJSON_Print(tokenobj), _stripwhite(tokenstr,' ');
+            }
             argjson = cJSON_GetArrayItem(json,0);
             copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
             copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
@@ -800,11 +813,11 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata_deref(tokenstr,forwarder,sender,valid,(char *)databuf,json);
             if ( retstr == 0 )
                 retstr = busdata(tokenstr,forwarder,sender,valid,key,timestamp,databuf,datalen,json);
+            if ( tokenstr != 0 )
+                free(tokenstr);
 //printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
-        if ( tokenstr != 0 )
-            free(tokenstr);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
     if ( Debuglevel > 2 )
         fprintf(stderr,"BUSDATA.(%s) -> %p.(%s)\n",msg,retstr,retstr);

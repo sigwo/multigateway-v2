@@ -289,8 +289,8 @@ static void plugin_transportaddr(char *addr,char *transportstr,char *ipaddr,uint
 
 static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,struct plugin_info *plugin,int32_t permanentflag,uint64_t daemonid,uint64_t myid,char *jsonstr)
 {
-    uint32_t timestamp; int32_t valid = -11,len = (int32_t)strlen(jsonstr); cJSON *json,*obj; uint64_t tag = 0;
-    char name[MAX_JSON_FIELD],destname[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],tokenstr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],sender[MAX_JSON_FIELD];
+    int32_t valid = -11,len = (int32_t)strlen(jsonstr); cJSON *json,*obj,*tokenobj; uint64_t tag = 0;
+    char name[MAX_JSON_FIELD],destname[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],tokenstr[MAX_JSON_FIELD],sender[MAX_JSON_FIELD];
     retbuf[0] = *sendflagp = 0;
     if ( Debuglevel > 2 )
         printf("PLUGIN.(%s) process_plugin_json (%s)\n",plugin->name,jsonstr);
@@ -299,10 +299,11 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         if ( is_cJSON_Array(json) != 0 )
         {
             obj = cJSON_GetArrayItem(json,0);
-            copy_cJSON(tokenstr,cJSON_GetArrayItem(json,1));
-            timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(obj,"time"),0);
-            sender[0] = 0;
-            valid = validate_token(forwarder,pubkey,sender,jsonstr,(timestamp != 0)*MAXTIMEDIFF);
+            tokenobj = cJSON_GetArrayItem(json,1);
+            copy_cJSON(tokenstr,tokenobj);
+            copy_cJSON(forwarder,cJSON_GetObjectItem(tokenobj,"forwarder"));
+            copy_cJSON(sender,cJSON_GetObjectItem(tokenobj,"sender"));
+            valid = get_API_int(cJSON_GetObjectItem(tokenobj,"valid"),valid);
         }
         else obj = json, tokenstr[0] = forwarder[0] = sender[0] = 0;
         copy_cJSON(name,cJSON_GetObjectItem(obj,"plugin"));
