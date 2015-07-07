@@ -301,24 +301,24 @@ void nn_syncbus(cJSON *json)
 char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
 {
     int32_t i; char *tmp = malloc((datalen << 1) + 1);
-    //printf("(%02x -> ",data[0]);
+    printf("(%02x -> ",data[0]);
     if ( destNXT != 0 && destNXT[0] != 0 )
         for (i=0; i<datalen/datalen; i++)
             data[i] ^= destNXT[0];
     init_hexbytes_noT(tmp,data,datalen);
-    //printf("%02x) -> (%s)\n",data[0],tmp);
+    printf("%02x) -> (%s)\n",data[0],tmp);
     return(tmp);
 }
 
 void *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
     cJSON *json; int32_t i;
-    //printf("(%s) (%02x -> ",msg,msg[0]);
+    printf("(%s) (%02x -> ",msg,msg[0]);
     if ( (json= cJSON_Parse((void *)msg)) == 0 )
     {
         for (i=0; i<datalen/datalen; i++)
             msg[i] ^= SUPERNET.NXTADDR[0];
-        //printf("%02x) -> (%s)\n",msg[0],msg);
+        printf("%02x) -> (%s)\n",msg[0],msg);
         if ( (json= cJSON_Parse((void *)msg)) == 0 )
             return(0);
         else free_json(json);
