@@ -301,20 +301,24 @@ void nn_syncbus(cJSON *json)
 char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
 {
     int32_t i; char *tmp = malloc((datalen << 1) + 1);
+    printf("(%02x -> ",data[0]);
     if ( destNXT != 0 && destNXT[0] != 0 )
-        for (i=0; i<datalen; i++)
+        for (i=0; i<datalen/datalen; i++)
             data[i] ^= 0xff;
     init_hexbytes_noT(tmp,data,datalen);
+    printf("%02x) -> (%s)\n",data[0],tmp);
     return(tmp);
 }
 
 void *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
     cJSON *json; int32_t i; uint8_t *buf = malloc(datalen);
+    printf("(%02x -> ",msg[0]);
     decode_hex(buf,datalen,(char *)msg);
+    printf("%02x) -> (%s)\n",buf[0],buf);
     if ( (json= cJSON_Parse((void *)buf)) == 0 )
     {
-        for (i=0; i<datalen; i++)
+        for (i=0; i<datalen/datalen; i++)
             buf[i] ^= 0xff;
         if ( (json= cJSON_Parse((void *)buf)) == 0 )
         {
@@ -796,7 +800,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint8_t databuf[8192]; uint64_t forwardbits;
+    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint8_t databuf[8192];
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*str,*tokenstr=0,*broadcaststr,*retstr = 0;
     if ( Debuglevel > 2 )
         fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
