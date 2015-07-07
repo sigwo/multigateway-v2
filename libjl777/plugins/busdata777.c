@@ -978,9 +978,10 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                         printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                     submethod = cJSON_str(cJSON_GetObjectItem(json,"submethod"));
-                    if ( submethod != 0 && strcmp(destplugin,"relay") == 0 && strcmp(submethod,"join") == 0 )
+                    if ( submethod != 0 && strcmp(destplugin,"relay") == 0 && strcmp(submethod,"join") == 0 && SUPERNET.noncing == 0 )
                     {
                         void recv_nonces(void *_ptr);
+                        SUPERNET.noncing = 1;
                         if ( SUPERNET.responses != 0 )
                             free(SUPERNET.responses), SUPERNET.responses = 0;
                         apply.startflag = 1;

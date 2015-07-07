@@ -626,27 +626,27 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     }
                     //fprintf(stderr,"join or nonce.(%s)\n",retbuf);
                 }
-                else if ( strcmp(methodstr,"nonce") == 0 )
+            }
+            else if ( strcmp(methodstr,"nonce") == 0 )
+            {
+                char endpoint[512],sender[64],destpoint[512],relaypoint[512],globalpoint[512];
+                memset(&apply,0,sizeof(apply));
+                copy_cJSON(destpoint,cJSON_GetObjectItem(json,"destpoint"));
+                copy_cJSON(endpoint,cJSON_GetObjectItem(json,"lbendpoint"));
+                copy_cJSON(relaypoint,cJSON_GetObjectItem(json,"relaypoint"));
+                copy_cJSON(globalpoint,cJSON_GetObjectItem(json,"globalpoint"));
+                copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
+                if ( strcmp(SUPERNET.lbendpoint,destpoint) == 0 )
                 {
-                    char endpoint[512],sender[64],destpoint[512],relaypoint[512],globalpoint[512];
-                    memset(&apply,0,sizeof(apply));
-                    copy_cJSON(destpoint,cJSON_GetObjectItem(json,"destpoint"));
-                    copy_cJSON(endpoint,cJSON_GetObjectItem(json,"lbendpoint"));
-                    copy_cJSON(relaypoint,cJSON_GetObjectItem(json,"relaypoint"));
-                    copy_cJSON(globalpoint,cJSON_GetObjectItem(json,"globalpoint"));
-                    copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
-                    if ( strcmp(SUPERNET.lbendpoint,destpoint) == 0 )
+                    if ( endpoint[0] != 0 && tokenstr[0] != 0 && (tokenobj= cJSON_Parse(tokenstr)) != 0 )
                     {
-                        if ( endpoint[0] != 0 && tokenstr[0] != 0 && (tokenobj= cJSON_Parse(tokenstr)) != 0 )
-                        {
-                            strcpy(apply.lbendpoint,endpoint);
-                            strcpy(apply.relayendpoint,relaypoint);
-                            strcpy(apply.globalendpoint,globalpoint);
-                            apply.senderbits = calc_nxt64bits(sender);
-                            apply.nonce = (uint32_t)get_cJSON_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
-                            free_json(tokenobj);
-                            recv_nonces(&apply);
-                        }
+                        strcpy(apply.lbendpoint,endpoint);
+                        strcpy(apply.relayendpoint,relaypoint);
+                        strcpy(apply.globalendpoint,globalpoint);
+                        apply.senderbits = calc_nxt64bits(sender);
+                        apply.nonce = (uint32_t)get_cJSON_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
+                        free_json(tokenobj);
+                        recv_nonces(&apply);
                     }
                 }
             }
