@@ -812,7 +812,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata(tokenstr,forwarder,sender,valid,key,timestamp,databuf,datalen,json);
  //printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
         }
-        else if ( argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(argjson,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 )
+        else if ( SUPERNET.iamrelay != 0 && argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(argjson,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 )
         {
             dupjson = cJSON_Duplicate(json,1);
             if ( cJSON_GetObjectItem(tokenobj,"stop") == 0 )

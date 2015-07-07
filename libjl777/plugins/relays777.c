@@ -379,8 +379,8 @@ cJSON *relay_json(struct _relay_info *list)
     }
     json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"endpoints",array);
-    cJSON_AddItemToObject(json,"type",cJSON_CreateString(nn_typestr(list->mytype)));
-    cJSON_AddItemToObject(json,"dest",cJSON_CreateString(nn_typestr(list->desttype)));
+    //cJSON_AddItemToObject(json,"type",cJSON_CreateString(nn_typestr(list->mytype)));
+    //cJSON_AddItemToObject(json,"dest",cJSON_CreateString(nn_typestr(list->desttype)));
     cJSON_AddItemToObject(json,"total",cJSON_CreateNumber(list->num));
     return(json);
 }
