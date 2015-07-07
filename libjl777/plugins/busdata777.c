@@ -312,21 +312,21 @@ char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
 
 void *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
-    cJSON *json; int32_t i; uint8_t *buf = malloc(datalen);
+    cJSON *json; int32_t i; //uint8_t *buf = malloc(datalen);
     printf("(%s) (%02x -> ",msg,msg[0]);
-    decode_hex(buf,datalen,(char *)msg);
-    printf("%02x) -> (%s)\n",buf[0],buf);
-    if ( (json= cJSON_Parse((void *)buf)) == 0 )
+    //decode_hex(buf,datalen,(char *)msg);
+    if ( (json= cJSON_Parse((void *)msg)) == 0 )
     {
         for (i=0; i<datalen/datalen; i++)
-            buf[i] ^= 0xff;
-        if ( (json= cJSON_Parse((void *)buf)) == 0 )
+            msg[i] ^= 0xff;
+        printf("%02x) -> (%s)\n",msg[0],msg);
+        if ( (json= cJSON_Parse((void *)msg)) == 0 )
         {
-            free(buf);
+            //free(buf);
             return(0);
         } else free_json(json);
     } else free_json(json);
-    return(buf);
+    return(msg);
 }
 
 cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,int32_t datalen)
@@ -334,14 +334,12 @@ cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,
     char *jsonstr; cJSON *json = 0;
     if ( validated >= 0 )
     {
-        jsonstr = malloc(datalen/2+1);
-        decode_hex((void *)jsonstr,datalen,(char *)msg);
-        //if ( (jsonstr= busdata_decrypt(sender,msg,datalen)) != 0 )
+        if ( (jsonstr= busdata_decrypt(sender,msg,datalen)) != 0 )
         {
-            json = cJSON_Parse(jsonstr);
+            json = cJSON_Parse((char *)jsonstr);
             copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
             free(jsonstr);
-        }// else printf("couldnt decrypt.(%s)\n",jsonstr);
+        } else printf("couldnt decrypt.(%s)\n",msg);
     } else printf("neg validated.%d\n",validated);
     return(json);
 }
@@ -693,7 +691,7 @@ char *busdata(char *tokenstr,char *forwarder,char *sender,int32_t valid,char *ke
 
 int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json)
 {
-    char pubkey[256],hexstr[65],sha[65],datastr[65536],fforwarder[512],fsender[512],*buf; int32_t valid,fvalid; cJSON *argjson; bits256 hash;
+    char pubkey[256],hexstr[65],sha[65],datastr[8192],fforwarder[512],fsender[512]; int32_t valid,fvalid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0; forwarder[0] = sender[0] = 0;
     //printf("busdata_validate.(%s)\n",msg);
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -714,12 +712,11 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
         if ( strcmp(sender,SUPERNET.NXTADDR) != 0 || datastr[0] != 0 )
         {
             copy_cJSON(sha,cJSON_GetObjectItem(argjson,"H"));
-            //if ( datastr[0] != 0 )
-            //    decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
-            //else databuf[0] = 0;
-            buf = busdata_decrypt(sender,(void *)datastr,(int32_t)(strlen(datastr)+1)>>1);
+            if ( datastr[0] != 0 )
+                decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
+            else databuf[0] = 0;
             *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
-            calc_sha256(hexstr,hash.bytes,(void *)buf,*datalenp);
+            calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
             if ( strcmp(hexstr,sha) == 0 )
                 return(1);
             else printf("hash mismatch %s vs %s\n",hexstr,sha);
