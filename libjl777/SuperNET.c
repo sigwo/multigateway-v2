@@ -628,7 +628,8 @@ void *issue_cgicall(void *_ptr)
     {
         if ( strcmp(plugin,"relay") == 0 || (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
-            //printf("call busdata_sync\n");
+            if ( Debuglevel > 2 )
+                printf("call busdata_sync.(%s)\n",ptr->jsonstr);
             str = busdata_sync(&nonce,ptr->jsonstr,broadcaststr,cJSON_str(cJSON_GetObjectItem(ptr->json,"destNXT")));
             //printf("got.(%s)\n",str);
         }
