@@ -725,7 +725,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         dupjson = cJSON_Duplicate(json,1);
         second = cJSON_GetArrayItem(dupjson,1);
         ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-        if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
+        if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
         {
             ensure_jsonitem(second,"stop","yes");
             str = cJSON_Print(dupjson), _stripwhite(str,' ');
