@@ -301,17 +301,27 @@ void nn_syncbus(cJSON *json)
 char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
 {
     int32_t i; char *tmp = malloc((datalen << 1) + 1);
-    init_hexbytes_noT(tmp,data,datalen);
     if ( destNXT != 0 && destNXT[0] != 0 )
         for (i=0; i<datalen; i++)
             data[i] ^= 0xff;
+    init_hexbytes_noT(tmp,data,datalen);
     return(tmp);
 }
 
 void *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
-    uint8_t *buf = malloc(datalen);
+    cJSON *json; int32_t i; uint8_t *buf = malloc(datalen);
     decode_hex(buf,datalen,(char *)msg);
+    if ( (json= cJSON_Parse((void *)buf)) == 0 )
+    {
+        for (i=0; i<datalen; i++)
+            buf[i] ^= 0xff;
+        if ( (json= cJSON_Parse((void *)buf)) == 0 )
+        {
+            free(buf);
+            return(0);
+        } else free_json(json);
+    } else free_json(json);
     return(buf);
 }
 
