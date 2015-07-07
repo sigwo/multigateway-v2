@@ -816,16 +816,15 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         else if ( argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(argjson,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 )
         {
             dupjson = cJSON_Duplicate(json,1);
-            ensure_jsonitem(tokenobj,"forwarder",SUPERNET.NXTADDR);
-            copy_cJSON(forwarder,cJSON_GetObjectItem(tokenobj,"forwarder"));
-            if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(tokenobj,"stop") == 0 )
+            if ( cJSON_GetObjectItem(tokenobj,"stop") == 0 )
             {
                 ensure_jsonitem(tokenobj,"stop","end");
                 str = cJSON_Print(dupjson), _stripwhite(str,' ');
                 printf("[%s] blind broadcast.(%s) by %s\n",broadcaststr,str,SUPERNET.NXTADDR);
                 nn_send(RELAYS.pubglobal,str,(int32_t)strlen((char *)str)+1,0);
                 free(str);
-            }
+                retstr = clonestr("{\"result\":\"success\",\"broadcast\":\"allnodes\"}");
+            } else retstr = clonestr("{\"error\":\"already stop\",\"broadcast\":\"nowhere\"}");
             free_json(dupjson);
         }
         else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
