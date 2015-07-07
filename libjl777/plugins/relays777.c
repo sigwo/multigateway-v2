@@ -485,15 +485,25 @@ void calc_nonces(char *destpoint)
     free(destpoint);
 }
 
-void recv_nonces(char *myendpoint)
+struct applicant_info { uint64_t senderbits; uint32_t nonce; char startflag,endpoint[99]; };
+
+void recv_nonces(void *_ptr)
 {
-    double endmilli = milliseconds() + 60000;
-    while ( milliseconds() < endmilli )
+    struct applicant_info *ptr = _ptr;
+    if ( ptr->startflag != 0 )
     {
+        double endmilli = milliseconds() + 60000;
+        while ( milliseconds() < endmilli )
+        {
+        }
+        SUPERNET.noncing = 0;
+        printf("finished recv_nonces for (%s)\n",ptr->endpoint);
+        free(ptr);
     }
-    SUPERNET.noncing = 0;
-    printf("finished recv_nonces for (%s)\n",myendpoint);
-    free(myendpoint);
+    else
+    {
+        fprintf(stderr,"got nonce.%u from %llu %s\n",ptr->nonce,(long long)ptr->senderbits,ptr->endpoint);
+    }
 }
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *origjsonstr,cJSON *origjson,int32_t initflag,char *tokenstr)
@@ -556,7 +566,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 {
                     copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
-                    //nn_connect(RELAYS.subclient,endpoint);
                     if ( strcmp(methodstr,"join") == 0 )
                     {
                         SUPERNET.noncing = 1;
@@ -567,7 +576,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 }
                 else
                 {
+                    struct applicant_info apply,*ptr;
                     char endpoint[512],sender[64],destpoint[512],myendpoint[512];
+                    memset(&apply,0,sizeof(apply));
                     copy_cJSON(destpoint,cJSON_GetObjectItem(json,"destpoint"));
                     copy_cJSON(endpoint,cJSON_GetObjectItem(json,"myendpoint"));
                     copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
@@ -575,7 +586,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     if ( strcmp(methodstr,"join") == 0 && SUPERNET.noncing == 0 )
                     {
                         SUPERNET.noncing = 1;
-                        portable_thread_create((void *)recv_nonces,clonestr(myendpoint));
+                        strcpy(apply.endpoint,myendpoint);
+                        apply.startflag = 1;
+                        apply.senderbits = SUPERNET.my64bits;
+                        ptr = calloc(1,sizeof(*ptr));
+                        *ptr = apply;
+                        portable_thread_create((void *)recv_nonces,ptr);
                         printf("START receiving nonces\n");
                     }
                     else
@@ -585,9 +601,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         {
                             if ( endpoint[0] != 0 && tokenstr[0] != 0 && (tokenobj= cJSON_Parse(tokenstr)) != 0 )
                             {
-                                nonce = (uint32_t)get_cJSON_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
-                                fprintf(stderr,"received.(%s) from (%s) nonce.%u endpoint.(%s)\n",origjsonstr,sender,nonce,endpoint);
+                                strcpy(apply.endpoint,myendpoint);
+                                apply.senderbits = calc_nxt64bits(sender);
+                                apply.nonce = (uint32_t)get_cJSON_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
                                 free_json(tokenobj);
+                                recv_nonces(&apply);
                             }
                         }
                     }
