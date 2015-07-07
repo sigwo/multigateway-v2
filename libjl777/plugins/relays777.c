@@ -511,7 +511,7 @@ void recv_nonces(void *_ptr)
                 {
                     if ( strcmp(A.lbendpoint,SUPERNET.responses[i].lbendpoint) == 0 )
                     {
-                        cJSON_AddItemToArray(nonces,cJSON_CreateNumber(A.nonce));
+                        cJSON_AddItemToArray(nonces,cJSON_CreateNumber(SUPERNET.responses[i].nonce));
                         memset(&SUPERNET.responses[i],0,sizeof(SUPERNET.responses[i]));
                     }
                 }
