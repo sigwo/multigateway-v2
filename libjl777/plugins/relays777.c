@@ -485,24 +485,58 @@ void calc_nonces(char *destpoint)
     free(destpoint);
 }
 
-struct applicant_info { uint64_t senderbits; uint32_t nonce; char startflag,endpoint[99]; };
 
 void recv_nonces(void *_ptr)
 {
-    struct applicant_info *ptr = _ptr;
+    int32_t i,j,n; cJSON *json,*item,*array,*nonces; char *jsonstr; struct applicant_info A,*ptr = _ptr;
     if ( ptr->startflag != 0 )
     {
         double endmilli = milliseconds() + 60000;
         while ( milliseconds() < endmilli )
+            sleep(1);
+        printf("finished.%d recv_nonces for (%s)\n",SUPERNET.numnonces,ptr->endpoint);
+        free(ptr);
+        if ( (n= SUPERNET.numnonces) > 0 )
         {
+            json = cJSON_CreateObject();
+            array = cJSON_CreateArray();
+            while ( n > 0 )
+            {
+                A = SUPERNET.responses[0];
+                item = cJSON_CreateObject();
+                nonces = cJSON_CreateArray();
+                SUPERNET.responses[0] = SUPERNET.responses[--n];
+                for (i=0; i<=n; i++)
+                {
+                    if ( strcmp(A.endpoint,SUPERNET.responses[i].endpoint) == 0 )
+                    {
+                        cJSON_AddItemToArray(nonces,cJSON_CreateNumber(A.nonce));
+                        memset(&SUPERNET.responses[i],0,sizeof(SUPERNET.responses[i]));
+                    }
+                }
+                for (j=0,i=1; i<n; i++)
+                    if ( SUPERNET.responses[i].senderbits != 0 )
+                        SUPERNET.responses[j++] = SUPERNET.responses[i];
+                n = j;
+                cJSON_AddItemToObject(item,"endpoint",cJSON_CreateString(A.endpoint));
+                cJSON_AddItemToObject(item,"nonces",nonces);
+                cJSON_AddItemToArray(array,item);
+            }
+            cJSON_AddItemToObject(json,"peers",array);
+            jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
+            printf("%s\n",jsonstr);
+            if ( SUPERNET.peersjson != 0 )
+                free_json(SUPERNET.peersjson);
+            SUPERNET.peersjson = json;
         }
         SUPERNET.noncing = 0;
-        printf("finished recv_nonces for (%s)\n",ptr->endpoint);
-        free(ptr);
+        SUPERNET.numnonces = 0;
     }
     else
     {
-        fprintf(stderr,"got nonce.%u from %llu %s\n",ptr->nonce,(long long)ptr->senderbits,ptr->endpoint);
+        SUPERNET.responses = realloc(SUPERNET.responses,(sizeof(*SUPERNET.responses) * (SUPERNET.numnonces + 1)));
+        SUPERNET.responses[SUPERNET.numnonces++] = *ptr;
+        fprintf(stderr,"%d: got nonce.%u from %llu %s\n",SUPERNET.numnonces,ptr->nonce,(long long)ptr->senderbits,ptr->endpoint);
     }
 }
 
@@ -586,6 +620,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     if ( strcmp(methodstr,"join") == 0 && SUPERNET.noncing == 0 )
                     {
                         SUPERNET.noncing = 1;
+                        SUPERNET.numnonces = 0;
+                        if ( SUPERNET.responses != 0 )
+                            free(SUPERNET.responses), SUPERNET.responses = 0;
                         strcpy(apply.endpoint,myendpoint);
                         apply.startflag = 1;
                         apply.senderbits = SUPERNET.my64bits;
