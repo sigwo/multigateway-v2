@@ -684,6 +684,7 @@ int32_t busdata_validate(char **tokenstrp,char *forwarder,char *sender,uint32_t 
     {
         argjson = cJSON_GetArrayItem(json,0);
         *tokenstrp = cJSON_str(cJSON_GetArrayItem(json,1));
+        printf("GOT.(%s)\n",*tokenstrp);
         *timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
         if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
         {
