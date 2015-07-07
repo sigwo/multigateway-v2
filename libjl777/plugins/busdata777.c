@@ -817,8 +817,17 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         secret = SUPERNET.NXTACCTSECRET;
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
-            sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,port);
-            cJSON_ReplaceItemInObject(json,"endpoint",cJSON_CreateString(endpoint));
+            if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
+            {
+                cJSON_ReplaceItemInObject(json,"lbendpoint",cJSON_CreateString(SUPERNET.lbendpoint));
+                cJSON_ReplaceItemInObject(json,"relaypoint",cJSON_CreateString(SUPERNET.relayendpoint));
+                cJSON_ReplaceItemInObject(json,"globalpoint",cJSON_CreateString(SUPERNET.globalendpoint));
+            }
+            else
+            {
+                sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,port);
+                cJSON_ReplaceItemInObject(json,"endpoint",cJSON_CreateString(endpoint));
+            }
             if ( SUPERNET.SERVICESECRET[0] != 0 && issue_generateToken(servicetoken,endpoint,SUPERNET.SERVICESECRET) == 0 )
             {
                 cJSON_AddItemToObject(json,"servicetoken",cJSON_CreateString(servicetoken));
