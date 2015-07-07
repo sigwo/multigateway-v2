@@ -357,7 +357,7 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
         }
         else
         {
-            printf("got recvlen.%d %s\n",recvlen,nn_errstr());
+            printf("nn_loadbalanced got recvlen.%d %s\n",recvlen,nn_errstr());
             jsonstr = clonestr("{\"error\":\"lb recv error, probably timeout\"}");
         }
     } else printf("got sendlen.%d instead of %d %s\n",sendlen,len,nn_errstr()), jsonstr = clonestr("{\"error\":\"lb send error\"}");

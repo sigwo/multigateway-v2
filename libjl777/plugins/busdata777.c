@@ -729,12 +729,12 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         {
             ensure_jsonitem(second,"stop","yes");
             str = cJSON_Print(dupjson), _stripwhite(str,' ');
-            if ( strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0 )
+            if ( RELAYS.pubrelays >= 0 && (strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0) )
             {
                 printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
                 nn_send(RELAYS.pubrelays,str,(int32_t)strlen(str)+1,0);
             }
-            else if ( strcmp(broadcaststr,"allnodes") == 0 )
+            else if ( RELAYS.pubglobal >= 0 && strcmp(broadcaststr,"allnodes") == 0 )
             {
                 printf("ALL [%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
                 nn_send(RELAYS.pubglobal,str,(int32_t)strlen(str)+1,0);
