@@ -634,7 +634,8 @@ void *issue_cgicall(void *_ptr)
         }
         else
         {
-            //printf("call plugin_method.(%s)\n",ptr->jsonstr);
+            if ( Debuglevel > 2 )
+                fprintf(stderr,"call plugin_method.(%s)\n",ptr->jsonstr);
             /*ptr->retstr = 0;
             if ( 0 )
             {

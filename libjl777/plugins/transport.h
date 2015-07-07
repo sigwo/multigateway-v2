@@ -116,7 +116,8 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
     struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
     struct daemon_info *dp;
     char numstr[64],*tmpstr,*jsonstr; uint8_t *data; int32_t ind,datalen,tmplen,flag = 0; uint64_t tmp,tag = 0; cJSON *json;
-//printf("A send_to_daemon.(%s).%d\n",origjsonstr,len);
+    if ( Debuglevel > 2 )
+        printf("A send_to_daemon.(%s).%d\n",origjsonstr,len);
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
         jsonstr = origjsonstr;
@@ -135,7 +136,8 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                     tag = tmp, flag = 1;
                 if ( tag == 0 )
                     tag = (((uint64_t)rand() << 32) | rand()), flag = 1;
-//printf("tag.%llu flag.%d tmp.%llu datalen.%d\n",(long long)tag,flag,(long long)tmp,datalen);
+                if ( Debuglevel > 2 )
+                    printf("tag.%llu flag.%d tmp.%llu datalen.%d\n",(long long)tag,flag,(long long)tmp,datalen);
                 if ( flag != 0 )
                 {
                     sprintf(numstr,"%llu",(long long)tag), ensure_jsonitem(json,"tag",numstr);
@@ -165,7 +167,8 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
         free_json(json);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
-//printf("after find_daemoninfo send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
+            if ( Debuglevel > 2 )
+                printf("after find_daemoninfo send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
             if ( len > 0 )
             {
                 if ( Debuglevel > 2 )

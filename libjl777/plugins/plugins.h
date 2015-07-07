@@ -468,7 +468,8 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
 char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout,char *tokenstr)
 {
     struct daemon_info *dp; char retbuf[8192],*str,*methodsstr,*retstr; uint64_t tag; cJSON *json; int32_t ind,async;
-//printf("localaccess.%d origargstr.(%s).%d retstrp.%p\n",localaccess,origargstr,len,retstrp);
+    if ( Debuglevel > 2 )
+        printf("localaccess.%d origargstr.(%s).%d retstrp.%p token.(%s)\n",localaccess,origargstr,len,retstrp,tokenstr!=0?tokenstr:"");
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
@@ -511,7 +512,8 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         }
         else
         {
-//fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
+            if ( Debuglevel > 2 )
+                fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
             if ( (tag= send_to_daemon(sock,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess,tokenstr)) == 0 )
             {
 fprintf(stderr,"null tag from send_to_daemon\n");
