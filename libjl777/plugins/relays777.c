@@ -636,7 +636,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 copy_cJSON(relaypoint,cJSON_GetObjectItem(json,"relaypoint"));
                 copy_cJSON(globalpoint,cJSON_GetObjectItem(json,"globalpoint"));
                 copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
-                if ( strcmp(SUPERNET.lbendpoint,destpoint) == 0 )
+                if ( SUPERNET.noncing != 0 && strcmp(SUPERNET.lbendpoint,destpoint) == 0 )
                 {
                     if ( endpoint[0] != 0 && tokenstr[0] != 0 && (tokenobj= cJSON_Parse(tokenstr)) != 0 )
                     {
@@ -647,7 +647,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         copy_cJSON(noncestr,cJSON_GetObjectItem(tokenobj,"nonce"));
                         if ( noncestr[0] != 0 )
                             apply.nonce = (uint32_t)calc_nxt64bits(noncestr);
-                        printf("tokenobj.(%s) -> nonce.%u\n",tokenstr,apply.nonce);
+                        //printf("tokenobj.(%s) -> nonce.%u\n",tokenstr,apply.nonce);
                         free_json(tokenobj);
                         recv_nonces(&apply);
                     }
