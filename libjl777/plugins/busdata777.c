@@ -675,16 +675,14 @@ char *busdata(char *tokenstr,char *forwarder,char *sender,int32_t valid,char *ke
     return(retstr);
 }
 
-int32_t busdata_validate(char **tokenstrp,char *forwarder,char *sender,uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json)
+int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_t *databuf,int32_t *datalenp,void *msg,cJSON *json)
 {
     char pubkey[256],hexstr[65],sha[65],datastr[8192]; int32_t valid; cJSON *argjson; bits256 hash;
-    *timestamp = *datalenp = 0; forwarder[0] = sender[0] = 0; *tokenstrp = 0;
+    *timestamp = *datalenp = 0; forwarder[0] = sender[0] = 0;
     //printf("busdata_validate.(%s)\n",msg);
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
-        *tokenstrp = cJSON_str(cJSON_GetArrayItem(json,1));
-        printf("GOT.(%s)\n",*tokenstrp);
         *timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
         if ( (valid= validate_token(forwarder,pubkey,sender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
         {
@@ -789,9 +787,11 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
-        if ( (valid= busdata_validate(&tokenstr,forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
+        if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
         {
             argjson = cJSON_GetArrayItem(json,0);
+            if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+                tokenstr = cJSON_str(cJSON_GetArrayItem(json,1)), printf("GOT.(%s)\n",tokenstr);
             copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
             copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
             copy_cJSON(usedest,cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"usedest"));
