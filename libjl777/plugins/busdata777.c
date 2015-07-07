@@ -787,11 +787,12 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
+        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+            tokenstr = cJSON_Print(cJSON_GetArrayItem(json,1)), printf("GOT.(%s)\n",tokenstr);
+        else tokenstr = 0;
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
         {
             argjson = cJSON_GetArrayItem(json,0);
-            if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-                tokenstr = cJSON_str(cJSON_GetArrayItem(json,1)), printf("GOT.(%s)\n",tokenstr);
             copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
             copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
             copy_cJSON(usedest,cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"usedest"));
@@ -802,6 +803,8 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
 //printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
         } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
         free_json(json);
+        if ( tokenstr != 0 )
+            free(tokenstr);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
     if ( Debuglevel > 2 )
         fprintf(stderr,"BUSDATA.(%s) -> %p.(%s)\n",msg,retstr,retstr);
