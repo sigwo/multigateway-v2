@@ -905,7 +905,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
-        ensure_jsonitem(json,"stop","yes");
+        ensure_jsonitem(datajson,"stop","yes");
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
         tmp = malloc((datalen << 1) + 1);
