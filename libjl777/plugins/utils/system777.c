@@ -270,7 +270,6 @@ int32_t busdata_poll();
 char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr);
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode);
-char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broadcastmode,char *destNXTaddr);
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
 uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce);
 int32_t nonce_leverage(char *broadcaststr);
