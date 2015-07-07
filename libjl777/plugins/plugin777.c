@@ -401,7 +401,7 @@ int32_t main
         if ( (len= nn_recv(plugin->pullsock,&line,NN_MSG,0)) > 0 )
         {
             len = (int32_t)strlen(line);
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
             if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
             {
