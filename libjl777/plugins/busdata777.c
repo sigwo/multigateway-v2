@@ -313,7 +313,7 @@ char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
 void *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
     cJSON *json; int32_t i; uint8_t *buf = malloc(datalen);
-    printf("(%02x -> ",msg[0]);
+    printf("(%s) (%02x -> ",msg,msg[0]);
     decode_hex(buf,datalen,(char *)msg);
     printf("%02x) -> (%s)\n",buf[0],buf);
     if ( (json= cJSON_Parse((void *)buf)) == 0 )
@@ -336,7 +336,7 @@ cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,
     {
         if ( (jsonstr= busdata_decrypt(sender,msg,datalen)) != 0 )
         {
-            json = cJSON_Parse((char *)msg);
+            json = cJSON_Parse((char *)jsonstr);
             copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
             free(jsonstr);
         } else printf("couldnt decrypt.(%s)\n",msg);
