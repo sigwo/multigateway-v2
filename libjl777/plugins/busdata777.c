@@ -301,30 +301,27 @@ void nn_syncbus(cJSON *json)
 char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
 {
     int32_t i; char *tmp = malloc((datalen << 1) + 1);
-    printf("(%02x -> ",data[0]);
+    //printf("(%02x -> ",data[0]);
     if ( destNXT != 0 && destNXT[0] != 0 )
-        for (i=0; i<datalen/datalen; i++)
+        for (i=0; i<datalen; i++)
             data[i] ^= 0xff;
     init_hexbytes_noT(tmp,data,datalen);
-    printf("%02x) -> (%s)\n",data[0],tmp);
+    //printf("%02x) -> (%s)\n",data[0],tmp);
     return(tmp);
 }
 
 void *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
 {
-    cJSON *json; int32_t i; //uint8_t *buf = malloc(datalen);
-    printf("(%s) (%02x -> ",msg,msg[0]);
-    //decode_hex(buf,datalen,(char *)msg);
+    cJSON *json; int32_t i;
+    //printf("(%s) (%02x -> ",msg,msg[0]);
     if ( (json= cJSON_Parse((void *)msg)) == 0 )
     {
-        for (i=0; i<datalen/datalen; i++)
+        for (i=0; i<datalen; i++)
             msg[i] ^= 0xff;
-        printf("%02x) -> (%s)\n",msg[0],msg);
+        //printf("%02x) -> (%s)\n",msg[0],msg);
         if ( (json= cJSON_Parse((void *)msg)) == 0 )
-        {
-            //free(buf);
             return(0);
-        } else free_json(json);
+        else free_json(json);
     } else free_json(json);
     return(msg);
 }
@@ -338,7 +335,6 @@ cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,
         {
             json = cJSON_Parse((char *)jsonstr);
             copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
-            free(jsonstr);
         } else printf("couldnt decrypt.(%s)\n",msg);
     } else printf("neg validated.%d\n",validated);
     return(json);
