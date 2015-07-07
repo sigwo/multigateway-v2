@@ -111,7 +111,7 @@ char *wait_for_daemon(char **destp,uint64_t tag,int32_t timeout,int32_t sleepmil
     return(*destp);
 }
  
-uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid,uint64_t instanceid,char *origjsonstr,int32_t len,int32_t localaccess)
+uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid,uint64_t instanceid,char *origjsonstr,int32_t len,int32_t localaccess,char *tokenstr)
 {
     struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
     struct daemon_info *dp;
@@ -162,18 +162,6 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
         }
         if ( len == 0 )
             len = (int32_t)strlen(jsonstr) + 1;
-        /*if ( 0 && localaccess != 0 && is_cJSON_Array(json) == 0 )
-        {
-            uint32_t nonce;
-            tokbuf = calloc(1,len + 1024);
-//printf("local tokenize jsonstr.(%s)\n",jsonstr);
-            broadcastmode = get_broadcastmode(json,cJSON_str(cJSON_GetObjectItem(json,"broadcast")));
-            len = construct_tokenized_req(&nonce,tokbuf,jsonstr,SUPERNET.NXTACCTSECRET,broadcastmode);
-            if ( flag != 0 )
-                free(jsonstr);
-            jsonstr = tokbuf, flag = 1;
-        }*/
-//printf("localaccess.%d send_to_daemon.(%s) tag.%llu\n",localaccess,jsonstr,(long long)tag);
         free_json(json);
         if ( (dp= find_daemoninfo(&ind,name,daemonid,instanceid)) != 0 )
         {
@@ -185,6 +173,15 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                 if ( tag != 0 )
                     add_tagstr(dp,tag,retstrp,sock);
                 dp->numsent++;
+                if ( tokenstr != 0 )
+                {
+                    tmpstr = calloc(1,len + strlen(tokenstr) + 5);
+                    sprintf(tmpstr,"[%s, %s]",jsonstr,tokenstr);
+                    len = (int32_t)strlen(tmpstr) + 1;
+                    if ( flag != 0 )
+                        free(jsonstr);
+                    jsonstr = tmpstr, flag = 1;
+                }
                 if ( nn_local_broadcast(dp->pushsock,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
                     printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
             } else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);

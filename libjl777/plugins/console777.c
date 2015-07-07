@@ -229,7 +229,7 @@ char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcast
     if ( broadcastflag != 0 || strcmp(plugin,"relay") == 0 )
     {
         if ( strcmp(method,"busdata") == 0 )
-            retstr = busdata_sync(&nonce,cmdstr,broadcastflag==0?0:"allnodes");
+            retstr = busdata_sync(&nonce,cmdstr,broadcastflag==0?0:"allnodes",0);
         else retstr = clonestr("{\"error\":\"direct load balanced calls deprecated, use busdata\"}");
     }
     //else if ( strcmp(plugin,"peers") == 0 )
@@ -238,7 +238,7 @@ char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcast
     {
         //len = construct_tokenized_req(tokenized,cmdstr,SUPERNET.NXTACCTSECRET,broadcastflag!=0?"allnodes":0);
         //printf("console.(%s)\n",tokenized);
-        retstr = plugin_method(-1,0,1,plugin,method,0,0,cmdstr,len,timeout != 0 ? timeout : 0);
+        retstr = plugin_method(-1,0,1,plugin,method,0,0,cmdstr,len,timeout != 0 ? timeout : 0,0);
     }
     else retstr = clonestr("{\"error\":\"invalid command\"}");
     return(retstr);

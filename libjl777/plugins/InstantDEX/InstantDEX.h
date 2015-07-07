@@ -150,9 +150,10 @@ void ramparse_stub(struct rambook_info *bids,struct rambook_info *asks,int32_t m
 
 char *submit_respondtx(char *respondtxstr,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t dest64bits)
 {
-    uint32_t nonce;
+    uint32_t nonce; char destNXT[64];
+    expand_nxt64bits(destNXT,dest64bits);
     printf("submit_respondtx.(%s) -> dest.%llu\n",respondtxstr,(long long)dest64bits);
-    return(busdata_sync(&nonce,respondtxstr,"allnodes"));
+    return(busdata_sync(&nonce,respondtxstr,"allnodes",destNXT));
 }
 
 int32_t calc_users_maxopentrades(uint64_t nxt64bits)
@@ -455,7 +456,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
                             free(jsonstr);
                             return(retstr);
                         } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
-                        if ( (str= busdata_sync(&nonce,jsonstr,"allnodes")) != 0 )
+                        if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
                             free(str);
                         retstr = jsonstr;
                     } else return(clonestr("{\"result\":\"updated rambook\"}"));

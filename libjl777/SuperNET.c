@@ -629,7 +629,7 @@ void *issue_cgicall(void *_ptr)
         if ( strcmp(plugin,"relay") == 0 || (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
             //printf("call busdata_sync\n");
-            str = busdata_sync(&nonce,ptr->jsonstr,broadcaststr);
+            str = busdata_sync(&nonce,ptr->jsonstr,broadcaststr,cJSON_str(cJSON_GetObjectItem(ptr->json,"destNXT")));
             //printf("got.(%s)\n",str);
         }
         else
@@ -645,7 +645,7 @@ void *issue_cgicall(void *_ptr)
                     msleep(10);
                 str = ptr->retstr, ptr->retstr = 0;
             }
-            else */str = plugin_method(ptr->sock,0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
+            else */str = plugin_method(ptr->sock,0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout,0);
         }
         if ( str != 0 )
         {

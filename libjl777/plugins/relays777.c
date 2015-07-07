@@ -471,7 +471,7 @@ void calc_nonces(char *destpoint)
     while ( milliseconds() < endmilli && n < sizeof(SUPERNET.nonces)/sizeof(*SUPERNET.nonces) )
     {
         sprintf(buf,"{\"plugin\":\"relay\",\"counter\":\"%d\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"8\",\"lbendpoint\":\"%s\",\"relaypoint\":\"%s\",\"globalpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",n,SUPERNET.lbendpoint,SUPERNET.relayendpoint,SUPERNET.globalendpoint,destpoint,SUPERNET.NXTADDR);
-        if ( (str= busdata_sync(&SUPERNET.nonces[n],buf,"8")) != 0 )
+        if ( (str= busdata_sync(&SUPERNET.nonces[n],buf,"8",0)) != 0 )
         {
             fprintf(stderr,"send.(%s)\n",buf);
             free(str);
@@ -597,7 +597,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 retstr = relays_jsonstr(jsonstr,json);
             else if ( strcmp(methodstr,"busdata") == 0 )
             {
-                retstr = busdata_sync(&nonce,jsonstr,cJSON_str(cJSON_GetObjectItem(json,"broadcast")));
+                retstr = busdata_sync(&nonce,jsonstr,cJSON_str(cJSON_GetObjectItem(json,"broadcast")),0);
                 if ( SUPERNET.iamrelay == 0 && destplugin != 0 && submethod != 0 && strcmp(destplugin,"relay") == 0 && strcmp(submethod,"join") == 0 )
                 {
                     if ( SUPERNET.responses != 0 )
