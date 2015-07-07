@@ -473,7 +473,7 @@ void calc_nonces(char *destpoint)
         sprintf(buf,"{\"plugin\":\"relay\",\"counter\":\"%d\",\"destplugin\":\"relay\",\"method\":\"nonce\",\"broadcast\":\"8\",\"lbendpoint\":\"%s\",\"relaypoint\":\"%s\",\"globalpoint\":\"%s\",\"destpoint\":\"%s\",\"NXT\":\"%s\"}",n,SUPERNET.lbendpoint,SUPERNET.relayendpoint,SUPERNET.globalendpoint,destpoint,SUPERNET.NXTADDR);
         if ( (str= busdata_sync(&SUPERNET.nonces[n],buf,"8",0)) != 0 )
         {
-            fprintf(stderr,"send.(%s)\n",buf);
+            //fprintf(stderr,"send.(%s)\n",buf);
             free(str);
             n++;
         }
