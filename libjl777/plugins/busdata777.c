@@ -143,7 +143,7 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
         return(0);
     }
     *noncep = nonce;
-    sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":\"%u\",\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
+    sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\",\"nonce\":%u,\"leverage\":\"%u\"",broadcastmode,nonce,leverage);
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     //printf("GEN.(%s).(%s) -> (%s) len.%d crc.%u\n",broadcastmode,cmdjson,broadcaststr,(int32_t)strlen(cmdjson),_crc32(0,(void *)cmdjson,(int32_t)strlen(cmdjson)));
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);

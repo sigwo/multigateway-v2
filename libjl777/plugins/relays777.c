@@ -645,7 +645,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         strcpy(apply.globalendpoint,globalpoint);
                         apply.senderbits = calc_nxt64bits(sender);
                         apply.nonce = (uint32_t)get_cJSON_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
-                        printf("tokenobj.(%s)\n",tokenstr);
+                        //printf("tokenobj.(%s)\n",tokenstr);
                         free_json(tokenobj);
                         recv_nonces(&apply);
                     }
