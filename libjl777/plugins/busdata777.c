@@ -125,7 +125,7 @@ uint32_t nonce_func(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxm
 
 int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode)
 {
-    char encoded[2*NXT_TOKEN_LEN+1],broadcaststr[512]; uint32_t nonce,nonceerr; int32_t i,leverage,n = 100;
+    char encoded[2*NXT_TOKEN_LEN+1],ftoken[2*NXT_TOKEN_LEN+1],ftokenstr[2*NXT_TOKEN_LEN+128],broadcaststr[512]; uint32_t nonce,nonceerr; int32_t i,leverage,n = 100;
     *noncep = 0;
     if ( broadcastmode == 0 )
         broadcastmode = "";
@@ -147,10 +147,15 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
     //sprintf(broadcaststr,",\"broadcast\":\"%s\",\"usedest\":\"yes\"",broadcastmode);
     //printf("GEN.(%s).(%s) -> (%s) len.%d crc.%u\n",broadcastmode,cmdjson,broadcaststr,(int32_t)strlen(cmdjson),_crc32(0,(void *)cmdjson,(int32_t)strlen(cmdjson)));
     issue_generateToken(encoded,cmdjson,NXTACCTSECRET);
-    encoded[NXT_TOKEN_LEN] = 0;
+    if ( strcmp(NXTACCTSECRET,SUPERNET.NXTACCTSECRET) != 0 )
+    {
+        issue_generateToken(ftoken,cmdjson,SUPERNET.NXTACCTSECRET);
+        sprintf(ftokenstr,",\"ftoken\":\"%s\"",ftoken);
+    } else ftokenstr[0] = 0;
+    encoded[NXT_TOKEN_LEN] = ftoken[NXT_TOKEN_LEN] = 0;
     if ( SUPERNET.iamrelay == 0 )
         sprintf(tokenized,"[%s, {\"token\":\"%s\"%s}]",cmdjson,encoded,broadcaststr);
-    else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s}]",cmdjson,encoded,SUPERNET.NXTADDR,broadcaststr);
+    else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s%s}]",cmdjson,encoded,SUPERNET.NXTADDR,ftokenstr,broadcaststr);
     return((int32_t)strlen(tokenized)+1);
 }
 
@@ -809,7 +814,8 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
     char *str,*str2,*tokbuf = 0,*tmp,*secret;
     bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,diff,datalen = 0;
     *datalenp = *noncep = 0;
-    //printf("create_busdata\n");
+    if ( Debuglevel > 2 )
+        printf("create_busdata.(%s).%s -> %s\n",jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
@@ -829,9 +835,9 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         {
             if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
             {
-                cJSON_ReplaceItemInObject(json,"lbendpoint",cJSON_CreateString(SUPERNET.lbendpoint));
-                cJSON_ReplaceItemInObject(json,"relaypoint",cJSON_CreateString(SUPERNET.relayendpoint));
-                cJSON_ReplaceItemInObject(json,"globalpoint",cJSON_CreateString(SUPERNET.globalendpoint));
+                ensure_jsonitem(json,"lbendpoint",SUPERNET.lbendpoint);
+                ensure_jsonitem(json,"relaypoint",SUPERNET.relayendpoint);
+                ensure_jsonitem(json,"globalpoint",SUPERNET.globalendpoint);
                 strcpy(endpoint,SUPERNET.lbendpoint);
             }
             sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,port);
@@ -895,7 +901,8 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
     if ( strcmp(plugin,"relay") == 0 && strcmp(destplugin,"relay") == 0 && broadcastmode == 0 )
         broadcastmode = "4";
     sentflag = 0;
-    //printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
+    if ( Debuglevel > 2 )
+        printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(noncep,&datalen,jsonstr,broadcastmode,destNXTaddr)) != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
@@ -908,7 +915,8 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                     if ( data != jsonstr )
                         free(data);
                     free_json(json);
-                    //printf("relay returns publicaccess.(%s)\n",retstr);
+                    if ( Debuglevel > 2 )
+                        printf("relay returns publicaccess.(%s)\n",retstr);
                     return(retstr);
                 } else free_json(json);
                 if ( RELAYS.pubglobal >= 0 && (strcmp(broadcastmode,"allnodes") == 0 || strcmp(broadcastmode,"8") == 0) )
@@ -943,15 +951,17 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
             {
                 if ( broadcastmode == 0 && cJSON_str(cJSON_GetObjectItem(json,"servicename")) == 0 )
                 {
-                    //printf("call busdata proc.(%s)\n",data);
+                    if ( Debuglevel > 2 )
+                        printf("call busdata proc.(%s)\n",data);
                     retstr = nn_busdata_processor((uint8_t *)data,datalen);
                 }
                 else
                 {
-                    //printf("LBsend.(%s)\n",data);
+                    if ( Debuglevel > 2 )
+                        printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                 }
-                if ( 0 && retstr != 0 )
+                if ( Debuglevel > 2 && retstr != 0 )
                     printf("busdata nn_loadbalanced retstr.(%s) %p\n",retstr,retstr);
                 if ( data != jsonstr )
                     free(data);
