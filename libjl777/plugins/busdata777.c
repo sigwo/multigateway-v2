@@ -723,24 +723,29 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
     if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
     {
         dupjson = cJSON_Duplicate(json,1);
+        argjson = cJSON_GetArrayItem(dupjson,0);
         second = cJSON_GetArrayItem(dupjson,1);
-        ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-        if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
+        if ( cJSON_GetObjectItem(second,"forwarder") == 0 )
         {
-            ensure_jsonitem(second,"stop","yes");
-            str = cJSON_Print(dupjson), _stripwhite(str,' ');
-            if ( RELAYS.pubrelays >= 0 && (strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0) )
+            ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+            if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
             {
-                printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
-                nn_send(RELAYS.pubrelays,str,(int32_t)strlen(str)+1,0);
-            }
-            else if ( RELAYS.pubglobal >= 0 && strcmp(broadcaststr,"allnodes") == 0 )
-            {
-                printf("ALL [%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
-                nn_send(RELAYS.pubglobal,str,(int32_t)strlen(str)+1,0);
-            }
-            free(str);
-        } // else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
+                ensure_jsonitem(second,"stop","yes");
+                ensure_jsonitem(second,"stop","yes");
+                str = cJSON_Print(dupjson), _stripwhite(str,' ');
+                if ( RELAYS.pubrelays >= 0 && (strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0) )
+                {
+                    printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
+                    nn_send(RELAYS.pubrelays,str,(int32_t)strlen(str)+1,0);
+                }
+                else if ( RELAYS.pubglobal >= 0 && strcmp(broadcaststr,"allnodes") == 0 )
+                {
+                    printf("ALL [%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
+                    nn_send(RELAYS.pubglobal,str,(int32_t)strlen(str)+1,0);
+                }
+                free(str);
+            } // else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
+        }
         free_json(dupjson);
     }
     if ( (origjson= cJSON_Parse(databuf)) != 0 )
