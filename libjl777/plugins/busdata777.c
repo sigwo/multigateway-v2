@@ -302,7 +302,7 @@ char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
 {
     int32_t i; char *tmp = malloc((datalen << 1) + 1);
     init_hexbytes_noT(tmp,data,datalen);
-    if ( destNXT[0] != 0 )
+    if ( destNXT != 0 && destNXT[0] != 0 )
         for (i=0; i<datalen; i++)
             data[i] ^= 0xff;
     return(tmp);
