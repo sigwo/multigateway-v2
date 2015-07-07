@@ -612,7 +612,7 @@ int32_t got_newpeer(const char *ip_port) { if ( Debuglevel > 2 ) printf("got_new
 
 void *issue_cgicall(void *_ptr)
 {
-    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr; uint32_t nonce; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
+    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr,*destNXT; uint32_t nonce; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
     copy_cJSON(apitag,cJSON_GetObjectItem(ptr->json,"apitag"));
     safecopy(ptr->apitag,apitag,sizeof(ptr->apitag));
     copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"agent"));
@@ -626,28 +626,19 @@ void *issue_cgicall(void *_ptr)
         fprintf(stderr,"error connecting to (%s)\n",apitag);
     else
     {
+        destNXT = cJSON_str(cJSON_GetObjectItem(ptr->json,"destNXT"));
         if ( strcmp(plugin,"relay") == 0 || (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
             if ( Debuglevel > 2 )
                 printf("call busdata_sync.(%s)\n",ptr->jsonstr);
-            str = busdata_sync(&nonce,ptr->jsonstr,broadcaststr,cJSON_str(cJSON_GetObjectItem(ptr->json,"destNXT")));
+            str = busdata_sync(&nonce,ptr->jsonstr,broadcaststr,destNXT);
             //printf("got.(%s)\n",str);
         }
         else
         {
             if ( Debuglevel > 2 )
                 fprintf(stderr,"call plugin_method.(%s)\n",ptr->jsonstr);
-            /*ptr->retstr = 0;
-            if ( 0 )
-            {
-                str = plugin_method(ptr->sock,&ptr->retstr,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout);
-                if ( str != 0 )
-                    free(str);
-                while ( ptr->retstr == 0 )
-                    msleep(10);
-                str = ptr->retstr, ptr->retstr = 0;
-            }
-            else */str = plugin_method(ptr->sock,0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout,0);
+            str = plugin_method(ptr->sock,0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout,0);
         }
         if ( str != 0 )
         {

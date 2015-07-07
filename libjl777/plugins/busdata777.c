@@ -9,6 +9,8 @@
 // encryption
 // ipv6
 // btc38
+// join protocol + anti-sybil
+// duplicate filter
 
 // "servicesecret" in SuperNET.conf
 // register: ./BitcoinDarkd SuperNET '{"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"serviceprovider","servicename":"echo","endpoint":""}'
@@ -298,7 +300,7 @@ void nn_syncbus(cJSON *json)
     }
 }
 
-char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
+/*char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
 {
     int32_t i; char *tmp = malloc((datalen << 1) + 1);
     printf("(%02x -> ",data[0]);
@@ -338,7 +340,7 @@ cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,
         } else printf("couldnt decrypt.(%s)\n",msg);
     } else printf("neg validated.%d\n",validated);
     return(json);
-}
+}*/
 
 queue_t busdataQ[2];
 struct busdata_item { struct queueitem DL; bits256 hash; cJSON *json; char *retstr,*key; uint64_t dest64bits,senderbits; uint32_t queuetime,donetime; };
@@ -656,27 +658,14 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
 
 char *busdata(char *tokenstr,char *forwarder,char *sender,int32_t valid,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
-    cJSON *json; char destNXT[64],response[1024],*retstr = 0;
+    cJSON *json; char destNXT[64],*retstr = 0;
     if ( SUPERNET.iamrelay != 0 && valid > 0 )
     {
-        if ( (json= busdata_decode(destNXT,valid,sender,msg,datalen)) != 0 )
+        //if ( (json= busdata_decode(destNXT,valid,sender,msg,datalen)) != 0 )
+        if ( (json= cJSON_Parse((void *)msg)) != 0 )
         {
-            copy_cJSON(response,cJSON_GetObjectItem(json,"response"));
-            if ( response[0] == 0 )
-            {
-                //if ( busdata_isduplicate(destNXT,sender,key,timestamp,json) != 0 )
-                //    return(clonestr("{\"error\":\"busdata duplicate request\"}"));
-                if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson)) == 0 )
-                {
-                    nn_syncbus(origjson);
-                }
-            }
-            else if ( (retstr= busdata_matchquery(response,destNXT,sender,key,timestamp,json)) != 0 )
-            {
-                printf("busdata_query returned.(%s)\n",retstr);
-                return(retstr);
-            }
-            else return(clonestr("{\"error\":\"busdata response without matching query\"}"));
+            if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson)) == 0 )
+                nn_syncbus(origjson);
             free_json(json);
         } else printf("couldnt decode.(%s)\n",msg);
     }
@@ -917,7 +906,8 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
-        tmp = busdata_encrypt(destNXTaddr,(void *)str,datalen);
+        tmp = malloc((datalen << 1) + 1);
+        init_hexbytes_noT(tmp,(void *)str,datalen);
         cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
         calc_sha256(hexstr,hash.bytes,(uint8_t *)str,datalen);
         cJSON_AddItemToObject(datajson,"n",cJSON_CreateNumber(datalen));

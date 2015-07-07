@@ -16,7 +16,6 @@
 #include "system777.c"
 #include "NXT777.c"
 #include "plugin777.c"
-//#include "gen1block.c"
 #undef DEFINES_ONLY
 #define NN_WS -4
 
@@ -140,37 +139,6 @@ int32_t add_relay(struct _relay_info *list,struct endpoint epbits)
         printf("add_relay warning num.%d > %ld\n",list->num,(sizeof(list->connections)/sizeof(*list->connections)));
     return(list->num);
 }
-
-/*int32_t update_serverbits(struct _relay_info *list,char *transport,uint32_t ipbits,uint16_t port,int32_t type)
-{
-    char endpoint[1024]; struct endpoint epbits;
-    if ( ipbits == SUPERNET.myipbits )
-        return(-1);
-    if ( list->sock < 0 )
-    {
-        printf("illegal list sock.%d\n",list->sock);
-        return(-1);
-    }
-//printf("%p update_serverbits sock.%d type.%d num.%d ipbits.%llx\n",list,list->sock,type,list->num,(long long)ipbits);
-    epbits = find_epbits(list,ipbits,port,type);
-    if ( epbits.ipbits == 0 )
-    {
-        epbits = calc_epbits(transport,ipbits,port,type);
-        expand_epbits(endpoint,epbits);
-        if ( nn_connect(list->sock,endpoint) < 0 )
-            printf("error connecting to (%s) %s\n",endpoint,nn_errstr());
-        else
-        {
-            if ( type == NN_PUB )
-            {
-                printf("subscribed to (%s)\n",endpoint);
-                nn_setsockopt(list->sock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
-            }
-            //add_relay(list,epbits);
-        }
-    }
-    return(list->num);
-}*/
 
 int32_t nn_add_lbservers(uint16_t port,uint16_t globalport,uint16_t relaysport,int32_t priority,int32_t sock,char servers[][MAX_SERVERNAME],int32_t num)
 {
