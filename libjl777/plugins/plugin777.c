@@ -299,7 +299,8 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
         if ( is_cJSON_Array(json) != 0 )
         {
             obj = cJSON_GetArrayItem(json,0);
-            tokenobj = cJSON_GetArrayItem(json,1);
+            jsonstr = cJSON_Print(obj), _stripwhite(jsonstr,' ');
+            tokenobj = cJSON_GetArrayItem(json,1), _stripwhite(tokenstr,' ');
             copy_cJSON(tokenstr,tokenobj);
             copy_cJSON(forwarder,cJSON_GetObjectItem(tokenobj,"forwarder"));
             copy_cJSON(sender,cJSON_GetObjectItem(tokenobj,"sender"));
