@@ -786,26 +786,24 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    cJSON *json,*argjson,*tokenobj; uint32_t timestamp; int32_t datalen,valid; uint8_t databuf[8192];
-    char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*tokenstr=0,*retstr = 0;
+    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint8_t databuf[8192]; uint64_t forwardbits;
+    char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*str,*tokenstr=0,*broadcaststr,*retstr = 0;
     if ( Debuglevel > 2 )
         fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
     if ( (json= cJSON_Parse((char *)msg)) != 0 )
     {
+        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+            tokenobj = cJSON_GetArrayItem(json,1);
+        argjson = cJSON_GetArrayItem(json,0);
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
         {
-            if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-            {
-                tokenobj = cJSON_GetArrayItem(json,1);
-                if ( cJSON_GetObjectItem(tokenobj,"valid") != 0 )
-                    cJSON_DeleteItemFromObject(tokenobj,"valid");
-                if ( cJSON_GetObjectItem(tokenobj,"sender") != 0 )
-                    cJSON_DeleteItemFromObject(tokenobj,"sender");
-                cJSON_AddItemToObject(tokenobj,"valid",cJSON_CreateNumber(valid));
-                cJSON_AddItemToObject(tokenobj,"sender",cJSON_CreateString(sender));
-                tokenstr = cJSON_Print(tokenobj), _stripwhite(tokenstr,' ');
-            }
-            argjson = cJSON_GetArrayItem(json,0);
+            if ( cJSON_GetObjectItem(tokenobj,"valid") != 0 )
+                cJSON_DeleteItemFromObject(tokenobj,"valid");
+            if ( cJSON_GetObjectItem(tokenobj,"sender") != 0 )
+                cJSON_DeleteItemFromObject(tokenobj,"sender");
+            cJSON_AddItemToObject(tokenobj,"valid",cJSON_CreateNumber(valid));
+            cJSON_AddItemToObject(tokenobj,"sender",cJSON_CreateString(sender));
+            tokenstr = cJSON_Print(tokenobj), _stripwhite(tokenstr,' ');
             copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
             copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
             copy_cJSON(usedest,cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"usedest"));
@@ -813,10 +811,26 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata_deref(tokenstr,forwarder,sender,valid,(char *)databuf,json);
             if ( retstr == 0 )
                 retstr = busdata(tokenstr,forwarder,sender,valid,key,timestamp,databuf,datalen,json);
-            if ( tokenstr != 0 )
-                free(tokenstr);
-//printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
-        } else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
+ //printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
+        }
+        else if ( argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(argjson,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 )
+        {
+            dupjson = cJSON_Duplicate(json,1);
+            ensure_jsonitem(tokenobj,"forwarder",SUPERNET.NXTADDR);
+            copy_cJSON(forwarder,cJSON_GetObjectItem(tokenobj,"forwarder"));
+            if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(tokenobj,"stop") == 0 )
+            {
+                ensure_jsonitem(tokenobj,"stop","end");
+                str = cJSON_Print(dupjson), _stripwhite(str,' ');
+                printf("[%s] blind broadcast.(%s) by %s\n",broadcaststr,str,SUPERNET.NXTADDR);
+                nn_send(RELAYS.pubglobal,str,(int32_t)strlen((char *)str)+1,0);
+                free(str);
+            }
+            free_json(dupjson);
+        }
+        else retstr = clonestr("{\"error\":\"busdata doesnt validate\"}");
+        if ( tokenstr != 0 )
+            free(tokenstr);
         free_json(json);
     } else retstr = clonestr("{\"error\":\"couldnt parse busdata\"}");
     if ( Debuglevel > 2 )
@@ -881,6 +895,8 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         datajson = cJSON_CreateObject();
         cJSON_AddItemToObject(datajson,"tag",cJSON_CreateString(numstr));
+        if ( broadcastmode != 0 && broadcastmode[0] != 0 )
+            cJSON_AddItemToObject(datajson,"broadcast",cJSON_CreateString(broadcastmode));
         cJSON_AddItemToObject(datajson,"plugin",cJSON_CreateString("relay"));
         cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
         if ( SUPERNET.SERVICESECRET[0] != 0 )
