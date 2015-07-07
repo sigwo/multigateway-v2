@@ -905,12 +905,12 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
+        ensure_jsonitem(json,"stop","yes");
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
         tmp = malloc((datalen << 1) + 1);
         init_hexbytes_noT(tmp,(void *)str,datalen);
         cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
-        cJSON_AddItemToObject(datajson,"stop",cJSON_CreateString("yes"));
         calc_sha256(hexstr,hash.bytes,(uint8_t *)str,datalen);
         cJSON_AddItemToObject(datajson,"n",cJSON_CreateNumber(datalen));
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
