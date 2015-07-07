@@ -818,6 +818,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
             dupjson = cJSON_Duplicate(json,1);
             if ( cJSON_GetObjectItem(tokenobj,"stop") == 0 )
             {
+                tokenobj = cJSON_GetArrayItem(dupjson,1);
                 ensure_jsonitem(tokenobj,"stop","end");
                 str = cJSON_Print(dupjson), _stripwhite(str,' ');
                 printf("[%s] blind broadcast.(%s) by %s\n",broadcaststr,str,SUPERNET.NXTADDR);
