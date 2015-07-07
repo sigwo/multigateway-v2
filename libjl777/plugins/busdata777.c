@@ -910,7 +910,8 @@ char *create_busdata(uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broa
 
 char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr)
 {
-    int32_t sentflag,datalen,sendlen = 0; char plugin[512],destplugin[512],*data,*retstr; cJSON *json;
+    struct applicant_info apply,*ptr;
+    int32_t sentflag,datalen,sendlen = 0; char plugin[512],destplugin[512],*data,*retstr,*submethod; cJSON *json;
     json = cJSON_Parse(jsonstr);
     copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
@@ -976,6 +977,19 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                     if ( Debuglevel > 2 )
                         printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
+                    submethod = cJSON_str(cJSON_GetObjectItem(json,"submethod"));
+                    if ( submethod != 0 && strcmp(destplugin,"relay") == 0 && strcmp(submethod,"join") == 0 )
+                    {
+                        void recv_nonces(void *_ptr);
+                        if ( SUPERNET.responses != 0 )
+                            free(SUPERNET.responses), SUPERNET.responses = 0;
+                        apply.startflag = 1;
+                        apply.senderbits = SUPERNET.my64bits;
+                        ptr = calloc(1,sizeof(*ptr));
+                        *ptr = apply;
+                        portable_thread_create((void *)recv_nonces,ptr);
+                        printf("START receiving nonces\n");
+                    }
                 }
                 if ( Debuglevel > 2 && retstr != 0 )
                     printf("busdata nn_loadbalanced retstr.(%s) %p\n",retstr,retstr);

@@ -549,14 +549,15 @@ void recv_nonces(void *_ptr)
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *origjsonstr,cJSON *origjson,int32_t initflag,char *tokenstr)
 {
     char endpoint[128],tagstr[512],*resultstr,*retstr = 0,*methodstr,*jsonstr,*destplugin,*submethod; cJSON *retjson,*json,*tokenobj; uint32_t nonce;
-    struct applicant_info apply,*ptr;
+    struct applicant_info apply;
     retbuf[0] = 0;
     if ( tokenstr == 0 )
         tokenstr = "";
     if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
         json = cJSON_GetArrayItem(origjson,0), jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     else json = origjson, jsonstr = origjsonstr;
-    printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s [(%s).(%s)]\n",plugin->name,jsonstr,tokenstr);
+    if ( Debuglevel > 2 )
+        printf("<<<<<<<<<<<< INSIDE relays PLUGIN! process %s [(%s).(%s)]\n",plugin->name,jsonstr,tokenstr);
     if ( initflag > 0 )
     {
         // configure settings
@@ -600,17 +601,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             else if ( strcmp(methodstr,"busdata") == 0 )
             {
                 retstr = busdata_sync(&nonce,jsonstr,cJSON_str(cJSON_GetObjectItem(json,"broadcast")),0);
-                if ( SUPERNET.iamrelay == 0 && destplugin != 0 && submethod != 0 && strcmp(destplugin,"relay") == 0 && strcmp(submethod,"join") == 0 )
-                {
-                    if ( SUPERNET.responses != 0 )
-                        free(SUPERNET.responses), SUPERNET.responses = 0;
-                    apply.startflag = 1;
-                    apply.senderbits = SUPERNET.my64bits;
-                    ptr = calloc(1,sizeof(*ptr));
-                    *ptr = apply;
-                    portable_thread_create((void *)recv_nonces,ptr);
-                    printf("START receiving nonces\n");
-                }
+                // {"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"join","broadcast":"join","endpoint":""}
             }
             else if ( strcmp(methodstr,"allservices") == 0 )
             {
