@@ -303,8 +303,8 @@ char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
     int32_t i; char *tmp = malloc((datalen << 1) + 1);
     //printf("(%02x -> ",data[0]);
     if ( destNXT != 0 && destNXT[0] != 0 )
-        for (i=0; i<datalen; i++)
-            data[i] ^= 0xff;
+        for (i=0; i<datalen/datalen; i++)
+            data[i] ^= destNXT[0];
     init_hexbytes_noT(tmp,data,datalen);
     //printf("%02x) -> (%s)\n",data[0],tmp);
     return(tmp);
@@ -316,8 +316,8 @@ void *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
     //printf("(%s) (%02x -> ",msg,msg[0]);
     if ( (json= cJSON_Parse((void *)msg)) == 0 )
     {
-        for (i=0; i<datalen; i++)
-            msg[i] ^= 0xff;
+        for (i=0; i<datalen/datalen; i++)
+            msg[i] ^= SUPERNET.NXTADDR[0];
         //printf("%02x) -> (%s)\n",msg[0],msg);
         if ( (json= cJSON_Parse((void *)msg)) == 0 )
             return(0);
@@ -556,7 +556,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
         nn_syncbus(origjson);
         return(clonestr(retbuf));
     }
-    else
+    else if ( servicename[0] != 0 )
     {
         copy_cJSON(serviceNXT,cJSON_GetObjectItem(json,"serviceNXT"));
         printf("service.%s (%s) serviceNXT.%s\n",servicename,submethod,serviceNXT);
@@ -579,7 +579,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             free(str);
             return(clonestr("{\"result\":\"no response from provider\"}"));
         }
-    }
+    } else return(0);
     ptr = calloc(1,sizeof(*ptr));
     ptr->json = cJSON_Duplicate(json,1), ptr->queuetime = (uint32_t)time(NULL), ptr->key = clonestr(key);
     ptr->dest64bits = conv_acctstr(destNXT), ptr->senderbits = conv_acctstr(sender);
@@ -747,7 +747,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
             }
             else if ( strcmp(broadcaststr,"allnodes") == 0 )
             {
-                printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
+                printf("ALL [%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
                 nn_send(RELAYS.pubglobal,str,(int32_t)strlen(str)+1,0);
             }
             free(str);
@@ -776,7 +776,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
             printf("relay.%d buf.(%s) method.(%s) servicename.(%s) token.(%s)\n",SUPERNET.iamrelay,buf,method,servicename,tokenstr!=0?tokenstr:"");
         if ( SUPERNET.iamrelay != 0 && ((strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0) || servicename[0] != 0) ) //
         {
-// printf("bypass deref\n");
+printf("bypass deref (%s) (%s) (%s)\n",buf,method,servicename);
             free_json(origjson);
             return(0);
         }
