@@ -176,11 +176,13 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                 if ( tokenstr != 0 )
                 {
                     tmpstr = calloc(1,len + strlen(tokenstr) + 5);
+                    fprintf(stderr,"add tokenstr.(%s)\n",tokenstr);
                     sprintf(tmpstr,"[%s, %s]",jsonstr,tokenstr);
                     len = (int32_t)strlen(tmpstr) + 1;
                     if ( flag != 0 )
                         free(jsonstr);
                     jsonstr = tmpstr, flag = 1;
+                    fprintf(stderr,"added tokenstr.(%s)\n",jsonstr);
                 }
                 if ( nn_local_broadcast(dp->pushsock,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
                     printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
