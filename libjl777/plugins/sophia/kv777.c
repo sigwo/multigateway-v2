@@ -252,7 +252,7 @@ void kv777_test()
                 key[j] = rand();
             for (j=0; j<valuesize; j++)
                 value[j] = rand();
-            kv777_write(kv,key,keylen,value,valuesize);
+            //kv777_write(kv,key,keylen,value,valuesize);
             if ( (rval= kv777_read(kv,key,keylen,0,&len)) != 0 )
             {
                 if ( len != valuesize || memcmp(value,rval,valuesize) != 0 )
