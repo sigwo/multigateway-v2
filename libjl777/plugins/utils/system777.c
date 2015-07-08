@@ -279,6 +279,7 @@ int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,
 int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t relaysport);
 int32_t OS_init();
 int32_t nn_settimeouts(int32_t sock,int32_t sendtimeout,int32_t recvtimeout);
+int32_t is_duplicate_tag(uint64_t tag);
 
 #define MAXTIMEDIFF 60
 

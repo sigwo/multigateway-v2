@@ -846,12 +846,39 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
     return(retstr);
 }
 
+int32_t is_duplicate_tag(uint64_t tag)
+{
+    static uint64_t Tags[8192]; static int32_t nextj; int32_t j;
+    for (j=0; j<sizeof(Tags)/sizeof(*Tags); j++)
+    {
+        if ( Tags[j] == 0 )
+        {
+            nextj = j;
+            break;
+        }
+        else if ( Tags[j] == tag )
+        {
+            fprintf(stderr,"skip duplicate tag.%llu\n",(long long)tag);
+            return(1);
+        }
+    }
+    if ( j == sizeof(Tags)/sizeof(*Tags) || Tags[j] == 0 )
+    {
+        fprintf(stderr,"Tag[%d] <-- %llu\n",nextj,(long long)tag);
+        Tags[nextj++ % (sizeof(Tags)/sizeof(*Tags))] = tag;
+    }
+    return(0);
+}
+
 char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broadcastmode,char *destNXTaddr)
 {
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
     char *str,*str2,*tokbuf = 0,*tmp,*secret;
     bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second; int32_t tlen,diff,datalen = 0;
     *sentflagp = *datalenp = *noncep = 0;
+    calc_sha256(0,hash.bytes,(void *)jsonstr,(int32_t)strlen(jsonstr));
+    if ( is_duplicate_tag(hash.txid) != 0 )
+        return(clonestr("{\"error\":\"duplicate jsonstr\"}"));
     if ( Debuglevel > 2 )
         printf("create_busdata.(%s).%s -> %s\n",jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -1057,11 +1084,9 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
     return(0);
 }
 
-uint64_t Tags[8192];
 int32_t busdata_poll()
 {
-    static int32_t nextj;
-    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,j,n = 0; uint32_t nonce;
+    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -1079,47 +1104,30 @@ int32_t busdata_poll()
                     else obj = json;
                     tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
                     fprintf(stderr,"got tag.%llu\n",(long long)tag);
-                    for (j=0; j<sizeof(Tags)/sizeof(*Tags); j++)
+                    if ( is_duplicate_tag(tag) == 0 )
                     {
-                        if ( Tags[j] == 0 )
+                        if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
                         {
-                            nextj = j;
-                            break;
-                        }
-                        else if ( Tags[j] == tag )
-                        {
-                            fprintf(stderr,"skip duplicate tag.%llu\n",(long long)tag);
-                            free_json(json);
-                            nn_freemsg(msg);
-                            return(-1);
-                        }
-                    }
-                    if ( j == sizeof(Tags)/sizeof(*Tags) || Tags[j] == 0 )
-                    {
-                        fprintf(stderr,"Tag[%d] <-- %llu\n",nextj,(long long)tag);
-                        Tags[nextj++ % (sizeof(Tags)/sizeof(*Tags))] = tag;
-                    }
-                    if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
-                    {
-                        noneed = 0;
-                        if ( (retjson= cJSON_Parse(retstr)) != 0 )
-                        {
-                            if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
+                            noneed = 0;
+                            if ( (retjson= cJSON_Parse(retstr)) != 0 )
                             {
-                                noneed = 1;
-                                //fprintf(stderr,"return.(%s)\n",retstr);
-                                nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
+                                if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
+                                {
+                                    noneed = 1;
+                                    //fprintf(stderr,"return.(%s)\n",retstr);
+                                    nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
+                                }
+                                free_json(retjson);
                             }
-                            free_json(retjson);
-                        }
-                        if ( noneed == 0 )
-                        {
-                            len = construct_tokenized_req(&nonce,tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
-                            //fprintf(stderr,"tokenized return.(%s)\n",tokenized);
-                            nn_send(sock,tokenized,len,0);
-                        }
-                        free(retstr);
-                    } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
+                            if ( noneed == 0 )
+                            {
+                                len = construct_tokenized_req(&nonce,tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
+                                //fprintf(stderr,"tokenized return.(%s)\n",tokenized);
+                                nn_send(sock,tokenized,len,0);
+                            }
+                            free(retstr);
+                        } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
+                    }
                     free_json(json);
                 }
                 nn_freemsg(msg);
