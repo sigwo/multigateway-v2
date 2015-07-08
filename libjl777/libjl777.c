@@ -1560,7 +1560,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         copy_cJSON(SOPHIA.RAMDISK,cJSON_GetObjectItem(json,"RAMDISK"));
         if ( SOPHIA.PATH[0] == 0 )
             strcpy(SOPHIA.PATH,"./DB");
-        os_compatible_path(SOPHIA.PATH);
+        os_compatible_path(SOPHIA.PATH), ensure_directory(SOPHIA.PATH);
         MGW.port = get_API_int(cJSON_GetObjectItem(json,"MGWport"),7643);
         copy_cJSON(MGW.PATH,cJSON_GetObjectItem(json,"MGWPATH"));
         if ( MGW.PATH[0] == 0 )
