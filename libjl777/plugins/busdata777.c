@@ -1084,6 +1084,7 @@ int32_t busdata_poll()
                     if ( ptr == 0 )
                     {
                         ptr = calloc(1,sizeof(*ptr));
+                        ptr->tag = tag;
                         HASH_ADD(hh,Tags,tag,sizeof(tag),ptr);
                         HASH_FIND(hh,Tags,&tag,sizeof(tag),ptr);
                         if ( ptr == 0 )
