@@ -58,6 +58,8 @@ void kv777_unlock(struct kv777 *kv)
 int32_t kv777_update(struct kv777 *kv,struct kv777_item *ptr)
 {
     uint8_t buf[65536],*value; long size,offset = 0; int32_t retval = -1;
+    if ( kv->fp == 0 )
+        return(-1);
     size = ptr->valuesize + sizeof(ptr->valuesize) + ptr->hh.keylen + sizeof(ptr->hh.keylen);
     if ( size > sizeof(buf) )
         value = malloc(size);
@@ -184,7 +186,7 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
     sprintf(kv->fname,"%s/%s",SOPHIA.PATH,kv->name), os_compatible_path(kv->fname);
     if ( (kv->fp= fopen(kv->fname,"rb+")) == 0 )
         kv->fp = fopen(kv->fname,"wb+");
-    if ( 1 && kv->rwflag != 0 )
+    if ( kv->fp != 0 && kv->rwflag != 0 )
     {
         while ( fread(&crc,1,sizeof(crc),kv->fp) == sizeof(crc) && crc != 0 )
         {
