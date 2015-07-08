@@ -870,19 +870,29 @@ int32_t is_duplicate_tag(uint64_t tag)
     return(0);
 }
 
-char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char *jsonstr,char *broadcastmode,char *destNXTaddr)
+char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char *_jsonstr,char *broadcastmode,char *destNXTaddr)
 {
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
-    char *str,*str2,*tokbuf = 0,*tmp,*secret;
+    char *str,*str2,*jsonstr,*tokbuf = 0,*tmp,*secret;
     bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second; int32_t tlen,diff,datalen = 0;
     *sentflagp = *datalenp = *noncep = 0;
-    calc_sha256(0,hash.bytes,(void *)jsonstr,(int32_t)strlen(jsonstr));
-    if ( is_duplicate_tag(hash.txid) != 0 )
-        return(0);
     if ( Debuglevel > 2 )
-        printf("create_busdata.(%s).%s -> %s\n",jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
-    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        printf("create_busdata.(%s).%s -> %s\n",_jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
+    if ( (json= cJSON_Parse(_jsonstr)) != 0 )
     {
+        if ( cJSON_GetObjectItem(json,"tag") != 0 )
+        {
+            cJSON_DeleteItemFromObject(json,"tag");
+            jsonstr = cJSON_Print(json);
+        } else jsonstr = _jsonstr;
+        _stripwhite(jsonstr,' ');
+        calc_sha256(0,hash.bytes,(void *)jsonstr,(int32_t)strlen(jsonstr));
+        if ( is_duplicate_tag(hash.txid) != 0 )
+        {
+            if ( jsonstr != _jsonstr )
+                free(jsonstr);
+            return(0);
+        }
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
         {
             *datalenp = (int32_t)strlen(jsonstr) + 1;
@@ -958,8 +968,10 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
             printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
+        if ( jsonstr != _jsonstr )
+            free(jsonstr);
         free_json(json);
-    } else printf("couldnt parse busdata json.(%s)\n",jsonstr);
+    } else printf("couldnt parse busdata json.(%s)\n",_jsonstr);
     return(tokbuf);
 }
 
