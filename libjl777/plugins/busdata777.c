@@ -1059,9 +1059,10 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
     return(0);
 }
 
+struct taghash { UT_hash_handle hh; uint64_t tag; } *Tags;
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
+    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce; struct taghash *ptr;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -1074,27 +1075,39 @@ int32_t busdata_poll()
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
                 {
-                    if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
+                    HASH_FIND(hh,Tags,&tag,sizeof(tag),ptr);
+                    if ( ptr == 0 )
                     {
-                        noneed = 0;
-                        if ( (retjson= cJSON_Parse(retstr)) != 0 )
+                        ptr = calloc(1,sizeof(*ptr));
+                        HASH_ADD(hh,Tags,tag,sizeof(tag),ptr);
+                        HASH_FIND(hh,Tags,&tag,sizeof(tag),ptr);
+                        if ( ptr == 0 )
                         {
-                            if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
+                            printf("cant find just added tag.%llu\n",(long long)tag);
+                            return(-1);
+                        }
+                        if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
+                        {
+                            noneed = 0;
+                            if ( (retjson= cJSON_Parse(retstr)) != 0 )
                             {
-                                noneed = 1;
-                                //fprintf(stderr,"return.(%s)\n",retstr);
-                                nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
+                                if ( is_cJSON_Array(retjson) != 0 && cJSON_GetArraySize(retjson) == 2 )
+                                {
+                                    noneed = 1;
+                                    //fprintf(stderr,"return.(%s)\n",retstr);
+                                    nn_send(sock,retstr,(int32_t)strlen(retstr)+1,0);
+                                }
+                                free_json(retjson);
                             }
-                            free_json(retjson);
-                        }
-                        if ( noneed == 0 )
-                        {
-                            len = construct_tokenized_req(&nonce,tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
-                            //fprintf(stderr,"tokenized return.(%s)\n",tokenized);
-                            nn_send(sock,tokenized,len,0);
-                        }
-                        free(retstr);
-                    } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
+                            if ( noneed == 0 )
+                            {
+                                len = construct_tokenized_req(&nonce,tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
+                                //fprintf(stderr,"tokenized return.(%s)\n",tokenized);
+                                nn_send(sock,tokenized,len,0);
+                            }
+                            free(retstr);
+                        } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
+                    } else printf("skip duplicate tag.%llu\n",(long long)tag);
                     free_json(json);
                 }
                 nn_freemsg(msg);

@@ -45,37 +45,22 @@ int32_t init_pluginhostsocks(struct daemon_info *dp,char *connectaddr)
     return(0);
 }
 
-struct taghash { UT_hash_handle hh; uint64_t tag; } *Tags;
 int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,int32_t retsock)
 {
-    int32_t i; struct taghash *ptr;
-    HASH_FIND(hh,Tags,&tag,sizeof(tag),ptr);
-    if ( tag == 0 )
+    int32_t i;
+    //printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
+    for (i=0; i<NUM_PLUGINTAGS; i++)
     {
-        ptr = calloc(1,sizeof(*ptr));
-        HASH_ADD(hh,Tags,tag,sizeof(tag),ptr);
-        HASH_FIND(hh,Tags,&tag,sizeof(tag),ptr);
-        if ( ptr == 0 )
+        if ( SUPERNET.tags[i][0] == 0 )
         {
-            printf("cant find just added tag.%llu\n",(long long)tag);
-            return(-1);
+            if ( Debuglevel > 2 )
+                printf("dp.%p %s slot.%d <- tag.%llu dest.%p\n",dp,dp->name,i,(long long)tag,dest);
+            SUPERNET.tags[i][0] = tag, SUPERNET.tags[i][1] = (uint64_t)dest, SUPERNET.tags[i][2] = (uint64_t)retsock;
+            return(i);
         }
-        //printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
-        for (i=0; i<NUM_PLUGINTAGS; i++)
-        {
-            if ( SUPERNET.tags[i][0] == 0 )
-            {
-                if ( Debuglevel > 2 )
-                    printf("dp.%p %s slot.%d <- tag.%llu dest.%p\n",dp,dp->name,i,(long long)tag,dest);
-                SUPERNET.tags[i][0] = tag, SUPERNET.tags[i][1] = (uint64_t)dest, SUPERNET.tags[i][2] = (uint64_t)retsock;
-                return(i);
-            }
-        }
-        printf("add_tagstr: no place for tag.%llu\n",(long long)tag);
-        return(-1);
     }
-    printf("skip duplicate tag.%llu\n",(long long)tag);
-    return(1);
+    printf("add_tagstr: no place for tag.%llu\n",(long long)tag);
+    return(-1);
 }
 
 char **get_tagstr(int32_t *retsockp,struct daemon_info *dp,uint64_t tag)
