@@ -1062,7 +1062,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 struct taghash { UT_hash_handle hh; uint64_t tag; } *Tags;
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce; struct taghash *ptr;
+    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce; struct taghash *ptr;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -1075,6 +1075,11 @@ int32_t busdata_poll()
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
                 {
+                    if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
+                        obj = cJSON_GetArrayItem(json,0);
+                    else obj = json;
+                    tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
+                    printf("got tag.%llu\n",(long long)tag);
                     HASH_FIND(hh,Tags,&tag,sizeof(tag),ptr);
                     if ( ptr == 0 )
                     {
