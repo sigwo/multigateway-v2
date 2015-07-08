@@ -320,12 +320,13 @@ int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis)
 
 void add_standard_fields(char *request)
 {
-    cJSON *json;
+    cJSON *json; uint64_t tag;
     if ( (json= cJSON_Parse(request)) != 0 )
     {
         if ( get_API_nxt64bits(cJSON_GetObjectItem(json,"NXT")) == 0 )
         {
-            sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\",\"tag\":\"%llu\"}",SUPERNET.NXTADDR,(((long long)rand() << 32) | (uint32_t)rand()));
+            randombytes((void *)&tag,sizeof(tag));
+            sprintf(request + strlen(request) - 1,",\"NXT\":\"%s\",\"tag\":\"%llu\"}",SUPERNET.NXTADDR,(long long)tag);
             if ( SUPERNET.iamrelay != 0 && (SUPERNET.hostname[0] != 0 || SUPERNET.myipaddr[0] != 0) )
                 sprintf(request + strlen(request) - 1,",\"iamrelay\":\"%s\"}",SUPERNET.hostname[0]!=0?SUPERNET.hostname:SUPERNET.myipaddr);
         }

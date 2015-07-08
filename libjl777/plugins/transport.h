@@ -150,7 +150,7 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                 if ( tmp != 0 )
                     tag = tmp, flag = 1;
                 if ( tag == 0 )
-                    tag = (((uint64_t)rand() << 32) | rand()), flag = 1;
+                    randombytes((void *)&tag,sizeof(tag)), flag = 1;
                 if ( Debuglevel > 2 )
                     printf("tag.%llu flag.%d tmp.%llu datalen.%d\n",(long long)tag,flag,(long long)tmp,datalen);
                 if ( flag != 0 )
