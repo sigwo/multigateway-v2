@@ -1085,7 +1085,7 @@ int32_t busdata_poll()
                     {
                         if ( Tags[j] == 0 )
                         {
-                            Tags[j] = tag;
+                            nextj = j;
                             break;
                         }
                         else if ( Tags[j] == tag )
@@ -1094,8 +1094,11 @@ int32_t busdata_poll()
                             return(-1);
                         }
                     }
-                    if ( j == sizeof(Tags)/sizeof(*Tags) )
+                    if ( j == sizeof(Tags)/sizeof(*Tags) || Tags[j] == 0 )
+                    {
+                        printf("Tag[%d] <-- %llu\n",nextj,(long long)tag);
                         Tags[nextj++ % (sizeof(Tags)/sizeof(*Tags))] = tag;
+                    }
                     if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
                     {
                         noneed = 0;
