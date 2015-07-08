@@ -45,22 +45,37 @@ int32_t init_pluginhostsocks(struct daemon_info *dp,char *connectaddr)
     return(0);
 }
 
+struct taghash { UT_hash_handle hh; uint64_t tag; } *Tags;
 int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,int32_t retsock)
 {
-    int32_t i;
-    //printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
-    for (i=0; i<NUM_PLUGINTAGS; i++)
+    int32_t i; struct taghash *ptr;
+    HASH_FIND(hh,Tags,&tag,sizeof(tag),ptr);
+    if ( tag == 0 )
     {
-        if ( SUPERNET.tags[i][0] == 0 )
+        ptr = calloc(1,sizeof(*ptr));
+        HASH_ADD(hh,Tags,tag,sizeof(tag),ptr);
+        HASH_FIND(hh,Tags,&tag,sizeof(tag),ptr);
+        if ( ptr == 0 )
         {
-            if ( Debuglevel > 2 )
-                printf("dp.%p %s slot.%d <- tag.%llu dest.%p\n",dp,dp->name,i,(long long)tag,dest);
-            SUPERNET.tags[i][0] = tag, SUPERNET.tags[i][1] = (uint64_t)dest, SUPERNET.tags[i][2] = (uint64_t)retsock;
-            return(i);
+            printf("cant find just added tag.%llu\n",(long long)tag);
+            return(-1);
         }
+        //printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
+        for (i=0; i<NUM_PLUGINTAGS; i++)
+        {
+            if ( SUPERNET.tags[i][0] == 0 )
+            {
+                if ( Debuglevel > 2 )
+                    printf("dp.%p %s slot.%d <- tag.%llu dest.%p\n",dp,dp->name,i,(long long)tag,dest);
+                SUPERNET.tags[i][0] = tag, SUPERNET.tags[i][1] = (uint64_t)dest, SUPERNET.tags[i][2] = (uint64_t)retsock;
+                return(i);
+            }
+        }
+        printf("add_tagstr: no place for tag.%llu\n",(long long)tag);
+        return(-1);
     }
-    printf("add_tagstr: no place for tag.%llu\n",(long long)tag);
-    return(-1);
+    printf("skip duplicate tag.%llu\n",(long long)tag);
+    return(1);
 }
 
 char **get_tagstr(int32_t *retsockp,struct daemon_info *dp,uint64_t tag)
@@ -115,7 +130,7 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
 {
     struct daemon_info *find_daemoninfo(int32_t *indp,char *name,uint64_t daemonid,uint64_t instanceid);
     struct daemon_info *dp;
-    char numstr[64],*tmpstr,*jsonstr; uint8_t *data; int32_t ind,datalen,tmplen,flag = 0; uint64_t tmp,tag = 0; cJSON *json;
+    char numstr[64],*tmpstr,*jsonstr; uint8_t *data; int32_t duplicateflag = 0,ind,datalen,tmplen,flag = 0; uint64_t tmp,tag = 0; cJSON *json;
     if ( Debuglevel > 2 )
         printf("A send_to_daemon.(%s).%d\n",origjsonstr,len);
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
@@ -174,21 +189,24 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                 if ( Debuglevel > 2 )
                     fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s) sock.%d\n",(long long)tag,jsonstr,sock);
                 if ( tag != 0 )
-                    add_tagstr(dp,tag,retstrp,sock);
-                dp->numsent++;
-                if ( tokenstr != 0 )
+                    duplicateflag = add_tagstr(dp,tag,retstrp,sock);
+                if ( duplicateflag == 0 )
                 {
-                    tmpstr = calloc(1,len + strlen(tokenstr) + 5);
-                    //fprintf(stderr,"add tokenstr.(%s)\n",tokenstr);
-                    sprintf(tmpstr,"[%s, %s]",jsonstr,tokenstr);
-                    len = (int32_t)strlen(tmpstr) + 1;
-                    if ( flag != 0 )
-                        free(jsonstr);
-                    jsonstr = tmpstr, flag = 1;
-                    //fprintf(stderr,"added tokenstr.(%s)\n",jsonstr);
+                    dp->numsent++;
+                    if ( tokenstr != 0 )
+                    {
+                        tmpstr = calloc(1,len + strlen(tokenstr) + 5);
+                        //fprintf(stderr,"add tokenstr.(%s)\n",tokenstr);
+                        sprintf(tmpstr,"[%s, %s]",jsonstr,tokenstr);
+                        len = (int32_t)strlen(tmpstr) + 1;
+                        if ( flag != 0 )
+                            free(jsonstr);
+                        jsonstr = tmpstr, flag = 1;
+                        //fprintf(stderr,"added tokenstr.(%s)\n",jsonstr);
+                    }
+                    if ( nn_local_broadcast(dp->pushsock,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
+                        printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
                 }
-                if ( nn_local_broadcast(dp->pushsock,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
-                    printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
             } else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);
         } else printf("cant find (%s) for.(%s)\n",name,jsonstr);
         //printf("dp.%p (%s) tag.%llu\n",dp,jsonstr,(long long)tag);
