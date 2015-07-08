@@ -1127,7 +1127,7 @@ int32_t busdata_poll()
                             }
                             free(retstr);
                         } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
-                    }
+                    } else nn_send(sock,"{\"error\":\"duplicate command\"}",(int32_t)strlen("{\"error\":\"duplicate command\"}")+1,0);
                     free_json(json);
                 }
                 nn_freemsg(msg);
