@@ -206,7 +206,7 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                     }
                     if ( nn_local_broadcast(dp->pushsock,instanceid,instanceid != 0 ? 0 : LOCALCAST,(uint8_t *)jsonstr,len) < 0 )
                         printf("error sending to daemon %s\n",nn_strerror(nn_errno()));
-                }
+                } else tag = 0;
             } else printf("send_to_daemon: error jsonstr.(%s)\n",jsonstr);
         } else printf("cant find (%s) for.(%s)\n",name,jsonstr);
         //printf("dp.%p (%s) tag.%llu\n",dp,jsonstr,(long long)tag);

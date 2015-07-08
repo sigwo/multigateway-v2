@@ -7,10 +7,10 @@
 // sync relays
 // and then also to make sure adding relays on the fly syncs up to the current set of serviceproviders
 // encryption
-// ipv6
 // btc38
 // join protocol + anti-sybil
 // duplicate filter
+// ipv6 got_newpeer.([2a03:b0c0:0:1010::e2:b001]:14631)
 
 // "servicesecret" in SuperNET.conf
 // register: ./BitcoinDarkd SuperNET '{"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"serviceprovider","servicename":"echo","endpoint":""}'
@@ -791,33 +791,36 @@ printf("bypass deref (%s) (%s) (%s)\n",buf,method,servicename);
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
     cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint8_t databuf[8192];
-    char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*str,*tokenstr=0,*broadcaststr,*retstr = 0;
+    char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],destNXT[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*str,*tokenstr=0,*broadcaststr,*retstr = 0;
     if ( Debuglevel > 2 )
         fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
-    if ( (json= cJSON_Parse((char *)msg)) != 0 )
+    if ( (json= cJSON_Parse((char *)msg)) != 0 && is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
-        if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
-            tokenobj = cJSON_GetArrayItem(json,1);
         argjson = cJSON_GetArrayItem(json,0);
+        tokenobj = cJSON_GetArrayItem(json,1);
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
         {
-            if ( cJSON_GetObjectItem(tokenobj,"valid") != 0 )
-                cJSON_DeleteItemFromObject(tokenobj,"valid");
-            if ( cJSON_GetObjectItem(tokenobj,"sender") != 0 )
-                cJSON_DeleteItemFromObject(tokenobj,"sender");
-            cJSON_AddItemToObject(tokenobj,"valid",cJSON_CreateNumber(valid));
-            cJSON_AddItemToObject(tokenobj,"sender",cJSON_CreateString(sender));
-            tokenstr = cJSON_Print(tokenobj), _stripwhite(tokenstr,' ');
-            copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
-            copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
-            copy_cJSON(usedest,cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"usedest"));
-            if ( usedest[0] != 0 )
-                retstr = busdata_deref(tokenstr,forwarder,sender,valid,(char *)databuf,json);
-            if ( retstr == 0 )
-                retstr = busdata(tokenstr,forwarder,sender,valid,key,timestamp,databuf,datalen,json);
+            copy_cJSON(destNXT,cJSON_GetObjectItem(argjson,"destNXT"));
+            if ( destNXT[0] == 0 || strcmp(destNXT,SUPERNET.NXTADDR) == 0 || strcmp(destNXT,SUPERNET.SERVICENXT) == 0 )
+            {
+                if ( cJSON_GetObjectItem(tokenobj,"valid") != 0 )
+                    cJSON_DeleteItemFromObject(tokenobj,"valid");
+                if ( cJSON_GetObjectItem(tokenobj,"sender") != 0 )
+                    cJSON_DeleteItemFromObject(tokenobj,"sender");
+                cJSON_AddItemToObject(tokenobj,"valid",cJSON_CreateNumber(valid));
+                cJSON_AddItemToObject(tokenobj,"sender",cJSON_CreateString(sender));
+                tokenstr = cJSON_Print(tokenobj), _stripwhite(tokenstr,' ');
+                copy_cJSON(src,cJSON_GetObjectItem(argjson,"NXT"));
+                copy_cJSON(key,cJSON_GetObjectItem(argjson,"key"));
+                copy_cJSON(usedest,cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"usedest"));
+                if ( usedest[0] != 0 )
+                    retstr = busdata_deref(tokenstr,forwarder,sender,valid,(char *)databuf,json);
+                if ( retstr == 0 )
+                    retstr = busdata(tokenstr,forwarder,sender,valid,key,timestamp,databuf,datalen,json);
+            }
  //printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
         }
-        else if ( 0 && RELAYS.pubglobal >= 0 && SUPERNET.iamrelay != 0 && argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(tokenobj,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 && cJSON_GetObjectItem(argjson,"stop") == 0 )
+        else if ( RELAYS.pubglobal >= 0 && SUPERNET.iamrelay != 0 && argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(tokenobj,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 && cJSON_GetObjectItem(argjson,"stop") == 0 )
         {
             dupjson = cJSON_Duplicate(json,1);
             if ( cJSON_GetObjectItem(tokenobj,"stop") == 0 )
