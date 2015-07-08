@@ -878,7 +878,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
     *sentflagp = *datalenp = *noncep = 0;
     calc_sha256(0,hash.bytes,(void *)jsonstr,(int32_t)strlen(jsonstr));
     if ( is_duplicate_tag(hash.txid) != 0 )
-        return(clonestr("{\"error\":\"duplicate jsonstr\"}"));
+        return(0);
     if ( Debuglevel > 2 )
         printf("create_busdata.(%s).%s -> %s\n",jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
