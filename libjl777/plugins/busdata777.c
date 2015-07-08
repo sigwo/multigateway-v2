@@ -1063,7 +1063,7 @@ uint64_t Tags[8192];
 int32_t busdata_poll()
 {
     static int32_t nextj;
-    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,j,n = 0; uint32_t nonce; struct taghash *ptr;
+    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,j,n = 0; uint32_t nonce;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -1080,7 +1080,7 @@ int32_t busdata_poll()
                         obj = cJSON_GetArrayItem(json,0);
                     else obj = json;
                     tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
-                    printf("got tag.%llu\n",(long long)tag);
+                    fprintf(stderr,"got tag.%llu\n",(long long)tag);
                     for (j=0; j<sizeof(Tags)/sizeof(*Tags); j++)
                     {
                         if ( Tags[j] == 0 )
@@ -1090,13 +1090,15 @@ int32_t busdata_poll()
                         }
                         else if ( Tags[j] == tag )
                         {
-                            printf("skip duplicate tag.%llu\n",(long long)tag);
+                            fprintf(stderr,"skip duplicate tag.%llu\n",(long long)tag);
+                            free_json(json);
+                            nn_freemsg(msg);
                             return(-1);
                         }
                     }
                     if ( j == sizeof(Tags)/sizeof(*Tags) || Tags[j] == 0 )
                     {
-                        printf("Tag[%d] <-- %llu\n",nextj,(long long)tag);
+                        fprintf(stderr,"Tag[%d] <-- %llu\n",nextj,(long long)tag);
                         Tags[nextj++ % (sizeof(Tags)/sizeof(*Tags))] = tag;
                     }
                     if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
