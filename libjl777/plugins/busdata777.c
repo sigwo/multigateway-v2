@@ -593,7 +593,7 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     return(0);
 }
 
-int32_t busdata_match(struct busdata_item *ptr,uint64_t dest64bits,uint64_t senderbits,char *key,uint32_t timestamp,cJSON *json)
+/*int32_t busdata_match(struct busdata_item *ptr,uint64_t dest64bits,uint64_t senderbits,char *key,uint32_t timestamp,cJSON *json)
 {
     if ( ptr->dest64bits == senderbits && ptr->senderbits == dest64bits && strcmp(key,ptr->key) == 0 )
         return(1);
@@ -654,14 +654,13 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
         }
     }
     return(retstr);
-}
+}*/
 
 char *busdata(char *tokenstr,char *forwarder,char *sender,int32_t valid,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],*retstr = 0;
     if ( SUPERNET.iamrelay != 0 && valid > 0 )
     {
-        //if ( (json= busdata_decode(destNXT,valid,sender,msg,datalen)) != 0 )
         if ( (json= cJSON_Parse((void *)msg)) != 0 )
         {
             if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson)) == 0 )
@@ -730,7 +729,6 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
             if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
             {
-                ensure_jsonitem(argjson,"stop","yes");
                 ensure_jsonitem(second,"stop","yes");
                 str = cJSON_Print(dupjson), _stripwhite(str,' ');
                 if ( RELAYS.pubrelays >= 0 && (strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0) )
@@ -846,7 +844,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
 {
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
     char *str,*str2,*tokbuf = 0,*tmp,*secret;
-    bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json; int32_t tlen,diff,datalen = 0;
+    bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second; int32_t tlen,diff,datalen = 0;
     *sentflagp = *datalenp = *noncep = 0;
     if ( Debuglevel > 2 )
         printf("create_busdata.(%s).%s -> %s\n",jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
@@ -855,6 +853,9 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
         {
             *datalenp = (int32_t)strlen(jsonstr) + 1;
+            second = cJSON_GetArrayItem(json,1);
+            *sentflagp = (cJSON_GetObjectItem(cJSON_GetArrayItem(json,0),"stop") != 0 || cJSON_GetObjectItem(second,"stop") != 0);
+            ensure_jsonitem(second,"stop","yes");
             free_json(json);
             return(jsonstr);
         }
