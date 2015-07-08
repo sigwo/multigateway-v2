@@ -1268,7 +1268,8 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
 
 #define DEFINES_ONLY
 #include "plugins/plugin777.c"
-#include "plugins/sophia/storage.c"
+#include "plugins/sophia/kv777.c"
+#include "plugins/utils/NXT777.c"
 #include "plugins/utils/system777.c"
 #include "plugins/utils/files777.c"
 #undef DEFINES_ONLY

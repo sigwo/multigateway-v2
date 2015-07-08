@@ -882,6 +882,7 @@ int SuperNET_start(char *fname,char *myip)
     SaM_PrepareIndices();
     init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;
+    void kv777_test(); kv777_test();
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
         jsonstr = clonestr("{}");
     parse_ipaddr(ipaddr,myip);

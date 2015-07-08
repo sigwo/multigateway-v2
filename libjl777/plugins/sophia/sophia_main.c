@@ -29,7 +29,7 @@ char *PLUGNAME(_authmethods)[] = { "stats", "create", "close", "add", "find",
 #endif
 };
 
-int32_t db777_idle(struct plugin_info *plugin) { return(0); }
+int32_t db777_idle(struct plugin_info *plugin) { return(kv777_idle()); }
 
 // env = sp_env(void);
 // ctl = sp_ctl(env): get an environment control object.

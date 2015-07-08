@@ -21,7 +21,7 @@
 
 #define DEFINES_ONLY
 #include "../plugin777.c"
-#include "storage.c"
+#include "kv777.c"
 #include "system777.c"
 #include "NXT777.c"
 #include "ramchain.c"

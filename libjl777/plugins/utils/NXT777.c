@@ -181,6 +181,15 @@ uint64_t min_asset_amount(uint64_t assetid);
 uint64_t RS_decode(char *rs);
 int32_t RS_encode(char *rsaddr,uint64_t id);
 
+
+struct nodestats *get_nodestats(uint64_t nxt64bits);
+int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
+int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
+cJSON *http_search(char *destip,char *type,char *file);
+struct NXT_acct *get_NXTacct(int32_t *createdp,char *NXTaddr);
+int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender);
+struct NXT_acct *get_nxt64bits(int32_t *createdp,uint64_t nxt64bits);
+
 #endif
 #else
 #ifndef crypto777_NXT777_c
@@ -1560,6 +1569,25 @@ int32_t RS_encode(char *rsaddr,uint64_t id)
     }
     rsaddr[j] = 0;
     return(0);
+}
+
+struct NXT_acct *get_nxt64bits(int32_t *createdp,uint64_t nxt64bits)
+{
+    static struct NXT_acct N,*np;
+    int32_t len = sizeof(N);
+    if ( (np= db777_get(&N,&len,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits))) == 0 )
+    {
+        np = calloc(1,sizeof(*np));
+        np->nxt64bits = nxt64bits, expand_nxt64bits(np->NXTaddr,nxt64bits);
+        db777_add(1,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
+        *createdp = 1;
+    } else *createdp = 0;
+    return(np);
+}
+
+struct NXT_acct *get_NXTacct(int32_t *createdp,char *NXTaddr)
+{
+    return(get_nxt64bits(createdp,calc_nxt64bits(NXTaddr)));
 }
 
 #endif
