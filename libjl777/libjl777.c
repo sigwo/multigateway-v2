@@ -1571,24 +1571,27 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         sprintf(buf,"%s/sent",MGW.PATH), ensure_directory(buf);
         sprintf(buf,"%s/deposit",MGW.PATH), ensure_directory(buf);
         printf("MGWport.%u >>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d pullnode.(%s)\n",MGW.port,SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay,RAMCHAINS.pullnode);
-        if ( DB_NXTaccts == 0 )
-            DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
-        if ( DB_nodestats == 0 )
-            DB_nodestats = db777_create(0,0,"nodestats",0,0);
-        if ( DB_busdata == 0 )
-            DB_busdata = db777_create(0,0,"busdata",0,0);
-        if ( DB_NXTtxids == 0 )
-            DB_NXTtxids = db777_create(0,0,"NXT_txids",0,0);
-        if ( DB_redeems == 0 )
-            DB_redeems = db777_create(0,0,"redeems",0,0);
-        if ( DB_MGW == 0 )
-            DB_MGW = db777_create(0,0,"MGW",0,0);
-        if ( DB_msigs == 0 )
-            DB_msigs = db777_create(0,0,"msigs",0,0);
-        if ( DB_NXTtrades == 0 )
-            DB_NXTtrades = db777_create(0,0,"NXT_trades",0,0);
-        if ( DB_services == 0 )
-            DB_services = db777_create(0,0,"services",0,0);
+        if ( SUPERNET.gatewayid >= 0 )
+        {
+            if ( DB_NXTaccts == 0 )
+                DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
+            if ( DB_nodestats == 0 )
+                DB_nodestats = db777_create(0,0,"nodestats",0,0);
+            if ( DB_busdata == 0 )
+                DB_busdata = db777_create(0,0,"busdata",0,0);
+            if ( DB_NXTtxids == 0 )
+                DB_NXTtxids = db777_create(0,0,"NXT_txids",0,0);
+            if ( DB_redeems == 0 )
+                DB_redeems = db777_create(0,0,"redeems",0,0);
+            if ( DB_MGW == 0 )
+                DB_MGW = db777_create(0,0,"MGW",0,0);
+            if ( DB_msigs == 0 )
+                DB_msigs = db777_create(0,0,"msigs",0,0);
+            if ( DB_NXTtrades == 0 )
+                DB_NXTtrades = db777_create(0,0,"NXT_trades",0,0);
+            if ( DB_services == 0 )
+                DB_services = db777_create(0,0,"services",0,0);
+        }
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {
