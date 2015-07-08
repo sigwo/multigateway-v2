@@ -899,10 +899,8 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
                 cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
         }
         if ( (tag= get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"))) == 0 )
-        {
             randombytes((uint8_t *)&tag,sizeof(tag));
-            sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
-        }
+        sprintf(numstr,"%llu",(long long)tag);
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         datajson = cJSON_CreateObject();
