@@ -727,8 +727,9 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         if ( cJSON_GetObjectItem(second,"forwarder") == 0 )
         {
             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-            if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
+            if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 && cJSON_GetObjectItem(second,"usedest") == 0 )
             {
+                ensure_jsonitem(second,"usedest","yes");
                 ensure_jsonitem(second,"stop","yes");
                 cJSON_DeleteItemFromObject(second,"broadcast");
                 str = cJSON_Print(dupjson), _stripwhite(str,' ');
@@ -816,7 +817,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 retstr = busdata(tokenstr,forwarder,sender,valid,key,timestamp,databuf,datalen,json);
  //printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
         }
-        else if ( RELAYS.pubglobal >= 0 && SUPERNET.iamrelay != 0 && argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(tokenobj,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 && cJSON_GetObjectItem(argjson,"stop") == 0 )
+        else if ( 0 && RELAYS.pubglobal >= 0 && SUPERNET.iamrelay != 0 && argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(tokenobj,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 && cJSON_GetObjectItem(argjson,"stop") == 0 )
         {
             dupjson = cJSON_Duplicate(json,1);
             if ( cJSON_GetObjectItem(tokenobj,"stop") == 0 )
