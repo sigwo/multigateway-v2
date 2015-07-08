@@ -878,7 +878,6 @@ int SuperNET_start(char *fname,char *myip)
     void SaM_PrepareIndices();
     char ipaddr[256],*jsonstr = 0;
     uint64_t allocsize;
-    void kv777_test(); kv777_test();
     OS_init();
     SaM_PrepareIndices();
     init_SUPERNET_pullsock(10,1);
