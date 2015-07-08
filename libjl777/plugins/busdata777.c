@@ -790,7 +790,7 @@ printf("bypass deref (%s) (%s) (%s)\n",buf,method,servicename);
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint8_t databuf[8192];
+    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint8_t databuf[8192]; uint64_t destbits;
     char usedest[128],key[MAX_JSON_FIELD],src[MAX_JSON_FIELD],destNXT[MAX_JSON_FIELD],forwarder[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],*str,*tokenstr=0,*broadcaststr,*retstr = 0;
     if ( Debuglevel > 2 )
         fprintf(stderr,"nn_busdata_processor.(%s)\n",msg);
@@ -801,6 +801,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
         {
             copy_cJSON(destNXT,cJSON_GetObjectItem(argjson,"destNXT"));
+            destbits = conv_acctstr(destNXT), expand_nxt64bits(destNXT,destbits);
             if ( destNXT[0] == 0 || strcmp(destNXT,SUPERNET.NXTADDR) == 0 || strcmp(destNXT,SUPERNET.SERVICENXT) == 0 )
             {
                 if ( cJSON_GetObjectItem(tokenobj,"valid") != 0 )
