@@ -5,6 +5,7 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 #include <stdint.h>
+#include <curl/curl.h>
 #include "ccgi.h"
 #include "nn.h"
 #include "cJSON.h"
@@ -160,6 +161,7 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
     fputs("Content-type: text/plain\r\n",stdout);
     if ( url != 0 )
     {
+        curl_global_init(CURL_GLOBAL_ALL); //init the curl session
 fprintf(stderr,"url.(%s) (%s)\n",url,postbuf);
         if ( (retstr= issue_POST(url,postbuf)) != 0 )
         {

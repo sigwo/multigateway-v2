@@ -573,6 +573,7 @@ int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { retur
 #endif
 
 #include <stdio.h>
+#include <curl/curl.h>
 #define DEFINES_ONLY
 #include "cJSON.h"
 #include "utils777.c"
@@ -879,6 +880,7 @@ int SuperNET_start(char *fname,char *myip)
     char ipaddr[256],*jsonstr = 0;
     uint64_t allocsize;
     OS_init();
+    curl_global_init(CURL_GLOBAL_ALL); //init the curl session
     SaM_PrepareIndices();
     init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;
