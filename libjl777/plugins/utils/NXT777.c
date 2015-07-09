@@ -736,10 +736,13 @@ uint64_t conv_acctstr(char *acctstr)
 {
     uint64_t nxt64bits = 0;
     int32_t len;
-    if ( (len= is_decimalstr(acctstr)) > 0 && len < 24 )
-        nxt64bits = calc_nxt64bits(acctstr);
-    else if ( strncmp("NXT-",acctstr,4) == 0 )
-        nxt64bits = conv_rsacctstr(acctstr,0);
+    if ( acctstr != 0 )
+    {
+        if ( (len= is_decimalstr(acctstr)) > 0 && len < 24 )
+            nxt64bits = calc_nxt64bits(acctstr);
+        else if ( strncmp("NXT-",acctstr,4) == 0 )
+            nxt64bits = conv_rsacctstr(acctstr,0);
+    }
     return(nxt64bits);
 }
 
