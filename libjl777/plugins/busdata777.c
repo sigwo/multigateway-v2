@@ -557,7 +557,8 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 {
     cJSON *strjson; char *hexstr; int32_t len;
     len = (int32_t)strlen(pmstr);
-    hexstr = malloc(len*2 + 1);
+    pmstr[0] ^= (uint8_t)destbits;
+    hexstr = malloc((len+1)*2 + 1);
     init_hexbytes_noT(hexstr,(void *)pmstr,len);
     printf("encrypt.(%s) -> (%s) dest.%llu\n",pmstr,hexstr,(long long)destbits);
     strjson = cJSON_CreateString(hexstr);
@@ -567,15 +568,17 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 
 int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
 {
-    char *pmstr; cJSON *json; int32_t len2;
-    printf("decoded.(%s) -> (%s)\n",datastr,databuf);
+    char *pmstr; cJSON *json; int32_t len2,n;
+    //printf("decoded.(%s) -> (%s)\n",datastr,databuf);
     if ( (json= cJSON_Parse((char *)databuf)) != 0 )
     {
         if ( (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
         {
             sprintf((void *)databuf,"{\"method\":\"PM\",\"PM\":\"");
             len2 = (int32_t)strlen(pmstr) >> 1;
-            decode_hex(&databuf[strlen((char *)databuf)],len2,pmstr);
+            n = (int32_t)strlen((char *)databuf);
+            decode_hex(&databuf[n],len2,pmstr);
+            databuf[n] ^= (uint8_t)calc_nxt64bits(SUPERNET.NXTADDR);
             strcat((char *)databuf,"\"}");
         }
     }
