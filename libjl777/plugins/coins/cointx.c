@@ -234,8 +234,17 @@ int32_t _validate_decoderawtransaction(char *hexstr,struct cointx_info *cointx,i
     _emit_cointx(checkstr,len,cointx,oldtx);
     if ( (retval= strcmp(checkstr,hexstr)) != 0 )
     {
-        disp_cointx(cointx);
-        printf("_validate_decoderawtransaction: error: \n(%s) != \n(%s)\n",hexstr,checkstr);
+        long hlen;
+        if ( strlen(checkstr)+2 == (hlen= strlen(hexstr)) && hexstr[hlen-1] == hexstr[hlen-2] && hexstr[hlen-1] == '0' )
+        {
+            printf("hexstr has 2 extra '0', truncate\n");
+            hexstr[hlen-2] = 0;
+        }
+        else
+        {
+            disp_cointx(cointx);
+            printf("_validate_decoderawtransaction: error: \n(%s) != \n(%s)\n",hexstr,checkstr);
+        }
         //getchar();
     }
     //else printf("_validate_decoderawtransaction.(%s) validates\n",hexstr);
