@@ -876,12 +876,9 @@ int SuperNET_start(char *fname,char *myip)
 {
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
     int32_t parse_ipaddr(char *ipaddr,char *ip_port);
-    void SaM_PrepareIndices();
     char ipaddr[256],*jsonstr = 0;
     uint64_t allocsize;
-    OS_init();
-    curl_global_init(CURL_GLOBAL_ALL); //init the curl session
-    SaM_PrepareIndices();
+    portable_OS_init();
     init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )

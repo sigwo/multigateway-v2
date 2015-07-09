@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <curl/curl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -349,7 +350,7 @@ int32_t main
     struct plugin_info *plugin; double startmilli; cJSON *argjson;
     int32_t bundledflag,max,sendflag,sleeptime=1,len = 0;
 #ifndef BUNDLED
-    OS_init();
+    portable_OS_init();
 #endif
     milliseconds();
     max = 1000000;

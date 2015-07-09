@@ -727,8 +727,9 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         if ( cJSON_GetObjectItem(second,"forwarder") == 0 )
         {
             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-            if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 && cJSON_GetObjectItem(second,"usedest") == 0 )
+            if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
             {
+                copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
                 ensure_jsonitem(second,"usedest","yes");
                 ensure_jsonitem(second,"stop","yes");
                 cJSON_DeleteItemFromObject(second,"broadcast");
@@ -742,6 +743,12 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
                 {
                     printf("ALL [%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
                     nn_send(RELAYS.pubglobal,str,(int32_t)strlen(str)+1,0);
+                    if ( strcmp(method,"PM") == 0 )
+                    {
+                        free(str);
+                        free_json(dupjson);
+                        return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage broadcast\"}"));
+                    }
                 }
                 free(str);
             } // else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
@@ -900,6 +907,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
             second = cJSON_GetArrayItem(json,1);
             *sentflagp = (cJSON_GetObjectItem(cJSON_GetArrayItem(json,0),"stop") != 0 || cJSON_GetObjectItem(second,"stop") != 0);
             ensure_jsonitem(second,"stop","yes");
+            ensure_jsonitem(second,"usedest","yes");
             free_json(json);
             return(jsonstr);
         }

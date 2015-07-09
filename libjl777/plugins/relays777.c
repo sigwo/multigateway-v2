@@ -567,6 +567,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             strcpy(retbuf,"{\"result\":\"relay command under construction\"}");
             if ( strcmp(methodstr,"list") == 0 )
                 retstr = relays_jsonstr(jsonstr,json);
+            else if ( strcmp(methodstr,"PM") == 0 )
+            {
+                sprintf(retbuf,"%s",jsonstr);
+                // {"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"join","broadcast":"join","endpoint":""}
+            }
             else if ( strcmp(methodstr,"busdata") == 0 )
             {
                 retstr = busdata_sync(&nonce,jsonstr,cJSON_str(cJSON_GetObjectItem(json,"broadcast")),0);

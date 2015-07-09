@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <curl/curl.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include "../includes/miniupnp/miniwget.h"
@@ -280,6 +281,7 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t 
 int32_t OS_init();
 int32_t nn_settimeouts(int32_t sock,int32_t sendtimeout,int32_t recvtimeout);
 int32_t is_duplicate_tag(uint64_t tag);
+void portable_OS_init();
 
 #define MAXTIMEDIFF 60
 
@@ -607,5 +609,12 @@ void *memalloc(struct alloc_space *mem,long size,int32_t clearflag)
     return(ptr);
 }
 
+void portable_OS_init()
+{
+    void SaM_PrepareIndices();
+    OS_init();
+    curl_global_init(CURL_GLOBAL_ALL); //init the curl session
+    SaM_PrepareIndices();
+}
 #endif
 #endif
