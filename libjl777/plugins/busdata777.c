@@ -568,17 +568,17 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
 {
     char *pmstr; cJSON *json; int32_t len2;
+    printf("decoded.(%s) -> (%s)\n",datastr,databuf);
     if ( (json= cJSON_Parse((char *)databuf)) != 0 )
     {
         if ( (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
         {
-            sprintf((void *)databuf,"{\"PM\":\"");
+            sprintf((void *)databuf,"{\"method\":\"PM\",\"PM\":\"");
             len2 = (int32_t)strlen(pmstr) >> 1;
-            decode_hex(&databuf[len],len2,pmstr);
-            strcpy((char *)&databuf[len + len2],"\"}");
+            decode_hex(&databuf[strlen((char *)databuf)],len2,pmstr);
+            strcat((char *)databuf,"\"}");
         }
     }
-    printf("decoded.(%s) -> (%s)\n",datastr,databuf);
     return(len);
 }
 
@@ -666,7 +666,9 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         second = cJSON_GetArrayItem(dupjson,1);
         if ( cJSON_GetObjectItem(second,"forwarder") == 0 )
         {
-            ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+            if ( strcmp(method,"PM") == 0 )
+                ensure_jsonitem(second,"forwarder",GENESISACCT);
+            else ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
             if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
             {
                 copy_cJSON(method,cJSON_GetObjectItem(argjson,"method"));
