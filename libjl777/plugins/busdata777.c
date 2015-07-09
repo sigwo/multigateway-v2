@@ -557,12 +557,13 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 {
     cJSON *strjson; char *hexstr; int32_t len; uint32_t crc;
     len = (int32_t)strlen(pmstr);
+    printf("[%s].%d ",pmstr,len);
     pmstr[0] ^= (uint8_t)destbits;
     crc = _crc32(0,pmstr,len);
     hexstr = malloc((len+sizeof(uint32_t)+1)*2 + 1);
     init_hexbytes_noT(hexstr,(void *)&crc,sizeof(crc));
     init_hexbytes_noT(&hexstr[sizeof(crc) << 1],(void *)pmstr,len+1);
-    printf("len.%d crc.%x encrypt.(%s) -> (%s) dest.%llu\n",len+1,crc,pmstr,hexstr,(long long)destbits);
+    printf("len.%d crc.%x encrypt.(%s) -> (%s) dest.%llu\n",len,crc,pmstr,hexstr,(long long)destbits);
     strjson = cJSON_CreateString(hexstr);
     free(hexstr);
     return(strjson);
@@ -582,10 +583,9 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
             decode_hex(&databuf[n],len2,pmstr);
             databuf[n] ^= (uint8_t)calc_nxt64bits(SUPERNET.NXTADDR);
             memcpy(&crc,&databuf[n],sizeof(uint32_t));
-            checkcrc = _crc32(0,&databuf[n + sizeof(crc)],len2 - (int32_t)sizeof(crc));
+            checkcrc = _crc32(0,&databuf[n + sizeof(crc)],len2 - 1 - (int32_t)sizeof(crc));
             for (i=0; i<len2 - (int32_t)sizeof(crc); i++)
                 databuf[n + i] = databuf[n + i + sizeof(crc)];
-            databuf[n+i] = 0;
             strcat((char *)databuf,"\"}");
             if ( crc != checkcrc )
             {
