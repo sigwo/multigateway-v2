@@ -517,7 +517,8 @@ void recv_nonces(void *_ptr)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *origjsonstr,cJSON *origjson,int32_t initflag,char *tokenstr)
 {
-    char endpoint[128],tagstr[512],*resultstr,*retstr = 0,*methodstr,*jsonstr,*destplugin,*submethod; cJSON *retjson,*json,*tokenobj; uint32_t nonce;
+    char endpoint[128],tagstr[512],*resultstr,*retstr = 0,*methodstr,*jsonstr,*destplugin,*submethod,*pmstr;
+    cJSON *retjson,*json,*tokenobj; uint32_t nonce; int32_t ind,len;
     struct applicant_info apply;
     retbuf[0] = 0;
     if ( tokenstr == 0 )
@@ -571,6 +572,19 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             {
                 sprintf(retbuf,"%s",jsonstr);
                 // {"plugin":"relay","method":"busdata","destplugin":"relay","submethod":"join","broadcast":"join","endpoint":""}
+            }
+            else if ( strcmp(methodstr,"getPM") == 0 )
+            {
+                ind = get_API_int(cJSON_GetObjectItem(json,"ind"),-1);
+                if ( SUPERNET.PM != 0 )
+                {
+                    sprintf(retbuf,"{\"result\":\"success\",\"numkeys\":%d}",SUPERNET.PM->numkeys);
+                    if ( ind >= 0 )
+                    {
+                        if ( (pmstr= kv777_read(SUPERNET.PM,(void *)&ind,sizeof(ind),0,&len)) != 0 )
+                            sprintf(retbuf + strlen(retbuf) - 1,",\"ind\":%u,\"PM\":\"%s\",\"len\":%d}",ind,pmstr,len);
+                     }
+                } else sprintf(retbuf,"{\"error\":\"no PM database\"}");
             }
             else if ( strcmp(methodstr,"busdata") == 0 )
             {
