@@ -302,48 +302,6 @@ void nn_syncbus(cJSON *json)
     }
 }
 
-/*char *busdata_encrypt(char *destNXT,uint8_t *data,int32_t datalen)
-{
-    int32_t i; char *tmp = malloc((datalen << 1) + 1);
-    printf("(%02x -> ",data[0]);
-    if ( destNXT != 0 && destNXT[0] != 0 )
-        for (i=0; i<datalen/datalen; i++)
-            data[i] ^= destNXT[0];
-    init_hexbytes_noT(tmp,data,datalen);
-    printf("%02x) -> (%s)\n",data[0],tmp);
-    return(tmp);
-}
-
-void *busdata_decrypt(char *sender,uint8_t *msg,int32_t datalen)
-{
-    cJSON *json; int32_t i;
-    printf("(%s) (%02x -> ",msg,msg[0]);
-    if ( (json= cJSON_Parse((void *)msg)) == 0 )
-    {
-        for (i=0; i<datalen/datalen; i++)
-            msg[i] ^= SUPERNET.NXTADDR[0];
-        printf("%02x) -> (%s)\n",msg[0],msg);
-        if ( (json= cJSON_Parse((void *)msg)) == 0 )
-            return(0);
-        else free_json(json);
-    } else free_json(json);
-    return(msg);
-}
-
-cJSON *busdata_decode(char *destNXT,int32_t validated,char *sender,uint8_t *msg,int32_t datalen)
-{
-    char *jsonstr; cJSON *json = 0;
-    if ( validated >= 0 )
-    {
-        if ( (jsonstr= busdata_decrypt(sender,msg,datalen)) != 0 )
-        {
-            json = cJSON_Parse((char *)jsonstr);
-            copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
-        } else printf("couldnt decrypt.(%s)\n",msg);
-    } else printf("neg validated.%d\n",validated);
-    return(json);
-}*/
-
 queue_t busdataQ[2];
 struct busdata_item { struct queueitem DL; bits256 hash; cJSON *json; char *retstr,*key; uint64_t dest64bits,senderbits; uint32_t queuetime,donetime; };
 struct service_provider { UT_hash_handle hh; int32_t sock; } *Service_providers;
@@ -595,81 +553,31 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     return(0);
 }
 
-/*int32_t busdata_match(struct busdata_item *ptr,uint64_t dest64bits,uint64_t senderbits,char *key,uint32_t timestamp,cJSON *json)
-{
-    if ( ptr->dest64bits == senderbits && ptr->senderbits == dest64bits && strcmp(key,ptr->key) == 0 )
-        return(1);
-    else return(0);
-}
-
-int32_t busdata_isduplicate(char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
-{
-    char *hashstr; bits256 hash; struct queueitem *ptr; struct busdata_item *busdata; int32_t i,iter;
-    if ( (hashstr= cJSON_str(cJSON_GetObjectItem(json,"H"))) != 0 )
-        decode_hex(hash.bytes,sizeof(hash),hashstr);
-    else memset(hash.bytes,0,sizeof(hash));
-    for (iter=0; iter<2; iter++)
-    {
-        i = 0;
-        DL_FOREACH(busdataQ[iter].list,ptr)
-        {
-            busdata = (struct busdata_item *)ptr;
-            //printf("%d.(%llx vs %llx).i%d ",iter,(long long)busdata->hash.txid,(long long)hash.txid,i);
-            if ( busdata->hash.txid == hash.txid )
-                return(1 * 0);
-            i++;
-        }
-    }
-    return(0);
-}
-
-char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uint32_t timestamp,cJSON *json)
-{
-    uint64_t dest64bits,senderbits; struct busdata_item *ptr; char *retstr = 0; int32_t iter; uint32_t now = (uint32_t)time(NULL);
-    dest64bits = conv_acctstr(destNXT), senderbits = conv_acctstr(sender);
-    for (iter=0; iter<2; iter++)
-    {
-        if ( (ptr= queue_dequeue(&busdataQ[iter],0)) != 0 )
-        {
-            if ( busdata_match(ptr,dest64bits,senderbits,key,timestamp,json) != 0 )
-            {
-                if ( (retstr= ptr->retstr) != 0 )
-                    retstr = clonestr("{\"result\":\"busdata request done\"}");
-                if ( ptr->json != 0 )
-                    free_json(ptr->json);
-                if ( ptr->key != 0 )
-                    free(ptr->key);
-                return(retstr);
-            }
-            else if ( (now - ptr->queuetime) > 600 )
-            {
-                printf("expired busdataQ.%u at %u\n",ptr->queuetime,now);
-                if ( ptr->retstr != 0 )
-                    free(ptr->retstr);
-                if ( ptr->json != 0 )
-                    free_json(ptr->json);
-                if ( ptr->key != 0 )
-                    free(ptr->key);
-                free(ptr);
-            }
-            else queue_enqueue("re-busdata",&busdataQ[iter ^ 1],&ptr->DL);
-        }
-    }
-    return(retstr);
-}*/
-
 cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 {
-    cJSON *strjson;
-    printf("encrypt.(%s) -> %llu\n",pmstr,(long long)destbits);
-    pmstr[0] ^= (uint8_t)destbits;
-    strjson = cJSON_CreateString(pmstr);
+    cJSON *strjson; char *hexstr; int32_t len;
+    len = (int32_t)strlen(pmstr) * 2;
+    hexstr = malloc(len + 1);
+    init_hexbytes_noT(hexstr,(void *)pmstr,len);
+    printf("encrypt.(%s) -> (%s) dest.%llu\n",pmstr,hexstr,(long long)destbits);
+    strjson = cJSON_CreateString(hexstr);
+    free(hexstr);
     return(strjson);
 }
 
 int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
 {
-    databuf[0] ^= (uint8_t)calc_nxt64bits(SUPERNET.NXTADDR);
+    char *pmstr; cJSON *json; int32_t len2;
+    if ( (json= cJSON_Parse((char *)databuf)) != 0 )
+    {
+        if ( (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
+        {
+            sprintf((void *)databuf,"{\"PM\":\"");
+            len2 = (int32_t)strlen(pmstr) >> 1;
+            decode_hex(&databuf[len],len2,pmstr);
+            strcpy((char *)&databuf[len + len2],"\"}");
+        }
+    }
     printf("decoded.(%s) -> (%s)\n",datastr,databuf);
     return(len);
 }
