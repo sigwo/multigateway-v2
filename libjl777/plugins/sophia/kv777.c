@@ -162,7 +162,7 @@ int32_t kv777_delete(struct kv777 *kv,void *key,int32_t keysize)
 struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t valuesize)
 {
     void *newkey; int32_t ind,duplicate = 0; struct kv777_item *ptr = 0;
-    if ( kv == SUPERNET.PM )
+    //if ( kv == SUPERNET.PM )
         fprintf(stderr,"kv777_write kv.%p table.%p write key.%u size.%d, value.(%s) size.%d\n",kv,kv->table,*(int *)key,keysize,value,valuesize);
     kv777_lock(kv);
     HASH_FIND(hh,kv->table,key,keysize,ptr);
@@ -273,7 +273,7 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
                 ptr->crc = calccrc;
                 ptr->offset = offset;
                 ptr->ind = i;
-                if ( strcmp(name,"PM") == 0 )
+                //if ( strcmp(name,"PM") == 0 )
                     fprintf(stderr,"[%x] %s add item.%d crc.%u valuesize.%d keysize.%d [%d]\n",*(int *)ptr->value,ptr->value,i,calccrc,valuesize,keylen,*(int *)key);
                 HASH_ADD_KEYPTR(hh,kv->table,key,keylen,ptr);
                 i++;

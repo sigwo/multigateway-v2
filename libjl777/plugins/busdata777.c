@@ -655,6 +655,7 @@ char *privatemessage_recv(char *jsonstr)
             printf("ind.%d ",SUPERNET.PM->numkeys);
             ind = SUPERNET.PM->numkeys;
             ptr = kv777_write(SUPERNET.PM,&ind,sizeof(ind),pmstr,(int32_t)strlen(pmstr)+1);
+            kv777_flush();
         }
         printf("privatemessage_recv.(%s)\n",pmstr!=0?pmstr:"<no message>");
     }
@@ -765,7 +766,11 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
                     if ( strcmp(method,"PM") == 0 )
                     {
                         if ( SUPERNET.rawPM != 0 )
-                            ind = SUPERNET.rawPM->numkeys, kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
+                        {
+                            ind = SUPERNET.rawPM->numkeys;
+                            kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
+                            kv777_flush();
+                        }
                         free(str);
                         free_json(dupjson);
                         return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage broadcast\"}"));
@@ -786,7 +791,13 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
                 str = busdata_duppacket(dupjson);
                 free_json(dupjson);
             }
-            ind = SUPERNET.rawPM->numkeys, kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
+            if ( SUPERNET.rawPM != 0 )
+            {
+                ind = SUPERNET.rawPM->numkeys;
+                kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
+                kv777_flush();
+            }
+            free(str);
             return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage ignored\"}"));
         }
         else return(privatemessage_recv(databuf));
