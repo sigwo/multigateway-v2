@@ -954,7 +954,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
             cJSON_AddItemToObject(datajson,"broadcast",cJSON_CreateString(broadcastmode));
         cJSON_AddItemToObject(datajson,"plugin",cJSON_CreateString("relay"));
-        cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
+        cJSON_AddItemToObject(datajson,"method",cJSON_CreateString(strcmp(method,"PM") == 0 ? "PM" : "busdata"));
         if ( SUPERNET.SERVICESECRET[0] != 0 )
             cJSON_AddItemToObject(datajson,"serviceNXT",cJSON_CreateString(SUPERNET.SERVICENXT));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
@@ -973,8 +973,8 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-        if ( Debuglevel > 2 )
-            printf("created busdata.(%s) -> (%s) tlen.%d\n",str,tokbuf,tlen);
+        if ( Debuglevel > 1 )
+            printf("method.(%s) created busdata.(%s) -> (%s) tlen.%d\n",method,str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         if ( jsonstr != _jsonstr )
