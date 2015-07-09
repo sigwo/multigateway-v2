@@ -132,7 +132,7 @@ struct SuperNET_info
     uint16_t port,serviceport;
     uint64_t tags[NUM_PLUGINTAGS][3];
     struct env777 DBs;
-    struct kv777 *PM;
+    struct kv777 *PM,*rawPM;
     cJSON *argjson;
 }; extern struct SuperNET_info SUPERNET;
 
