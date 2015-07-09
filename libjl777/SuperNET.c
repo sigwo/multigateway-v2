@@ -878,6 +878,7 @@ int SuperNET_start(char *fname,char *myip)
     int32_t parse_ipaddr(char *ipaddr,char *ip_port);
     char ipaddr[256],*jsonstr = 0;
     uint64_t allocsize;
+    printf("myip.(%s)\n",myip);
     portable_OS_init();
     init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;

@@ -556,8 +556,8 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
 cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 {
     cJSON *strjson; char *hexstr; int32_t len;
-    len = (int32_t)strlen(pmstr) * 2;
-    hexstr = malloc(len + 1);
+    len = (int32_t)strlen(pmstr);
+    hexstr = malloc(len*2 + 1);
     init_hexbytes_noT(hexstr,(void *)pmstr,len);
     printf("encrypt.(%s) -> (%s) dest.%llu\n",pmstr,hexstr,(long long)destbits);
     strjson = cJSON_CreateString(hexstr);

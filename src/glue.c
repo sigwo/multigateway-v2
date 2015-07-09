@@ -137,7 +137,7 @@ void *_launch_SuperNET(void *_myip)
             did_SuperNET_init = 1;
         }
         SuperNET_retval = retval;
-        printf("SuperNET_retval = %d\n",SuperNET_retval);
+        printf("myip.(%s) SuperNET_retval = %d\n",myip,SuperNET_retval);
     }
     return(processptr);
 }
