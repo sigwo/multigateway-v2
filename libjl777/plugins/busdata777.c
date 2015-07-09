@@ -603,7 +603,7 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
     crc = _crc32(0,cipher,cipherlen);
     hexstr = malloc((cipherlen + sizeof(uint32_t) + 1)*2 + 1);
     init_hexbytes_noT(hexstr,(void *)&crc,sizeof(crc));
-    init_hexbytes_noT(&hexstr[sizeof(crc) << 1],(void *)pmstr,cipherlen + 1);
+    init_hexbytes_noT(&hexstr[sizeof(crc) << 1],(void *)cipher,cipherlen + 1);
     printf("len.%d crc.%x encrypt.(%s) -> (%s) dest.%llu\n",len,crc,pmstr,hexstr,(long long)destbits);
     strjson = cJSON_CreateString(hexstr);
     free(hexstr), free(cipher);
@@ -630,13 +630,13 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
                 databuf[0] = 0;
                 printf("(%s) crc.%x != checkcrc.%x len.%d\n",databuf,crc,checkcrc,len3);
             }
-            else
+            //else
             {
                 printf("crc matched\n");
                 decoded = calloc(1,len3);
                 if ( decode_cipher((void *)decoded,&databuf[n + sizeof(crc)],&len3,SUPERNET.myprivkey) == 0 )
                     sprintf((char *)databuf,"{\"method\":\"PM\",\"PM\":\"%s\"}",decoded);
-                else databuf[0] = 0, printf("decrypt error\n");
+                else databuf[0] = 0, printf("decrypt error.(%s)\n",decoded);
                 free(decoded);
             }
         } else printf("no PM str\n");
