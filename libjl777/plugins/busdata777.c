@@ -561,8 +561,8 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
     crc = _crc32(0,pmstr,len);
     hexstr = malloc((len+sizeof(uint32_t)+1)*2 + 1);
     init_hexbytes_noT(hexstr,(void *)&crc,sizeof(crc));
-    init_hexbytes_noT(&hexstr[sizeof(crc)],(void *)pmstr,len+1);
-    printf("len.%d crc.%u encrypt.(%s) -> (%s) dest.%llu\n",len+1,crc,pmstr,hexstr,(long long)destbits);
+    init_hexbytes_noT(&hexstr[sizeof(crc) << 1],(void *)pmstr,len+1);
+    printf("len.%d crc.%x encrypt.(%s) -> (%s) dest.%llu\n",len+1,crc,pmstr,hexstr,(long long)destbits);
     strjson = cJSON_CreateString(hexstr);
     free(hexstr);
     return(strjson);
@@ -589,7 +589,7 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
             strcat((char *)databuf,"\"}");
             if ( crc != checkcrc )
             {
-                printf("(%s) crc.%u != checkcrc.%u len.%d\n",databuf,crc,checkcrc,len2 - (int32_t)sizeof(crc));
+                printf("(%s) crc.%x != checkcrc.%x len.%d\n",databuf,crc,checkcrc,len2 - (int32_t)sizeof(crc));
             }
         }
     }
