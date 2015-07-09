@@ -585,7 +585,7 @@ int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *mypriv
     return(err);
 }
 
-cJSON *privatemessage_encrypt(char destbits,char *pmstr)
+cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 {
     uint8_t *cipher; bits256 destpubkey,onetime_pubkey,onetime_privkey; cJSON *strjson;
     char *hexstr,destNXT[64]; int32_t len,haspubkey,cipherlen; uint32_t crc;
@@ -899,7 +899,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
     char *str,*str2,*jsonstr,*tokbuf = 0,*tmp,*secret,*pmstr;
     bits256 hash; uint64_t destbits,nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second; int32_t tlen,diff,datalen = 0;
     *sentflagp = *datalenp = *noncep = 0;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("create_busdata.(%s).%s -> %s\n",_jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
     if ( (json= cJSON_Parse(_jsonstr)) != 0 )
     {
@@ -938,7 +938,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         else destNXT[0] = 0;
         if ( (destbits= conv_acctstr(destNXTaddr)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
         {
-            printf("destbits.%llu (%s)\n",(long long)destbits,destNXT);
+            //printf("destbits.%llu (%s)\n",(long long)destbits,destNXT);
             cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr));
             secret = GENESIS_SECRET;
             cJSON_DeleteItemFromObject(json,"destNXT");
