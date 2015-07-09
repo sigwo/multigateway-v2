@@ -885,7 +885,7 @@ int SuperNET_start(char *fname,char *myip)
         jsonstr = clonestr("{}");
     parse_ipaddr(ipaddr,myip);
     strcpy(SUPERNET.myipaddr,ipaddr);
-    printf("SuperNET_start ipaddr.(%s)\n",ipaddr);
+    printf("SuperNET_start myip.(%s) -> ipaddr.(%s)\n",myip!=0?myip:"",ipaddr);
     language_func("SuperNET","",0,0,1,"SuperNET",jsonstr,call_system);
     if ( jsonstr != 0 )
         free(jsonstr);

@@ -670,9 +670,14 @@ int32_t privatemessage_decrypt(void *databuf,int32_t len,char *datastr)
     return(len);
 }
 
-char *privatemessage_recv(char *pmstr,cJSON *origjson)
+char *privatemessage_recv(cJSON *origjson)
 {
-    printf("privatemessage_recv.(%s)\n",pmstr);
+    cJSON *argjson; char *pmstr;
+    if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
+        argjson = cJSON_GetArrayItem(origjson,0);
+    else argjson = origjson;
+    pmstr = cJSON_str(cJSON_GetObjectItem(argjson,"PM"));
+    printf("privatemessage_recv.(%s)\n",pmstr!=0?pmstr:"<no message>");
     return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage received\"}"));
 }
 
@@ -782,11 +787,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
     {
         if ( SUPERNET.iamrelay != 0 )
             return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage ignored\"}"));
-        else
-        {
-            if ( (argjson= cJSON_GetArrayItem(json,0)) != 0 )
-                return(privatemessage_recv(cJSON_str(cJSON_GetObjectItem(argjson,"PM")),argjson));
-        }
+        else return(privatemessage_recv(json));
     }
     if ( (origjson= cJSON_Parse(databuf)) != 0 )
     {
