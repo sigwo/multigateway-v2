@@ -1323,7 +1323,7 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
     expand_nxt64bits(NXTaddr,nxt64bits);
     if ( 1 )
         conv_rsacctstr(NXTacct,nxt64bits);
-    printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>");
+    printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,secret);//Debuglevel > 2 ? secret : "<secret>");
     //escape_code(secret,secretstr);
     return(nxt64bits);
 }
