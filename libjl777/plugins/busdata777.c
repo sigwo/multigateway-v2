@@ -729,7 +729,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
             ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
             if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
             {
-                copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
+                copy_cJSON(method,cJSON_GetObjectItem(argjson,"method"));
                 ensure_jsonitem(second,"usedest","yes");
                 ensure_jsonitem(second,"stop","yes");
                 cJSON_DeleteItemFromObject(second,"broadcast");
