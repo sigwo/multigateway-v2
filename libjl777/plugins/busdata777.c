@@ -723,10 +723,26 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
     return(-1);
 }
 
+char *busdata_duppacket(cJSON *json)
+{
+    cJSON *argjson,*second; char method[MAX_JSON_FIELD],*str;
+    argjson = cJSON_GetArrayItem(json,0);
+    second = cJSON_GetArrayItem(json,1);
+    copy_cJSON(method,cJSON_GetObjectItem(argjson,"method"));
+    if ( strcmp(method,"PM") == 0 )
+        ensure_jsonitem(second,"forwarder",GENESISACCT);
+    else ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
+    ensure_jsonitem(second,"usedest","yes");
+    ensure_jsonitem(second,"stop","yes");
+    cJSON_DeleteItemFromObject(second,"broadcast");
+    str = cJSON_Print(json), _stripwhite(str,' ');
+    return(str);
+}
+
 char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,char *databuf,cJSON *json)
 {
-    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],buf[MAX_JSON_FIELD],servicename[MAX_JSON_FIELD],*broadcaststr,*str,*retstr = 0;
-    cJSON *dupjson,*second,*argjson,*origjson; uint64_t forwardbits;
+    char plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],buf[MAX_JSON_FIELD],servicename[MAX_JSON_FIELD],*broadcaststr,*str=0,*retstr = 0;
+    cJSON *dupjson,*second,*argjson,*origjson; uint64_t forwardbits; uint32_t ind;
     if ( SUPERNET.iamrelay != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(cJSON_GetArrayItem(json,1),"broadcast"))) != 0 )
     {
         dupjson = cJSON_Duplicate(json,1);
@@ -734,16 +750,9 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         second = cJSON_GetArrayItem(dupjson,1);
         if ( cJSON_GetObjectItem(second,"forwarder") == 0 )
         {
-            if ( strcmp(method,"PM") == 0 )
-                ensure_jsonitem(second,"forwarder",GENESISACCT);
-            else ensure_jsonitem(second,"forwarder",SUPERNET.NXTADDR);
-            if ( SUPERNET.iamrelay != 0 && (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
+            if ( (forwardbits= conv_acctstr(forwarder)) == 0 && cJSON_GetObjectItem(second,"stop") == 0 )
             {
-                copy_cJSON(method,cJSON_GetObjectItem(argjson,"method"));
-                ensure_jsonitem(second,"usedest","yes");
-                ensure_jsonitem(second,"stop","yes");
-                cJSON_DeleteItemFromObject(second,"broadcast");
-                str = cJSON_Print(dupjson), _stripwhite(str,' ');
+                str = busdata_duppacket(dupjson);
                 if ( RELAYS.pubrelays >= 0 && (strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0) )
                 {
                     printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
@@ -755,12 +764,14 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
                     nn_send(RELAYS.pubglobal,str,(int32_t)strlen(str)+1,0);
                     if ( strcmp(method,"PM") == 0 )
                     {
+                        if ( SUPERNET.rawPM != 0 )
+                            ind = SUPERNET.rawPM->numkeys, kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
                         free(str);
                         free_json(dupjson);
                         return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage broadcast\"}"));
                     }
                 }
-                free(str);
+                //free(str);
             } // else printf("forwardbits.%llu stop.%p\n",(long long)forwardbits,cJSON_GetObjectItem(second,"stop"));
         }
         free_json(dupjson);
@@ -768,9 +779,20 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
     if ( strcmp(method,"PM") != 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
+        {
+            if ( str == 0 )
+            {
+                dupjson = cJSON_Duplicate(json,1);
+                str = busdata_duppacket(dupjson);
+                free_json(dupjson);
+            }
+            ind = SUPERNET.rawPM->numkeys, kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
             return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage ignored\"}"));
+        }
         else return(privatemessage_recv(databuf));
     }
+    if ( str != 0 )
+        free(str);
     if ( (origjson= cJSON_Parse(databuf)) != 0 )
     {
         if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
