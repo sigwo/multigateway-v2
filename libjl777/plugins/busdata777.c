@@ -157,6 +157,8 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
     encoded[NXT_TOKEN_LEN] = ftoken[NXT_TOKEN_LEN] = 0;
     if ( SUPERNET.iamrelay == 0 )
         sprintf(tokenized,"[%s, {\"token\":\"%s\"%s}]",cmdjson,encoded,broadcaststr);
+    else if ( NXTACCTSECRET == GENESIS_SECRET )
+        sprintf(tokenized,"[%s, {\"token\":\"%s\"\"forwarder\":\"%s\"%s}]",cmdjson,encoded,GENESISACCT,broadcaststr);
     else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s%s}]",cmdjson,encoded,SUPERNET.NXTADDR,ftokenstr,broadcaststr);
     return((int32_t)strlen(tokenized)+1);
 }
@@ -660,12 +662,14 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 {
     cJSON *strjson;
     printf("encrypt.(%s) -> %llu\n",pmstr,(long long)destbits);
+    pmstr[0] ^= (uint8_t)destbits;
     strjson = cJSON_CreateString(pmstr);
     return(strjson);
 }
 
-int32_t privatemessage_decrypt(void *databuf,int32_t len,char *datastr)
+int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
 {
+    databuf[0] ^= (uint8_t)calc_nxt64bits(SUPERNET.NXTADDR);
     printf("decoded.(%s) -> (%s)\n",datastr,databuf);
     return(len);
 }
@@ -959,7 +963,11 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
         if ( (destbits= conv_acctstr(destNXT)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
-            cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr)), secret = GENESIS_SECRET;
+        {
+            cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr));
+            secret = GENESIS_SECRET;
+            cJSON_DeleteItemFromObject(json,"destNXT");
+        }
         else secret = SUPERNET.NXTACCTSECRET;
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
@@ -1007,7 +1015,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
             sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
         }
         else cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("PM"));
-        ensure_jsonitem(datajson,"stop","yes");
+        //ensure_jsonitem(datajson,"stop","yes");
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
         tmp = malloc((datalen << 1) + 1);
