@@ -958,6 +958,9 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
+        if ( (destbits= conv_acctstr(destNXT)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
+            cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr)), secret = GENESIS_SECRET;
+        else secret = SUPERNET.NXTACCTSECRET;
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
             if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
@@ -969,15 +972,12 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
             }
             sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,port);
             cJSON_ReplaceItemInObject(json,"endpoint",cJSON_CreateString(endpoint));
-            if ( SUPERNET.SERVICESECRET[0] != 0 && issue_generateToken(servicetoken,endpoint,SUPERNET.SERVICESECRET) == 0 )
+            if ( secret != GENESIS_SECRET && SUPERNET.SERVICESECRET[0] != 0 && issue_generateToken(servicetoken,endpoint,SUPERNET.SERVICESECRET) == 0 )
             {
                 cJSON_AddItemToObject(json,"servicetoken",cJSON_CreateString(servicetoken));
                 secret = SUPERNET.SERVICESECRET;
             }
         }
-        if ( (destbits= conv_acctstr(destNXT)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
-            cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr)), secret = GENESIS_SECRET;
-        else secret = SUPERNET.NXTACCTSECRET;
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
             cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString("busdata"));
@@ -996,14 +996,17 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
             cJSON_AddItemToObject(datajson,"broadcast",cJSON_CreateString(broadcastmode));
         cJSON_AddItemToObject(datajson,"plugin",cJSON_CreateString("relay"));
-        cJSON_AddItemToObject(datajson,"method",cJSON_CreateString(strcmp(method,"PM") == 0 ? "PM" : "busdata"));
-        if ( SUPERNET.SERVICESECRET[0] != 0 )
-            cJSON_AddItemToObject(datajson,"serviceNXT",cJSON_CreateString(SUPERNET.SERVICENXT));
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
-        nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
         if ( secret != GENESIS_SECRET )
+        {
+            cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
+            if ( SUPERNET.SERVICESECRET[0] != 0 )
+                cJSON_AddItemToObject(datajson,"serviceNXT",cJSON_CreateString(SUPERNET.SERVICENXT));
+            nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
             sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
+        }
+        else cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("PM"));
         ensure_jsonitem(datajson,"stop","yes");
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
@@ -1016,8 +1019,8 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-        if ( Debuglevel > 2 )
-            printf("method.(%s) created busdata.(%s) -> (%s) tlen.%d\n",method,str,tokbuf,tlen);
+        if ( Debuglevel > 1 )
+            printf("method.(%s) [%s] created busdata.(%s) -> (%s) tlen.%d\n",method,secret,str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         if ( jsonstr != _jsonstr )
