@@ -656,6 +656,26 @@ char *busdata_matchquery(char *response,char *destNXT,char *sender,char *key,uin
     return(retstr);
 }*/
 
+cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
+{
+    cJSON *strjson;
+    printf("encrypt.(%s) -> %llu\n",pmstr,(long long)destbits);
+    strjson = cJSON_CreateString(pmstr);
+    return(strjson);
+}
+
+int32_t privatemessage_decrypt(void *databuf,int32_t len,char *datastr)
+{
+    printf("decoded.(%s) -> (%s)\n",datastr,databuf);
+    return(len);
+}
+
+char *privatemessage_recv(char *pmstr,cJSON *origjson)
+{
+    printf("privatemessage_recv.(%s)\n",pmstr);
+    return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage received\"}"));
+}
+
 char *busdata(char *tokenstr,char *forwarder,char *sender,int32_t valid,char *key,uint32_t timestamp,uint8_t *msg,int32_t datalen,cJSON *origjson)
 {
     cJSON *json; char destNXT[64],*retstr = 0;
@@ -702,7 +722,10 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
             *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
             calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
             if ( strcmp(hexstr,sha) == 0 )
+            {
+                *datalenp = privatemessage_decrypt(databuf,*datalenp,datastr);
                 return(1);
+            }
             else printf("hash mismatch %s vs %s\n",hexstr,sha);
         }
         else
@@ -761,7 +784,8 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
             return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage ignored\"}"));
         else
         {
-            return(clonestr(databuf));
+            if ( (argjson= cJSON_GetArrayItem(json,0)) != 0 )
+                return(privatemessage_recv(cJSON_str(cJSON_GetObjectItem(argjson,"PM")),argjson));
         }
     }
     if ( (origjson= cJSON_Parse(databuf)) != 0 )
@@ -889,9 +913,9 @@ int32_t is_duplicate_tag(uint64_t tag)
 
 char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char *_jsonstr,char *broadcastmode,char *destNXTaddr)
 {
-    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
-    char *str,*str2,*jsonstr,*tokbuf = 0,*tmp,*secret;
-    bits256 hash; uint64_t nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second; int32_t tlen,diff,datalen = 0;
+    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],destNXT[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
+    char *str,*str2,*jsonstr,*tokbuf = 0,*tmp,*secret,*pmstr;
+    bits256 hash; uint64_t destbits,nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second; int32_t tlen,diff,datalen = 0;
     *sentflagp = *datalenp = *noncep = 0;
     if ( Debuglevel > 2 )
         printf("create_busdata.(%s).%s -> %s\n",_jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
@@ -927,6 +951,9 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         *sentflagp = (cJSON_GetObjectItem(json,"stop") != 0);
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+        copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
+        if ( (destbits= conv_acctstr(destNXT)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
+            cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr));
         secret = SUPERNET.NXTACCTSECRET;
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
