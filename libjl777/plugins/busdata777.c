@@ -755,6 +755,15 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         }
         free_json(dupjson);
     }
+    if ( strcmp(method,"PM") != 0 )
+    {
+        if ( SUPERNET.iamrelay != 0 )
+            return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage ignored\"}"));
+        else
+        {
+            return(clonestr(databuf));
+        }
+    }
     if ( (origjson= cJSON_Parse(databuf)) != 0 )
     {
         if ( is_cJSON_Array(origjson) != 0 && cJSON_GetArraySize(origjson) == 2 )
