@@ -933,8 +933,10 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         *sentflagp = (cJSON_GetObjectItem(json,"stop") != 0);
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
-        copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
-        if ( (destbits= conv_acctstr(destNXT)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
+        if ( destNXTaddr != 0 )
+            strcpy(destNXT,destNXTaddr);
+        else destNXT[0] = 0;
+        if ( (destbits= conv_acctstr(destNXTaddr)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
         {
             cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr));
             secret = GENESIS_SECRET;
