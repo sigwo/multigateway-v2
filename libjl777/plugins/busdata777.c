@@ -906,7 +906,7 @@ int32_t is_duplicate_tag(uint64_t tag)
     }
     if ( j == sizeof(Tags)/sizeof(*Tags) || Tags[j] == 0 )
     {
-        fprintf(stderr,"Tag[%d] <-- %llu\n",nextj,(long long)tag);
+        //fprintf(stderr,"Tag[%d] <-- %llu\n",nextj,(long long)tag);
         Tags[nextj++ % (sizeof(Tags)/sizeof(*Tags))] = tag;
     }
     return(0);
@@ -1010,7 +1010,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-        if ( Debuglevel > 1 )
+        if ( Debuglevel > 2 )
             printf("method.(%s) created busdata.(%s) -> (%s) tlen.%d\n",method,str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
@@ -1161,7 +1161,7 @@ int32_t busdata_poll()
                         obj = cJSON_GetArrayItem(json,0);
                     else obj = json;
                     tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
-                    fprintf(stderr,"got tag.%llu\n",(long long)tag);
+                    //fprintf(stderr,"got tag.%llu\n",(long long)tag);
                     if ( is_duplicate_tag(tag) == 0 )
                     {
                         if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )
