@@ -572,7 +572,7 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
 {
     char *pmstr; cJSON *json; int32_t len2,i,n; uint32_t crc,checkcrc;
-    //printf("decoded.(%s) -> (%s)\n",datastr,databuf);
+    printf("decoded.(%s) -> (%s)\n",datastr,databuf);
     if ( (json= cJSON_Parse((char *)databuf)) != 0 )
     {
         if ( (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
@@ -581,15 +581,15 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
             len2 = (int32_t)strlen(pmstr) >> 1;
             n = (int32_t)strlen((char *)databuf);
             decode_hex(&databuf[n],len2,pmstr);
-            databuf[n] ^= (uint8_t)calc_nxt64bits(SUPERNET.NXTADDR);
             memcpy(&crc,&databuf[n],sizeof(uint32_t));
+            databuf[n] ^= (uint8_t)calc_nxt64bits(SUPERNET.NXTADDR);
             checkcrc = _crc32(0,&databuf[n + sizeof(crc)],len2 - 1 - (int32_t)sizeof(crc));
             for (i=0; i<len2 - (int32_t)sizeof(crc); i++)
                 databuf[n + i] = databuf[n + i + sizeof(crc)];
             strcat((char *)databuf,"\"}");
             if ( crc != checkcrc )
             {
-                printf("(%s) crc.%x != checkcrc.%x len.%d\n",databuf,crc,checkcrc,len2 - (int32_t)sizeof(crc));
+                printf("(%s) crc.%x != checkcrc.%x len.%d\n",databuf,crc,checkcrc,len2 - 1 - (int32_t)sizeof(crc));
             }
         }
     }
