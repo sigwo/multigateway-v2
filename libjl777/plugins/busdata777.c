@@ -555,12 +555,14 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
 
 cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 {
-    cJSON *strjson; char *hexstr; int32_t len;
+    cJSON *strjson; char *hexstr; int32_t len; uint32_t crc;
     len = (int32_t)strlen(pmstr);
     pmstr[0] ^= (uint8_t)destbits;
-    hexstr = malloc((len+1)*2 + 1);
-    init_hexbytes_noT(hexstr,(void *)pmstr,len);
-    printf("encrypt.(%s) -> (%s) dest.%llu\n",pmstr,hexstr,(long long)destbits);
+    crc = _crc32(0,pmstr,len);
+    hexstr = malloc((len+sizeof(uint32_t)+1)*2 + 1);
+    init_hexbytes_noT(hexstr,(void *)&crc,sizeof(crc));
+    init_hexbytes_noT(&hexstr[sizeof(crc)],(void *)pmstr,len+1);
+    printf("len.%d crc.%u encrypt.(%s) -> (%s) dest.%llu\n",len+1,crc,pmstr,hexstr,(long long)destbits);
     strjson = cJSON_CreateString(hexstr);
     free(hexstr);
     return(strjson);
@@ -568,7 +570,7 @@ cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
 
 int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
 {
-    char *pmstr; cJSON *json; int32_t len2,n;
+    char *pmstr; cJSON *json; int32_t len2,i,n; uint32_t crc,checkcrc;
     //printf("decoded.(%s) -> (%s)\n",datastr,databuf);
     if ( (json= cJSON_Parse((char *)databuf)) != 0 )
     {
@@ -579,7 +581,16 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
             n = (int32_t)strlen((char *)databuf);
             decode_hex(&databuf[n],len2,pmstr);
             databuf[n] ^= (uint8_t)calc_nxt64bits(SUPERNET.NXTADDR);
+            memcpy(&crc,&databuf[n],sizeof(uint32_t));
+            checkcrc = _crc32(0,&databuf[n + sizeof(crc)],len2 - (int32_t)sizeof(crc));
+            for (i=0; i<len2 - (int32_t)sizeof(crc); i++)
+                databuf[n + i] = databuf[n + i + sizeof(crc)];
+            databuf[n+i] = 0;
             strcat((char *)databuf,"\"}");
+            if ( crc != checkcrc )
+            {
+                printf("(%s) crc.%u != checkcrc.%u len.%d\n",databuf,crc,checkcrc,len2 - (int32_t)sizeof(crc));
+            }
         }
     }
     return(len);
@@ -590,9 +601,9 @@ char *privatemessage_recv(char *jsonstr)
     cJSON *argjson; char *pmstr = 0;
     if ( (argjson= cJSON_Parse(jsonstr)) != 0 )
     {
-         pmstr = cJSON_str(cJSON_GetObjectItem(argjson,"PM"));
+        pmstr = cJSON_str(cJSON_GetObjectItem(argjson,"PM"));
+        printf("privatemessage_recv.(%s)\n",pmstr!=0?pmstr:"<no message>");
     }
-    printf("privatemessage_recv.(%s)\n",pmstr!=0?pmstr:"<no message>");
     return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage received\"}"));
 }
 
