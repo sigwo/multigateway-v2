@@ -1289,7 +1289,6 @@ char *PLUGNAME(_authmethods)[] = { "setpass" }; // list of supported methods
 uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass)
 {
     uint64_t allocsize,nxt64bits;
-    uint8_t mysecret[32],mypublic[32];
     char coinaddr[MAX_JSON_FIELD],*str,*privkey;
     NXTaddr[0] = 0;
     extract_cJSON_str(secret,max,argjson,"secret");
@@ -1320,7 +1319,7 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
     }
     else if ( strcmp(secret,"randvals") == 0 )
         gen_randomacct(33,NXTaddr,secret,"randvals");
-    nxt64bits = conv_NXTpassword(mysecret,mypublic,(uint8_t *)secret,(int32_t)strlen(secret));
+    nxt64bits = conv_NXTpassword(SUPERNET.myprivkey,SUPERNET.mypubkey,(uint8_t *)secret,(int32_t)strlen(secret));
     expand_nxt64bits(NXTaddr,nxt64bits);
     if ( 1 )
         conv_rsacctstr(NXTacct,nxt64bits);

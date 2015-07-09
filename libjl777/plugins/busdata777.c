@@ -163,7 +163,7 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
     return((int32_t)strlen(tokenized)+1);
 }
 
-int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char encoded[NXT_TOKEN_LEN])
+int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,uint8_t encoded[NXT_TOKEN_LEN])
 {
     char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr;
     cJSON *nxtobj,*validobj,*json;
@@ -197,7 +197,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
 {
     cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t valid,leverage,retcode = -13;
     char buf[MAX_JSON_FIELD],serviceNXT[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*broadcastmode,*firstjsontxt = 0;
-    unsigned char encoded[4096];
+    uint8_t encoded[4096];
     array = cJSON_Parse(tokenizedtxt);
     NXTaddr[0] = pubkey[0] = forwarder[0] = 0;
     if ( array == 0 )
@@ -553,25 +553,66 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
     return(0);
 }
 
-cJSON *privatemessage_encrypt(uint64_t destbits,char *pmstr)
+uint8_t *encode_str(int32_t *cipherlenp,void *str,int32_t len,bits256 destpubkey,bits256 myprivkey,bits256 mypubkey)
 {
-    cJSON *strjson; char *hexstr; int32_t len; uint32_t crc;
+    uint8_t *buf,*nonce,*cipher,*ptr;
+    buf = calloc(1,len + crypto_box_NONCEBYTES + crypto_box_ZEROBYTES + sizeof(mypubkey));
+    ptr = cipher = calloc(1,len + crypto_box_NONCEBYTES + crypto_box_ZEROBYTES + sizeof(mypubkey));
+    memcpy(cipher,mypubkey.bytes,sizeof(mypubkey));
+    nonce = &cipher[sizeof(mypubkey)];
+    randombytes(nonce,crypto_box_NONCEBYTES);
+    cipher = &nonce[crypto_box_NONCEBYTES];
+   //printf("len.%ld -> %ld %ld\n",len,len+crypto_box_ZEROBYTES,len + crypto_box_ZEROBYTES + crypto_box_NONCEBYTES);
+    memset(cipher,0,len+crypto_box_ZEROBYTES);
+    memset(buf,0,crypto_box_ZEROBYTES);
+    memcpy(buf+crypto_box_ZEROBYTES,str,len);
+    crypto_box(cipher,buf,len+crypto_box_ZEROBYTES,nonce,destpubkey.bytes,myprivkey.bytes);
+    free(buf);
+    *cipherlenp = ((int32_t)len + crypto_box_ZEROBYTES + crypto_box_NONCEBYTES + sizeof(mypubkey));
+    return(ptr);
+}
+
+int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *myprivkey)
+{
+    bits256 srcpubkey; uint8_t *nonce; int i,err,len = *lenp;
+    memcpy(srcpubkey.bytes,cipher,sizeof(srcpubkey)), cipher += sizeof(srcpubkey), len -= sizeof(srcpubkey);
+    nonce = cipher;
+    cipher += crypto_box_NONCEBYTES, len -= crypto_box_NONCEBYTES;
+    err = crypto_box_open((uint8_t *)str,cipher,len,nonce,srcpubkey.bytes,myprivkey);
+    for (i=0; i<len-crypto_box_ZEROBYTES; i++)
+        str[i] = str[i+crypto_box_ZEROBYTES];
+    *lenp = len - crypto_box_ZEROBYTES;
+    return(err);
+}
+
+cJSON *privatemessage_encrypt(char destbits,char *pmstr)
+{
+    uint8_t *cipher; bits256 destpubkey,onetime_pubkey,onetime_privkey; cJSON *strjson;
+    char *hexstr,destNXT[64]; int32_t len,haspubkey,cipherlen; uint32_t crc;
+    expand_nxt64bits(destNXT,destbits);
+    destpubkey = issue_getpubkey(&haspubkey,destNXT);
+    crypto_box_keypair(onetime_pubkey.bytes,onetime_privkey.bytes);
     len = (int32_t)strlen(pmstr);
+    cipher = encode_str(&cipherlen,pmstr,len,destpubkey,onetime_privkey,onetime_pubkey);
+    if ( haspubkey == 0 || cipher == 0 )
+    {
+        printf("destNXT.%s has no pubkey\n",destNXT);
+        return(cJSON_CreateString(""));
+    }
     printf("[%s].%d ",pmstr,len);
-    pmstr[0] ^= (uint8_t)destbits;
-    crc = _crc32(0,pmstr,len);
-    hexstr = malloc((len+sizeof(uint32_t)+1)*2 + 1);
+    crc = _crc32(0,cipher,cipherlen);
+    hexstr = malloc((cipherlen + sizeof(uint32_t) + 1)*2 + 1);
     init_hexbytes_noT(hexstr,(void *)&crc,sizeof(crc));
-    init_hexbytes_noT(&hexstr[sizeof(crc) << 1],(void *)pmstr,len+1);
+    init_hexbytes_noT(&hexstr[sizeof(crc) << 1],(void *)pmstr,cipherlen + 1);
     printf("len.%d crc.%x encrypt.(%s) -> (%s) dest.%llu\n",len,crc,pmstr,hexstr,(long long)destbits);
     strjson = cJSON_CreateString(hexstr);
-    free(hexstr);
+    free(hexstr), free(cipher);
     return(strjson);
 }
 
 int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
 {
-    char *pmstr; cJSON *json; int32_t len2,i,n; uint32_t crc,checkcrc;
+    char *pmstr,*decoded; cJSON *json; int32_t len2,n,len3; uint32_t crc,checkcrc;
     printf("decoded.(%s) -> (%s)\n",datastr,databuf);
     if ( (json= cJSON_Parse((char *)databuf)) != 0 )
     {
@@ -582,16 +623,23 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
             n = (int32_t)strlen((char *)databuf);
             decode_hex(&databuf[n],len2,pmstr);
             memcpy(&crc,&databuf[n],sizeof(uint32_t));
-            databuf[n] ^= (uint8_t)calc_nxt64bits(SUPERNET.NXTADDR);
-            checkcrc = _crc32(0,&databuf[n + sizeof(crc)],len2 - 1 - (int32_t)sizeof(crc));
-            for (i=0; i<len2 - (int32_t)sizeof(crc); i++)
-                databuf[n + i] = databuf[n + i + sizeof(crc)];
-            strcat((char *)databuf,"\"}");
+            len3 = (int32_t)(len2 - 1 - (int32_t)sizeof(crc));
+            checkcrc = _crc32(0,&databuf[n + sizeof(crc)],len3);
             if ( crc != checkcrc )
             {
-                printf("(%s) crc.%x != checkcrc.%x len.%d\n",databuf,crc,checkcrc,len2 - 1 - (int32_t)sizeof(crc));
+                databuf[0] = 0;
+                printf("(%s) crc.%x != checkcrc.%x len.%d\n",databuf,crc,checkcrc,len3);
             }
-        }
+            else
+            {
+                printf("crc matched\n");
+                decoded = calloc(1,len3);
+                if ( decode_cipher((void *)decoded,&databuf[n + sizeof(crc)],&len3,SUPERNET.myprivkey) == 0 )
+                    sprintf((char *)databuf,"{\"method\":\"PM\",\"PM\":\"%s\"}",decoded);
+                else databuf[0] = 0, printf("decrypt error\n");
+                free(decoded);
+            }
+        } else printf("no PM str\n");
     }
     return(len);
 }
