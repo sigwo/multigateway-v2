@@ -646,10 +646,16 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
 
 char *privatemessage_recv(char *jsonstr)
 {
-    cJSON *argjson; char *pmstr = 0;
+    uint32_t ind; cJSON *argjson; struct kv777_item *ptr; char *pmstr = 0;
     if ( (argjson= cJSON_Parse(jsonstr)) != 0 )
     {
         pmstr = cJSON_str(cJSON_GetObjectItem(argjson,"PM"));
+        if ( SUPERNET.PM != 0 && pmstr != 0 )
+        {
+            printf("ind.%d ",SUPERNET.PM->numkeys);
+            ind = SUPERNET.PM->numkeys;
+            ptr = kv777_write(SUPERNET.PM,&ind,sizeof(ind),pmstr,(int32_t)strlen(pmstr)+1);
+        }
         printf("privatemessage_recv.(%s)\n",pmstr!=0?pmstr:"<no message>");
     }
     return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage received\"}"));

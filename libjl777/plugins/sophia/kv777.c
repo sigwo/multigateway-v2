@@ -11,21 +11,26 @@
 #define crypto777_storage_h
 #include <stdio.h>
 #include <stdint.h>
+#include "mutex.h"
 #include "uthash.h"
 #include "bits777.c"
+#define portable_mutex_t struct nn_mutex
+#define portable_mutex_init nn_mutex_init
+#define portable_mutex_lock nn_mutex_lock
+#define portable_mutex_unlock nn_mutex_unlock
 
-struct kv777_item { UT_hash_handle hh; struct kv777_item *next,*prev; long offset; uint32_t crc,maxsize,valuesize; uint8_t value[]; };
+struct kv777_item { UT_hash_handle hh; struct kv777_item *next,*prev; long offset; uint32_t crc,maxsize,valuesize,ind; uint8_t value[]; };
 struct kv777
 {
     char name[64],fname[512];
     struct kv777_item *table,*list;
     portable_mutex_t mutex;
     FILE *fp;
-    int32_t rwflag,hddflag,multithreaded;
+    int32_t rwflag,hddflag,multithreaded,numkeys;
 };
 int32_t kv777_idle();
 void kv777_flush();
-void *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t valuesize);
+struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t valuesize);
 void *kv777_read(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t *valuesizep);
 struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded); // NOT THREADSAFE!
 
@@ -154,10 +159,11 @@ int32_t kv777_delete(struct kv777 *kv,void *key,int32_t keysize)
     return(retval);
 }
 
-void *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t valuesize)
+struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t valuesize)
 {
-    void *newkey; struct kv777_item *ptr = 0;
-    //fprintf(stderr,"kv777_write kv.%p table.%p write key.%p size.%d, value.%p size.%d\n",kv,kv->table,key,keysize,value,valuesize);
+    void *newkey; int32_t ind,duplicate = 0; struct kv777_item *ptr = 0;
+    if ( kv == SUPERNET.PM )
+        fprintf(stderr,"kv777_write kv.%p table.%p write key.%u size.%d, value.(%s) size.%d\n",kv,kv->table,*(int *)key,keysize,value,valuesize);
     kv777_lock(kv);
     HASH_FIND(hh,kv->table,key,keysize,ptr);
     if ( ptr != 0 )
@@ -169,15 +175,20 @@ void *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t
             kv777_unlock(kv);
             return(ptr);
         }
+        ind = ptr->ind;
         fprintf(stderr,"%d DELETE.%p val.%x %x vs %x val.%x\n",counter,ptr,*(int *)ptr->value,*(int *)ptr->hh.key,*(int *)key,*(int *)value);
         HASH_DELETE(hh,kv->table,ptr);
         free(ptr);
         counter++;
-    }
+        duplicate = 1;
+    } else ind = kv->numkeys;
     ptr = calloc(1,sizeof(struct kv777_item) + valuesize);
+    ptr->ind = ind;
     //fprintf(stderr,"key.%p %x alloc.%p size.%ld\n",key,*(int *)key,ptr,sizeof(struct kv777_item) + valuesize);
     newkey = malloc(keysize);
     memcpy(newkey,key,keysize);
+    if ( duplicate == 0 )
+        kv->numkeys++;
     HASH_ADD_KEYPTR(hh,kv->table,newkey,keysize,ptr);
     ptr->valuesize = ptr->maxsize = valuesize;
     memcpy(ptr->value,value,valuesize);
@@ -261,7 +272,9 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
                 ptr->valuesize = ptr->maxsize = valuesize;
                 ptr->crc = calccrc;
                 ptr->offset = offset;
-                //fprintf(stderr,"[%x] %p add item.%d crc.%u valuesize.%d keysize.%d\n",*(int *)ptr->value,ptr,i,calccrc,valuesize,keylen);
+                ptr->ind = i;
+                if ( kv == SUPERNET.PM )
+                    fprintf(stderr,"[%x] %p add item.%d crc.%u valuesize.%d keysize.%d\n",*(int *)ptr->value,ptr,i,calccrc,valuesize,keylen);
                 HASH_ADD_KEYPTR(hh,kv->table,key,keylen,ptr);
                 i++;
             }
@@ -269,6 +282,7 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
             goodpos = ftell(kv->fp);
         }
     }
+    kv->numkeys = i;
     printf("kv777.%s added %d items, fpos.%ld -> goodpos.%ld\n",kv->name,i,ftell(kv->fp),goodpos);
     if ( goodpos != ftell(kv->fp) )
         fseek(kv->fp,goodpos,SEEK_SET);

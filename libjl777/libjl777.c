@@ -1590,6 +1590,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             if ( DB_services == 0 )
                 DB_services = db777_create(0,0,"services",0,0);
         }
+        SUPERNET.PM = kv777_init("PM",1,1);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {
