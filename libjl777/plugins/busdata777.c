@@ -841,6 +841,11 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
         tokenobj = cJSON_GetArrayItem(json,1);
         if ( (valid= busdata_validate(forwarder,sender,&timestamp,databuf,&datalen,msg,json)) > 0 )
         {
+            if ( datalen <= 0 )
+            {
+                free_json(json);
+                return(clonestr("{\"result\":\"no data decrypted\"}"));
+            }
             copy_cJSON(destNXT,cJSON_GetObjectItem(argjson,"destNXT"));
             destbits = conv_acctstr(destNXT), expand_nxt64bits(destNXT,destbits);
             if ( destNXT[0] == 0 || strcmp(destNXT,SUPERNET.NXTADDR) == 0 || strcmp(destNXT,SUPERNET.SERVICENXT) == 0 )
@@ -953,9 +958,6 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         copy_cJSON(destNXT,cJSON_GetObjectItem(json,"destNXT"));
-        if ( (destbits= conv_acctstr(destNXT)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
-            cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr));
-        secret = SUPERNET.NXTACCTSECRET;
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
             if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
@@ -973,6 +975,9 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
                 secret = SUPERNET.SERVICESECRET;
             }
         }
+        if ( (destbits= conv_acctstr(destNXT)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
+            cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr)), secret = GENESIS_SECRET;
+        else secret = SUPERNET.NXTACCTSECRET;
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
             cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString("busdata"));
@@ -997,7 +1002,8 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
         nxt64bits = conv_acctstr(SUPERNET.NXTADDR);
-        sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
+        if ( secret != GENESIS_SECRET )
+            sprintf(numstr,"%llu",(long long)nxt64bits), cJSON_AddItemToObject(datajson,"NXT",cJSON_CreateString(numstr));
         ensure_jsonitem(datajson,"stop","yes");
         str = cJSON_Print(json), _stripwhite(str,' ');
         datalen = (int32_t)(strlen(str) + 1);
