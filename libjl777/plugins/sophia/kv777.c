@@ -273,7 +273,7 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
                 ptr->crc = calccrc;
                 ptr->offset = offset;
                 ptr->ind = i;
-                if ( kv == SUPERNET.PM )
+                if ( strcmp(name,"PM") == 0 )
                     fprintf(stderr,"[%x] %p add item.%d crc.%u valuesize.%d keysize.%d\n",*(int *)ptr->value,ptr,i,calccrc,valuesize,keylen);
                 HASH_ADD_KEYPTR(hh,kv->table,key,keylen,ptr);
                 i++;
