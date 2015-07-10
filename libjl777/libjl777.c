@@ -1593,6 +1593,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         SUPERNET.PM = kv777_init("PM",1,1);
         SUPERNET.alias = kv777_init("alias",1,1);
         SUPERNET.channels = kv777_init("channels",1,1);
+        SUPERNET.NXTaccts = kv777_init("NXTaccts",1,1);
         if ( SUPERNET.iamrelay != 0 )
             SUPERNET.rawPM = kv777_init("rawPM",1,1);
         SUPERNET.readyflag = 1;

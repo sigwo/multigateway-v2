@@ -343,8 +343,8 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
             offset = ftell(kv->fp);
         }
     }
-    printf("kv777.%s added %d items, fpos.%ld -> goodpos.%ld\n",kv->name,kv->numkeys,ftell(kv->fp),offset);
-    if ( offset != ftell(kv->fp) )
+    printf("kv777.%s added %d items, fpos.%ld -> goodpos.%ld\n",kv->name,kv->numkeys,kv->fp != 0 ? ftell(kv->fp) : 0,offset);
+    if ( kv->fp != 0 && offset != ftell(kv->fp) )
     {
         printf("strange position?, seek\n");
         fseek(kv->fp,offset,SEEK_SET);
@@ -357,7 +357,7 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
 
 void kv777_test()
 {
-    struct kv777 *kv; void *rval; int32_t i=1,j,len,keylen,valuesize,n = 1000000; uint8_t key[32],value[32]; double startmilli;
+    struct kv777 *kv; void *rval; int32_t i=1,j,len,keylen,valuesize,n = 100000; uint8_t key[32],value[32]; double startmilli;
     startmilli = milliseconds();
     if ( (kv= kv777_init("test",1,1)) != 0 )
     {

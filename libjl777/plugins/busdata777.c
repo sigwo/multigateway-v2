@@ -639,7 +639,7 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
                 else databuf[0] = 0;//, printf("decrypt error.(%s)\n",decoded);
                 free(decoded);
             }
-        } else printf("no PM str\n");
+        } //else printf("no PM str\n");
     }
     return(len);
 }
@@ -781,7 +781,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         }
         free_json(dupjson);
     }
-    if ( strcmp(method,"PM") != 0 )
+    if ( strcmp(method,"PM") == 0 )
     {
         if ( SUPERNET.iamrelay != 0 )
         {

@@ -826,37 +826,6 @@ int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *ra
     return(0);
 }
 
-void set_NXTpubkey(char *NXTpubkey,char *NXTacct)
-{
-    static uint8_t zerokey[256>>3];
-    struct nodestats *stats;
-    struct NXT_acct *np;
-    char NXTaddr[64];
-    uint64_t nxt64bits;
-    int32_t createdflag;
-    bits256 pubkey;
-    if ( NXTpubkey != 0 )
-        NXTpubkey[0] = 0;
-    if ( NXTacct == 0 || NXTacct[0] == 0 )
-        return;
-    nxt64bits = conv_rsacctstr(NXTacct,0);
-    expand_nxt64bits(NXTaddr,nxt64bits);
-    np = get_NXTacct(&createdflag,NXTaddr);
-    stats = &np->stats;
-    if ( memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
-    {
-        pubkey = issue_getpubkey(0,NXTacct);
-        if ( memcmp(&pubkey,zerokey,sizeof(stats->pubkey)) != 0 )
-            memcpy(stats->pubkey,&pubkey,sizeof(stats->pubkey));
-    } else memcpy(&pubkey,stats->pubkey,sizeof(pubkey));
-    db777_add(0,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
-    if ( NXTpubkey != 0 )
-    {
-        int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
-        init_hexbytes_noT(NXTpubkey,pubkey.bytes,sizeof(pubkey));
-    }
-}
-
 int32_t _in_specialNXTaddrs(struct mgw777 *mgw,char *NXTaddr)
 {
     //printf("%s -> %d\n",NXTaddr,in_jsonarray(mgw->special,NXTaddr));
@@ -1574,16 +1543,54 @@ int32_t RS_encode(char *rsaddr,uint64_t id)
     return(0);
 }
 
+void set_NXTpubkey(char *NXTpubkey,char *NXTacct)
+{
+    static uint8_t zerokey[256>>3];
+    struct nodestats *stats;
+    struct NXT_acct *np;
+    char NXTaddr[64];
+    uint64_t nxt64bits;
+    int32_t createdflag;
+    bits256 pubkey;
+    if ( NXTpubkey != 0 )
+        NXTpubkey[0] = 0;
+    if ( NXTacct == 0 || NXTacct[0] == 0 )
+        return;
+    nxt64bits = conv_rsacctstr(NXTacct,0);
+    expand_nxt64bits(NXTaddr,nxt64bits);
+    np = get_NXTacct(&createdflag,NXTaddr);
+    stats = &np->stats;
+    if ( memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
+    {
+        pubkey = issue_getpubkey(0,NXTacct);
+        if ( memcmp(&pubkey,zerokey,sizeof(stats->pubkey)) != 0 )
+            memcpy(stats->pubkey,&pubkey,sizeof(stats->pubkey));
+    } else memcpy(&pubkey,stats->pubkey,sizeof(pubkey));
+    if ( DB_NXTaccts != 0 )
+        db777_add(0,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
+    else kv777_write(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
+    if ( NXTpubkey != 0 )
+    {
+        int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
+        init_hexbytes_noT(NXTpubkey,pubkey.bytes,sizeof(pubkey));
+    }
+}
+
 struct NXT_acct *get_nxt64bits(int32_t *createdp,uint64_t nxt64bits)
 {
     static struct NXT_acct N,*np;
     int32_t len = sizeof(N);
-    if ( (np= db777_get(&N,&len,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits))) == 0 )
+    if ( DB_NXTaccts != 0 )
+        np = db777_get(&N,&len,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits));
+    else np = kv777_read(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),&N,&len);
+    if ( np == 0 )
     {
         np = calloc(1,sizeof(*np));
         np->nxt64bits = nxt64bits, expand_nxt64bits(np->NXTaddr,nxt64bits);
-        db777_add(1,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
-        *createdp = 1;
+        if ( DB_NXTaccts != 0 )
+            db777_add(1,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
+        else kv777_write(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),&N,sizeof(*np));
+       *createdp = 1;
     } else *createdp = 0;
     return(np);
 }
