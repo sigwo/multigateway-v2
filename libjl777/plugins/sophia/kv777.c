@@ -225,8 +225,10 @@ void kv777_flush()
             kv = KVS[i];
             if ( kv->fp != 0 )
                 fflush(kv->fp);
+#ifndef _WIN32
             if ( kv->fileptr != 0 && kv->mapsize != 0 )
                 msync(kv->fileptr,kv->mapsize,MS_SYNC);
+#endif
         }
     }
 }
@@ -332,6 +334,9 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_
 {
     long offset = 0; struct kv777_hdditem *item; uint32_t i,itemsize,allocflag;
     struct kv777_item *ptr; struct kv777 *kv;
+#ifdef _WIN32
+    mmapflag = 0;
+#endif
     if ( Num_kvs > 0 )
     {
         for (i=0; i<Num_kvs; i++)
