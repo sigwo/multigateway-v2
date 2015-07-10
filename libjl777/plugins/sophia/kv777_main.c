@@ -645,7 +645,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         // configure settings
         ensure_directory(SOPHIA.PATH);
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
-        SOPHIA.readyflag = 1;
+        KV777.readyflag = 1;
         //Debuglevel = 3;
     }
     else
