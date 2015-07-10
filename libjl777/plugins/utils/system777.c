@@ -118,6 +118,8 @@ struct env777
     uint32_t start_RTblocknum;
 };
 
+struct kv777_info { int32_t readyflag; }; extern struct kv777_info KV777;
+
 #define DEFAULT_APISLEEP 100  // milliseconds
 #define NUM_PLUGINTAGS 8192
 struct applicant_info { uint64_t senderbits; uint32_t nonce; char startflag,lbendpoint[100],relayendpoint[100],globalendpoint[100]; };

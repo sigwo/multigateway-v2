@@ -630,7 +630,7 @@ void *issue_cgicall(void *_ptr)
         destNXT = cJSON_str(cJSON_GetObjectItem(ptr->json,"destNXT"));
         if ( strcmp(plugin,"relay") == 0 || (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
-            if ( Debuglevel > 2 )
+            if ( Debuglevel > 1 )
                 printf("call busdata_sync.(%s)\n",ptr->jsonstr);
             //printf("destNXT.(%s)\n",destNXT!=0?destNXT:"");
             str = busdata_sync(&nonce,ptr->jsonstr,broadcaststr,destNXT);
@@ -796,8 +796,8 @@ void SuperNET_loop(void *ipaddr)
     }
     sleep(1);
     sprintf(jsonargs,"{\"filename\":\"SuperNET.conf\"}");
-    strs[n++] = language_func((char *)"db777","",0,0,1,(char *)"db777",jsonargs,call_system);
-    while ( SOPHIA.readyflag == 0 || find_daemoninfo(&ind,"db777",0,0) == 0 )
+    strs[n++] = language_func((char *)"kv777","",0,0,1,(char *)"kv777",jsonargs,call_system);
+    while ( KV777.readyflag == 0 || find_daemoninfo(&ind,"kv777",0,0) == 0 )
          poll_daemons();
     if ( SUPERNET.gatewayid >= 0 )
     {

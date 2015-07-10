@@ -355,8 +355,8 @@ int32_t main
     milliseconds();
     max = 1000000;
     retbuf = malloc(max+1);
-    plugin = calloc(1,sizeof(*plugin) + PLUGIN_EXTRASIZE);
-    plugin->extrasize = PLUGIN_EXTRASIZE;
+    plugin = calloc(1,sizeof(*plugin));// + PLUGIN_EXTRASIZE);
+    //plugin->extrasize = PLUGIN_EXTRASIZE;
     plugin->ppid = OS_getppid();
     strcpy(plugin->name,PLUGINSTR);
     if ( 0 )

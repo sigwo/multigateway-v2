@@ -1066,6 +1066,8 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
     json = cJSON_Parse(jsonstr);
     copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
+    if ( destplugin[0] == 0 )
+        strcpy(destplugin,plugin);
     if ( strcmp(plugin,"relay") == 0 && strcmp(destplugin,"relay") == 0 && broadcastmode == 0 )
         broadcastmode = "4";
     sentflag = 0;
