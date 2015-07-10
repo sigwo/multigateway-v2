@@ -147,7 +147,8 @@ struct kv777_hdditem *kv777_load(uint32_t *allocflagp,uint32_t *itemsizep,struct
         item->crc = _crc32(0,(void *)((long)item + sizeof(item->crc)),size - sizeof(item->crc));
         if ( crc != item->crc )
         {
-            for (int i=0; i<size; i++)
+            uint32_t i;
+            for (i=0; i<size; i++)
                 printf("%02x ",((uint8_t *)item)[i]);
             printf("kv777.%s error item.%d crc.%x vs calccrc.%x valuesize.%u\n",kv->name,kv->numkeys,crc,item->crc,valuesize);
             return(0);
