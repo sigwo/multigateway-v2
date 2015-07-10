@@ -1607,6 +1607,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 upnpredirect(portstr,portstr,"TCP","SuperNET");
             }
         }
+        void kv777_test(); kv777_test();
     }
     else
     {

@@ -391,7 +391,7 @@ void kv777_test()
     for (iter=errors=0; iter<3; iter++)
     {
         startmilli = milliseconds();
-        if ( (kv= kv777_init("test",1,1,iter == 0)) != 0 )
+        if ( (kv= kv777_init("test",1,1,1)) != 0 )
         {
             srand(777);
             for (i=0; i<n; i++)
@@ -416,7 +416,7 @@ void kv777_test()
                 } else errors++, printf("kv777_read error i.%d cant find key added, len.%d, valuesize.%d\n",i,len,valuesize);
             }
         }
-        printf("finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds\n",i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
+        printf("iter.%d fileptr.%p finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds\n",iter,kv->fileptr,i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
         kv777_flush();
         printf("errors.%d finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds after flush\n",errors,i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
     }
