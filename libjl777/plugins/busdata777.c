@@ -6,10 +6,8 @@
 //
 // sync relays
 // and then also to make sure adding relays on the fly syncs up to the current set of serviceproviders
-// encryption
 // btc38
 // join protocol + anti-sybil
-// duplicate filter
 // ipv6 got_newpeer.([2a03:b0c0:0:1010::e2:b001]:14631)
 
 // "servicesecret" in SuperNET.conf

@@ -30,7 +30,7 @@ struct kv777
     char name[64],fname[512];
     struct kv777_item *table,*list;
     portable_mutex_t mutex;
-    FILE *fp;
+    FILE *fp; void *fileptr; uint64_t mapsize,offset;
     int32_t rwflag,hddflag,multithreaded,numkeys;
 };
 int32_t kv777_idle();
@@ -70,8 +70,9 @@ void kv777_unlock(struct kv777 *kv)
 
 uint32_t kv777_itemsize(uint32_t valuesize,uint32_t keysize)
 {
-    int32_t alignmask,alignsize;
-    uint32_t size = (uint32_t)(sizeof(struct kv777_hdditem) + valuesize + keysize);
+    int32_t alignmask,alignsize; uint32_t size;
+    valuesize &= ~(1<<31);
+    size = (uint32_t)(sizeof(struct kv777_hdditem) + valuesize + keysize);
     alignsize = (1 << KV777_ALIGNBITS), alignmask = (alignsize - 1);
     if ( KV777_ALIGNBITS > 0 && (valuesize & alignmask) != 0 )
         size += alignsize - (valuesize & alignmask);
@@ -106,10 +107,23 @@ struct kv777_hdditem *kv777_hdditem(uint32_t *allocsizep,void *buf,int32_t maxsi
     return(item);
 }
 
-struct kv777_hdditem *kv777_load(uint32_t *itemsizep,uint32_t *deletedp,struct kv777 *kv)
+struct kv777_hdditem *kv777_load(uint32_t *allocflagp,uint32_t *itemsizep,struct kv777 *kv)
 {
     uint32_t crc,valuesize,keysize,size; long fpos; struct kv777_hdditem *item = 0;
-    fpos = ftell(kv->fp);
+    if ( kv->fileptr != 0 )
+    {
+        item = (void *)((long)kv->fileptr + kv->offset);
+        *itemsizep = size = kv777_itemsize(item->valuesize,item->keysize);
+        if ( (kv->offset + size) <= kv->mapsize )
+        {
+            *allocflagp = 0;
+            kv->offset += size;
+            return(item);
+        }
+    }
+    fpos = kv->offset;
+    fseek(kv->fp,fpos,SEEK_SET);
+    *allocflagp = 1;
     if ( fread(&crc,1,sizeof(crc),kv->fp) == sizeof(crc) && crc != 0 )
     {
         if ( fread(&valuesize,1,sizeof(valuesize),kv->fp) != sizeof(valuesize) )
@@ -117,9 +131,6 @@ struct kv777_hdditem *kv777_load(uint32_t *itemsizep,uint32_t *deletedp,struct k
             printf("valuesize read error after %d items\n",kv->numkeys);
             return(0);
         }
-        if ( (valuesize & (1<<31)) != 0 )
-            *deletedp = 1, valuesize &= ~(1<<31);
-        else *deletedp = 0;
         if ( fread(&keysize,1,sizeof(keysize),kv->fp) != sizeof(keysize) || keysize > KV777_MAXKEYSIZE || valuesize > KV777_MAXVALUESIZE )
         {
             printf("keysize read error after %d items keysize.%u valuesize.%u\n",kv->numkeys,keysize,valuesize);
@@ -141,7 +152,8 @@ struct kv777_hdditem *kv777_load(uint32_t *itemsizep,uint32_t *deletedp,struct k
             printf("kv777.%s error item.%d crc.%x vs calccrc.%x valuesize.%u\n",kv->name,kv->numkeys,crc,item->crc,valuesize);
             return(0);
         }
-    }
+    } else item = 0;
+    kv->offset = ftell(kv->fp);
     return(item);
 }
 
@@ -210,8 +222,10 @@ void kv777_flush()
         for (i=0; i<Num_kvs; i++)
         {
             kv = KVS[i];
-            if ( kv->rwflag != 0 && kv->fp != 0 )//kv->hddflag != 0 && kv->M.fileptr != 0 )
+            if ( kv->fp != 0 )
                 fflush(kv->fp);
+            if ( kv->fileptr != 0 && kv->mapsize != 0 )
+                msync(kv->fileptr,kv->mapsize,MS_SYNC);
         }
     }
 }
@@ -255,7 +269,7 @@ struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *
             return(ptr);
         }
         ind = ptr->ind;
-        fprintf(stderr,"%d DELETE.%p val.%s %s vs %s val.%s\n",counter,ptr,ptr->item->value,kv777_itemkey(ptr->item),key,value);
+        //fprintf(stderr,"%d DELETE.%p val.%s %s vs %s val.%s\n",counter,ptr,ptr->item->value,kv777_itemkey(ptr->item),key,value);
         HASH_DELETE(hh,kv->table,ptr);
         free(ptr);
         counter++;
@@ -315,7 +329,8 @@ char *kv777_findstr(char *retbuf,int32_t max,struct kv777 *kv,char *key)
 
 struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NOT THREADSAFE!
 {
-    long offset = 0; struct kv777_hdditem *item; uint32_t deleted,itemsize; struct kv777_item *ptr; struct kv777 *kv = calloc(1,sizeof(*kv));
+    long offset = 0; struct kv777_hdditem *item; uint32_t itemsize,allocflag;
+    struct kv777_item *ptr; struct kv777 *kv = calloc(1,sizeof(*kv));
     safecopy(kv->name,name,sizeof(kv->name));
     portable_mutex_init(&kv->mutex);
     kv->rwflag = 1, kv->hddflag = hddflag;
@@ -324,11 +339,19 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
     sprintf(kv->fname,"%s/%s",SOPHIA.PATH,kv->name), os_compatible_path(kv->fname);
     if ( (kv->fp= fopen(kv->fname,"rb+")) == 0 )
         kv->fp = fopen(kv->fname,"wb+");
-    if ( kv->fp != 0 && kv->rwflag != 0 )
+    if ( kv->fp != 0 )
     {
-        while ( (item= kv777_load(&itemsize,&deleted,kv)) != 0 )
+        fseek(kv->fp,0,SEEK_END);
+        kv->mapsize = ftell(kv->fp);
+        kv->fileptr = map_file(kv->fname,&kv->mapsize,0);
+        rewind(kv->fp);
+    }
+    if ( kv->fp != 0 )
+    {
+        while ( (item= kv777_load(&allocflag,&itemsize,kv)) != 0 )
         {
-            if ( deleted != 0 )
+            //printf("%d: item.%p itemsize.%d\n",kv->numkeys,item,itemsize);
+            if ( (item->valuesize & (1<<31)) != 0 && allocflag != 0 )
                 free(item);
             else
             {
@@ -340,10 +363,10 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
                 HASH_ADD_KEYPTR(hh,kv->table,kv777_itemkey(item),item->keysize,ptr);
                 //fprintf(stderr,"[%s] add item.%d crc.%u valuesize.%d keysize.%d [%s]\n",item->value,kv->numkeys,item->crc,item->valuesize,item->keysize,kv777_itemkey(item));
             }
-            offset = ftell(kv->fp);
+            offset = kv->offset; //ftell(kv->fp);
         }
     }
-    printf("kv777.%s added %d items, fpos.%ld -> goodpos.%ld\n",kv->name,kv->numkeys,kv->fp != 0 ? ftell(kv->fp) : 0,offset);
+    printf("kv777.%s added %d items, fpos.%ld -> goodpos.%ld fileptr.%p mapsize.%ld\n",kv->name,kv->numkeys,kv->fp != 0 ? ftell(kv->fp) : 0,offset,kv->fileptr,(long)kv->mapsize);
     if ( kv->fp != 0 && offset != ftell(kv->fp) )
     {
         printf("strange position?, seek\n");
@@ -357,32 +380,39 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
 
 void kv777_test()
 {
-    struct kv777 *kv; void *rval; int32_t i=1,j,len,keylen,valuesize,n = 100000; uint8_t key[32],value[32]; double startmilli;
-    startmilli = milliseconds();
-    if ( (kv= kv777_init("test",1,1)) != 0 )
+    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize,n = 400000; uint8_t key[32],value[32]; double startmilli;
+    for (iter=errors=0; iter<3; iter++)
     {
-        srand(777);
-        for (i=0; i<n; i++)
+        startmilli = milliseconds();
+        if ( (kv= kv777_init("test",1,1)) != 0 )
         {
-            //printf("i.%d of n.%d\n",i,n);
-            valuesize = (rand() % (sizeof(value)-1)) + 1;
-            keylen = (rand() % (sizeof(key)-8)) + 8;
-            memset(key,0,sizeof(key));
-            for (j=0; j<keylen; j++)
-                key[j] = safechar64(rand());
-            for (j=0; j<valuesize; j++)
-                value[j] = safechar64(rand());
-            kv777_write(kv,key,keylen,value,valuesize);
-            if ( (rval= kv777_read(kv,key,keylen,0,&len)) != 0 )
+            srand(777);
+            for (i=0; i<n; i++)
             {
-                if ( len != valuesize || memcmp(value,rval,valuesize) != 0 )
-                    printf("len.%d vs valuesize.%d or data mismatch\n",len,valuesize);
-            } else printf("kv777_read error i.%d cant find key added, len.%d, valuesize.%d\n",i,len,valuesize);
+                //printf("i.%d of n.%d\n",i,n);
+                valuesize = (rand() % (sizeof(value)-1)) + 1;
+                keylen = (rand() % (sizeof(key)-8)) + 8;
+                memset(key,0,sizeof(key));
+                for (j=0; j<keylen; j++)
+                    key[j] = safechar64(rand());
+                sprintf((void *)key,"%d",i);
+                keylen = (int32_t)strlen((void *)key);
+                for (j=0; j<valuesize; j++)
+                    value[j] = safechar64(rand());
+                if ( iter != 0 && (i % 1000) == 0 )
+                    value[0] ^= 0xff;
+                kv777_write(kv,key,keylen,value,valuesize);
+                if ( (rval= kv777_read(kv,key,keylen,0,&len)) != 0 )
+                {
+                    if ( len != valuesize || memcmp(value,rval,valuesize) != 0 )
+                        errors++, printf("len.%d vs valuesize.%d or data mismatch\n",len,valuesize);
+                } else errors++, printf("kv777_read error i.%d cant find key added, len.%d, valuesize.%d\n",i,len,valuesize);
+            }
         }
+        printf("finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds\n",i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
+        kv777_flush();
+        printf("errors.%d finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds after flush\n",errors,i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
     }
-    printf("finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds\n",i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
-    kv777_flush();
-    printf("finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds\n",i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
     //getchar();
 }
 

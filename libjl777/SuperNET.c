@@ -894,7 +894,7 @@ int SuperNET_start(char *fname,char *myip)
         free(jsonstr);
     portable_thread_create((void *)SuperNET_loop,myip);
     portable_thread_create((void *)SuperNET_apiloop,myip);
-    void kv777_test(); kv777_test();
+    //void kv777_test(); kv777_test();
     return(0);
 }
 
