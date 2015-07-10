@@ -117,7 +117,7 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
     struct daemon_info *dp;
     char numstr[64],*tmpstr,*jsonstr; uint8_t *data; int32_t duplicateflag = 0,ind,datalen,tmplen,flag = 0; uint64_t tmp,tag = 0; cJSON *json;
     if ( Debuglevel > 2 )
-        printf("A send_to_daemon.(%s).%d\n",origjsonstr,len);
+        printf("A.local %d send_to_daemon.(%s).%d\n",localaccess,origjsonstr,len);
     if ( (json= cJSON_Parse(origjsonstr)) != 0 )
     {
         jsonstr = origjsonstr;

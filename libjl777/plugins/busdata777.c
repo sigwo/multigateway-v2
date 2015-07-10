@@ -936,7 +936,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
 {
     char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],destNXT[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
     char *str,*str2,*jsonstr,*tokbuf = 0,*tmp,*secret,*pmstr;
-    bits256 hash; uint64_t destbits,nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second; int32_t tlen,diff,datalen = 0;
+    bits256 hash; uint64_t destbits,nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second,*dupjson=0; int32_t tlen,diff,datalen = 0;
     *sentflagp = *datalenp = *noncep = 0;
     if ( Debuglevel > 2 )
         printf("create_busdata.(%s).%s -> %s\n",_jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
@@ -944,8 +944,9 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
     {
         if ( cJSON_GetObjectItem(json,"tag") != 0 )
         {
-            cJSON_DeleteItemFromObject(json,"tag");
-            jsonstr = cJSON_Print(json);
+            dupjson = cJSON_Duplicate(json,1);
+            cJSON_DeleteItemFromObject(dupjson,"tag");
+            jsonstr = cJSON_Print(dupjson);
         } else jsonstr = _jsonstr;
         _stripwhite(jsonstr,' ');
         calc_sha256(0,hash.bytes,(void *)jsonstr,(int32_t)strlen(jsonstr));
@@ -955,6 +956,11 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
                 free(jsonstr);
             return(0);
         }
+        if ( jsonstr != _jsonstr )
+            free(jsonstr);
+        if ( dupjson != 0 )
+            free_json(dupjson);
+        jsonstr = _jsonstr;
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
         {
             *datalenp = (int32_t)strlen(jsonstr) + 1;
@@ -1009,8 +1015,11 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
                 cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
         }
         if ( (tag= get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"))) == 0 )
+        {
             randombytes((uint8_t *)&tag,sizeof(tag));
-        sprintf(numstr,"%llu",(long long)tag);
+            sprintf(numstr,"%llu",(long long)tag);
+            cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
+        } else sprintf(numstr,"%llu",(long long)tag);
         timestamp = (uint32_t)time(NULL);
         copy_cJSON(key,cJSON_GetObjectItem(json,"key"));
         datajson = cJSON_CreateObject();
@@ -1041,8 +1050,8 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 1024);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-        if ( Debuglevel > 1 )
-            printf("method.(%s) [%s] created busdata.(%s) -> (%s) tlen.%d\n",method,secret,str,tokbuf,tlen);
+        if ( Debuglevel > 2 )
+            printf("method.(%s) created busdata.(%s) -> (%s) tlen.%d\n",method,str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
         if ( jsonstr != _jsonstr )
