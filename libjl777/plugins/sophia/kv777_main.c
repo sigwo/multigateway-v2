@@ -679,12 +679,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         sprintf(retbuf + strlen(retbuf) - 1,",\"ind\":%u,\"PM\":\"%s\",\"len\":%d}",ind,pmstr,len);
                 }
             } else sprintf(retbuf,"{\"error\":\"no PM database\"}");
-            printf("retbuf.(%s)\n",retbuf);
+            //printf("retbuf.(%s)\n",retbuf);
         }
         else sprintf(retbuf,"{\"error\":\"invalid kv777 method\",\"method\":\"%s\",\"tag\":\"%llu\"}",method,(long long)tag);
         if ( retbuf[0] == 0 )
             sprintf(retbuf,"{\"error\":\"null return\",\"method\":\"%s\",\"tag\":\"%llu\"}",method,(long long)tag);
-        else sprintf(retbuf + strlen(retbuf) - 1,",\"tag\":%llu}",(long long)tag);
+        else sprintf(retbuf + strlen(retbuf) - 1,",\"tag\":\"%llu\"}",(long long)tag);
     }
     return((int32_t)strlen(retbuf) + retbuf[0] != 0);
 }

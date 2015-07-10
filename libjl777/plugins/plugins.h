@@ -188,7 +188,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         permflag = get_API_int(cJSON_GetObjectItem(json,"permanentflag"),0);
         instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
         tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
-        if ( dp->readyflag == 0 )
+        if ( dp->readyflag == 0 || Debuglevel > 2 )
             printf("HOST: process_plugin_message.(%s) instanceid.%llu allowremote.%d pushsock.%d\n",str,(long long)instanceid,dp->allowremote,dp->pushsock);
         dp->readyflag = 1;
         if ( permflag == 0 && instanceid != 0 )
@@ -215,7 +215,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         }
         free_json(json);
     } else printf("parse error.(%s)\n",str);
-    //printf("tag.%llu str.%p retstr.%p\n",(long long)tag,str,retstr);
+//printf("tag.%llu str.%p retstr.%p\n",(long long)tag,str,retstr);
     if ( tag != 0 )
     {
         if ( (dest= get_tagstr(&retsock,dp,tag)) != 0 )

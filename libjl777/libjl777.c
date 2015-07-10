@@ -904,7 +904,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
 
 char *call_SuperNET_JSON(char *JSONstr)
 {
-    cJSON *json,*array; int32_t valid; uint64_t tag; char NXTaddr[64],_tokbuf[2*MAX_JSON_FIELD],encoded[NXT_TOKEN_LEN+1],*cmdstr,*retstr = 0;
+    cJSON *json,*array; int32_t valid; uint64_t tag; char NXTaddr[64],numstr[64],_tokbuf[2*MAX_JSON_FIELD],encoded[NXT_TOKEN_LEN+1],*cmdstr,*retstr = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     if ( Finished_init == 0 )
     {
@@ -924,7 +924,7 @@ char *call_SuperNET_JSON(char *JSONstr)
         if ( cJSON_GetObjectItem(json,"tag") == 0 )
         {
             randombytes((void *)&tag,sizeof(tag));
-            cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
+            sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         }
         cmdstr = cJSON_Print(json);
         if ( cmdstr != 0 )

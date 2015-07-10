@@ -179,7 +179,7 @@ char *localcommand(char *line)
 
 char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,int32_t broadcastflag)
 {
-    int32_t i,j; char numstr[64],*pubstr,*cmdstr = 0; cJSON *json;
+    int32_t i,j; char numstr[64],*pubstr,*cmdstr = 0; cJSON *json; uint64_t tag;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
@@ -200,7 +200,7 @@ char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,
         if ( strcmp("direct",method) == 0 && cJSON_GetObjectItem(json,"myipaddr") == 0 )
             cJSON_AddItemToObject(json,"myipaddr",cJSON_CreateString(SUPERNET.myipaddr));
         if ( cJSON_GetObjectItem(json,"tag") == 0 )
-            sprintf(numstr,"%llu",((long long)rand()<<32) | rand()),cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
+            randombytes((void *)&tag,sizeof(tag)), sprintf(numstr,"%llu",(long long)tag),cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         //if ( cJSON_GetObjectItem(json,"NXT") == 0 )
         //    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
         *timeoutp = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);

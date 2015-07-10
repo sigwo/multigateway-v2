@@ -24,7 +24,7 @@ char *os_compatible_path(char *str);
 void process_json(cJSON *json,int32_t publicaccess)
 {
     int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
-    char endpoint[128],*resultstr,*jsonstr;
+    char endpoint[128],numstr[64],*resultstr,*jsonstr;
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
     apitag = _crc32(0,jsonstr,len);
@@ -34,7 +34,7 @@ void process_json(cJSON *json,int32_t publicaccess)
     sendtimeout = 30000;
     randombytes(&tag,sizeof(tag));
     if ( cJSON_GetObjectItem(json,"tag") == 0 )
-        cJSON_AddItemToObject(json,"tag",cJSON_CreateNumber(tag));
+        printf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
     if ( cJSON_GetObjectItem(json,"apitag") == 0 )
         cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
     if ( publicaccess != 0 )
