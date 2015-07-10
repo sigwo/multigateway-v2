@@ -766,6 +766,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
                         if ( SUPERNET.rawPM != 0 )
                         {
                             ind = SUPERNET.rawPM->numkeys;
+                            printf("RELAYSAVE.(%s)\n",str);
                             kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
                             kv777_flush();
                         }
@@ -781,6 +782,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
     }
     if ( strcmp(method,"PM") == 0 )
     {
+        printf("got PM.(%s)\n",databuf);
         if ( SUPERNET.iamrelay != 0 )
         {
             if ( str == 0 )
@@ -792,6 +794,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
             if ( SUPERNET.rawPM != 0 )
             {
                 ind = SUPERNET.rawPM->numkeys;
+                printf("RELAYSAVE2.(%s)\n",str);
                 kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
                 kv777_flush();
             }
