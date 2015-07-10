@@ -1517,6 +1517,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             strcpy(SUPERNET.myipaddr,myipaddr);
         if ( SUPERNET.myipaddr[0] != 0 )
             SUPERNET.myipbits = (uint32_t)calc_ipbits(SUPERNET.myipaddr);
+        SUPERNET.mmapflag = get_API_int(cJSON_GetObjectItem(json,"mmapflag"),1);
         //if ( strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
         //    SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),1*0);
         //else
@@ -1590,12 +1591,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             if ( DB_services == 0 )
                 DB_services = db777_create(0,0,"services",0,0);
         }
-        SUPERNET.PM = kv777_init("PM",1,1);
-        SUPERNET.alias = kv777_init("alias",1,1);
-        SUPERNET.channels = kv777_init("channels",1,1);
-        SUPERNET.NXTaccts = kv777_init("NXTaccts",1,1);
+        SUPERNET.PM = kv777_init("PM",1,1,0);
+        SUPERNET.alias = kv777_init("alias",1,1,0);
+        SUPERNET.channels = kv777_init("channels",1,1,0);
+        SUPERNET.NXTaccts = kv777_init("NXTaccts",1,1,0);
         if ( SUPERNET.iamrelay != 0 )
-            SUPERNET.rawPM = kv777_init("rawPM",1,1);
+            SUPERNET.rawPM = kv777_init("rawPM",1,1,1);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {

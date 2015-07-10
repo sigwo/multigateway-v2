@@ -31,13 +31,13 @@ struct kv777
     struct kv777_item *table,*list;
     portable_mutex_t mutex;
     FILE *fp; void *fileptr; uint64_t mapsize,offset;
-    int32_t rwflag,hddflag,multithreaded,numkeys;
+    int32_t rwflag,hddflag,multithreaded,numkeys,mmapflag;
 };
 int32_t kv777_idle();
 void kv777_flush();
 struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t valuesize);
 void *kv777_read(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t *valuesizep);
-struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded); // NOT THREADSAFE!
+struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_t mmapflag); // kv777_init is NOT THREADSAFE!
 int32_t kv777_addstr(struct kv777 *kv,char *key,char *value);
 char *kv777_findstr(char *retbuf,int32_t max,struct kv777 *kv,char *key);
 int32_t kv777_delete(struct kv777 *kv,void *key,int32_t keysize);
@@ -327,13 +327,13 @@ char *kv777_findstr(char *retbuf,int32_t max,struct kv777 *kv,char *key)
     return(kv777_read(kv,key,(int32_t)strlen(key)+1,retbuf,&max));
 }
 
-struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NOT THREADSAFE!
+struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_t mmapflag) // kv777_init IS NOT THREADSAFE!
 {
     long offset = 0; struct kv777_hdditem *item; uint32_t itemsize,allocflag;
     struct kv777_item *ptr; struct kv777 *kv = calloc(1,sizeof(*kv));
     safecopy(kv->name,name,sizeof(kv->name));
     portable_mutex_init(&kv->mutex);
-    kv->rwflag = 1, kv->hddflag = hddflag;
+    kv->rwflag = 1, kv->hddflag = hddflag, kv->mmapflag = mmapflag * SUPERNET.mmapflag;
     if ( SOPHIA.PATH[0] == 0 )
         strcpy(SOPHIA.PATH,"DB");
     sprintf(kv->fname,"%s/%s",SOPHIA.PATH,kv->name), os_compatible_path(kv->fname);
@@ -341,13 +341,13 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
         kv->fp = fopen(kv->fname,"wb+");
     if ( kv->fp != 0 )
     {
-        fseek(kv->fp,0,SEEK_END);
-        kv->mapsize = ftell(kv->fp);
-        kv->fileptr = map_file(kv->fname,&kv->mapsize,0);
+        if ( kv->mmapflag != 0 )
+        {
+            fseek(kv->fp,0,SEEK_END);
+            kv->mapsize = ftell(kv->fp);
+            kv->fileptr = map_file(kv->fname,&kv->mapsize,0);
+        }
         rewind(kv->fp);
-    }
-    if ( kv->fp != 0 )
-    {
         while ( (item= kv777_load(&allocflag,&itemsize,kv)) != 0 )
         {
             //printf("%d: item.%p itemsize.%d\n",kv->numkeys,item,itemsize);
@@ -380,11 +380,11 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
 
 void kv777_test()
 {
-    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize,n = 400000; uint8_t key[32],value[32]; double startmilli;
+    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize,n = 333333; uint8_t key[32],value[32]; double startmilli;
     for (iter=errors=0; iter<3; iter++)
     {
         startmilli = milliseconds();
-        if ( (kv= kv777_init("test",1,1)) != 0 )
+        if ( (kv= kv777_init("test",1,1,iter == 0)) != 0 )
         {
             srand(777);
             for (i=0; i<n; i++)
