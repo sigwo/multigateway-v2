@@ -650,19 +650,18 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     }
     else
     {
-        name = cJSON_str(cJSON_GetObjectItem(json,"name"));
         if ( plugin_result(retbuf,json,tag) > 0 )
             return((int32_t)strlen(retbuf));
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         method = cJSON_str(cJSON_GetObjectItem(json,"method"));
         path = cJSON_str(cJSON_GetObjectItem(json,"path"));
         subdir = cJSON_str(cJSON_GetObjectItem(json,"subdir"));
-        if ( method == 0 || name == 0 || name[0] == 0 )
+        if ( method == 0 )
         {
-            printf("(%s) has not method or dbname\n",jsonstr);
+            printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        printf("kv777.(%s) for (%s)\n",method,name);
+        printf("kv777.(%s)\n",method);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
