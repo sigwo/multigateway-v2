@@ -329,8 +329,15 @@ char *kv777_findstr(char *retbuf,int32_t max,struct kv777 *kv,char *key)
 
 struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_t mmapflag) // kv777_init IS NOT THREADSAFE!
 {
-    long offset = 0; struct kv777_hdditem *item; uint32_t itemsize,allocflag;
-    struct kv777_item *ptr; struct kv777 *kv = calloc(1,sizeof(*kv));
+    long offset = 0; struct kv777_hdditem *item; uint32_t i,itemsize,allocflag;
+    struct kv777_item *ptr; struct kv777 *kv;
+    if ( Num_kvs > 0 )
+    {
+        for (i=0; i<Num_kvs; i++)
+            if ( strcmp(KVS[i]->name,name) == 0 )
+                return(KVS[i]);
+    }
+    kv = calloc(1,sizeof(*kv));
     safecopy(kv->name,name,sizeof(kv->name));
     portable_mutex_init(&kv->mutex);
     kv->rwflag = 1, kv->hddflag = hddflag, kv->mmapflag = mmapflag * SUPERNET.mmapflag;
@@ -380,7 +387,7 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_
 
 void kv777_test()
 {
-    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize,n = 333333; uint8_t key[32],value[32]; double startmilli;
+    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize,n = 1000000; uint8_t key[32],value[32]; double startmilli;
     for (iter=errors=0; iter<3; iter++)
     {
         startmilli = milliseconds();
