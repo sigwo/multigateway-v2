@@ -881,6 +881,7 @@ int SuperNET_start(char *fname,char *myip)
     uint64_t allocsize;
     printf("myip.(%s)\n",myip);
     portable_OS_init();
+    void kv777_test(); kv777_test();
     init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
@@ -893,7 +894,7 @@ int SuperNET_start(char *fname,char *myip)
         free(jsonstr);
     portable_thread_create((void *)SuperNET_loop,myip);
     portable_thread_create((void *)SuperNET_apiloop,myip);
-    //void kv777_test(); kv777_test();
+    void kv777_test(); kv777_test();
     return(0);
 }
 

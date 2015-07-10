@@ -16,7 +16,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "cJSON.h"
-#include "db777.c"
+#include "kv777.c"
 #include "system777.c"
 
 #endif
@@ -87,12 +87,12 @@ void update_alias(char *line)
     printf("i.%d alias.(%s) value.(%s)\n",i,alias,value);
     if ( value[0] == 0 )
         printf("warning value for %s is null\n",alias);
-    db777_findstr(retbuf,sizeof(retbuf),DB_nodestats,alias);
+    kv777_findstr(retbuf,sizeof(retbuf),SUPERNET.alias,alias);
     if ( strcmp(retbuf,value) == 0 )
         printf("UNCHANGED ");
     else printf("%s ",retbuf[0] == 0 ? "CREATE" : "UPDATE");
     printf(" (%s) -> (%s)\n",alias,value);
-    if ( (err= db777_addstr(DB_nodestats,alias,value)) != 0 )
+    if ( (err= kv777_addstr(SUPERNET.alias,alias,value)) != 0 )
         printf("error.%d updating alias database\n",err);
 }
 
@@ -113,7 +113,7 @@ char *expand_aliases(char *_expanded,char *_expanded2,int32_t max,char *line)
                     continue;
                 i += k;
                 alias[0] = '#';
-                if ( db777_findstr(value,sizeof(value),DB_nodestats,alias) > 0 )
+                if ( kv777_findstr(value,sizeof(value),SUPERNET.alias,alias) != 0 )
                 {
                     if ( value[0] != 0 )
                         for (k=0; value[k]!=0; k++)
@@ -258,8 +258,10 @@ void process_userinput(char *_line)
         broadcastflag = 1, line++;
     if ( (json= cJSON_Parse(line)) != 0 )
     {
+        char *process_nn_message(int32_t sock,char *jsonstr);
         free_json(json);
-        retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
+        retstr = process_nn_message(-1,line);
+        //retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
         printf("console.(%s) -> (%s)\n",line,retstr);
         return;
     }

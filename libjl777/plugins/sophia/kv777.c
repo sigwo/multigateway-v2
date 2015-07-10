@@ -19,7 +19,12 @@
 #define portable_mutex_lock nn_mutex_lock
 #define portable_mutex_unlock nn_mutex_unlock
 
-struct kv777_item { UT_hash_handle hh; struct kv777_item *next,*prev; long offset; uint32_t crc,maxsize,valuesize,ind; uint8_t value[]; };
+#define KV777_ALIGNBITS 2
+#define KV777_MAXKEYSIZE 65536
+#define KV777_MAXVALUESIZE (1 << 30)
+
+struct kv777_hdditem { uint32_t crc,valuesize,keysize; uint8_t value[]; };
+struct kv777_item { UT_hash_handle hh; struct kv777_item *next,*prev; long offset; uint32_t ind,itemsize; struct kv777_hdditem *item; };
 struct kv777
 {
     char name[64],fname[512];
@@ -33,6 +38,9 @@ void kv777_flush();
 struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t valuesize);
 void *kv777_read(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t *valuesizep);
 struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded); // NOT THREADSAFE!
+int32_t kv777_addstr(struct kv777 *kv,char *key,char *value);
+char *kv777_findstr(char *retbuf,int32_t max,struct kv777 *kv,char *key);
+int32_t kv777_delete(struct kv777 *kv,void *key,int32_t keysize);
 
 #endif
 #else
@@ -60,20 +68,97 @@ void kv777_unlock(struct kv777 *kv)
         portable_mutex_unlock(&kv->mutex);
 }
 
+uint32_t kv777_itemsize(uint32_t valuesize,uint32_t keysize)
+{
+    int32_t alignmask,alignsize;
+    uint32_t size = (uint32_t)(sizeof(struct kv777_hdditem) + valuesize + keysize);
+    alignsize = (1 << KV777_ALIGNBITS), alignmask = (alignsize - 1);
+    if ( KV777_ALIGNBITS > 0 && (valuesize & alignmask) != 0 )
+        size += alignsize - (valuesize & alignmask);
+    if ( KV777_ALIGNBITS > 0 && (keysize & alignmask) != 0 )
+        size += alignsize - (keysize & alignmask);
+    return(size);
+}
+
+void *kv777_itemkey(struct kv777_hdditem *item)
+{
+    int32_t alignmask,alignsize,size = item->valuesize;
+    alignsize = (1 << KV777_ALIGNBITS), alignmask = (alignsize - 1);
+    if ( KV777_ALIGNBITS > 0 && (size & alignmask) != 0 )
+        size += alignsize - (size & alignmask);
+    return(&item->value[size]);
+}
+
+struct kv777_hdditem *kv777_hdditem(uint32_t *allocsizep,void *buf,int32_t maxsize,void *key,int32_t keysize,void *value,int32_t valuesize)
+{
+    struct kv777_hdditem *item; uint32_t size;
+    *allocsizep = size = kv777_itemsize(valuesize,keysize);
+    if ( size > maxsize || buf == 0 )
+        item = calloc(1,size);
+    else item = (struct kv777_hdditem *)buf;
+    item->valuesize = valuesize, item->keysize = keysize;
+    memcpy(item->value,value,valuesize);
+    memcpy(kv777_itemkey(item),key,keysize);
+    item->crc = _crc32(0,(void *)((long)item + sizeof(item->crc)),size - sizeof(item->crc));
+    //for (int i=0; i<size; i++)
+    //    printf("%02x ",((uint8_t *)item)[i]);
+    //printf("-> itemsize.%d | %p value.%p %d key.%p %d (%s %s)\n",size,item,item->value,item->valuesize,kv777_itemkey(item),item->keysize,item->value,kv777_itemkey(item));
+    return(item);
+}
+
+struct kv777_hdditem *kv777_load(uint32_t *itemsizep,uint32_t *deletedp,struct kv777 *kv)
+{
+    uint32_t crc,valuesize,keysize,size; long fpos; struct kv777_hdditem *item = 0;
+    fpos = ftell(kv->fp);
+    if ( fread(&crc,1,sizeof(crc),kv->fp) == sizeof(crc) && crc != 0 )
+    {
+        if ( fread(&valuesize,1,sizeof(valuesize),kv->fp) != sizeof(valuesize) )
+        {
+            printf("valuesize read error after %d items\n",kv->numkeys);
+            return(0);
+        }
+        if ( (valuesize & (1<<31)) != 0 )
+            *deletedp = 1, valuesize &= ~(1<<31);
+        else *deletedp = 0;
+        if ( fread(&keysize,1,sizeof(keysize),kv->fp) != sizeof(keysize) || keysize > KV777_MAXKEYSIZE || valuesize > KV777_MAXVALUESIZE )
+        {
+            printf("keysize read error after %d items keysize.%u valuesize.%u\n",kv->numkeys,keysize,valuesize);
+            return(0);
+        }
+        *itemsizep = size = kv777_itemsize(valuesize,keysize);
+        item = calloc(1,size);
+        item->valuesize = valuesize, item->keysize = keysize;
+        if ( fread(item->value,1,size - sizeof(*item),kv->fp) != (size - sizeof(*item)) )
+        {
+            printf("valuesize.%d read error after %d items\n",valuesize,kv->numkeys);
+            return(0);
+        }
+        item->crc = _crc32(0,(void *)((long)item + sizeof(item->crc)),size - sizeof(item->crc));
+        if ( crc != item->crc )
+        {
+            for (int i=0; i<size; i++)
+                printf("%02x ",((uint8_t *)item)[i]);
+            printf("kv777.%s error item.%d crc.%x vs calccrc.%x valuesize.%u\n",kv->name,kv->numkeys,crc,item->crc,valuesize);
+            return(0);
+        }
+    }
+    return(item);
+}
+
 int32_t kv777_update(struct kv777 *kv,struct kv777_item *ptr)
 {
-    uint8_t buf[65536],*value; uint32_t valuesize; long savepos,size,offset = 0; int32_t retval = -1;
+    struct kv777_hdditem *item; uint32_t valuesize; long savepos; int32_t retval = -1;
     if ( kv->fp == 0 )
         return(-1);
-    size = ptr->valuesize + sizeof(ptr->valuesize) + ptr->hh.keylen + sizeof(ptr->hh.keylen);
-    if ( (ptr->valuesize & (1<<31)) != 0 )
+    item = (void *)ptr->item;
+    if ( (item->valuesize & (1<<31)) != 0 )
     {
         savepos = ftell(kv->fp);
-        fseek(kv->fp,ptr->offset + sizeof(ptr->crc),SEEK_SET);
+        fseek(kv->fp,ptr->offset + sizeof(item->crc),SEEK_SET);
         if ( fread(&valuesize,1,sizeof(valuesize),kv->fp) == sizeof(valuesize) )
         {
             valuesize |= (1 << 31);
-            fseek(kv->fp,ptr->offset + sizeof(ptr->crc),SEEK_SET);
+            fseek(kv->fp,ptr->offset + sizeof(item->crc),SEEK_SET);
             if ( fwrite(&valuesize,1,sizeof(valuesize),kv->fp) == sizeof(valuesize) )
                 retval = 0;
         }
@@ -82,19 +167,12 @@ int32_t kv777_update(struct kv777 *kv,struct kv777_item *ptr)
         fseek(kv->fp,savepos,SEEK_SET);
         return(retval);
     } else ptr->offset = ftell(kv->fp);
-    if ( size > sizeof(buf) )
-        value = malloc(size);
-    else value = buf;
-    memcpy(&value[offset],&ptr->crc,sizeof(ptr->crc)), offset += sizeof(ptr->crc);
-    memcpy(&value[offset],&ptr->valuesize,sizeof(ptr->valuesize)), offset += sizeof(ptr->valuesize);
-    memcpy(&value[offset],&ptr->hh.keylen,sizeof(ptr->hh.keylen)), offset += sizeof(ptr->hh.keylen);
-    memcpy(&value[offset],ptr->value,ptr->valuesize), offset += ptr->valuesize;
-    memcpy(&value[offset],ptr->hh.key,ptr->hh.keylen), offset += ptr->hh.keylen;
-    if ( fwrite(value,1,offset,kv->fp) != offset )
+    //for (int i=0; i<ptr->itemsize; i++)
+    //    printf("%02x ",((uint8_t *)item)[i]);
+    //printf("-> itemsize.%d | %p value.%p %d key.%p %d (%s %s)\n",ptr->itemsize,item,item->value,item->valuesize,kv777_itemkey(item),item->keysize,item->value,kv777_itemkey(item));
+    if ( fwrite(ptr->item,1,ptr->itemsize,kv->fp) != ptr->itemsize )
         printf("fwrite.%s error at fpos.%ld\n",kv->name,ftell(kv->fp));
     else retval = 0;
-    if ( value != buf )
-        free(value);
     return(retval);
 }
 
@@ -141,14 +219,15 @@ void kv777_flush()
 int32_t kv777_delete(struct kv777 *kv,void *key,int32_t keysize)
 {
     static uint32_t counter;
-    int32_t retval = -1; struct kv777_item *ptr = 0;
+    void *itemkey; int32_t retval = -1; struct kv777_item *ptr = 0;
     kv777_lock(kv);
     HASH_FIND(hh,kv->table,key,keysize,ptr);
     if ( ptr != 0 )
     {
-        fprintf(stderr,"%d kv777_delete.%p val.%x %x vs %x val.%x\n",counter,ptr,*(int *)ptr->value,*(int *)ptr->hh.key,*(int *)key,*(int *)ptr->value);
+        itemkey = kv777_itemkey(ptr->item);
+        fprintf(stderr,"%d kv777_delete.%p val.%s %s vs %s val.%s\n",counter,ptr,ptr->item->value,itemkey,key,ptr->item->value);
         HASH_DELETE(hh,kv->table,ptr);
-        ptr->valuesize |= (1 << 31);
+        ptr->item->valuesize |= (1 << 31);
         if ( kv->hddflag != 0 && kv->rwflag != 0 )
             DL_APPEND(kv->list,ptr);
         else free(ptr);
@@ -161,68 +240,82 @@ int32_t kv777_delete(struct kv777 *kv,void *key,int32_t keysize)
 
 struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t valuesize)
 {
-    void *newkey; int32_t ind,duplicate = 0; struct kv777_item *ptr = 0;
+    int32_t ind,duplicate = 0; struct kv777_item *ptr = 0;
     //if ( kv == SUPERNET.PM )
-        fprintf(stderr,"kv777_write kv.%p table.%p write key.%u size.%d, value.(%s) size.%d\n",kv,kv->table,*(int *)key,keysize,value,valuesize);
+    //fprintf(stderr,"kv777_write kv.%p table.%p write key.%s size.%d, value.(%s) size.%d\n",kv,kv->table,key,keysize,value,valuesize);
     kv777_lock(kv);
     HASH_FIND(hh,kv->table,key,keysize,ptr);
     if ( ptr != 0 )
     {
         static uint32_t counter;
-        if ( valuesize == ptr->valuesize && memcmp(ptr->value,value,valuesize) == 0 )
+        if ( valuesize == ptr->item->valuesize && memcmp(ptr->item->value,value,valuesize) == 0 )
         {
-            //fprintf(stderr,"%d IDENTICAL.%p val.%x %x vs %x val.%x\n",counter,ptr,*(int *)ptr->value,*(int *)ptr->hh.key,*(int *)key,*(int *)value);
+            //fprintf(stderr,"%d IDENTICAL.%p val.%s %s vs %s val.%s\n",counter,ptr,ptr->item->value,kv777_itemkey(ptr->item),key,value);
             kv777_unlock(kv);
             return(ptr);
         }
         ind = ptr->ind;
-        fprintf(stderr,"%d DELETE.%p val.%x %x vs %x val.%x\n",counter,ptr,*(int *)ptr->value,*(int *)ptr->hh.key,*(int *)key,*(int *)value);
+        fprintf(stderr,"%d DELETE.%p val.%s %s vs %s val.%s\n",counter,ptr,ptr->item->value,kv777_itemkey(ptr->item),key,value);
         HASH_DELETE(hh,kv->table,ptr);
         free(ptr);
         counter++;
         duplicate = 1;
     } else ind = kv->numkeys;
-    ptr = calloc(1,sizeof(struct kv777_item) + valuesize);
+    ptr = calloc(1,sizeof(struct kv777_item));
     ptr->ind = ind;
-    //fprintf(stderr,"key.%p %x alloc.%p size.%ld\n",key,*(int *)key,ptr,sizeof(struct kv777_item) + valuesize);
-    newkey = malloc(keysize);
-    memcpy(newkey,key,keysize);
-    if ( duplicate == 0 )
-        kv->numkeys++;
-    HASH_ADD_KEYPTR(hh,kv->table,newkey,keysize,ptr);
-    ptr->valuesize = ptr->maxsize = valuesize;
-    memcpy(ptr->value,value,valuesize);
-    ptr->crc = _crc32(_crc32(0,value,valuesize),key,keysize);
-    if ( 1 && kv->hddflag != 0 && kv->rwflag != 0 )
-        DL_APPEND(kv->list,ptr);
+    if ( (ptr->item= kv777_hdditem(&ptr->itemsize,0,0,key,keysize,value,valuesize)) != 0 )
+    {
+        if ( duplicate == 0 )
+            kv->numkeys++;
+        HASH_ADD_KEYPTR(hh,kv->table,kv777_itemkey(ptr->item),keysize,ptr);
+        if ( kv->hddflag != 0 && kv->rwflag != 0 )
+            DL_APPEND(kv->list,ptr);
+    }
+    else
+    {
+        printf("kv777_write: couldnt create item.(%s) %s ind.%d offset.%ld\n",key,value,kv->numkeys,ftell(kv->fp));
+        free(ptr), ptr = 0;
+    }
     kv777_unlock(kv);
     return(ptr);
 }
 
 void *kv777_read(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t *valuesizep)
 {
-    struct kv777_item *ptr = 0;
+    struct kv777_hdditem *item; struct kv777_item *ptr = 0;
     kv777_lock(kv);
     HASH_FIND(hh,kv->table,key,keysize,ptr);
     kv777_unlock(kv);
-    if ( ptr != 0 )
+    if ( ptr != 0 && (item= ptr->item) != 0 && (item->valuesize & (1<<31)) == 0 )
     {
-        if ( ptr->valuesize <= *valuesizep )
+        if ( item->valuesize <= *valuesizep )
         {
             if ( value != 0 )
-                memcpy(value,ptr->value,ptr->valuesize);
+                memcpy(value,item->value,item->valuesize);
         }
-        *valuesizep = ptr->valuesize;
-        return(ptr->value);
+        *valuesizep = item->valuesize;
+        return(item->value);
     }
     *valuesizep = 0;
     return(0);
 }
 
+int32_t kv777_addstr(struct kv777 *kv,char *key,char *value)
+{
+    struct kv777_item *ptr;
+    if ( (ptr= kv777_write(kv,key,(int32_t)strlen(key)+1,value,(int32_t)strlen(value)+1)) != 0 )
+        return(ptr->ind);
+    return(-1);
+}
+
+char *kv777_findstr(char *retbuf,int32_t max,struct kv777 *kv,char *key)
+{
+    return(kv777_read(kv,key,(int32_t)strlen(key)+1,retbuf,&max));
+}
+
 struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NOT THREADSAFE!
 {
-    void *key; long offset,goodpos = 0; uint32_t crc,calccrc,keylen,valuesize,deleted,i=0;
-    struct kv777_item *ptr; struct kv777 *kv = calloc(1,sizeof(*kv));
+    long offset = 0; struct kv777_hdditem *item; uint32_t deleted,itemsize; struct kv777_item *ptr; struct kv777 *kv = calloc(1,sizeof(*kv));
     safecopy(kv->name,name,sizeof(kv->name));
     portable_mutex_init(&kv->mutex);
     kv->rwflag = 1, kv->hddflag = hddflag;
@@ -233,59 +326,29 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded) // NO
         kv->fp = fopen(kv->fname,"wb+");
     if ( kv->fp != 0 && kv->rwflag != 0 )
     {
-        offset = goodpos;
-        while ( fread(&crc,1,sizeof(crc),kv->fp) == sizeof(crc) && crc != 0 )
+        while ( (item= kv777_load(&itemsize,&deleted,kv)) != 0 )
         {
-            if ( fread(&valuesize,1,sizeof(valuesize),kv->fp) != sizeof(valuesize) )
+            if ( deleted != 0 )
+                free(item);
+            else
             {
-                printf("valuesize read error after %d items\n",i);
-                break;
-            }
-            if ( (valuesize & (1<<31)) != 0 )
-                deleted = 1, valuesize &= ~(1<<31);
-            else deleted = 0;
-            if ( fread(&keylen,1,sizeof(keylen),kv->fp) != sizeof(keylen) )
-            {
-                printf("keylen read error after %d items\n",i);
-                break;
-            }
-            ptr = calloc(1,sizeof(struct kv777_item) + valuesize);
-            if ( fread(&ptr->value,1,valuesize,kv->fp) != valuesize )
-            {
-                printf("valuesize.%d read error after %d items\n",valuesize,i);
-                break;
-            }
-            key = malloc(keylen);
-            if ( fread(key,1,keylen,kv->fp) != keylen )
-            {
-                printf("key.%d read error after %d items\n",keylen,i);
-                break;
-            }
-            calccrc = _crc32(_crc32(0,ptr->value,valuesize),key,keylen);
-            if ( crc != calccrc )
-            {
-                printf("kv777.%s error item.%d crc.%u vs calccrc.%u valuesize.%u\n",kv->name,i,crc,calccrc,valuesize);
-                break;
-            }
-            if ( deleted == 0 )
-            {
-                ptr->valuesize = ptr->maxsize = valuesize;
-                ptr->crc = calccrc;
+                ptr = calloc(1,sizeof(*ptr));
+                ptr->itemsize = itemsize;
+                ptr->item = item;
+                ptr->ind = kv->numkeys++;
                 ptr->offset = offset;
-                ptr->ind = i;
-                //if ( strcmp(name,"PM") == 0 )
-                    fprintf(stderr,"[%x] %s add item.%d crc.%u valuesize.%d keysize.%d [%d]\n",*(int *)ptr->value,ptr->value,i,calccrc,valuesize,keylen,*(int *)key);
-                HASH_ADD_KEYPTR(hh,kv->table,key,keylen,ptr);
-                i++;
+                HASH_ADD_KEYPTR(hh,kv->table,kv777_itemkey(item),item->keysize,ptr);
+                //fprintf(stderr,"[%s] add item.%d crc.%u valuesize.%d keysize.%d [%s]\n",item->value,kv->numkeys,item->crc,item->valuesize,item->keysize,kv777_itemkey(item));
             }
-            else free(ptr), free(key);
-            goodpos = ftell(kv->fp);
+            offset = ftell(kv->fp);
         }
     }
-    kv->numkeys = i;
-    printf("kv777.%s added %d items, fpos.%ld -> goodpos.%ld\n",kv->name,i,ftell(kv->fp),goodpos);
-    if ( goodpos != ftell(kv->fp) )
-        fseek(kv->fp,goodpos,SEEK_SET);
+    printf("kv777.%s added %d items, fpos.%ld -> goodpos.%ld\n",kv->name,kv->numkeys,ftell(kv->fp),offset);
+    if ( offset != ftell(kv->fp) )
+    {
+        printf("strange position?, seek\n");
+        fseek(kv->fp,offset,SEEK_SET);
+    }
     kv->multithreaded = multithreaded;
     KVS = realloc(KVS,sizeof(*KVS) * (Num_kvs + 1));
     KVS[Num_kvs++] = kv;
@@ -303,14 +366,12 @@ void kv777_test()
         {
             //printf("i.%d of n.%d\n",i,n);
             valuesize = (rand() % (sizeof(value)-1)) + 1;
-            if ( (valuesize & 3) != 0 )
-                valuesize += 4 - (valuesize & 3);
             keylen = (rand() % (sizeof(key)-8)) + 8;
             memset(key,0,sizeof(key));
             for (j=0; j<keylen; j++)
-                key[j] = rand();
+                key[j] = safechar64(rand());
             for (j=0; j<valuesize; j++)
-                value[j] = rand();
+                value[j] = safechar64(rand());
             kv777_write(kv,key,keylen,value,valuesize);
             if ( (rval= kv777_read(kv,key,keylen,0,&len)) != 0 )
             {
@@ -319,9 +380,10 @@ void kv777_test()
             } else printf("kv777_read error i.%d cant find key added, len.%d, valuesize.%d\n",i,len,valuesize);
         }
     }
-    printf("finished kv777_test %d iterations, %.3f millis ave -> %.1f seconds\n",i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
+    printf("finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds\n",i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
     kv777_flush();
-    printf("finished kv777_test %d iterations, %.3f millis ave -> %.1f seconds\n",i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
+    printf("finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds\n",i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
+    //getchar();
 }
 
 #endif
