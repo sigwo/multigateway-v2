@@ -635,11 +635,11 @@ int32_t env777_close(struct env777 *DBs,int32_t reopenflag)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char *method,*name,*resultstr,*path,*subdir,*pmstr; int32_t ind,len;
+    char *method,*resultstr,*path,*subdir,*pmstr; int32_t ind,len;
     //struct db777 *DB;
     //int32_t len,offset;
     retbuf[0] = 0;
-    //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
@@ -679,6 +679,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         sprintf(retbuf + strlen(retbuf) - 1,",\"ind\":%u,\"PM\":\"%s\",\"len\":%d}",ind,pmstr,len);
                 }
             } else sprintf(retbuf,"{\"error\":\"no PM database\"}");
+            printf("retbuf.(%s)\n",retbuf);
         }
         else sprintf(retbuf,"{\"error\":\"invalid kv777 method\",\"method\":\"%s\",\"tag\":\"%llu\"}",method,(long long)tag);
         if ( retbuf[0] == 0 )
