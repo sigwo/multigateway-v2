@@ -387,11 +387,11 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_
 
 void kv777_test()
 {
-    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize,n = 10000; uint8_t key[32],value[32]; double startmilli;
+    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize,n = 1000000; uint8_t key[32],value[32]; double startmilli;
     for (iter=errors=0; iter<3; iter++)
     {
         startmilli = milliseconds();
-        if ( (kv= kv777_init("test",1,1,1)) != 0 )
+        if ( (kv= kv777_init("test",1,0,1)) != 0 )
         {
             srand(777);
             for (i=0; i<n; i++)
