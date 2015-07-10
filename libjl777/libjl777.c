@@ -1517,7 +1517,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             strcpy(SUPERNET.myipaddr,myipaddr);
         if ( SUPERNET.myipaddr[0] != 0 )
             SUPERNET.myipbits = (uint32_t)calc_ipbits(SUPERNET.myipaddr);
-        SUPERNET.mmapflag = get_API_int(cJSON_GetObjectItem(json,"mmapflag"),1);
+        SUPERNET.mmapflag = get_API_int(cJSON_GetObjectItem(json,"mmapflag"),0);
         //if ( strncmp(SUPERNET.myipaddr,"89.248",5) == 0 )
         //    SUPERNET.iamrelay = get_API_int(cJSON_GetObjectItem(json,"iamrelay"),1*0);
         //else
