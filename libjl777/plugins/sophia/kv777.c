@@ -597,6 +597,8 @@ int32_t KV777_ping(struct kv777_dcntrl *KV)
 char *KV777_processping(cJSON *json,char *jsonstr)
 {
     cJSON *array; int32_t i,j,n,size; struct endpoint endpoint,*ep; char ipaddr[64],buf[512],*endpointstr; uint16_t port;
+    if ( SUPERNET.relays == 0 )
+        return(clonestr("{\"error\":\"no relays KV777\"}"));
     if ( (array= cJSON_GetObjectItem(json,"peers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
         for (i=0; i<n; i++)
