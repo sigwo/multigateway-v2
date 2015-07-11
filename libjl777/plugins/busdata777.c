@@ -820,6 +820,8 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         }
         else argjson = origjson;
         copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destplugin"));
+        if ( plugin[0] == 0 )
+            copy_cJSON(plugin,cJSON_GetObjectItem(argjson,"destagent"));
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"method"));
         copy_cJSON(servicename,cJSON_GetObjectItem(argjson,"servicename"));
@@ -979,6 +981,8 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         *sentflagp = (cJSON_GetObjectItem(json,"stop") != 0);
         copy_cJSON(method,cJSON_GetObjectItem(json,"method"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+        if ( plugin[0] == 0 )
+            copy_cJSON(plugin,cJSON_GetObjectItem(json,"agent"));
         if ( destNXTaddr != 0 )
             strcpy(destNXT,destNXTaddr);
         else destNXT[0] = 0;
