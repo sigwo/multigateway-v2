@@ -23,7 +23,6 @@
 #include "nonportable.h"
 #include "uthash.h"
 #include "cJSON.h"
-#include "../sophia/kv777.c"
 #include "utils777.c"
 #include "inet.c"
 #include "mutex.h"

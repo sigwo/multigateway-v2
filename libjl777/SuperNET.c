@@ -912,7 +912,9 @@ int main(int argc,const char *argv[])
     //SaM_PrepareIndices();
     //SaM_test();
     //printf("finished SaM_test\n");
-    //getchar();
+    void kv777_test(int32_t n);
+    kv777_test(1000000);
+    getchar();
     if ( 0 )
     {
         bits128 calc_md5(char digeststr[33],void *buf,int32_t len);

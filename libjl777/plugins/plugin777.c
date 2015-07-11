@@ -33,6 +33,7 @@
 #include "pair.h"
 #include "pubsub.h"
 #include "cJSON.h"
+#include "sophia/kv777.c"
 #include "system777.c"
 
 struct plugin_info

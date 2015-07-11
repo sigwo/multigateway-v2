@@ -22,9 +22,9 @@ struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata,*DB_NXTtxids,*DB_M
 struct db777_info SOPHIA;
 STRUCTNAME KV777;
 
-char *PLUGNAME(_methods)[] = { "getPM" };
-char *PLUGNAME(_pubmethods)[] = { "getPM" };
-char *PLUGNAME(_authmethods)[] = { "getPM",
+char *PLUGNAME(_methods)[] = { "getPM", "ping" };
+char *PLUGNAME(_pubmethods)[] = { "getPM", "ping" };
+char *PLUGNAME(_authmethods)[] = { "getPM", "ping",
 #ifdef BUNDLED
     "get", "set", "object", "env", "ctl","open", "destroy", "error", "delete", "async", "drop", "cursor", "begin", "commit", "type",
 #endif
@@ -635,7 +635,7 @@ int32_t env777_close(struct env777 *DBs,int32_t reopenflag)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char *method,*resultstr,*path,*subdir,*pmstr; int32_t ind,len;
+    char *method,*resultstr,*path,*subdir,*pmstr,*retstr = 0; int32_t ind,len;
     //struct db777 *DB;
     //int32_t len,offset;
     retbuf[0] = 0;
@@ -667,6 +667,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
+        else if ( strcmp(method,"ping") == 0 )
+        {
+            char *KV777_processping(cJSON *json,char *jsonstr);
+            retstr = KV777_processping(json,jsonstr);
+        }
         else if ( strcmp(method,"getPM") == 0 )
         {
             ind = get_API_int(cJSON_GetObjectItem(json,"ind"),-1);
@@ -682,6 +687,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             //printf("retbuf.(%s)\n",retbuf);
         }
         else sprintf(retbuf,"{\"error\":\"invalid kv777 method\",\"method\":\"%s\",\"tag\":\"%llu\"}",method,(long long)tag);
+        if ( retstr != 0 )
+        {
+            strcpy(retbuf,retstr);
+            free(retstr);
+        }
         if ( retbuf[0] == 0 )
             sprintf(retbuf,"{\"error\":\"null return\",\"method\":\"%s\",\"tag\":\"%llu\"}",method,(long long)tag);
         else sprintf(retbuf + strlen(retbuf) - 1,",\"tag\":\"%llu\"}",(long long)tag);

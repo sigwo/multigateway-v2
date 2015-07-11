@@ -453,7 +453,6 @@ void calc_nonces(char *destpoint)
     free(destpoint);
 }
 
-
 void recv_nonces(void *_ptr)
 {
     int32_t i,j,n; cJSON *json,*item,*array,*nonces; char *jsonstr; struct applicant_info A,*ptr = _ptr;
