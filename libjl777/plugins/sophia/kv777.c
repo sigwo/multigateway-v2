@@ -431,9 +431,9 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_
 {
     long offset = 0; struct kv777_hdditem *item; uint32_t i,itemsize,allocflag;
     struct kv777_item *ptr; struct kv777 *kv;
-#ifdef _WIN32
+//#ifdef _WIN32
     mmapflag = 0;
-#endif
+//#endif
     if ( Num_kvs > 0 )
     {
         for (i=0; i<Num_kvs; i++)
