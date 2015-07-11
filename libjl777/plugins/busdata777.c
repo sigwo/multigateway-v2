@@ -1264,10 +1264,12 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
         RELAYS.pubglobal = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBGLOBALS_OFFSET,sendtimeout,recvtimeout);
         sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + PUBRELAYS_OFFSET);
         RELAYS.pubrelays = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBRELAYS_OFFSET,sendtimeout,recvtimeout);
+        SUPERNET.relays = KV777_init("relays",&SUPERNET.rawPM,1,8,RELAYS.pubrelays,RELAYS.subclient,RELAYS.active.connections,RELAYS.active.num,1 << CONNECTION_NUMBITS,SUPERNET.port + PUBRELAYS_OFFSET);
     }
     for (i=0; i<RELAYS.numservers; i++)
         RELAYS.pfd[i].events = NN_POLLIN | NN_POLLOUT;
     printf("SUPERNET.iamrelay %d, numservers.%d\n",SUPERNET.iamrelay,RELAYS.numservers);
+
 }
 
 int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)

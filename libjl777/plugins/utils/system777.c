@@ -134,6 +134,7 @@ struct SuperNET_info
     uint64_t tags[NUM_PLUGINTAGS][3];
     struct env777 DBs;
     struct kv777 *PM,*rawPM,*channels,*alias,*NXTaccts;
+    struct kv777_dcntrl *relays;
     cJSON *argjson;
 }; extern struct SuperNET_info SUPERNET;
 
