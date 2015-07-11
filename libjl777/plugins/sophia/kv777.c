@@ -411,7 +411,8 @@ void *kv777_read(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t 
         }
         return(item->value);
     }
-    printf("kv777_read ptr.%p item.%p key.%s keysize.%d\n",ptr,item,key,keysize);
+    if ( Debuglevel > 3 )
+        printf("kv777_read ptr.%p item.%p key.%s keysize.%d\n",ptr,item,key,keysize);
     if ( valuesizep != 0 )
         *valuesizep = 0;
     return(0);
@@ -529,8 +530,9 @@ void kv777_test(int32_t n)
 
 int32_t KV777_ping(struct kv777_dcntrl *KV)
 {
-    uint32_t nonce; char *retstr;
-    if ( (retstr= busdata_sync(&nonce,"{\"agent\":\"kv777\",\"method\":\"ping\"}","allrelays",0)) != 0 )
+    uint32_t nonce; char *retstr,buf[1025];
+    strcpy(buf,"{\"agent\":\"kv777\",\"method\":\"ping\"}");
+    if ( (retstr= busdata_sync(&nonce,buf,"allrelays",0)) != 0 )
     {
         printf("KV777_ping.(%s)\n",retstr);
         free(retstr);
@@ -547,12 +549,15 @@ char *KV777_processping(cJSON *json,char *jsonstr)
 int32_t KV777_connect(struct kv777_dcntrl *KV,struct endpoint *ep)
 {
     int32_t j; char endpoint[512];
+    if ( KV->subsock < 0 )
+        return(-1);
     for (j=0; j<KV->num; j++)
         if ( memcmp(ep,&KV->connections[j],sizeof(*ep)) == 0 )
             return(0);;
     if ( j == KV->num )
     {
         expand_epbits(endpoint,*ep);
+        printf("connect to (%s)\n",endpoint);
         if ( nn_connect(KV->subsock,endpoint) < 0 )
             printf("KV777_init warning: error connecting to (%s) %s\n",endpoint,nn_errstr());
         else
@@ -569,6 +574,7 @@ int32_t KV777_connect(struct kv777_dcntrl *KV,struct endpoint *ep)
 int32_t KV777_addnode(struct kv777_dcntrl *KV,struct endpoint *ep)
 {
     struct KV_node node; uint32_t ind = KV->nodes->numkeys;
+    printf("addnode %x\n",ep->ipbits);
     memset(&node,0,sizeof(node));
     node.endpoint = *ep;
     if ( kv777_write(KV->nodes,ep,sizeof(*ep),&node,sizeof(node)) == 0 || kv777_write(KV->nodes,&ind,sizeof(ind),ep,sizeof(*ep)) == 0 )
@@ -602,6 +608,7 @@ struct kv777_dcntrl *KV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uin
     for (i=0; i<KV->nodes->numkeys; i++) // connect all nodes in DB that are not already connected
     {
         size = sizeof(endpoint);
+        printf("nodesearch.%d\n",i);
         if ( (ep= kv777_read(KV->nodes,&i,sizeof(i),&endpoint,&size)) != 0 && size == sizeof(endpoint) )
             KV777_connect(KV,ep);
     }
@@ -614,7 +621,6 @@ struct kv777_dcntrl *KV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uin
                 printf("KV777_init warning: error adding node to (%s)\n",buf);
         }
     }
-    KV777_ping(KV);
     return(KV);
 }
 

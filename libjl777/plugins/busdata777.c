@@ -1049,7 +1049,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         cJSON_AddItemToObject(datajson,"n",cJSON_CreateNumber(datalen));
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
-        tokbuf = calloc(1,strlen(str2) + 1024);
+        tokbuf = calloc(1,strlen(str2) + 4096);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
         if ( Debuglevel > 2 )
             printf("method.(%s) created busdata.(%s) -> (%s) tlen.%d\n",method,str,tokbuf,tlen);
@@ -1264,12 +1264,12 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
         RELAYS.pubglobal = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBGLOBALS_OFFSET,sendtimeout,recvtimeout);
         sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + PUBRELAYS_OFFSET);
         RELAYS.pubrelays = nn_createsocket(endpoint,1,"NN_PUB",NN_PUB,SUPERNET.port + PUBRELAYS_OFFSET,sendtimeout,recvtimeout);
-        SUPERNET.relays = KV777_init("relays",&SUPERNET.rawPM,1,8,RELAYS.pubrelays,RELAYS.subclient,RELAYS.active.connections,RELAYS.active.num,1 << CONNECTION_NUMBITS,SUPERNET.port + PUBRELAYS_OFFSET);
     }
     for (i=0; i<RELAYS.numservers; i++)
         RELAYS.pfd[i].events = NN_POLLIN | NN_POLLOUT;
     printf("SUPERNET.iamrelay %d, numservers.%d\n",SUPERNET.iamrelay,RELAYS.numservers);
-
+    if ( SUPERNET.iamrelay != 0 )
+        SUPERNET.relays = KV777_init("relay",&SUPERNET.rawPM,1,8,RELAYS.pubrelays,RELAYS.subclient,RELAYS.active.connections,RELAYS.active.num,1 << CONNECTION_NUMBITS,SUPERNET.port + PUBRELAYS_OFFSET);
 }
 
 int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)

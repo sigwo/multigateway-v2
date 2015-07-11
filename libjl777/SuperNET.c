@@ -913,8 +913,8 @@ int main(int argc,const char *argv[])
     //SaM_test();
     //printf("finished SaM_test\n");
     void kv777_test(int32_t n);
-    kv777_test(1000000);
-    getchar();
+    //kv777_test(10000);
+    //getchar();
     if ( 0 )
     {
         bits128 calc_md5(char digeststr[33],void *buf,int32_t len);
@@ -959,6 +959,10 @@ int main(int argc,const char *argv[])
             if ( is_bundled_plugin((char *)argv[i]) != 0 )
                 language_func((char *)argv[i],"",0,0,1,(char *)argv[i],jsonstr,call_system);
     }
+    sleep(60);
+    int32_t KV777_ping(struct kv777_dcntrl *KV);
+    KV777_ping(SUPERNET.relays);
+
     while ( 1 )
     {
         char line[1024];
