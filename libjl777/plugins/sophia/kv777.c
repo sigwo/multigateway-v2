@@ -617,10 +617,10 @@ char *KV777_processping(cJSON *json,char *jsonstr)
                 }
                 if ( j == SUPERNET.relays->nodes->numkeys && strcmp(endpointstr,SUPERNET.relayendpoint) != 0 )
                 {
-                    KV777_connect(SUPERNET.relays,ep);
                     port = parse_ipaddr(ipaddr,endpointstr+6);
                     printf("ipaddr.(%s):%d\n",ipaddr,port);
                     endpoint = calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(ipaddr),port,NN_PUB);
+                    KV777_connect(SUPERNET.relays,&endpoint);
                     KV777_addnode(SUPERNET.relays,&endpoint);
                 }
             }
