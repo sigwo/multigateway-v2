@@ -546,6 +546,7 @@ int32_t KV777_ping(struct kv777_dcntrl *KV)
             cJSON_AddItemToArray(array,cJSON_CreateString(buf));
         }
     }
+    cJSON_AddItemToObject(json,"peers",array);
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' '), free_json(json);
     if ( (retstr= busdata_sync(&nonce,jsonstr,"allrelays",0)) != 0 )
     {
