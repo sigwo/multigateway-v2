@@ -646,6 +646,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         ensure_directory(SOPHIA.PATH);
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
         KV777.readyflag = 1;
+        plugin->allowremote = 1;
         //Debuglevel = 3;
     }
     else
