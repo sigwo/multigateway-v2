@@ -570,6 +570,7 @@ int32_t KV777_ping(struct kv777_dcntrl *KV)
     json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"agent",cJSON_CreateString("kv777"));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("ping"));
+    cJSON_AddItemToObject(json,"rand",cJSON_CreateNumber(rand()));
     cJSON_AddItemToObject(json,"unixtime",cJSON_CreateNumber(time(NULL)));
     cJSON_AddItemToObject(json,"myendpoint",cJSON_CreateString(SUPERNET.relayendpoint));
     array = cJSON_CreateArray();
