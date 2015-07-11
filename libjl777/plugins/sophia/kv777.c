@@ -245,6 +245,15 @@ int32_t kv777_update(struct kv777 *kv,struct kv777_item *ptr)
                 exit(-1);
             }
         }
+        if ( Debuglevel > 3 )
+            printf("updated item.%d at %ld siz.%d\n",ptr->ind,ptr->offset,ptr->itemsize);
+        if ( fwrite(ptr->item,1,ptr->itemsize,kv->fp) != ptr->itemsize )
+        {
+            printf("fwrite.%s error at fpos.%ld\n",kv->name,ftell(kv->fp));
+            exit(-1);
+        }
+        fseek(kv->fp,savepos,SEEK_SET);
+        return(0);
     }
     //for (int i=0; i<ptr->itemsize; i++)
     //    printf("%02x ",((uint8_t *)item)[i]);
@@ -307,14 +316,17 @@ void kv777_counters(struct kv777 *kv,int32_t polarity,uint32_t keysize,uint32_t 
     kv->totalvalues += polarity * kv777_valuesize(valuesize), kv->netvalues += polarity;
     kv->totalkeys += polarity *  keysize, kv->netkeys += polarity;
     if ( ptr != 0 && kv->hddflag != 0 && kv->rwflag != 0 )
+    {
+        //kv777_update(kv,ptr);
         DL_APPEND(kv->list,ptr);
+    }
 }
 
-void kv777_add(struct kv777 *kv,struct kv777_item *ptr)
+void kv777_add(struct kv777 *kv,struct kv777_item *ptr,int32_t updatehdd)
 {
     kv->numkeys++;
     HASH_ADD_KEYPTR(hh,kv->table,kv777_itemkey(ptr->item),ptr->item->keysize,ptr);
-    kv777_counters(kv,1,ptr->item->keysize,ptr->item->valuesize,ptr);
+    kv777_counters(kv,1,ptr->item->keysize,ptr->item->valuesize,updatehdd != 0 ? ptr : 0);
 }
 
 int32_t kv777_delete(struct kv777 *kv,void *key,int32_t keysize)
@@ -353,16 +365,19 @@ struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *
                 kv777_unlock(kv);
                 return(ptr);
             }
+            else if ( Debuglevel > 3 )
+                printf("kv777_write (%s) != (%s)\n",ptr->item->value,value);
             kv777_counters(kv,-1,ptr->item->keysize,ptr->item->valuesize,0);
             kv777_free(kv,ptr,0);
-        }
+        } else printf("kv777_write: null item?\n");
         if ( Debuglevel > 3 )
             fprintf(stderr,"%d REPLACE.%p val.%s %s vs %s val.%s\n",kv->netkeys,ptr,ptr->item->value,kv777_itemkey(ptr->item),key,value);
         if ( kv777_itemsize(keysize,valuesize) > ptr->itemsize )
             ptr->offset = -1;
         if ( (ptr->item= kv777_hdditem(&ptr->itemsize,0,0,key,keysize,value,valuesize)) != 0 )
             kv777_counters(kv,1,keysize,valuesize,ptr);
-        else printf("kv777_write: couldnt create item.(%s) %s ind.%d offset.%ld\n",key,value,kv->numkeys,ftell(kv->fp));
+        else if ( Debuglevel > 3 )
+            printf("kv777_write: couldnt create item.(%s) %s ind.%d offset.%ld\n",key,value,kv->numkeys,ftell(kv->fp));
     }
     else
     {
@@ -372,7 +387,7 @@ struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *
         {
             printf("kv777_write: couldnt create item.(%s) %s ind.%d offset.%ld\n",key,value,kv->numkeys,ftell(kv->fp));
             free(ptr), ptr = 0;
-        } else  kv777_add(kv,ptr);
+        } else  kv777_add(kv,ptr,1);
         if ( Debuglevel > 3 )
             fprintf(stderr,"%d CREATE.%p val.%s %s vs %s val.%s\n",kv->netkeys,ptr,ptr->item->value,kv777_itemkey(ptr->item),key,value);
     }
@@ -382,7 +397,7 @@ struct kv777_item *kv777_write(struct kv777 *kv,void *key,int32_t keysize,void *
 
 void *kv777_read(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t *valuesizep)
 {
-    struct kv777_hdditem *item; struct kv777_item *ptr = 0;
+    struct kv777_hdditem *item = 0; struct kv777_item *ptr = 0;
     kv777_lock(kv);
     HASH_FIND(hh,kv->table,key,keysize,ptr);
     kv777_unlock(kv);
@@ -396,6 +411,7 @@ void *kv777_read(struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t 
         }
         return(item->value);
     }
+    printf("kv777_read ptr.%p item.%p key.%s keysize.%d\n",ptr,item,key,keysize);
     if ( valuesizep != 0 )
         *valuesizep = 0;
     return(0);
@@ -431,7 +447,7 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_
     if ( SOPHIA.PATH[0] == 0 )
         strcpy(SOPHIA.PATH,"DB");
     sprintf(kv->fname,"%s/%s",SOPHIA.PATH,kv->name), os_compatible_path(kv->fname);
-    if ( (kv->fp= fopen(kv->fname,"rb+")) == 0 )
+    if ( hddflag != 0 && (kv->fp= fopen(kv->fname,"rb+")) == 0 )
         kv->fp = fopen(kv->fname,"wb+");
     if ( kv->fp != 0 )
     {
@@ -454,7 +470,7 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_
                 ptr->item = item;
                 ptr->ind = kv->numkeys;
                 ptr->offset = offset;
-                kv777_add(kv,ptr);
+                kv777_add(kv,ptr,0);
                 //fprintf(stderr,"[%s] add item.%d crc.%u valuesize.%d keysize.%d [%s]\n",item->value,kv->numkeys,item->crc,item->valuesize,item->keysize,kv777_itemkey(item));
             }
             offset = kv->offset; //ftell(kv->fp);
@@ -474,8 +490,9 @@ struct kv777 *kv777_init(char *name,int32_t hddflag,int32_t multithreaded,int32_
 
 void kv777_test(int32_t n)
 {
-    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize; uint8_t key[32],value[32]; double startmilli;
+    struct kv777 *kv; void *rval; int32_t errors,iter,i=1,j,len,keylen,valuesize; uint8_t key[32],value[32],result[1024]; double startmilli;
     SUPERNET.mmapflag = 1;
+    //Debuglevel = 3;
     for (iter=errors=0; iter<3; iter++)
     {
         startmilli = milliseconds();
@@ -496,9 +513,8 @@ void kv777_test(int32_t n)
                     value[j] = safechar64(rand());
                 if ( 1 && iter != 0 && (i % 1000) == 0 )
                     value[0] ^= 0xff;
-                if ( iter < 2 )
-                    kv777_write(kv,key,keylen,value,valuesize);
-                if ( (rval= kv777_read(kv,key,keylen,0,&len)) != 0 )
+                kv777_write(kv,key,keylen,value,valuesize);
+                if ( (rval= kv777_read(kv,key,keylen,result,&len)) != 0 )
                 {
                     if ( len != valuesize || memcmp(value,rval,valuesize) != 0 )
                         errors++, printf("len.%d vs valuesize.%d or data mismatch\n",len,valuesize);
