@@ -531,7 +531,7 @@ void kv777_test(int32_t n)
 int32_t KV777_ping(struct kv777_dcntrl *KV)
 {
     uint32_t nonce; char *retstr,buf[1025];
-    strcpy(buf,"{\"agent\":\"kv777\",\"method\":\"ping\"}");
+    sprintf(buf,"{\"agent\":\"kv777\",\"method\":\"ping\",\"uniq\":%lu}",(long)time(NULL));
     if ( (retstr= busdata_sync(&nonce,buf,"allrelays",0)) != 0 )
     {
         printf("KV777_ping.(%s)\n",retstr);
