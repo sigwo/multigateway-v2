@@ -34,7 +34,7 @@ void process_json(cJSON *json,int32_t publicaccess)
     sendtimeout = 30000;
     randombytes(&tag,sizeof(tag));
     if ( cJSON_GetObjectItem(json,"tag") == 0 )
-        printf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
+        sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
     if ( cJSON_GetObjectItem(json,"apitag") == 0 )
         cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
     if ( publicaccess != 0 )
