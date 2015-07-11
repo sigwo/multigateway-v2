@@ -960,8 +960,6 @@ int main(int argc,const char *argv[])
                 language_func((char *)argv[i],"",0,0,1,(char *)argv[i],jsonstr,call_system);
     }
     sleep(60);
-    int32_t KV777_ping(struct kv777_dcntrl *KV);
-    KV777_ping(SUPERNET.relays);
 
     while ( 1 )
     {

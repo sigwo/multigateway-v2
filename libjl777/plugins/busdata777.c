@@ -1235,6 +1235,16 @@ int32_t busdata_poll()
             }
         }
     }
+    if ( SUPERNET.iamrelay != 0 )
+    {
+        int32_t KV777_ping(struct kv777_dcntrl *KV);
+        static double lastping;
+        if ( milliseconds() > lastping+3000 )
+        {
+            KV777_ping(SUPERNET.relays);
+            lastping = milliseconds();
+        }
+    }
     return(n);
 }
 
