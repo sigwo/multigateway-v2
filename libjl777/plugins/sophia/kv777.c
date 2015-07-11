@@ -528,41 +528,6 @@ void kv777_test(int32_t n)
     printf("errors.%d finished kv777_test %d iterations, %.4f millis ave -> %.1f seconds after flush\n",errors,i,(milliseconds() - startmilli) / i,.001*(milliseconds() - startmilli));
 }
 
-int32_t KV777_ping(struct kv777_dcntrl *KV)
-{
-    uint32_t i,nonce; int32_t size; struct endpoint endpoint,*ep; char *retstr,*jsonstr,buf[512]; cJSON *array,*json;
-    json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"agent",cJSON_CreateString("kv777"));
-    cJSON_AddItemToObject(json,"method",cJSON_CreateString("ping"));
-    cJSON_AddItemToObject(json,"unixtime",cJSON_CreateNumber(time(NULL)));
-    cJSON_AddItemToObject(json,"myendpoint",cJSON_CreateString("SUPERNET.relayendpoint"));
-    array = cJSON_CreateArray();
-    for (i=0; i<KV->nodes->numkeys; i++)
-    {
-        size = sizeof(endpoint);
-        if ( (ep= kv777_read(KV->nodes,&i,sizeof(i),&endpoint,&size)) != 0 && size == sizeof(endpoint) )
-        {
-            expand_epbits(buf,*ep);
-            cJSON_AddItemToArray(array,cJSON_CreateString(buf));
-        }
-    }
-    cJSON_AddItemToObject(json,"peers",array);
-    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' '), free_json(json);
-    if ( (retstr= busdata_sync(&nonce,jsonstr,"allrelays",0)) != 0 )
-    {
-        printf("KV777_ping.(%s)\n",jsonstr);
-        free(retstr);
-    }
-    free(jsonstr);
-    return(0);
-}
-
-char *KV777_processping(cJSON *json,char *jsonstr)
-{
-    printf("KV777 GOT.(%s)\n",jsonstr);
-    return(clonestr("{\"result\":\"success\"}"));
-}
-
 int32_t KV777_connect(struct kv777_dcntrl *KV,struct endpoint *ep)
 {
     int32_t j; char endpoint[512];
@@ -599,6 +564,70 @@ int32_t KV777_addnode(struct kv777_dcntrl *KV,struct endpoint *ep)
     return(0);
 }
 
+int32_t KV777_ping(struct kv777_dcntrl *KV)
+{
+    uint32_t i,nonce; int32_t size; struct endpoint endpoint,*ep; char *retstr,*jsonstr,buf[512]; cJSON *array,*json;
+    json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"agent",cJSON_CreateString("kv777"));
+    cJSON_AddItemToObject(json,"method",cJSON_CreateString("ping"));
+    cJSON_AddItemToObject(json,"unixtime",cJSON_CreateNumber(time(NULL)));
+    cJSON_AddItemToObject(json,"myendpoint",cJSON_CreateString(SUPERNET.relayendpoint));
+    array = cJSON_CreateArray();
+    cJSON_AddItemToArray(array,cJSON_CreateString(SUPERNET.relayendpoint));
+    for (i=0; i<KV->nodes->numkeys; i++)
+    {
+        size = sizeof(endpoint);
+        if ( (ep= kv777_read(KV->nodes,&i,sizeof(i),&endpoint,&size)) != 0 && size == sizeof(endpoint) )
+        {
+            expand_epbits(buf,*ep);
+            cJSON_AddItemToArray(array,cJSON_CreateString(buf));
+        }
+    }
+    cJSON_AddItemToObject(json,"peers",array);
+    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' '), free_json(json);
+    if ( (retstr= busdata_sync(&nonce,jsonstr,"allrelays",0)) != 0 )
+    {
+        printf("KV777_ping.(%s)\n",jsonstr);
+        free(retstr);
+    }
+    free(jsonstr);
+    return(0);
+}
+
+char *KV777_processping(cJSON *json,char *jsonstr)
+{
+    cJSON *array; int32_t i,j,n,size; struct endpoint endpoint,*ep; char ipaddr[64],buf[512],*endpointstr; uint16_t port;
+    if ( (array= cJSON_GetObjectItem(json,"peers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        for (i=0; i<n; i++)
+        {
+            if ( (endpointstr= cJSON_str(cJSON_GetArrayItem(array,i))) != 0 )
+            {
+                for (j=0; j<SUPERNET.relays->nodes->numkeys; j++)
+                {
+                    size = sizeof(endpoint);
+                    if ( (ep= kv777_read(SUPERNET.relays->nodes,&j,sizeof(j),&endpoint,&size)) != 0 && size == sizeof(endpoint) )
+                    {
+                        expand_epbits(buf,*ep);
+                        if ( strcmp(buf,endpointstr) == 0 )
+                            break;
+                    }
+                }
+                if ( j == SUPERNET.relays->nodes->numkeys && strcmp(endpointstr,SUPERNET.relayendpoint) != 0 )
+                {
+                    KV777_connect(SUPERNET.relays,ep);
+                    port = parse_ipaddr(ipaddr,endpointstr+6);
+                    printf("ipaddr.(%s):%d\n",ipaddr,port);
+                    endpoint = calc_epbits(SUPERNET.transport,(uint32_t)calc_ipbits(ipaddr),port,NN_PUB);
+                    KV777_addnode(SUPERNET.relays,&endpoint);
+                }
+            }
+        }
+    }
+    printf("KV777 GOT.(%s)\n",jsonstr);
+    return(clonestr("{\"result\":\"success\"}"));
+}
+
 struct kv777_dcntrl *KV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uint32_t flags,int32_t pubsock,int32_t subsock,struct endpoint *connections,int32_t num,int32_t max,uint16_t port)
 {
     struct kv777_dcntrl *KV = calloc(1,sizeof(*KV));
@@ -625,7 +654,6 @@ struct kv777_dcntrl *KV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uin
     for (i=0; i<KV->nodes->numkeys; i++) // connect all nodes in DB that are not already connected
     {
         size = sizeof(endpoint);
-        printf("nodesearch.%d\n",i);
         if ( (ep= kv777_read(KV->nodes,&i,sizeof(i),&endpoint,&size)) != 0 && size == sizeof(endpoint) )
             KV777_connect(KV,ep);
     }
