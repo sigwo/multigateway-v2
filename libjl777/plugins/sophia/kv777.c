@@ -531,7 +531,7 @@ void kv777_test(int32_t n)
 int32_t KV777_connect(struct kv777_dcntrl *KV,struct endpoint *ep)
 {
     int32_t j; char endpoint[512];
-    if ( KV->subsock < 0 )
+    if ( KV == 0 || KV->subsock < 0 )
         return(-1);
     for (j=0; j<KV->num; j++)
         if ( memcmp(ep,&KV->connections[j],sizeof(*ep)) == 0 )
