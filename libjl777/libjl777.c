@@ -1604,13 +1604,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {
-            char portstr[16];
-            for (i=0; i<12; i++)
-            {
-                sprintf(portstr,"%d",SUPERNET.port+i);
-                upnpredirect(portstr,portstr,"TCP","SuperNET");
-            }
+            char portstr[64];
+            sprintf(portstr,"%d",SUPERNET.serviceport), upnpredirect(portstr,portstr,"TCP","SuperNET");
+            sprintf(portstr,"%d",SUPERNET.port + LB_OFFSET), upnpredirect(portstr,portstr,"TCP","SuperNET");
+            sprintf(portstr,"%d",SUPERNET.port + PUBGLOBALS_OFFSET), upnpredirect(portstr,portstr,"TCP","SuperNET");
+            sprintf(portstr,"%d",SUPERNET.port + PUBRELAYS_OFFSET), upnpredirect(portstr,portstr,"TCP","SuperNET");
         }
+        
         //void kv777_test(); kv777_test();
     }
     else
