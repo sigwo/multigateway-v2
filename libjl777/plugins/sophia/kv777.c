@@ -509,7 +509,7 @@ struct kv777 *kv777_init(char *name,struct kv777_flags *flags) // kv777_init IS 
     long offset = 0; struct kv777_hdditem *item; uint32_t i,itemsize,allocflag; struct kv777_flags F;
     struct kv777_item *ptr; struct kv777 *kv;
     if ( flags == 0 )
-        flags = &F, memset(flags,0,sizeof(*flags));
+        flags = &F, kv777_defaultflags(flags);
 #ifdef _WIN32
     flags->mmap = 0;
 #endif
