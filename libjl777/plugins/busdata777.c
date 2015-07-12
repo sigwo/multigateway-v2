@@ -1222,11 +1222,11 @@ int32_t busdata_poll()
     }
     if ( SUPERNET.iamrelay != 0 )
     {
-        int32_t KV777_ping(struct kv777_dcntrl *KV);
+        int32_t dKV777_ping(struct dKV777 *dKV);
         static double lastping;
         if ( milliseconds() > (lastping + SUPERNET.relays->pinggap) )
         {
-            KV777_ping(SUPERNET.relays);
+            dKV777_ping(SUPERNET.relays);
             lastping = milliseconds();
         }
     }
@@ -1264,7 +1264,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
         RELAYS.pfd[i].events = NN_POLLIN | NN_POLLOUT;
     printf("SUPERNET.iamrelay %d, numservers.%d ipaddr.(%s://%s) port.%d serviceport.%d\n",SUPERNET.iamrelay,RELAYS.numservers,SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port,SUPERNET.serviceport);
     if ( SUPERNET.iamrelay != 0 )
-        SUPERNET.relays = KV777_init("relay",0,0,8,RELAYS.pubrelays,RELAYS.subclient,RELAYS.active.connections,RELAYS.active.num,1 << CONNECTION_NUMBITS,SUPERNET.port + PUBRELAYS_OFFSET,0.);
+        SUPERNET.relays = dKV777_init("relays",0,0,8,RELAYS.pubrelays,RELAYS.subclient,RELAYS.active.connections,RELAYS.active.num,1 << CONNECTION_NUMBITS,SUPERNET.port + PUBRELAYS_OFFSET,0.);
 }
 
 int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)

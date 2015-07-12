@@ -671,8 +671,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(method,"ping") == 0 )
         {
-            char *KV777_processping(cJSON *json,char *jsonstr,char *sender,char *tokenstr);
-            retstr = KV777_processping(json,jsonstr,sender,tokenstr);
+            char *dKV777_processping(cJSON *json,char *jsonstr,char *sender,char *tokenstr);
+            retstr = dKV777_processping(json,jsonstr,sender,tokenstr);
         }
         else if ( strcmp(method,"getPM") == 0 )
         {
