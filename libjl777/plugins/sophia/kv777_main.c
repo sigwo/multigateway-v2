@@ -18,7 +18,7 @@
 #include "db777.c"
 #undef DEFINES_ONLY
 
-struct db777 *DB_msigs,*DB_NXTaccts,*DB_nodestats,*DB_busdata,*DB_NXTtxids,*DB_MGW,*DB_redeems,*DB_NXTtrades,*DB_services;
+struct db777 *DB_msigs,*DB_NXTaccts,*DB_NXTtxids,*DB_MGW,*DB_redeems,*DB_NXTtrades;
 struct db777_info SOPHIA;
 STRUCTNAME KV777;
 
@@ -390,9 +390,9 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
     strcpy(DB->name,dbname);
     DB->env = sp_env();
     DB->ctl = sp_ctl(DB->env);
-    if ( SOPHIA.PATH[0] == '.' && (SOPHIA.PATH[1] == '/' || SOPHIA.PATH[1] == '\\') )
-        strcpy(path,SOPHIA.PATH+2);
-    else strcpy(path,SOPHIA.PATH);
+    if ( KV777.PATH[0] == '.' && (KV777.PATH[1] == '/' || KV777.PATH[1] == '\\') )
+        strcpy(path,KV777.PATH+2);
+    else strcpy(path,KV777.PATH);
     ensure_directory(path);
     if ( specialpath != 0 )
     {
@@ -644,6 +644,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     {
         // configure settings
         ensure_directory(SOPHIA.PATH);
+        ensure_directory(KV777.PATH);
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
         KV777.readyflag = 1;
         plugin->allowremote = 1;

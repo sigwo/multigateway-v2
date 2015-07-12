@@ -1555,11 +1555,15 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         copy_cJSON(SUPERNET.BACKUPS,cJSON_GetObjectItem(json,"backups"));
         if ( SUPERNET.BACKUPS[0] == 0 )
             strcpy(SUPERNET.BACKUPS,"/tmp");
+        copy_cJSON(KV777.PATH,cJSON_GetObjectItem(json,"KV777"));
         copy_cJSON(SOPHIA.PATH,cJSON_GetObjectItem(json,"SOPHIA"));
         copy_cJSON(SOPHIA.RAMDISK,cJSON_GetObjectItem(json,"RAMDISK"));
         if ( SOPHIA.PATH[0] == 0 )
             strcpy(SOPHIA.PATH,"./DB");
+        if ( KV777.PATH[0] == 0 )
+            strcpy(KV777.PATH,"./DB");
         os_compatible_path(SOPHIA.PATH), ensure_directory(SOPHIA.PATH);
+        os_compatible_path(KV777.PATH), ensure_directory(KV777.PATH);
         MGW.port = get_API_int(cJSON_GetObjectItem(json,"MGWport"),7643);
         copy_cJSON(MGW.PATH,cJSON_GetObjectItem(json,"MGWPATH"));
         if ( MGW.PATH[0] == 0 )
@@ -1574,10 +1578,10 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             if ( DB_NXTaccts == 0 )
                 DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
-            if ( DB_nodestats == 0 )
-                DB_nodestats = db777_create(0,0,"nodestats",0,0);
-            if ( DB_busdata == 0 )
-                DB_busdata = db777_create(0,0,"busdata",0,0);
+            //if ( DB_nodestats == 0 )
+            //    DB_nodestats = db777_create(0,0,"nodestats",0,0);
+            //if ( DB_busdata == 0 )
+            //    DB_busdata = db777_create(0,0,"busdata",0,0);
             if ( DB_NXTtxids == 0 )
                 DB_NXTtxids = db777_create(0,0,"NXT_txids",0,0);
             if ( DB_redeems == 0 )
@@ -1588,14 +1592,15 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 DB_msigs = db777_create(0,0,"msigs",0,0);
             if ( DB_NXTtrades == 0 )
                 DB_NXTtrades = db777_create(0,0,"NXT_trades",0,0);
-            if ( DB_services == 0 )
-                DB_services = db777_create(0,0,"services",0,0);
+            //if ( DB_services == 0 )
+            //    DB_services = db777_create(0,0,"services",0,0);
         }
-        SUPERNET.PM = kv777_init("PM",1,1,0);
-        SUPERNET.alias = kv777_init("alias",1,1,0);
-        SUPERNET.channels = kv777_init("channels",1,1,0);
-        SUPERNET.NXTaccts = kv777_init("NXTaccts",1,1,0);
-        SUPERNET.rawPM = kv777_init("rawPM",1,1,1);
+        SUPERNET.PM = kv777_init("PM",0);
+        SUPERNET.alias = kv777_init("alias",0);
+        SUPERNET.channels = kv777_init("channels",0);
+        SUPERNET.NXTaccts = kv777_init("NXTaccts",0);
+        SUPERNET.rawPM = kv777_init("rawPM",0);
+        SUPERNET.services = kv777_init("services",0);
         SUPERNET.readyflag = 1;
         if ( SUPERNET.UPNP != 0 )
         {

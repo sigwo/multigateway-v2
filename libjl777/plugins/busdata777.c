@@ -339,89 +339,79 @@ char *lb_serviceprovider(struct service_provider *sp,uint8_t *data,int32_t datal
     return(jsonstr);
 }
 
+void *serviceprovider_iterator(struct kv777 *kv,void *_ptr,void *key,int32_t keysize,void *value,int32_t valuesize)
+{
+    char numstr[64]; struct serviceprovider *S = key; cJSON *item,*array = _ptr;
+    if ( keysize == sizeof(*S) )
+    {
+        item = cJSON_CreateObject();
+        cJSON_AddItemToObject(item,S->name,cJSON_CreateString(S->endpoint));
+        sprintf(numstr,"%llu",(long long)S->servicebits), cJSON_AddItemToObject(item,"serviceNXT",cJSON_CreateString(numstr));
+        cJSON_AddItemToArray(array,item);
+        return(0);
+    }
+    printf("unexpected services entry size.%d/%d vs %ld? abort serviceprovider_iterator\n",keysize,valuesize,sizeof(*S));
+    return(KV777_ABORTITERATOR);
+}
+
+struct connectargs { char *servicename,*endpoint; int32_t sock; };
+void *serviceconnect_iterator(struct kv777 *kv,void *_ptr,void *key,int32_t keysize,void *value,int32_t valuesize)
+{
+    struct serviceprovider *S = key; struct connectargs *ptr = _ptr;
+    if ( keysize == sizeof(*S) && strcmp(ptr->servicename,S->name) == 0 )
+    {
+        nn_connect(ptr->sock,S->endpoint), printf("SERVICEPROVIDER CONNECT ");
+        if ( ptr->endpoint != 0 && strcmp(S->endpoint,ptr->endpoint) == 0 )
+            ptr->endpoint = 0;
+    }
+    printf("%24llu %16s %s\n",(long long)S->servicebits,S->name,S->endpoint);
+    return(0);
+}
+
 cJSON *serviceprovider_json()
 {
-    struct serviceprovider **sps; int32_t i,num; cJSON *json,*item,*array; char numstr[64];
-    json = cJSON_CreateObject();
-    array = cJSON_CreateArray();
-    if ( (sps= (struct serviceprovider **)db777_copy_all(&num,DB_services,"key",0)) != 0 )
-    {
-        for (i=0; i<num; i++)
-        {
-            if ( sps[i] != 0 )
-            {
-                item = cJSON_CreateObject();
-                cJSON_AddItemToObject(item,sps[i]->name,cJSON_CreateString(sps[i]->endpoint));
-                sprintf(numstr,"%llu",(long long)sps[i]->servicebits), cJSON_AddItemToObject(item,"serviceNXT",cJSON_CreateString(numstr));
-                free(sps[i]);
-                cJSON_AddItemToArray(array,item);
-            }
-        }
-        free(sps);
-    }
+    cJSON *json,*array;
+    json = cJSON_CreateObject(), array = cJSON_CreateArray();
+    kv777_iterate(SUPERNET.services,array,0,serviceprovider_iterator);
     cJSON_AddItemToObject(json,"services",array);
     return(json);
 }
 
 uint32_t find_serviceprovider(struct serviceprovider *S)
 {
-    void *obj,*result,*value; int32_t len; uint32_t timestamp = 0;
-    if ( (obj= sp_object(DB_services->db)) != 0 )
-    {
-        if ( sp_set(obj,"key",S,sizeof(*S)) == 0 && (result= sp_get(DB_services->db,obj)) != 0 )
-        {
-            value = sp_get(result,"value",&len);
-            memcpy(&timestamp,value,len);
-            sp_destroy(result);
-        }
-    }
-    return(timestamp);
+    uint32_t *timestampp; int32_t len = sizeof(*timestampp);
+    if ( (timestampp= kv777_read(SUPERNET.services,S,sizeof(*S),0,&len)) != 0 && len == sizeof(uint32_t) )
+        return(*timestampp);
+    return(0);
+}
+
+void set_serviceprovider(struct serviceprovider *S,char *serviceNXT,char *servicename,char *endpoint)
+{
+    memset(S,0,sizeof(*S));
+    S->servicebits = conv_acctstr(serviceNXT);
+    strncpy(S->name,servicename,sizeof(S->name)-1);
+    strncpy(S->endpoint,endpoint,sizeof(S->endpoint)-1);
+    S->endpoint[sizeof(S->endpoint)-1] = 0;
 }
 
 int32_t remove_service_provider(char *serviceNXT,char *servicename,char *endpoint)
 {
-    void *obj; int32_t retval; struct serviceprovider S;
-    memset(&S,0,sizeof(S));
-    S.servicebits = conv_acctstr(serviceNXT);
-    strncpy(S.name,servicename,sizeof(S.name)-1);
-    S.endpoint[sizeof(S.endpoint)-1] = 0;
-    strncpy(S.endpoint,endpoint,sizeof(S.endpoint)-1);
-    if ( find_serviceprovider(&S) != 0 && (obj= sp_object(DB_services->db)) != 0 )
-    {
-        if ( sp_set(obj,"key",&S,sizeof(S)) == 0 )
-        {
-            printf("DELETE SERVICEPROVIDER.(%s) (%s) serviceNXT.(%s) (%s)\n",servicename,endpoint,serviceNXT,cJSON_Print(serviceprovider_json()));
-            retval = sp_delete(DB_services->db,obj);
-            printf("after delete retval.%d (%s)\n",retval,cJSON_Print(serviceprovider_json()));
-        }
-    }
-    return(-1);
+    struct serviceprovider S;
+    set_serviceprovider(&S,serviceNXT,servicename,endpoint);
+    return(kv777_delete(SUPERNET.services,&S,sizeof(S)));
 }
 
 int32_t add_serviceprovider(struct serviceprovider *S,uint32_t timestamp)
 {
-    void *obj;
-    if ( (obj= sp_object(DB_services->db)) != 0 )
-    {
-        if ( sp_set(obj,"key",S,sizeof(*S)) == 0 && sp_set(obj,"value",&timestamp,sizeof(timestamp)) == 0 )
-            return(sp_set(DB_services->db,obj));
-        else
-        {
-            sp_destroy(obj);
-            printf("error add_serviceprovider %s\n",db777_errstr(DB_services->ctl));
-        }
-    }
+    if ( kv777_write(SUPERNET.services,S,sizeof(*S),&timestamp,sizeof(timestamp)) != 0 )
+        return(0);
     return(-1);
 }
 
 int32_t add_service_provider(char *serviceNXT,char *servicename,char *endpoint)
 {
     struct serviceprovider S;
-    memset(&S,0,sizeof(S));
-    S.servicebits = conv_acctstr(serviceNXT);
-    strncpy(S.name,servicename,sizeof(S.name)-1);
-    S.endpoint[sizeof(S.endpoint)-1] = 0;
-    strncpy(S.endpoint,endpoint,sizeof(S.endpoint)-1);
+    set_serviceprovider(&S,serviceNXT,servicename,endpoint);
     if ( find_serviceprovider(&S) == 0 )
         add_serviceprovider(&S,(uint32_t)time(NULL));
     return(0);
@@ -429,7 +419,7 @@ int32_t add_service_provider(char *serviceNXT,char *servicename,char *endpoint)
 
 struct service_provider *find_servicesock(char *servicename,char *endpoint)
 {
-    struct service_provider *sp,*checksp; struct serviceprovider **sps; int32_t i,num,sendtimeout,recvtimeout,retrymillis,maxmillis;
+    struct service_provider *sp,*checksp; int32_t sendtimeout,recvtimeout,retrymillis,maxmillis; struct connectargs args;
     HASH_FIND(hh,Service_providers,servicename,strlen(servicename),sp);
     if ( sp == 0 )
     {
@@ -442,34 +432,19 @@ struct service_provider *find_servicesock(char *servicename,char *endpoint)
         {
             printf("checksp.%p != %p\n",checksp,sp);
         }
-        sp->sock = nn_socket(AF_SP,NN_REQ);
-        sendtimeout = 1000, recvtimeout = 10000, maxmillis = 3000, retrymillis = 100;
-        if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
-            fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-        else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
-            fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-        else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
-            fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-        else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
-            fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
-        // scan DB and nn_connect
-        if ( (sps= (struct serviceprovider **)db777_copy_all(&num,DB_services,"key",0)) != 0 )
+        if ( (sp->sock= nn_socket(AF_SP,NN_REQ)) >= 0 )
         {
-            for (i=0; i<num; i++)
-            {
-                if ( sps[i] != 0 )
-                {
-                    if ( strcmp(servicename,sps[i]->name) == 0 )
-                    {
-                        nn_connect(sp->sock,sps[i]->endpoint), printf("SERVICEPROVIDER CONNECT ");
-                        if ( endpoint != 0 && strcmp(sps[i]->endpoint,endpoint) == 0 )
-                            endpoint = 0;
-                    }
-                    printf("%24llu %16s %s\n",(long long)sps[i]->servicebits,sps[i]->name,sps[i]->endpoint);
-                    free(sps[i]);
-                }
-            }
-            free(sps);
+            sendtimeout = 1000, recvtimeout = 10000, maxmillis = 3000, retrymillis = 100;
+            if ( sendtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_SNDTIMEO,&sendtimeout,sizeof(sendtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            else if ( recvtimeout > 0 && nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RCVTIMEO,&recvtimeout,sizeof(recvtimeout)) < 0 )
+                fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
+            else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
+                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+            else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
+                fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
+            args.servicename = servicename, args.endpoint = endpoint, args.sock = sp->sock;
+            kv777_iterate(SUPERNET.services,servicename,0,serviceconnect_iterator); // scan DB and nn_connect
         }
     } // else printf("sp.%p found servicename.(%s) sock.%d\n",sp,servicename,sp->sock);
     if ( endpoint != 0 )

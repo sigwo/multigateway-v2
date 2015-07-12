@@ -117,7 +117,7 @@ struct env777
     uint32_t start_RTblocknum;
 };
 
-struct kv777_info { int32_t readyflag; }; extern struct kv777_info KV777;
+struct kv777_info { char PATH[1024]; int32_t readyflag; }; extern struct kv777_info KV777;
 
 #define DEFAULT_APISLEEP 100  // milliseconds
 #define NUM_PLUGINTAGS 8192
@@ -133,7 +133,7 @@ struct SuperNET_info
     uint16_t port,serviceport;
     uint64_t tags[NUM_PLUGINTAGS][3];
     struct env777 DBs;
-    struct kv777 *PM,*rawPM,*channels,*alias,*NXTaccts;
+    struct kv777 *PM,*rawPM,*channels,*alias,*NXTaccts,*services;
     struct kv777_dcntrl *relays;
     cJSON *argjson;
 }; extern struct SuperNET_info SUPERNET;
