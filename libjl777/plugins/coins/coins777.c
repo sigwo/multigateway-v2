@@ -16,7 +16,7 @@
 #include "cJSON.h"
 #include "huffstream.c"
 #include "system777.c"
-#include "kv777.c"
+#include "../sophia/kv777.c"
 #include "db777.c"
 #include "files777.c"
 #include "utils777.c"
