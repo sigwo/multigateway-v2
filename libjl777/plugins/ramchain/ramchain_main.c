@@ -15,8 +15,8 @@
 
 #define DEFINES_ONLY
 #include "../plugin777.c"
-#include "kv777.c"
-#include "system777.c"
+#include "../sophia/kv777.c"
+#include "../utils/system777.c"
 //#include "ledger777.c"
 #include "ramchain.c"
 #undef DEFINES_ONLY

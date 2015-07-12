@@ -21,10 +21,10 @@
 
 #define DEFINES_ONLY
 #include "../plugin777.c"
-#include "kv777.c"
-#include "system777.c"
-#include "NXT777.c"
-#include "ramchain.c"
+#include "../sophia/kv777.c"
+#include "../utils/system777.c"
+#include "../utils/NXT777.c"
+#include "../ramchain/ramchain.c"
 #undef DEFINES_ONLY
 
 int32_t MGW_idle(struct plugin_info *plugin)

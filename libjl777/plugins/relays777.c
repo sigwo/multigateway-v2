@@ -13,9 +13,9 @@
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
 
 #define DEFINES_ONLY
-#include "system777.c"
-#include "NXT777.c"
-#include "plugin777.c"
+#include "../utils/system777.c"
+#include "../utils/NXT777.c"
+#include "../plugin777.c"
 #undef DEFINES_ONLY
 #define NN_WS -4
 
