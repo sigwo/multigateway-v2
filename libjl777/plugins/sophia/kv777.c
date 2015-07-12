@@ -762,8 +762,9 @@ struct kv777_dcntrl *KV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uin
         free(KV);
         return(0);
     }
-    sprintf(buf,"%s.nodes",name);
-    KV->nodes = kv777_init(buf,0);
+    if ( kvs == &relays )
+        KV->nodes = relays;
+    else sprintf(buf,"%s.nodes",name), KV->nodes = kv777_init(buf,0);
     for (i=0; i<KV->nodes->numkeys; i++) // connect all nodes in DB that are not already connected
     {
         size = sizeof(endpoint);
