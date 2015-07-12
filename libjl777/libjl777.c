@@ -1480,7 +1480,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     char *retstr,*resultstr,*methodstr,*destplugin,buf[1024],myipaddr[512];
     uint8_t mysecret[32],mypublic[32];
     FILE *fp;
-    int32_t i,len;
+    int32_t len;
     retbuf[0] = 0;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN.(%s)! (%s) initflag.%d process %s\n",plugin->name,jsonstr,initflag,plugin->name);
     if ( initflag > 0 )

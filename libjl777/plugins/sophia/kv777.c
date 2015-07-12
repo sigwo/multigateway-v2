@@ -641,6 +641,29 @@ int32_t KV777_addnode(struct kv777_dcntrl *KV,struct endpoint *ep)
     return(0);
 }
 
+cJSON *kv_json(struct kv777 *kv)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"name",cJSON_CreateString(kv->name));
+    cJSON_AddItemToObject(json,"numkeys",cJSON_CreateNumber(kv->numkeys));
+    cJSON_AddItemToObject(json,"netkeys",cJSON_CreateNumber(kv->netkeys));
+    cJSON_AddItemToObject(json,"keysizes",cJSON_CreateNumber(kv->totalkeys));
+    cJSON_AddItemToObject(json,"netvalues",cJSON_CreateNumber(kv->netvalues));
+    cJSON_AddItemToObject(json,"valuesizes",cJSON_CreateNumber(kv->totalvalues));
+    return(json);
+}
+
+cJSON *kvs_json(struct kv777_dcntrl *KV)
+{
+    int32_t i; cJSON *array = cJSON_CreateArray();
+    if ( KV->numkvs > 0 )
+    {
+        for (i=0; i<KV->numkvs; i++)
+            cJSON_AddItemToArray(array,kv_json(KV->kvs[i]));
+    }
+    return(array);
+}
+
 int32_t KV777_ping(struct kv777_dcntrl *KV)
 {
     uint32_t i,nonce; int32_t size; struct endpoint endpoint,*ep; char *retstr,*jsonstr,buf[512]; cJSON *array,*json;
@@ -662,6 +685,7 @@ int32_t KV777_ping(struct kv777_dcntrl *KV)
         }
     }
     cJSON_AddItemToObject(json,"peers",array);
+    cJSON_AddItemToObject(json,"kvs",kvs_json(KV));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' '), free_json(json);
     if ( (retstr= busdata_sync(&nonce,jsonstr,"allrelays",0)) != 0 )
     {
