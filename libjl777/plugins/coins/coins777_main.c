@@ -14,13 +14,13 @@
 
 
 #define DEFINES_ONLY
-#include "cJSON.h"
+#include "../includes/cJSON.h"
 #include "../plugin777.c"
-#include "files777.c"
-#include "NXT777.c"
+#include "../utils/files777.c"
+#include "../utils/NXT777.c"
 #include "coins777.c"
 #include "gen1auth.c"
-#include "msig.c"
+#include "../coins/msig.c"
 #undef DEFINES_ONLY
 
 int32_t coins_idle(struct plugin_info *plugin)

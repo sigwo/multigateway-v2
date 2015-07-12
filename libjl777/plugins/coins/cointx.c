@@ -17,7 +17,7 @@
 #include "coins777.c"
 #include "../utils/system777.c"
 #include "gen1auth.c"
-#include "msig.c"
+#include "../coins/msig.c"
 
 struct cointx_info *_decode_rawtransaction(char *hexstr,int32_t oldtx);
 int32_t _emit_cointx(char *hexstr,long len,struct cointx_info *cointx,int32_t oldtx);
