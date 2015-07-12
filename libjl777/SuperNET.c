@@ -36,7 +36,7 @@ int32_t recvsock;
 #include "plugins/utils/utils777.c"
 #undef DEFINES_ONLY
 
-#include "cJSON.h"
+#include "plugins/includes/cJSON.h"
 #define NUM_GATEWAYS 3
 
 cJSON *SuperAPI(char *cmd,char *field0,char *arg0,char *field1,char *arg1)

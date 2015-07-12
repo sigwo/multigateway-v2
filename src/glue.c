@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <string.h>
-#include "cJSON.h"
+#include "../libjl777/plugins/includes/cJSON.h"
 
 void *poll_for_broadcasts(void *args);
 extern int32_t SuperNET_retval,did_SuperNET_init;
