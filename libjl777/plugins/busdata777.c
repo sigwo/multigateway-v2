@@ -358,7 +358,7 @@ struct connectargs { char *servicename,*endpoint; int32_t sock; };
 void *serviceconnect_iterator(struct kv777 *kv,void *_ptr,void *key,int32_t keysize,void *value,int32_t valuesize)
 {
     struct serviceprovider *S = key; struct connectargs *ptr = _ptr;
-    if ( keysize == sizeof(*S) && strcmp(ptr->servicename,S->name) == 0 )
+    if ( keysize == sizeof(*S) && strcmp(ptr->servicename,S->name) == 0 && S->servicebits != 0 )
     {
         nn_connect(ptr->sock,S->endpoint), printf("SERVICEPROVIDER CONNECT ");
         if ( ptr->endpoint != 0 && strcmp(S->endpoint,ptr->endpoint) == 0 )
@@ -480,6 +480,8 @@ char *busdata_addpending(char *destNXT,char *sender,char *key,uint32_t timestamp
             remove_service_provider(serviceNXT,servicename,endpoint);
             sprintf(retbuf,"{\"result\":\"serviceprovider endpoint removed\",\"endpoint\":\"%s\",\"serviceNXT\":\"%s\"}",endpoint,serviceNXT);
         }
+        else if ( serviceNXT[0] == 0 || is_decimalstr(serviceNXT) == 0 || calc_nxt64bits(serviceNXT) == 0 )
+            return(clonestr("{\"error\":\"no serviceNXT\"}"));
         else
         {
             if ( add_service_provider(serviceNXT,servicename,endpoint) == 0 )
@@ -1260,7 +1262,7 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
     }
     for (i=0; i<RELAYS.numservers; i++)
         RELAYS.pfd[i].events = NN_POLLIN | NN_POLLOUT;
-    printf("SUPERNET.iamrelay %d, numservers.%d\n",SUPERNET.iamrelay,RELAYS.numservers);
+    printf("SUPERNET.iamrelay %d, numservers.%d ipaddr.(%s://%s) port.%d serviceport.%d\n",SUPERNET.iamrelay,RELAYS.numservers,SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port,SUPERNET.serviceport);
     if ( SUPERNET.iamrelay != 0 )
         SUPERNET.relays = KV777_init("relay",&SUPERNET.rawPM,1,8,RELAYS.pubrelays,RELAYS.subclient,RELAYS.active.connections,RELAYS.active.num,1 << CONNECTION_NUMBITS,SUPERNET.port + PUBRELAYS_OFFSET,0.);
 }

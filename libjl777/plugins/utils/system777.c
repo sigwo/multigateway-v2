@@ -121,7 +121,7 @@ struct kv777_info { char PATH[1024]; int32_t readyflag; }; extern struct kv777_i
 
 #define DEFAULT_APISLEEP 100  // milliseconds
 #define NUM_PLUGINTAGS 8192
-struct applicant_info { uint64_t senderbits; uint32_t nonce; char startflag,lbendpoint[100],relayendpoint[100],globalendpoint[100]; };
+struct applicant_info { uint64_t senderbits; uint32_t nonce; char startflag,lbendpoint[128],relayendpoint[128],globalendpoint[128]; };
 
 struct SuperNET_info
 {
