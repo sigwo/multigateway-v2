@@ -668,7 +668,7 @@ cJSON *kvs_json(struct kv777_dcntrl *KV)
 
 char *KV777_processping(cJSON *json,char *origjsonstr,char *sender,char *tokenstr)
 {
-    cJSON *array; int32_t i,j,n,size; struct endpoint endpoint,*ep; char ipaddr[64],buf[512],*endpointstr; uint16_t port;
+    cJSON *array; int32_t i,j,n,size; struct endpoint endpoint,*ep; char ipaddr[64],buf[512],*endpointstr,*nxtaddr; uint16_t port;
     if ( SUPERNET.relays == 0 )
         return(clonestr("{\"error\":\"no relays KV777\"}"));
     if ( (array= cJSON_GetObjectItem(json,"peers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
@@ -697,6 +697,12 @@ char *KV777_processping(cJSON *json,char *origjsonstr,char *sender,char *tokenst
                 }
             }
         }
+    }
+    if ( (nxtaddr= cJSON_str(cJSON_GetObjectItem(json,"NXT"))) != 0 && conv_acctstr(nxtaddr) == conv_acctstr(sender) )
+    {
+        char hexstr[512]; bits256 sha;
+        calc_sha256(hexstr,(void *)&sha.bytes,(void *)origjsonstr,(int32_t)strlen(origjsonstr));
+        printf("[approve %s] ",hexstr);
     }
     printf("KV777 GOT.(%s) from.(%s) [%s]\n",origjsonstr,sender,tokenstr);
     return(clonestr("{\"result\":\"success\"}"));
