@@ -22,9 +22,9 @@ struct db777 *DB_msigs,*DB_NXTaccts,*DB_NXTtxids,*DB_MGW,*DB_redeems,*DB_NXTtrad
 struct db777_info SOPHIA;
 STRUCTNAME KV777;
 
-char *PLUGNAME(_methods)[] = { "getPM", "ping" };
-char *PLUGNAME(_pubmethods)[] = { "getPM", "ping" };
-char *PLUGNAME(_authmethods)[] = { "getPM", "ping",
+char *PLUGNAME(_methods)[] = { "getPM", "getrawPM", "ping" };
+char *PLUGNAME(_pubmethods)[] = { "getPM", "getrawPM", "ping" };
+char *PLUGNAME(_authmethods)[] = { "getPM", "getrawPM", "ping",
 #ifdef BUNDLED
     "get", "set", "object", "env", "ctl","open", "destroy", "error", "delete", "async", "drop", "cursor", "begin", "commit", "type",
 #endif
@@ -686,6 +686,20 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         sprintf(retbuf + strlen(retbuf) - 1,",\"ind\":%u,\"PM\":\"%s\",\"len\":%d}",ind,pmstr,len);
                 }
             } else sprintf(retbuf,"{\"error\":\"no PM database\"}");
+            //printf("retbuf.(%s)\n",retbuf);
+        }
+        else if ( strcmp(method,"getrawPM") == 0 )
+        {
+            ind = get_API_int(cJSON_GetObjectItem(json,"ind"),-1);
+            if ( SUPERNET.rawPM != 0 )
+            {
+                sprintf(retbuf,"{\"result\":\"success\",\"numkeys\":%d}",SUPERNET.rawPM->numkeys);
+                if ( ind >= 0 )
+                {
+                    if ( (pmstr= kv777_read(SUPERNET.rawPM,(void *)&ind,sizeof(ind),0,&len)) != 0 )
+                        sprintf(retbuf + strlen(retbuf) - 1,",\"ind\":%u,\"rawPM\":\"%s\",\"len\":%d}",ind,pmstr,len);
+                }
+            } else sprintf(retbuf,"{\"error\":\"no rawPM database\"}");
             //printf("retbuf.(%s)\n",retbuf);
         }
         else sprintf(retbuf,"{\"error\":\"invalid kv777 method\",\"method\":\"%s\",\"tag\":\"%llu\"}",method,(long long)tag);

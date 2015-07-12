@@ -745,8 +745,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
                         {
                             ind = SUPERNET.rawPM->numkeys;
                             printf("RELAYSAVE.(%s)\n",str);
-                            kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
-                            kv777_flush();
+                            dKV777_write(SUPERNET.relays,SUPERNET.rawPM,calc_nxt64bits(sender),str,(int32_t)strlen(str)+1), kv777_flush();
                         }
                         free(str);
                         free_json(dupjson);
@@ -775,8 +774,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
             {
                 ind = SUPERNET.rawPM->numkeys;
                 printf("RELAYSAVE2.(%s)\n",str);
-                kv777_write(SUPERNET.rawPM,&ind,sizeof(ind),str,(int32_t)strlen(str)+1);
-                kv777_flush();
+                dKV777_write(SUPERNET.relays,SUPERNET.rawPM,calc_nxt64bits(sender),str,(int32_t)strlen(str)+1), kv777_flush();
             }
             free(str);
             return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage ignored\"}"));

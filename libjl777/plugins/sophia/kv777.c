@@ -56,40 +56,24 @@ int32_t kv777_idle();
 void *kv777_iterate(struct kv777 *kv,void *args,int32_t allitems,void *(*iterator)(struct kv777 *kv,void *args,void *key,int32_t keysize,void *value,int32_t valuesize));
 
 struct dKV_node { struct endpoint endpoint; uint64_t nxt64bits,stake; int64_t penalty; uint32_t activetime,nodei; int32_t sock; };
-struct dKV_item { void *key,*value; int32_t keysize,valuesize; };
 
-struct dKV_branch
-{
-    struct dKV_item item;
-    int32_t numnodes;
-    uint64_t weight;
-    struct dKV_node nodes[];
-};
-
-#define KV777_MAXPEERS 16
-//#define KV777_FIFODEPTH 16
-//#define KV777_NUMGENERATORS 16
-#define KV777_ORDERED 1
 struct dKV777
 {
     char name[64];
     struct kv777 *approvals,*nodes,**kvs;
     uint64_t approvalfifo[256];
-    //struct dKV_node peers[KV777_MAXPEERS];
-    //uint64_t generators[KV777_FIFODEPTH][KV777_NUMGENERATORS];
     struct endpoint *connections;
     double pinggap;
     int32_t pubsock,subsock,num,max,numkvs,fifoind,lastfifoi; uint32_t totalnodes,ind,keysize,flags; uint16_t port;
 };
 
 struct dKV777 *dKV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uint32_t flags,int32_t pubsock,int32_t subsock,struct endpoint *connections,int32_t num,int32_t max,uint16_t port,double pinggap);
-int32_t dKV777_addnode(struct dKV777 *KV,struct endpoint *ep);
-int32_t dKV777_removenode(struct dKV777 *KV,struct endpoint *ep);
-int32_t dKV777_blacklist(struct dKV777 *KV,struct endpoint *ep,int32_t penalty);
-int32_t dKV777_submit(struct dKV777 *KV,void *key,int32_t keysize,void *value,int32_t valuesize);
-int32_t dKV777_get(struct dKV777 *KV,struct dKV_item *item);
-int32_t dKV777_put(struct dKV777 *KV,struct dKV_item *item);
-int32_t dKV777_ping(struct dKV777 *KV);
+int32_t dKV777_addnode(struct dKV777 *dKV,struct endpoint *ep);
+int32_t dKV777_removenode(struct dKV777 *dKV,struct endpoint *ep);
+int32_t dKV777_blacklist(struct dKV777 *dKV,struct endpoint *ep,int32_t penalty);
+int32_t dKV777_ping(struct dKV777 *dKV);
+struct kv777_item *dKV777_write(struct dKV777 *dKV,struct kv777 *kv,uint64_t senderbits,void *value,int32_t valuesize);
+void *dKV777_read(struct dKV777 *dKV,struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t *valuesizep);
 
 #endif
 #else
@@ -672,20 +656,6 @@ cJSON *dKV_approvals_json(struct dKV777 *dKV)
     return(array);
 }
 
-void dKV777_approval(struct dKV777 *dKV,uint64_t nxt64bits,char *peerstr)
-{
-    char hexstr[512]; bits256 sha; int32_t len = (int32_t)strlen(peerstr) + 1;
-    calc_sha256(hexstr,(void *)&sha.bytes,(void *)peerstr,len);
-    if ( dKV != 0 && kv777_read(dKV->approvals,(void *)&sha.bytes,sizeof(sha.bytes),0,0) == 0 )
-    {
-        if ( kv777_write(dKV->approvals,(void *)&sha.bytes,sizeof(sha.bytes),peerstr,len) == 0 )
-            printf("dKV777_approval error writing approval for (%s)\n",peerstr);
-        else dKV->approvalfifo[dKV->fifoind++ % (sizeof(dKV->approvalfifo)/sizeof(*dKV->approvalfifo))] = sha.txid;
-        printf("NEW.");
-    }
-    printf("[%s approve %s] ",dKV->name,hexstr);
-}
-
 void dKV777_gotapproval(struct dKV777 *dKV,uint64_t senderbits,uint64_t txid)
 {
     uint32_t count,paircount; int32_t size; uint64_t key[2];
@@ -730,6 +700,54 @@ void dKV777_gotapproval(struct dKV777 *dKV,uint64_t senderbits,uint64_t txid)
         if ( kv777_write(dKV->approvals,(void *)key,sizeof(key),&paircount,sizeof(paircount)) == 0 )
             printf("dKV777_gotapproval error writing approval txid.%llu for (NXT.%llu) paircount.%d\n",(long long)txid,(long long)senderbits,paircount);
     }
+}
+
+bits256 dKV777_approval(struct dKV777 *dKV,uint64_t nxt64bits,void *ptr,int32_t len)
+{
+    char hexstr[512]; bits256 hash;
+    calc_sha256(hexstr,(void *)&hash.bytes,ptr,len);
+    if ( dKV != 0 && kv777_read(dKV->approvals,(void *)&hash.bytes,sizeof(hash.bytes),0,0) == 0 )
+    {
+        if ( kv777_write(dKV->approvals,(void *)&hash.bytes,sizeof(hash.bytes),ptr,len) == 0 )
+            printf("dKV777_approval error writing approval for (%s)\n",ptr);
+        else dKV->approvalfifo[dKV->fifoind++ % (sizeof(dKV->approvalfifo)/sizeof(*dKV->approvalfifo))] = hash.txid;
+        printf("NEW.");
+    }
+    printf("[%s approve %s].%llu ",dKV->name,hexstr,(long long)hash.txid);
+    return(hash);
+}
+
+struct kv777_item *dKV777_write(struct dKV777 *dKV,struct kv777 *kv,uint64_t senderbits,void *value,int32_t valuesize)
+{
+    int32_t i; uint64_t key[2]; bits256 hash; struct kv777_item *ptr;
+    hash = dKV777_approval(dKV,senderbits,value,valuesize);
+    if ( dKV->numkvs > 0 )
+    {
+        for (i=0; i<dKV->numkvs; i++)
+            if ( dKV->kvs[i] == kv )
+            {
+                key[0] = senderbits;
+                key[1] = kv->numkeys;
+                if ( (ptr= kv777_read(kv,hash.bytes,sizeof(hash),0,0)) == 0 )
+                {
+                    kv777_write(kv,key,sizeof(key),hash.bytes,sizeof(hash));
+                    return(kv777_write(kv,hash.bytes,sizeof(hash),value,valuesize));
+                } return(ptr);
+            }
+    }
+    return(0);
+}
+
+void *dKV777_read(struct dKV777 *dKV,struct kv777 *kv,void *key,int32_t keysize,void *value,int32_t *valuesizep)
+{
+    int32_t i;
+    if ( dKV->numkvs > 0 )
+    {
+        for (i=0; i<dKV->numkvs; i++)
+            if ( dKV->kvs[i] == kv )
+                return(kv777_read(kv,key,keysize,value,valuesizep));
+    }
+    return(0);
 }
 
 int32_t dKV777_connect(struct dKV777 *dKV,struct endpoint *ep)
@@ -810,7 +828,7 @@ char *dKV777_processping(cJSON *json,char *origjsonstr,char *sender,char *tokens
         }
     }
     if ( dKV != 0 && senderbits != 0 && peerstr != 0 && (nxtaddr= cJSON_str(cJSON_GetObjectItem(json,"NXT"))) != 0 && (nxt64bits= conv_acctstr(nxtaddr)) == senderbits )
-        dKV777_approval(dKV,nxt64bits,peerstr);
+        dKV777_approval(dKV,nxt64bits,peerstr,(int32_t)strlen(peerstr)+1);
     printf("KV777 GOT.(%s) from.(%s) [%s]\n",origjsonstr,sender,tokenstr);
     if ( peerstr != 0 )
         free(peerstr);
@@ -866,7 +884,7 @@ struct dKV777 *dKV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uint32_t
     struct endpoint endpoint,*ep; char buf[512]; int32_t i,size,sendtimeout=10,recvtimeout=10;
     dKV->port = port; dKV->connections = connections, dKV->num = num, dKV->max = max, dKV->flags = flags, dKV->kvs = kvs, dKV->numkvs = numkvs, safecopy(dKV->name,name,sizeof(dKV->name));
     if ( (dKV->pinggap= pinggap) == 0. )
-        dKV->pinggap = 60000;
+        dKV->pinggap = 3600000;
     buf[0] = 0;
     if ( (dKV->pubsock= pubsock) < 0 && (dKV->pubsock= nn_createsocket(buf,1,"NN_PUB",NN_SUB,port,sendtimeout,recvtimeout)) < 0 )
     {
