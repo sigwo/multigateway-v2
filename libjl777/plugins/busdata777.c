@@ -923,24 +923,27 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         printf("create_busdata.(%s).%s -> %s\n",_jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
     if ( (json= cJSON_Parse(_jsonstr)) != 0 )
     {
-        if ( cJSON_GetObjectItem(json,"tag") != 0 )
+        if ( broadcastmode != 0 && strcmp(broadcastmode,"publicaccess") != 0 )
         {
-            dupjson = cJSON_Duplicate(json,1);
-            cJSON_DeleteItemFromObject(dupjson,"tag");
-            jsonstr = cJSON_Print(dupjson);
-        } else jsonstr = _jsonstr;
-        _stripwhite(jsonstr,' ');
-        calc_sha256(0,hash.bytes,(void *)jsonstr,(int32_t)strlen(jsonstr));
-        if ( is_duplicate_tag(hash.txid) != 0 )
-        {
+            if ( cJSON_GetObjectItem(json,"tag") != 0 )
+            {
+                dupjson = cJSON_Duplicate(json,1);
+                cJSON_DeleteItemFromObject(dupjson,"tag");
+                jsonstr = cJSON_Print(dupjson);
+            } else jsonstr = _jsonstr;
+            _stripwhite(jsonstr,' ');
+            calc_sha256(0,hash.bytes,(void *)jsonstr,(int32_t)strlen(jsonstr));
+            if ( is_duplicate_tag(hash.txid) != 0 )
+            {
+                if ( jsonstr != _jsonstr )
+                    free(jsonstr);
+                return(0);
+            }
             if ( jsonstr != _jsonstr )
                 free(jsonstr);
-            return(0);
+            if ( dupjson != 0 )
+                free_json(dupjson);
         }
-        if ( jsonstr != _jsonstr )
-            free(jsonstr);
-        if ( dupjson != 0 )
-            free_json(dupjson);
         jsonstr = _jsonstr;
         if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
         {
