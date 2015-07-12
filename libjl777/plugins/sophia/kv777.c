@@ -14,6 +14,7 @@
 #define crypto777_storage_h
 #include "mutex.h"
 #include "uthash.h"
+#include "NXT777.c"
 #include "files777.c"
 #include "system777.c"
 #define portable_mutex_t struct nn_mutex
@@ -656,45 +657,13 @@ cJSON *kv_json(struct kv777 *kv)
 cJSON *kvs_json(struct kv777_dcntrl *KV)
 {
     int32_t i; cJSON *array = cJSON_CreateArray();
+    cJSON_AddItemToArray(array,kv_json(KV->nodes));
     if ( KV->numkvs > 0 )
     {
         for (i=0; i<KV->numkvs; i++)
             cJSON_AddItemToArray(array,kv_json(KV->kvs[i]));
     }
     return(array);
-}
-
-int32_t KV777_ping(struct kv777_dcntrl *KV)
-{
-    uint32_t i,nonce; int32_t size; struct endpoint endpoint,*ep; char *retstr,*jsonstr,buf[512]; cJSON *array,*json;
-    json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"agent",cJSON_CreateString("kv777"));
-    cJSON_AddItemToObject(json,"method",cJSON_CreateString("ping"));
-    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
-    cJSON_AddItemToObject(json,"rand",cJSON_CreateNumber(rand()));
-    cJSON_AddItemToObject(json,"unixtime",cJSON_CreateNumber(time(NULL)));
-    cJSON_AddItemToObject(json,"myendpoint",cJSON_CreateString(SUPERNET.relayendpoint));
-    array = cJSON_CreateArray();
-    cJSON_AddItemToArray(array,cJSON_CreateString(SUPERNET.relayendpoint));
-    for (i=0; i<KV->nodes->numkeys; i++)
-    {
-        size = sizeof(endpoint);
-        if ( (ep= kv777_read(KV->nodes,&i,sizeof(i),&endpoint,&size)) != 0 && size == sizeof(endpoint) )
-        {
-            expand_epbits(buf,*ep);
-            cJSON_AddItemToArray(array,cJSON_CreateString(buf));
-        }
-    }
-    cJSON_AddItemToObject(json,"peers",array);
-    cJSON_AddItemToObject(json,"kvs",kvs_json(KV));
-    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' '), free_json(json);
-    if ( (retstr= busdata_sync(&nonce,jsonstr,"allrelays",0)) != 0 )
-    {
-        printf("KV777_ping.(%s)\n",jsonstr);
-        free(retstr);
-    }
-    free(jsonstr);
-    return(0);
 }
 
 char *KV777_processping(cJSON *json,char *origjsonstr,char *sender,char *tokenstr)
@@ -733,17 +702,52 @@ char *KV777_processping(cJSON *json,char *origjsonstr,char *sender,char *tokenst
     return(clonestr("{\"result\":\"success\"}"));
 }
 
+int32_t KV777_ping(struct kv777_dcntrl *KV)
+{
+    uint32_t i,nonce; int32_t size; struct endpoint endpoint,*ep; char tokenstr[512],buf[512],*retstr,*jsonstr; cJSON *array,*json;
+    json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"agent",cJSON_CreateString("kv777"));
+    cJSON_AddItemToObject(json,"method",cJSON_CreateString("ping"));
+    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
+    cJSON_AddItemToObject(json,"rand",cJSON_CreateNumber(rand()));
+    cJSON_AddItemToObject(json,"unixtime",cJSON_CreateNumber(time(NULL)));
+    cJSON_AddItemToObject(json,"myendpoint",cJSON_CreateString(SUPERNET.relayendpoint));
+    array = cJSON_CreateArray();
+    cJSON_AddItemToArray(array,cJSON_CreateString(SUPERNET.relayendpoint));
+    for (i=0; i<KV->nodes->numkeys; i++)
+    {
+        size = sizeof(endpoint);
+        if ( (ep= kv777_read(KV->nodes,&i,sizeof(i),&endpoint,&size)) != 0 && size == sizeof(endpoint) )
+        {
+            expand_epbits(buf,*ep);
+            cJSON_AddItemToArray(array,cJSON_CreateString(buf));
+        }
+    }
+    cJSON_AddItemToObject(json,"peers",array);
+    cJSON_AddItemToObject(json,"kvs",kvs_json(KV));
+    jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' '), free_json(json);
+    if ( (retstr= busdata_sync(&nonce,jsonstr,"allrelays",0)) != 0 )
+    {
+        printf("KV777_ping.(%s)\n",jsonstr);
+        free(retstr);
+    }
+    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+    {
+        issue_generateToken(tokenstr,jsonstr,SUPERNET.NXTACCTSECRET);
+        tokenstr[NXT_TOKEN_LEN] = 0;
+        if ( (retstr= KV777_processping(json,jsonstr,SUPERNET.NXTADDR,tokenstr)) != 0 )
+            free(retstr);
+        free_json(json);
+    }
+    free(jsonstr);
+    return(0);
+}
+
 struct kv777_dcntrl *KV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uint32_t flags,int32_t pubsock,int32_t subsock,struct endpoint *connections,int32_t num,int32_t max,uint16_t port,double pinggap)
 {
     static struct kv777 *relays;
     struct kv777_dcntrl *KV = calloc(1,sizeof(*KV));
     struct endpoint endpoint,*ep; char buf[512]; int32_t i,size,sendtimeout=10,recvtimeout=10;
-    if ( kvs == 0 || numkvs == 0 )
-    {
-        if ( relays == 0 )
-            relays = kv777_init("relays",0);
-        numkvs = 1, kvs = &relays;
-    }
     KV->port = port; KV->connections = connections, KV->num = num, KV->max = max, KV->flags = flags, KV->kvs = kvs, KV->numkvs = numkvs;
     if ( (KV->pinggap= pinggap) == 0. )
         KV->pinggap = 60000;
@@ -763,9 +767,7 @@ struct kv777_dcntrl *KV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uin
         free(KV);
         return(0);
     }
-    if ( kvs == &relays )
-        KV->nodes = relays;
-    else sprintf(buf,"%s.nodes",name), KV->nodes = kv777_init(buf,0);
+    sprintf(buf,"%s.nodes",name), KV->nodes = kv777_init(buf,0);
     for (i=0; i<KV->nodes->numkeys; i++) // connect all nodes in DB that are not already connected
     {
         size = sizeof(endpoint);

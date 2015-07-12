@@ -189,6 +189,7 @@ cJSON *http_search(char *destip,char *type,char *file);
 struct NXT_acct *get_NXTacct(int32_t *createdp,char *NXTaddr);
 int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender);
 struct NXT_acct *get_nxt64bits(int32_t *createdp,uint64_t nxt64bits);
+int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecret);
 
 #endif
 #else
