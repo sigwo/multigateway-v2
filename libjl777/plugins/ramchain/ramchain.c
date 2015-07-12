@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include "./includes/cJSON.h"
+#include "../includes/cJSON.h"
 #include "../utils/system777.c"
 #include "../coins/coins777.c"
 //#include "pass1.c"
