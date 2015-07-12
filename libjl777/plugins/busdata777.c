@@ -756,6 +756,8 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         }
         free_json(dupjson);
     }
+    argjson = cJSON_GetArrayItem(json,0);
+    copy_cJSON(method,cJSON_GetObjectItem(argjson,"method"));
     if ( strcmp(method,"PM") == 0 )
     {
         printf("got PM.(%s)\n",databuf);
@@ -913,7 +915,7 @@ int32_t is_duplicate_tag(uint64_t tag)
 
 char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char *_jsonstr,char *broadcastmode,char *destNXTaddr)
 {
-    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],destNXT[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65];
+    char key[MAX_JSON_FIELD],method[MAX_JSON_FIELD],plugin[MAX_JSON_FIELD],destNXT[MAX_JSON_FIELD],servicetoken[NXT_TOKEN_LEN+1],endpoint[128],hexstr[65],numstr[65],*newmethod;
     char *str,*str2,*jsonstr,*tokbuf = 0,*tmp,*secret,*pmstr;
     bits256 hash; uint64_t destbits,nxt64bits,tag; uint16_t port; uint32_t timestamp; cJSON *datajson,*json,*second,*dupjson=0; int32_t tlen,diff,datalen = 0;
     *sentflagp = *datalenp = *noncep = 0;
@@ -966,10 +968,11 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         {
             //printf("destbits.%llu (%s)\n",(long long)destbits,destNXT);
             cJSON_ReplaceItemInObject(json,"PM",privatemessage_encrypt(destbits,pmstr));
+            newmethod = "PM";
+            cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString(newmethod));
             secret = GENESIS_SECRET;
             cJSON_DeleteItemFromObject(json,"destNXT");
-        }
-        else secret = SUPERNET.NXTACCTSECRET;
+        } else secret = SUPERNET.NXTACCTSECRET, newmethod = "busdata";
         if ( cJSON_GetObjectItem(json,"endpoint") != 0 )
         {
             if ( broadcastmode != 0 && strcmp(broadcastmode,"join") == 0 )
@@ -989,7 +992,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         }
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
         {
-            cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString("busdata"));
+            cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString(newmethod));
             cJSON_ReplaceItemInObject(json,"plugin",cJSON_CreateString("relay"));
             cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(method));
             //if ( strcmp(plugin,"relay") != 0 )
