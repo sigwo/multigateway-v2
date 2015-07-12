@@ -83,14 +83,17 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 if ( strlen(addr) > 4 )
                 {
                     if ( strncmp(addr,"NXT-",4) == 0 )
-                        nxt64bits = RS_decode(addr), strcpy(rsaddr,addr);
+                    {
+                        nxt64bits = RS_decode(addr);
+                        sprintf(retbuf,"{\"result\":\"success\",\"accountRS\":\"%s\",\"account\":\"%llu\"}",addr,(long long)nxt64bits);
+                    }
                     else if ( is_decimalstr(addr) != 0 )
+                    {
                         nxt64bits = calc_nxt64bits(addr), RS_encode(rsaddr,nxt64bits);
-                    if ( nxt64bits != 0 )
                         sprintf(retbuf,"{\"result\":\"success\",\"account\":\"%llu\",\"accountRS\":\"%s\"}",(long long)nxt64bits,rsaddr);
+                    }
                 }
-                if ( nxt64bits == 0 )
-                    sprintf(retbuf,"{\"error\":\"illegal addr field\",\"addr\":\"%s\"}",addr);
+                else sprintf(retbuf,"{\"error\":\"illegal addr field\",\"addr\":\"%s\"}",addr);
             }
             else sprintf(retbuf,"{\"error\":\"no addr field\"}");
         }
