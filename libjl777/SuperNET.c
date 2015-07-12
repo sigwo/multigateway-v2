@@ -575,10 +575,10 @@ int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { retur
 #include <stdio.h>
 #include <curl/curl.h>
 #define DEFINES_ONLY
-#include "cJSON.h"
-#include "utils777.c"
-#include "files777.c"
-#include "system777.c"
+#include "plugins/includes/cJSON.h"
+#include "plugins/utils/utils777.c"
+#include "plugins/utils/files777.c"
+#include "plugins/utils/system777.c"
 #include "plugins/plugins.h"
 #undef DEFINES_ONLY
 
