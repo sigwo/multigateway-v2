@@ -22,10 +22,10 @@
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
 
 #define DEFINES_ONLY
-#include "../utils/system777.c"
-#include "../utils/NXT777.c"
-#include "../plugin777.c"
-#include "SaM.c"
+#include "utils/system777.c"
+#include "utils/NXT777.c"
+#include "plugin777.c"
+#include "utils/SaM.c"
 #undef DEFINES_ONLY
 
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecret)
