@@ -17,7 +17,7 @@ PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a
 LIBS= libs/libjl777.a nanomsg/.libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lanl -lm #-lssl -lcrypto
 
 CC=clang
-CFLAGS=-Wall -O2  -pedantic -g -fPIC -Iplugins/includes  -Iplugins/utils -Iplugins/nonportable -Iincludes  -Iplugins/mgw -Iplugins/InstantDEX -Iplugins/sophia -Iplugins/ramchain -Iplugins/coins -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS) -I../includes -I../../includes -I/usr/include -Iplugins -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2 #-DADDRINFO_SIZE=256
+CFLAGS=-Wall -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  #-Iplugins/utils -Iplugins/nonportable -Iincludes  -Iplugins/mgw -Iplugins/InstantDEX -Iplugins/sophia -Iplugins/ramchain -Iplugins/coins  -I../includes -I../../includes -I/usr/include -Iplugins#-DADDRINFO_SIZE=256
 
 TARGET	= libjl777.a
 
