@@ -721,6 +721,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
     {
         dupjson = cJSON_Duplicate(json,1);
         argjson = cJSON_GetArrayItem(dupjson,0);
+        copy_cJSON(method,cJSON_GetObjectItem(argjson,"method"));
         second = cJSON_GetArrayItem(dupjson,1);
         if ( cJSON_GetObjectItem(second,"forwarder") == 0 )
         {
