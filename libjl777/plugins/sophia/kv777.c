@@ -670,6 +670,7 @@ int32_t KV777_ping(struct kv777_dcntrl *KV)
     json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"agent",cJSON_CreateString("kv777"));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("ping"));
+    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
     cJSON_AddItemToObject(json,"rand",cJSON_CreateNumber(rand()));
     cJSON_AddItemToObject(json,"unixtime",cJSON_CreateNumber(time(NULL)));
     cJSON_AddItemToObject(json,"myendpoint",cJSON_CreateString(SUPERNET.relayendpoint));
@@ -696,7 +697,7 @@ int32_t KV777_ping(struct kv777_dcntrl *KV)
     return(0);
 }
 
-char *KV777_processping(cJSON *json,char *jsonstr)
+char *KV777_processping(cJSON *json,char *origjsonstr,char *sender,char *tokenstr)
 {
     cJSON *array; int32_t i,j,n,size; struct endpoint endpoint,*ep; char ipaddr[64],buf[512],*endpointstr; uint16_t port;
     if ( SUPERNET.relays == 0 )
@@ -728,7 +729,7 @@ char *KV777_processping(cJSON *json,char *jsonstr)
             }
         }
     }
-    printf("KV777 GOT.(%s)\n",jsonstr);
+    printf("KV777 GOT.(%s) from.(%s) [%s]\n",origjsonstr,sender,tokenstr);
     return(clonestr("{\"result\":\"success\"}"));
 }
 
