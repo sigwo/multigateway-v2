@@ -745,7 +745,6 @@ int32_t KV777_ping(struct kv777_dcntrl *KV)
 
 struct kv777_dcntrl *KV777_init(char *name,struct kv777 **kvs,int32_t numkvs,uint32_t flags,int32_t pubsock,int32_t subsock,struct endpoint *connections,int32_t num,int32_t max,uint16_t port,double pinggap)
 {
-    static struct kv777 *relays;
     struct kv777_dcntrl *KV = calloc(1,sizeof(*KV));
     struct endpoint endpoint,*ep; char buf[512]; int32_t i,size,sendtimeout=10,recvtimeout=10;
     KV->port = port; KV->connections = connections, KV->num = num, KV->max = max, KV->flags = flags, KV->kvs = kvs, KV->numkvs = numkvs;
