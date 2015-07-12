@@ -13,10 +13,10 @@
 #ifndef crypto777_storage_h
 #define crypto777_storage_h
 #include "mutex.h"
-#include "uthash.h"
-#include "NXT777.c"
-#include "files777.c"
-#include "system777.c"
+#include "../includes/uthash.h"
+#include "../utils/NXT777.c"
+#include "../utils/files777.c"
+#include "../utils/system777.c"
 #define portable_mutex_t struct nn_mutex
 #define portable_mutex_init nn_mutex_init
 #define portable_mutex_lock nn_mutex_lock

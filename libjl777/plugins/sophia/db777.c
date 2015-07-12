@@ -14,9 +14,9 @@
 #include <stdint.h>
 #include <math.h>
 #include "sophia.h"
-#include "cJSON.h"
-#include "system777.c"
-#include "coins777.c"
+#include "../includes/cJSON.h"
+#include "../utils/system777.c"
+#include "../coins/coins777.c"
 #include "kv777.c"
 
 #define DB777_RAM 1

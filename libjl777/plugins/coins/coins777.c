@@ -12,14 +12,14 @@
 #ifndef crypto777_coins777_h
 #define crypto777_coins777_h
 #include <stdio.h>
-#include "uthash.h"
-#include "cJSON.h"
-#include "huffstream.c"
-#include "system777.c"
+#include "../uthash.h"
+#include "../cJSON.h"
+#include "../utils/huffstream.c"
+#include "../utils/system777.c"
 #include "../sophia/kv777.c"
-#include "db777.c"
-#include "files777.c"
-#include "utils777.c"
+#include "../sophia/db777.c"
+#include "../utils/files777.c"
+#include "../utils/utils777.c"
 #include "gen1pub.c"
 
 #define OP_RETURN_OPCODE 0x6a

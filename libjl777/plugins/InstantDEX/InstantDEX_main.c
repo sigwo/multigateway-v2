@@ -13,8 +13,8 @@
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
 
 #define DEFINES_ONLY
-#include "plugin777.c"
-#include "NXT777.c"
+#include "../plugin777.c"
+#include "../utils/NXT777.c"
 #undef DEFINES_ONLY
 
 #include "InstantDEX.h"

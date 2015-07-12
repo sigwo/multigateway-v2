@@ -13,13 +13,12 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
-#include "cJSON.h"
-#include "uthash.h"
-//#include "db777.c"
-#include "bits777.c"
-#include "utils777.c"
-#include "system777.c"
-#include "coins777.c"
+#include "../includes/cJSON.h"
+#include "../uthash.h"
+#include "../utils/bits777.c"
+#include "../utils/utils777.c"
+#include "../utils/system777.c"
+#include "../coins/coins777.c"
 
 #include "tweetnacl.h"
 int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);

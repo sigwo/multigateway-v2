@@ -12,10 +12,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <memory.h>
-#include "cJSON.h"
-#include "utils777.c"
+#include "../includes/cJSON.h"
+#include "../utils/utils777.c"
 #include "coins777.c"
-#include "system777.c"
+#include "../utils/system777.c"
 #include "gen1auth.c"
 #include "msig.c"
 
