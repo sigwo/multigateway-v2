@@ -444,7 +444,7 @@ struct service_provider *find_servicesock(char *servicename,char *endpoint)
             else if ( nn_setsockopt(sp->sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
                 fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
             args.servicename = servicename, args.endpoint = endpoint, args.sock = sp->sock;
-            kv777_iterate(SUPERNET.services,servicename,0,serviceconnect_iterator); // scan DB and nn_connect
+            kv777_iterate(SUPERNET.services,&args,0,serviceconnect_iterator); // scan DB and nn_connect
         }
     } // else printf("sp.%p found servicename.(%s) sock.%d\n",sp,servicename,sp->sock);
     if ( endpoint != 0 )
