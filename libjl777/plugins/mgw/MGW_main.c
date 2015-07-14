@@ -600,7 +600,7 @@ int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json)
         else if ( strcmp(methodstr,"askacctpubkey") == 0 )
         {
             if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 )
-                copy_cJSON(NXTaddr,cJSON_GetObjectItem(array,"userNXT"));
+                copy_cJSON(NXTaddr,cJSON_GetObjectItem(cJSON_GetArrayItem(array,0),"userNXT"));
             if ( NXTaddr[0] != 0 && (str= fix_msigaddr(coin,NXTaddr,"myacctpubkey")) != 0 )
             {
                 strcpy(retbuf,str);
