@@ -690,6 +690,12 @@ char *devMGW_command(char *jsonstr,cJSON *json)
                     free_json(item), item = 0;
                 }
                 msleep(250);
+                if ( (str= fix_msigaddr(coin,nxtaddr,"myacctpubkey")) != 0 )
+                {
+                    nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
+                    printf("SENT.(%s)\n",str);
+                    free(str);
+                }
             }
         }
         if ( item != 0 )
@@ -701,7 +707,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
                 sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",nxtaddr);
                 _stripwhite(msigjsonstr,' ');
                 str = clonestr(msigjsonstr);
-            } else nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
+            }
         }
         return(str);
     } else return(0);
