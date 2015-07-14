@@ -378,36 +378,20 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
     else return(0);
 }
 
-int32_t ensure_NXT_msigaddr(int32_t propagate,char *msigjsonstr,char *coinstr,char *NXTaddr,char *userNXTpubkey,int32_t buyNXT)
+int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *userNXTpubkey,int32_t buyNXT)
 {
     char coinaddrs[16][256],pubkeys[16][1024],*str;//,*cmdstr;
-    int32_t g,m,retval = 0;
+    int32_t g,m,mask,retval = 0;
     uint64_t nxt64bits;
     struct multisig_addr *msig;
     msigjsonstr[0] = 0;
     nxt64bits = calc_nxt64bits(NXTaddr);
-    for (g=m=0; g<SUPERNET.numgateways; g++)
+    for (g=m=mask=0; g<SUPERNET.numgateways; g++)
     {
-        //cmdstr = 0;
-        //printf("(%llu NXT.%llu) g%d: ",(long long)MGW.srv64bits[g],(long long)nxt64bits,g);
-        if ( get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]) > 0 )
-        {
-            //if ( propagate != 0 && g == SUPERNET.gatewayid )
-            //    cmdstr = "myacctpubkey";
-            m++;
-        }
-        //else if ( propagate != 0 && g != SUPERNET.gatewayid )
-        //    cmdstr = "askacctpubkey";
-        /*if ( propagate != 0 && (str= fix_msigaddr(coin777_find(coinstr,0),NXTaddr,"myacctpubkey")) != 0 )
-        {
-            nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
-            free(str);
-        }
-        if ( propagate != 0 && (str= fix_msigaddr(coin777_find(coinstr,0),NXTaddr,"askacctpubkey")) != 0 )
-        {
-            nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
-            free(str);
-        }*/
+        if ( g == SUPERNET.gatewayid )
+            add_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
+        if ( get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]) != 0 )
+            m++, mask |= (1 << g);
     }
     //printf("m.%d ensure.(%s)\n",m,coinstr);
     if ( m == SUPERNET.numgateways && (msig= get_NXT_msigaddr(MGW.srv64bits,MGW.M,SUPERNET.numgateways,nxt64bits,coinstr,coinaddrs,pubkeys,userNXTpubkey,buyNXT)) != 0 )
@@ -421,9 +405,9 @@ int32_t ensure_NXT_msigaddr(int32_t propagate,char *msigjsonstr,char *coinstr,ch
             printf("ENSURE.(%s)\n",msigjsonstr);
             retval = 1;
             free(str);
-        }
+        } else printf("error creating msigaddr\n");
         //free(msig);
-    }
+    } else printf("m.%d mask.%d vs numgateways.%d\n",m,mask,SUPERNET.numgateways);
     return(retval);
 }
 
@@ -452,7 +436,7 @@ int32_t process_acctpubkey(int32_t *havemsigp,cJSON *item,int32_t gatewayid,uint
     {
         //printf("%s.G%d +(%s %s): ",coinstr,g,coinaddr,pubkey);
         updated = add_NXT_coininfo(gatewaybits,nxt64bits,coinstr,coinaddr,pubkey);
-        *havemsigp = ensure_NXT_msigaddr(0,msigjsonstr,coinstr,NXTaddr,userNXTpubkey,buyNXT);
+        *havemsigp = ensure_NXT_msigaddr(msigjsonstr,coinstr,NXTaddr,userNXTpubkey,buyNXT);
     }
     return(updated);
 }
@@ -696,9 +680,9 @@ char *devMGW_command(char *jsonstr,cJSON *json)
         printf("NXTaddr.(%s) %llu %s\n",nxtaddr,(long long)nxt64bits,coinstr);
         if ( nxtaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr,0)) != 0 )
         {
-            for (i=0; i<2; i++)
+            for (i=0; i<1; i++)
             {
-                if ( ensure_NXT_msigaddr(1,msigjsonstr,coinstr,nxtaddr,userNXTpubkey,buyNXT) > 0 )
+                if ( ensure_NXT_msigaddr(msigjsonstr,coinstr,nxtaddr,userNXTpubkey,buyNXT) > 0 )
                 {
                     item = cJSON_Parse(msigjsonstr);
                     if ( (addr= cJSON_str(cJSON_GetObjectItem(item,"address"))) != 0 )
@@ -706,12 +690,6 @@ char *devMGW_command(char *jsonstr,cJSON *json)
                     free_json(item), item = 0;
                 }
                 msleep(250);
-                /*if ( (str= fix_msigaddr(coin,nxtaddr,"askacctpubkey")) != 0 )
-                {
-                    nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
-                    printf("SENT.(%s)\n",str);
-                    free(str);
-                }*/
             }
         }
         if ( item != 0 )
