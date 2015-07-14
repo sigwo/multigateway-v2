@@ -404,7 +404,6 @@ int32_t ensure_NXT_msigaddr(int32_t propagate,char *msigjsonstr,char *coinstr,ch
             retval = 1;
             free(str);
         }
-        //free(msig);
     }
     return(retval);
 }
@@ -653,7 +652,7 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
 char *devMGW_command(char *jsonstr,cJSON *json)
 {
     int32_t i,buyNXT; uint64_t nxt64bits; cJSON *item = 0; struct coin777 *coin;
-    char nxtaddr[64],retbuf[1024],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024],*str,*addr;
+    char nxtaddr[64],retbuf[65536],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024],*str,*addr;
     if ( SUPERNET.gatewayid >= 0 )
     {
         copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
