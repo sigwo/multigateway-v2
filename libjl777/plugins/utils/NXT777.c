@@ -1538,7 +1538,10 @@ uint64_t conv_acctstr(char *acctstr)
         if ( (len= is_decimalstr(acctstr)) > 0 && len < 24 )
             nxt64bits = calc_nxt64bits(acctstr);
         else if ( strncmp("NXT-",acctstr,4) == 0 )
-            nxt64bits = RS_decode(acctstr);
+        {
+            //nxt64bits = RS_decode(acctstr);
+            nxt64bits = conv_rsacctstr(acctstr,0);
+        }
     }
     return(nxt64bits);
 }
