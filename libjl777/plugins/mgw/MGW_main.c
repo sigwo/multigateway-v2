@@ -489,7 +489,7 @@ cJSON *msig_itemjson(char *coinstr,char *account,char *coinaddr,char *pubkey,int
 char *fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method)
 {
     cJSON *msigjson,*array; char coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],*retstr = 0;
-    if ( coin != 0 && SUPERNET.gatewayid >= 0 )
+    if ( coin != 0 && NXTaddr != 0 && NXTaddr[0] != 0 && SUPERNET.gatewayid >= 0 )
     {
         get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
         get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
@@ -2105,6 +2105,14 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             if ( SUPERNET.gatewayid >= 0 )
             {
+                char *str;
+                if ( (str= fix_msigaddr(coin777_find(coinstr,0),cJSON_str(cJSON_GetObjectItem(json,"userNXT")),"askacctpubkey")) != 0 )
+                {
+                    strcpy(retbuf,str);
+                    nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
+                    printf("MGW SEND.(%s)\n",str);
+                    free(str);
+                }
                 if ( (retstr= devMGW_command(jsonstr,json)) != 0 )
                     printf("msigaddr.(%s)\n",retstr);
                 else sprintf(retbuf,"{\"result\":\"start msigaddr\"}");
