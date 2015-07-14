@@ -907,6 +907,7 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
 #ifdef __APPLE__
+    void peggy_test(); peggy_test();
     //void SaM_PrepareIndices();
     //int32_t SaM_test();
     //SaM_PrepareIndices();
