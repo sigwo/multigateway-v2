@@ -380,7 +380,7 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
 
 int32_t ensure_NXT_msigaddr(int32_t propagate,char *msigjsonstr,char *coinstr,char *NXTaddr,char *userNXTpubkey,int32_t buyNXT)
 {
-    char coinaddrs[16][256],pubkeys[16][1024],*str,*cmdstr;
+    char coinaddrs[16][256],pubkeys[16][1024],*str;//,*cmdstr;
     int32_t g,m,retval = 0;
     uint64_t nxt64bits;
     struct multisig_addr *msig;
@@ -388,17 +388,22 @@ int32_t ensure_NXT_msigaddr(int32_t propagate,char *msigjsonstr,char *coinstr,ch
     nxt64bits = calc_nxt64bits(NXTaddr);
     for (g=m=0; g<SUPERNET.numgateways; g++)
     {
-        cmdstr = 0;
+        //cmdstr = 0;
         //printf("(%llu NXT.%llu) g%d: ",(long long)MGW.srv64bits[g],(long long)nxt64bits,g);
         if ( get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]) > 0 )
         {
-            if ( propagate != 0 && g == SUPERNET.gatewayid )
-                cmdstr = "myacctpubkey";
+            //if ( propagate != 0 && g == SUPERNET.gatewayid )
+            //    cmdstr = "myacctpubkey";
             m++;
         }
-        else if ( propagate != 0 && g != SUPERNET.gatewayid )
-            cmdstr = "askacctpubkey";
-        if ( cmdstr != 0 && (str= fix_msigaddr(coin777_find(coinstr,0),NXTaddr,cmdstr)) != 0 )
+        //else if ( propagate != 0 && g != SUPERNET.gatewayid )
+        //    cmdstr = "askacctpubkey";
+        if ( propagate != 0 && (str= fix_msigaddr(coin777_find(coinstr,0),NXTaddr,"myacctpubkey")) != 0 )
+        {
+            nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
+            free(str);
+        }
+        if ( propagate != 0 && (str= fix_msigaddr(coin777_find(coinstr,0),NXTaddr,"askacctpubkey")) != 0 )
         {
             nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
             free(str);
