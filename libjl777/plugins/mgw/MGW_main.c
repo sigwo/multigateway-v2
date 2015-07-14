@@ -600,7 +600,7 @@ int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json)
             retval = process_acctpubkeys(coinstr,gatewayid,gatewaybits,retbuf,jsonstr,json,methodstr);
         else if ( strcmp(methodstr,"askacctpubkey") == 0 )
         {
-            if ( (str= fix_msigaddr(coin,NXTaddr,methodstr)) != 0 )
+            if ( NXTaddr[0] != 0 && (str= fix_msigaddr(coin,NXTaddr,methodstr)) != 0 )
             {
                 strcpy(retbuf,str);
                 nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
@@ -704,12 +704,12 @@ char *devMGW_command(char *jsonstr,cJSON *json)
                     free_json(item), item = 0;
                 }
                 msleep(250);
-                if ( (str= fix_msigaddr(coin,nxtaddr,"askacctpubkey")) != 0 )
+                /*if ( (str= fix_msigaddr(coin,nxtaddr,"askacctpubkey")) != 0 )
                 {
                     nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
                     printf("SENT.(%s)\n",str);
                     free(str);
-                }
+                }*/
             }
         }
         if ( item != 0 )
