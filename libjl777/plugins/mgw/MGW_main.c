@@ -398,11 +398,11 @@ int32_t ensure_NXT_msigaddr(int32_t propagate,char *msigjsonstr,char *coinstr,ch
         }
         //else if ( propagate != 0 && g != SUPERNET.gatewayid )
         //    cmdstr = "askacctpubkey";
-        if ( propagate != 0 && (str= fix_msigaddr(coin777_find(coinstr,0),NXTaddr,"myacctpubkey")) != 0 )
+        /*if ( propagate != 0 && (str= fix_msigaddr(coin777_find(coinstr,0),NXTaddr,"myacctpubkey")) != 0 )
         {
             nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
             free(str);
-        }
+        }*/
         if ( propagate != 0 && (str= fix_msigaddr(coin777_find(coinstr,0),NXTaddr,"askacctpubkey")) != 0 )
         {
             nn_send(MGW.all.socks.both.bus,(uint8_t *)str,(int32_t)strlen(str)+1,0);
