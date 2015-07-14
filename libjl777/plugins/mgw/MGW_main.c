@@ -488,9 +488,10 @@ cJSON *msig_itemjson(char *coinstr,char *account,char *coinaddr,char *pubkey,int
 
 char *fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method)
 {
-    cJSON *msigjson,*array; char coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],*retstr = 0;
+    cJSON *msigjson,*array; char coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],*retstr = 0; uint64_t nxt64bits;
     if ( coin != 0 && NXTaddr != 0 && NXTaddr[0] != 0 && SUPERNET.gatewayid >= 0 )
     {
+        nxt64bits = conv_acctstr(NXTaddr), expand_nxt64bits(NXTaddr,nxt64bits);
         get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
         get_pubkey(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
         printf("%s new address.(%s) -> (%s) (%s)\n",coin->name,NXTaddr,coinaddr,pubkey);
