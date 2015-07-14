@@ -380,7 +380,7 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
 
 int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *userNXTpubkey,int32_t buyNXT)
 {
-    char coinaddrs[16][256],pubkeys[16][1024],*str;//,*cmdstr;
+    char coinaddrs[16][256],pubkeys[16][1024],*str; struct coin777 *coin;
     int32_t g,m,mask,retval = 0;
     uint64_t nxt64bits;
     struct multisig_addr *msig;
@@ -388,8 +388,13 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
     nxt64bits = calc_nxt64bits(NXTaddr);
     for (g=m=mask=0; g<SUPERNET.numgateways; g++)
     {
-        if ( g == SUPERNET.gatewayid )
+        if ( g == SUPERNET.gatewayid && (coin= coin777_find(coinstr,0)) != 0 )
+        {
+            get_acct_coinaddr(coinaddrs[g],coin->name,coin->serverport,coin->userpass,NXTaddr);
+            get_pubkey(pubkeys[g],coin->name,coin->serverport,coin->userpass,coinaddrs[g]);
+            printf("ensure_NXT_msigaddr %s new address.(%s) -> (%s) (%s)\n",coin->name,NXTaddr,coinaddrs[g],pubkeys[g]);
             add_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
+        }
         if ( get_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]) != 0 )
             m++, mask |= (1 << g);
     }
