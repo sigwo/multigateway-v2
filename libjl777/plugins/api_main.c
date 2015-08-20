@@ -152,9 +152,7 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
         }
         CGI_free_varlist(varlist);
     }
-    if ( localaccess == 0 )
-        fputs("Access-Control-Allow-Origin: *\r\n",stdout);
-    else fputs("Access-Control-Allow-Origin: null\r\n",stdout);
+    fputs("Access-Control-Allow-Origin: *\r\n",stdout);
     fputs("Access-Control-Allow-Headers: Authorization, Content-Type\r\n",stdout);
     fputs("Access-Control-Allow-Credentials: true\r\n",stdout);
     fputs("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n",stdout);
