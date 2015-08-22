@@ -1419,7 +1419,7 @@ int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
 int32_t mgw_isrealtime(struct coin777 *coin)
 {
     printf("verified.%d lag.%d (coin->ramchain.RTblocknum - coin->ramchain.blocknum) <= coin->minconfirms %d vs %d\n",coin->verified,coin->lag,(coin->ramchain.RTblocknum - coin->ramchain.blocknum),coin->minconfirms);
-    if ( (coin->lag > 0 && coin->lag <= coin->minconfirms) && coin->verified != 0 )
+    if ( (coin->lag >= 0 && coin->lag <= coin->minconfirms) && coin->verified != 0 )
         return(1);
     return(0);
 }
