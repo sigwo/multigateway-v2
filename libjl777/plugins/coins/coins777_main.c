@@ -210,6 +210,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     safecopy(coin->name,coinstr,sizeof(coin->name));
     coin->minoutput = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"minoutput"));
     coin->minconfirms = get_API_int(cJSON_GetObjectItem(argjson,"minconfirms"),(strcmp("BTC",coinstr) == 0) ? 3 : 10);
+    coin->lag = -1;
     if ( argjson != 0 )
     {
         coin->jsonstr = cJSON_Print(argjson);

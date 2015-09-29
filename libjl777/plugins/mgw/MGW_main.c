@@ -683,7 +683,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
         copy_cJSON(userNXTpubkey,cJSON_GetObjectItem(json,"userpubkey"));
         buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
         printf("NXTaddr.(%s) %llu %s\n",nxtaddr,(long long)nxt64bits,coinstr);
-        if ( nxtaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr,0)) != 0 )
+        if ( nxtaddr[0] != 0 && coinstr[0] != 0 && (coin= coin777_find(coinstr,0)) != 0 )
         {
             for (i=0; i<1; i++)
             {
@@ -1350,7 +1350,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                 printf("height.%u MATCHED REDEEM: (%llu %.8f -> %s) script.(%s) scriptind.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,scriptstr,scriptind);
                 return(MGW_WITHDRAWDONE);
             }
-            printf("height.%u NO REDEEM: (%llu %.8f -> %s) script.(%s) scriptind.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,scriptstr,scriptind);
+            //printf("height.%u NO REDEEM: (%llu %.8f -> %s) script.(%s) scriptind.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,scriptstr,scriptind);
             if ( (addrind= coin777_addrind(&firstblocknum,coin,extra->coindata)) != 0 && coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
             {
                 for (i=0; i<L.numaddrtx; i++)
@@ -1797,7 +1797,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     strcpy(cointx->coinstr,coin->name);
     cointx->redeemtxid = redeemtxid;
     cointx->gatewayid = SUPERNET.gatewayid;
-    MGWfee = (value >> 11) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - opreturn_amount - mgw->txfee;
+    MGWfee = 0*(value >> 11) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - opreturn_amount - mgw->txfee;
     if ( value <= MGWfee + opreturn_amount + mgw->txfee )
     {
         printf("%s redeem.%llu withdraw %.8f < MGWfee %.8f + minoutput %.8f + txfee %.8f\n",coin->name,(long long)redeemtxid,dstr(value),dstr(MGWfee),dstr(opreturn_amount),dstr(mgw->txfee));
@@ -1858,7 +1858,8 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
 
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
-    struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
+    static int dispflag;
+    struct multisig_addr **msigs; int32_t i,M=0,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
     cJSON *json,*retjson,*item,*waiting,*pending; char numstr[64],*jsonstr,*retbuf; struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
     ramchain_prepare(coin,&coin->ramchain);
     if ( mgw->unspents != 0 )
@@ -1873,9 +1874,9 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         return(0);
     }
     retjson = cJSON_CreateObject(), waiting = cJSON_CreateArray(), pending = cJSON_CreateArray();
-    if ( mgw->marker_addrind == 0 && mgw->marker != 0 )
+    if ( mgw->marker_addrind == 0 && mgw->marker[0] != 0 )
         mgw->marker_addrind = coin777_addrind(&firstblocknum,coin,mgw->marker);
-    if ( mgw->marker2_addrind == 0 && mgw->marker2 != 0 )
+    if ( mgw->marker2_addrind == 0 && mgw->marker2[0] != 0 )
         mgw->marker2_addrind = coin777_addrind(&firstblocknum,coin,mgw->marker2);
     if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,DB_msigs,"value",0)) != 0 )
     {
@@ -1886,18 +1887,24 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
                 free(msigs[i]);
                 continue;
             }
-            if ( strcmp(msigs[i]->coinstr,coin->name) == 0 && (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
-            {
-                m++;
-                unspent += val;
-                if ( smallest == 0 || val < smallest )
-                {
-                    smallest = val;
-                    strcpy(smallestaddrB,smallestaddr);
-                    strcpy(smallestaddr,msigs[i]->multisigaddr);
-                }
-                else if ( smallestaddrB[0] == 0 && strcmp(smallestaddr,msigs[i]->multisigaddr) != 0 )
-                    strcpy(smallestaddrB,msigs[i]->multisigaddr);
+            if ( strcmp(msigs[i]->coinstr,coin->name) == 0 )
+	    {
+		m++;
+		if ( (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
+		{
+			M++;
+			if ( dispflag == 0 )
+				printf("(%s -> %s %.8f) ",msigs[i]->multisigaddr,msigs[i]->NXTaddr,dstr(val));
+			unspent += val;
+			if ( smallest == 0 || val < smallest )
+			{
+			    smallest = val;
+			    strcpy(smallestaddrB,smallestaddr);
+			    strcpy(smallestaddr,msigs[i]->multisigaddr);
+			}
+			else if ( smallestaddrB[0] == 0 && strcmp(smallestaddr,msigs[i]->multisigaddr) != 0 )
+			    strcpy(smallestaddrB,msigs[i]->multisigaddr);
+		}
             }
             free(msigs[i]);
         }
@@ -1905,10 +1912,12 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         if ( Debuglevel > 2 )
             printf("smallest (%s %.8f)\n",smallestaddr,dstr(smallest));
     }
+    if ( M != 0 )
+	dispflag = 1;
     mgw->circulation = circulation = calc_circulation(0,mgw,0);
     mgw->unspent = unspent;
     balance = (unspent - circulation - mgw->withdrawsum);
-    printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [balance %.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),m);
+    printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [balance %.8f] nummsigs.%d %d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),M,m);
     cJSON_AddItemToObject(retjson,"coin",cJSON_CreateString(coin->name));
     cJSON_AddItemToObject(retjson,"circulation",cJSON_CreateNumber(dstr(circulation)));
     cJSON_AddItemToObject(retjson,"unspent",cJSON_CreateNumber(dstr(unspent)));
