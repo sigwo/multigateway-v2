@@ -2163,12 +2163,15 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             struct coin777 *coin;
             if ( sender[0] != 0 )
                 sprintf(retbuf,"{\"error\":\"clearstate can only be done locally\"}");
-            if ( (coin= coin777_find(coinstr,0)) != 0 )
-            {
-                mgw_clearstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0));
-                sprintf(retbuf,"{\"result\":\"clearstate issued\"}");
-            }
-            else sprintf(retbuf,"{\"error\":\"coin not active\"}");
+            else 
+	    {
+		if ( (coin= coin777_find(coinstr,0)) != 0 )
+		{
+		    mgw_clearstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0));
+		    sprintf(retbuf,"{\"result\":\"clearstate issued\"}");
+		}
+		else sprintf(retbuf,"{\"error\":\"coin not active\"}");
+	    }
         }
         if ( retstr != 0 )
         {
