@@ -34,9 +34,9 @@ int32_t MGW_idle(struct plugin_info *plugin)
 char *fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method);
 
 STRUCTNAME MGW;
-char *PLUGNAME(_methods)[] = { "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
-char *PLUGNAME(_pubmethods)[] = { "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
-char *PLUGNAME(_authmethods)[] = { "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_methods)[] = { "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_pubmethods)[] = { "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_authmethods)[] = { "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
@@ -1199,6 +1199,63 @@ int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *
     return(flag);
 }
 
+int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
+{
+    int32_t slen;
+    slen = (int32_t)strlen(txidstr) >> 1;
+    memcpy(key,&vout,sizeof(vout)), decode_hex(&key[sizeof(vout)],slen,txidstr), slen += sizeof(vout);
+    return(slen);
+}
+
+int32_t mgw_unspentstatus(char *txidstr,uint16_t vout)
+{
+    uint8_t key[1024]; int32_t status,keylen,len = sizeof(status);
+    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
+    if ( db777_read(&status,&len,0,DB_MGW,key,keylen,0) != 0 )
+        return(status);
+    return(0);
+}
+
+int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
+{
+    uint8_t key[1024]; int32_t keylen;
+    if ( status < 0 )
+        status = MGW_ERRORSTATUS;
+    status |= mgw_unspentstatus(txidstr,vout);
+    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
+    printf("(%s v%d) <- MGW status.%d\n",txidstr,vout,status);
+    return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
+}
+
+int32_t mgw_clearunspent(char *txidstr,int32_t vout)
+{
+    uint8_t key[1024]; int32_t keylen,status = 0;
+    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
+    printf("mgw_clearunspent (%s v%d) <- MGW status.%d\n",txidstr,vout,status);
+    return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
+}
+
+int32_t mgw_clearstate(struct coin777 *coin,char *txidstr,int32_t vout)
+{
+    int32_t i,n,flag = 0; struct extra_info extra;
+    mgw_clearunspent(txidstr,vout);
+    NXT_revassettxid(&extra,coin->mgw.assetidbits,0), n = extra.ind;
+    for (i=1; i<=n; i++)
+    {
+        if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == sizeof(extra) )
+        {
+            if ( extra.vout == vout && strcmp(txidstr,extra.coindata) == 0 )
+            {
+                printf("clear revassettxid.%d %llu for (%s/v%d)\n",i,(long long)extra.txidbits,extra.coindata,extra.vout);
+                extra.flags = 0;
+                NXT_set_revassettxid(coin->mgw.assetidbits,i,&extra);
+            }
+        } else printf("error loading assettxid[%d] for %llu\n",i,(long long)coin->mgw.assetidbits);
+    }
+    //printf("n.%d ",n);
+    return(flag);
+}
+
 int32_t mgw_encode_OP_RETURN(char *scriptstr,uint64_t redeemtxid)
 {
     long _emit_uint32(uint8_t *data,long offset,uint32_t x);
@@ -1386,34 +1443,6 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
         } else printf("cant find MGW_PENDINGREDEEM (%s) (%llu %.8f)\n",extra->coindata,(long long)extra->txidbits,dstr(extra->amount));
     }
     return(0);
-}
-
-int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
-{
-    int32_t slen;
-    slen = (int32_t)strlen(txidstr) >> 1;
-    memcpy(key,&vout,sizeof(vout)), decode_hex(&key[sizeof(vout)],slen,txidstr), slen += sizeof(vout);
-    return(slen);
-}
-
-int32_t mgw_unspentstatus(char *txidstr,uint16_t vout)
-{
-    uint8_t key[1024]; int32_t status,keylen,len = sizeof(status);
-    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
-    if ( db777_read(&status,&len,0,DB_MGW,key,keylen,0) != 0 )
-        return(status);
-    return(0);
-}
-
-int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
-{
-    uint8_t key[1024]; int32_t keylen;
-    if ( status < 0 )
-        status = MGW_ERRORSTATUS;
-    status |= mgw_unspentstatus(txidstr,vout);
-    keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
-    printf("(%s v%d) <- MGW status.%d\n",txidstr,vout,status);
-    return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
 }
 
 int32_t mgw_isrealtime(struct coin777 *coin)
@@ -2129,6 +2158,18 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"myacctpubkeys") == 0 || strcmp(methodstr,"myacctpubkey") == 0 || strcmp(methodstr,"askacctpubkey") == 0 )
             mgw_processbus(retbuf,jsonstr,json);
+        else if ( strcmp(methodstr,"clearstate") == 0 )
+        {
+            struct coin777 *coin;
+            if ( sender[0] != 0 )
+                sprintf(retbuf,"{\"error\":\"clearstate can only be done locally\"}");
+            if ( (coin= coin777_find(coinstr,0)) != 0 )
+            {
+                mgw_clearstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0));
+                sprintf(retbuf,"{\"result\":\"clearstate issued\"}");
+            }
+            else sprintf(retbuf,"{\"error\":\"coin not active\"}");
+        }
         if ( retstr != 0 )
         {
             strncpy(retbuf,retstr,maxlen-1);
