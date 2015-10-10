@@ -1751,12 +1751,26 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
 
 struct unspent_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struct unspent_info *unspents,int32_t numunspents,uint64_t value)
 {
-    int32_t i; uint64_t above,below,gap,atx_value; struct unspent_info *vin,*abovevin,*belowvin;
+    int32_t i; uint32_t txidind,unspentind; uint64_t above,below,gap,atx_value; struct unspent_info *vin,*abovevin,*belowvin; struct cointx_input I; struct coin777_addrinfo A;
+struct unspent_info U;
     abovevin = belowvin = 0;
     *valuep = 0;
     for (above=below=i=0; i<numunspents; i++)
     {
         vin = &unspents[i];
+            coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,vin->addrind);
+            memset(&I,0,sizeof(I));
+            strcpy(I.coinaddr,A.coinaddr);
+            unspentind = vin->rawind_or_blocknum;
+            coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,unspentind);
+            coin777_scriptstr(coin,I.sigs,sizeof(I.sigs),U.rawind_or_blocknum,U.addrind);
+            I.tx.vout = coin777_unspentmap(&txidind,I.tx.txidstr,coin,unspentind);
+
+	if ( strcmp("e6db47446ad5368c3ab5bf5999f1a358cd9f7087b86e69c70cb49977787798f7",I.tx.txidstr) == 0 )
+	{
+		printf("skip ALREADYSPENT\n");
+		continue;
+	}
         *valuep = atx_value = vin->value;
         if ( atx_value == value )
             return(vin);
