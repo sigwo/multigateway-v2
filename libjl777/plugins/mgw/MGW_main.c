@@ -35,8 +35,8 @@ char *fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method);
 
 STRUCTNAME MGW;
 char *PLUGNAME(_methods)[] = { "findmsigaddr","markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
-char *PLUGNAME(_pubmethods)[] = { "findmsigaddr","markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
-char *PLUGNAME(_authmethods)[] = { "findmsigaddr","markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_pubmethods)[] = { "findmsigaddr", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_authmethods)[] = { "findmsigaddr", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
