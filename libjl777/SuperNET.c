@@ -822,13 +822,13 @@ void SuperNET_loop(void *ipaddr)
         poll_daemons();
     strs[n++] = language_func((char *)"subscriptions","",0,0,1,(char *)"subscriptions",jsonargs,call_system);
     while ( SUBSCRIPTIONS.readyflag == 0 || find_daemoninfo(&ind,"subscriptions",0,0) == 0 )
-        poll_daemons();*/
+        poll_daemons();
     if ( SUPERNET.gatewayid < 0 )
     {
         strs[n++] = language_func((char *)"InstantDEX","",0,0,1,(char *)"InstantDEX",jsonargs,call_system);
         while ( INSTANTDEX.readyflag == 0 || find_daemoninfo(&ind,"InstantDEX",0,0) == 0 )
             poll_daemons();
-    }
+    }*/
     for (i=0; i<n; i++)
     {
         printf("%s ",strs[i]);
@@ -881,10 +881,13 @@ int SuperNET_start(char *fname,char *myip)
     uint64_t allocsize;
     printf("myip.(%s)\n",myip);
     portable_OS_init();
+    if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
+	{
+printf("no SuperNET.conf\n");
+return(-1);
+	}
     init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;
-    if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
-        jsonstr = clonestr("{}");
     parse_ipaddr(ipaddr,myip);
     strcpy(SUPERNET.myipaddr,ipaddr);
     printf("SuperNET_start myip.(%s) -> ipaddr.(%s)\n",myip!=0?myip:"",ipaddr);

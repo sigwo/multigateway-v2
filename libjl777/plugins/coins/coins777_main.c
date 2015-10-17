@@ -262,7 +262,13 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     }
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu opreturn.%d oldformat.%d\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits,coin->mgw.do_opreturn,coin->mgw.oldtx_format);
     extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
-    printf("COIN.%s serverport.(%s) userpass.(%s)\n",coin->name,coin->serverport,coin->userpass);
+    coin->mgw.DB_NXTaccts = db777_create(coinstr,0,"NXTaccts",0,0);
+    coin->mgw.DB_NXTtxids = db777_create(coinstr,0,"NXT_txids",0,0);
+    coin->mgw.DB_redeems = db777_create(coinstr,0,"redeems",0,0);
+    coin->mgw.DB_MGW = db777_create(coinstr,0,"MGW",0,0);
+    coin->mgw.DB_msigs = db777_create(coinstr,0,"msigs",0,0);
+    //coin->mgw.DB_NXTtrades = db777_create(coinstr,0,"NXT_trades",0,0);
+    printf("DB.(%p %p %p %p %p) COIN.%s serverport.(%s) userpass.(%s)\n",coin->mgw.DB_NXTaccts,coin->mgw.DB_NXTtxids,coin->mgw.DB_redeems,coin->mgw.DB_MGW,coin->mgw.DB_msigs,coin->name,coin->serverport,coin->userpass);
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
     COINS.LIST[COINS.num] = coin, COINS.num++;
     //ensure_packedptrs(coin);

@@ -1577,7 +1577,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         sprintf(buf,"%s/sent",MGW.PATH), ensure_directory(buf);
         sprintf(buf,"%s/deposit",MGW.PATH), ensure_directory(buf);
         printf("MGWport.%u >>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d pullnode.(%s)\n",MGW.port,SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay,RAMCHAINS.pullnode);
-        if ( SUPERNET.gatewayid >= 0 )
+        /*if ( SUPERNET.gatewayid >= 0 )
         {
             if ( DB_NXTaccts == 0 )
                 DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
@@ -1597,8 +1597,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 DB_NXTtrades = db777_create(0,0,"NXT_trades",0,0);
             //if ( DB_services == 0 )
             //    DB_services = db777_create(0,0,"services",0,0);
-        }
+        }*/
         SUPERNET.PM = kv777_init("PM",0);
+        SUPERNET.NXTaccts = kv777_init("NXTaccts",0);
         SUPERNET.alias = kv777_init("alias",0);
         SUPERNET.channels = kv777_init("channels",0);
         SUPERNET.NXTaccts = kv777_init("NXTaccts",0);

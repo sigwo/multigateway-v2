@@ -152,13 +152,8 @@ struct mgw777
     double lastupdate,NXTconvrate;
     struct unspent_info *unspents;
     struct MGWstate S,otherS[16],remotesrcs[16];
-    struct extra_info withdraws[128];
-    /*uint64_t MGWbits,NXTfee_equiv,txfee,*limboarray; char *coinstr,*serverport,*userpass,*marker,*marker2;
-     int32_t numgateways,nummsigs,depositconfirms,withdrawconfirms,remotemode,numpendingsends,min_NXTconfirms,numspecials;
-     uint32_t firsttime,NXTtimestamp,marker_rawind,marker2_rawind;
-     double NXTconvrate;
-     struct NXT_asset *ap;
-     char multisigchar,*srvNXTADDR,**special_NXTaddrs,*MGWredemption,*backups,MGWsmallest[256],MGWsmallestB[256],MGWpingstr[1024],mgwstrs[3][8192];*/
+    struct db777 *DB_msigs,*DB_NXTaccts,*DB_NXTtxids,*DB_MGW,*DB_redeems;//,*DB_NXTtrades;
+    struct extra_info withdraws[512];
 };
 
 struct coin777
@@ -208,8 +203,8 @@ int32_t update_NXT_assettransfers(struct mgw777 *mgw);
 uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height);
 int32_t coin777_RWaddrtx(int32_t writeflag,struct coin777 *coin,uint32_t addrind,struct addrtx_info *ATX,struct coin777_Lentry *L,int32_t addrtxi);
 #define coin777_scriptptr(A) ((A)->scriptlen == 0 ? 0 : (uint8_t *)&(A)->coinaddr[(A)->addrlen])
-int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra);
-int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind);
+//int32_t NXT_set_revassettxid(struct db777 *DB_NXTtxids,int64_t assetidbits,uint32_t ind,struct extra_info *extra);
+//int32_t NXT_revassettxid(struct db777 *DB_NXTtxids,struct extra_info *extra,uint64_t assetidbits,uint32_t ind);
 int32_t NXT_mark_withdrawdone(struct mgw777 *mgw,uint64_t redeemtxid);
 
 #endif
