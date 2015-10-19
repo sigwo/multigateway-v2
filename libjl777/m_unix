@@ -9,7 +9,7 @@ rm SuperNET
 make SuperNET
 make api
 if make btcd; then
-#	rm ~/.BitcoinDark/debug.log
+	rm ~/.BitcoinDark/debug.log
 #	./BitcoinDarkd
 #	libs/websocketd --sameorigin=true --cgidir=plugins/cgi --port=7777
 	#libs/websocketd --cgidir=plugins/cgi --port=7777
