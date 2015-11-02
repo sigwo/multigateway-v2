@@ -1,1 +1,2 @@
-cat launch_BTC > /tmp/srv-input
+SNPID=$(pgrep SuperNET)
+echo "./BitcoinDarkd SuperNET '{\"plugin\":\"ramchain\",\"method\":\"create\",\"coin\":\"BTC\"}'" > /proc/$SNPID/fd/0

@@ -1,1 +1,2 @@
-cat launch_OPAL > /tmp/srv-input
+SNPID=$(pgrep SuperNET)
+echo "./BitcoinDarkd SuperNET '{\"plugin\":\"ramchain\",\"method\":\"create\",\"coin\":\"OPAL\"}'" > /proc/$SNPID/fd/0
