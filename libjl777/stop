@@ -1,0 +1,4 @@
+pkill -15 SuperNET
+echo "SuperNET stopped."
+pkill -9 screen
+killall tee

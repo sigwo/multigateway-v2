@@ -127,9 +127,9 @@ char *default_coindir(char *confname,char *coinstr)
 {
     int32_t i;
 #ifdef __APPLE__
-    char *coindirs[][3] = { {"BTC","Bitcoin","bitcoin"}, {"BTCD","BitcoinDark"}, {"LTC","Litecoin","litecoin"}, {"VRC","Vericoin","vericoin"}, {"OPAL","OpalCoin","opalcoin"}, {"BITS","Bitstar","bitstar"}, {"DOGE","Dogecoin","dogecoin"}, {"DASH","Dash","dash"}, {"BC","Blackcoin","blackcoin"}, {"FIBRE","Fibre","fibre"}, {"VPN","Vpncoin","vpncoin"} };
+    char *coindirs[][3] = { {"BTC","Bitcoin","bitcoin"}, {"BTCD","BitcoinDark"}, {"LTC","Litecoin","litecoin"}, {"VRC","Vericoin","vericoin"}, {"OPAL","OpalCoin","opalcoin"}, {"BITS","Bitstar","bitstar"}, {"DOGE","Dogecoin","dogecoin"}, {"DASH","Dash","dash"}, {"BC","Blackcoin","blackcoin"}, {"FIBRE","Fibre","fibre"}, {"VPN","Vpncoin","vpncoin"}, {"SYS","Syscoin","syscoin"} };
 #else
-    char *coindirs[][3] = { {"BTC",".bitcoin"}, {"BTCD",".BitcoinDark"}, {"LTC",".litecoin"}, {"VRC",".vericoin"}, {"OPAL",".opalcoin"}, {"BITS",".Bitstar"}, {"DOGE",".dogecoin"}, {"DASH",".dash"}, {"BC",".blackcoin"}, {"FIBRE",".Fibre"}, {"VPN",".vpncoin"} };
+    char *coindirs[][3] = { {"BTC",".bitcoin"}, {"BTCD",".BitcoinDark"}, {"LTC",".litecoin"}, {"VRC",".vericoin"}, {"OPAL",".opalcoin"}, {"BITS",".Bitstar"}, {"DOGE",".dogecoin"}, {"DASH",".dash"}, {"BC",".blackcoin"}, {"FIBRE",".Fibre"}, {"VPN",".vpncoin"}, {"SYS",".syscoin"} };
 #endif
     for (i=0; i<(int32_t)(sizeof(coindirs)/sizeof(*coindirs)); i++)
         if ( strcmp(coindirs[i][0],coinstr) == 0 )
@@ -210,6 +210,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     safecopy(coin->name,coinstr,sizeof(coin->name));
     coin->minoutput = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"minoutput"));
     coin->minconfirms = get_API_int(cJSON_GetObjectItem(argjson,"minconfirms"),(strcmp("BTC",coinstr) == 0) ? 3 : 10);
+    coin->lag = -1;
     if ( argjson != 0 )
     {
         coin->jsonstr = cJSON_Print(argjson);
@@ -261,7 +262,13 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     }
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu opreturn.%d oldformat.%d\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits,coin->mgw.do_opreturn,coin->mgw.oldtx_format);
     extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
-    printf("COIN.%s serverport.(%s) userpass.(%s)\n",coin->name,coin->serverport,coin->userpass);
+    coin->mgw.DB_NXTaccts = db777_create(coinstr,0,"NXTaccts",0,0);
+    coin->mgw.DB_NXTtxids = db777_create(coinstr,0,"NXT_txids",0,0);
+    coin->mgw.DB_redeems = db777_create(coinstr,0,"redeems",0,0);
+    coin->mgw.DB_MGW = db777_create(coinstr,0,"MGW",0,0);
+    coin->mgw.DB_msigs = db777_create(coinstr,0,"msigs",0,0);
+    //coin->mgw.DB_NXTtrades = db777_create(coinstr,0,"NXT_trades",0,0);
+    printf("DB.(%p %p %p %p %p) COIN.%s serverport.(%s) userpass.(%s)\n",coin->mgw.DB_NXTaccts,coin->mgw.DB_NXTtxids,coin->mgw.DB_redeems,coin->mgw.DB_MGW,coin->mgw.DB_msigs,coin->name,coin->serverport,coin->userpass);
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
     COINS.LIST[COINS.num] = coin, COINS.num++;
     //ensure_packedptrs(coin);

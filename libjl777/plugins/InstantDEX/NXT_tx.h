@@ -408,7 +408,7 @@ uint64_t send_feetx(uint64_t assetbits,uint64_t fee,char *fullhash,char *comment
     return(feetxid);
 }
 
-int32_t NXT_set_revassettrade(uint32_t ind,uint64_t key[2])
+/*int32_t NXT_set_revassettrade(uint32_t ind,uint64_t key[2])
 {
     void *obj;
     //printf("NXT_set_revassettrade\n");
@@ -503,25 +503,6 @@ uint64_t set_assettrade(int32_t i,int32_t n,struct assettrade *tp,cJSON *json)
 {
     uint64_t ap_mult; char type[64],name[4096];
     memset(tp,0,sizeof(*tp));
-    /*
-     "seller": "13507302008315288445",
-     "quantityQNT": "4217933",
-     "bidOrder": "7711071669082465415",
-     "sellerRS": "NXT-V8VX-MLHS-NK94-DMWWQ",
-     "buyer": "1533153801325642313",
-     "priceNQT": "490000",
-     "askOrder": "18381562686533022497",
-     "buyerRS": "NXT-W2LB-ABK2-M37N-3VQKC",
-     "decimals": 4,
-     "name": "SkyNET",
-     "block": "3211297665777998350",
-     "asset": "6854596569382794790",
-     "askOrderHeight": 443292,
-     "bidOrderHeight": 451101,
-     "tradeType": "buy",
-     "timestamp": 49051994,
-     "height": 451101
-     */
     if ( (tp->assetid= get_API_nxt64bits(cJSON_GetObjectItem(json,"asset"))) != 0 )
     {
         ap_mult = get_assetmult(tp->assetid);
@@ -621,5 +602,5 @@ int32_t update_NXT_assettrades()
     free(trades);
     return(count);
 }
-
+*/
 #endif

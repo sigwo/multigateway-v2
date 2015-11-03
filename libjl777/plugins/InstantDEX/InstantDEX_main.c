@@ -179,7 +179,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         plugin->allowremote = 1;
         portable_mutex_init(&plugin->mutex);
         init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0);
-        update_NXT_assettrades();
+        //update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
         strcpy(retbuf,"{\"result\":\"InstantDEX init\"}");
     }

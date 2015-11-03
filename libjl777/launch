@@ -1,0 +1,5 @@
+rm /tmp/srv-input
+mkfifo /tmp/srv-input
+cat > /tmp/srv-input &
+echo $! > /tmp/srv-input-cat-pid
+cat /tmp/srv-input | ./SuperNET  &

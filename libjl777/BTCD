@@ -1,0 +1,2 @@
+SNPID=$(pgrep SuperNET)
+echo "./BitcoinDarkd SuperNET '{\"plugin\":\"ramchain\",\"method\":\"create\",\"coin\":\"BTCD\"}'" > /proc/$SNPID/fd/0

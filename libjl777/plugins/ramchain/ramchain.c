@@ -82,7 +82,9 @@ uint32_t ramchain_prepare(struct coin777 *coin,struct ramchain *ramchain)
     {
         ramchain->paused = 1;
         ramchain->RTblocknum = _get_RTheight(&ramchain->lastgetinfo,coin->name,coin->serverport,coin->userpass,ramchain->RTblocknum);
+printf("call initDB\n");
         coin777_initDBenv(coin);
+printf("back from initDB\n");
         ramchain->startblocknum = coin777_startblocknum(coin,-1);
         printf("startblocknum.%u\n",ramchain->startblocknum);
         if ( coin777_getinds(coin,ramchain->startblocknum,&credits,&debits,&timestamp,&txidind,&numrawvouts,&numrawvins,&addrind,&scriptind,&totaladdrtx) == 0 )
