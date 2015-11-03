@@ -1702,8 +1702,9 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     }
                     else
                     {
-                        // withdraw 11364111978695678059
-                        printf("unhandled case.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                        printf("zero status case.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+			    mgw_markunspent(&coin->mgw,txidstr,vout,Ustatus | MGW_IGNORE);
+
                     }
                 }
             }
