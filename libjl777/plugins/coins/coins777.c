@@ -41,8 +41,8 @@ struct rawblock
     struct rawvout voutspace[MAX_BLOCKTX];
 };
 
-#define MAX_COINTX_INPUTS 64
-#define MAX_COINTX_OUTPUTS 8
+#define MAX_COINTX_INPUTS 256
+#define MAX_COINTX_OUTPUTS 256
 struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t value; uint32_t sequence; char used; };
 struct cointx_info
 {
