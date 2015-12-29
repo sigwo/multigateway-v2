@@ -1173,7 +1173,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
+    char tokenized[131072],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
