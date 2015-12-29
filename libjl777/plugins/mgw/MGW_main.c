@@ -18,6 +18,7 @@
 #define STRUCTNAME struct PLUGNAME(_info)
 #define STRINGIFY(NAME) #NAME
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
+#define MGW_NETBUF 128000
 
 #define DEFINES_ONLY
 #include "../plugin777.c"
@@ -701,7 +702,7 @@ int32_t process_acctpubkeys(char *coinstr,int32_t gatewayid,uint64_t gatewaybits
 
 char *mgw_other_redeem(struct mgw777 *mgw,char *signedtx,uint64_t redeemtxid,uint64_t gatewaybits)
 {
-    uint64_t key[2]; int32_t len = 65536;
+    uint64_t key[2]; int32_t len = MGW_NETBUF;
     key[0] = redeemtxid, key[1] = gatewaybits;
 if ( mgw->DB_redeems == 0 )
 {
@@ -1869,7 +1870,7 @@ cJSON *mgw_create_vouts(struct cointx_info *cointx)
 struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t opreturn,uint64_t redeemtxid,int32_t gatewayid,int32_t numgateways,int32_t oldtx_format,int32_t do_opreturn)
 {
     struct cointx_info *rettx = 0; char *signedtxs[NUM_GATEWAYS],*txbytes,*signedtx,*txbytes2,*paramstr,*cointxid;
-    cJSON *array,*voutsobj=0,*vinsobj=0,*keysobj=0; int32_t i,flags,allocsize,len = 65536;
+    cJSON *array,*voutsobj=0,*vinsobj=0,*keysobj=0; int32_t i,flags,allocsize,len = MGW_NETBUF;
     txbytes = calloc(1,len);
     if ( _emit_cointx(txbytes,len,cointx,oldtx_format) < 0 )
     {
@@ -2224,7 +2225,7 @@ mgw_sendaudit(coin->name,array);
                         if ( cointx->cointxid[0] != 0 )
                             cJSON_AddItemToObject(json,"cointxid",cJSON_CreateString(cointx->cointxid));
                         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-                        retbuf = malloc(65536), MGW_publishjson(retbuf,json);
+                        retbuf = malloc(MGW_NETBUF), MGW_publishjson(retbuf,json);
                         free(retbuf), free(jsonstr), free_json(json);
                     }
                     free(cointx);

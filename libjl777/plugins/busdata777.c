@@ -20,6 +20,7 @@
 #define STRUCTNAME struct PLUGNAME(_info) 
 #define STRINGIFY(NAME) #NAME
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
+#define MGW_NETBUF 128000
 
 #define DEFINES_ONLY
 #include "utils/system777.c"
@@ -1173,7 +1174,7 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[131072],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
+    char tokenized[MGW_NETBUF],*msg,*retstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
