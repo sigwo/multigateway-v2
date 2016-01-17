@@ -26,6 +26,7 @@
 #include "../utils/system777.c"
 #include "../utils/NXT777.c"
 #include "../ramchain/ramchain.c"
+#include "../../nxtv17codec.h"
 #undef DEFINES_ONLY
 
 int32_t MGW_idle(struct plugin_info *plugin)
@@ -1307,7 +1308,9 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
         for (iter=(value==0); iter<2; iter++)
         {
             errjsontxt = 0;
+	    pair= v17encode(pair); // chanc3r v1.7: encode the json before its put into the AM string
             str = cJSON_Print(pair);
+	    pair=v17decode(pair);  // chanc3r v1.7: decode back into original json as its used later
             _stripwhite(str,' ');
             expand_nxt64bits(assetidstr,coin->mgw.assetidbits);
             depositid = issue_transferAsset(&errjsontxt,0,SUPERNET.NXTACCTSECRET,NXTaddr,(iter == 0) ? assetidstr : nxtassetidstr,(iter == 0) ? (value/coin->mgw.ap_mult) : buyNXT*SATOSHIDEN,MIN_NQTFEE,deadline,str,0);

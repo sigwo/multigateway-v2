@@ -18,6 +18,7 @@
 #include "uthash.h"
 #include "utils777.c"
 #include "NXT777.c"
+#include "../../nxtv17codec.h"
 //#include "msig.c"
 #include "mgw.c"
 //#include "search.c"
@@ -307,6 +308,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
             if ( message != 0 && type == 1 )
             {
                 copy_cJSON(AMstr,message);
+		AMstr=v17decode(AMstr); // chanc3r v1.7 decode AM
                 n = strlen(AMstr);
                 if ( is_hexstr(AMstr) != 0 )
                 {
@@ -508,7 +510,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
             //sprintf(fname,"%s/ramchains/NXT.%s",SUPERNET.MGWROOT,ram->special_NXTaddrs[j]);
             printf("(%s) init NXT special.%d of %d (%s)\n",mgw->name,j,mgw->numspecials,mgw->special_NXTaddrs[j]);
             timestamp = 0;
-            sprintf(cmd,"requestType=getAccountTransactions&account=%s&timestamp=%u",mgw->special_NXTaddrs[j],timestamp);
+            sprintf(cmd,"requestType=getBlockchainTransactions&account=%s&timestamp=%u",mgw->special_NXTaddrs[j],timestamp); // chanc3r 1.7 change
             jsonstr = issue_NXTPOST(cmd);
             if ( jsonstr != 0 )
             {

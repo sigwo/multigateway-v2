@@ -3954,7 +3954,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct ramchain_info *ram,uint32_t 
                 }
                 else
                 {
-                    sprintf(cmd,"requestType=getAccountTransactions&account=%s&timestamp=%u",ram->special_NXTaddrs[j],timestamp);
+                    sprintf(cmd,"requestType=getBlockchainTransactions&account=%s&timestamp=%u",ram->special_NXTaddrs[j],timestamp);
                     jsonstr = _issue_NXTPOST(cmd);
                     if ( fp == 0 && (fp= fopen(os_compatible_path(fname),"wb")) != 0 )
                     {

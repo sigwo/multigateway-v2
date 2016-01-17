@@ -66,7 +66,7 @@ uint64_t find_best_market_maker(int32_t *totalticketsp,int32_t *numticketsp,char
     uint32_t now = (uint32_t)time(NULL);
     if ( timestamp == 0 )
         timestamp = 38785003;
-    sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,timestamp);
+    sprintf(cmdstr,"requestType=getBlockchainTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,timestamp);
     //printf("cmd.(%s)\n",cmdstr);
     if ( (jsonstr= bitcoind_RPC(0,"curl",NXTAPIURL,0,0,cmdstr)) != 0 )
     {
