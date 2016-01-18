@@ -148,7 +148,9 @@ int hexstr2bytes(const char *hex, byte* bytes, size_t byte_size) {
     size_t len=strlen(hex);
     if(len%2) return 0; // has to be an even number of bytes
     for (int i=0; i<len; i+=2, byte_count++) {
-        if(sscanf(&hex[i],"%2x",&bytes[byte_count]) <= 0) return 0;
+	int value;
+        if(sscanf(&hex[i],"%2x",&value) <= 0) return 0;
+	bytes[byte_count]=value;
     }
     return byte_count;
 
@@ -190,6 +192,12 @@ int bytes2hexstr(const byte* bytes, size_t byte_count, char *hex, size_t hex_siz
 #define enc_CROP  0xFF  // REMOVE THE FIELD
 
 #define ENC_BYTES_MAX 160
+
+#ifndef V17VERBOSE
+#define V17VERBOSE 0
+#endif
+
+#define V17DO if(V17VERBOSE)
 
 // this is hex
 // first two byte is the content field
@@ -258,7 +266,6 @@ cJSON* v17encode(cJSON* in_json) {
         if(json_item) {
             json_cnt-=1;
             encMASK |= json_map[i].mask; // register the json item.
-
             switch (json_map[i].enctype) {
                 case enc_INT8:
                     if(json_map[i].jsontype==cJSON_Number)
@@ -268,8 +275,8 @@ cJSON* v17encode(cJSON* in_json) {
                     break;
                 case enc_INT16:
                     if(json_map[i].jsontype==cJSON_Number)
-                        sprintf((encBytes+enc_len),"%04hx",(uint16_t)json_item->valueint);
-                    else sprintf((encBytes+enc_len),"%04hx",(uint16_t)strtol(json_item->valuestring,0,0));
+                        sprintf((encBytes+enc_len),"%04x",(uint16_t)json_item->valueint);
+                    else sprintf((encBytes+enc_len),"%04x",(uint16_t)strtol(json_item->valuestring,0,0));
                     enc_len+=4;
                     break;
                 case enc_INT32:
@@ -367,7 +374,10 @@ cJSON* v17decode(cJSON* in_json) {
     
     cJSON *mgw_json=cJSON_GetObjectItem(in_json,ENC_JSON_NAME);
     
-    if(!mgw_json) return in_json; // its not our json
+    if(!mgw_json) {
+        V17DO printf("NOT MGW JSON\n");
+        return in_json; // its not our json
+    }
     char *v7_json=mgw_json->valuestring;
     if(!v7_json) return in_json; // nothing to do
     sscanf(v7_json,"%04x",&encMask);
@@ -375,14 +385,16 @@ cJSON* v17decode(cJSON* in_json) {
     enc_len+=4;
     ret_json=cJSON_CreateObject(); // need to delete on all error paths...
 
-    
+    V17DO printf("Decoding...\n");
     for (int i=0, n ; json_map[i].name; i++) { // this loop has to be the same in encoder/decoder
         if(json_map[i].mask&encMask) {
+            V17DO printf("Expecting %s,", json_map[i].name);
             switch (json_map[i].enctype) {
-                    char int8_value; //its a cheat as compiler barfs
-                    int16_t int16_value;
+                    int int8_value;
+                    int int16_value;
                 case enc_INT8:
                     sscanf((v7_json+enc_len),"%02x",&int8_value);
+                    V17DO printf("found %d\n",int8_value);
                     if(json_map[i].jsontype==cJSON_Number)
                         cJSON_AddNumberToObject(ret_json, json_map[i].name, int8_value);
                     else {
@@ -392,7 +404,8 @@ cJSON* v17decode(cJSON* in_json) {
                     enc_len+=2;
                     break;
                 case enc_INT16:
-                    sscanf((v7_json+enc_len),"%04hx",&int16_value);
+                    sscanf((v7_json+enc_len),"%04x",&int16_value);
+                    V17DO printf("found %d\n", int16_value);
                     if(json_map[i].jsontype==cJSON_Number)
                         cJSON_AddNumberToObject(ret_json, json_map[i].name, int16_value);
                     else {
@@ -403,6 +416,7 @@ cJSON* v17decode(cJSON* in_json) {
                     break;
                 case enc_INT32:
                     sscanf((v7_json+enc_len),"%08x",&value32.integer);
+                    V17DO printf("found %d\n", value32.integer);
                     if(json_map[i].jsontype==cJSON_Number)
                         cJSON_AddNumberToObject(ret_json, json_map[i].name, value32.integer);
                     else {
@@ -413,6 +427,7 @@ cJSON* v17decode(cJSON* in_json) {
                     break;
                 case enc_INT64:
                     sscanf((v7_json+enc_len),"%016lx",&value64.integer);
+                    V17DO printf("found %ld\n", value64.integer);
                     if(json_map[i].jsontype==cJSON_Number)
                         cJSON_AddNumberToObject(ret_json, json_map[i].name, value64.integer);
                     else {
@@ -426,6 +441,7 @@ cJSON* v17decode(cJSON* in_json) {
                     enc_len+=2;
                     for(int t=0;enc_token[t].name;t++) {
                         if(enc_token[t].value==value32.integer) {
+                            V17DO printf("found %s\n", enc_token[t].name);
                             cJSON_AddStringToObject(ret_json, json_map[i].name, enc_token[t].name);
                             break;
                         }
@@ -433,6 +449,7 @@ cJSON* v17decode(cJSON* in_json) {
                     break;
                 case enc_FLT:
                     sscanf((v7_json+enc_len),"%08x",&value32.integer);
+                    V17DO printf("found %.8f\n", value32.real);
                     if(json_map[i].jsontype==cJSON_Number)
                         cJSON_AddNumberToObject(ret_json, json_map[i].name, value32.real);
                     else {
@@ -443,6 +460,7 @@ cJSON* v17decode(cJSON* in_json) {
                     break;
                 case enc_DBL:
                     sscanf((v7_json+enc_len),"%016lx",&value64.integer);
+                    V17DO printf("found %.8f\n", value64.real);
                     if(json_map[i].jsontype==cJSON_Number)
                         cJSON_AddNumberToObject(ret_json, json_map[i].name, value64.real);
                     else {
@@ -462,9 +480,14 @@ cJSON* v17decode(cJSON* in_json) {
                     if (n) {
                         if(bytes2hexstr((byte*)workBytes+1, n-1, valuestring, sizeof(valuestring))) {
                             valuestring[value32.integer]=0; // null terminate at original length
+                            V17DO printf("found: %s\n", valuestring);
                             cJSON_AddStringToObject(ret_json,json_map[i].name,valuestring);
-                        } else { cJSON_Delete(ret_json); return in_json; }  // hex85 decoding failed
-                    } else { cJSON_Delete(ret_json); return in_json; }// hex85 decoding failed
+                        } else {
+                            V17DO printf("FAILED: BIN->HEX: %s <- [%d]\"%s\"\n", json_map[i].name, value32.integer, valuestring);
+                            cJSON_Delete(ret_json); return in_json; }  // hex85 decoding failed
+                    } else {
+                        V17DO printf("FAILED: B85->BIN: %s <- [%d]\"%s\"\n", json_map[i].name, value32.integer, valuestring);
+                        cJSON_Delete(ret_json); return in_json; }// hex85 decoding failed
                     
                     break;
                 case enc_NONE:
@@ -473,6 +496,7 @@ cJSON* v17decode(cJSON* in_json) {
                     strncpy(valuestring,(v7_json+enc_len),value32.integer);
                     enc_len+=value32.integer;
                     valuestring[value32.integer]=0;
+                    V17DO printf("found %s\n", valuestring);
                     cJSON_AddStringToObject(ret_json, json_map[i].name, valuestring);
                     break;
 

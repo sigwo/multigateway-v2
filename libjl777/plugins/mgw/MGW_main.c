@@ -1308,10 +1308,13 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
         for (iter=(value==0); iter<2; iter++)
         {
             errjsontxt = 0;
+            str = cJSON_PrintUnformatted(pair); // chanc3r v1.7 DEBUG - just for printing
+	    if(str) { printf("v17 encoder - got (%s)\n", str); free(str); } // chanc3r v1.7 DEBUG
 	    pair= v17encode(pair); // chanc3r v1.7: encode the json before its put into the AM string
-            str = cJSON_Print(pair);
+            str = cJSON_PrintUnformatted(pair); // chanc3r v1.7 changed to printUnformatted
+	    if(str) { printf("v17 encoder - sent (%s)\n", str); } // chanc3r v1.7 DEBUG
 	    pair=v17decode(pair);  // chanc3r v1.7: decode back into original json as its used later
-            _stripwhite(str,' ');
+            //_stripwhite(str,' '); // chanc3r v1.7 depreciated due to use of PrintUnformatted
             expand_nxt64bits(assetidstr,coin->mgw.assetidbits);
             depositid = issue_transferAsset(&errjsontxt,0,SUPERNET.NXTACCTSECRET,NXTaddr,(iter == 0) ? assetidstr : nxtassetidstr,(iter == 0) ? (value/coin->mgw.ap_mult) : buyNXT*SATOSHIDEN,MIN_NQTFEE,deadline,str,0);
             free(str);

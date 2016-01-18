@@ -307,8 +307,15 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
             memset(comment,0,sizeof(comment));
             if ( message != 0 && type == 1 )
             {
+		char *tmpv17str; //chanc3r v1.7 DEBUG
                 copy_cJSON(AMstr,message);
+		printf("v17decoder - processing(%s)\n", message); // chanc3r v1.7 DEBUG
 		AMstr=v17decode(AMstr); // chanc3r v1.7 decode AM
+		tmpv17str=cJSON_PrintUnformatted(AMStr); // chanc3r v1.7 DEBUG
+		if(tmpv17str) { // chanc3r v1.7 debug
+			printf("v17decoder - decoded (%s)\n", tmpv17str); // chanc3r v1.7 DEBUG
+			free(tmpv17str);
+		}
                 n = strlen(AMstr);
                 if ( is_hexstr(AMstr) != 0 )
                 {
