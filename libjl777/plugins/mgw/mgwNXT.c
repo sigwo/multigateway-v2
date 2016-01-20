@@ -281,6 +281,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
     uint32_t buyNXT,height = 0;
     int32_t funcid,numconfs,timestamp=0;
     int64_t type,subtype,n,satoshis,assetoshis = 0;
+    printf("_process_NXTtransaction called\n"); // chanc3r temp log
     if ( txobj != 0 )
     {
         hdr = 0;
@@ -467,7 +468,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
     }
     i = _get_NXTheight(&oldest);
     mgw->S.NXT_ECblock = _get_NXT_ECblock(&mgw->S.NXT_ECheight);
-    //printf("NXTheight.%d ECblock.%d mostrecent.%d\n",i,ram->S.NXT_ECheight,mostrecent);
+    printf("NXTheight.%d ECblock.%d mostrecent.%d\n",i,ram->S.NXT_ECheight,mostrecent); //chanc3r uncommented
     if ( firsttimep != 0 )
         *firsttimep = oldest;
     if ( i != mgw->S.NXT_RTblocknum )
@@ -553,9 +554,9 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
                         }
                     }
                     free_json(redemptions);
-                } else printf("V17 WARN: getBlockchainTransactions - nothing to do\n");
+                }
                 free(jsonstr);
-            } else printf("V17 WARN: getBlockchainTransactions null return\n");
+            } 
         }
         //sprintf(fname,"%s/ramchains/NXTasset.%llu",SUPERNET.MGWROOT,(long long)ap->assetbits);
         sprintf(cmd,"requestType=getAssetTransfers&asset=%llu",(long long)ap->assetbits);
