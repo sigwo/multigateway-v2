@@ -302,20 +302,13 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
         attachment = cJSON_GetObjectItem(txobj,"attachment");
         if ( attachment != 0 )
         {
+
             message = cJSON_GetObjectItem(attachment,"message");
             assetjson = cJSON_GetObjectItem(attachment,"asset");
             memset(comment,0,sizeof(comment));
             if ( message != 0 && type == 1 )
             {
-		char *tmpv17str; //chanc3r v1.7 DEBUG
                 copy_cJSON(AMstr,message);
-		printf("v17decoder - processing(%s)\n", message); // chanc3r v1.7 DEBUG
-		AMstr=v17decode(AMstr); // chanc3r v1.7 decode AM
-		tmpv17str=cJSON_PrintUnformatted(AMStr); // chanc3r v1.7 DEBUG
-		if(tmpv17str) { // chanc3r v1.7 debug
-			printf("v17decoder - decoded (%s)\n", tmpv17str); // chanc3r v1.7 DEBUG
-			free(tmpv17str);
-		}
                 n = strlen(AMstr);
                 if ( is_hexstr(AMstr) != 0 )
                 {
@@ -329,10 +322,19 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
             }
             else if ( assetjson != 0 && type == 2 && subtype == 1 )
             {
+ 		char *tmpv17str; //chanc3r v1.7 DEBUG
                 commentobj = cJSON_GetObjectItem(attachment,"comment");
                 if ( commentobj == 0 )
                     commentobj = message;
                 copy_cJSON(comment,commentobj);
+                printf("v17decoder - processing(%s)\n", message); // chanc3r v1.7 DEBUG
+                comment=v17decode(comment); // chanc3r v1.7 decode AM
+                tmpv17str=cJSON_PrintUnformatted(comment); // chanc3r v1.7 DEBUG
+                if(tmpv17str) { // chanc3r v1.7 debug
+                        printf("v17decoder - decoded (%s)\n", tmpv17str); // chanc3r v1.7 DEBUG
+                        free(tmpv17str);
+                }
+
                 if ( comment[0] != 0 )
                     commentstr = clonestr(unstringify(comment));
                 copy_cJSON(assetidstr,cJSON_GetObjectItem(attachment,"asset"));
