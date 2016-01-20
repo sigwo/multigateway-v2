@@ -34,6 +34,7 @@ void printhex(const byte* bytes, size_t byte_size) {
 //reference 
 const char urlmap[][2]={
 {'/','*'},
+{'+','@'},
 {0,0}
 };
 
