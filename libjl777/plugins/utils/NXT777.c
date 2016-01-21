@@ -19,6 +19,8 @@
 #include "../utils/utils777.c"
 #include "../utils/system777.c"
 #include "../coins/coins777.c"
+#include "../../nxtv17codec.h"
+
 
 #include "tweetnacl.h"
 int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
@@ -1119,7 +1121,27 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
         {
             message = cJSON_GetObjectItem(attachment,"message");
             assetjson = cJSON_GetObjectItem(attachment,"asset");
-            memset(comment,0,sizeof(comment));
+	    if(message) { // chanc3r v1.7 decoder block
+                char *tmpv17str;
+                printf("v17decoder - processing(%s)\n", message); // chanc3r v1.7 DEBUG
+                cJSON* v17json=cJSON_Parse(message->valuestring);
+                if(v17json) { // do we have json
+                    cJSON* mgwjson=v17decode(v17json);
+                    if(v17json!=mgwjson) {
+                        cJSON* decodemsg;
+                        tmpv17str=cJSON_PrintUnformatted(mgwjson); // chanc3r v1.7 DEBUG
+                        if(tmpv17str) { // chanc3r v1.7 debug
+                            printf("v17decoder - decoded (%s)\n", tmpv17str); // chanc3r v1.7 DEBUG
+			    free(message->valuestring);
+			    message->valuestring=tmpv17str;
+                           //replace encoded message with decoded message in attachment
+                        }
+                        cJSON_Delete(mgwjson); // clean up
+                    } else 
+                        cJSON_Delete(v17json); // clean up only if decode failed.
+                }
+           } 
+           memset(comment,0,sizeof(comment));
             if ( message != 0 && type == 1 )
             {
                 copy_cJSON(AMstr,message);
