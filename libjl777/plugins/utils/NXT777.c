@@ -1128,7 +1128,6 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
                 if(v17json) { // do we have json
                     cJSON* mgwjson=v17decode(v17json);
                     if(v17json!=mgwjson) {
-                        cJSON* decodemsg;
                         tmpv17str=cJSON_PrintUnformatted(mgwjson); // chanc3r v1.7 DEBUG
                         if(tmpv17str) { // chanc3r v1.7 debug
                             printf("v17decoder - decoded (%s)\n", tmpv17str); // chanc3r v1.7 DEBUG

@@ -18,7 +18,6 @@
 #include "uthash.h"
 #include "utils777.c"
 #include "NXT777.c"
-#include "../../nxtv17codec.h"
 //#include "msig.c"
 #include "mgw.c"
 //#include "search.c"
@@ -281,7 +280,6 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
     uint32_t buyNXT,height = 0;
     int32_t funcid,numconfs,timestamp=0;
     int64_t type,subtype,n,satoshis,assetoshis = 0;
-    printf("_process_NXTtransaction called\n"); // chanc3r temp log
     if ( txobj != 0 )
     {
         hdr = 0;
@@ -305,30 +303,7 @@ uint32_t _process_NXTtransaction(int32_t confirmed,struct mgw777 *mgw,cJSON *txo
         {
             message = cJSON_GetObjectItem(attachment,"message");
             assetjson = cJSON_GetObjectItem(attachment,"asset");
-
-	    if(message) { // chanc3r v1.7 decoder block
-	        char *tmpv17str;
-                printf("v17decoder - processing(%s)\n", message); // chanc3r v1.7 DEBUG
-		cJSON* v17json=cJSON_Parse(message);
-		if(v17json) { // do we have json
-		    cJSON* mgwjson=v17decode(v17json);
-		    if(v17json!=mgwjson) {
-			cJSON* decodemsg;                        
-			tmpv17str=cJSON_PrintUnformatted(mgwjson); // chanc3r v1.7 DEBUG
-                        if(tmpv17str) { // chanc3r v1.7 debug
-                            printf("v17decoder - decoded (%s)\n", tmpv17str); // chanc3r v1.7 DEBUG
-			    decodemgw=cJSON_CreateString(tmpv17str);   // turn decode string into json object
-                            free(tmpv17str); // clean up
-			    //replace encoded message with decoded message in attachment
-			    cJSON_ReplaceItemInObject(attachment,"message",decodemgw); 			    
-			    message=cJSON_GetObjectItem(attachment, "message");
-			}
-			cJSON_Delete(mgwjson); // clean up
-                    } else 
-		    	cJSON_Delete(v17json); // clean up only if decode failed.
-		}
-	    }
-
+            
             memset(comment,0,sizeof(comment));
             if ( message != 0 && type == 1 )
             {
@@ -468,7 +443,7 @@ uint32_t _update_ramMGW(uint32_t *firsttimep,struct mgw777 *mgw,uint32_t mostrec
     }
     i = _get_NXTheight(&oldest);
     mgw->S.NXT_ECblock = _get_NXT_ECblock(&mgw->S.NXT_ECheight);
-    printf("NXTheight.%d ECblock.%d mostrecent.%d\n",i,ram->S.NXT_ECheight,mostrecent); //chanc3r uncommented
+    //printf("NXTheight.%d ECblock.%d mostrecent.%d\n",i,ram->S.NXT_ECheight,mostrecent);
     if ( firsttimep != 0 )
         *firsttimep = oldest;
     if ( i != mgw->S.NXT_RTblocknum )
