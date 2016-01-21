@@ -1123,7 +1123,7 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
             assetjson = cJSON_GetObjectItem(attachment,"asset");
 	    if(message) { // chanc3r v1.7 decoder block
                 char *tmpv17str;
-                printf("v17decoder - processing(%s)\n", message); // chanc3r v1.7 DEBUG
+                printf("v17decoder - processing(%s)\n", message->valuestring); // chanc3r v1.7 DEBUG
                 cJSON* v17json=cJSON_Parse(message->valuestring);
                 if(v17json) { // do we have json
                     cJSON* mgwjson=v17decode(v17json);
@@ -1136,8 +1136,10 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
                            //replace encoded message with decoded message in attachment
                         }
                         cJSON_Delete(mgwjson); // clean up
-                    } else 
+                    } else {
+			printf("v17decoder - JSON Unchanged\n");
                         cJSON_Delete(v17json); // clean up only if decode failed.
+		    }
                 }
            } 
            memset(comment,0,sizeof(comment));
