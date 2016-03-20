@@ -61,6 +61,7 @@
 #define BITS_COINID 44
 #define VPN_COINID 45
 #define INFX_COINID 46
+#define DASH_COINID 47
 
 #define BTC_MARKER "17outUgtsnLkguDuXm14tcQ7dMbdD8KZGK"
 #define LTC_MARKER "Le9hFCEGKDKp7qYpzfWyEFAq58kSQsjAqX"
@@ -108,6 +109,7 @@
 #define BITS_MARKER "BPeZsNiahkKF54YxvSJpeNgSaWbyXo4NPF"
 #define VPN_MARKER "Vaw75Sz2YeHbiGygjgGu6LrhP7TJTP5tG8"
 #define INFX_MARKER "CJq3QURp4erq1GDEsfAtLGGRVU37wgPuYv"
+#define DASH_MARKER "XiiSWYGYozVKg3jyDLfJSF2xbieX15bNU8"
 
 int32_t Numcoins;
 struct coin_info **Coin_daemons;
