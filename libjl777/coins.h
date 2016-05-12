@@ -62,6 +62,7 @@
 #define VPN_COINID 45
 #define INFX_COINID 46
 #define DASH_COINID 47
+#define SYS_COINID 48
 
 #define BTC_MARKER "17outUgtsnLkguDuXm14tcQ7dMbdD8KZGK"
 #define LTC_MARKER "Le9hFCEGKDKp7qYpzfWyEFAq58kSQsjAqX"
@@ -110,6 +111,7 @@
 #define VPN_MARKER "Vaw75Sz2YeHbiGygjgGu6LrhP7TJTP5tG8"
 #define INFX_MARKER "CJq3QURp4erq1GDEsfAtLGGRVU37wgPuYv"
 #define DASH_MARKER "XiiSWYGYozVKg3jyDLfJSF2xbieX15bNU8"
+#define SYS_MARKER "SPLP47qshWjwJqTf1F38FzqWC6MfhZoEhH"
 
 int32_t Numcoins;
 struct coin_info **Coin_daemons;
@@ -157,18 +159,18 @@ char *get_marker(char *coinstr)
         return(OPAL_MARKER);
     else if ( strcmp(coinstr,"VPN") == 0 )
         return(VPN_MARKER);
-    else if ( strcmp(coinstr,"BBR") == 0 )
-        return(BBR_MARKER);
+    else if ( strcmp(coinstr,"INFX") == 0 )
+        return(INFX_MARKER);
     else if ( strcmp(coinstr,"BITS") == 0 )
         return(BITS_MARKER);
-    else if ( strcmp(coinstr,"CHA") == 0 )
-        return(CHA_MARKER);
+    else if ( strcmp(coinstr,"SYS") == 0 )
+        return(SYS_MARKER);
     else if ( strcmp(coinstr,"LTC") == 0 )
         return(LTC_MARKER);
     else if ( strcmp(coinstr,"DOGE") == 0 )
         return(DOGE_MARKER);
-    else if ( strcmp(coinstr,"DRK") == 0 )
-        return(DRK_MARKER);
+    else if ( strcmp(coinstr,"DASH") == 0 )
+        return(DASH_MARKER);
     else if ( strcmp(coinstr,"PPC") == 0 )
         return(PPC_MARKER);
     else if ( strcmp(coinstr,"NMC") == 0 )
