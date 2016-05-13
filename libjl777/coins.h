@@ -111,7 +111,7 @@
 #define VPN_MARKER "Vaw75Sz2YeHbiGygjgGu6LrhP7TJTP5tG8"
 #define INFX_MARKER "CJq3QURp4erq1GDEsfAtLGGRVU37wgPuYv"
 #define DASH_MARKER "XiiSWYGYozVKg3jyDLfJSF2xbieX15bNU8"
-#define SYS_MARKER "SPLP47qshWjwJqTf1F38FzqWC6MfhZoEhH"
+#define SYS_MARKER "1Kj6HAiMHXcYkFHy5k6BxqX9zNnLmMYyEs"
 
 int32_t Numcoins;
 struct coin_info **Coin_daemons;
