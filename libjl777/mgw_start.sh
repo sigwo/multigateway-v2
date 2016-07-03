@@ -14,14 +14,14 @@ function checktrip1 {
   pgrep Influxd >/dev/null || { echo "INFX Daemon is not running! Start it and try again."; exit 1; }
   pgrep opalcoind >/dev/null || { echo "OPAL Daemon is not running! Start it and try again."; exit 1; }
   pgrep syscoind >/dev/null || { echo "SYS Daemon is not running! Start it and try again."; exit 1; }
-  ps ax | grep -q "[c]onf nxt.Nxt" || { echo "Nxt is not running! Start it and try again."; exit 1; }
+  ps ax | grep -q "[c]lasses nxt.Nxt" || { echo "Nxt is not running! Start it and try again."; exit 1; }
 }
 function checktrip2 {
   pgrep SuperNET >/dev/null && { echo "MGW seems to be already running. Run ./mgw_stop.sh first if you want to restart."; exit 1; }
   pgrep bitcoind > /dev/null || { echo "BTC Daemon is not running! Start it and try again."; exit 1; }
   pgrep dogecoind > /dev/null || { echo "DOGE Daemon is not running! Start it and try again."; exit 1; }
   pgrep litecoind > /dev/null || { echo "LTC Daemon is not running! Start it and try again."; exit 1; }
-  ps ax | grep -q "[c]onf nxt.Nxt" || { echo "Nxt is not running! Start it and try again."; exit 1; }
+  ps ax | grep -q "[c]lasses nxt.Nxt" || { echo "Nxt is not running! Start it and try again."; exit 1; }
 }
 checktrip${MGWTRIPLET}
 
@@ -40,12 +40,13 @@ fi
 
 screen -q -wipe
 pgrep screen && screen -X -S mgw quit
+sleep 1
 echo "Launching MGW main process ..."
 cd $MGWHOME
 screen -d -m -S mgw -c ~/.screenlog -L
 rm ~/.screenlog
 echo "Logfile: $MGWLOG"
-sleep 2
+sleep 5
 screen -S mgw -X stuff './launch'$(echo -ne '\015')
 tail -f $MGWLOG | while read LOGLINE
 do
