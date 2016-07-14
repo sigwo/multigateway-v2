@@ -4,8 +4,8 @@ echo -n "Stopping Multigateway..."
 pkill -15 SuperNET
 echo "Done."
 echo -n "Stopping screen process..."
-pkill -9 screen
+killall screen
 echo "Done."
-pgrep tee && killall tee
+pgrep tee >/dev/null && killall tee
 
 exit $?

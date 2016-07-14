@@ -38,15 +38,13 @@ fi
 
 # Start detached screen and MGW main process
 
-screen -q -wipe
-pgrep screen && screen -X -S mgw quit
-sleep 1
+#pgrep screen >/dev/null && screen -X -S mgw quit
 echo "Launching MGW main process ..."
 cd $MGWHOME
 screen -d -m -S mgw -c ~/.screenlog -L
 rm ~/.screenlog
 echo "Logfile: $MGWLOG"
-sleep 5
+sleep 1
 screen -S mgw -X stuff './launch'$(echo -ne '\015')
 tail -f $MGWLOG | while read LOGLINE
 do
